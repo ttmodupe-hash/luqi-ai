@@ -1,406 +1,424 @@
 #!/usr/bin/env python3
-"""Omega AI v3.2.0 — Central Brain / Orchestrator"""
+# -*- coding: utf-8 -*-
+"""
+Core Brain Module for Omega AI
+The central orchestration engine that coordinates all Omega AI subsystems,
+processes user requests, manages context, and routes tasks to appropriate modules.
+"""
 
-import hashlib
-import time
-from typing import Any, Dict, List, Optional
+import json
+import logging
+import asyncio
+from typing import Dict, List, Optional, Any, Tuple, Callable
+from datetime import datetime
+from dataclasses import dataclass, field, asdict
+from enum import Enum
+import uuid
 
-# ── Lazy imports to avoid circular dependencies ──────────────────────────────
-_db_engine = None
-_cache_engine = None
-_kb_engine = None
-_conv_state = None
-
-
-def _get_db():
-    global _db_engine
-    if _db_engine is None:
-        from db_engine import DatabaseEngine
-        _db_engine = DatabaseEngine()
-    return _db_engine
+logger = logging.getLogger(__name__)
 
 
-def _get_cache():
-    global _cache_engine
-    if _cache_engine is None:
-        from cache_manager import ModuleCache
-        _cache_engine = ModuleCache()
-    return _cache_engine
+class TaskType(Enum):
+    """Types of tasks the core brain can handle"""
+    CONVERSATION = "conversation"
+    FINANCIAL_ADVICE = "financial_advice"
+    EDUCATIONAL_SUPPORT = "educational_support"
+    CODE_GENERATION = "code_generation"
+    RESEARCH = "research"
+    TRANSLATION = "translation"
+    CONTENT_CREATION = "content_creation"
+    DATA_ANALYSIS = "data_analysis"
+    SCHEDULING = "scheduling"
+    REMINDER = "reminder"
+    WEB_SEARCH = "web_search"
+    FILE_PROCESSING = "file_processing"
+    SYSTEM_COMMAND = "system_command"
+    MULTI_STEP = "multi_step"
 
 
-def _get_kb():
-    global _kb_engine
-    if _kb_engine is None:
-        from knowledge_base import KnowledgeBase
-        _kb_engine = KnowledgeBase()
-    return _kb_engine
+class ProcessingStage(Enum):
+    """Stages of request processing"""
+    RECEIVED = "received"
+    PARSING = "parsing"
+    ROUTING = "routing"
+    EXECUTING = "executing"
+    SYNTHESIZING = "synthesizing"
+    COMPLETED = "completed"
+    ERROR = "error"
 
 
-def _get_conv_state():
-    global _conv_state
-    if _conv_state is None:
-        from conversation_state import ConversationStateMachine
-        _conv_state = ConversationStateMachine()
-    return _conv_state
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  PUBLIC API
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class OmegaBrain:
-    """Central brain that routes queries to capability modules."""
-
-    # Capability routing table — maps keywords to module names
-    CAPABILITY_MAP = {
-        # Financial
-        "budget": "financial_literacy",
-        "save": "financial_literacy",
-        "invest": "financial_literacy",
-        "stock": "financial_literacy",
-        "crypto": "financial_literacy",
-        "bitcoin": "financial_literacy",
-        "retirement": "financial_literacy",
-        "pension": "financial_literacy",
-        "tax": "tax_engine",
-        "vat": "tax_engine",
-        "income tax": "tax_engine",
-        "insurance": "financial_literacy",
-        "loan": "financial_literacy",
-        "debt": "financial_literacy",
-        "credit": "financial_literacy",
-        "mortgage": "financial_literacy",
-        "stokvel": "stokvel_manager",
-        "property": "financial_literacy",
-        "real estate": "financial_literacy",
-        "wealth": "financial_literacy",
-
-        # Education
-        "learn": "educational_companion",
-        "study": "educational_companion",
-        "course": "educational_companion",
-        "school": "educational_companion",
-        "university": "educational_companion",
-        "degree": "educational_companion",
-        "diploma": "educational_companion",
-        "certificate": "educational_companion",
-        "exam": "educational_companion",
-        "test": "educational_companion",
-        "quiz": "educational_companion",
-        "tutor": "educational_companion",
-        "homework": "educational_companion",
-        "assignment": "educational_companion",
-        "math": "educational_companion",
-        "science": "educational_companion",
-        "history": "educational_companion",
-        "language": "educational_companion",
-        "read": "educational_companion",
-        "write": "educational_companion",
-
-        # Vocational
-        "job": "vocational_companion",
-        "career": "vocational_companion",
-        "work": "vocational_companion",
-        "skill": "vocational_companion",
-        "trade": "vocational_companion",
-        "apprenticeship": "vocational_companion",
-        "internship": "vocational_companion",
-        "cv": "vocational_companion",
-        "resume": "vocational_companion",
-        "interview": "vocational_companion",
-        "profession": "vocational_companion",
-        "qualification": "vocational_companion",
-        "experience": "vocational_companion",
-        "employment": "vocational_companion",
-        "salary": "vocational_companion",
-        "wage": "vocational_companion",
-        "entrepreneur": "vocational_companion",
-        "business": "vocational_companion",
-        "startup": "vocational_companion",
-
-        # African languages
-        "zulu": "african_languages",
-        "xhosa": "african_languages",
-        "sotho": "african_languages",
-        "tswana": "african_languages",
-        "venda": "african_languages",
-        "tsonga": "african_languages",
-        "swati": "african_languages",
-        "ndebele": "african_languages",
-        "pedi": "african_languages",
-        "afrikaans": "african_languages",
-        "translate": "african_languages",
-        "translation": "african_languages",
-        "phrase": "african_languages",
-        "greeting": "african_languages",
-        "traditional": "african_languages",
-        "culture": "african_languages",
-        "idiom": "african_languages",
-        "proverb": "african_languages",
-
-        # Calculator
-        "calculate": "calc_engine",
-        "compute": "calc_engine",
-        "math": "calc_engine",
-        "sum": "calc_engine",
-        "add": "calc_engine",
-        "subtract": "calc_engine",
-        "multiply": "calc_engine",
-        "divide": "calc_engine",
-        "percentage": "calc_engine",
-        "interest": "calc_engine",
-        "formula": "calc_engine",
-        "equation": "calc_engine",
-        "conversion": "calc_engine",
-        "convert": "calc_engine",
-        "currency": "calc_engine",
-        "rand": "calc_engine",
-        "usd": "calc_engine",
-        "eur": "calc_engine",
-        "gbp": "calc_engine",
-
-        # Reminders
-        "remind": "reminders",
-        "reminder": "reminders",
-        "alarm": "reminders",
-        "schedule": "reminders",
-        "appointment": "reminders",
-        "meeting": "reminders",
-        "deadline": "reminders",
-        "due": "reminders",
-        "timer": "reminders",
-        "notify": "reminders",
-        "alert": "reminders",
-
-        # Scheduler
-        "plan": "scheduler",
-        "routine": "scheduler",
-        "daily": "scheduler",
-        "weekly": "scheduler",
-        "monthly": "scheduler",
-        "habit": "scheduler",
-        "todo": "scheduler",
-        "task": "scheduler",
-        "agenda": "scheduler",
-        "calendar": "scheduler",
-        "event": "scheduler",
-
-        # Deep research
-        "research": "deep_research",
-        "analyze": "deep_research",
-        "analysis": "deep_research",
-        "report": "deep_research",
-        "study": "deep_research",
-        "investigate": "deep_research",
-        "survey": "deep_research",
-        "data": "deep_research",
-        "statistics": "deep_research",
-        "market": "deep_research",
-        "industry": "deep_research",
-        "sector": "deep_research",
-        "trend": "deep_research",
-        "forecast": "deep_research",
-        "predict": "deep_research",
-
-        # Email
-        "email": "email_assistant",
-        "mail": "email_assistant",
-        "inbox": "email_assistant",
-        "compose": "email_assistant",
-        "draft": "email_assistant",
-        "send": "email_assistant",
-        "message": "email_assistant",
-        "letter": "email_assistant",
-        "correspondence": "email_assistant",
-
-        # Knowledge base
-        "faq": "knowledge_base",
-        "question": "knowledge_base",
-        "answer": "knowledge_base",
-        "help": "knowledge_base",
-        "support": "knowledge_base",
-        "information": "knowledge_base",
-        "wiki": "knowledge_base",
-        "knowledge": "knowledge_base",
-        "how to": "knowledge_base",
-        "what is": "knowledge_base",
-        "explain": "knowledge_base",
-        "define": "knowledge_base",
-    }
-
-    # Multi-word phrases that should be checked first
-    PHRASE_MAP = {
-        "income tax": "tax_engine",
-        "real estate": "financial_literacy",
-        "how to": "knowledge_base",
-        "what is": "knowledge_base",
-        "deep research": "deep_research",
-        "stock market": "financial_literacy",
-    }
-
-    def __init__(self):
-        self._db = _get_db()
-        self._cache = _get_cache()
-        self._kb = _get_kb()
-        self._conv = _get_conv_state()
-
-    def process(self, user_id: str, query: str, context: dict = None) -> dict:
-        """Process a user query and route to the appropriate module."""
-        start_time = time.time()
-        context = context or {}
-
-        # Step 1: Check cache
-        cache_key = hashlib.md5(f"{user_id}:{query}".encode()).hexdigest()
-        cached = self._cache.get(cache_key)
-        if cached:
-            return {"status": "cached", **cached, "response_time_ms": 0}
-
-        # Step 2: Check knowledge base for FAQ matches
-        kb_match = self._kb.find_match(query)
-        if kb_match and kb_match["confidence"] > 0.85:
-            result = {
-                "status": "success",
-                "module": "knowledge_base",
-                "response": kb_match["answer"],
-                "confidence": kb_match["confidence"],
-                "source": kb_match.get("source", "faq")
-            }
-            self._cache.set(cache_key, result, ttl=3600)
-            return result
-
-        # Step 3: Route to capability module
-        module_name = self._route_query(query)
-
-        # Step 4: Process with the selected module
-        try:
-            result = self._process_with_module(module_name, user_id, query, context)
-        except Exception as e:
-            result = {
-                "status": "error",
-                "module": module_name,
-                "error": str(e),
-                "response": f"I encountered an error processing your request. Please try again."
-            }
-
-        # Step 5: Cache and return
-        elapsed = int((time.time() - start_time) * 1000)
-        result["response_time_ms"] = elapsed
-        result["module"] = module_name
-
-        if result["status"] == "success":
-            self._cache.set(cache_key, result, ttl=1800)
-
-        return result
-
-    def _route_query(self, query: str) -> str:
-        """Route a query to the appropriate capability module."""
-        query_lower = query.lower().strip()
-
-        # Check multi-word phrases first
-        for phrase, module in self.PHRASE_MAP.items():
-            if phrase in query_lower:
-                return module
-
-        # Check individual keywords
-        words = query_lower.split()
-        for word in words:
-            if word in self.CAPABILITY_MAP:
-                return self.CAPABILITY_MAP[word]
-
-        # Check for partial matches (substring)
-        for keyword, module in self.CAPABILITY_MAP.items():
-            if keyword in query_lower:
-                return module
-
-        # Default to knowledge base
-        return "knowledge_base"
-
-    def _process_with_module(self, module_name: str, user_id: str, query: str, context: dict) -> dict:
-        """Process a query with the specified module."""
-        # Import module dynamically
-        module_map = {
-            "financial_literacy": "financial_literacy",
-            "tax_engine": "tax_engine",
-            "stokvel_manager": "stokvel_manager",
-            "educational_companion": "educational_companion",
-            "vocational_companion": "vocational_companion",
-            "african_languages": "african_languages",
-            "calc_engine": "calc_engine",
-            "reminders": "reminders",
-            "scheduler": "scheduler",
-            "deep_research": "deep_research",
-            "email_assistant": "email_assistant",
-            "knowledge_base": "knowledge_base",
-        }
-
-        if module_name not in module_map:
-            return {
-                "status": "error",
-                "error": f"Unknown module: {module_name}",
-                "response": "I'm not sure how to help with that. Could you rephrase?"
-            }
-
-        # Try to import and process
-        try:
-            module_import = module_map[module_name]
-            mod = __import__(module_import)
-            if hasattr(mod, "process"):
-                return mod.process(query, context)
-            elif hasattr(mod, "handle"):
-                return mod.handle(query, context)
-            else:
-                return {
-                    "status": "success",
-                    "response": f"I understand you're asking about {module_name}. Let me help with that.",
-                    "module": module_name
-                }
-        except ImportError:
-            return {
-                "status": "success",
-                "response": f"I'd help you with {module_name}, but that module isn't available right now.",
-                "module": module_name
-            }
-
-    def get_stats(self) -> dict:
-        """Get brain statistics."""
+@dataclass
+class TaskContext:
+    """Context for a task being processed"""
+    task_id: str
+    user_id: str
+    task_type: TaskType
+    original_request: str
+    params: Dict[str, Any] = field(default_factory=dict)
+    conversation_history: List[Dict] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    def to_dict(self) -> Dict[str, Any]:
         return {
-            "version": "3.2.0",
-            "capabilities": len(set(self.CAPABILITY_MAP.values())),
-            "total_keywords": len(self.CAPABILITY_MAP),
-            "db_status": "connected" if _db_engine else "disconnected",
-            "cache_status": "active" if _cache_engine else "inactive",
+            "task_id": self.task_id,
+            "user_id": self.user_id,
+            "task_type": self.task_type.value,
+            "original_request": self.original_request,
+            "params": self.params,
+            "conversation_history": self.conversation_history,
+            "metadata": self.metadata,
+            "created_at": self.created_at
         }
 
-    def get_capabilities(self) -> List[str]:
-        """List all available capabilities."""
-        return sorted(set(self.CAPABILITY_MAP.values()))
+
+@dataclass
+class ProcessingResult:
+    """Result of processing a task"""
+    task_id: str
+    success: bool
+    response: str = ""
+    data: Dict[str, Any] = field(default_factory=dict)
+    stage: ProcessingStage = ProcessingStage.COMPLETED
+    processing_time_ms: float = 0.0
+    modules_used: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "task_id": self.task_id,
+            "success": self.success,
+            "response": self.response,
+            "data": self.data,
+            "stage": self.stage.value,
+            "processing_time_ms": self.processing_time_ms,
+            "modules_used": self.modules_used,
+            "errors": self.errors
+        }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  MODULE-LEVEL FUNCTIONS (for backward compatibility)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-_brain_instance: Optional[OmegaBrain] = None
-
-
-def get_brain() -> OmegaBrain:
-    """Get or create the singleton brain instance."""
-    global _brain_instance
-    if _brain_instance is None:
-        _brain_instance = OmegaBrain()
-    return _brain_instance
-
-
-def process_query(user_id: str, query: str, context: dict = None) -> dict:
-    """Process a query (convenience function)."""
-    return get_brain().process(user_id, query, context)
-
-
-def get_stats() -> dict:
-    """Get brain statistics (convenience function)."""
-    return get_brain().get_stats()
+@dataclass
+class UserSession:
+    """User session state"""
+    session_id: str
+    user_id: str
+    context: Dict[str, Any] = field(default_factory=dict)
+    preferences: Dict[str, Any] = field(default_factory=dict)
+    active_tasks: List[str] = field(default_factory=list)
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    last_activity: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "context": self.context,
+            "preferences": self.preferences,
+            "active_tasks": self.active_tasks,
+            "created_at": self.created_at,
+            "last_activity": self.last_activity
+        }
 
 
-def get_capabilities() -> List[str]:
-    """List capabilities (convenience function)."""
-    return get_brain().get_capabilities()
+class CoreBrain:
+    """
+    Core Brain - Central orchestration engine for Omega AI.
+    Coordinates all subsystems, routes tasks, manages context,
+    and synthesizes responses from multiple modules.
+    """
+    
+    def __init__(self):
+        self.sessions: Dict[str, UserSession] = {}
+        self.active_tasks: Dict[str, TaskContext] = {}
+        self.task_history: List[str] = []
+        self.modules: Dict[str, Any] = {}
+        self.middleware_chain: List[Callable] = []
+        self.routing_table: Dict[TaskType, List[str]] = {
+            TaskType.CONVERSATION: ["conversation_state", "local_llm"],
+            TaskType.FINANCIAL_ADVICE: ["financial_literacy", "tax_engine", "calc_engine"],
+            TaskType.EDUCATIONAL_SUPPORT: ["educational_companion", "pedagogical_engine", "knowledge_base"],
+            TaskType.CODE_GENERATION: ["local_llm", "file_agent"],
+            TaskType.RESEARCH: ["deep_research", "web_search", "knowledge_base"],
+            TaskType.TRANSLATION: ["bilingual", "african_languages"],
+            TaskType.CONTENT_CREATION: ["local_llm", "pdf_generator"],
+            TaskType.DATA_ANALYSIS: ["calc_engine", "viz_engine", "deep_research"],
+            TaskType.SCHEDULING: ["scheduler", "reminders"],
+            TaskType.REMINDER: ["reminders", "scheduler"],
+            TaskType.WEB_SEARCH: ["web_search", "deep_research"],
+            TaskType.FILE_PROCESSING: ["file_agent", "pdf_generator"],
+            TaskType.SYSTEM_COMMAND: ["auth_middleware", "pipeline"],
+            TaskType.MULTI_STEP: ["workflow_engine", "pipeline"]
+        }
+        logger.info("CoreBrain initialized")
+    
+    def register_module(self, name: str, module_instance: Any) -> None:
+        """Register a module with the core brain"""
+        self.modules[name] = module_instance
+        logger.info(f"Registered module: {name}")
+    
+    def register_middleware(self, middleware: Callable) -> None:
+        """Register middleware in the processing chain"""
+        self.middleware_chain.append(middleware)
+        logger.info(f"Registered middleware: {middleware.__name__}")
+    
+    async def process_request(self, user_id: str, request: str, 
+                            context: Optional[Dict] = None) -> ProcessingResult:
+        """Process a user request through the full pipeline"""
+        start_time = datetime.now()
+        task_id = str(uuid.uuid4())
+        
+        try:
+            # Create task context
+            task_ctx = TaskContext(
+                task_id=task_id,
+                user_id=user_id,
+                task_type=self._classify_request(request),
+                original_request=request,
+                params=context or {}
+            )
+            self.active_tasks[task_id] = task_ctx
+            
+            # Run middleware chain
+            for middleware in self.middleware_chain:
+                request = await middleware(request, task_ctx)
+            
+            # Route and execute
+            result = await self._route_and_execute(task_ctx)
+            
+            # Calculate processing time
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            result.processing_time_ms = processing_time
+            result.task_id = task_id
+            
+            # Store in history
+            self.task_history.append(task_id)
+            
+            # Clean up
+            if task_id in self.active_tasks:
+                del self.active_tasks[task_id]
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error processing request: {e}")
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            return ProcessingResult(
+                task_id=task_id,
+                success=False,
+                response=f"An error occurred while processing your request: {str(e)}",
+                stage=ProcessingStage.ERROR,
+                processing_time_ms=processing_time,
+                errors=[str(e)]
+            )
+    
+    def _classify_request(self, request: str) -> TaskType:
+        """Classify a request into a task type"""
+        request_lower = request.lower()
+        
+        # Financial keywords
+        financial_keywords = [
+            "budget", "save", "invest", "stock", "money", "debt", "credit", 
+            "loan", "mortgage", "retirement", "401k", "ira", "tax", "income",
+            "expense", "financial", "wealth", "interest rate", "portfolio"
+        ]
+        if any(kw in request_lower for kw in financial_keywords):
+            return TaskType.FINANCIAL_ADVICE
+        
+        # Educational keywords
+        educational_keywords = [
+            "learn", "study", "teach", "lesson", "course", "quiz", "homework",
+            "math", "science", "history", "explain", "how does", "what is",
+            "tutorial", "education", "school", "university", "exam"
+        ]
+        if any(kw in request_lower for kw in educational_keywords):
+            return TaskType.EDUCATIONAL_SUPPORT
+        
+        # Code keywords
+        code_keywords = [
+            "code", "program", "function", "class", "debug", "error", "python",
+            "javascript", "api", "database", "algorithm", "script", "developer"
+        ]
+        if any(kw in request_lower for kw in code_keywords):
+            return TaskType.CODE_GENERATION
+        
+        # Research keywords
+        research_keywords = [
+            "research", "find", "search", "information about", "what are",
+            "compare", "analyze", "study about", "report on", "investigate"
+        ]
+        if any(kw in request_lower for kw in research_keywords):
+            return TaskType.RESEARCH
+        
+        # Translation keywords
+        translation_keywords = [
+            "translate", "in swahili", "in french", "in spanish", "meaning of",
+            "how do you say", "pronunciation", "language"
+        ]
+        if any(kw in request_lower for kw in translation_keywords):
+            return TaskType.TRANSLATION
+        
+        # Scheduling keywords
+        scheduling_keywords = [
+            "schedule", "remind me", "set a reminder", "calendar", "appointment",
+            "meeting", "deadline", "due date", "when should"
+        ]
+        if any(kw in request_lower for kw in scheduling_keywords):
+            return TaskType.SCHEDULING
+        
+        # Web search keywords
+        web_search_keywords = [
+            "look up", "google", "find online", "latest news", "current",
+            "what's happening", "weather", "stock price", "news about"
+        ]
+        if any(kw in request_lower for kw in web_search_keywords):
+            return TaskType.WEB_SEARCH
+        
+        # File processing keywords
+        file_keywords = [
+            "file", "document", "pdf", "spreadsheet", "csv", "upload",
+            "download", "read this file", "analyze this data"
+        ]
+        if any(kw in request_lower for kw in file_keywords):
+            return TaskType.FILE_PROCESSING
+        
+        # Default to conversation
+        return TaskType.CONVERSATION
+    
+    async def _route_and_execute(self, task_ctx: TaskContext) -> ProcessingResult:
+        """Route a task to appropriate modules and execute"""
+        task_type = task_ctx.task_type
+        module_names = self.routing_table.get(task_type, ["local_llm"])
+        
+        result = ProcessingResult(
+            task_id=task_ctx.task_id,
+            success=True,
+            modules_used=module_names
+        )
+        
+        # Execute each module in the chain
+        accumulated_data = {}
+        for module_name in module_names:
+            if module_name in self.modules:
+                module = self.modules[module_name]
+                try:
+                    # Call the module's process method
+                    if hasattr(module, 'process'):
+                        module_result = await module.process(task_ctx)
+                        accumulated_data[module_name] = module_result
+                    elif hasattr(module, 'handle'):
+                        module_result = module.handle(task_ctx.original_request, task_ctx.params)
+                        accumulated_data[module_name] = module_result
+                    else:
+                        accumulated_data[module_name] = {"status": "module has no process/handle method"}
+                except Exception as e:
+                    logger.error(f"Error in module {module_name}: {e}")
+                    result.errors.append(f"{module_name}: {str(e)}")
+            else:
+                logger.warning(f"Module {module_name} not registered")
+        
+        # Synthesize response
+        result.data = accumulated_data
+        result.response = self._synthesize_response(task_ctx, accumulated_data)
+        
+        return result
+    
+    def _synthesize_response(self, task_ctx: TaskContext, 
+                           module_results: Dict[str, Any]) -> str:
+        """Synthesize a final response from module results"""
+        # This is a simplified synthesis - in production, this would use
+        # the local LLM or a more sophisticated approach
+        
+        responses = []
+        for module_name, result in module_results.items():
+            if isinstance(result, dict):
+                if "response" in result:
+                    responses.append(result["response"])
+                elif "error" in result:
+                    responses.append(f"[{module_name} error: {result['error']}]")
+            elif isinstance(result, str):
+                responses.append(result)
+        
+        if responses:
+            return "\n\n".join(responses)
+        
+        return f"I've processed your request about '{task_ctx.original_request}'. " \
+               f"The following modules were consulted: {', '.join(module_results.keys())}."
+    
+    def create_session(self, user_id: str, 
+                      preferences: Optional[Dict] = None) -> UserSession:
+        """Create a new user session"""
+        session_id = str(uuid.uuid4())
+        session = UserSession(
+            session_id=session_id,
+            user_id=user_id,
+            preferences=preferences or {}
+        )
+        self.sessions[session_id] = session
+        logger.info(f"Created session {session_id} for user {user_id}")
+        return session
+    
+    def get_session(self, session_id: str) -> Optional[UserSession]:
+        """Get a user session"""
+        return self.sessions.get(session_id)
+    
+    def update_session_context(self, session_id: str, 
+                              context_update: Dict[str, Any]) -> Optional[UserSession]:
+        """Update session context"""
+        session = self.sessions.get(session_id)
+        if session:
+            session.context.update(context_update)
+            session.last_activity = datetime.now().isoformat()
+        return session
+    
+    def end_session(self, session_id: str) -> bool:
+        """End a user session"""
+        if session_id in self.sessions:
+            del self.sessions[session_id]
+            logger.info(f"Ended session {session_id}")
+            return True
+        return False
+    
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get the status of the core brain and all modules"""
+        return {
+            "status": "operational",
+            "active_sessions": len(self.sessions),
+            "active_tasks": len(self.active_tasks),
+            "total_tasks_processed": len(self.task_history),
+            "registered_modules": list(self.modules.keys()),
+            "routing_table": {k.value: v for k, v in self.routing_table.items()},
+            "middleware_count": len(self.middleware_chain),
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Get the status of a task"""
+        task = self.active_tasks.get(task_id)
+        if task:
+            return {
+                "task_id": task_id,
+                "status": "active",
+                "task_type": task.task_type.value,
+                "created_at": task.created_at
+            }
+        
+        # Check history
+        if task_id in self.task_history:
+            return {
+                "task_id": task_id,
+                "status": "completed",
+                "note": "Task has been processed and removed from active tasks"
+            }
+        
+        return None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize the CoreBrain state"""
+        return {
+            "active_sessions": len(self.sessions),
+            "active_tasks": len(self.active_tasks),
+            "total_tasks_processed": len(self.task_history),
+            "registered_modules": list(self.modules.keys()),
+            "middleware_count": len(self.middleware_chain),
+            "supported_task_types": [t.value for t in TaskType]
+        }
