@@ -205,7 +205,7 @@ class WebhookConfig:
 
 @dataclass
 class SystemHealth:
-    """System health snapshot."""
+    """System health snapshot with per-check diagnostics."""
     status: str = "healthy"
     version: str = ""
     capabilities_active: int = 0
@@ -213,3 +213,7 @@ class SystemHealth:
     documents: int = 0
     requests_total: int = 0
     timestamp: str = ""
+    # v25.2.0 — enhanced health check fields
+    checks: Dict[str, Any] = field(default_factory=dict)
+    overall_status: str = ""
+    response_time_ms: float = 0.0
