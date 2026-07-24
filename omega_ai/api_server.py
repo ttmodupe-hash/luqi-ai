@@ -1,110 +1,49 @@
 #!/usr/bin/env python3
-"""Omega AI v3.7.0 — HTTP API Server
-Standard-library-only REST API. Start with: python omega_ai.py --server [--port PORT]
-
-Security features:
-- Request size limit (1MB max)
-- JSON body validation
-- Rate limiting (60 req/min per IP + 100 req/min per key)
-- Exception isolation (one bad request can't crash others)
-- Singleton OmegaBrain (no re-initialization per request)
-- API key authentication (HMAC-based, configurable via env var)
-- Role-based access control (admin / user / readonly)
+# -*- coding: utf-8 -*-
 """
-from __future__ import annotations
+API Server Module for Omega AI
+Provides HTTP REST API endpoints for all Omega AI capabilities.
+Supports request processing, authentication, rate limiting, and health checks.
+"""
 
 import json
+import logging
 import os
 import signal
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any
+from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
-# ── Project root ────────────────────────────────────────────────────────────
+# Project root
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-# ── Lazy singleton ──────────────────────────────────────────────────────────
-_brain = None
-_db = None
-_cache = None
-_scheduler = None
-_kb = None
-_conv_state = None
+from core_brain import CoreBrain
 
+logger = logging.getLogger(__name__)
 
-def _get_brain():
-    global _brain
-    if _brain is None:
-        from core_brain import OmegaBrain
-        _brain = OmegaBrain()
-    return _brain
+# Server globals
+SERVER_START_TIME = time.time()
+REQUEST_COUNT = 0
 
-
-def _get_db():
-    global _db
-    if _db is None:
-        from db_engine import DatabaseEngine
-        _db = DatabaseEngine()
-    return _db
-
-
-def _get_cache():
-    global _cache
-    if _cache is None:
-        from cache_manager import ModuleCache
-        _cache = ModuleCache()
-    return _cache
-
-
-def _get_scheduler():
-    global _scheduler
-    if _scheduler is None:
-        from scheduler import TaskScheduler
-        _scheduler = TaskScheduler()
-    return _scheduler
-
-
-def _get_kb():
-    global _kb
-    if _kb is None:
-        from knowledge_base import KnowledgeBase
-        _kb = KnowledgeBase()
-    return _kb
-
-
-def _get_conv_state():
-    global _conv_state
-    if _conv_state is None:
-        from conversation_state import ConversationStateMachine
-        _conv_state = ConversationStateMachine()
-    return _conv_state
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  REQUEST HANDLER
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class OmegaHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for Omega AI API."""
+    """HTTP request handler for Omega AI API"""
 
     # Rate limiting storage
     _rate_limit_store = {}
-    _api_keys = {}
-
-    # Maximum request body size (1MB)
-    MAX_BODY_SIZE = 1 * 1024 * 1024
+    MAX_BODY_SIZE = 1 * 1024 * 1024  # 1MB
 
     def log_message(self, fmt, *args):
-        """Override to use custom logging."""
+        """Override to use custom logging"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}] {args[0]}")
 
     def _send_json(self, status_code: int, data: dict):
-        """Send JSON response."""
+        """Send JSON response"""
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -114,17 +53,17 @@ class OmegaHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data, indent=2).encode())
 
     def _send_error(self, status_code: int, message: str):
-        """Send error response."""
+        """Send error response"""
         self._send_json(status_code, {"status": "error", "message": message})
 
     def _get_query_params(self) -> dict:
-        """Parse query parameters from URL."""
+        """Parse query parameters from URL"""
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
         return {k: v[0] if len(v) == 1 else v for k, v in params.items()}
 
     def _get_json_body(self) -> dict:
-        """Parse JSON body from request."""
+        """Parse JSON body from request"""
         content_length = int(self.headers.get("Content-Length", 0))
         if content_length > self.MAX_BODY_SIZE:
             raise ValueError("Request body too large")
@@ -134,7 +73,8 @@ class OmegaHandler(BaseHTTPRequestHandler):
         return json.loads(body.decode())
 
     def _check_rate_limit(self, client_ip: str) -> bool:
-        """Check if client has exceeded rate limit."""
+        """Check if client has exceeded rate limit"""
+        import asyncio
         now = time.time()
         window = 60  # 1 minute window
 
@@ -154,19 +94,16 @@ class OmegaHandler(BaseHTTPRequestHandler):
         return True
 
     def _authenticate(self) -> bool:
-        """Check API key authentication."""
+        """Check API key authentication"""
         api_key = self.headers.get("X-API-Key", "")
         if not api_key:
             return True  # Allow without key (public endpoints)
-
-        # Validate key format
         if len(api_key) < 16:
             return False
-
         return True
 
     def do_OPTIONS(self):
-        """Handle CORS preflight requests."""
+        """Handle CORS preflight requests"""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -174,7 +111,9 @@ class OmegaHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        """Handle GET requests."""
+        """Handle GET requests"""
+        global REQUEST_COUNT
+        REQUEST_COUNT += 1
         try:
             client_ip = self.client_address[0]
             if not self._check_rate_limit(client_ip):
@@ -184,7 +123,6 @@ class OmegaHandler(BaseHTTPRequestHandler):
             path = urlparse(self.path).path
             params = self._get_query_params()
 
-            # Route to handler
             if path == "/":
                 self._handle_root()
             elif path == "/health":
@@ -195,16 +133,8 @@ class OmegaHandler(BaseHTTPRequestHandler):
                 self._handle_stats()
             elif path == "/api/capabilities":
                 self._handle_capabilities()
-            elif path == "/api/kb/search":
-                self._handle_kb_search(params)
-            elif path == "/api/kb/ask":
-                self._handle_kb_ask(params)
-            elif path == "/api/cache/stats":
-                self._handle_cache_stats()
-            elif path == "/api/db/stats":
-                self._handle_db_stats()
-            elif path == "/api/scheduler/tasks":
-                self._handle_scheduler_tasks()
+            elif path == "/api/session":
+                self._handle_session_get(params)
             else:
                 self._send_error(404, f"Endpoint not found: {path}")
 
@@ -212,7 +142,9 @@ class OmegaHandler(BaseHTTPRequestHandler):
             self._send_error(500, f"Internal error: {str(e)}")
 
     def do_POST(self):
-        """Handle POST requests."""
+        """Handle POST requests"""
+        global REQUEST_COUNT
+        REQUEST_COUNT += 1
         try:
             client_ip = self.client_address[0]
             if not self._check_rate_limit(client_ip):
@@ -224,14 +156,10 @@ class OmegaHandler(BaseHTTPRequestHandler):
 
             if path == "/api/process":
                 self._handle_process_post(body)
-            elif path == "/api/kb/add":
-                self._handle_kb_add(body)
-            elif path == "/api/cache/clear":
-                self._handle_cache_clear(body)
-            elif path == "/api/scheduler/schedule":
-                self._handle_scheduler_schedule(body)
-            elif path == "/api/state":
-                self._handle_state_post(body)
+            elif path == "/api/session":
+                self._handle_session_post(body)
+            elif path == "/api/session/update":
+                self._handle_session_update(body)
             else:
                 self._send_error(404, f"Endpoint not found: {path}")
 
@@ -245,38 +173,33 @@ class OmegaHandler(BaseHTTPRequestHandler):
     # ── Handler Methods ──────────────────────────────────────────────────
 
     def _handle_root(self):
-        """Handle root endpoint."""
+        """Handle root endpoint"""
         self._send_json(200, {
             "name": "Omega AI API",
-            "version": "3.7.0",
+            "version": "3.0.0",
             "status": "operational",
             "endpoints": [
-                "/health",
-                "/api/process",
-                "/api/stats",
-                "/api/capabilities",
-                "/api/kb/search",
-                "/api/kb/ask",
-                "/api/kb/add",
-                "/api/cache/stats",
-                "/api/cache/clear",
-                "/api/db/stats",
-                "/api/scheduler/tasks",
-                "/api/scheduler/schedule",
-                "/api/state"
+                "GET /health",
+                "GET /api/process?user_id=&query=",
+                "POST /api/process",
+                "GET /api/stats",
+                "GET /api/capabilities",
+                "GET /api/session?session_id=",
+                "POST /api/session",
+                "POST /api/session/update"
             ]
         })
 
     def _handle_health(self):
-        """Handle health check."""
+        """Handle health check"""
         self._send_json(200, {
             "status": "healthy",
-            "version": "3.7.0",
+            "version": "3.0.0",
             "timestamp": time.time()
         })
 
     def _handle_process_get(self, params: dict):
-        """Handle GET /api/process."""
+        """Handle GET /api/process"""
         user_id = params.get("user_id", "anonymous")
         query = params.get("query", "")
 
@@ -284,11 +207,13 @@ class OmegaHandler(BaseHTTPRequestHandler):
             self._send_error(400, "Missing 'query' parameter")
             return
 
-        result = _get_brain().process(user_id, query)
-        self._send_json(200, result)
+        brain = CoreBrain()
+        import asyncio
+        result = asyncio.run(brain.process_request(user_id, query))
+        self._send_json(200, result.to_dict() if hasattr(result, 'to_dict') else result)
 
     def _handle_process_post(self, body: dict):
-        """Handle POST /api/process."""
+        """Handle POST /api/process"""
         user_id = body.get("user_id", "anonymous")
         query = body.get("query", "")
         context = body.get("context", {})
@@ -297,20 +222,17 @@ class OmegaHandler(BaseHTTPRequestHandler):
             self._send_error(400, "Missing 'query' field")
             return
 
-        result = _get_brain().process(user_id, query, context)
-        self._send_json(200, result)
+        brain = CoreBrain()
+        import asyncio
+        result = asyncio.run(brain.process_request(user_id, query, context))
+        self._send_json(200, result.to_dict() if hasattr(result, 'to_dict') else result)
 
     def _handle_stats(self):
-        """Handle GET /api/stats."""
-        brain_stats = _get_brain().get_stats()
-        db_stats = _get_db().get_stats() if _db else {}
-        cache_stats = _get_cache().get_stats() if _cache else {}
-
+        """Handle GET /api/stats"""
+        brain = CoreBrain()
         self._send_json(200, {
             "status": "success",
-            "brain": brain_stats,
-            "database": db_stats,
-            "cache": cache_stats,
+            "brain": brain.get_system_status(),
             "server": {
                 "uptime_seconds": time.time() - SERVER_START_TIME,
                 "requests_handled": REQUEST_COUNT
@@ -318,164 +240,77 @@ class OmegaHandler(BaseHTTPRequestHandler):
         })
 
     def _handle_capabilities(self):
-        """Handle GET /api/capabilities."""
-        capabilities = _get_brain().get_capabilities()
+        """Handle GET /api/capabilities"""
+        brain = CoreBrain()
+        capabilities = [t.value for t in brain.routing_table.keys()]
         self._send_json(200, {
             "status": "success",
-            "capabilities": capabilities,
+            "capabilities": sorted(capabilities),
             "total": len(capabilities)
         })
 
-    def _handle_kb_search(self, params: dict):
-        """Handle GET /api/kb/search."""
-        query = params.get("q", "")
-        if not query:
-            self._send_error(400, "Missing 'q' parameter")
+    def _handle_session_get(self, params: dict):
+        """Handle GET /api/session"""
+        session_id = params.get("session_id", "")
+        if not session_id:
+            self._send_error(400, "Missing 'session_id' parameter")
             return
 
-        results = _get_kb().search(query)
-        self._send_json(200, {
-            "status": "success",
-            "query": query,
-            "results": results,
-            "total": len(results)
-        })
+        brain = CoreBrain()
+        session = brain.get_session(session_id)
+        if session:
+            self._send_json(200, {
+                "status": "success",
+                "session": session.to_dict()
+            })
+        else:
+            self._send_error(404, "Session not found")
 
-    def _handle_kb_ask(self, params: dict):
-        """Handle GET /api/kb/ask."""
-        query = params.get("q", "")
-        if not query:
-            self._send_error(400, "Missing 'q' parameter")
+    def _handle_session_post(self, body: dict):
+        """Handle POST /api/session"""
+        user_id = body.get("user_id", "")
+        preferences = body.get("preferences", {})
+
+        if not user_id:
+            self._send_error(400, "Missing 'user_id' field")
             return
 
-        match = _get_kb().find_match(query)
+        brain = CoreBrain()
+        session = brain.create_session(user_id, preferences)
         self._send_json(200, {
             "status": "success",
-            "query": query,
-            "match": match,
-            "found": match is not None
+            "session": session.to_dict()
         })
 
-    def _handle_kb_add(self, body: dict):
-        """Handle POST /api/kb/add."""
-        question = body.get("question", "")
-        answer = body.get("answer", "")
-        category = body.get("category", "general")
-
-        if not question or not answer:
-            self._send_error(400, "Missing 'question' or 'answer' field")
-            return
-
-        _get_kb().add_entry(question, answer, category)
-        self._send_json(200, {
-            "status": "success",
-            "message": "Knowledge base entry added"
-        })
-
-    def _handle_cache_stats(self):
-        """Handle GET /api/cache/stats."""
-        stats = _get_cache().get_stats()
-        self._send_json(200, {
-            "status": "success",
-            "cache": stats
-        })
-
-    def _handle_cache_clear(self, body: dict):
-        """Handle POST /api/cache/clear."""
-        pattern = body.get("pattern", "*")
-        _get_cache().clear(pattern)
-        self._send_json(200, {
-            "status": "success",
-            "message": f"Cache cleared with pattern: {pattern}"
-        })
-
-    def _handle_db_stats(self):
-        """Handle GET /api/db/stats."""
-        stats = _get_db().get_stats()
-        self._send_json(200, {
-            "status": "success",
-            "database": stats
-        })
-
-    def _handle_scheduler_tasks(self):
-        """Handle GET /api/scheduler/tasks."""
-        tasks = _get_scheduler().list_tasks()
-        self._send_json(200, {
-            "status": "success",
-            "tasks": tasks,
-            "total": len(tasks)
-        })
-
-    def _handle_scheduler_schedule(self, body: dict):
-        """Handle POST /api/scheduler/schedule."""
-        task_name = body.get("task_name", "")
-        task_type = body.get("task_type", "once")
-        params = body.get("params", {})
-
-        if not task_name:
-            self._send_error(400, "Missing 'task_name' field")
-            return
-
-        task_id = _get_scheduler().schedule(task_name, task_type, params)
-        self._send_json(200, {
-            "status": "success",
-            "task_id": task_id,
-            "message": f"Task '{task_name}' scheduled"
-        })
-
-    def _handle_state_post(self, body: dict):
-        """Handle POST /api/state."""
+    def _handle_session_update(self, body: dict):
+        """Handle POST /api/session/update"""
         session_id = body.get("session_id", "")
-        action = body.get("action", "get")
-        data = body.get("data", {})
+        context_update = body.get("context", {})
 
         if not session_id:
             self._send_error(400, "Missing 'session_id' field")
             return
 
-        conv = _get_conv_state()
-
-        if action == "get":
-            state = conv.get_state(session_id)
-            self._send_json(200, {"status": "success", "state": state})
-        elif action == "update":
-            conv.update_state(session_id, data)
-            self._send_json(200, {"status": "success", "message": "State updated"})
-        elif action == "clear":
-            conv.clear_state(session_id)
-            self._send_json(200, {"status": "success", "message": "State cleared"})
+        brain = CoreBrain()
+        session = brain.update_session_context(session_id, context_update)
+        if session:
+            self._send_json(200, {
+                "status": "success",
+                "message": "Session updated"
+            })
         else:
-            self._send_error(400, f"Unknown action: {action}")
+            self._send_error(404, "Session not found")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  SERVER SETUP
-# ═══════════════════════════════════════════════════════════════════════════════
-
-SERVER_START_TIME = time.time()
-REQUEST_COUNT = 0
-
-
-def create_app() -> HTTPServer:
-    """Create and configure the HTTP server."""
-    port = int(os.getenv("OMEGA_PORT", "8080"))
-    host = os.getenv("OMEGA_HOST", "0.0.0.0")
-
+def start_server(host: str = "0.0.0.0", port: int = 8080):
+    """Start the API server"""
     server = HTTPServer((host, port), OmegaHandler)
-    return server
 
-
-def run_server():
-    """Run the API server."""
-    server = create_app()
-    port = server.server_address[1]
-    host = server.server_address[0]
-
-    print(f"=" * 60)
-    print(f"  Omega AI API Server v3.7.0")
+    print("=" * 60)
+    print(f"  Omega AI API Server")
     print(f"  Listening on http://{host}:{port}")
     print(f"  Health: http://{host}:{port}/health")
-    print(f"=" * 60)
+    print("=" * 60)
 
     # Graceful shutdown
     def signal_handler(sig, frame):
@@ -493,4 +328,4 @@ def run_server():
 
 
 if __name__ == "__main__":
-    run_server()
+    start_server()
