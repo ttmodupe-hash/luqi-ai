@@ -1,72 +1,58 @@
 """
-Luqi AI Configuration - Centralized settings with .env support.
-All environment variables are optional; sensible defaults are provided.
+Luqi AI — Project-level configuration
+Reads from environment variables; provides sensible defaults for local dev.
 """
+
+from __future__ import annotations
+
 import os
 from pathlib import Path
-from typing import Optional
 
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).parent.resolve()
+DATA_DIR = PROJECT_ROOT / "data"
+STATIC_DIR = PROJECT_ROOT / "app" / "dist"  # Vite build output
+UPLOADS_DIR = PROJECT_ROOT / "uploads"
 
-class Settings:
-    """Application settings loaded from environment with defaults."""
+for d in (DATA_DIR, UPLOADS_DIR):
+    d.mkdir(parents=True, exist_ok=True)
 
-    PROJECT_ROOT: Path = Path(__file__).parent.resolve()
-    DATA_DIR: Path = PROJECT_ROOT / "data"
-    LOG_DIR: Path = PROJECT_ROOT / "data" / "logs"
-    SANDBOX_DIR: Path = PROJECT_ROOT / "data" / "sandbox"
+# ---------------------------------------------------------------------------
+# Server
+# ---------------------------------------------------------------------------
+DEBUG = os.environ.get("DEBUG", "false").lower() in ("1", "true", "yes")
+HOST = os.environ.get("HOST", "0.0.0.0")
+PORT = int(os.environ.get("PORT", "8000"))
 
-    host: str = os.getenv("LUQI_HOST", "0.0.0.0")
-    port: int = int(os.getenv("LUQI_PORT", "8000"))
-    workers: int = int(os.getenv("LUQI_WORKERS", "1"))
-    reload: bool = os.getenv("LUQI_RELOAD", "false").lower() == "true"
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+_raw_cors = os.environ.get("CORS_ORIGINS", "*")
+CORS_ORIGINS = [s.strip() for s in _raw_cors.split(",") if s.strip()]
 
-    cors_origins: list = os.getenv(
-        "LUQI_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,*"
-    ).split(",")
+# ---------------------------------------------------------------------------
+# AI / Keys
+# ---------------------------------------------------------------------------
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
+ADMIN_KEY = os.environ.get("LUQI_ADMIN_KEY", "")
 
-    openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
-    openai_model: str = os.getenv("LUQI_MODEL", "gpt-4o")
-    openai_max_tokens: int = int(os.getenv("LUQI_MAX_TOKENS", "2048"))
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "gpt-4o-mini")
+MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "50"))
 
-    db_path: Path = Path(os.getenv("LUQI_DB_PATH", str(DATA_DIR / "luqi.db")))
+# ---------------------------------------------------------------------------
+# Cache / DB
+# ---------------------------------------------------------------------------
+CACHE_DIR = DATA_DIR / "cache"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    voice_timeout: int = int(os.getenv("LUQI_VOICE_TIMEOUT", "5"))
-    voice_accent: str = os.getenv("LUQI_VOICE_ACCENT", "uk")
-    voice_language: str = os.getenv("LUQI_VOICE_LANGUAGE", "en")
+DB_PATH = DATA_DIR / "luqi.db"
 
-    sandbox_timeout: int = int(os.getenv("LUQI_SANDBOX_TIMEOUT", "10"))
-    max_file_size_mb: int = int(os.getenv("LUQI_MAX_FILE_SIZE_MB", "50"))
-
-    alarm_time: str = os.getenv("LUQI_ALARM_TIME", "07:30")
-
-    log_level: str = os.getenv("LUQI_LOG_LEVEL", "INFO")
-    log_to_file: bool = os.getenv("LUQI_LOG_TO_FILE", "true").lower() == "true"
-
-    api_key_header: str = os.getenv("LUQI_API_KEY_HEADER", "X-API-Key")
-    require_api_key: bool = os.getenv("LUQI_REQUIRE_API_KEY", "false").lower() == "true"
-
-    environment: str = os.getenv("LUQI_ENV", "development")
-    version: str = "25.1.2"
-    codename: str = "LUQI"
-
-    @classmethod
-    def ensure_dirs(cls):
-        for d in (cls.DATA_DIR, cls.LOG_DIR, cls.SANDBOX_DIR):
-            d.mkdir(parents=True, exist_ok=True)
-
-    @classmethod
-    def health_info(cls) -> dict:
-        return {
-            "version": cls.version,
-            "codename": cls.codename,
-            "environment": cls.environment,
-            "model": cls.openai_model,
-            "host": cls.host,
-            "port": cls.port,
-            "db_path": str(cls.db_path),
-            "log_level": cls.log_level,
-        }
-
-
-settings = Settings()
-settings.ensure_dirs()
+# ---------------------------------------------------------------------------
+# Feature flags
+# ---------------------------------------------------------------------------
+ENABLE_SANDBOX = os.environ.get("ENABLE_SANDBOX", "true").lower() in ("1", "true", "yes")
+ENABLE_VOICE = os.environ.get("ENABLE_VOICE", "true").lower() in ("1", "true", "yes")
+ENABLE_WEBSOCKET = os.environ.get("ENABLE_WEBSOCKET", "true").lower() in ("1", "true", "yes")
