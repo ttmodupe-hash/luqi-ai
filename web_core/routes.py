@@ -155,7 +155,7 @@ async def root():
 @app.get("/health")
 async def health():
     h = system_agent.health() if system_agent else {}
-    return {"status": "healthy", "version": VERSION, **h.__dict__ if hasattr(h, '__dict__') else {}}
+    return {"status": "healthy", "version": VERSION, **(h.__dict__ if hasattr(h, '__dict__') else {})}
 
 @app.get("/ready")
 async def ready():
