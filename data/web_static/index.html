@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Luqi AI - Unified AI Platform for Web, Desktop, and Mobile">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <title>Luqi AI v25.1.2</title>
+    <style>
+        :root {
+            --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+            --text: #f8fafc; --text2: #94a3b8; --accent: #38bdf8;
+            --accent2: #818cf8; --success: #4ade80; --warning: #fbbf24;
+            --error: #f87171; --border: #475569;
+        }
+        [data-theme="light"] {
+            --bg: #f8fafc; --surface: #ffffff; --surface2: #e2e8f0;
+            --text: #0f172a; --text2: #64748b; --accent: #0284c7;
+            --accent2: #4f46e5; --success: #16a34a; --warning: #d97706;
+            --error: #dc2626; --border: #cbd5e1;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+        .app { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+        .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+        button { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; transition: all 0.2s; }
+        button:hover { background: var(--accent); color: white; }
+        button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; color: white; }
+        button.primary:hover { opacity: 0.9; }
+        .tabs { display: flex; gap: 0.25rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1rem; -webkit-overflow-scrolling: touch; }
+        .tab { padding: 0.625rem 1rem; border-radius: 0.5rem; cursor: pointer; white-space: nowrap; font-size: 0.875rem; color: var(--text2); transition: all 0.2s; border: none; background: transparent; }
+        .tab.active { background: var(--surface2); color: var(--accent); font-weight: 600; }
+        .tab:hover { color: var(--text); }
+        .panel { display: none; animation: fadeIn 0.3s ease; }
+        .panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
+        .card-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+        .grid { display: grid; gap: 1rem; }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+        .stat { text-align: center; padding: 1.5rem 1rem; }
+        .stat-value { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+        .chat-container { display: flex; flex-direction: column; height: calc(100vh - 200px); min-height: 400px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .message { max-width: 85%; padding: 0.75rem 1rem; border-radius: 1rem; font-size: 0.9375rem; line-height: 1.5; word-wrap: break-word; }
+        .message.user { align-self: flex-end; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border-bottom-right-radius: 0.25rem; }
+        .message.assistant { align-self: flex-start; background: var(--surface2); color: var(--text); border-bottom-left-radius: 0.25rem; }
+        .message.system { align-self: center; font-size: 0.75rem; color: var(--text2); background: transparent; max-width: 100%; text-align: center; }
+        .chat-input { display: flex; gap: 0.5rem; padding: 0.75rem; border-top: 1px solid var(--border); background: var(--surface); }
+        .chat-input input { flex: 1; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 1rem; outline: none; }
+        .chat-input input:focus { border-color: var(--accent); }
+        .chat-input button { padding: 0.75rem 1.25rem; }
+        .status-badge { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .status-active { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+        .status-planned { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+        .model-select { padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.875rem; }
+        .session-list { max-height: 300px; overflow-y: auto; }
+        .session-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; transition: background 0.2s; }
+        .session-item:hover { background: var(--surface2); }
+        .session-item.active { background: var(--surface2); border-left: 3px solid var(--accent); }
+        .upload-zone { border: 2px dashed var(--border); border-radius: 0.75rem; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-zone:hover { border-color: var(--accent); background: rgba(56, 189, 248, 0.05); }
+        .upload-zone.dragover { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
+        .capability-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid var(--border); }
+        .capability-item:last-child { border-bottom: none; }
+        .toast { position: fixed; bottom: 1rem; right: 1rem; padding: 0.75rem 1.25rem; border-radius: 0.5rem; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 0.875rem; z-index: 1000; animation: slideIn 0.3s ease; max-width: 300px; }
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--error); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .typing { display: flex; gap: 0.25rem; padding: 0.75rem 1rem; }
+        .typing-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--text2); animation: bounce 1.4s infinite ease-in-out; }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); } 40% { transform: scale(1); } }
+        .hidden { display: none !important; }
+        .api-key-input { width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: monospace; font-size: 0.875rem; }
+        @media (max-width: 640px) {
+            .app { padding: 0.5rem; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .chat-container { height: calc(100vh - 160px); }
+            .message { max-width: 95%; font-size: 0.875rem; }
+            .logo { font-size: 1.25rem; }
+            header { flex-wrap: wrap; gap: 0.5rem; }
+        }
+        @media (min-width: 1024px) {
+            .sidebar-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <div class="logo">&#9889; LUQI AI</div>
+            <div class="header-actions">
+                <select id="modelSelect" class="model-select">
+                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="claude-sonnet">Claude Sonnet</option>
+                    <option value="claude-haiku">Claude Haiku</option>
+                    <option value="local-llama">Local Llama</option>
+                </select>
+                <button onclick="toggleTheme()" title="Toggle theme">&#9788;</button>
+                <button onclick="showApiKeyModal()" title="API Key">&#128272;</button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" onclick="showPanel('chat')">&#128172; Chat</button>
+            <button class="tab" onclick="showPanel('sessions')">&#128214; Sessions</button>
+            <button class="tab" onclick="showPanel('upload')">&#128206; Upload</button>
+            <button class="tab" onclick="showPanel('capabilities')">&#9889; Capabilities</button>
+            <button class="tab" onclick="showPanel('youtube')">&#127909; YouTube</button>
+            <button class="tab" onclick="showPanel('wealth')">&#128176; Wealth</button>
+            <button class="tab" onclick="showPanel('tools')">&#128295; Tools</button>
+            <button class="tab" onclick="showPanel('settings')">&#9881; Settings</button>
+        </nav>
+
+        <!-- Chat Panel -->
+        <div id="panel-chat" class="panel active">
+            <div class="sidebar-layout">
+                <div class="card hidden-lg">
+                    <div class="card-title">&#128214; Sessions</div>
+                    <div class="session-list" id="sessionList"></div>
+                    <button class="primary" onclick="newSession()" style="width:100%;margin-top:0.5rem;">+ New Session</button>
+                </div>
+                <div>
+                    <div class="card chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message system">Welcome to Luqi AI v25.1.2 &#127881;<br>Enter your API key to start chatting.</div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="chatInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendMessage()">
+                            <button onclick="sendMessage()">&#10148;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Panel -->
+        <div id="panel-sessions" class="panel">
+            <div class="card">
+                <div class="card-title">&#128214; Conversation Sessions</div>
+                <div id="sessionsList"></div>
+            </div>
+        </div>
+
+        <!-- Upload Panel -->
+        <div id="panel-upload" class="panel">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">&#128206; Upload Document</div>
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <p style="font-size:2rem;margin-bottom:0.5rem;">&#128229;</p>
+                        <p>Click or drag & drop files here</p>
+                        <p style="font-size:0.75rem;color:var(--text2);margin-top:0.5rem;">PDF, DOCX, XLSX, TXT, PY, JSON, CSV, Images</p>
+                    </div>
+                    <input type="file" id="fileInput" class="hidden" onchange="handleFileSelect(event)">
+                    <div id="uploadResult"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">&#128196; Documents</div>
+                    <div id="documentsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capabilities Panel -->
+        <div id="panel-capabilities" class="panel">
+            <div class="grid grid-4">
+                <div class="card stat">
+                    <div class="stat-value" id="statActive">-</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-value" id="statPlanned">-</div>
+                    <div class="stat-label">Planned</div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-value" id="statTotal">-</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-value" id="statCategories">-</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">&#9889; All Capabilities</div>
+                <div id="capabilitiesList"></div>
+            </div>
+        </div>
+
+        <!-- YouTube Panel -->
+        <div id="panel-youtube" class="panel">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">&#127909; Create Campaign</div>
+                    <input type="text" id="ytNiche" placeholder="Niche (e.g., technology)" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <input type="text" id="ytAudience" placeholder="Target Audience (e.g., beginners)" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <input type="number" id="ytCount" placeholder="Video count (default: 30)" value="30" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <button class="primary" onclick="createYoutubeCampaign()" style="width:100%;">Generate Campaign</button>
+                    <div id="youtubeResult"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">&#127912; Thumbnail Prompt</div>
+                    <input type="text" id="ytThumbTitle" placeholder="Video title" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <button class="primary" onclick="generateThumbnail()" style="width:100%;">Generate Prompt</button>
+                    <div id="thumbnailResult"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">&#128221; Script Outline</div>
+                <input type="text" id="ytScriptTopic" placeholder="Topic" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                <input type="number" id="ytScriptDuration" placeholder="Duration in minutes" value="10" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                <button class="primary" onclick="generateScript()" style="width:100%;">Generate Script</button>
+                <div id="scriptResult"></div>
+            </div>
+        </div>
+
+        <!-- Wealth Panel -->
+        <div id="panel-wealth" class="panel">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">&#128176; Sales Funnel</div>
+                    <input type="text" id="wNiche" placeholder="Niche (e.g., tech)" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <input type="number" id="wAudience" placeholder="Audience size" value="10000" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <input type="text" id="wContent" placeholder="Content type (videos/blog/podcast)" value="videos" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <button class="primary" onclick="generateFunnel()" style="width:100%;">Generate Funnel</button>
+                    <div id="funnelResult"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">&#127942; Sponsors</div>
+                    <input type="text" id="wSponsorNiche" placeholder="Niche" value="tech" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <input type="number" id="wSubscribers" placeholder="Subscriber count" value="50000" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <button class="primary" onclick="findSponsors()" style="width:100%;">Find Sponsors</button>
+                    <div id="sponsorResult"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">&#128142; Pricing Tiers</div>
+                <input type="text" id="wProduct" placeholder="Product name" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                <input type="text" id="wValueProps" placeholder="Value propositions (comma separated)" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                <button class="primary" onclick="createPricing()" style="width:100%;">Create Pricing</button>
+                <div id="pricingResult"></div>
+            </div>
+        </div>
+
+        <!-- Tools Panel -->
+        <div id="panel-tools" class="panel">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">&#128270; Web Search</div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" id="searchQuery" placeholder="Search query..." style="flex:1;padding:0.75rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                        <button class="primary" onclick="webSearch()">Search</button>
+                    </div>
+                    <div id="searchResult"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">&#127760; Translate</div>
+                    <input type="text" id="translateText" placeholder="Text to translate" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                    <select id="translateLang" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ar">Arabic</option>
+                        <option value="hi">Hindi</option>
+                        <option value="yo">Yoruba</option>
+                        <option value="ig">Igbo</option>
+                    </select>
+                    <button class="primary" onclick="translateText()" style="width:100%;">Translate</button>
+                    <div id="translateResult"></div>
+                </div>
+            </div>
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">&#128483; Text-to-Speech</div>
+                    <textarea id="ttsText" placeholder="Enter text to speak..." rows="3" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;"></textarea>
+                    <select id="ttsAccent" style="width:100%;padding:0.75rem;margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+                        <option value="american">&#127482;&#127480; American</option>
+                        <option value="british">&#127468;&#127463; British</option>
+                        <option value="australian">&#127462;&#127482; Australian</option>
+                        <option value="indian">&#127470;&#127475; Indian</option>
+                        <option value="nigerian">&#127475;&#127468; Nigerian</option>
+                        <option value="south_african">&#127487;&#127462; South African</option>
+                        <option value="french">&#127467;&#127479; French</option>
+                        <option value="german">&#127465;&#127466; German</option>
+                    </select>
+                    <button class="primary" onclick="textToSpeech()" style="width:100%;">Speak</button>
+                    <audio id="ttsAudio" controls style="width:100%;margin-top:0.5rem;display:none;"></audio>
+                </div>
+                <div class="card">
+                    <div class="card-title">&#128295; Self-Improvement</div>
+                    <button onclick="getSelfImproveReport()">Generate Report</button>
+                    <button onclick="getSelfImproveAnalyze()">Analyze Project</button>
+                    <div id="selfImproveResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="panel-settings" class="panel">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-title">&#9881; System Info</div>
+                    <div id="systemInfo"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">&#128272; API Key</div>
+                    <input type="password" id="apiKeyInput" class="api-key-input" placeholder="sk-luqi-..." onchange="saveApiKey()">
+                    <p style="font-size:0.75rem;color:var(--text2);margin-top:0.5rem;">Your API key is stored locally in your browser.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
+        <div class="card" style="max-width:400px;width:90%;">
+            <div class="card-title">&#128272; Enter API Key</div>
+            <p style="margin-bottom:1rem;color:var(--text2);">You need an API key to use Luqi AI features.</p>
+            <input type="password" id="modalApiKey" class="api-key-input" placeholder="sk-luqi-..." style="margin-bottom:1rem;">
+            <div style="display:flex;gap:0.5rem;">
+                <button onclick="closeApiKeyModal()" style="flex:1;">Cancel</button>
+                <button class="primary" onclick="saveModalApiKey()" style="flex:1;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let apiKey = localStorage.getItem('luqi_api_key') || '';
+        let currentSession = localStorage.getItem('luqi_session') || generateId();
+        let ws = null;
+        const API_BASE = '';
+
+        function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('luqi_theme', next);
+        }
+        const savedTheme = localStorage.getItem('luqi_theme');
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Panels
+        function showPanel(name) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('panel-' + name)?.classList.add('active');
+            event.target.classList.add('active');
+            if (name === 'capabilities') loadCapabilities();
+            if (name === 'sessions') loadSessions();
+            if (name === 'upload') loadDocuments();
+            if (name === 'settings') loadSystemInfo();
+        }
+
+        // API Key
+        function showApiKeyModal() { document.getElementById('apiKeyModal').style.display = 'flex'; document.getElementById('modalApiKey').value = apiKey; }
+        function closeApiKeyModal() { document.getElementById('apiKeyModal').style.display = 'none'; }
+        function saveModalApiKey() { apiKey = document.getElementById('modalApiKey').value; localStorage.setItem('luqi_api_key', apiKey); closeApiKeyModal(); showToast('API key saved'); }
+        function saveApiKey() { apiKey = document.getElementById('apiKeyInput').value; localStorage.setItem('luqi_api_key', apiKey); }
+        if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+
+        // Headers
+        function headers() {
+            const h = {'Content-Type': 'application/json'};
+            if (apiKey) h['x-api-key'] = apiKey;
+            return h;
+        }
+
+        // Toast
+        function showToast(msg, type='success') {
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 4000);
+        }
+
+        // Chat
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            if (!apiKey) { showApiKeyModal(); return; }
+            input.value = '';
+            addMessage('user', msg);
+            showTyping();
+            try {
+                const res = await fetch(API_BASE + '/chat', {method: 'POST', headers: headers(), body: JSON.stringify({message: msg, session_id: currentSession, model: document.getElementById('modelSelect').value})});
+                hideTyping();
+                if (res.ok) {
+                    const data = await res.json();
+                    addMessage('assistant', data.reply || 'No response');
+                } else {
+                    const err = await res.text();
+                    addMessage('system', 'Error: ' + res.status + ' - ' + err);
+                }
+            } catch (e) {
+                hideTyping();
+                addMessage('system', 'Network error: ' + e.message);
+            }
+        }
+
+        function addMessage(role, content) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message ' + role;
+            div.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTyping() {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message assistant typing';
+            div.id = 'typingIndicator';
+            div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideTyping() { document.getElementById('typingIndicator')?.remove(); }
+
+        function escapeHtml(t) {
+            const d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+
+        // Sessions
+        async function loadSessions() {
+            try {
+                const res = await fetch(API_BASE + '/sessions', {headers: headers()});
+                if (!res.ok) return;
+                const data = await res.json();
+                const list = document.getElementById('sessionsList');
+                const sidebarList = document.getElementById('sessionList');
+                let html = '';
+                let sidebarHtml = '';
+                (data.sessions || []).forEach(s => {
+                    const active = s.session_id === currentSession ? 'active' : '';
+                    const item = `<div class="session-item ${active}" onclick="switchSession('${s.session_id}')">
+                        <div><strong>${s.session_id.substr(0, 12)}...</strong><br><small>${s.message_count} msgs</small></div>
+                        <small>${new Date(s.last_active).toLocaleDateString()}</small>
+                    </div>`;
+                    html += item;
+                    sidebarHtml += item;
+                });
+                list.innerHTML = html || '<p style="color:var(--text2);">No sessions yet</p>';
+                sidebarList.innerHTML = sidebarHtml || '<p style="color:var(--text2);font-size:0.75rem;">No sessions</p>';
+            } catch (e) { console.error(e); }
+        }
+
+        function switchSession(id) { currentSession = id; localStorage.setItem('luqi_session', id); document.getElementById('chatMessages').innerHTML = ''; addMessage('system', 'Switched to session ' + id.substr(0, 12)); loadSessions(); }
+        function newSession() { currentSession = generateId(); localStorage.setItem('luqi_session', currentSession); document.getElementById('chatMessages').innerHTML = ''; addMessage('system', 'New session started'); loadSessions(); }
+
+        // Upload
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('dragover'); }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('dragover'); }
+        function handleDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('dragover'); const files = e.dataTransfer.files; if (files.length) uploadFile(files[0]); }
+        function handleFileSelect(e) { const files = e.target.files; if (files.length) uploadFile(files[0]); }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(API_BASE + '/upload', {method: 'POST', headers: {'x-api-key': apiKey}, body: formData});
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('uploadResult').innerHTML = `<p style="color:var(--success);margin-top:0.5rem;">&#10003; Uploaded: ${data.filename} (${data.parsed_length} chars parsed)</p>`;
+                    loadDocuments();
+                } else {
+                    document.getElementById('uploadResult').innerHTML = `<p style="color:var(--error);margin-top:0.5rem;">Error: ${data.detail || 'Upload failed'}</p>`;
+                }
+            } catch (e) { document.getElementById('uploadResult').innerHTML = `<p style="color:var(--error);">Error: ${e.message}</p>`; }
+        }
+
+        async function loadDocuments() {
+            try {
+                const res = await fetch(API_BASE + '/documents', {headers: headers()});
+                if (!res.ok) return;
+                const data = await res.json();
+                const list = document.getElementById('documentsList');
+                list.innerHTML = (data.documents || []).map(d => `<div class="capability-item">
+                    <span>&#128196; ${d.filename} <small style="color:var(--text2)">(${d.doc_type})</small></span>
+                    <small style="color:var(--text2)">${(d.size_bytes / 1024).toFixed(1)} KB</small>
+                </div>`).join('') || '<p style="color:var(--text2);">No documents uploaded</p>';
+            } catch (e) { console.error(e); }
+        }
+
+        // Capabilities
+        async function loadCapabilities() {
+            try {
+                const res = await fetch(API_BASE + '/capabilities', {headers: headers()});
+                if (!res.ok) return;
+                const data = await res.json();
+                const caps = data.capabilities || [];
+                document.getElementById('statActive').textContent = data.summary?.active || '-';
+                document.getElementById('statPlanned').textContent = data.summary?.planned || '-';
+                document.getElementById('statTotal').textContent = caps.length;
+                const categories = [...new Set(caps.map(c => c.category))];
+                document.getElementById('statCategories').textContent = categories.length;
+                document.getElementById('capabilitiesList').innerHTML = caps.map(c => `<div class="capability-item">
+                    <div><strong>${c.name}</strong><br><small style="color:var(--text2)">${c.id} &middot; ${c.category}</small></div>
+                    <span class="status-badge ${c.status === 'active' ? 'status-active' : 'status-planned'}">${c.status}</span>
+                </div>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        // YouTube
+        async function createYoutubeCampaign() {
+            const niche = document.getElementById('ytNiche').value;
+            const audience = document.getElementById('ytAudience').value;
+            const count = parseInt(document.getElementById('ytCount').value) || 30;
+            if (!niche) { showToast('Enter a niche', 'error'); return; }
+            try {
+                const res = await fetch(API_BASE + '/youtube/campaign', {method: 'POST', headers: headers(), body: JSON.stringify({niche, target_audience: audience, video_count: count})});
+                const data = await res.json();
+                if (res.ok) {
+                    let html = `<h4 style="margin:1rem 0 0.5rem">${data.niche} Campaign (${data.total_videos} videos)</h4>`;
+                    html += `<p><strong>Content Pillars:</strong> ${(data.content_pillars || []).join(', ')}</p>`;
+                    html += `<p><strong>Upload Schedule:</strong> ${(data.upload_schedule || []).join(', ')}</p>`;
+                    html += '<div style="max-height:300px;overflow-y:auto;margin-top:0.5rem">';
+                    (data.videos || []).slice(0, 10).forEach(v => {
+                        html += `<div style="padding:0.5rem;border-bottom:1px solid var(--border)"><strong>Ep ${v.episode}:</strong> ${v.title}<br><small>${v.pillar} &middot; ${v.estimated_duration}min</small></div>`;
+                    });
+                    html += '</div>';
+                    document.getElementById('youtubeResult').innerHTML = html;
+                    showToast('Campaign created!');
+                } else { showToast(data.detail || 'Error', 'error'); }
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function generateThumbnail() {
+            const title = document.getElementById('ytThumbTitle').value;
+            if (!title) { showToast('Enter a title', 'error'); return; }
+            try {
+                const res = await fetch(API_BASE + '/youtube/thumbnail', {method: 'POST', headers: headers(), body: JSON.stringify({title})});
+                const data = await res.json();
+                document.getElementById('thumbnailResult').innerHTML = `<pre style="margin-top:0.5rem;padding:0.75rem;background:var(--bg);border-radius:0.5rem;white-space:pre-wrap;font-size:0.875rem">${escapeHtml(data.prompt || '')}</pre>`;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function generateScript() {
+            const topic = document.getElementById('ytScriptTopic').value;
+            const duration = parseInt(document.getElementById('ytScriptDuration').value) || 10;
+            if (!topic) { showToast('Enter a topic', 'error'); return; }
+            try {
+                const res = await fetch(API_BASE + '/youtube/script', {method: 'POST', headers: headers(), body: JSON.stringify({topic, duration_minutes: duration})});
+                const data = await res.json();
+                let html = `<h4 style="margin-top:0.5rem">${data.topic} (${data.total_duration}min)</h4>`;
+                (data.segments || []).forEach(s => {
+                    html += `<div style="padding:0.5rem;border-bottom:1px solid var(--border)"><span class="status-badge status-active">${s.type}</span> <strong>${s.duration}min</strong><br>${escapeHtml(s.content)}</div>`;
+                });
+                document.getElementById('scriptResult').innerHTML = html;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // Wealth
+        async function generateFunnel() {
+            const niche = document.getElementById('wNiche').value;
+            const audience = parseInt(document.getElementById('wAudience').value) || 10000;
+            const content = document.getElementById('wContent').value;
+            if (!niche) { showToast('Enter a niche', 'error'); return; }
+            try {
+                const res = await fetch(API_BASE + '/wealth/funnel', {method: 'POST', headers: headers(), body: JSON.stringify({niche, audience_size: audience, content_type: content})});
+                const data = await res.json();
+                let html = `<h4 style="margin:0.5rem 0">${data.template}</h4>`;
+                html += `<p><strong>Est. Yearly Revenue:</strong> $${data.total_yearly_revenue?.toLocaleString() || 0}</p>`;
+                html += '<table style="width:100%;margin-top:0.5rem;font-size:0.875rem">';
+                html += '<tr><th style="text-align:left;padding:0.5rem;border-bottom:1px solid var(--border)">Tier</th><th style="text-align:right">Audience</th><th style="text-align:right">Revenue</th></tr>';
+                (data.tiers || []).forEach(t => { html += `<tr><td style="padding:0.5rem;border-bottom:1px solid var(--border)">${t.tier}</td><td style="text-align:right">${t.audience?.toLocaleString() || 0}</td><td style="text-align:right">$${t.revenue?.toLocaleString() || 0}</td></tr>`; });
+                html += '</table>';
+                document.getElementById('funnelResult').innerHTML = html;
+                showToast('Funnel generated!');
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function findSponsors() {
+            const niche = document.getElementById('wSponsorNiche').value;
+            const subs = parseInt(document.getElementById('wSubscribers').value) || 50000;
+            try {
+                const res = await fetch(API_BASE + '/wealth/sponsors', {method: 'POST', headers: headers(), body: JSON.stringify({niche, subscriber_count: subs})});
+                const data = await res.json();
+                const s = (data.sponsors || [])[0];
+                if (s) {
+                    let html = `<p><strong>Est. per video:</strong> $${s.estimated_sponsorship_per_video?.toLocaleString() || 0}</p>`;
+                    html += `<p><strong>Potential sponsors:</strong> ${(s.potential_sponsors || []).join(', ')}</p>`;
+                    html += `<p style="margin-top:0.5rem"><strong>Tips:</strong></p><ul style="margin-left:1rem;color:var(--text2)">`;
+                    (s.negotiation_tips || []).forEach(t => { html += `<li>${t}</li>`; });
+                    html += '</ul>';
+                    document.getElementById('sponsorResult').innerHTML = html;
+                }
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function createPricing() {
+            const product = document.getElementById('wProduct').value;
+            const props = document.getElementById('wValueProps').value.split(',').map(s => s.trim()).filter(Boolean);
+            if (!product) { showToast('Enter a product name', 'error'); return; }
+            try {
+                const res = await fetch(API_BASE + '/wealth/pricing', {method: 'POST', headers: headers(), body: JSON.stringify({product_name: product, value_propositions: props})});
+                const data = await res.json();
+                let html = '<div class="grid grid-3" style="margin-top:0.5rem">';
+                ['basic', 'pro', 'premium'].forEach(tier => {
+                    const t = data[tier];
+                    if (t) html += `<div class="card" style="text-align:center"><h4 style="text-transform:capitalize">${tier}</h4><div style="font-size:1.5rem;font-weight:800;color:var(--accent);margin:0.5rem 0">${t.price}</div><p style="font-size:0.75rem;color:var(--text2)">${t.target}</p><ul style="text-align:left;font-size:0.875rem;margin-top:0.5rem">${(t.includes || []).map(i => `<li>${i}</li>`).join('')}</ul></div>`;
+                });
+                html += '</div>';
+                document.getElementById('pricingResult').innerHTML = html;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // Tools
+        async function webSearch() {
+            const query = document.getElementById('searchQuery').value;
+            if (!query) return;
+            try {
+                const res = await fetch(API_BASE + '/search?query=' + encodeURIComponent(query), {headers: headers()});
+                const data = await res.json();
+                document.getElementById('searchResult').innerHTML = `<pre style="margin-top:0.5rem;padding:0.75rem;background:var(--bg);border-radius:0.5rem;white-space:pre-wrap;font-size:0.875rem">${escapeHtml(data.results || 'No results')}</pre>`;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function translateText() {
+            const text = document.getElementById('translateText').value;
+            const lang = document.getElementById('translateLang').value;
+            if (!text) return;
+            try {
+                const res = await fetch(API_BASE + '/translate', {method: 'POST', headers: headers(), body: JSON.stringify({text, target_language: lang})});
+                const data = await res.json();
+                document.getElementById('translateResult').innerHTML = `<p style="margin-top:0.5rem"><strong>${data.target_language}:</strong> ${escapeHtml(data.translated || '')}</p>`;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function textToSpeech() {
+            const text = document.getElementById('ttsText').value;
+            const accent = document.getElementById('ttsAccent').value;
+            if (!text) return;
+            try {
+                const res = await fetch(API_BASE + '/voice/tts', {method: 'POST', headers: headers(), body: JSON.stringify({text, accent})});
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const audio = document.getElementById('ttsAudio');
+                    audio.src = url;
+                    audio.style.display = 'block';
+                    audio.play();
+                } else { showToast('TTS failed', 'error'); }
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function getSelfImproveReport() {
+            try {
+                const res = await fetch(API_BASE + '/self-improve/report', {headers: headers()});
+                const data = await res.json();
+                document.getElementById('selfImproveResult').innerHTML = `<pre style="margin-top:0.5rem;padding:0.75rem;background:var(--bg);border-radius:0.5rem;white-space:pre-wrap;font-size:0.75rem;max-height:400px;overflow-y:auto">${escapeHtml(data.report || '')}</pre>`;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function getSelfImproveAnalyze() {
+            try {
+                const res = await fetch(API_BASE + '/self-improve/analyze', {headers: headers()});
+                const data = await res.json();
+                const files = (data.files || []).slice(0, 10);
+                let html = '<div style="margin-top:0.5rem;max-height:400px;overflow-y:auto">';
+                files.forEach(f => {
+                    html += `<div style="padding:0.5rem;border-bottom:1px solid var(--border)"><strong>${f.file}</strong> - ${f.lines} lines, ${f.functions} funcs, ${f.classes} classes`;
+                    if (f.issues?.length) html += `<br><span style="color:var(--error);font-size:0.75rem">${f.issues.join('; ')}</span>`;
+                    html += '</div>';
+                });
+                html += '</div>';
+                document.getElementById('selfImproveResult').innerHTML = html;
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // System Info
+        async function loadSystemInfo() {
+            try {
+                const res = await fetch(API_BASE + '/config');
+                const data = await res.json();
+                let html = `<p><strong>Version:</strong> ${data.version}</p>`;
+                html += `<p><strong>Models:</strong> ${(data.models || []).join(', ')}</p>`;
+                html += `<p><strong>Voice STT:</strong> ${data.features?.voice_stt ? '&#10003; Available' : '&#10007; Not installed'}</p>`;
+                html += `<p><strong>Voice TTS:</strong> ${data.features?.voice_tts ? '&#10003; Available' : '&#10007; Not installed'}</p>`;
+                html += `<p><strong>AI:</strong> ${data.features?.ai ? '&#10003; Connected' : '&#10007; Offline'}</p>`;
+                html += `<p><strong>Document Types:</strong> ${(data.doc_types || []).join(', ')}</p>`;
+                html += `<p><strong>Accents:</strong> ${(data.accents || []).join(', ')}</p>`;
+                document.getElementById('systemInfo').innerHTML = html;
+            } catch (e) { document.getElementById('systemInfo').innerHTML = '<p style="color:var(--error)">Failed to load system info</p>'; }
+        }
+
+        // WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+            ws.onopen = () => { ws.send(JSON.stringify({type: 'init', session_id: currentSession})); };
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'response') { hideTyping(); addMessage('assistant', data.content); }
+                else if (data.type === 'system') { addMessage('system', data.content); }
+            };
+            ws.onclose = () => { setTimeout(connectWebSocket, 3000); };
+        }
+
+        // PWA
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'luqi-v25.1.2';
+                const urlsToCache = ['/static/index.html', '/static/icon-192.png', '/static/icon-512.png'];
+                self.addEventListener('install', e => {
+                    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+                    self.skipWaiting();
+                });
+                self.addEventListener('fetch', e => {
+                    e.respondWith(caches.match(e.request).then(response => response || fetch(e.request)));
+                });
+                self.addEventListener('activate', e => {
+                    e.waitUntil(caches.keys().then(names => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))));
+                    self.clients.claim();
+                });
+            `;
+            const swBlob = new Blob([swCode], {type: 'application/javascript'});
+            const swUrl = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swUrl).catch(() => {});
+        }
+
+        // Init
+        loadSessions();
+        if (!apiKey) setTimeout(showApiKeyModal, 500);
+    </script>
+</body>
+</html>
