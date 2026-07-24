@@ -1,18 +1,16 @@
-#!/usr/bin/env python3
-"""
-Omega AI - Advanced African Intelligence Platform
-==================================================
-A comprehensive AI system with African language support, financial literacy,
-educational companions, vocational training, and more.
+"""Omega AI (Luqi-AI) — Multi-capability AI assistant.
 
-Version: 3.2.0
+Specialized in African markets, finance, languages, and professional assistance.
 """
+from __future__ import annotations
 
-__version__ = "3.2.0"
-__author__ = "Luqi AI Team"
+__version__ = "3.6.0"
+__author__ = "Luqi AI Labs"
 __license__ = "MIT"
 
-from .core_brain import OmegaBrain
-from .api_server import create_app
+# Convenience imports
+from config import CONFIG
+from core_brain import OmegaBrain
+from response_schema import ResponseDict, ok, err
 
-__all__ = ["OmegaBrain", "create_app"]
+__all__ = ["CONFIG", "OmegaBrain", "ResponseDict", "ok", "err", "__version__"]

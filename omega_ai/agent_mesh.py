@@ -1,87 +1,65 @@
-#!/usr/bin/env python3
+"""Omega AI v3 — Agent Mesh
+Agent-to-agent communication and task delegation between modules.
 """
-Omega AI Agent Mesh - Distributed Agent Network
-Enables multiple AI agents to collaborate and share knowledge.
-"""
+from __future__ import annotations
 
-import logging
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
+import time
+import uuid
+from typing import Any, Callable
 
-logger = logging.getLogger(__name__)
-
-@dataclass
-class AgentNode:
-    """Represents an agent in the mesh network."""
-    agent_id: str
-    name: str
-    capabilities: List[str]
-    status: str = "active"
-    last_seen: Optional[str] = None
 
 class AgentMesh:
-    """Manages a network of collaborating AI agents."""
-    
-    def __init__(self):
-        self.agents: Dict[str, AgentNode] = {}
-        self.message_queue: List[Dict[str, Any]] = []
-        logger.info("Agent Mesh initialized")
-    
-    def register_agent(self, agent_id: str, name: str, capabilities: List[str]) -> bool:
-        """Register a new agent in the mesh."""
-        if agent_id in self.agents:
-            logger.warning(f"Agent {agent_id} already registered")
-            return False
-        
-        self.agents[agent_id] = AgentNode(
-            agent_id=agent_id,
-            name=name,
-            capabilities=capabilities
-        )
-        logger.info(f"Agent {name} ({agent_id}) registered")
-        return True
-    
-    def unregister_agent(self, agent_id: str) -> bool:
-        """Remove an agent from the mesh."""
-        if agent_id not in self.agents:
-            return False
-        del self.agents[agent_id]
-        logger.info(f"Agent {agent_id} unregistered")
-        return True
-    
-    def get_agent(self, agent_id: str) -> Optional[AgentNode]:
-        """Get an agent by ID."""
-        return self.agents.get(agent_id)
-    
-    def list_agents(self) -> List[Dict[str, Any]]:
-        """List all registered agents."""
-        return [
-            {
-                "agent_id": agent.agent_id,
-                "name": agent.name,
-                "capabilities": agent.capabilities,
-                "status": agent.status
-            }
-            for agent in self.agents.values()
-        ]
-    
-    def find_agents_by_capability(self, capability: str) -> List[AgentNode]:
-        """Find agents with a specific capability."""
-        return [
-            agent for agent in self.agents.values()
-            if capability in agent.capabilities
-        ]
-    
-    def broadcast(self, message: Dict[str, Any]) -> int:
-        """Broadcast a message to all agents."""
-        self.message_queue.append(message)
-        return len(self.agents)
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """Get mesh statistics."""
+    """Lightweight message bus for inter-module communication."""
+
+    def __init__(self) -> None:
+        self.agents: dict[str, Callable] = {}
+        self.messages: list[dict[str, Any]] = []
+        self.max_messages = 1000
+
+    def register(self, name: str, handler: Callable) -> None:
+        """Register an agent handler."""
+        self.agents[name] = handler
+
+    def send(self, sender: str, recipient: str, task: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Send a message to another agent."""
+        msg = {
+            "id": str(uuid.uuid4())[:8],
+            "sender": sender,
+            "recipient": recipient,
+            "task": task,
+            "payload": payload or {},
+            "timestamp": time.time(),
+        }
+        self.messages.append(msg)
+        if len(self.messages) > self.max_messages:
+            self.messages = self.messages[-self.max_messages:]
+
+        if recipient in self.agents:
+            try:
+                result = self.agents[recipient](task, payload or {})
+                return {"success": True, "result": result, "message_id": msg["id"]}
+            except Exception as e:
+                return {"success": False, "error": str(e), "message_id": msg["id"]}
+        return {"success": False, "error": f"Agent '{recipient}' not registered", "message_id": msg["id"]}
+
+    def broadcast(self, sender: str, task: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Broadcast a message to all registered agents."""
+        results = {}
+        for name in self.agents:
+            if name != sender:
+                results[name] = self.send(sender, name, task, payload)
+        return {"success": True, "results": results}
+
+    def get_messages(self, agent: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        """Get recent messages, optionally filtered by agent."""
+        msgs = self.messages[-limit:]
+        if agent:
+            msgs = [m for m in msgs if m["sender"] == agent or m["recipient"] == agent]
+        return msgs
+
+    def status(self) -> dict[str, Any]:
         return {
-            "total_agents": len(self.agents),
-            "active_agents": sum(1 for a in self.agents.values() if a.status == "active"),
-            "total_messages": len(self.message_queue),
-            "agents": self.list_agents()
+            "registered_agents": list(self.agents.keys()),
+            "message_count": len(self.messages),
+            "max_messages": self.max_messages,
         }
