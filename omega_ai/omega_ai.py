@@ -1,22 +1,33 @@
 #!/usr/bin/env python3
-"""Omega AI v3.2.0 — Main Entry Point
+# -*- coding: utf-8 -*-
+"""
+Omega AI - Main Entry Point
 Unified interface for all Omega AI capabilities.
-Usage: python omega_ai.py [command] [options]
 """
 
 import argparse
+import asyncio
 import json
+import logging
 import os
 import sys
 import time
 from typing import Any, Dict, List, Optional
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Ensure project root is in path
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from core_brain import OmegaBrain, get_brain, process_query, get_stats, get_capabilities
+from core_brain import CoreBrain
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  COMMAND HANDLERS
@@ -24,11 +35,11 @@ from core_brain import OmegaBrain, get_brain, process_query, get_stats, get_capa
 
 def handle_chat(args):
     """Interactive chat mode."""
-    brain = get_brain()
+    brain = CoreBrain()
     user_id = args.user_id or f"cli_{int(time.time())}"
 
     print("=" * 60)
-    print("  Omega AI v3.2.0 — Interactive Chat")
+    print("  Omega AI — Interactive Chat")
     print("  Type 'exit' to quit, 'stats' for system info")
     print("=" * 60)
 
@@ -38,18 +49,18 @@ def handle_chat(args):
             if query.lower() in ("exit", "quit", "q"):
                 break
             if query.lower() == "stats":
-                print(json.dumps(get_stats(), indent=2))
+                print(json.dumps(brain.get_system_status(), indent=2))
                 continue
             if not query:
                 continue
 
-            result = brain.process(user_id, query)
-            response = result.get("response", "No response")
+            result = asyncio.run(brain.process_request(user_id, query))
+            response = result.response if hasattr(result, 'response') else str(result)
             print(f"Omega: {response}")
 
             if args.verbose:
-                print(f"  [module: {result.get('module', 'unknown')}, "
-                      f"time: {result.get('response_time_ms', 0)}ms]")
+                print(f"  [modules: {result.modules_used if hasattr(result, 'modules_used') else []}, "
+                      f"time: {result.processing_time_ms if hasattr(result, 'processing_time_ms') else 0}ms]")
 
         except KeyboardInterrupt:
             break
@@ -61,49 +72,55 @@ def handle_chat(args):
 
 def handle_query(args):
     """Single query mode."""
-    brain = get_brain()
-    result = brain.process(args.user_id or "cli", args.query)
+    brain = CoreBrain()
+    result = asyncio.run(brain.process_request(args.user_id or "cli", args.query))
 
     if args.json:
-        print(json.dumps(result, indent=2))
+        print(json.dumps(result.to_dict() if hasattr(result, 'to_dict') else result, indent=2))
     else:
-        print(result.get("response", "No response"))
+        print(result.response if hasattr(result, 'response') else str(result))
 
 
 def handle_server(args):
     """Start API server."""
-    from api_server import run_server
-    run_server()
+    try:
+        from api_server import start_server
+        start_server()
+    except ImportError:
+        logger.error("api_server module not found")
+        print("Error: api_server module not available")
 
 
 def handle_stats(args):
     """Show system statistics."""
-    stats = get_stats()
+    brain = CoreBrain()
+    stats = brain.get_system_status()
     print(json.dumps(stats, indent=2))
 
 
 def handle_capabilities(args):
     """List available capabilities."""
-    caps = get_capabilities()
+    brain = CoreBrain()
+    caps = [t.value for t in brain.routing_table.keys()]
     print("Available Capabilities:")
-    for cap in caps:
+    for cap in sorted(caps):
         print(f"  - {cap}")
 
 
 def handle_test(args):
     """Run self-test."""
     print("Running Omega AI self-test...")
-    brain = get_brain()
+    brain = CoreBrain()
 
     test_queries = [
         ("financial", "How do I budget my money?"),
         ("education", "Help me study for my exam"),
         ("vocational", "I need career advice"),
-        ("language", "How do I say hello in Zulu?"),
+        ("language", "How do I say hello in Swahili?"),
         ("calculator", "What is 15% of 250?"),
         ("reminder", "Remind me to call mom tomorrow"),
         ("scheduler", "Help me plan my week"),
-        ("research", "Research the South African economy"),
+        ("research", "Research the African economy"),
         ("knowledge", "What is inflation?"),
     ]
 
@@ -112,8 +129,8 @@ def handle_test(args):
 
     for category, query in test_queries:
         try:
-            result = brain.process("test_user", query)
-            status = "PASS" if result["status"] == "success" else "FAIL"
+            result = asyncio.run(brain.process_request("test_user", query))
+            status = "PASS" if result.success else "FAIL"
             if status == "PASS":
                 passed += 1
             else:
@@ -133,7 +150,7 @@ def handle_test(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Omega AI v3.2.0 — African Intelligence Platform",
+        description="Omega AI — African Intelligence Platform",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -146,7 +163,7 @@ Examples:
         """
     )
 
-    parser.add_argument("--version", action="version", version="Omega AI 3.2.0")
+    parser.add_argument("--version", action="version", version="Omega AI 3.0.0")
     parser.add_argument("--user-id", default="cli_user", help="User ID for sessions")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
