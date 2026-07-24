@@ -1,0 +1,6 @@
+{
+  "appId": "com.luqiai.app",
+  "appName": "Luqi-AI",
+  "bundledWebRuntime": false,
+  "webDir": "public"
+}
