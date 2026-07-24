@@ -1,67 +1,100 @@
-import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import './App.css';
+import { useState } from "react";
+import { Routes, Route } from "react-router";
+import Home from "./pages/Home";
+import StatusPage from "./pages/StatusPage";
+import KBPage from "./pages/KBPage";
+import PluginsPage from "./pages/PluginsPage";
+import WisdomPage from "./pages/WisdomPage";
+import { MessageSquare, Activity, BookOpen, Puzzle, Sparkles, Menu, X } from "lucide-react";
 
-// Lazy load pages
-const Home = React.lazy(() => import('./pages/Home'));
-const StatusPage = React.lazy(() => import('./pages/StatusPage'));
-const KBPage = React.lazy(() => import('./pages/KBPage'));
-const PluginsPage = React.lazy(() => import('./pages/PluginsPage'));
-const WisdomPage = React.lazy(() => import('./pages/WisdomPage'));
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState("chat");
 
-// Loading fallback
-const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-  </div>
-);
+  const navItems = [
+    { id: "chat", label: "Chat", icon: MessageSquare, path: "/" },
+    { id: "status", label: "System Status", icon: Activity, path: "/status" },
+    { id: "kb", label: "Knowledge Base", icon: BookOpen, path: "/kb" },
+    { id: "plugins", label: "Plugins", icon: Puzzle, path: "/plugins" },
+    { id: "wisdom", label: "Wisdom", icon: Sparkles, path: "/wisdom" },
+  ];
 
-function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Navigation */}
-        <nav className="bg-white dark:bg-gray-800 shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <Link to="/" className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                  Luqi AI
-                </Link>
+    <div className="flex h-screen w-screen bg-neutral-950 text-white overflow-hidden">
+      {/* Sidebar */}
+      <aside
+        className={`${
+          sidebarOpen ? "w-64" : "w-16"
+        } bg-neutral-900 border-r border-neutral-800 flex flex-col transition-all duration-300 flex-shrink-0`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+          {sidebarOpen && (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center text-black font-bold text-sm">
+                Ω
               </div>
-              <div className="flex items-center space-x-4">
-                <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Home</Link>
-                <Link to="/status" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Status</Link>
-                <Link to="/kb" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Knowledge</Link>
-                <Link to="/plugins" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Plugins</Link>
-                <Link to="/wisdom" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Wisdom</Link>
-              </div>
+              <span className="font-semibold text-sm text-neutral-100">Luqi-AI</span>
             </div>
-          </div>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-md hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+          >
+            {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 p-2 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentPage === item.id;
+            return (
+              <a
+                key={item.id}
+                href={item.path}
+                onClick={() => setCurrentPage(item.id)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                    : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                }`}
+              >
+                <Icon size={18} />
+                {sidebarOpen && <span>{item.label}</span>}
+              </a>
+            );
+          })}
         </nav>
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/status" element={<StatusPage />} />
-              <Route path="/kb" element={<KBPage />} />
-              <Route path="/plugins" element={<PluginsPage />} />
-              <Route path="/wisdom" element={<WisdomPage />} />
-            </Routes>
-          </Suspense>
-        </main>
-
         {/* Footer */}
-        <footer className="bg-white dark:bg-gray-800 shadow-inner mt-auto">
-          <div className="max-w-7xl mx-auto px-4 py-4 text-center text-gray-500 dark:text-gray-400">
-            <p>Luqi AI v25.2.0 "Modular LUQI" — Built with React + TypeScript + Tailwind</p>
+        {sidebarOpen && (
+          <div className="p-4 border-t border-neutral-800">
+            <div className="text-xs text-neutral-500">
+              <p>API: localhost:8080</p>
+              <p>v3.6.0</p>
+            </div>
           </div>
-        </footer>
-      </div>
-    </Router>
+        )}
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden">{children}</main>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/status" element={<StatusPage />} />
+        <Route path="/kb" element={<KBPage />} />
+        <Route path="/plugins" element={<PluginsPage />} />
+        <Route path="/wisdom" element={<WisdomPage />} />
+      </Routes>
+    </AppLayout>
+  );
+}
