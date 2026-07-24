@@ -27,7 +27,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
     origins = os.getenv("CORS_ORIGINS", "*").split(",")
     app.add_middleware(
         CORSMiddleware,
@@ -37,12 +36,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Static files
     static_dir = os.path.join(os.path.dirname(__file__), "data", "web_static")
     if os.path.isdir(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-    # Health check
     @app.get("/health")
     async def health():
         return {"status": "healthy", "version": "25.1.2"}

@@ -1,13 +1,7 @@
 """
 Luqi AI Configuration - Centralized settings with .env support.
 All environment variables are optional; sensible defaults are provided.
-
-Usage:
-    from config import settings
-    db_path = settings.db_path
-    model = settings.openai_model
 """
-
 import os
 from pathlib import Path
 from typing import Optional
