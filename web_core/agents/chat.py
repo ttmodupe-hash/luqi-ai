@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from web_core.db.conversations import ConversationStore
 from web_core.models import ChatMessage
+from web_core.middleware.circuit_breaker import circuit_breaker_decorator
 
 logger = logging.getLogger("luqi.agents.chat")
 
@@ -37,6 +38,7 @@ class ChatAgent:
     def ai_available(self) -> bool:
         return self.client is not None
 
+    @circuit_breaker_decorator("openai", failure_threshold=5, recovery_timeout=30)
     async def chat(self, message: str, session_id: str = "default",
                    model: str = "gpt-4o-mini") -> Dict[str, Any]:
         """Process a chat message and return the AI response."""
