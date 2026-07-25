@@ -126,7 +126,7 @@ export default function ChatPage() {
     const startTime = performance.now();
 
     try {
-      const data = await post('/api/v25/chat', { query: text, session_id: sessionId });
+      const data = await post('/api/v25/luqi/chat', { query: text, session_id: sessionId });
       const responseTimeMs = performance.now() - startTime;
 
       const assistantMsg: Message = {
