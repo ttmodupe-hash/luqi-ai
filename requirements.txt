@@ -30,7 +30,7 @@ passlib[bcrypt]>=1.7.4
 websockets>=12.0
 
 # Voice (TTS/STT)
-gTTS>=2.5.0
+gTTS>=2.5.4
 SpeechRecognition>=3.10.0
 
 # Utilities
