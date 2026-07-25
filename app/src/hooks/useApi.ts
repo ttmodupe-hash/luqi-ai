@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -14,8 +14,8 @@ export interface SystemStatus {
   version: string;
   modules: Record<string, boolean>;
   db_tables?: Record<string, number>;
-  cache_stats?: Record<string, any>;
-  kb_stats?: Record<string, any>;
+  cache_stats?: Record<string, unknown>;
+  kb_stats?: Record<string, unknown>;
   uptime_seconds?: number;
 }
 
@@ -30,93 +30,92 @@ export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const chat = useCallback(async (query: string): Promise<ChatMessage | null> => {
-    setLoading(true);
-    setError(null);
+  const get = useCallback(async (endpoint: string) => {
+    setLoading(true); setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+      const res = await fetch(`${API_BASE}${endpoint}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const post = useCallback(async (endpoint: string, body: unknown) => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Backward-compatible typed helpers
+  const chat = useCallback(async (query: string): Promise<ChatMessage | null> => {
+    try {
+      const data = await post('/api/v25/chat', { query });
       return {
-        role: "assistant",
-        content: data.response || "No response",
+        role: 'assistant',
+        content: data.response || 'No response',
         module: data.module,
         responseTimeMs: data.response_time_ms,
       };
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       return {
-        role: "assistant",
-        content: `Error: ${e.message}. Make sure the API server is running on port 8080.`,
-        module: "error",
+        role: 'assistant',
+        content: `Error: ${msg}. Make sure the API server is running.`,
+        module: 'error',
       };
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [post]);
 
   const getStatus = useCallback(async (): Promise<SystemStatus | null> => {
     try {
-      const res = await fetch(`${API_BASE}/api/status`);
-      if (!res.ok) return null;
-      return await res.json();
+      return await get('/api/v25/status');
     } catch {
       return null;
     }
-  }, []);
+  }, [get]);
 
   const kbAsk = useCallback(async (question: string): Promise<KBAnswer[] | null> => {
-    setLoading(true);
-    setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/kb/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
+      const data = await post('/api/v25/kb/ask', { question });
       return data.answers || [];
-    } catch (e: any) {
-      setError(e.message);
+    } catch {
       return null;
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [post]);
 
-  const kbSearch = useCallback(async (query: string): Promise<any[] | null> => {
+  const kbSearch = useCallback(async (query: string): Promise<unknown[] | null> => {
     try {
-      const res = await fetch(`${API_BASE}/api/kb/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
+      const data = await post('/api/v25/kb/search', { query });
       return data.results || [];
     } catch {
       return null;
     }
-  }, []);
+  }, [post]);
 
   const kbCategories = useCallback(async (): Promise<string[] | null> => {
     try {
-      const res = await fetch(`${API_BASE}/api/kb/categories`);
-      if (!res.ok) return null;
-      const data = await res.json();
+      const data = await get('/api/v25/kb/categories');
       return data.categories || [];
     } catch {
       return null;
     }
-  }, []);
+  }, [get]);
 
-  return { chat, getStatus, kbAsk, kbSearch, kbCategories, loading, error };
+  return { get, post, chat, getStatus, kbAsk, kbSearch, kbCategories, loading, error };
 }
