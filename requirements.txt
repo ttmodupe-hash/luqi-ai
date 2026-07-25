@@ -1,6 +1,9 @@
 # Core Framework
 fastapi>=0.110.0
-uvicorn[standard]>=0.29.0
+uvicorn[standard]>=0.27.0
+
+# WSGI Server
+gunicorn>=21.2.0
 
 # Database
 sqlalchemy>=2.0.0
@@ -12,7 +15,7 @@ pydantic>=2.6.0
 pydantic-settings>=2.1.0
 
 # AI / LLM Integration
-openai>=1.14.0
+openai>=1.12.0
 
 # HTTP Client
 httpx>=0.27.0
@@ -23,37 +26,32 @@ python-multipart>=0.0.9
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 
-# Document Processing
-pypdf>=4.1.0
-python-docx>=1.1.0
-openpyxl>=3.1.2
-
-# Web Scraping
-beautifulsoup4>=4.12.0
-lxml>=5.1.0
-
-# Audio / Voice
-gtts>=2.5.0
-SpeechRecognition>=3.10.0
+# WebSocket
 websockets>=12.0
 
-# Image Processing
-Pillow>=10.2.0
-
-# Scientific Computing
-numpy>=1.26.0
-
-# System Monitoring
-psutil>=5.9.8
+# Voice (TTS/STT)
+gTTS>=2.5.0
+SpeechRecognition>=3.10.0
 
 # Utilities
 jinja2>=3.1.3
-markupsafe>=2.1.5
-python-dotenv>=1.0.1
+python-dotenv>=1.0.0
 click>=8.1.0
 rich>=13.7.0
 
-# Testing
+# Development & Testing
 pytest>=8.0.0
-pytest-asyncio>=0.23.0
 pytest-cov>=4.1.0
+pytest-asyncio>=0.23.0
+pytest-xdist>=3.5.0
+
+# Linting & Type Checking
+ruff>=0.3.0
+mypy>=1.8.0
+
+# Documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.5.0
+
+# Monitoring & Logging
+structlog>=24.1.0
