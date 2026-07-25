@@ -20,7 +20,6 @@ import {
   BarChart3,
   Mail,
   Clock,
-  Star,
   AlertTriangle,
   CheckCircle2,
   Lightbulb,
@@ -28,8 +27,6 @@ import {
   TrendingDown,
   Minus,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 const TOOLS = [
   { id: "slack", name: "Slack", category: "communication", best_for: ["Real-time team chat", "Project channels", "Integrations"], pricing: "Freemium" },
@@ -110,23 +107,15 @@ export default function WorkspacePage() {
   const [meetingsInput, setMeetingsInput] = useState("9:00-10:00\n11:00-11:30\n14:00-15:00");
   const [focusBlocks, setFocusBlocks] = useState<FocusBlock[] | null>(null);
 
+  // Tool comparison — all client-side
   const compareTools = async () => {
     if (!tool1 || !tool2) return;
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/v25/workspace/tools/compare`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tools: [tool1, tool2] }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setComparison(data.tools_compared || generateMockComparison(tool1, tool2));
-    } catch (e: unknown) {
-      setComparison(generateMockComparison(tool1, tool2));
-    } finally {
-      setLoading(false);
-    }
+    setComparison(null);
+    // Simulate a brief delay for UX
+    await new Promise((r) => setTimeout(r, 300));
+    setComparison(generateMockComparison(tool1, tool2));
+    setLoading(false);
   };
 
   const generateMockComparison = (t1: string, t2: string): ToolComparison[] => {
@@ -150,103 +139,68 @@ export default function WorkspacePage() {
     ];
   };
 
+  // Productivity assessment — all client-side
   const assessProductivity = async () => {
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/v25/workspace/productivity/assess`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          team_size: parseInt(teamSize),
-          remote_frequency: parseInt(remoteFreq),
-          meeting_hours_daily: parseInt(meetingHours),
-          tool_count: parseInt(toolCount),
-          satisfaction_1_to_10: parseInt(satisfaction),
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setProductivityResult(data);
-    } catch (e: unknown) {
-      const ts = parseInt(teamSize), rf = parseInt(remoteFreq), mh = parseInt(meetingHours), tc = parseInt(toolCount), sat = parseInt(satisfaction);
-      const teamScore = Math.min(10, Math.max(2, 10 - Math.abs(ts - 5)));
-      const remoteScore = rf <= 5 ? rf * 2 : 6;
-      const meetingScore = Math.max(0, 10 - mh * 2);
-      const toolScore = Math.min(10, Math.max(2, 10 - Math.abs(tc - 5)));
-      const overall = Math.round((teamScore * 0.1 + remoteScore * 0.15 + meetingScore * 0.2 + toolScore * 0.15 + sat * 0.4) * 10) / 10;
-      setProductivityResult({
-        productivity_score: overall,
-        score_breakdown: { team_size: teamScore, remote_frequency: remoteScore, meeting_hours: meetingScore, tool_count: toolScore, satisfaction: sat },
-        recommendations: mh > 3 ? ["Consider reducing meeting hours", "Try async updates instead"] : tc > 8 ? ["Consolidate your tool stack"] : ["Productivity profile looks balanced"],
-        comparison_to_benchmark: `Your score of ${overall}/10 is ${overall > 7 ? "above average" : overall > 5 ? "average" : "below average"}`,
-      });
-    } finally {
-      setLoading(false);
-    }
+    setProductivityResult(null);
+    // Simulate a brief delay for UX
+    await new Promise((r) => setTimeout(r, 300));
+    const ts = parseInt(teamSize), rf = parseInt(remoteFreq), mh = parseInt(meetingHours), tc = parseInt(toolCount), sat = parseInt(satisfaction);
+    const teamScore = Math.min(10, Math.max(2, 10 - Math.abs(ts - 5)));
+    const remoteScore = rf <= 5 ? rf * 2 : 6;
+    const meetingScore = Math.max(0, 10 - mh * 2);
+    const toolScore = Math.min(10, Math.max(2, 10 - Math.abs(tc - 5)));
+    const overall = Math.round((teamScore * 0.1 + remoteScore * 0.15 + meetingScore * 0.2 + toolScore * 0.15 + sat * 0.4) * 10) / 10;
+    setProductivityResult({
+      productivity_score: overall,
+      score_breakdown: { team_size: teamScore, remote_frequency: remoteScore, meeting_hours: meetingScore, tool_count: toolScore, satisfaction: sat },
+      recommendations: mh > 3 ? ["Consider reducing meeting hours", "Try async updates instead"] : tc > 8 ? ["Consolidate your tool stack"] : ["Productivity profile looks balanced"],
+      comparison_to_benchmark: `Your score of ${overall}/10 is ${overall > 7 ? "above average" : overall > 5 ? "average" : "below average"}`,
+    });
+    setLoading(false);
   };
 
+  // Email tone analyzer — all client-side
   const analyzeTone = async () => {
     if (!emailText.trim()) return;
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/v25/workspace/email/tone`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailText }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setToneResult(data);
-    } catch (e: unknown) {
-      const text = emailText.toLowerCase();
-      const scores: Record<string, number> = { formal: 0, casual: 0, aggressive: 0, passive: 0, urgent: 0, friendly: 0 };
-      const formalWords = ["dear", "sincerely", "regards", "pursuant"];
-      const casualWords = ["hey", "hi", "thanks", "cheers", "btw"];
-      const aggressiveWords = ["must", "immediately", "fail", "unacceptable"];
-      const friendlyWords = ["hope", "great", "happy", "appreciate", "glad"];
-      formalWords.forEach((w) => { if (text.includes(w)) scores.formal++; });
-      casualWords.forEach((w) => { if (text.includes(w)) scores.casual++; });
-      aggressiveWords.forEach((w) => { if (text.includes(w)) scores.aggressive++; });
-      friendlyWords.forEach((w) => { if (text.includes(w)) scores.friendly++; });
-      const detected = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-      setToneResult({
-        detected_tone: detected[1] > 0 ? detected[0] : "neutral",
-        tone_scores: scores,
-        suggestions: scores.aggressive > 0 ? ["Soften imperative language"] : scores.passive > 2 ? ["Be more direct"] : ["Tone looks balanced"],
-        improved_version: emailText,
-        readability_score: 60,
-      });
-    } finally {
-      setLoading(false);
-    }
+    setToneResult(null);
+    // Simulate a brief delay for UX
+    await new Promise((r) => setTimeout(r, 300));
+    const text = emailText.toLowerCase();
+    const scores: Record<string, number> = { formal: 0, casual: 0, aggressive: 0, passive: 0, urgent: 0, friendly: 0 };
+    const formalWords = ["dear", "sincerely", "regards", "pursuant"];
+    const casualWords = ["hey", "hi", "thanks", "cheers", "btw"];
+    const aggressiveWords = ["must", "immediately", "fail", "unacceptable"];
+    const friendlyWords = ["hope", "great", "happy", "appreciate", "glad"];
+    formalWords.forEach((w) => { if (text.includes(w)) scores.formal++; });
+    casualWords.forEach((w) => { if (text.includes(w)) scores.casual++; });
+    aggressiveWords.forEach((w) => { if (text.includes(w)) scores.aggressive++; });
+    friendlyWords.forEach((w) => { if (text.includes(w)) scores.friendly++; });
+    const detected = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+    setToneResult({
+      detected_tone: detected[1] > 0 ? detected[0] : "neutral",
+      tone_scores: scores,
+      suggestions: scores.aggressive > 0 ? ["Soften imperative language"] : scores.passive > 2 ? ["Be more direct"] : ["Tone looks balanced"],
+      improved_version: emailText,
+      readability_score: 60,
+    });
+    setLoading(false);
   };
 
+  // Focus time scheduler — all client-side
   const scheduleFocus = async () => {
     setLoading(true);
-    try {
-      const lines = meetingsInput.trim().split("\n").filter((l) => l.includes("-"));
-      const meetings = lines.map((line) => {
-        const [start, end] = line.trim().split("-");
-        return { start: start.trim(), end: end.trim() };
-      });
-      const res = await fetch(`${API_BASE}/api/v25/workspace/focus-schedule`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meetings, focus_blocks: 2, block_duration: 90 }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setFocusBlocks(data.focus_blocks || generateMockFocus(meetings));
-    } catch (e: unknown) {
-      const lines = meetingsInput.trim().split("\n").filter((l) => l.includes("-"));
-      const meetings = lines.map((line) => {
-        const [start, end] = line.trim().split("-");
-        return { start: start.trim(), end: end.trim() };
-      });
-      setFocusBlocks(generateMockFocus(meetings));
-    } finally {
-      setLoading(false);
-    }
+    setFocusBlocks(null);
+    // Simulate a brief delay for UX
+    await new Promise((r) => setTimeout(r, 300));
+    const lines = meetingsInput.trim().split("\n").filter((l) => l.includes("-"));
+    const meetings = lines.map((line) => {
+      const [start, end] = line.trim().split("-");
+      return { start: start.trim(), end: end.trim() };
+    });
+    setFocusBlocks(generateMockFocus(meetings));
+    setLoading(false);
   };
 
   const generateMockFocus = (meetings: Array<{ start: string; end: string }>): FocusBlock[] => {

@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import { useApi } from "@/hooks/useApi";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { useVoice } from "@/hooks/useVoice";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +16,11 @@ import {
   MessageSquare,
   Sparkles,
   AlertTriangle,
+  Wifi,
+  WifiOff,
+  Mic,
+  MicOff,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 interface Message {
   role: "user" | "assistant";
@@ -50,12 +55,47 @@ const MODULE_COLORS: Record<string, string> = {
 };
 
 export default function ChatPage() {
+  const { post, loading, error: apiError } = useApi();
+  const [useWsMode, setUseWsMode] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // WebSocket hook for real-time mode
+  const { messages: wsMessages, connected, sendMessage: sendWsMessage } = useWebSocket(sessionId);
+
+  // Voice hook for voice input
+  const { listening, transcript, startListening, stopListening, clearTranscript } = useVoice();
+
+  // Sync voice transcript to input
+  useEffect(() => {
+    if (transcript) {
+      setInput(transcript);
+    }
+  }, [transcript]);
+
+  // Merge WebSocket messages into chat
+  useEffect(() => {
+    if (wsMessages.length > 0) {
+      const lastMsg = wsMessages[wsMessages.length - 1];
+      if (lastMsg.role === "assistant") {
+        const assistantMsg: Message = {
+          role: "assistant",
+          content: lastMsg.content,
+          timestamp: Date.now(),
+        };
+        // Check if we already have this message (avoid duplicates)
+        setMessages((prev) => {
+          if (prev.length > 0 && prev[prev.length - 1].role === "assistant" && prev[prev.length - 1].content === lastMsg.content) {
+            return prev;
+          }
+          return [...prev, assistantMsg];
+        });
+      }
+    }
+  }, [wsMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -73,26 +113,21 @@ export default function ChatPage() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setLoading(true);
+    clearTranscript();
     setError(null);
 
+    // If WebSocket mode is on and connected, use WebSocket
+    if (useWsMode && connected) {
+      sendWsMessage(text);
+      return;
+    }
+
+    // Otherwise use REST API
     const startTime = performance.now();
 
     try {
-      const res = await fetch(`${API_BASE}/api/v25/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, session_id: sessionId }),
-      });
-
+      const data = await post('/api/v25/chat', { query: text, session_id: sessionId });
       const responseTimeMs = performance.now() - startTime;
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(errData.error || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
 
       const assistantMsg: Message = {
         role: "assistant",
@@ -106,29 +141,6 @@ export default function ChatPage() {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
 
-      // Fallback: Use main chat endpoint
-      try {
-        const fallbackRes = await fetch(`${API_BASE}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: text }),
-        });
-        if (fallbackRes.ok) {
-          const data = await fallbackRes.json();
-          const assistantMsg: Message = {
-            role: "assistant",
-            content: data.response || "I received your message but cannot provide a detailed response right now.",
-            timestamp: Date.now(),
-            module: data.module || "general",
-          };
-          setMessages((prev) => [...prev, assistantMsg]);
-          setError(null);
-          return;
-        }
-      } catch {
-        // Both endpoints failed
-      }
-
       const errorMsg: Message = {
         role: "assistant",
         content: `Sorry, I encountered an error: ${msg}. Please make sure the API server is running.`,
@@ -136,8 +148,6 @@ export default function ChatPage() {
         module: "error",
       };
       setMessages((prev) => [...prev, errorMsg]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -176,14 +186,43 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearChat}
-          className="text-neutral-400 hover:text-red-400 hover:bg-red-500/10"
-        >
-          <Trash2 size={14} />
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Connection status */}
+          <div className="flex items-center gap-1 text-xs">
+            {useWsMode ? (
+              connected ? (
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <Wifi size={12} /> Live
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-red-400">
+                  <WifiOff size={12} /> Offline
+                </span>
+              )
+            ) : (
+              <span className="flex items-center gap-1 text-neutral-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500" /> REST
+              </span>
+            )}
+          </div>
+          {/* WebSocket toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setUseWsMode((prev) => !prev)}
+            className={useWsMode ? "text-emerald-400 bg-emerald-500/10" : "text-neutral-400 hover:text-white"}
+          >
+            {useWsMode ? <Wifi size={14} /> : <WifiOff size={14} />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearChat}
+            className="text-neutral-400 hover:text-red-400 hover:bg-red-500/10"
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -195,9 +234,14 @@ export default function ChatPage() {
                 <Bot size={28} className="text-cyan-400" />
               </div>
               <h2 className="text-lg font-semibold text-white mb-2">Start a Conversation</h2>
-              <p className="text-sm text-neutral-400 mb-6 max-w-md mx-auto">
-                Ask me about investments, taxes, African languages, career advice, or anything else. I'm here to help.
+              <p className="text-sm text-neutral-400 mb-2 max-w-md mx-auto">
+                Ask me about investments, taxes, African languages, career advice, or anything else. I&apos;m here to help.
               </p>
+              {useWsMode && (
+                <p className="text-xs text-emerald-400 mb-4">
+                  {connected ? "Real-time mode is active" : "Connecting to real-time server..."}
+                </p>
+              )}
               <div className="flex flex-wrap justify-center gap-2">
                 {SUGGESTED_QUERIES.map((q) => (
                   <button
@@ -286,10 +330,10 @@ export default function ChatPage() {
             </div>
           )}
 
-          {error && (
+          {(error || apiError) && (
             <div className="flex items-center gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2">
               <AlertTriangle size={12} />
-              {error}
+              {error || apiError}
             </div>
           )}
         </div>
@@ -301,10 +345,19 @@ export default function ChatPage() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
+            placeholder={listening ? "Listening..." : "Type your message..."}
             className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
-            disabled={loading}
+            disabled={loading || listening}
           />
+          {/* Voice input button */}
+          <Button
+            type="button"
+            onClick={listening ? stopListening : startListening}
+            className={listening ? "bg-red-600 hover:bg-red-500 text-white" : "bg-neutral-700 hover:bg-neutral-600 text-white"}
+            title={listening ? "Stop listening" : "Voice input"}
+          >
+            {listening ? <MicOff size={16} className="animate-pulse" /> : <Mic size={16} />}
+          </Button>
           <Button
             type="submit"
             disabled={loading || !input.trim()}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useApi } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,8 +27,6 @@ import {
   Music,
   Code,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 const SUBJECTS = [
   { id: "math", name: "Mathematics", icon: Calculator, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
@@ -69,9 +68,9 @@ interface PracticeQuestion {
 }
 
 export default function EducationPage() {
+  const { get, post, loading, error } = useApi();
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
@@ -83,54 +82,36 @@ export default function EducationPage() {
 
   const createStudyPlan = async () => {
     if (!selectedSubject || !selectedLevel) return;
-    setLoading(true);
     setStudyPlan(null);
     try {
-      const res = await fetch(`${API_BASE}/education/study-plan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject: selectedSubject, level: selectedLevel }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await post('/api/v25/education/study-plan', { subject: selectedSubject, level: selectedLevel });
       setStudyPlan(data.plan ? data : generateMockPlan());
     } catch (e: unknown) {
       setStudyPlan(generateMockPlan());
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchQuestions = async () => {
     if (!selectedSubject || !selectedLevel) return;
-    setLoading(true);
     setQuestions([]);
     setSelectedAnswers({});
     setShowResults(false);
     try {
-      const res = await fetch(`${API_BASE}/education/questions?subject=${encodeURIComponent(selectedSubject)}&level=${encodeURIComponent(selectedLevel)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get(`/api/v25/education/questions?subject=${encodeURIComponent(selectedSubject)}&level=${encodeURIComponent(selectedLevel)}`);
       setQuestions(data.questions || generateMockQuestions());
     } catch (e: unknown) {
       setQuestions(generateMockQuestions());
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchHelp = async () => {
     if (!selectedSubject) return;
-    setLoading(true);
+    setHelpTopic(null);
     try {
-      const res = await fetch(`${API_BASE}/education/help?subject=${encodeURIComponent(selectedSubject)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get(`/api/v25/education/help?subject=${encodeURIComponent(selectedSubject)}`);
       setHelpTopic(data.help || data.tips || getSubjectHelp());
     } catch (e: unknown) {
       setHelpTopic(getSubjectHelp());
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -302,6 +283,12 @@ export default function EducationPage() {
             <div className="text-center py-12 text-neutral-500">
               <Sparkles size={32} className="animate-spin mx-auto mb-3" />
               <p>Loading...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-400">
+              API error: {error}. Showing demo data.
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useApi } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +23,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
 interface TaxResult {
   country: string;
   income: number;
@@ -44,9 +43,8 @@ interface BudgetResult {
 const COUNTRIES = ["South Africa", "Nigeria", "Kenya", "Ghana", "Egypt", "Morocco", "Ethiopia", "Tanzania"];
 
 export default function FinancePage() {
+  const { get, post, loading, error } = useApi();
   const [activeTab, setActiveTab] = useState("tax");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Tax calculator state
   const [taxCountry, setTaxCountry] = useState("");
@@ -68,16 +66,9 @@ export default function FinancePage() {
 
   const calculateTax = async () => {
     if (!taxCountry || !taxIncome) return;
-    setLoading(true);
-    setError(null);
+    setTaxResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/v25/tax/calculate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country: taxCountry, income: parseFloat(taxIncome) }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await post('/api/v25/tax/calculate', { country: taxCountry, income: parseFloat(taxIncome) });
       setTaxResult({
         country: taxCountry,
         income: parseFloat(taxIncome),
@@ -96,23 +87,14 @@ export default function FinancePage() {
         effective_rate: rate * 100,
         after_tax_income: income * (1 - rate),
       });
-      setError("Using estimated rates. Connect API for exact calculations.");
-    } finally {
-      setLoading(false);
     }
   };
 
   const calculateBudget = async () => {
     if (!budgetIncome || !budgetExpenses) return;
-    setLoading(true);
+    setBudgetResult(null);
     try {
-      const res = await fetch(`${API_BASE}/finance/budget`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ income: parseFloat(budgetIncome), expenses: parseFloat(budgetExpenses) }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await post('/api/v25/finance/budget', { income: parseFloat(budgetIncome), expenses: parseFloat(budgetExpenses) });
       setBudgetResult(data);
     } catch (e: unknown) {
       const income = parseFloat(budgetIncome);
@@ -133,18 +115,14 @@ export default function FinancePage() {
           ? [`You're saving ${((savings / income) * 100).toFixed(1)}% of income.`, "Consider investing your savings.", "Build an emergency fund of 3-6 months."]
           : ["Expenses exceed income. Review spending.", "Consider reducing non-essential costs.", "Look for additional income sources."],
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchConcept = async () => {
     if (!conceptQuery.trim()) return;
-    setLoading(true);
+    setConceptResult(null);
     try {
-      const res = await fetch(`${API_BASE}/finance/concept/${encodeURIComponent(conceptQuery)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get(`/api/v25/finance/concept/${encodeURIComponent(conceptQuery)}`);
       setConceptResult(data.explanation || data.description || JSON.stringify(data, null, 2));
     } catch (e: unknown) {
       const concepts: Record<string, string> = {
@@ -158,18 +136,14 @@ export default function FinancePage() {
       };
       const key = Object.keys(concepts).find((k) => conceptQuery.toLowerCase().includes(k));
       setConceptResult(key ? concepts[key] : `Information about "${conceptQuery}" is not available. Try searching for: inflation, compound_interest, diversification, etf, stocks, bonds, or credit_score.`);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchInvestmentGuide = async () => {
     if (!investTopic.trim()) return;
-    setLoading(true);
+    setInvestResult(null);
     try {
-      const res = await fetch(`${API_BASE}/finance/investment/${encodeURIComponent(investTopic)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get(`/api/v25/finance/investment/${encodeURIComponent(investTopic)}`);
       setInvestResult(data.guide || data.advice || JSON.stringify(data, null, 2));
     } catch (e: unknown) {
       const guides: Record<string, string> = {
@@ -181,8 +155,6 @@ export default function FinancePage() {
       };
       const key = Object.keys(guides).find((k) => investTopic.toLowerCase().includes(k));
       setInvestResult(key ? guides[key] : `Investment guide for "${investTopic}" is not available. Try: beginner, retirement, crypto, realestate, or stocks.`);
-    } finally {
-      setLoading(false);
     }
   };
 

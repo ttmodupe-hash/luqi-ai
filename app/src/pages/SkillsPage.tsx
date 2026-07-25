@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useApi } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +21,6 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 interface Trade {
   id: string;
@@ -58,26 +57,19 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function SkillsPage() {
+  const { get, loading, error } = useApi();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [filtered, setFiltered] = useState<Trade[]>([]);
   const [search, setSearch] = useState("");
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchTrades = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const res = await fetch(`${API_BASE}/skills/trades`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get('/api/v25/skills/trades');
       const t = data.trades || data;
       setTrades(Array.isArray(t) ? t : []);
       setFiltered(Array.isArray(t) ? t : []);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
       // Fallback demo data
       const demo: Trade[] = [
         { id: "plumbing", name: "Plumbing", category: "plumbing", description: "Install and repair pipes, fixtures, and water systems in homes and buildings.", difficulty: "Intermediate" },
@@ -95,17 +87,12 @@ export default function SkillsPage() {
       ];
       setTrades(demo);
       setFiltered(demo);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchTradeDetail = async (tradeId: string) => {
-    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/skills/trades/${encodeURIComponent(tradeId)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get(`/api/v25/skills/trades/${encodeURIComponent(tradeId)}`);
       setSelectedTrade({ ...data, id: tradeId });
     } catch (e: unknown) {
       // Fallback detail
@@ -139,13 +126,12 @@ export default function SkillsPage() {
         };
         setSelectedTrade({ ...trade, ...detail });
       }
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchTrades();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -328,7 +314,7 @@ export default function SkillsPage() {
           {filtered.length === 0 && !loading && (
             <div className="text-center py-12 text-neutral-500">
               <Search size={32} className="mx-auto mb-3 opacity-50" />
-              <p>No trades found matching "{search}"</p>
+              <p>No trades found matching &quot;{search}&quot;</p>
             </div>
           )}
         </div>

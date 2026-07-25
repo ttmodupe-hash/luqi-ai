@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useApi } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +23,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
 interface Language {
   name: string;
   region: string;
@@ -42,12 +41,11 @@ interface LanguageDetail {
 }
 
 export default function LanguagesPage() {
+  const { get, post, loading, error } = useApi();
   const [languages, setLanguages] = useState<Language[]>([]);
   const [filtered, setFiltered] = useState<Language[]>([]);
   const [search, setSearch] = useState("");
   const [selectedLang, setSelectedLang] = useState<LanguageDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Translate state
   const [translateText, setTranslateText] = useState("");
@@ -56,18 +54,12 @@ export default function LanguagesPage() {
   const [translating, setTranslating] = useState(false);
 
   const fetchLanguages = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/v25/languages`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get('/api/v25/languages');
       const langs = data.languages || data;
       setLanguages(Array.isArray(langs) ? langs : []);
       setFiltered(Array.isArray(langs) ? langs : []);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
       // Fallback demo data
       const demo: Language[] = [
         { name: "Zulu", region: "South Africa", greeting: "Sawubona", speakers: "12M", family: "Bantu" },
@@ -85,17 +77,12 @@ export default function LanguagesPage() {
       ];
       setLanguages(demo);
       setFiltered(demo);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchLanguageDetail = async (lang: string) => {
-    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v25/languages/${encodeURIComponent(lang)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await get(`/api/v25/languages/${encodeURIComponent(lang)}`);
       setSelectedLang(data);
     } catch (e: unknown) {
       // Fallback detail
@@ -117,8 +104,6 @@ export default function LanguagesPage() {
         region: "Africa",
         speakers: "Millions",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -127,13 +112,7 @@ export default function LanguagesPage() {
     setTranslating(true);
     setTranslationResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/v25/languages/translate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phrase: translateText, language: translateLang }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await post('/api/v25/languages/translate', { phrase: translateText, language: translateLang });
       setTranslationResult(data.translation || data.translated || JSON.stringify(data));
     } catch (e: unknown) {
       setTranslationResult(`[${translateLang}] "${translateText}" — Translation simulated (API unavailable)`);
@@ -144,6 +123,7 @@ export default function LanguagesPage() {
 
   useEffect(() => {
     fetchLanguages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -333,7 +313,7 @@ export default function LanguagesPage() {
           {filtered.length === 0 && !loading && (
             <div className="text-center py-12 text-neutral-500">
               <Search size={32} className="mx-auto mb-3 opacity-50" />
-              <p>No languages found matching "{search}"</p>
+              <p>No languages found matching &quot;{search}&quot;</p>
             </div>
           )}
         </div>
