@@ -1,0 +1,45 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: TypeScript type check
+        working-directory: app
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: app
+        run: npx eslint src/ --ext .ts,.tsx --max-warnings=0
+
+      - name: Build
+        working-directory: app
+        run: npm run build
+
+      - name: Upload build artifacts
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: app/dist/
