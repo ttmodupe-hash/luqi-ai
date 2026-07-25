@@ -159,7 +159,7 @@ def _ok(module_name: str) -> bool:
 #  v25 STATUS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/status")
+@router.get("/status")
 async def api_v25_status():
     """v25 Prometheus engine status — reports which Omega modules are loaded."""
     modules = {
@@ -199,7 +199,7 @@ async def api_v25_status():
 #  ERROR REPAIR ENGINE (v3.6.1)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/error-repair/stats", dependencies=[Depends(require_auth)])
+@router.get("/error-repair/stats", dependencies=[Depends(require_auth)])
 async def api_v25_error_repair_stats():
     """Get error repair statistics."""
     try:
@@ -215,7 +215,7 @@ async def api_v25_error_repair_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/error-repair/heal", dependencies=[Depends(require_auth)])
+@router.post("/error-repair/heal", dependencies=[Depends(require_auth)])
 async def api_v25_error_repair_heal(request: Request):
     """Trigger self-healing for a module."""
     try:
@@ -233,7 +233,7 @@ async def api_v25_error_repair_heal(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/error-repair/clear", dependencies=[Depends(require_auth)])
+@router.post("/error-repair/clear", dependencies=[Depends(require_auth)])
 async def api_v25_error_repair_clear(request: Request):
     """Clear error history."""
     try:
@@ -255,7 +255,7 @@ async def api_v25_error_repair_clear(request: Request):
 #  MEMORY MANAGER (v3.6.2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/memory-manager/stats", dependencies=[Depends(require_auth)])
+@router.get("/memory-manager/stats", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_stats():
     """Get memory manager statistics."""
     try:
@@ -271,7 +271,7 @@ async def api_v25_memory_manager_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v25/memory-manager/entries", dependencies=[Depends(require_auth)])
+@router.get("/memory-manager/entries", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_entries():
     """List all memory entries."""
     try:
@@ -287,7 +287,7 @@ async def api_v25_memory_manager_entries():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/memory-manager/cleanup", dependencies=[Depends(require_auth)])
+@router.post("/memory-manager/cleanup", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_cleanup(request: Request):
     """Propose memory cleanup."""
     try:
@@ -304,7 +304,7 @@ async def api_v25_memory_manager_cleanup(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v25/memory-manager/purge-proposals", dependencies=[Depends(require_auth)])
+@router.get("/memory-manager/purge-proposals", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_purge_proposals():
     """Get pending purge proposals."""
     try:
@@ -320,7 +320,7 @@ async def api_v25_memory_manager_purge_proposals():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/memory-manager/approve-purge", dependencies=[Depends(require_auth)])
+@router.post("/memory-manager/approve-purge", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_approve_purge(request: Request):
     """Approve a purge proposal."""
     try:
@@ -338,7 +338,7 @@ async def api_v25_memory_manager_approve_purge(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/memory-manager/reject-purge", dependencies=[Depends(require_auth)])
+@router.post("/memory-manager/reject-purge", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_reject_purge(request: Request):
     """Reject a purge proposal."""
     try:
@@ -356,7 +356,7 @@ async def api_v25_memory_manager_reject_purge(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/memory-manager/recover", dependencies=[Depends(require_auth)])
+@router.post("/memory-manager/recover", dependencies=[Depends(require_auth)])
 async def api_v25_memory_manager_recover(request: Request):
     """Recover a soft-deleted entry."""
     try:
@@ -378,7 +378,7 @@ async def api_v25_memory_manager_recover(request: Request):
 #  PEDAGOGICAL ENGINE (v3.6.3)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/pedagogical/diagnostic", dependencies=[Depends(require_auth)])
+@router.post("/pedagogical/diagnostic", dependencies=[Depends(require_auth)])
 async def api_v25_ped_diagnostic(request: Request):
     """Run pedagogical diagnostic assessment (Socrates + Bjork + Bloom)."""
     try:
@@ -396,7 +396,7 @@ async def api_v25_ped_diagnostic(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v25/pedagogical/progress/{student_id}", dependencies=[Depends(require_auth)])
+@router.get("/pedagogical/progress/{student_id}", dependencies=[Depends(require_auth)])
 async def api_v25_ped_progress(student_id: str):
     """Get student progress across all domains."""
     try:
@@ -413,7 +413,7 @@ async def api_v25_ped_progress(student_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/pedagogical/tutor", dependencies=[Depends(require_auth)])
+@router.post("/pedagogical/tutor", dependencies=[Depends(require_auth)])
 async def api_v25_ped_tutor(request: Request):
     """Socratic tutoring session — asks guiding questions."""
     try:
@@ -431,7 +431,7 @@ async def api_v25_ped_tutor(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/pedagogical/assess-bloom", dependencies=[Depends(require_auth)])
+@router.post("/pedagogical/assess-bloom", dependencies=[Depends(require_auth)])
 async def api_v25_ped_assess_bloom(request: Request):
     """Assess student against Bloom's Taxonomy levels."""
     try:
@@ -453,7 +453,7 @@ async def api_v25_ped_assess_bloom(request: Request):
 #  WISDOM ENGINE (v3.5.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/wisdom", dependencies=[Depends(require_auth)])
+@router.get("/wisdom", dependencies=[Depends(require_auth)])
 async def api_v25_wisdom(tradition: Optional[str] = None):
     """Get a wisdom proverb or quote from 17+ traditions."""
     try:
@@ -470,7 +470,7 @@ async def api_v25_wisdom(tradition: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v25/wisdom/traditions", dependencies=[Depends(require_auth)])
+@router.get("/wisdom/traditions", dependencies=[Depends(require_auth)])
 async def api_v25_wisdom_traditions():
     """List all available wisdom traditions."""
     try:
@@ -491,7 +491,7 @@ async def api_v25_wisdom_traditions():
 #  CRYPTO UTILS (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/crypto/encrypt", dependencies=[Depends(require_auth)])
+@router.post("/crypto/encrypt", dependencies=[Depends(require_auth)])
 async def api_v25_crypto_encrypt(request: Request):
     """Encrypt plaintext using AES-256-GCM."""
     try:
@@ -509,7 +509,7 @@ async def api_v25_crypto_encrypt(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/crypto/decrypt", dependencies=[Depends(require_auth)])
+@router.post("/crypto/decrypt", dependencies=[Depends(require_auth)])
 async def api_v25_crypto_decrypt(request: Request):
     """Decrypt ciphertext."""
     try:
@@ -527,7 +527,7 @@ async def api_v25_crypto_decrypt(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/crypto/hash", dependencies=[Depends(require_auth)])
+@router.post("/crypto/hash", dependencies=[Depends(require_auth)])
 async def api_v25_crypto_hash(request: Request):
     """Hash data (SHA-256, SHA-512, BLAKE2)."""
     try:
@@ -549,7 +549,7 @@ async def api_v25_crypto_hash(request: Request):
 #  RATE LIMITER (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/rate-limit/status", dependencies=[Depends(require_auth)])
+@router.get("/rate-limit/status", dependencies=[Depends(require_auth)])
 async def api_v25_rate_limit_status():
     """Get rate limiter status."""
     try:
@@ -569,7 +569,7 @@ async def api_v25_rate_limit_status():
 #  VECTOR DB (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/vector/search", dependencies=[Depends(require_auth)])
+@router.post("/vector/search", dependencies=[Depends(require_auth)])
 async def api_v25_vector_search(request: Request):
     """Search vector database."""
     try:
@@ -587,7 +587,7 @@ async def api_v25_vector_search(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/vector/store", dependencies=[Depends(require_auth)])
+@router.post("/vector/store", dependencies=[Depends(require_auth)])
 async def api_v25_vector_store(request: Request):
     """Store a document in vector database."""
     try:
@@ -609,7 +609,7 @@ async def api_v25_vector_store(request: Request):
 #  MULTI-TENANT (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/tenant/stats", dependencies=[Depends(require_auth)])
+@router.get("/tenant/stats", dependencies=[Depends(require_auth)])
 async def api_v25_tenant_stats():
     """Get multi-tenant statistics."""
     try:
@@ -629,7 +629,7 @@ async def api_v25_tenant_stats():
 #  PLUGIN MARKETPLACE (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/marketplace/plugins", dependencies=[Depends(require_auth)])
+@router.get("/marketplace/plugins", dependencies=[Depends(require_auth)])
 async def api_v25_marketplace_plugins():
     """List available plugins in marketplace."""
     try:
@@ -645,7 +645,7 @@ async def api_v25_marketplace_plugins():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/marketplace/install", dependencies=[Depends(require_auth)])
+@router.post("/marketplace/install", dependencies=[Depends(require_auth)])
 async def api_v25_marketplace_install(request: Request):
     """Install a plugin from marketplace."""
     try:
@@ -667,7 +667,7 @@ async def api_v25_marketplace_install(request: Request):
 #  REALTIME PRICES (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/prices/realtime", dependencies=[Depends(require_auth)])
+@router.post("/prices/realtime", dependencies=[Depends(require_auth)])
 async def api_v25_prices_realtime(request: Request):
     """Get realtime cryptocurrency/financial prices."""
     try:
@@ -689,7 +689,7 @@ async def api_v25_prices_realtime(request: Request):
 #  METRICS EXPORTER (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/metrics", dependencies=[Depends(require_auth)])
+@router.get("/metrics", dependencies=[Depends(require_auth)])
 async def api_v25_metrics():
     """Export system metrics (Prometheus-compatible)."""
     try:
@@ -709,7 +709,7 @@ async def api_v25_metrics():
 #  EMAIL NOTIFIER (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/notify/email", dependencies=[Depends(require_auth)])
+@router.post("/notify/email", dependencies=[Depends(require_auth)])
 async def api_v25_notify_email(request: Request):
     """Send an email notification."""
     try:
@@ -731,7 +731,7 @@ async def api_v25_notify_email(request: Request):
 #  TELEGRAM BOT (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/telegram/send", dependencies=[Depends(require_auth)])
+@router.post("/telegram/send", dependencies=[Depends(require_auth)])
 async def api_v25_telegram_send(request: Request):
     """Send a Telegram message."""
     try:
@@ -753,7 +753,7 @@ async def api_v25_telegram_send(request: Request):
 #  PDF GENERATOR (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/pdf/generate", dependencies=[Depends(require_auth)])
+@router.post("/pdf/generate", dependencies=[Depends(require_auth)])
 async def api_v25_pdf_generate(request: Request):
     """Generate a PDF report."""
     try:
@@ -775,7 +775,7 @@ async def api_v25_pdf_generate(request: Request):
 #  AUTO BACKUP (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.post("/api/v25/backup/create", dependencies=[Depends(require_auth)])
+@router.post("/backup/create", dependencies=[Depends(require_auth)])
 async def api_v25_backup_create():
     """Create a system backup."""
     try:
@@ -792,7 +792,7 @@ async def api_v25_backup_create():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/backup/restore", dependencies=[Depends(require_auth)])
+@router.post("/backup/restore", dependencies=[Depends(require_auth)])
 async def api_v25_backup_restore(request: Request):
     """Restore from a backup."""
     try:
@@ -810,7 +810,7 @@ async def api_v25_backup_restore(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v25/backup/list", dependencies=[Depends(require_auth)])
+@router.get("/backup/list", dependencies=[Depends(require_auth)])
 async def api_v25_backup_list():
     """List available backups."""
     try:
@@ -830,7 +830,7 @@ async def api_v25_backup_list():
 #  LOCAL LLM (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/llm/status", dependencies=[Depends(require_auth)])
+@router.get("/llm/status", dependencies=[Depends(require_auth)])
 async def api_v25_llm_status():
     """Get local LLM status."""
     try:
@@ -846,7 +846,7 @@ async def api_v25_llm_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/v25/llm/query", dependencies=[Depends(require_auth)])
+@router.post("/llm/query", dependencies=[Depends(require_auth)])
 async def api_v25_llm_query(request: Request):
     """Query the local LLM."""
     try:
@@ -868,7 +868,7 @@ async def api_v25_llm_query(request: Request):
 #  AGENT MESH (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/mesh/agents", dependencies=[Depends(require_auth)])
+@router.get("/mesh/agents", dependencies=[Depends(require_auth)])
 async def api_v25_mesh_agents():
     """List agents in the mesh."""
     try:
@@ -884,7 +884,7 @@ async def api_v25_mesh_agents():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v25/mesh/tasks", dependencies=[Depends(require_auth)])
+@router.get("/mesh/tasks", dependencies=[Depends(require_auth)])
 async def api_v25_mesh_tasks(agent_id: Optional[str] = None):
     """List tasks in the agent mesh."""
     try:
@@ -905,7 +905,7 @@ async def api_v25_mesh_tasks(agent_id: Optional[str] = None):
 #  BLOCKCHAIN AUDIT (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/blockchain/audit", dependencies=[Depends(require_auth)])
+@router.get("/blockchain/audit", dependencies=[Depends(require_auth)])
 async def api_v25_blockchain_audit():
     """Get blockchain audit log."""
     try:
@@ -925,7 +925,7 @@ async def api_v25_blockchain_audit():
 #  FEDERATED LEARNING (v3.7.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/api/v25/federated/status", dependencies=[Depends(require_auth)])
+@router.get("/federated/status", dependencies=[Depends(require_auth)])
 async def api_v25_federated_status():
     """Get federated learning model status."""
     try:
