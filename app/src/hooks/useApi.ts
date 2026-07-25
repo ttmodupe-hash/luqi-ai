@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-change-in-prod';
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -33,7 +34,9 @@ export function useApi() {
   const get = useCallback(async (endpoint: string) => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`${API_BASE}${endpoint}`);
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        headers: { 'X-API-Key': API_KEY },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (e) {
@@ -49,7 +52,7 @@ export function useApi() {
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
