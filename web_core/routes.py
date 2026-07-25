@@ -41,6 +41,10 @@ from web_core.agents.system import SystemAgent
 from web_core.security.auth import AuthManager
 from web_core.security.rate_limit import TokenBucketRateLimiter
 from web_core.security.audit import SqliteAuditLogger
+from web_core.middleware.validation import ValidationMiddleware, register_schema
+from web_core.middleware.tracing import TracingMiddleware
+from web_core.middleware.circuit_breaker import add_circuit_breaker_handlers
+from web_core.db.health import HealthMonitor, DatabaseHealthCheck, DiskSpaceHealthCheck, MemoryHealthCheck, TableHealthCheck
 
 logger = logging.getLogger("luqi.routes")
 
@@ -50,6 +54,7 @@ pool: ConnectionPool | None = None
 auth: AuthManager | None = None
 rate_limiter: TokenBucketRateLimiter | None = None
 audit: SqliteAuditLogger | None = None
+health_monitor: HealthMonitor | None = None
 
 chat_agent: ChatAgent | None = None
 doc_agent: DocumentAgent | None = None
@@ -100,13 +105,31 @@ async def audit_middleware(request: Request, call_next):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global pool, auth, rate_limiter, audit
+    global pool, auth, rate_limiter, audit, health_monitor
     global chat_agent, doc_agent, voice_agent, youtube_agent, wealth_agent, system_agent
 
     pool = ConnectionPool(DB_FILE)
     auth = AuthManager(pool, ADMIN_KEY)
     rate_limiter = TokenBucketRateLimiter(pool)
     audit = SqliteAuditLogger(pool)
+
+    # Run database migrations
+    try:
+        from web_core.db.migrations import MigrationManager
+        mgr = MigrationManager(pool, DATA_DIR / "migrations")
+        applied = mgr.migrate()
+        if applied:
+            logger.info("Applied %d migration(s): %s", len(applied), applied)
+        logger.info("Database migrated to version: %s", mgr.status()["current_version"])
+    except Exception as e:
+        logger.warning("Migration failed: %s", e)
+
+    # Register health checks
+    health_monitor = HealthMonitor()
+    health_monitor.register(DatabaseHealthCheck(pool))
+    health_monitor.register(DiskSpaceHealthCheck(DATA_DIR))
+    health_monitor.register(MemoryHealthCheck())
+    health_monitor.register(TableHealthCheck(pool))
 
     conv_store = ConversationStore(pool)
     doc_store = DocumentStore(pool)
@@ -139,6 +162,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(ValidationMiddleware)
+    app.add_middleware(TracingMiddleware, skip_paths={"/health", "/ready", "/static"})
+    add_circuit_breaker_handlers(app)
     return app
 
 app = create_app()
@@ -154,8 +180,9 @@ async def root():
 
 @app.get("/health")
 async def health():
-    h = system_agent.health() if system_agent else {}
-    return {"status": "healthy", "version": VERSION, **(h.__dict__ if hasattr(h, '__dict__') else {})}
+    report = health_monitor.get_report() if health_monitor else {"overall": "unknown", "checks": []}
+    status_code = 200 if report.get("overall") == "healthy" else 503
+    return JSONResponse(content=report, status_code=status_code, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 @app.get("/ready")
 async def ready():
