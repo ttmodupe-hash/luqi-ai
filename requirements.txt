@@ -30,7 +30,7 @@ openpyxl>=3.1.2
 
 # Web Scraping
 beautifulsoup4>=4.12.0
-lxml>=5.1.0
+lxml>=5.4.0
 
 # Audio / Voice
 gtts>=2.5.0
