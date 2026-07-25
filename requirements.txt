@@ -34,7 +34,7 @@ gTTS>=2.5.0
 SpeechRecognition>=3.10.0
 
 # Utilities
-jinja2>=3.1.3
+jinja2>=3.1.6
 python-dotenv>=1.0.0
 click>=8.1.0
 rich>=13.7.0
