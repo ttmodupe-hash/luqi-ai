@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""
+Multi-Format Export Engine for Luqi-AI.
+
+Provides unified export capabilities for Markdown, CSV, JSON, and plain
+text.  The :class:`ExportEngine` auto-routes to the correct serializer
+and generates safe, timestamped filenames under the user's home directory.
+
+Example::
+
+    from export_formats import ExportEngine
+
+    engine = ExportEngine()
+    path = engine.auto_export(
+        "What is Bitcoin?",
+        {"text": "Bitcoin is a decentralised digital currency."},
+        format="md",
+    )
+    print(f"Saved to: {path}")
+"""
+
+from __future__ import annotations
+
+import csv
+import io
+import json
+import os
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_DEFAULT_EXPORT_DIR: Path = Path.home() / "Luqi-AI" / "exports"
+"""Default directory for exported files."""
+
+_MAX_FILENAME_LEN: int = 120
+"""Maximum filename length (excluding extension)."""
+
+_ALLOWED_FORMATS: set[str] = {"md", "csv", "json", "txt"}
+"""Supported export formats."""
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _iso_timestamp() -> str:
+    """Return an ISO-8601 timestamp string suitable for filenames."""
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+
+def _slugify(text: str, max_len: int = _MAX_FILENAME_LEN) -> str:
+    """
+    Convert *text* into a safe filename fragment.
+
+    Collapses whitespace / punctuation into single underscores and
+    truncates to *max_len* characters.
+    """
+    slug = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
+    slug = re.sub(r"[\s_-]+", "_", slug.strip()).lower()
+    slug = slug.strip("_")
+    return slug[:max_len] if slug else "export"
+
+
+# ---------------------------------------------------------------------------
+# ExportEngine
+# ---------------------------------------------------------------------------
+
+class ExportEngine:
+    """
+    Unified export engine supporting Markdown, CSV, JSON, and plain text.
+
+    All exported files are written beneath
+    ``~/Luqi-AI/exports/<YYYY-MM>/`` by default.
+    """
+
+    def __init__(self, export_dir: Path | str | None = None) -> None:
+        """
+        Args:
+            export_dir: Override the default export root directory.
+        """
+        self._export_dir = Path(export_dir or _DEFAULT_EXPORT_DIR)
+        self._export_dir.mkdir(parents=True, exist_ok=True)
+
+    # -- Filename helpers -----------------------------------------------
+
+    def _safe_filename(self, base: str, ext: str) -> Path:
+        """
+        Generate a safe, timestamped file path.
+
+        The path includes a ``YYYY-MM`` sub-folder to avoid cluttering a
+        single directory.
+
+        Args:
+            base: Descriptive base name (may be truncated / slugified).
+            ext: File extension **without** the leading dot.
+
+        Returns:
+            Absolute :class:`pathlib.Path` ready for writing.
+        """
+        ext = ext.lstrip(".").lower()
+        slug = _slugify(base) if base else "export"
+        ts = _iso_timestamp()
+        month_folder = datetime.now(timezone.utc).strftime("%Y-%m")
+        folder = self._export_dir / month_folder
+        folder.mkdir(parents=True, exist_ok=True)
+        filename = f"{slug}_{ts}.{ext}"
+        return folder / filename
+
+    # -- Markdown export ------------------------------------------------
+
+    def export_markdown(
+        self,
+        query: str,
+        response: str,
+        module: str = "",
+        sources: list[str] | None = None,
+        filename: str = "",
+    ) -> str:
+        """
+        Export a query/response pair as a Markdown document.
+
+        Args:
+            query: The user's original question.
+            response: The assistant's answer text.
+            module: Name of the Luqi-AI module that produced the response.
+            sources: Optional list of source URLs / references.
+            filename: Optional override filename (without extension).
+
+        Returns:
+            Absolute path of the written file.
+        """
+        safe_name = filename or _slugify(query, max_len=60)
+        path = self._safe_filename(safe_name, "md")
+
+        lines: list[str] = [
+            f"# {query}",
+            "",
+            f"**Module:** `{module or 'general'}`  ",
+            f"**Exported:** {datetime.now(timezone.utc).isoformat()} UTC",
+            "",
+            "## Response",
+            "",
+            response,
+            "",
+        ]
+        if sources:
+            lines.extend(["## Sources", ""])
+            for i, src in enumerate(sources, start=1):
+                lines.append(f"{i}. {src}")
+            lines.append("")
+        lines.extend(["---", "*Generated by Luqi-AI ExportEngine*", ""])
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return str(path.resolve())
+
+    # -- CSV export -----------------------------------------------------
+
+    def export_csv(self, data: dict[str, Any], filename: str = "") -> str:
+        """
+        Convert a structured dictionary into a CSV file.
+
+        The dictionary is flattened into ``key,value`` rows.  If *data*
+        contains nested dicts or lists they are serialised as JSON in the
+        value column.
+
+        Args:
+            data: Flat or nested dictionary.
+            filename: Optional override filename (without extension).
+
+        Returns:
+            Absolute path of the written file.
+        """
+        safe_name = filename or "data_export"
+        path = self._safe_filename(safe_name, "csv")
+
+        output = io.StringIO()
+        writer = csv.writer(output, lineterminator="\n")
+        writer.writerow(["key", "value"])
+
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False)
+            writer.writerow([key, str(value)])
+
+        path.write_text(output.getvalue(), encoding="utf-8")
+        return str(path.resolve())
+
+    # -- JSON export ----------------------------------------------------
+
+    def export_json(self, data: dict[str, Any], filename: str = "") -> str:
+        """
+        Pretty-print a dictionary as JSON with metadata.
+
+        Injects ``_export_meta`` with timestamp and format version.
+
+        Args:
+            data: Dictionary to serialise.
+            filename: Optional override filename (without extension).
+
+        Returns:
+            Absolute path of the written file.
+        """
+        safe_name = filename or "data_export"
+        path = self._safe_filename(safe_name, "json")
+
+        envelope = {
+            "data": data,
+            "_export_meta": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "format_version": "1.0",
+                "engine": "Luqi-AI ExportEngine",
+            },
+        }
+
+        path.write_text(
+            json.dumps(envelope, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        return str(path.resolve())
+
+    # -- Plain text export ----------------------------------------------
+
+    def export_txt(
+        self,
+        query: str,
+        response: str,
+        module: str = "",
+        filename: str = "",
+    ) -> str:
+        """
+        Export a query/response pair as a plain text document.
+
+        Args:
+            query: The user's original question.
+            response: The assistant's answer text.
+            module: Name of the Luqi-AI module that produced the response.
+            filename: Optional override filename (without extension).
+
+        Returns:
+            Absolute path of the written file.
+        """
+        safe_name = filename or _slugify(query, max_len=60)
+        path = self._safe_filename(safe_name, "txt")
+
+        lines = [
+            "=" * 60,
+            f"QUERY: {query}",
+            f"MODULE: {module or 'general'}",
+            f"EXPORTED: {datetime.now(timezone.utc).isoformat()} UTC",
+            "=" * 60,
+            "",
+            response,
+            "",
+            "-" * 60,
+            "Generated by Luqi-AI ExportEngine",
+            "",
+        ]
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return str(path.resolve())
+
+    # -- Auto router ----------------------------------------------------
+
+    def auto_export(
+        self,
+        query: str,
+        response_data: dict[str, Any],
+        fmt: str = "md",
+        filename: str = "",
+    ) -> str:
+        """
+        Route to the correct exporter based on *fmt*.
+
+        Args:
+            query: The user's original question.
+            response_data: Dictionary with at least a ``"text"`` key
+                containing the response string.  Additional keys are
+                passed through when appropriate.
+            fmt: Desired format -- ``"md"``, ``"csv"``, ``"json"``,
+                or ``"txt"``.
+            filename: Optional override filename (without extension).
+
+        Returns:
+            Absolute path of the written file.
+
+        Raises:
+            ValueError: If *fmt* is not a recognised format.
+        """
+        fmt = fmt.lower().strip(".")
+        if fmt not in _ALLOWED_FORMATS:
+            raise ValueError(
+                f"Unsupported format '{fmt}'. "
+                f"Choose from: {', '.join(sorted(_ALLOWED_FORMATS))}."
+            )
+
+        text: str = response_data.get("text", str(response_data))
+        module: str = response_data.get("module", "")
+        sources: list[str] | None = response_data.get("sources")
+
+        if fmt == "md":
+            return self.export_markdown(query, text, module, sources, filename)
+        if fmt == "csv":
+            return self.export_csv(response_data, filename)
+        if fmt == "json":
+            return self.export_json(response_data, filename)
+        # fmt == "txt"
+        return self.export_txt(query, text, module, filename)
+
+
+# ---------------------------------------------------------------------------
+# Self-test / demo
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    engine = ExportEngine()
+
+    sample_data = {
+        "text": "Bitcoin is a decentralised digital currency created in 2009.",
+        "module": "crypto_education",
+        "sources": ["https://bitcoin.org/en/faq", "https://en.wikipedia.org/wiki/Bitcoin"],
+        "confidence_score": 0.97,
+        "extra_metadata": {"version": "1.0", "lang": "en"},
+    }
+
+    print("=== Markdown export ===")
+    print(engine.auto_export("What is Bitcoin?", sample_data, fmt="md"))
+
+    print("\n=== CSV export ===")
+    print(engine.auto_export("What is Bitcoin?", sample_data, fmt="csv"))
+
+    print("\n=== JSON export ===")
+    print(engine.auto_export("What is Bitcoin?", sample_data, fmt="json"))
+
+    print("\n=== TXT export ===")
+    print(engine.auto_export("What is Bitcoin?", sample_data, fmt="txt"))
