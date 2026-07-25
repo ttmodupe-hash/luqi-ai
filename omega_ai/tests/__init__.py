@@ -1,1 +1,1 @@
-# Omega AI v3.5.0 — Unified Test Suite
+# Omega AI Test Suite
