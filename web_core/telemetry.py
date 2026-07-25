@@ -321,7 +321,10 @@ class RequestLogger:
         count = cur.fetchone()[0]
         if count > self._MAX_ROWS:
             purge = count - self._MAX_ROWS + 1000
-            conn.execute(f"DELETE FROM request_log WHERE id <= (SELECT id FROM request_log ORDER BY id ASC LIMIT {purge})")
+            conn.execute(
+                "DELETE FROM request_log WHERE id <= (SELECT id FROM request_log ORDER BY id ASC LIMIT ?)",
+                (purge,),
+            )
 
     def recent(self, limit: int = 100) -> list[dict[str, Any]]:
         """Return recent request log entries."""
