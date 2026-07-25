@@ -9,7 +9,7 @@ __author__ = "Luqi AI Labs"
 __license__ = "MIT"
 
 # Convenience imports
-from config import CONFIG
+from config import settings as CONFIG
 from core_brain import OmegaBrain
 from response_schema import ResponseDict, ok, err
 
