@@ -1,129 +1,205 @@
-"""Omega AI v3.7.0 — Multi-Tenant Workspace Manager
-Isolated workspaces per user/organization with separate data, settings, and history.
 """
+Multi-Tenant Isolation Module for LUQI AI.
+
+Manages tenant boundaries, quotas, and metadata for a multi-tenant SaaS
+deployment. Each tenant is isolated by ID and carries its own usage counters.
+
+Usage:
+    mod = __import__("omega_ai.multi_tenant")
+    engine = mod.TenantManager()
+    info = engine.create_tenant("Acme Corp", tier="premium")
+    quota = engine.check_quota(info["data"]["tenant_id"])
+"""
+
 from __future__ import annotations
 
-import hashlib
-import json
-import time
-from pathlib import Path
+import uuid
 from typing import Any
 
-from db_engine import DatabaseEngine
+
+# Pre-seeded example tenants
+_DEFAULT_TENANTS: list[dict[str, Any]] = [
+    {
+        "id": "tnt-alfa-001",
+        "name": "Alpha Enterprises",
+        "tier": "premium",
+        "users": 12,
+        "requests_used": 8450,
+        "requests_limit": 100000,
+        "created_at": "2024-01-15T09:00:00+00:00",
+    },
+    {
+        "id": "tnt-beta-002",
+        "name": "Beta Solutions",
+        "tier": "basic",
+        "users": 3,
+        "requests_used": 1240,
+        "requests_limit": 10000,
+        "created_at": "2024-03-22T14:30:00+00:00",
+    },
+    {
+        "id": "tnt-gamma-003",
+        "name": "Gamma Industries",
+        "tier": "enterprise",
+        "users": 45,
+        "requests_used": 320000,
+        "requests_limit": 500000,
+        "created_at": "2023-11-05T08:15:00+00:00",
+    },
+]
+
+_TIER_DEFAULTS: dict[str, int] = {
+    "basic": 10000,
+    "premium": 100000,
+    "enterprise": 500000,
+}
 
 
-class WorkspaceManager:
-    """Manages isolated workspaces for multi-tenant deployment."""
+class TenantManager:
+    """Multi-tenant isolation manager for LUQI AI."""
 
-    def __init__(self, db: DatabaseEngine | None = None) -> None:
-        self._db = db or DatabaseEngine()
-        self._ensure_schema()
+    def __init__(self) -> None:
+        """Initialize the tenant manager with pre-seeded example tenants."""
+        self.tenants: dict[str, dict[str, Any]] = {}
+        for t in _DEFAULT_TENANTS:
+            self.tenants[t["id"]] = dict(t)
 
-    def _ensure_schema(self) -> None:
-        """Create workspace tables."""
-        try:
-            self._db.execute("""
-                CREATE TABLE IF NOT EXISTS workspaces (
-                    workspace_id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    owner_key_hash TEXT NOT NULL,
-                    created_at REAL NOT NULL,
-                    settings TEXT DEFAULT '{}',
-                    status TEXT DEFAULT 'active'
-                )
-            """)
-            self._db.execute("""
-                CREATE TABLE IF NOT EXISTS workspace_usage (
-                    workspace_id TEXT PRIMARY KEY,
-                    query_count INTEGER DEFAULT 0,
-                    storage_bytes INTEGER DEFAULT 0,
-                    last_active REAL
-                )
-            """)
-        except Exception:
-            pass
+    # ── helpers ───────────────────────────────────────────────────────────
 
-    def create_workspace(self, name: str, owner_api_key: str) -> dict[str, Any]:
-        """Create a new workspace."""
-        ws_id = f"ws_{hashlib.sha256(f'{name}{time.time()}'.encode()).hexdigest()[:12]}"
-        key_hash = hashlib.sha256(owner_api_key.encode()).hexdigest()
-        now = time.time()
-        try:
-            self._db.execute(
-                "INSERT INTO workspaces VALUES (?, ?, ?, ?, ?, ?)",
-                (ws_id, name, key_hash, now, '{}', 'active')
-            )
-            self._db.execute(
-                "INSERT INTO workspace_usage VALUES (?, ?, ?, ?)",
-                (ws_id, 0, 0, now)
-            )
-        except Exception:
-            pass
-        return {"workspace_id": ws_id, "name": name, "created_at": now}
+    def _new_id(self) -> str:
+        """Generate a unique tenant ID."""
+        return f"tnt-{uuid.uuid4().hex[:8]}"
 
-    def get_workspace(self, workspace_id: str) -> dict[str, Any] | None:
-        """Get workspace details."""
-        row = self._db.fetch_one("SELECT * FROM workspaces WHERE workspace_id = ?", (workspace_id,))
-        if not row:
-            return None
+    # ── public API ────────────────────────────────────────────────────────
+
+    def get_stats(self) -> dict:
+        """Get tenant statistics.
+
+        Returns:
+            Dictionary with tenant_count and a list of tenant summaries.
+        """
+        summaries = [
+            {
+                "id": t["id"],
+                "name": t["name"],
+                "tier": t["tier"],
+                "users": t["users"],
+                "quota": f"{t['requests_used']:,} / {t['requests_limit']:,}",
+            }
+            for t in self.tenants.values()
+        ]
         return {
-            "workspace_id": row[0],
-            "name": row[1],
-            "created_at": row[3],
-            "settings": json.loads(row[4]) if row[4] else {},
-            "status": row[5],
+            "result": "success",
+            "status": "ok",
+            "data": {
+                "tenant_count": len(self.tenants),
+                "tenants": summaries,
+            },
         }
 
-    def update_settings(self, workspace_id: str, settings: dict[str, Any]) -> bool:
-        """Update workspace settings."""
-        try:
-            existing = self.get_workspace(workspace_id)
-            if existing:
-                merged = {**existing.get("settings", {}), **settings}
-                self._db.execute(
-                    "UPDATE workspaces SET settings = ? WHERE workspace_id = ?",
-                    (json.dumps(merged), workspace_id)
-                )
-                return True
-        except Exception:
-            pass
-        return False
+    def create_tenant(self, name: str, tier: str = "basic") -> dict:
+        """Create a new tenant.
 
-    def list_workspaces(self) -> list[dict[str, Any]]:
-        """List all workspaces."""
-        rows = self._db.fetch_all("SELECT * FROM workspaces ORDER BY created_at DESC")
-        return [{"workspace_id": r[0], "name": r[1], "status": r[5]} for r in rows]
+        Args:
+            name: Human-readable tenant name.
+            tier: Subscription tier (basic, premium, enterprise).
 
-    def record_usage(self, workspace_id: str) -> None:
-        """Record a query for workspace usage tracking."""
-        try:
-            self._db.execute(
-                "UPDATE workspace_usage SET query_count = query_count + 1, last_active = ? WHERE workspace_id = ?",
-                (time.time(), workspace_id)
-            )
-        except Exception:
-            pass
+        Returns:
+            Dictionary with the new tenant_id and metadata.
+        """
+        from datetime import datetime, timezone
 
-    def get_usage(self, workspace_id: str) -> dict[str, Any]:
-        """Get workspace usage stats."""
-        row = self._db.fetch_one("SELECT * FROM workspace_usage WHERE workspace_id = ?", (workspace_id,))
-        if not row:
-            return {"query_count": 0, "storage_bytes": 0, "last_active": None}
+        tenant_id = self._new_id()
+        limit = _TIER_DEFAULTS.get(tier, _TIER_DEFAULTS["basic"])
+        record: dict[str, Any] = {
+            "id": tenant_id,
+            "name": name,
+            "tier": tier,
+            "users": 0,
+            "requests_used": 0,
+            "requests_limit": limit,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self.tenants[tenant_id] = record
         return {
-            "workspace_id": row[0],
-            "query_count": row[1],
-            "storage_bytes": row[2],
-            "last_active": row[3],
+            "result": "success",
+            "status": "ok",
+            "data": {
+                "tenant_id": tenant_id,
+                "name": name,
+                "tier": tier,
+                "requests_limit": limit,
+                "created_at": record["created_at"],
+            },
         }
 
-    def get_workspace_db_path(self, workspace_id: str) -> str:
-        """Get isolated DB path for a workspace."""
-        path = Path(f".omega_sessions/workspaces/{workspace_id}")
-        path.mkdir(parents=True, exist_ok=True)
-        return str(path / "data.db")
+    def get_tenant(self, tenant_id: str) -> dict:
+        """Get tenant details.
 
-    def get_workspace_memory_path(self, workspace_id: str) -> str:
-        """Get isolated memory path for a workspace."""
-        path = Path(f".omega_sessions/workspaces/{workspace_id}")
-        path.mkdir(parents=True, exist_ok=True)
-        return str(path / "memory.json")
+        Args:
+            tenant_id: The unique tenant identifier.
+
+        Returns:
+            Dictionary with full tenant record or an error payload.
+        """
+        tenant = self.tenants.get(tenant_id)
+        if tenant is None:
+            return {
+                "result": "error",
+                "status": "not_found",
+                "data": {"message": f"Tenant {tenant_id!r} not found."},
+            }
+        return {
+            "result": "success",
+            "status": "ok",
+            "data": dict(tenant),
+        }
+
+    def check_quota(self, tenant_id: str) -> dict:
+        """Check if tenant is within quota.
+
+        Args:
+            tenant_id: The unique tenant identifier.
+
+        Returns:
+            Dictionary with within_quota flag, requests_used, and requests_limit.
+        """
+        tenant = self.tenants.get(tenant_id)
+        if tenant is None:
+            return {
+                "result": "error",
+                "status": "not_found",
+                "data": {"message": f"Tenant {tenant_id!r} not found."},
+            }
+        used = tenant["requests_used"]
+        limit = tenant["requests_limit"]
+        return {
+            "result": "success",
+            "status": "ok",
+            "data": {
+                "within_quota": used < limit,
+                "requests_used": used,
+                "requests_limit": limit,
+                "utilisation_pct": round((used / limit) * 100, 2) if limit else 0.0,
+            },
+        }
+
+    def increment_usage(self, tenant_id: str, count: int = 1) -> dict:
+        """Increment the request counter for a tenant.
+
+        Args:
+            tenant_id: The unique tenant identifier.
+            count: Number of requests to add (default 1).
+
+        Returns:
+            Dictionary with updated usage and quota status.
+        """
+        tenant = self.tenants.get(tenant_id)
+        if tenant is None:
+            return {
+                "result": "error",
+                "status": "not_found",
+                "data": {"message": f"Tenant {tenant_id!r} not found."},
+            }
+        tenant["requests_used"] += count
+        return self.check_quota(tenant_id)
