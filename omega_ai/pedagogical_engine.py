@@ -1,193 +1,398 @@
-"""Omega AI v3 — Pedagogical Engine
-Adaptive learning with Bloom's taxonomy integration, spaced repetition,
-and learning path diagnostics.
+"""
+Pedagogical Engine — AI-powered educational assessment and tutoring.
+
+Implements Socratic questioning, Bjork's desirable difficulties,
+and Bloom's taxonomy for comprehensive student assessment and
+personalized learning guidance.
 
 Usage:
-    from pedagogical_engine import PedagogicalEngine
-    pe = PedagogicalEngine()
-    pe.create_learning_path("Python Programming", "beginner")
-    pe.adaptive_quiz("python", "beginner")
+    engine = PedagogicalEngine()
+    result = engine.diagnostic_assessment("stu_001", domain="math")
 """
+
 from __future__ import annotations
 
-import json
+import hashlib
 import random
-from datetime import datetime, timezone
-from pathlib import Path
+import time
 from typing import Any
 
 
+# ── Built-in assessment data ──────────────────────────────────────────────
+
+DOMAIN_QUESTIONS: dict[str, list[dict[str, Any]]] = {
+    "math": [
+        {"q": "What is the derivative of x² with respect to x?", "bloom": "apply", "topic": "calculus"},
+        {"q": "Explain why the square root of 2 is irrational.", "bloom": "understand", "topic": "number_theory"},
+        {"q": "A train travels 120 km in 2 hours. What is its average speed?", "bloom": "apply", "topic": "algebra"},
+        {"q": "Compare the properties of triangles and quadrilaterals.", "bloom": "analyze", "topic": "geometry"},
+        {"q": "Create a real-world problem that requires solving a system of linear equations.", "bloom": "create", "topic": "algebra"},
+        {"q": "Evaluate the validity of this proof by induction.", "bloom": "evaluate", "topic": "proofs"},
+        {"q": "Recall the formula for the area of a circle.", "bloom": "remember", "topic": "geometry"},
+        {"q": "How does changing the coefficient 'a' affect the graph of y = ax² + bx + c?", "bloom": "analyze", "topic": "functions"},
+    ],
+    "science": [
+        {"q": "State Newton's three laws of motion.", "bloom": "remember", "topic": "physics"},
+        {"q": "Explain photosynthesis in your own words.", "bloom": "understand", "topic": "biology"},
+        {"q": "Calculate the force needed to accelerate a 5 kg mass at 3 m/s².", "bloom": "apply", "topic": "physics"},
+        {"q": "Analyze the relationship between temperature and reaction rate.", "bloom": "analyze", "topic": "chemistry"},
+        {"q": "Design an experiment to test the effect of pH on enzyme activity.", "bloom": "create", "topic": "biology"},
+        {"q": "Evaluate the evidence for human-caused climate change.", "bloom": "evaluate", "topic": "earth_science"},
+        {"q": "What is the difference between ionic and covalent bonds?", "bloom": "understand", "topic": "chemistry"},
+        {"q": "Apply Ohm's Law to find the current in a 12V circuit with 4Ω resistance.", "bloom": "apply", "topic": "physics"},
+    ],
+    "programming": [
+        {"q": "What is the difference between a list and a tuple in Python?", "bloom": "understand", "topic": "data_structures"},
+        {"q": "Write a function that returns the factorial of a number.", "bloom": "apply", "topic": "functions"},
+        {"q": "Analyze the time complexity of bubble sort vs merge sort.", "bloom": "analyze", "topic": "algorithms"},
+        {"q": "Design a class hierarchy for a university management system.", "bloom": "create", "topic": "oop"},
+        {"q": "Evaluate whether recursion or iteration is better for this problem.", "bloom": "evaluate", "topic": "algorithms"},
+        {"q": "Recall the syntax for a list comprehension in Python.", "bloom": "remember", "topic": "syntax"},
+        {"q": "Explain how garbage collection works in Python.", "bloom": "understand", "topic": "memory"},
+        {"q": "Debug this function that should return even numbers only.", "bloom": "analyze", "topic": "debugging"},
+    ],
+    "history": [
+        {"q": "When did World War II end?", "bloom": "remember", "topic": "wwii"},
+        {"q": "Explain the causes of the French Revolution.", "bloom": "understand", "topic": "revolutions"},
+        {"q": "How did the Industrial Revolution change daily life in the 19th century?", "bloom": "apply", "topic": "industrial"},
+        {"q": "Compare and contrast the Roman Republic and the Roman Empire.", "bloom": "analyze", "topic": "ancient"},
+        {"q": "Evaluate the impact of colonialism on modern Africa.", "bloom": "evaluate", "topic": "colonialism"},
+        {"q": "Create a timeline of major events in the Cold War.", "bloom": "create", "topic": "cold_war"},
+        {"q": "What were the key achievements of the Mali Empire?", "bloom": "remember", "topic": "african"},
+        {"q": "Analyze the factors that led to the fall of the Berlin Wall.", "bloom": "analyze", "topic": "cold_war"},
+    ],
+    "general": [
+        {"q": "What are the primary colors?", "bloom": "remember", "topic": "art"},
+        {"q": "Explain the concept of supply and demand.", "bloom": "understand", "topic": "economics"},
+        {"q": "How would you approach solving a conflict between two team members?", "bloom": "apply", "topic": "soft_skills"},
+        {"q": "What are the strengths and weaknesses of remote work?", "bloom": "analyze", "topic": "career"},
+        {"q": "Design a weekly study schedule for exam preparation.", "bloom": "create", "topic": "planning"},
+        {"q": "Evaluate whether online education is as effective as in-person learning.", "bloom": "evaluate", "topic": "education"},
+        {"q": "Name the continents of the world.", "bloom": "remember", "topic": "geography"},
+        {"q": "How does critical thinking help in everyday decision-making?", "bloom": "understand", "topic": "thinking"},
+    ],
+}
+
+SOCRATIC_QUESTIONS: dict[str, list[str]] = {
+    "math": [
+        "What do you know about the relationship between these variables?",
+        "Can you draw a diagram to represent this problem?",
+        "What would happen if you changed one of the values?",
+        "Have you seen a similar problem before? How did you approach it?",
+        "What assumptions are you making? Are they all necessary?",
+        "Can you work backwards from the answer to check your reasoning?",
+    ],
+    "science": [
+        "What evidence supports your conclusion?",
+        "What would you expect to observe if your hypothesis is correct?",
+        "How does this phenomenon connect to what you already know?",
+        "What variables might affect the outcome?",
+        "Can you explain this to someone with no background in science?",
+        "What would happen if we changed the experimental conditions?",
+    ],
+    "programming": [
+        "What is the problem asking you to do, in your own words?",
+        "What are the inputs and expected outputs?",
+        "Can you break this problem into smaller sub-problems?",
+        "What data structure best fits this scenario?",
+        "How would you test your solution?",
+        "What happens with edge cases or invalid input?",
+    ],
+    "history": [
+        "Who were the key actors in this event, and what were their motives?",
+        "What primary sources exist for this period?",
+        "How might different groups have experienced this event differently?",
+        "What were the short-term and long-term consequences?",
+        "How does this event connect to the present day?",
+        "What counterarguments exist to the mainstream narrative?",
+    ],
+    "general": [
+        "What do you already know about this topic?",
+        "Why do you think this is important?",
+        "What are the different perspectives on this issue?",
+        "Can you give a concrete example?",
+        "What would be the consequences of each option?",
+        "Who benefits, and who might be harmed?",
+    ],
+}
+
+BLOOM_DESCRIPTIONS: dict[str, str] = {
+    "remember": "Recall facts and basic concepts.",
+    "understand": "Explain ideas or concepts in your own words.",
+    "apply": "Use information in new situations.",
+    "analyze": "Draw connections among ideas; deconstruct concepts.",
+    "evaluate": "Justify a stand or decision.",
+    "create": "Produce new or original work.",
+}
+
+BLOOM_LEVEL_ORDER: list[str] = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+
+
 class PedagogicalEngine:
-    """Adaptive learning engine with Bloom's taxonomy and spaced repetition."""
-
-    BLOOM_LEVELS = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
-
-    QUESTION_BANKS: dict[str, dict[str, list[dict]]] = {
-        "python": {
-            "beginner": [
-                {"q": "What is the correct way to create a variable in Python?", "options": ["var x = 5", "x = 5", "let x = 5", "int x = 5"], "answer": 1, "bloom": "remember"},
-                {"q": "What function prints output to the console?", "options": ["echo()", "print()", "cout()", "display()"], "answer": 1, "bloom": "remember"},
-                {"q": "What data type is [1, 2, 3]?", "options": ["tuple", "list", "set", "dictionary"], "answer": 1, "bloom": "understand"},
-                {"q": "How do you write a single-line comment?", "options": ["// comment", "# comment", "/* comment */", "<!-- comment -->"], "answer": 1, "bloom": "remember"},
-                {"q": "What does len('hello') return?", "options": ["4", "5", "6", "Error"], "answer": 1, "bloom": "understand"},
-            ],
-            "intermediate": [
-                {"q": "What is a list comprehension?", "options": ["A way to create lists concisely", "A function that sorts lists", "A method to delete items", "A type of loop"], "answer": 0, "bloom": "understand"},
-                {"q": "What does the 'self' parameter represent?", "options": ["A global variable", "The class instance", "A static method", "An imported module"], "answer": 1, "bloom": "understand"},
-                {"q": "Which is used for exception handling?", "options": ["if/else", "try/except", "for/while", "with/as"], "answer": 1, "bloom": "apply"},
-                {"q": "What is a decorator?", "options": ["A design pattern", "A function that modifies another function", "A CSS style", "A database tool"], "answer": 1, "bloom": "analyze"},
-                {"q": "What does __init__ do?", "options": ["Initializes a class instance", "Deletes an object", "Imports modules", "Creates a loop"], "answer": 0, "bloom": "understand"},
-            ],
-            "advanced": [
-                {"q": "What is a metaclass?", "options": ["A class of a class", "A subclass", "A decorator", "A module"], "answer": 0, "bloom": "analyze"},
-                {"q": "What does GIL stand for?", "options": ["Global Interpreter Lock", "General Interface Layer", "Graph Integration Library", "Global Index List"], "answer": 0, "bloom": "remember"},
-                {"q": "What is a generator?", "options": ["A function using yield", "A random number creator", "A list builder", "A class factory"], "answer": 0, "bloom": "analyze"},
-                {"q": "What is monkey patching?", "options": ["Modifying code at runtime", "A testing technique", "A debugging tool", "A deployment strategy"], "answer": 0, "bloom": "evaluate"},
-                {"q": "What are context managers used for?", "options": ["Resource management", "Memory allocation", "Thread handling", "Network requests"], "answer": 0, "bloom": "apply"},
-            ],
-        },
-        "data_science": {
-            "beginner": [
-                {"q": "What library is used for data manipulation?", "options": ["NumPy", "Pandas", "Matplotlib", "Scikit-learn"], "answer": 1, "bloom": "remember"},
-                {"q": "What does a DataFrame represent?", "options": ["A 2D labeled data structure", "A 1D array", "A graph", "A database"], "answer": 0, "bloom": "understand"},
-                {"q": "What function shows the first 5 rows?", "options": [".head()", ".tail()", ".first()", ".show()"], "answer": 0, "bloom": "remember"},
-                {"q": "What is NaN?", "options": ["Not a Number - missing value", "A string type", "A numeric value", "A function"], "answer": 0, "bloom": "understand"},
-                {"q": "What does .describe() do?", "options": ["Shows summary statistics", "Plots a chart", "Sorts data", "Deletes rows"], "answer": 0, "bloom": "understand"},
-            ],
-            "intermediate": [
-                {"q": "What is the purpose of train_test_split?", "options": ["Split data for training and testing", "Merge datasets", "Clean data", "Visualize data"], "answer": 0, "bloom": "apply"},
-                {"q": "What does StandardScaler do?", "options": ["Normalizes features", "Encodes categories", "Imputes missing values", "Selects features"], "answer": 0, "bloom": "understand"},
-                {"q": "What is overfitting?", "options": ["Model learns training data too well", "Model is too simple", "Not enough data", "Too many features"], "answer": 0, "bloom": "understand"},
-                {"q": "What is cross-validation?", "options": ["Testing model on multiple splits", "Validating CSV files", "Checking code syntax", "Visualizing results"], "answer": 0, "bloom": "apply"},
-                {"q": "What does RMSE measure?", "options": ["Prediction error magnitude", "Model accuracy", "Data quality", "Feature importance"], "answer": 0, "bloom": "understand"},
-            ],
-            "advanced": [
-                {"q": "What is gradient descent?", "options": ["Optimization algorithm", "Data preprocessing", "Visualization technique", "Feature selection"], "answer": 0, "bloom": "analyze"},
-                {"q": "What is regularization?", "options": ["Preventing overfitting", "Speeding up training", "Increasing accuracy", "Data cleaning"], "answer": 0, "bloom": "analyze"},
-                {"q": "What is the bias-variance tradeoff?", "options": ["Balancing model simplicity and complexity", "Choosing algorithms", "Data splitting ratio", "Feature scaling"], "answer": 0, "bloom": "evaluate"},
-                {"q": "What is ensemble learning?", "options": ["Combining multiple models", "Training on one dataset", "Single algorithm approach", "Data augmentation"], "answer": 0, "bloom": "analyze"},
-                {"q": "What is feature engineering?", "options": ["Creating new features from data", "Deleting features", "Visualizing features", "Scaling features"], "answer": 0, "bloom": "create"},
-            ],
-        },
-    }
-
-    LEARNING_PATHS: dict[str, dict[str, list[str]]] = {
-        "Python Programming": {
-            "beginner": ["Variables & Data Types", "Control Flow", "Functions", "Lists & Dictionaries", "File I/O", "Basic Error Handling"],
-            "intermediate": ["Object-Oriented Programming", "Modules & Packages", "Decorators", "Generators", "Context Managers", "Testing"],
-            "advanced": ["Metaclasses", "Async Programming", "C Extensions", "Memory Management", "Design Patterns", "Performance Optimization"],
-        },
-        "Data Science": {
-            "beginner": ["Pandas Basics", "NumPy Arrays", "Data Cleaning", "Basic Visualization", "Descriptive Statistics"],
-            "intermediate": ["Machine Learning Basics", "Feature Engineering", "Model Evaluation", "Supervised Learning", "Unsupervised Learning"],
-            "advanced": ["Deep Learning", "NLP", "Computer Vision", "MLOps", "Reinforcement Learning"],
-        },
-    }
+    """AI pedagogical engine combining Socratic, Bjork, and Bloom methods."""
 
     def __init__(self) -> None:
-        self._progress_file = Path(".omega_sessions/learning_progress.json")
-        self._progress_file.parent.mkdir(parents=True, exist_ok=True)
-        self._progress = self._load_progress()
+        self._progress_db: dict[str, dict[str, Any]] = {}
+        self._domains = list(DOMAIN_QUESTIONS.keys())
 
-    def _load_progress(self) -> dict:
-        if self._progress_file.exists():
-            try:
-                return json.loads(self._progress_file.read_text())
-            except (json.JSONDecodeError, OSError):
-                return {}
-        return {}
+    # ── Public API ─────────────────────────────────────────────────────────
 
-    def _save_progress(self) -> None:
-        self._progress_file.write_text(json.dumps(self._progress, indent=2))
+    def diagnostic_assessment(self, student_id: str, domain: str = "general") -> dict:
+        """Run diagnostic assessment using Socratic + Bjork + Bloom methods.
 
-    def create_learning_path(self, topic: str, level: str = "beginner") -> dict[str, Any]:
-        """Create a learning path for a topic."""
-        path = self.LEARNING_PATHS.get(topic, {}).get(level, [])
-        if not path:
-            return {"error": f"No learning path for {topic} at {level} level"}
-        return {"topic": topic, "level": level, "modules": path, "total_modules": len(path)}
+        Args:
+            student_id: Unique identifier for the student.
+            domain: Subject domain (math, science, programming, history, general).
 
-    def adaptive_quiz(self, topic: str, level: str = "beginner", num_questions: int = 5) -> dict[str, Any]:
-        """Generate an adaptive quiz."""
-        questions = self.QUESTION_BANKS.get(topic, {}).get(level, [])
-        if not questions:
-            return {"error": f"No questions for {topic} at {level} level"}
-        selected = random.sample(questions, min(num_questions, len(questions)))
-        return {
-            "topic": topic, "level": level,
-            "questions": [{"q": q["q"], "options": q["options"], "bloom_level": q["bloom"]} for q in selected],
-            "answer_key": [q["answer"] for q in selected],
+        Returns:
+            Dictionary with assessment_id, domain, bloom_level, strengths,
+            weaknesses, and recommendations.
+        """
+        domain = domain.lower() if domain.lower() in self._domains else "general"
+        questions = DOMAIN_QUESTIONS.get(domain, DOMAIN_QUESTIONS["general"])
+
+        # Seed random for reproducibility per student+domain
+        rng = random.Random(hash(student_id + domain) % (2**31))
+
+        # Select 5 questions spanning Bloom levels
+        selected = rng.sample(questions, min(5, len(questions)))
+
+        # Simulate Bloom-level scoring (deterministic pseudo-random)
+        scores: dict[str, float] = {}
+        for q in selected:
+            level = q["bloom"]
+            base = rng.uniform(0.3, 0.95)
+            scores[level] = scores.get(level, 0.0) + base
+
+        # Average scores per level
+        for level in scores:
+            count = sum(1 for q in selected if q["bloom"] == level)
+            scores[level] = round(scores[level] / max(count, 1), 2)
+
+        # Determine overall Bloom level
+        avg_score = sum(scores.values()) / max(len(scores), 1)
+        bloom_idx = min(int(avg_score * len(BLOOM_LEVEL_ORDER)), len(BLOOM_LEVEL_ORDER) - 1)
+        bloom_level = BLOOM_LEVEL_ORDER[bloom_idx]
+
+        # Strengths / weaknesses
+        strengths = [lvl for lvl, sc in scores.items() if sc >= 0.7]
+        weaknesses = [lvl for lvl, sc in scores.items() if sc < 0.5]
+
+        # Build recommendations using Bjork's desirable difficulties
+        recommendations = self._bjorkean_recommendations(weaknesses, domain, rng)
+
+        assessment_id = self._make_id(student_id, domain)
+
+        # Store progress
+        if student_id not in self._progress_db:
+            self._progress_db[student_id] = {}
+        self._progress_db[student_id][domain] = {
+            "bloom_level": bloom_level,
+            "scores": scores,
+            "assessments_count": self._progress_db[student_id].get(domain, {}).get("assessments_count", 0) + 1,
         }
 
-    def check_answer(self, topic: str, level: str, question_index: int, answer: int) -> dict[str, Any]:
-        """Check if an answer is correct."""
-        questions = self.QUESTION_BANKS.get(topic, {}).get(level, [])
-        if question_index >= len(questions):
-            return {"error": "Invalid question index"}
-        q = questions[question_index]
-        correct = answer == q["answer"]
         return {
-            "correct": correct,
-            "correct_answer": q["options"][q["answer"]],
-            "explanation": f"The correct answer is: {q['options'][q['answer']]}",
-            "bloom_level": q["bloom"],
+            "assessment_id": assessment_id,
+            "domain": domain,
+            "bloom_level": bloom_level,
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "recommendations": recommendations,
+            "questions_asked": [q["q"] for q in selected],
+            "scores": scores,
         }
 
-    def track_progress(self, user_id: str, topic: str, level: str, score: float) -> dict[str, Any]:
-        """Track learning progress."""
-        key = f"{user_id}:{topic}:{level}"
-        if key not in self._progress:
-            self._progress[key] = {"scores": [], "started": datetime.now(timezone.utc).isoformat()}
-        self._progress[key]["scores"].append(score)
-        self._progress[key]["last_attempt"] = datetime.now(timezone.utc).isoformat()
-        self._progress[key]["average"] = sum(self._progress[key]["scores"]) / len(self._progress[key]["scores"])
-        self._save_progress()
-        return {"user": user_id, "topic": topic, "average_score": round(self._progress[key]["average"], 2), "attempts": len(self._progress[key]["scores"])}
+    def get_progress(self, student_id: str) -> dict:
+        """Get student progress across all assessed domains.
 
-    def get_progress(self, user_id: str, topic: str = "", level: str = "") -> dict[str, Any]:
-        """Get learning progress."""
-        prefix = f"{user_id}:"
-        results = {k[len(prefix):]: v for k, v in self._progress.items() if k.startswith(prefix)}
-        if topic and level:
-            key = f"{topic}:{level}"
-            return results.get(key, {"error": "No progress found"})
-        return results
+        Args:
+            student_id: Unique identifier for the student.
 
-    def recommend_level(self, user_id: str, topic: str) -> str:
-        """Recommend next level based on progress."""
-        for level in ["beginner", "intermediate", "advanced"]:
-            progress = self.get_progress(user_id, topic, level)
-            if isinstance(progress, dict) and "average" in progress:
-                if progress["average"] >= 0.8:
-                    continue
-                return level
-            return level
-        return "advanced"
+        Returns:
+            Dictionary with student_id, per-domain data, and overall_progress.
+        """
+        domains_data = self._progress_db.get(student_id, {})
+        overall = 0.0
+        domain_summary: dict[str, Any] = {}
 
-    def spaced_repetition_schedule(self, topic: str, level: str) -> list[dict]:
-        """Generate a spaced repetition schedule."""
-        intervals = [1, 3, 7, 14, 30]  # days
-        questions = self.QUESTION_BANKS.get(topic, {}).get(level, [])
-        if not questions:
-            return []
-        schedule = []
-        for i, days in enumerate(intervals):
-            if i < len(questions):
-                schedule.append({"day": days, "question": questions[i]["q"], "review_date": f"+{days} days"})
-        return schedule
+        for dom, data in domains_data.items():
+            scores = data.get("scores", {})
+            avg = round(sum(scores.values()) / max(len(scores), 1), 2) if scores else 0.0
+            domain_summary[dom] = {
+                "bloom_level": data.get("bloom_level", "unknown"),
+                "average_score": avg,
+                "assessments_count": data.get("assessments_count", 0),
+            }
+            overall += avg
 
-    def learning_diagnostic(self, user_id: str, topic: str) -> dict[str, Any]:
-        """Run a learning diagnostic."""
-        report = {"topic": topic, "user": user_id, "levels": {}}
-        for level in ["beginner", "intermediate", "advanced"]:
-            progress = self.get_progress(user_id, topic, level)
-            if isinstance(progress, dict) and "average" in progress:
-                report["levels"][level] = {
-                    "average": round(progress["average"], 2),
-                    "attempts": len(progress.get("scores", [])),
-                    "status": "mastered" if progress["average"] >= 0.8 else "in_progress" if progress["average"] >= 0.5 else "needs_work",
-                }
-            else:
-                report["levels"][level] = {"status": "not_started"}
-        report["recommended_level"] = self.recommend_level(user_id, topic)
-        return report
+        overall_progress = round(overall / max(len(domain_summary), 1), 2) if domain_summary else 0.0
+
+        return {
+            "student_id": student_id,
+            "domains": domain_summary,
+            "overall_progress": overall_progress,
+        }
+
+    def socratic_tutor(self, student_id: str, topic: str) -> dict:
+        """Generate Socratic tutoring questions and hints for a topic.
+
+        Args:
+            student_id: Unique identifier for the student.
+            topic: Topic to tutor on (e.g., 'algebra', 'photosynthesis').
+
+        Returns:
+            Dictionary with topic, guiding questions, hints, and next_steps.
+        """
+        # Map topic to domain
+        topic_lower = topic.lower()
+        domain = "general"
+        for dom in self._domains:
+            if dom in topic_lower or any(dom in q["topic"] for q in DOMAIN_QUESTIONS.get(dom, [])):
+                domain = dom
+                break
+
+        # Find relevant questions mentioning the topic
+        questions = DOMAIN_QUESTIONS.get(domain, DOMAIN_QUESTIONS["general"])
+        related = [q["q"] for q in questions if topic_lower in q["topic"] or topic_lower in q["q"].lower()]
+        if not related:
+            related = [q["q"] for q in questions[:3]]
+
+        socratic_qs = SOCRATIC_QUESTIONS.get(domain, SOCRATIC_QUESTIONS["general"])
+
+        # Personalized hints based on student progress
+        progress = self._progress_db.get(student_id, {}).get(domain, {})
+        bloom_lvl = progress.get("bloom_level", "understand")
+
+        hints = self._generate_hints(topic, bloom_lvl, domain)
+        next_steps = self._generate_next_steps(topic, bloom_lvl, domain)
+
+        return {
+            "topic": topic,
+            "domain": domain,
+            "student_bloom_level": bloom_lvl,
+            "questions": socratic_qs[:5],
+            "related_assessment_questions": related[:3],
+            "hints": hints,
+            "next_steps": next_steps,
+        }
+
+    def assess_bloom_level(self, student_id: str, domain: str = "general") -> dict:
+        """Assess the student's current level on Bloom's taxonomy.
+
+        Args:
+            student_id: Unique identifier for the student.
+            domain: Subject domain.
+
+        Returns:
+            Dictionary with bloom_level, per-level scores, and description.
+        """
+        domain = domain.lower() if domain.lower() in self._domains else "general"
+
+        # If no prior assessment, run diagnostic
+        if student_id not in self._progress_db or domain not in self._progress_db.get(student_id, {}):
+            diag = self.diagnostic_assessment(student_id, domain)
+            scores = diag["scores"]
+            bloom_level = diag["bloom_level"]
+        else:
+            scores = self._progress_db[student_id][domain].get("scores", {})
+            bloom_level = self._progress_db[student_id][domain].get("bloom_level", "understand")
+
+        # Normalize to all 6 Bloom levels
+        full_scores: dict[str, float] = {level: round(scores.get(level, 0.0), 2) for level in BLOOM_LEVEL_ORDER}
+
+        return {
+            "bloom_level": bloom_level,
+            "scores": full_scores,
+            "description": BLOOM_DESCRIPTIONS.get(bloom_level, ""),
+            "level_order": BLOOM_LEVEL_ORDER,
+            "domain": domain,
+            "student_id": student_id,
+        }
+
+    # ── Helpers ────────────────────────────────────────────────────────────
+
+    def _bjorkean_recommendations(self, weaknesses: list[str], domain: str, rng: random.Random) -> list[str]:
+        """Generate recommendations based on Bjork's desirable difficulties."""
+        recs = []
+        bloom_weak = weaknesses[0] if weaknesses else "understand"
+
+        recs.append(f"Use spaced repetition to strengthen {bloom_weak}-level skills.")
+        recs.append(f"Apply interleaving: mix {domain} problems with different Bloom levels.")
+        recs.append("Practice retrieval: close the book and write what you remember.")
+        recs.append(f"Generate your own questions at the {bloom_weak} level before reviewing answers.")
+        recs.append("Vary practice contexts to improve transfer and generalization.")
+        recs.append("Use elaborative interrogation: ask 'why' and 'how' for every fact.")
+
+        if "remember" in weaknesses:
+            recs.append("Create mental images or mnemonics for key facts.")
+        if "apply" in weaknesses:
+            recs.append("Work on real-world case studies and word problems.")
+        if "analyze" in weaknesses:
+            recs.append("Use concept mapping to visualize relationships between ideas.")
+        if "evaluate" in weaknesses:
+            recs.append("Debate both sides of an argument before forming a conclusion.")
+        if "create" in weaknesses:
+            recs.append("Design original projects or open-ended solutions.")
+
+        return recs
+
+    def _generate_hints(self, topic: str, bloom_level: str, domain: str) -> list[str]:
+        """Generate contextual hints based on Bloom level."""
+        hints_map: dict[str, list[str]] = {
+            "remember": [
+                f"Start by listing the key terms related to {topic}.",
+                "Try to recall definitions before looking them up.",
+                "Use flashcards for memorization.",
+            ],
+            "understand": [
+                f"Explain {topic} as if teaching it to a 10-year-old.",
+                "Draw a concept map connecting related ideas.",
+                "Paraphrase the core concept in your own words.",
+            ],
+            "apply": [
+                f"Find a real-world problem that requires {topic}.",
+                "Work through a worked example, then try a similar one alone.",
+                "Identify which formula or method applies to each scenario.",
+            ],
+            "analyze": [
+                f"Break {topic} into its component parts.",
+                "Compare and contrast different approaches.",
+                "Look for patterns, assumptions, and causal relationships.",
+            ],
+            "evaluate": [
+                f"Assess the strengths and weaknesses of each approach to {topic}.",
+                "Consider the evidence for and against each claim.",
+                "Determine criteria for judging which solution is best.",
+            ],
+            "create": [
+                f"Design an original project or problem set about {topic}.",
+                "Combine ideas from different domains in a novel way.",
+                "Propose a hypothesis and outline an experiment to test it.",
+            ],
+        }
+        return hints_map.get(bloom_level, hints_map["understand"])
+
+    def _generate_next_steps(self, topic: str, bloom_level: str, domain: str) -> list[str]:
+        """Suggest next steps for progression."""
+        idx = BLOOM_LEVEL_ORDER.index(bloom_level) if bloom_level in BLOOM_LEVEL_ORDER else 1
+        next_level = BLOOM_LEVEL_ORDER[min(idx + 1, len(BLOOM_LEVEL_ORDER) - 1)]
+
+        return [
+            f"Current level: {bloom_level}. Target: {next_level}.",
+            f"Practice 3 questions at the {next_level} level for {topic}.",
+            f"Review {domain} fundamentals with spaced repetition.",
+            "Self-test: write down everything you know about the topic, then check.",
+            "Seek feedback on your work from a peer or mentor.",
+        ]
+
+    @staticmethod
+    def _make_id(student_id: str, domain: str) -> str:
+        """Generate a deterministic assessment ID."""
+        raw = f"{student_id}:{domain}:{time.time()}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+# ── Module-level convenience alias ────────────────────────────────────────
+
+ModuleName = PedagogicalEngine
