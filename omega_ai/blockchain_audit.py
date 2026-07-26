@@ -1,84 +1,161 @@
-"""Omega AI v3.7.0 — Blockchain-Style Audit Log
-Immutable tamper-proof interaction records using hash chains.
 """
+Blockchain Audit Module for LUQI AI.
+
+Provides an immutable, hash-linked audit trail where every entry becomes a block
+chained to the previous one via SHA-256. Any tampering breaks the chain and is
+detected by verify_chain().
+
+Usage:
+    mod = __import__("omega_ai.blockchain_audit")
+    engine = mod.BlockchainAuditor(chain_path="data/audit.json")
+    engine.add_entry("user.login", "admin@luqi.ai", {"ip": "1.2.3.4"})
+    result = engine.verify_chain()
+"""
+
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 
-class BlockchainAuditLog:
-    """Append-only audit log with cryptographic hash chaining."""
+class BlockchainAuditor:
+    """Simple blockchain-based audit log. Each entry is a block with hash linking."""
 
-    def __init__(self, db: Any = None) -> None:
-        self._db = db
-        self._ensure_table()
+    def __init__(self, chain_path: str = "data/audit_chain.json") -> None:
+        """Initialize the auditor, loading existing chain or creating a genesis block.
 
-    def _ensure_table(self) -> None:
-        try:
-            self._db.execute("""
-                CREATE TABLE IF NOT EXISTS blockchain_audit (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    action TEXT NOT NULL,
-                    actor TEXT,
-                    data_json TEXT,
-                    data_hash TEXT NOT NULL,
-                    prev_hash TEXT,
-                    timestamp REAL NOT NULL
-                )
-            """)
-        except Exception:
-            pass
+        Args:
+            chain_path: File path where the JSON chain is persisted.
+        """
+        self.chain_path = chain_path
+        self._chain: list[dict[str, Any]] = []
+        self._load()
 
-    def _compute_hash(self, data: dict[str, Any], prev_hash: str | None = None) -> str:
-        content = json.dumps(data, sort_keys=True, separators=(",", ":"))
-        if prev_hash:
-            content = prev_hash + content
-        return hashlib.sha256(content.encode()).hexdigest()
+    # ── internal helpers ──────────────────────────────────────────────────
 
-    def _get_last_hash(self) -> str | None:
-        try:
-            row = self._db.fetch_one("SELECT data_hash FROM blockchain_audit ORDER BY id DESC LIMIT 1")
-            return row[0] if row else None
-        except Exception:
-            return None
+    def _load(self) -> None:
+        """Load chain from disk or start fresh with a genesis block."""
+        if os.path.exists(self.chain_path):
+            try:
+                with open(self.chain_path, "r", encoding="utf-8") as fh:
+                    self._chain = json.load(fh)
+                return
+            except (json.JSONDecodeError, OSError):
+                pass
+        self._chain = [self._create_genesis_block()]
+        self._persist()
 
-    def append(self, action: str, actor: str = "", data: dict[str, Any] | None = None) -> dict[str, Any]:
-        prev_hash = self._get_last_hash()
-        entry_data = {"action": action, "actor": actor, "data": data or {}, "timestamp": time.time()}
-        data_hash = self._compute_hash(entry_data, prev_hash)
-        try:
-            self._db.execute(
-                "INSERT INTO blockchain_audit (action, actor, data_json, data_hash, prev_hash, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-                (action, actor, json.dumps(data or {}), data_hash, prev_hash, time.time())
-            )
-            return {"success": True, "hash": data_hash, "previous": prev_hash, "action": action}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+    def _persist(self) -> None:
+        """Save the current chain to disk."""
+        os.makedirs(os.path.dirname(self.chain_path) or ".", exist_ok=True)
+        with open(self.chain_path, "w", encoding="utf-8") as fh:
+            json.dump(self._chain, fh, indent=2)
 
-    def verify_chain(self) -> dict[str, Any]:
-        try:
-            rows = self._db.fetch_all("SELECT id, data_json, data_hash, prev_hash, timestamp FROM blockchain_audit ORDER BY id")
-        except Exception:
-            return {"valid": False, "error": "Could not read audit log"}
-        broken = []
-        prev_hash = None
-        for row in rows:
-            entry_id, data_json, stored_hash, stored_prev, ts = row
-            if stored_prev != prev_hash:
-                broken.append(entry_id)
-            data = {"data": json.loads(data_json), "timestamp": ts}
-            computed = self._compute_hash(data, stored_prev)
-            if computed != stored_hash:
-                broken.append(entry_id)
-            prev_hash = stored_hash
-        return {"valid": len(broken) == 0, "total_entries": len(rows), "broken_entries": broken, "integrity": "100%" if len(broken) == 0 else f"{((len(rows)-len(broken))/len(rows)*100):.1f}%"}
+    def _create_genesis_block(self) -> dict[str, Any]:
+        """Create the genesis block (index 0)."""
+        block = {
+            "index": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action": "GENESIS",
+            "actor": "system",
+            "details": {},
+            "prev_hash": "0",
+            "hash": "",
+        }
+        block["hash"] = self._compute_hash(block)
+        return block
 
-    def get_recent(self, limit: int = 50) -> list[dict[str, Any]]:
-        rows = self._db.fetch_all("SELECT * FROM blockchain_audit ORDER BY id DESC LIMIT ?", (limit,))
-        return [{"id": r[0], "action": r[1], "actor": r[2], "data": json.loads(r[3]) if r[3] else {}, "hash": r[4], "previous": r[5], "timestamp": r[6]} for r in rows]
+    def _compute_hash(self, block: dict[str, Any]) -> str:
+        """Compute SHA-256 hash of a block (excludes the 'hash' field itself).
 
-    def stats(self) -> dict[str, Any]:
-        return {**self.verify_chain(), "recent_actions": len(self.get_recent(10))}
+        Args:
+            block: A block dictionary.
+
+        Returns:
+            Hex digest string of the block's canonical JSON encoding.
+        """
+        payload = {k: v for k, v in block.items() if k != "hash"}
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    # ── public API ────────────────────────────────────────────────────────
+
+    def add_entry(self, action: str, actor: str, details: dict | None = None) -> dict:
+        """Add a new audit entry as a block linked to the previous one.
+
+        Args:
+            action: Description of the action being logged.
+            actor: Identifier of the entity performing the action.
+            details: Optional dictionary with extra metadata.
+
+        Returns:
+            Dictionary with block_index, hash, and timestamp.
+        """
+        prev_block = self._chain[-1]
+        block: dict[str, Any] = {
+            "index": len(self._chain),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action": action,
+            "actor": actor,
+            "details": details or {},
+            "prev_hash": prev_block["hash"],
+            "hash": "",
+        }
+        block["hash"] = self._compute_hash(block)
+        self._chain.append(block)
+        self._persist()
+        return {
+            "result": "success",
+            "status": "ok",
+            "data": {
+                "block_index": block["index"],
+                "hash": block["hash"],
+                "timestamp": block["timestamp"],
+            },
+        }
+
+    def get_audit_log(self) -> dict:
+        """Get the full audit log with integrity summary.
+
+        Returns:
+            Dictionary with chain_length, blocks, and an integrity flag.
+        """
+        integrity = self.verify_chain()["data"]["valid"]
+        return {
+            "result": "success",
+            "status": "ok",
+            "data": {
+                "chain_length": len(self._chain),
+                "blocks": list(self._chain),
+                "integrity": integrity,
+            },
+        }
+
+    def verify_chain(self) -> dict:
+        """Verify chain integrity by checking every hash link.
+
+        Returns:
+            Dictionary with valid flag, blocks_checked, and tampered_blocks list.
+        """
+        tampered: list[int] = []
+        for i in range(1, len(self._chain)):
+            curr = self._chain[i]
+            prev = self._chain[i - 1]
+            if curr["prev_hash"] != prev["hash"]:
+                tampered.append(i)
+            if self._compute_hash(curr) != curr["hash"]:
+                tampered.append(i)
+        tampered = sorted(set(tampered))
+        return {
+            "result": "success",
+            "status": "ok",
+            "data": {
+                "valid": len(tampered) == 0,
+                "blocks_checked": len(self._chain),
+                "tampered_blocks": tampered,
+            },
+        }
