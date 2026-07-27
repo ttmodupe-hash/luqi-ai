@@ -23,6 +23,39 @@ from pydantic import BaseModel, Field
 router = APIRouter(tags=["v25"])
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  RATE LIMITING (Global + Per-Endpoint)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_rate_limiter = None
+
+def get_rate_limiter():
+    """Lazy-load the Omega AI RateLimiter. Returns None if unavailable."""
+    global _rate_limiter
+    if _rate_limiter is None:
+        try:
+            mod = __import__("omega_ai.rate_limiter")
+            _rate_limiter = mod.rate_limiter.RateLimiter()
+        except Exception:
+            _rate_limiter = None
+    return _rate_limiter
+
+
+async def rate_limit_check(client_id: str = "default"):
+    """
+    Check rate limit for a client. Raises HTTP 429 if exceeded.
+    Usage: add to endpoint dependencies=[Depends(rate_limit_check)]
+    """
+    rl = get_rate_limiter()
+    if rl:
+        result = rl.is_allowed(client_id)
+        if not result.get("allowed", True):
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded. Try again later. Reset at {result.get('reset_at', 'unknown')}"
+            )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  AUTHENTICATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -165,7 +198,7 @@ def _ok(module_name: str) -> bool:
 #  v25 STATUS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(rate_limit_check)])
 async def api_v25_status():
     """v25 Prometheus engine status — reports which Omega modules are loaded."""
     modules = {
@@ -1065,7 +1098,7 @@ async def api_v25_ca_audit_checklist(entity_type: str = "company"):
 #  TRAINING ENGINE (v4.0.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/training/courses", dependencies=[Depends(require_auth)])
+@router.get("/training/courses", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_training_courses(category: str = None, difficulty: str = None):
     """List training courses."""
     try:
@@ -1082,7 +1115,7 @@ async def api_v25_training_courses(category: str = None, difficulty: str = None)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/training/courses/{course_id}", dependencies=[Depends(require_auth)])
+@router.get("/training/courses/{course_id}", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_training_course(course_id: str):
     """Get a specific course."""
     try:
@@ -1099,7 +1132,7 @@ async def api_v25_training_course(course_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/training/enroll", dependencies=[Depends(require_auth)])
+@router.post("/training/enroll", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_training_enroll(request: Request):
     """Enroll a student in a course."""
     try:
@@ -1117,7 +1150,7 @@ async def api_v25_training_enroll(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/training/progress/{student_id}", dependencies=[Depends(require_auth)])
+@router.get("/training/progress/{student_id}", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_training_progress(student_id: str, course_id: str = None):
     """Get student progress."""
     try:
@@ -1134,7 +1167,7 @@ async def api_v25_training_progress(student_id: str, course_id: str = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/training/grade", dependencies=[Depends(require_auth)])
+@router.post("/training/grade", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_training_grade(request: Request):
     """Submit and grade an assessment."""
     try:
@@ -1152,7 +1185,7 @@ async def api_v25_training_grade(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/training/certificates/{student_id}", dependencies=[Depends(require_auth)])
+@router.get("/training/certificates/{student_id}", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_training_certificates(student_id: str):
     """Get student certificates."""
     try:
@@ -1524,7 +1557,7 @@ async def api_v25_cyber_assessment_run(request: Request):
     except HTTPException: raise
     except Exception as e: logger.error("Cyber assessment error: %s", e); raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/cyber/training/modules", dependencies=[Depends(require_auth)])
+@router.get("/cyber/training/modules", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_cyber_training_modules(category: str = None, level: str = None):
     try:
         mod = _omega("cybersecurity_engine")
@@ -1544,7 +1577,7 @@ async def api_v25_cyber_training_lesson(module_id: str, lesson_id: str):
     except HTTPException: raise
     except Exception as e: logger.error("Cyber lesson error: %s", e); raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/cyber/training/assess", dependencies=[Depends(require_auth)])
+@router.post("/cyber/training/assess", dependencies=[Depends(require_auth), Depends(rate_limit_check)])
 async def api_v25_cyber_training_assess(request: Request):
     try:
         mod = _omega("cybersecurity_engine")
