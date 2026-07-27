@@ -1,6 +1,6 @@
-"""Luqi AI v25.0.0 — Backend Package"""
+"""Luqi AI v29.0.0 — Backend Package"""
 
-__version__ = "25.0.0"
+__version__ = "29.0.0"
 __title__ = "Luqi AI"
 __description__ = (
     "World-class AI system with multi-agent orchestration, ASI cognitive engine, "
@@ -13,6 +13,8 @@ __description__ = (
     "Omega AI Prometheus Engines — Error Repair, Memory Manager, Pedagogical Engine, "
     "Wisdom, Crypto, Rate Limiting, WebSocket, Vector DB, Multi-Tenant, "
     "Plugin Marketplace, Realtime Prices, Metrics, Email, Telegram, PDF, "
-    "Backup, Local LLM, Agent Mesh, Blockchain Audit, Federated Learning. "
+    "Backup, Local LLM, Agent Mesh, Blockchain Audit, Federated Learning, "
+    "AI Brain with LLM, Auth System, Notification Hub, Mobile-first Design, "
+    "Favorites & Bookmarks. "
     "400+ endpoints. Built by Limitless Telecoms."
 )
