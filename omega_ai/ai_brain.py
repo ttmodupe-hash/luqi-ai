@@ -2126,5 +2126,294 @@ Rules:
         # Extract interest rate
         rate_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:interest|rate)", query, re.IGNORECASE)
         if rate_match:
+            entities["interest_rate"] = float(rate_match.group(1))
 
-# [TRUNCATED - File exceeded 95KB GitHub API limit. Full file available in source.]
+        return entities
+
+    def _pick_method(self, module_name: str, route: RouteResult) -> str:
+        """Pick the best method to call on a module."""
+        method_map = {
+            "hr_payroll": "calculate_payee",
+            "finance_data": "compare_rates",
+            "loan_calculator": "calculate_bond",
+            "tender_assistant": "generate_checklist",
+            "funding_assistant": "check_eligibility",
+            "university_guide": "get_nsfas_info",
+            "nsfas_assistant": "get_nsfas_info",
+            "health_advisor": "compare_medical_aids",
+            "medical_aid_comparator": "compare_medical_aids",
+            "business_registrar": "register_company",
+            "business_plan_generator": "generate_plan",
+            "tax_calculator": "calculate_tax",
+            "sars_efiler": "get_filing_status",
+            "cidb_lookup": "get_grade",
+            "cbbee_calculator": "calculate_score",
+            "agri_advisor": "get_crop_advice",
+            "construction_planner": "estimate_project",
+            "energy_advisor": "calculate_solar",
+            "security_auditor": "run_audit",
+            "legal_assistant": "get_legal_advice",
+            "insurance_comparator": "compare_quotes",
+            "property_valuer": "estimate_value",
+            "general_assistant": "answer",
+            "calculator": "compute",
+        }
+        return method_map.get(module_name, "process")
+
+    def _format_calculation(self, data: Dict[str, Any], route: RouteResult) -> str:
+        lines = []
+        if "paye_monthly" in data:
+            lines.append(
+                f"Based on a gross monthly salary of **R{data['gross_monthly']:,.2f}**:\n\n"
+                f"| Component | Amount |\n"
+                f"|-----------|--------|\n"
+                f"| Gross Monthly | R{data['gross_monthly']:,.2f} |\n"
+                f"| PAYE | R{data['paye_monthly']:,.2f} |\n"
+                f"| UIF | R{data['uif_monthly']:,.2f} |\n"
+                f"| **Net Monthly** | **R{data['net_monthly']:,.2f}** |\n\n"
+                f"Tax year: {data.get('tax_year', '2024/2025')}. "
+                f"Primary rebate applied."
+            )
+        elif "monthly_repayment" in data:
+            lines.append(
+                f"**Bond Calculation**:\n\n"
+                f"| Detail | Value |\n"
+                f"|--------|-------|\n"
+                f"| Property Value | R{data.get('property_value', 0):,.2f} |\n"
+                f"| Deposit | R{data.get('deposit', 0):,.2f} |\n"
+                f"| Loan Amount | R{data.get('loan_amount', 0):,.2f} |\n"
+                f"| Interest Rate | {data.get('interest_rate', 0)}% |\n"
+                f"| Term | {data.get('term_years', 20)} years |\n"
+                f"| **Monthly Repayment** | **R{data['monthly_repayment']:,.2f}** |\n"
+                f"| Total Interest | R{data.get('total_interest', 0):,.2f} |"
+            )
+        else:
+            lines.append(f"Here's the result of your calculation:")
+            for k, v in data.items():
+                if not k.startswith("_"):
+                    lines.append(f"- **{k.replace('_', ' ').title()}**: {v}")
+        return "\n".join(lines)
+
+    def _format_application(self, data: Dict[str, Any], route: RouteResult) -> str:
+        lines = ["Here's what you need to do:"]
+        if "steps" in data:
+            for i, step in enumerate(data["steps"], 1):
+                lines.append(f"{i}. {step}")
+        elif "checklist" in data:
+            for i, item in enumerate(data["checklist"], 1):
+                lines.append(f"{i}. {item}")
+        else:
+            for k, v in data.items():
+                if not k.startswith("_") and k != "message":
+                    lines.append(f"- **{k.replace('_', ' ').title()}**: {v}")
+
+        if "estimated_cost" in data:
+            lines.append(f"\n**Estimated cost:** R{data['estimated_cost']}")
+        if "estimated_time_days" in data:
+            lines.append(f"**Estimated time:** {data['estimated_time_days']} days")
+        if "next_steps" in data:
+            lines.append(f"\n**Next steps:** {data['next_steps']}")
+
+        return "\n".join(lines)
+
+    def _format_comparison(self, data: Dict[str, Any], route: RouteResult) -> str:
+        if "plans" in data:
+            lines = ["Here's a comparison of available options:", ""]
+            for plan in data["plans"]:
+                lines.append(f"**{plan.get('name', 'Plan')}** — R{plan.get('monthly', 'N/A')}/month")
+                for k, v in plan.items():
+                    if k != "name":
+                        lines.append(f"  - {k.capitalize()}: {v}")
+                lines.append("")
+            if "note" in data:
+                lines.append(f"*{data['note']}*")
+            return "\n".join(lines)
+        return "Comparison data available."
+
+    def _format_information(self, data: Dict[str, Any], route: RouteResult) -> str:
+        if isinstance(data, dict):
+            if "message" in data and len(data) == 2:
+                return data["message"]
+            lines = []
+            for k, v in data.items():
+                if k.startswith("_"):
+                    continue
+                if isinstance(v, list):
+                    lines.append(f"**{k.replace('_', ' ').title()}:**")
+                    for item in v:
+                        lines.append(f"  - {item}")
+                elif isinstance(v, dict):
+                    lines.append(f"**{k.replace('_', ' ').title()}:**")
+                    for sk, sv in v.items():
+                        lines.append(f"  - {sk}: {sv}")
+                else:
+                    lines.append(f"**{k.replace('_', ' ').title()}:** {v}")
+            return "\n".join(lines)
+        return str(data)
+
+    def _generate_followups(self, category: str, intent: IntentType, entities: Dict[str, Any]) -> List[str]:
+        followups_map = {
+            QueryCategory.EDUCATION.value: [
+                "What documents do I need for NSFAS?",
+                "When is the NSFAS application deadline?",
+                "Which universities offer data science?",
+            ],
+            QueryCategory.TENDERS.value: [
+                "What is my CIDB grade?",
+                "How do I improve my B-BBEE score?",
+                "Find construction tenders in my area",
+            ],
+            QueryCategory.FINANCE.value: [
+                "Compare fixed deposit rates",
+                "Should I invest in a TFSA?",
+                "What is the prime interest rate?",
+            ],
+            QueryCategory.HUMAN_RESOURCES.value: [
+                "What is the minimum wage?",
+                "How do I calculate UIF?",
+                "CCMA referral process",
+            ],
+            QueryCategory.HEALTH.value: [
+                "Compare medical aid plans",
+                "What is NHI?",
+                "Find clinics near me",
+            ],
+            QueryCategory.BUSINESS.value: [
+                "Register a new company",
+                "How do I get a tax clearance?",
+                "Write a business plan",
+            ],
+            QueryCategory.LEGAL.value: [
+                "What does POPIA require?",
+                "Review a lease agreement",
+                "Labour law basics",
+            ],
+            QueryCategory.TAXATION.value: [
+                "How do I file my tax return?",
+                "Calculate VAT on R2,400",
+                "What is provisional tax?",
+            ],
+            QueryCategory.REAL_ESTATE.value: [
+                "Estimate my property value",
+                "Sectional title rules",
+                "Transfer duty calculation",
+            ],
+            QueryCategory.ENERGY.value: [
+                "Calculate solar system size",
+                "Load shedding schedule today",
+                "Compare inverter prices",
+            ],
+            QueryCategory.CONSTRUCTION.value: [
+                "Estimate cost for house extension",
+                "NCC compliance checklist",
+                "Find a quantity surveyor",
+            ],
+        }
+        return followups_map.get(category, [
+            "Tell me more",
+            "What are the requirements?",
+            "How long does it take?",
+        ])[:3]
+
+    def _get_suggestions(self, category: str) -> List[str]:
+        meta = MODULE_REGISTRY.get(category, {})
+        return meta.get("examples", ["How can you help me?", "What can you do?"])
+
+    def _translate_if_needed(self, text: str, language: str) -> str:
+        """Simple phrase-based translation for supported languages."""
+        if language == "english":
+            return text
+        # For demo purposes, return text with a language note
+        # In production, this calls a translation service
+        phrase_map = {
+            "zulu": {
+                "Here's what you need to do:": "Nansi okudingeka uyenze:",
+                "I'm not sure I understood that.": "Angiqinisekile ukuthi ngikuqondayile lokho.",
+            },
+            "xhosa": {
+                "Here's what you need to do:": "Nantsi into okufuneka uyenze:",
+                "I'm not sure I understood that.": "Andiqinisekanga ukuba ndiyakuqonda oko.",
+            },
+            "afrikaans": {
+                "Here's what you need to do:": "Hier is wat jy moet doen:",
+                "I'm not sure I understood that.": "Ek is nie seker ek het dit verstaan nie.",
+            },
+        }
+        translated = text
+        for eng, trans in phrase_map.get(language, {}).items():
+            translated = translated.replace(eng, trans)
+        return translated
+
+
+# ---------------------------------------------------------------------------
+# Factory / singleton helper
+# ---------------------------------------------------------------------------
+
+_brain_instance: Optional[AIBrain] = None
+
+
+def get_brain() -> AIBrain:
+    """Return the singleton AIBrain instance."""
+    global _brain_instance
+    if _brain_instance is None:
+        _brain_instance = AIBrain()
+    return _brain_instance
+
+
+def reset_brain() -> None:
+    """Reset the singleton brain instance."""
+    global _brain_instance
+    _brain_instance = None
+
+
+# ---------------------------------------------------------------------------
+# CLI / standalone execution
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    brain = get_brain()
+    print("=" * 60)
+    print("LUQI AI Brain v2.2.0 — Interactive Demo")
+    print(f"LLM Status: {'ACTIVE (GPT-4o-mini)' if brain.llm.is_available() else 'OFFLINE (keyword routing)'}")
+    print("=" * 60)
+    print(f"\nLoaded {len(brain.list_capabilities())} capability categories")
+    print(f"Total modules: {len(brain._module_adapters)}")
+    print(f"Available tools for LLM: {len(TOOLS)}")
+    print("Type 'exit' to quit, 'status' for system status.\n")
+
+    session = f"demo_{int(time.time())}"
+
+    # Demo queries
+    demo_queries = [
+        "Hello!",
+        "How do I apply for NSFAS?",
+        "Calculate my PAYE if I earn R45,000 per month",
+        "What tender documents do I need for construction RFP worth R500,000?",
+        "Compare medical aid plans",
+        "How do I register a new company?",
+        "What is the status?",
+    ]
+
+    for q in demo_queries:
+        print(f"You: {q}")
+        resp = brain.process_message(q, session_id=session, language="auto")
+        print(f"LUQI: {resp['response'][:200]}...")
+        print(f"      [category={resp['category']}, confidence={resp['confidence']}, lang={resp['language']}, mode={resp.get('mode', 'unknown')}]\n")
+
+    # Interactive mode
+    while True:
+        try:
+            user_input = input("You: ").strip()
+            if not user_input or user_input.lower() in ("exit", "quit"):
+                break
+            if user_input.lower() == "status":
+                import pprint
+                pprint.pprint(brain.get_status())
+                continue
+            resp = brain.process_message(user_input, session_id=session, language="auto")
+            print(f"LUQI: {resp['response']}\n")
+            print(f"      [mode={resp.get('mode', 'unknown')}, llm_active={resp.get('llm_active', False)}]\n")
+        except (EOFError, KeyboardInterrupt):
+            break
+
+    print("\nGoodbye! LUQI AI Brain shutting down.")
