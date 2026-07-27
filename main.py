@@ -156,7 +156,7 @@ def mount_routers():
     """Dynamically mount all v25 endpoint modules."""
     mounted = []
 
-    # v25 Prometheus endpoints (main router)
+    # v25 Prometheus endpoints (main router + 2 continuation parts)
     try:
         from backend import v25_endpoints
         app.include_router(v25_endpoints.router, prefix="/api/v25")
@@ -164,6 +164,22 @@ def mount_routers():
         logger.info("Mounted: v25_endpoints at /api/v25")
     except Exception as e:
         logger.warning(f"Failed to mount v25_endpoints: {e}")
+
+    try:
+        from backend import v25_endpoints_b
+        app.include_router(v25_endpoints_b.router, prefix="/api/v25")
+        mounted.append("v25_endpoints_b")
+        logger.info("Mounted: v25_endpoints_b at /api/v25")
+    except Exception as e:
+        logger.warning(f"Failed to mount v25_endpoints_b: {e}")
+
+    try:
+        from backend import v25_endpoints_c
+        app.include_router(v25_endpoints_c.router, prefix="/api/v25")
+        mounted.append("v25_endpoints_c")
+        logger.info("Mounted: v25_endpoints_c at /api/v25")
+    except Exception as e:
+        logger.warning(f"Failed to mount v25_endpoints_c: {e}")
 
     # v25.1 LUQI Agent endpoints
     try:
