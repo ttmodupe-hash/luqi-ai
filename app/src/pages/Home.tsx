@@ -1,176 +1,246 @@
-import { useState, useRef, useEffect } from "react";
-import { useApi, type ChatMessage } from "@/hooks/useApi";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Clock } from "lucide-react";
+import {
+  Brain, Search, Wallet, FileText, TrendingUp, Clock, Star,
+  Sparkles, Zap, Sun, CloudRain, GraduationCap, HeartPulse,
+  LogIn, UserPlus, LogOut, User, Building2, Tractor, HardHat,
+  Monitor, Car, BookOpen, Globe, Phone
+} from "lucide-react";
 
-const SUGGESTED_QUERIES = [
-  "What is Bitcoin?",
-  "How do I file taxes in South Africa?",
-  "Translate hello to Zulu",
-  "What are African fintech opportunities?",
-  "Check Bitcoin price",
-  "How do I spot a scam?",
+const QUICK_ACTIONS = [
+  { id: "ai", label: "AI Chat", icon: Brain, path: "/ai-brain", color: "from-violet-500 to-purple-600" },
+  { id: "search", label: "Search", icon: Search, path: "/search", color: "from-blue-500 to-cyan-500" },
+  { id: "finance", label: "Finance", icon: Wallet, path: "/finance", color: "from-emerald-500 to-green-600" },
+  { id: "tender", label: "Tenders", icon: FileText, path: "/tenders", color: "from-orange-500 to-amber-600" },
 ];
 
-const MODULE_COLORS: Record<string, string> = {
-  knowledge_base: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  deep_research: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  investment: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  tax: "bg-green-500/10 text-green-400 border-green-500/20",
-  language: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  financial_lit: "bg-red-500/10 text-red-400 border-red-500/20",
-  opportunity: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  email: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  professional: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  companion: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-  general: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
-  error: "bg-red-500/10 text-red-400 border-red-500/20",
+const POPULAR = [
+  { name: "Load Shedding", icon: Zap, path: "/load-shedding" },
+  { name: "Solar Calculator", icon: Sun, path: "/solar" },
+  { name: "Weather", icon: CloudRain, path: "/weather" },
+  { name: "University Guide", icon: GraduationCap, path: "/university" },
+  { name: "Health", icon: HeartPulse, path: "/health" },
+  { name: "Job Market", icon: Building2, path: "/jobs" },
+  { name: "Farming", icon: Tractor, path: "/farming" },
+  { name: "Construction", icon: HardHat, path: "/construction" },
+  { name: "Cybersecurity", icon: Monitor, path: "/cybersecurity" },
+  { name: "Vehicle", icon: Car, path: "/vehicle" },
+  { name: "Education", icon: BookOpen, path: "/education" },
+  { name: "Travel", icon: Globe, path: "/travel" },
+];
+
+const INDUSTRY_MAP: Record<string, { label: string; items: { name: string; icon: any; path: string }[] }> = {
+  "IT & Technology": {
+    label: "Tech Tools",
+    items: [
+      { name: "AI Brain", icon: Brain, path: "/ai-brain" },
+      { name: "Cybersecurity", icon: Monitor, path: "/cybersecurity" },
+      { name: "Digital Transform", icon: Monitor, path: "/digital-transform" },
+      { name: "Local LLM", icon: Brain, path: "/local-llm" },
+    ]
+  },
+  "Agriculture": {
+    label: "Farming Tools",
+    items: [
+      { name: "Farming Guide", icon: Tractor, path: "/farming" },
+      { name: "Agriculture", icon: Tractor, path: "/agriculture" },
+      { name: "Weather", icon: CloudRain, path: "/weather" },
+      { name: "Load Shedding", icon: Zap, path: "/load-shedding" },
+    ]
+  },
+  "Construction": {
+    label: "Construction",
+    items: [
+      { name: "Construction Calc", icon: HardHat, path: "/construction" },
+      { name: "Tenders", icon: FileText, path: "/tenders" },
+      { name: "Load Shedding", icon: Zap, path: "/load-shedding" },
+      { name: "Water", icon: CloudRain, path: "/water" },
+    ]
+  },
+  "Finance": {
+    label: "Finance",
+    items: [
+      { name: "Loan Mastery", icon: TrendingUp, path: "/loan-mastery" },
+      { name: "Payroll", icon: Wallet, path: "/payroll" },
+      { name: "Invoice", icon: FileText, path: "/invoice" },
+      { name: "Funding", icon: Wallet, path: "/funding" },
+    ]
+  },
+  "Healthcare": {
+    label: "Healthcare",
+    items: [
+      { name: "Health", icon: HeartPulse, path: "/health" },
+      { name: "Healthcare Dir", icon: Phone, path: "/healthcare" },
+      { name: "Mental Health", icon: HeartPulse, path: "/mental-health" },
+      { name: "Nutrition", icon: HeartPulse, path: "/nutrition" },
+    ]
+  },
+  "Education": {
+    label: "Education",
+    items: [
+      { name: "University", icon: GraduationCap, path: "/university" },
+      { name: "Skills", icon: BookOpen, path: "/skills" },
+      { name: "Languages", icon: Globe, path: "/languages" },
+      { name: "Training", icon: BookOpen, path: "/training" },
+    ]
+  },
+  "Mining": {
+    label: "Mining",
+    items: [
+      { name: "Mining", icon: HardHat, path: "/mining" },
+      { name: "Investment", icon: TrendingUp, path: "/investment-mining" },
+      { name: "Safety", icon: HeartPulse, path: "/mining" },
+      { name: "Tenders", icon: FileText, path: "/tenders" },
+    ]
+  },
 };
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getRecentPages() {
+  try {
+    const r = localStorage.getItem("recentPages");
+    return r ? JSON.parse(r).slice(0, 5) : [];
+  } catch { return []; }
+}
+
 export default function Home() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Hello! I'm Luqi-AI v3.5.0. I can help with research, investments, taxes, African languages, scam detection, and more. What would you like to know?",
-      module: "general",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const { chat, loading, error } = useApi();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [recent, setRecent] = useState<any[]>([]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    try {
+      const u = localStorage.getItem("user");
+      if (u) setUser(JSON.parse(u));
+      setRecent(getRecentPages());
+    } catch { /* ignore */ }
+  }, []);
 
-  const handleSend = async (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: ChatMessage = { role: "user", content: text };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-
-    const response = await chat(text);
-    if (response) {
-      setMessages((prev) => [...prev, response]);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSend(input);
+  const industry = user?.industry || "";
+  const recommended = INDUSTRY_MAP[industry] || {
+    label: "Popular",
+    items: POPULAR.slice(0, 4)
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto space-y-4">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {msg.role === "assistant" && (
-                <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot size={16} className="text-black" />
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-cyan-600 text-white"
-                    : "bg-neutral-800 border border-neutral-700 text-neutral-100"
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                {msg.role === "assistant" && msg.module && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full border ${
-                        MODULE_COLORS[msg.module] || MODULE_COLORS.general
-                      }`}
-                    >
-                      {msg.module}
-                    </span>
-                    {msg.responseTimeMs && (
-                      <span className="text-xs text-neutral-500 flex items-center gap-1">
-                        <Clock size={10} />
-                        {msg.responseTimeMs.toFixed(0)}ms
-                      </span>
-                    )}
-                  </div>
-                )}
+    <div className="min-h-screen bg-neutral-900 text-white p-4 md:p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              {user ? `${getGreeting()}, ${user.full_name?.split(" ")[0] || "Friend"}!` : `${getGreeting()}!`}
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
+              {user ? "Your personalized African AI dashboard" : "Welcome to LUQI AI — Built for Africa"}
+            </p>
+          </div>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-sm font-bold">
+                {(user.full_name || "U")[0]}
               </div>
-              {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0 mt-1">
-                  <User size={16} className="text-neutral-300" />
-                </div>
-              )}
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-400 hover:text-white">
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
-          ))}
-
-          {loading && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center flex-shrink-0">
-                <Bot size={16} className="text-black animate-pulse" />
-              </div>
-              <div className="bg-neutral-800 border border-neutral-700 rounded-2xl px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-              </div>
+          ) : (
+            <div className="flex gap-2">
+              <Link to="/login"><Button variant="outline" size="sm" className="border-neutral-700 text-gray-300 hover:text-white">
+                <LogIn className="w-4 h-4 mr-1" /> Log In
+              </Button></Link>
+              <Link to="/signup"><Button size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
+                <UserPlus className="w-4 h-4 mr-1" /> Sign Up
+              </Button></Link>
             </div>
           )}
         </div>
-      </ScrollArea>
 
-      {/* Suggested queries */}
-      {messages.length <= 1 && (
-        <div className="px-4 pb-2">
-          <div className="max-w-3xl mx-auto flex flex-wrap gap-2">
-            {SUGGESTED_QUERIES.map((q) => (
-              <button
-                key={q}
-                onClick={() => handleSend(q)}
-                className="text-xs px-3 py-1.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors"
-              >
-                {q}
-              </button>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {QUICK_ACTIONS.map((a) => (
+            <Link key={a.id} to={a.path} className="group">
+              <div className={`bg-gradient-to-br ${a.color} rounded-xl p-4 hover:scale-[1.02] transition-transform cursor-pointer`}>
+                <a.icon className="w-6 h-6 text-white/90 mb-2" />
+                <p className="text-sm font-semibold text-white">{a.label}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Recommended / Personalized */}
+        <div>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+            {user ? `Recommended for ${user.industry || "You"}` : "Popular Right Now"}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {recommended.items.map((item: any, i: number) => (
+              <Link key={i} to={item.path} className="group">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 hover:border-cyan-500/50 hover:bg-neutral-750 transition-all cursor-pointer">
+                  <item.icon className="w-5 h-5 text-cyan-400 mb-2" />
+                  <p className="text-sm font-medium text-white">{item.name}</p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Input */}
-      <div className="border-t border-neutral-800 p-4">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex gap-2">
-          <div className="relative flex-1">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Luqi-AI anything..."
-              className="bg-neutral-800 border-neutral-700 text-white pr-10 placeholder:text-neutral-500"
-              disabled={loading}
-            />
-            {error && (
-              <div className="absolute -top-6 left-0 text-xs text-red-400">{error}</div>
-            )}
+        {/* Recently Used */}
+        {recent.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-gray-400" /> Recently Used
+            </h2>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {recent.map((r: any, i: number) => (
+                <Link key={i} to={r.path} className="flex-shrink-0">
+                  <div className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 hover:border-cyan-500/50 transition-all">
+                    <p className="text-sm text-gray-300">{r.name}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-          <Button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white"
-          >
-            <Send size={16} />
-          </Button>
-        </form>
+        )}
+
+        {/* All Capabilities Grid */}
+        <div>
+          <h2 className="text-lg font-semibold mb-3">All Capabilities</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {POPULAR.map((p, i) => (
+              <Link key={i} to={p.path} className="group">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-3 text-center hover:border-cyan-500/50 hover:bg-neutral-750 transition-all cursor-pointer">
+                  <p.icon className="w-5 h-5 text-gray-400 mx-auto mb-1.5 group-hover:text-cyan-400 transition-colors" />
+                  <p className="text-xs text-gray-300">{p.name}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats Footer */}
+        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-sm text-gray-400">
+            <span>348 endpoints</span>
+            <span>130 modules</span>
+            <span>83 pages</span>
+          </div>
+          <p className="text-xs text-gray-600">LUQI AI v29.0 — Built for Africa</p>
+        </div>
       </div>
     </div>
   );
