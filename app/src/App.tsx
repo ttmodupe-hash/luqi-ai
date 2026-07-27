@@ -16,6 +16,7 @@ import AccountantPage from "@/pages/AccountantPage";
 import TrainingPage from "@/pages/TrainingPage";
 import SupportPage from "@/pages/SupportPage";
 import AssistantPage from "@/pages/AssistantPage";
+import CybersecurityPage from "@/pages/CybersecurityPage";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import {
   MessageSquare,
@@ -158,6 +159,7 @@ export default function App() {
         <Route path="/training" element={<TrainingPage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/assistant" element={<AssistantPage />} />
+        <Route path="/cybersecurity" element={<CybersecurityPage />} />
       </Routes>
     </AppLayout>
   );
