@@ -20,6 +20,7 @@ Environment:
 """
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
@@ -27,7 +28,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -276,6 +277,31 @@ async def ready():
 async def get_config():
     """Get non-sensitive configuration."""
     return settings.health_info()
+
+
+# ── WebSocket Endpoint ───────────────────────────────────────────────────
+
+@app.websocket("/ws/chat")
+async def websocket_chat(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message = data.get("message", "")
+            session_id = data.get("session_id", "default")
+            # Simple echo with typing indicator
+            await websocket.send_json({"type": "typing", "session_id": session_id})
+            await asyncio.sleep(0.5)
+            await websocket.send_json({
+                "type": "message",
+                "content": f"Echo: {message}",
+                "session_id": session_id,
+                "timestamp": datetime.now().isoformat()
+            })
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
 
 
 # ── Error Handlers ───────────────────────────────────────────────────────
