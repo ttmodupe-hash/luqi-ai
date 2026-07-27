@@ -12,6 +12,10 @@ import ChatPage from "./pages/ChatPage";
 import EducationPage from "./pages/EducationPage";
 import SkillsPage from "./pages/SkillsPage";
 import WorkspacePage from "./pages/WorkspacePage";
+import AccountantPage from "@/pages/AccountantPage";
+import TrainingPage from "@/pages/TrainingPage";
+import SupportPage from "@/pages/SupportPage";
+import AssistantPage from "@/pages/AssistantPage";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import {
   MessageSquare,
@@ -150,6 +154,10 @@ export default function App() {
         <Route path="/kb" element={<KBPage />} />
         <Route path="/plugins" element={<PluginsPage />} />
         <Route path="/wisdom" element={<WisdomPage />} />
+        <Route path="/accountant" element={<AccountantPage />} />
+        <Route path="/training" element={<TrainingPage />} />
+        <Route path="/support" element={<SupportPage />} />
+        <Route path="/assistant" element={<AssistantPage />} />
       </Routes>
     </AppLayout>
   );
