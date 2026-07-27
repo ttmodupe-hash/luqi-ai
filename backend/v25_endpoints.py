@@ -1498,6 +1498,178 @@ async def api_v25_assistant_weekly():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CYBERSECURITY ENGINE (v1.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/cyber/assessment/categories", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_assessment_categories():
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_assessment_categories()})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber assessment categories error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cyber/assessment/run", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_assessment_run(request: Request):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        data = json.loads(await request.body())
+        engine = mod.CybersecurityEngine()
+        result = engine.run_security_assessment(data.get("domain"), data.get("assessment_type", "general"))
+        return JSONResponse({"success": True, **result})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber assessment error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/training/modules", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_training_modules(category: str = None, level: str = None):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_training_modules(category, level)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber training modules error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/training/lesson", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_training_lesson(module_id: str, lesson_id: str):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_lesson(module_id, lesson_id)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber lesson error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cyber/training/assess", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_training_assess(request: Request):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        data = json.loads(await request.body())
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.assess_knowledge(data.get("answers", []))})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber assess error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cyber/training/path", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_training_path(request: Request):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        data = json.loads(await request.body())
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.generate_learning_path(data.get("current_level", "beginner"), data.get("interests"))})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber path error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/labs", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_labs(category: str = None):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_practice_labs(category)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber labs error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/incident/playbooks", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_incident_playbooks(incident_type: str = None):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_incident_playbooks(incident_type)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber playbooks error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cyber/threat/analyze", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_threat_analyze(request: Request):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        data = json.loads(await request.body())
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.analyze_threat(data.get("indicators", {}))})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber threat error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/compliance/frameworks", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_compliance_frameworks():
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_compliance_frameworks()})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber frameworks error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/compliance/controls", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_compliance_controls(framework_id: str):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_compliance_controls(framework_id)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber controls error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cyber/compliance/assess", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_compliance_assess(request: Request):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        data = json.loads(await request.body())
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.assess_compliance(data.get("framework_id"), data.get("responses", {}))})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber compliance error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/popia", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_popia():
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_popia_guidelines()})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber POPIA error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cyber/password/check", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_password_check(request: Request):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        data = json.loads(await request.body())
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.check_password_strength(data.get("password", ""))})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber password error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/cve", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_cve(keyword: str = None, severity: str = None):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.get_cve_database(keyword, severity)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber CVE error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cyber/policy/generate", dependencies=[Depends(require_auth)])
+async def api_v25_cyber_policy_generate(policy_type: str = "general", organization_name: str = "Organization"):
+    try:
+        mod = _omega("cybersecurity_engine")
+        if not mod: raise HTTPException(status_code=503, detail="Cybersecurity engine not available")
+        engine = mod.CybersecurityEngine()
+        return JSONResponse({"success": True, **engine.generate_security_policy(policy_type, organization_name)})
+    except HTTPException: raise
+    except Exception as e: logger.error("Cyber policy error: %s", e); raise HTTPException(status_code=500, detail=str(e))
+
+
 logger.info(
-    "v25 Prometheus endpoints registered: 75+ endpoints across 24 Omega AI modules"
+    "v25 Prometheus endpoints registered: 91+ endpoints across 25 Omega AI modules"
 )
