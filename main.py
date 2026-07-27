@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Luqi AI v25.1.2 — FastAPI Application Factory
+Luqi AI v27.0.0 — FastAPI Application Factory
 ===============================================
 The canonical entry point. Mounts all v25 endpoint modules, serves static
 files, and provides health monitoring.
@@ -173,6 +173,15 @@ def mount_routers():
         logger.info("Mounted: v25_luqi_endpoints at /api/v25/luqi")
     except Exception as e:
         logger.warning(f"Failed to mount v25_luqi_endpoints: {e}")
+
+    # Favorites API (bookmarks for frequently used capabilities)
+    try:
+        from backend.favorites_api import router as favorites_router
+        app.include_router(favorites_router)
+        mounted.append("favorites_api")
+        logger.info("Mounted: favorites_api")
+    except Exception as e:
+        logger.warning(f"Failed to mount favorites_api: {e}")
 
     # Omega AI capability endpoints (unique capabilities)
     try:
