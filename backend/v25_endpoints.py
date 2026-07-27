@@ -139,14 +139,20 @@ _OMEGA_CACHE: dict[str, Any] = {}
 
 
 def _omega(module_name: str):
-    """Lazy-import an Omega AI root-level module."""
+    """Lazy-import an Omega AI module. Tries omega_ai.MODULE first, then root-level."""
     if module_name not in _OMEGA_CACHE:
         try:
-            mod = __import__(module_name)
+            # Try omega_ai package first (where our modules live)
+            mod = __import__(f"omega_ai.{module_name}", fromlist=[module_name])
             _OMEGA_CACHE[module_name] = mod
-        except Exception as e:
-            _OMEGA_CACHE[module_name] = None
-            logger.debug("Omega module '%s' not available: %s", module_name, e)
+        except Exception:
+            try:
+                # Fallback to root-level module
+                mod = __import__(module_name)
+                _OMEGA_CACHE[module_name] = mod
+            except Exception as e:
+                _OMEGA_CACHE[module_name] = None
+                logger.debug("Omega module '%s' not available: %s", module_name, e)
     return _OMEGA_CACHE[module_name]
 
 
@@ -941,6 +947,557 @@ async def api_v25_federated_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CHARTERED ACCOUNTANT (v4.0.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/ca/tax-brackets", dependencies=[Depends(require_auth)])
+async def api_v25_ca_tax_brackets():
+    """Get SARS tax brackets."""
+    try:
+        mod = _omega("sa_tax_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Tax engine not available")
+        engine = mod.SATaxEngine()
+        return JSONResponse({"success": True, "brackets": engine.get_brackets()})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CA tax brackets error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ca/calculate-paye", dependencies=[Depends(require_auth)])
+async def api_v25_ca_calculate_paye(request: Request):
+    """Calculate PAYE tax."""
+    try:
+        mod = _omega("ca_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="CA assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.CharteredAccountantAssistant()
+        result = assistant.calculate_net_salary(data.get("annual_salary", 0), data.get("deductions", {}))
+        return JSONResponse({"success": True, **result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CA PAYE error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ca/calculate-vat", dependencies=[Depends(require_auth)])
+async def api_v25_ca_calculate_vat(request: Request):
+    """Calculate VAT."""
+    try:
+        mod = _omega("ca_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="CA assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.CharteredAccountantAssistant()
+        result = assistant.calculate_vat(data.get("amount", 0), data.get("vat_type", "inclusive"))
+        return JSONResponse({"success": True, **result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CA VAT error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ca/depreciation", dependencies=[Depends(require_auth)])
+async def api_v25_ca_depreciation(request: Request):
+    """Calculate depreciation schedule."""
+    try:
+        mod = _omega("ca_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="CA assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.CharteredAccountantAssistant()
+        result = assistant.calculate_depreciation(data.get("cost", 0), data.get("method", "straight_line"))
+        return JSONResponse({"success": True, **result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CA depreciation error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ca/financial-ratios", dependencies=[Depends(require_auth)])
+async def api_v25_ca_financial_ratios(request: Request):
+    """Calculate financial ratios."""
+    try:
+        mod = _omega("ca_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="CA assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.CharteredAccountantAssistant()
+        result = assistant.calculate_ratios(
+            data.get("current_assets", 0), data.get("current_liabilities", 0),
+            data.get("total_assets", 0), data.get("total_liabilities", 0),
+            data.get("net_income", 0), data.get("revenue", 0),
+            data.get("equity")
+        )
+        return JSONResponse({"success": True, **result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CA ratios error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ca/audit-checklist", dependencies=[Depends(require_auth)])
+async def api_v25_ca_audit_checklist(entity_type: str = "company"):
+    """Get SARS audit checklist."""
+    try:
+        mod = _omega("ca_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="CA assistant not available")
+        assistant = mod.CharteredAccountantAssistant()
+        result = assistant.get_audit_checklist(entity_type)
+        return JSONResponse({"success": True, **result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CA audit checklist error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  TRAINING ENGINE (v4.0.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/training/courses", dependencies=[Depends(require_auth)])
+async def api_v25_training_courses(category: str = None, difficulty: str = None):
+    """List training courses."""
+    try:
+        mod = _omega("trainer_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Training engine not available")
+        engine = mod.TrainerEngine()
+        result = engine.list_courses(category, difficulty)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Training courses error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/training/courses/{course_id}", dependencies=[Depends(require_auth)])
+async def api_v25_training_course(course_id: str):
+    """Get a specific course."""
+    try:
+        mod = _omega("trainer_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Training engine not available")
+        engine = mod.TrainerEngine()
+        result = engine.get_course(course_id)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Training course error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/training/enroll", dependencies=[Depends(require_auth)])
+async def api_v25_training_enroll(request: Request):
+    """Enroll a student in a course."""
+    try:
+        mod = _omega("trainer_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Training engine not available")
+        data = json.loads(await request.body())
+        engine = mod.TrainerEngine()
+        result = engine.enroll_student(data.get("course_id"), data.get("student_id"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Training enroll error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/training/progress/{student_id}", dependencies=[Depends(require_auth)])
+async def api_v25_training_progress(student_id: str, course_id: str = None):
+    """Get student progress."""
+    try:
+        mod = _omega("trainer_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Training engine not available")
+        engine = mod.TrainerEngine()
+        result = engine.get_student_progress(student_id, course_id)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Training progress error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/training/grade", dependencies=[Depends(require_auth)])
+async def api_v25_training_grade(request: Request):
+    """Submit and grade an assessment."""
+    try:
+        mod = _omega("trainer_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Training engine not available")
+        data = json.loads(await request.body())
+        engine = mod.TrainerEngine()
+        result = engine.grade_assessment(data.get("assessment_id"), data.get("student_id"), data.get("answers", []))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Training grade error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/training/certificates/{student_id}", dependencies=[Depends(require_auth)])
+async def api_v25_training_certificates(student_id: str):
+    """Get student certificates."""
+    try:
+        mod = _omega("trainer_engine")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Training engine not available")
+        engine = mod.TrainerEngine()
+        result = engine.list_certificates(student_id)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Training certificates error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  SUPPORT DESK (v4.0.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/support/tickets", dependencies=[Depends(require_auth)])
+async def api_v25_support_tickets(status: str = None, category: str = None, priority: str = None):
+    """List support tickets."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        desk = mod.SupportDesk()
+        result = desk.list_tickets(status=status, category=category, priority=priority)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support tickets error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/support/tickets", dependencies=[Depends(require_auth)])
+async def api_v25_support_ticket_create(request: Request):
+    """Create a support ticket."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        data = json.loads(await request.body())
+        desk = mod.SupportDesk()
+        result = desk.create_ticket(data.get("subject"), data.get("description"),
+                                     data.get("customer_id"), data.get("category", "general"),
+                                     data.get("priority", "medium"), data.get("tags"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support ticket create error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/support/tickets/{ticket_id}", dependencies=[Depends(require_auth)])
+async def api_v25_support_ticket(ticket_id: str):
+    """Get a specific ticket."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        desk = mod.SupportDesk()
+        result = desk.get_ticket(ticket_id)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support ticket error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/support/tickets/{ticket_id}/respond", dependencies=[Depends(require_auth)])
+async def api_v25_support_ticket_respond(ticket_id: str, request: Request):
+    """Add a response to a ticket."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        data = json.loads(await request.body())
+        desk = mod.SupportDesk()
+        result = desk.add_response(ticket_id, data.get("message"), data.get("responder_id", "user"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support respond error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/support/faqs", dependencies=[Depends(require_auth)])
+async def api_v25_support_faqs(category: str = None):
+    """Get FAQs."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        desk = mod.SupportDesk()
+        result = desk.get_faqs(category)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support FAQs error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/support/faqs/search", dependencies=[Depends(require_auth)])
+async def api_v25_support_faq_search(request: Request):
+    """Search FAQs."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        data = json.loads(await request.body())
+        desk = mod.SupportDesk()
+        result = desk.search_faqs(data.get("query", ""))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support FAQ search error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/support/dashboard", dependencies=[Depends(require_auth)])
+async def api_v25_support_dashboard():
+    """Get support dashboard metrics."""
+    try:
+        mod = _omega("support_desk")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Support desk not available")
+        desk = mod.SupportDesk()
+        result = desk.get_dashboard_metrics()
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Support dashboard error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PERSONAL ASSISTANT (v4.0.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/assistant/tasks", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_tasks(status: str = None, priority: str = None):
+    """List tasks."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.list_tasks(status=status, priority=priority)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant tasks error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assistant/tasks", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_task_create(request: Request):
+    """Create a task."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.PersonalAssistant()
+        result = assistant.create_task(data.get("title"), data.get("description", ""),
+                                        data.get("priority", "medium"), data.get("due_date"),
+                                        data.get("tags"), data.get("recurring"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant task create error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assistant/tasks/{task_id}/complete", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_task_complete(task_id: str):
+    """Complete a task."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.complete_task(task_id)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant task complete error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assistant/reminders", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_reminders():
+    """List active reminders."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.get_reminders(upcoming_only=True)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant reminders error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assistant/reminders", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_reminder_create(request: Request):
+    """Create a reminder."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.PersonalAssistant()
+        result = assistant.set_reminder(data.get("title"), data.get("remind_at"),
+                                         data.get("description", ""), data.get("repeat"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant reminder create error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assistant/notes", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_notes(category: str = None, search: str = None):
+    """List notes."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.list_notes(category=category, search=search)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant notes error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assistant/notes", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_note_create(request: Request):
+    """Create a note."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.PersonalAssistant()
+        result = assistant.create_note(data.get("title"), data.get("content", ""),
+                                        data.get("category", "general"), data.get("tags"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant note create error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assistant/events", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_events(date: str = None):
+    """List calendar events."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.get_events(date=date)
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant events error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assistant/events", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_event_create(request: Request):
+    """Create a calendar event."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        data = json.loads(await request.body())
+        assistant = mod.PersonalAssistant()
+        result = assistant.add_event(data.get("title"), data.get("start_time"),
+                                      data.get("end_time"), data.get("description", ""),
+                                      data.get("location", ""), data.get("attendees"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant event create error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assistant/briefing", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_briefing():
+    """Get daily briefing."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.get_daily_briefing()
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant briefing error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/assistant/weekly-summary", dependencies=[Depends(require_auth)])
+async def api_v25_assistant_weekly():
+    """Get weekly summary."""
+    try:
+        mod = _omega("personal_assistant")
+        if not mod:
+            raise HTTPException(status_code=503, detail="Personal assistant not available")
+        assistant = mod.PersonalAssistant()
+        result = assistant.get_weekly_summary()
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Assistant weekly error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 logger.info(
-    "v25 Prometheus endpoints registered: 50+ endpoints across 20 Omega AI modules"
+    "v25 Prometheus endpoints registered: 75+ endpoints across 24 Omega AI modules"
 )
