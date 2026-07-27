@@ -1,4 +1,4 @@
-"""Luqi AI v25 — Omega AI Engine Integration Endpoints
+"""Luqi AI v25 — Omega AI Engine Integration Endpoints + JWT Authentication
 
 Wraps all 18 Omega AI v3.7.0 "Prometheus" modules into FastAPI endpoints,
 bringing: Error Repair, Memory Manager, Pedagogical Engine, Wisdom,
@@ -6,7 +6,10 @@ Crypto, Rate Limiting, WebSocket, Vector DB, Multi-Tenant, Marketplace,
 Realtime Prices, Metrics, Email, Telegram, PDF, Backup, Local LLM,
 Agent Mesh, Blockchain Audit, and Federated Learning.
 
-Registers 50+ new endpoints under /api/v25/*
+NEW: Full JWT authentication system with registration, login, token
+refresh, protected routes, and admin-only user management.
+
+Registers 50+ Omega endpoints + 8 auth endpoints under /api/v25/*
 """
 
 import json
@@ -15,15 +18,19 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import HTTPException, Request, WebSocket, WebSocketDisconnect, Depends, Header
 from fastapi.responses import JSONResponse
 
 from backend.router import app
+from backend.auth import AuthManager, get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
 
+# Auth manager singleton
+auth_mgr = AuthManager()
+
 # Ensure repo root is importable for Omega AI modules
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -49,6 +56,75 @@ def _omega(module_name: str):
 def _ok(module_name: str) -> bool:
     """Check if an Omega module is available."""
     return _omega(module_name) is not None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AUTHENTICATION ENDPOINTS (no auth required)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/v25/auth/register")
+async def api_v25_auth_register(request: Request):
+    """Register a new user account."""
+    data = json.loads(await request.body())
+    result = auth_mgr.register(
+        data.get("email", "").strip().lower(),
+        data.get("password", ""),
+        data.get("full_name", ""),
+    )
+    return JSONResponse(result, status_code=201 if result.get("success") else 400)
+
+
+@app.post("/api/v25/auth/login")
+async def api_v25_auth_login(request: Request):
+    """Authenticate and receive JWT access + refresh tokens."""
+    data = json.loads(await request.body())
+    result = auth_mgr.login(
+        data.get("email", "").strip().lower(),
+        data.get("password", ""),
+    )
+    return JSONResponse(result, status_code=200 if result.get("success") else 401)
+
+
+@app.post("/api/v25/auth/refresh")
+async def api_v25_auth_refresh(request: Request):
+    """Refresh an access token using a refresh token."""
+    data = json.loads(await request.body())
+    result = auth_mgr.refresh_access_token(data.get("refresh_token", ""))
+    return JSONResponse(result, status_code=200 if result.get("success") else 401)
+
+
+@app.get("/api/v25/auth/verify")
+async def api_v25_auth_verify(token: str = Header(None, alias="X-Token")):
+    """Verify a token's validity without consuming it."""
+    if not token:
+        return JSONResponse({"valid": False, "error": "No token provided"}, status_code=400)
+    result = auth_mgr.verify_token(token)
+    return JSONResponse(result, status_code=200 if result["valid"] else 401)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PROTECTED USER ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/v25/auth/me")
+async def api_v25_auth_me(user: dict = Depends(get_current_user)):
+    """Get current authenticated user's profile."""
+    result = auth_mgr.get_user(user["user_id"])
+    return JSONResponse(result)
+
+
+@app.get("/api/v25/auth/users")
+async def api_v25_auth_users(user: dict = Depends(require_admin)):
+    """List all users (admin only)."""
+    result = auth_mgr.list_users()
+    return JSONResponse(result)
+
+
+@app.delete("/api/v25/auth/users/{user_id}")
+async def api_v25_auth_delete_user(user_id: int, user: dict = Depends(require_admin)):
+    """Delete a user (admin only)."""
+    result = auth_mgr.delete_user(user_id)
+    return JSONResponse(result)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -87,7 +163,8 @@ async def api_v25_status():
         "modules_total": len(modules),
         "modules_loaded": loaded,
         "modules": modules,
-        "endpoints": 50,
+        "endpoints": 58,
+        "auth_enabled": True,
     })
 
 
@@ -839,6 +916,9 @@ async def api_v25_federated_status():
 
 logger.info(
     "v25 Prometheus endpoints registered: 50+ endpoints across 20 Omega AI modules"
+)
+logger.info(
+    "v25 Auth endpoints registered: 8 endpoints for registration, login, tokens, user management"
 )
 
 # ── v25.1 LUQI Agent Endpoints ──────────────────────────
