@@ -80,11 +80,16 @@ import CompanionTrainerPage from "@/pages/CompanionTrainerPage";
 import ProfessionalAssistPage from "@/pages/ProfessionalAssistPage";
 import InvestmentMiningPage from "@/pages/InvestmentMiningPage";
 import VoiceInterfacePage from "@/pages/VoiceInterfacePage";
+import AdminPage from "@/pages/AdminPage";
+import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
+import OnboardingPage from "@/pages/OnboardingPage";
 import AIBrainPage from "@/pages/AIBrainPage";
 import SearchPage from "@/pages/SearchPage";
 import MoreMenuPage from "@/pages/MoreMenuPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
+import FavoritesPage from "@/pages/FavoritesPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import {
@@ -404,7 +409,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    getInitialExpandedGroups
+    getInitialExpandedGroups()
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -837,10 +842,15 @@ export default function App() {
         <Route path="/professional-assist" element={<ProfessionalAssistPage />} />
         <Route path="/investment-mining" element={<InvestmentMiningPage />} />
         <Route path="/voice" element={<VoiceInterfacePage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/agriculture-advisor" element={<AgricultureAdvisorPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/menu" element={<MoreMenuPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/favorites" element={<FavoritesPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Routes>
     </AppLayout>
   );
