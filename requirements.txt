@@ -43,7 +43,7 @@ rich>=13.7.0
 pytest>=8.0.0
 pytest-cov>=4.1.0
 pytest-asyncio>=0.23.0
-pytest-xdist>=3.5.0
+pytest-xdist>=3.8.0
 
 # Linting & Type Checking
 ruff>=0.3.0
