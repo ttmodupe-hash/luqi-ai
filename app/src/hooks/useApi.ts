@@ -27,18 +27,33 @@ export interface KBAnswer {
   category: string;
 }
 
-export function useApi() {
+/** Get auth headers including JWT token if present in localStorage */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'X-API-Key': API_KEY,
+  };
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export function useApi<T = unknown>() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<T | null>(null);
 
   const get = useCallback(async (endpoint: string) => {
     setLoading(true); setError(null);
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
-        headers: { 'X-API-Key': API_KEY },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
+      const result = await res.json();
+      setData(result);
+      return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
       throw e;
@@ -52,11 +67,13 @@ export function useApi() {
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
+      const result = await res.json();
+      setData(result);
+      return result;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
       throw e;
@@ -64,6 +81,11 @@ export function useApi() {
       setLoading(false);
     }
   }, []);
+
+  // Generic fetchData helper
+  const fetchData = useCallback(async (endpoint: string) => {
+    return get(endpoint);
+  }, [get]);
 
   // Backward-compatible typed helpers
   const chat = useCallback(async (query: string): Promise<ChatMessage | null> => {
@@ -120,5 +142,5 @@ export function useApi() {
     }
   }, [get]);
 
-  return { get, post, chat, getStatus, kbAsk, kbSearch, kbCategories, loading, error };
+  return { get, post, chat, getStatus, kbAsk, kbSearch, kbCategories, data, fetchData, loading, error };
 }
