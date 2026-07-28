@@ -133,7 +133,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Luqi AI",
-    description="Unified Intelligence Platform — 19 AI engines, 55+ endpoints",
+    description="LUQI AI — 90+ AI-powered capabilities for South Africa. Finance, tenders, load shedding, health, education, and more.",
     version=f"{settings.version}-{settings.codename}",
     lifespan=lifespan,
     docs_url="/api/docs" if settings.environment != "production" else None,
@@ -180,6 +180,15 @@ def mount_routers():
         logger.info("Mounted: v25_endpoints_c at /api/v25")
     except Exception as e:
         logger.warning(f"Failed to mount v25_endpoints_c: {e}")
+
+    # Feedback & activity tracking API
+    try:
+        from backend import feedback_api
+        app.include_router(feedback_api.router)
+        mounted.append("feedback_api")
+        logger.info("Mounted: feedback_api")
+    except Exception as e:
+        logger.warning(f"Failed to mount feedback_api: {e}")
 
     # v25.1 LUQI Agent endpoints
     try:
