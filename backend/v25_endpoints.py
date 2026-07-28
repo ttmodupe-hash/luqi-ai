@@ -1386,24 +1386,3 @@ async def api_v25_support_dashboard():
     except Exception as e:
         logger.error("Support dashboard error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  PERSONAL ASSISTANT (v4.0.0)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@router.get("/assistant/tasks", dependencies=[Depends(require_auth)])
-async def api_v25_assistant_tasks(status: str = None, priority: str = None):
-
-    try:
-        mod = _omega("personal_assistant")
-        if not mod:
-            raise HTTPException(status_code=503, detail="Personal assistant not available")
-        assistant = mod.PersonalAssistant()
-        result = assistant.list_tasks(status=status, priority=priority)
-        return JSONResponse(result)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Assistant tasks error: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
