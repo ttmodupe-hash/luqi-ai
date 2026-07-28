@@ -1,16 +1,50 @@
 """JWT Authentication system for LUQI AI"""
+import os
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 import hashlib
-import secrets
 import jwt
 from fastapi import HTTPException, Header, Request
 
 # Config
-SECRET_KEY = secrets.token_hex(32)  # In production: from env
+SECRET_KEY = os.environ.get("JWT_SECRET") or "luqi-dev-secret-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+
+# Simple in-memory rate limiter for auth endpoints
+_rate_limit_store: dict = {}  # ip -> [(timestamp, count)]
+
+def rate_limit(max_requests: int = 5, window: int = 60):
+    """Rate limit decorator: max_requests per window (seconds)."""
+    from functools import wraps
+    from fastapi import HTTPException
+    import time
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(request: Request, *args, **kwargs):
+            ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            key = f"{ip}:{func.__name__}"
+
+            # Clean old entries
+            if key in _rate_limit_store:
+                _rate_limit_store[key] = [
+                    t for t in _rate_limit_store[key] if now - t < window
+                ]
+            else:
+                _rate_limit_store[key] = []
+
+            if len(_rate_limit_store[key]) >= max_requests:
+                raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+
+            _rate_limit_store[key].append(now)
+            return await func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class AuthManager:
@@ -40,11 +74,12 @@ class AuthManager:
             last_login TEXT
         )"""
         )
-        # Create default admin
+        # Create default admin (password from env, randomized if not set)
+        admin_password = os.environ.get("ADMIN_PASSWORD") or secrets.token_urlsafe(16)
         c.execute(
             """INSERT OR IGNORE INTO users (id, email, password_hash, full_name, role, created_at)
             VALUES (1, 'admin@luqi.ai', ?, 'System Admin', 'admin', ?)""",
-            (self._hash_password("admin123"), datetime.now().isoformat()),
+            (self._hash_password(admin_password), datetime.now().isoformat()),
         )
         conn.commit()
         conn.close()
