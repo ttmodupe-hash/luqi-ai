@@ -91,6 +91,12 @@ import SignupPage from "@/pages/SignupPage";
 import FavoritesPage from "@/pages/FavoritesPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import NotificationsPage from "@/pages/NotificationsPage";
+import TermsPage from "@/pages/TermsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import ContactPage from "@/pages/ContactPage";
+import CookieConsent from "@/components/CookieConsent";
+import WelcomeModal from "@/components/WelcomeModal";
+import { initAnalytics, trackPageView } from "@/lib/analytics";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import {
   Home as HomeIcon,
@@ -401,6 +407,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, [authState.isLoggedIn]);
 
+  /* ------------------------------------------------------------------ */
+  /* Analytics init + page view tracking                                */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
   // Initialize expanded groups: on mobile only "core" is expanded;
   // on desktop all groups are expanded.
   const getInitialExpandedGroups = (): Set<string> => {
@@ -409,7 +426,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    getInitialExpandedGroups()
+    getInitialExpandedGroups
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -754,6 +771,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Bottom Navigation */}
       {isMobile && <BottomNav currentPage={currentPage} onNavigate={handleNav} />}
+
+      {/* Pre-launch components */}
+      <CookieConsent />
+      <WelcomeModal />
     </div>
   );
 }
@@ -851,6 +872,9 @@ export default function App() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Routes>
     </AppLayout>
   );
