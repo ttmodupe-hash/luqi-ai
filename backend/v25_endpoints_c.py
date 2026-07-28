@@ -1,4 +1,130 @@
-from backend.v25_endpoints import router
+"""
+LUQI AI v29 — Omega Endpoints Part C
+Continues from v25_endpoints.py and v25_endpoints_b.py.
+"""
+from __future__ import annotations
+
+import json
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse
+
+# Re-use the same router and helpers from Part A
+from backend.v25_endpoints import router, _omega_endpoint, require_auth, _omega, rate_limit_check
+
+logger = logging.getLogger(__name__)
+
+
+@router.get("/omnilab/labs")
+async def api_v25_omnilab_labs(tier: Optional[str] = None, subject: Optional[str] = None):
+    """Get OmniLab labs filtered by tier and subject."""
+    try:
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        labs = engine.get_labs(tier=tier, subject=subject)
+        return JSONResponse({"success": True, "labs": labs, "total": len(labs)})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/omnilab/lab/{lab_id}")
+async def api_v25_omnilab_lab(lab_id: int):
+    """Get a single lab by ID."""
+    try:
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        lab = engine.get_lab(lab_id)
+        if lab:
+            return JSONResponse({"success": True, "lab": lab})
+        return JSONResponse({"success": False, "error": "Lab not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/omnilab/superpowers")
+async def api_v25_omnilab_superpowers():
+    """Get the superpower matrix definitions."""
+    try:
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        return JSONResponse(engine.get_superpowers())
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/omnilab/socratic/{sandbox_type}")
+async def api_v25_omnilab_socratic(sandbox_type: str, index: Optional[int] = None):
+    """Get Socratic dialogue prompts for a sandbox type."""
+    try:
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        return JSONResponse(engine.get_socratic(sandbox_type, index))
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.post("/omnilab/analyze/thermal")
+async def api_v25_omnilab_thermal(request: Request):
+    """Analyze thermal experiment data."""
+    try:
+        data = json.loads(await request.body())
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        result = engine.analyze_thermal(
+            temp_dark=data.get("temp_dark", 45),
+            temp_reflective=data.get("temp_reflective", 32),
+            ambient=data.get("ambient", 25),
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.post("/omnilab/analyze/gravity")
+async def api_v25_omnilab_gravity(request: Request):
+    """Analyze pendulum/gravity experiment data."""
+    try:
+        data = json.loads(await request.body())
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        result = engine.analyze_gravity(
+            times=data.get("times", []),
+            length_m=data.get("length_m", 1.0),
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.post("/omnilab/analyze/ohmic")
+async def api_v25_omnilab_ohmic(request: Request):
+    """Analyze resistivity experiment data."""
+    try:
+        data = json.loads(await request.body())
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        result = engine.analyze_ohmic(
+            readings=data.get("readings", []),
+            width_mm=data.get("width_mm", 2.0),
+            thickness_mm=data.get("thickness_mm", 0.1),
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@router.get("/omnilab/sync")
+async def api_v25_omnilab_sync():
+    """Trigger hexagonal harmonization cross-sync."""
+    try:
+        from omega_ai.omnilab_academies import get_engine
+        engine = get_engine()
+        return JSONResponse(engine.hexagonal_sync())
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
 
 async def api_v25_legal_laws(engine, category: str):
     """Get laws by category."""
@@ -290,7 +416,7 @@ async def api_v25_university_courses(engine, field: str = None, university: str 
     return JSONResponse({"success": True, **engine.get_courses(field, university)})
 
 
-@router.get("/university/nsfas-info", dependencies=[Depends(require_auth)])
+@router.get("/university/nsfas-info", dependencies={Depends(require_auth)}])
 @_omega_endpoint("university_guide", "UniversityGuide", "University guide not available")
 async def api_v25_university_nsfas_info(engine):
     """Get NSFAS funding information."""
@@ -342,7 +468,7 @@ async def api_v25_water_status(engine):
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/water/restrictions", dependencies=[Depends(require_auth)])
+@router.get("/water/restrictions", dependencies={Depends(require_auth)}])
 @_omega_endpoint("water_sanitation", "WaterSanitation", "Water sanitation not available")
 async def api_v25_water_restrictions(engine, municipality: str = None):
     """Get water restrictions."""
@@ -384,14 +510,14 @@ async def api_v25_emergency_numbers(engine, province: str = None):
     return JSONResponse({"success": True, **engine.get_emergency_numbers(province)})
 
 
-@router.get("/emergency/police-stations", dependencies=[Depends(require_auth)])
+@router.get("/emergency/police-stations", dependencies={Depends(require_auth)}])
 @_omega_endpoint("emergency_services", "EmergencyServices", "Emergency services not available")
 async def api_v25_emergency_police_stations(engine, location: str = None):
     """Find police stations."""
     return JSONResponse({"success": True, **engine.find_police_stations(location)})
 
 
-@router.get("/emergency/disaster-response", dependencies=[Depends(require_auth)])
+@router.get("/emergency/disaster-response", dependencies={Depends(require_auth)])
 @_omega_endpoint("emergency_services", "EmergencyServices", "Emergency services not available")
 async def api_v25_emergency_disaster_response(engine, disaster_type: str = None):
     """Get disaster response information."""
@@ -402,7 +528,7 @@ async def api_v25_emergency_disaster_response(engine, disaster_type: str = None)
 #  FARMING GUIDE (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/farming/status", dependencies=[Depends(require_auth)])
+@router.get("/farming/status", dependencies={Depends(require_auth)}])
 @_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
 async def api_v25_farming_status(engine):
     """Get farming guide status."""
@@ -416,14 +542,14 @@ async def api_v25_farming_crops(engine, region: str = None, season: str = None):
     return JSONResponse({"success": True, **engine.get_crop_recommendations(region, season)})
 
 
-@router.get("/farming/livestock", dependencies=[Depends(require_auth)])
+@router.get("/farming/livestock", dependencies={Depends(require_auth)])
 @_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
 async def api_v25_farming_livestock(engine, type: str = None):
     """Get livestock farming info."""
     return JSONResponse({"success": True, **engine.get_livestock_info(type)})
 
 
-@router.get("/farming/prices", dependencies=[Depends(require_auth)])
+@router.get("/farming/prices", dependencies={Depends(require_auth)])
 @_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
 async def api_v25_farming_prices(engine, commodity: str = None, market: str = None):
     """Get farming commodity prices."""
@@ -434,21 +560,21 @@ async def api_v25_farming_prices(engine, commodity: str = None, market: str = No
 #  MOBILE DATA OPTIMIZER (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/mobile-data/status", dependencies=[Depends(require_auth)])
+@router.get("/mobile-data/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("mobile_data", "MobileDataOptimizer", "Mobile data optimizer not available")
 async def api_v25_mobile_data_status(engine):
     """Get mobile data optimizer status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/mobile-data/plans", dependencies=[Depends(require_auth)])
+@router.get("/mobile-data/plans", dependencies={Depends(require_auth)])
 @_omega_endpoint("mobile_data", "MobileDataOptimizer", "Mobile data optimizer not available")
 async def api_v25_mobile_data_plans(engine, network: str = None, data_needed_gb: float = None):
     """Compare mobile data plans."""
     return JSONResponse({"success": True, **engine.compare_plans(network, data_needed_gb)})
 
 
-@router.post("/mobile-data/calculate-usage", dependencies=[Depends(require_auth)])
+@router.post("/mobile-data/calculate-usage", dependencies={Depends(require_auth)])
 @_omega_endpoint("mobile_data", "MobileDataOptimizer", "Mobile data optimizer not available")
 async def api_v25_mobile_data_calculate_usage(engine, request: Request):
     """Calculate estimated data usage."""
@@ -457,7 +583,7 @@ async def api_v25_mobile_data_calculate_usage(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.get("/mobile-data/ussd-codes", dependencies=[Depends(require_auth)])
+@router.get("/mobile-data/ussd-codes", dependencies={Depends(require_auth)])
 @_omega_endpoint("mobile_data", "MobileDataOptimizer", "Mobile data optimizer not available")
 async def api_v25_mobile_data_ussd_codes(engine, network: str = None):
     """Get USSD codes for data balance."""
@@ -468,28 +594,28 @@ async def api_v25_mobile_data_ussd_codes(engine, network: str = None):
 #  PROPERTY RENTAL (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/property/status", dependencies=[Depends(require_auth)])
+@router.get("/property/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("property_rental", "PropertyRental", "Property rental not available")
 async def api_v25_property_status(engine):
     """Get property rental module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/property/rental-prices", dependencies=[Depends(require_auth)])
+@router.get("/property/rental-prices", dependencies={Depends(require_auth)])
 @_omega_endpoint("property_rental", "PropertyRental", "Property rental not available")
 async def api_v25_property_rental_prices(engine, city: str = None, bedrooms: int = None):
     """Get rental price estimates."""
     return JSONResponse({"success": True, **engine.get_rental_prices(city, bedrooms)})
 
 
-@router.get("/property/tenant-rights", dependencies=[Depends(require_auth)])
+@router.get("/property/tenant-rights", dependencies={Depends(require_auth)])
 @_omega_endpoint("property_rental", "PropertyRental", "Property rental not available")
 async def api_v25_property_tenant_rights(engine, province: str = None):
     """Get tenant rights information."""
     return JSONResponse({"success": True, **engine.get_tenant_rights(province)})
 
 
-@router.post("/property/calculate-affordability", dependencies=[Depends(require_auth)])
+@router.post("/property/calculate-affordability", dependencies={Depends(require_auth)])
 @_omega_endpoint("property_rental", "PropertyRental", "Property rental not available")
 async def api_v25_property_calculate_affordability(engine, request: Request):
     """Calculate rental affordability."""
@@ -503,28 +629,28 @@ async def api_v25_property_calculate_affordability(engine, request: Request):
 #  NEWS FACT CHECK (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/news/status", dependencies=[Depends(require_auth)])
+@router.get("/news/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("news_factcheck", "NewsFactCheck", "News fact check not available")
 async def api_v25_news_status(engine):
     """Get news fact check module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/news/sources", dependencies=[Depends(require_auth)])
+@router.get("/news/sources", dependencies={Depends(require_auth)])
 @_omega_endpoint("news_factcheck", "NewsFactCheck", "News fact check not available")
 async def api_v25_news_sources(engine, category: str = None, reliability: str = None):
     """List news sources with reliability ratings."""
     return JSONResponse({"success": True, **engine.get_sources(category, reliability)})
 
 
-@router.get("/news/misinformation-patterns", dependencies=[Depends(require_auth)])
+@router.get("/news/misinformation-patterns", dependencies={Depends(require_auth)])
 @_omega_endpoint("news_factcheck", "NewsFactCheck", "News fact check not available")
 async def api_v25_news_misinformation_patterns(engine, topic: str = None):
     """Get common misinformation patterns."""
     return JSONResponse({"success": True, **engine.get_misinformation_patterns(topic)})
 
 
-@router.post("/news/check-claim", dependencies=[Depends(require_auth)])
+@router.post("/news/check-claim", dependencies={Depends(require_auth)])
 @_omega_endpoint("news_factcheck", "NewsFactCheck", "News fact check not available")
 async def api_v25_news_check_claim(engine, request: Request):
     """Check a news claim for accuracy."""
@@ -537,28 +663,28 @@ async def api_v25_news_check_claim(engine, request: Request):
 #  LIVESTOCK MANAGER (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/livestock/status", dependencies=[Depends(require_auth)])
+@router.get("/livestock/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("livestock_manager", "LivestockManager", "Livestock manager not available")
 async def api_v25_livestock_status(engine):
     """Get livestock manager status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/livestock/vaccines", dependencies=[Depends(require_auth)])
+@router.get("/livestock/vaccines", dependencies={Depends(require_auth)])
 @_omega_endpoint("livestock_manager", "LivestockManager", "Livestock manager not available")
 async def api_v25_livestock_vaccines(engine, animal_type: str = None):
     """Get vaccination schedules."""
     return JSONResponse({"success": True, **engine.get_vaccination_schedule(animal_type)})
 
 
-@router.get("/livestock/breeding", dependencies=[Depends(require_auth)])
+@router.get("/livestock/breeding", dependencies={Depends(require_auth)])
 @_omega_endpoint("livestock_manager", "LivestockManager", "Livestock manager not available")
 async def api_v25_livestock_breeding(engine, animal_type: str = None):
     """Get breeding guide information."""
     return JSONResponse({"success": True, **engine.get_breeding_guide(animal_type)})
 
 
-@router.get("/livestock/prices", dependencies=[Depends(require_auth)])
+@router.get("/livestock/prices", dependencies={Depends(require_auth)])
 @_omega_endpoint("livestock_manager", "LivestockManager", "Livestock manager not available")
 async def api_v25_livestock_prices(engine, animal_type: str = None, market: str = None):
     """Get livestock market prices."""
@@ -569,28 +695,28 @@ async def api_v25_livestock_prices(engine, animal_type: str = None, market: str 
 #  GRANT FUNDING (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/grants/status", dependencies=[Depends(require_auth)])
+@router.get("/grants/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("grant_funding", "GrantFunding", "Grant funding not available")
 async def api_v25_grants_status(engine):
     """Get grant funding module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/grants/government", dependencies=[Depends(require_auth)])
+@router.get("/grants/government", dependencies={Depends(require_auth)])
 @_omega_endpoint("grant_funding", "GrantFunding", "Grant funding not available")
 async def api_v25_grants_government(engine, sector: str = None, stage: str = None):
     """List government grants."""
     return JSONResponse({"success": True, **engine.get_government_grants(sector, stage)})
 
 
-@router.get("/grants/crowdfunding", dependencies=[Depends(require_auth)])
+@router.get("/grants/crowdfunding", dependencies={Depends(require_auth)])
 @_omega_endpoint("grant_funding", "GrantFunding", "Grant funding not available")
 async def api_v25_grants_crowdfunding(engine, platform: str = None):
     """Get crowdfunding platform info."""
     return JSONResponse({"success": True, **engine.get_crowdfunding_info(platform)})
 
 
-@router.post("/grants/check-eligibility", dependencies=[Depends(require_auth)])
+@router.post("/grants/check-eligibility", dependencies={Depends(require_auth)])
 @_omega_endpoint("grant_funding", "GrantFunding", "Grant funding not available")
 async def api_v25_grants_check_eligibility(engine, request: Request):
     """Check grant eligibility."""
@@ -603,28 +729,28 @@ async def api_v25_grants_check_eligibility(engine, request: Request):
 #  BUSINESS REGISTRATION (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/business-reg/status", dependencies=[Depends(require_auth)])
+@router.get("/business-reg/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("business_registration", "BusinessRegistration", "Business registration not available")
 async def api_v25_business_reg_status(engine):
     """Get business registration module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/business-reg/cipc-steps", dependencies=[Depends(require_auth)])
+@router.get("/business-reg/cipc-steps", dependencies={Depends(require_auth)])
 @_omega_endpoint("business_registration", "BusinessRegistration", "Business registration not available")
 async def api_v25_business_reg_cipc_steps(engine, entity_type: str = "private_company"):
     """Get CIPC registration steps."""
     return JSONResponse({"success": True, **engine.get_cipc_steps(entity_type)})
 
 
-@router.get("/business-reg/business-types", dependencies=[Depends(require_auth)])
+@router.get("/business-reg/business-types", dependencies={Depends(require_auth)])
 @_omega_endpoint("business_registration", "BusinessRegistration", "Business registration not available")
 async def api_v25_business_reg_business_types(engine):
     """Get business entity types."""
     return JSONResponse({"success": True, **engine.get_business_types()})
 
 
-@router.get("/business-reg/bbbee-levels", dependencies=[Depends(require_auth)])
+@router.get("/business-reg/bbbee-levels", dependencies={Depends(require_auth)])
 @_omega_endpoint("business_registration", "BusinessRegistration", "Business registration not available")
 async def api_v25_business_reg_bbbee_levels(engine, annual_turnover: float = None):
     """Get B-BBEE level requirements."""
@@ -635,14 +761,14 @@ async def api_v25_business_reg_bbbee_levels(engine, annual_turnover: float = Non
 #  CLIMATE & ENVIRONMENT (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/climate/status", dependencies=[Depends(require_auth)])
+@router.get("/climate/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("climate_environment", "ClimateEnvironment", "Climate environment not available")
 async def api_v25_climate_status(engine):
     """Get climate and environment module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.post("/climate/carbon-footprint", dependencies=[Depends(require_auth)])
+@router.post("/climate/carbon-footprint", dependencies={Depends(require_auth)])
 @_omega_endpoint("climate_environment", "ClimateEnvironment", "Climate environment not available")
 async def api_v25_climate_carbon_footprint(engine, request: Request):
     """Calculate carbon footprint."""
@@ -651,14 +777,14 @@ async def api_v25_climate_carbon_footprint(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.get("/climate/recycling", dependencies=[Depends(require_auth)])
+@router.get("/climate/recycling", dependencies={Depends(require_auth)])
 @_omega_endpoint("climate_environment", "ClimateEnvironment", "Climate environment not available")
 async def api_v25_climate_recycling(engine, material: str = None, city: str = None):
     """Get recycling information."""
     return JSONResponse({"success": True, **engine.get_recycling_info(material, city)})
 
 
-@router.get("/climate/renewable-options", dependencies=[Depends(require_auth)])
+@router.get("/climate/renewable-options", dependencies={Depends(require_auth)])
 @_omega_endpoint("climate_environment", "ClimateEnvironment", "Climate environment not available")
 async def api_v25_climate_renewable_options(engine, property_type: str = "residential"):
     """Get renewable energy options."""
@@ -669,14 +795,14 @@ async def api_v25_climate_renewable_options(engine, property_type: str = "reside
 #  HOUSING RDP (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/housing/status", dependencies=[Depends(require_auth)])
+@router.get("/housing/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("housing_rdp", "HousingRDP", "Housing RDP not available")
 async def api_v25_housing_status(engine):
     """Get housing RDP module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.post("/housing/rdp-calculator", dependencies=[Depends(require_auth)])
+@router.post("/housing/rdp-calculator", dependencies={Depends(require_auth)])
 @_omega_endpoint("housing_rdp", "HousingRDP", "Housing RDP not available")
 async def api_v25_housing_rdp_calculator(engine, request: Request):
     """Check RDP housing eligibility."""
@@ -686,7 +812,7 @@ async def api_v25_housing_rdp_calculator(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/housing/flisp-calculator", dependencies=[Depends(require_auth)])
+@router.post("/housing/flisp-calculator", dependencies={Depends(require_auth)])
 @_omega_endpoint("housing_rdp", "HousingRDP", "Housing RDP not available")
 async def api_v25_housing_flisp_calculator(engine, request: Request):
     """Calculate FLISP subsidy."""
@@ -695,7 +821,7 @@ async def api_v25_housing_flisp_calculator(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.get("/housing/provinces", dependencies=[Depends(require_auth)])
+@router.get("/housing/provinces", dependencies={Depends(require_auth)])
 @_omega_endpoint("housing_rdp", "HousingRDP", "Housing RDP not available")
 async def api_v25_housing_provinces(engine):
     """Get provincial housing contacts."""
@@ -706,28 +832,28 @@ async def api_v25_housing_provinces(engine):
 #  FOOD & WINE GUIDE (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/food-wine/status", dependencies=[Depends(require_auth)])
+@router.get("/food-wine/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("food_wine_guide", "FoodWineGuide", "Food and wine guide not available")
 async def api_v25_food_wine_status(engine):
     """Get food and wine guide status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/food-wine/wine-routes", dependencies=[Depends(require_auth)])
+@router.get("/food-wine/wine-routes", dependencies={Depends(require_auth)])
 @_omega_endpoint("food_wine_guide", "FoodWineGuide", "Food and wine guide not available")
 async def api_v25_food_wine_wine_routes(engine, region: str = None):
     """Get wine routes."""
     return JSONResponse({"success": True, **engine.get_wine_routes(region)})
 
 
-@router.get("/food-wine/restaurants", dependencies=[Depends(require_auth)])
+@router.get("/food-wine/restaurants", dependencies={Depends(require_auth)])
 @_omega_endpoint("food_wine_guide", "FoodWineGuide", "Food and wine guide not available")
 async def api_v25_food_wine_restaurants(engine, city: str = None, cuisine: str = None):
     """Get restaurant recommendations."""
     return JSONResponse({"success": True, **engine.get_restaurants(city, cuisine)})
 
 
-@router.get("/food-wine/traditional-dishes", dependencies=[Depends(require_auth)])
+@router.get("/food-wine/traditional-dishes", dependencies={Depends(require_auth)])
 @_omega_endpoint("food_wine_guide", "FoodWineGuide", "Food and wine guide not available")
 async def api_v25_food_wine_traditional_dishes(engine, culture: str = None):
     """Get traditional dishes."""
@@ -738,28 +864,28 @@ async def api_v25_food_wine_traditional_dishes(engine, culture: str = None):
 #  MINING INDUSTRY (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/mining/status", dependencies=[Depends(require_auth)])
+@router.get("/mining/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("mining_industry", "MiningIndustry", "Mining industry not available")
 async def api_v25_mining_status(engine):
     """Get mining industry module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/mining/safety", dependencies=[Depends(require_auth)])
+@router.get("/mining/safety", dependencies={Depends(require_auth)])
 @_omega_endpoint("mining_industry", "MiningIndustry", "Mining industry not available")
 async def api_v25_mining_safety(engine, commodity: str = None):
     """Get mining safety regulations."""
     return JSONResponse({"success": True, **engine.get_safety_regulations(commodity)})
 
 
-@router.get("/mining/careers", dependencies=[Depends(require_auth)])
+@router.get("/mining/careers", dependencies={Depends(require_auth)])
 @_omega_endpoint("mining_industry", "MiningIndustry", "Mining industry not available")
 async def api_v25_mining_careers(engine, field: str = None):
     """Get mining career information."""
     return JSONResponse({"success": True, **engine.get_career_info(field)})
 
 
-@router.get("/mining/companies", dependencies=[Depends(require_auth)])
+@router.get("/mining/companies", dependencies={Depends(require_auth)])
 @_omega_endpoint("mining_industry", "MiningIndustry", "Mining industry not available")
 async def api_v25_mining_companies(engine, commodity: str = None):
     """Get major mining companies."""
@@ -770,28 +896,28 @@ async def api_v25_mining_companies(engine, commodity: str = None):
 #  COMMUNITY EVENTS (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/community/status", dependencies=[Depends(require_auth)])
+@router.get("/community/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("community_events", "CommunityEvents", "Community events not available")
 async def api_v25_community_status(engine):
     """Get community events module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/community/events", dependencies=[Depends(require_auth)])
+@router.get("/community/events", dependencies={Depends(require_auth)])
 @_omega_endpoint("community_events", "CommunityEvents", "Community events not available")
 async def api_v25_community_events(engine, city: str = None, category: str = None):
     """List community events."""
     return JSONResponse({"success": True, **engine.get_events(city, category)})
 
 
-@router.get("/community/volunteer", dependencies=[Depends(require_auth)])
+@router.get("/community/volunteer", dependencies={Depends(require_auth)])
 @_omega_endpoint("community_events", "CommunityEvents", "Community events not available")
 async def api_v25_community_volunteer(engine, cause: str = None, location: str = None):
     """Get volunteer opportunities."""
     return JSONResponse({"success": True, **engine.get_volunteer_opportunities(cause, location)})
 
 
-@router.get("/community/safety-tips", dependencies=[Depends(require_auth)])
+@router.get("/community/safety-tips", dependencies={Depends(require_auth)])
 @_omega_endpoint("community_events", "CommunityEvents", "Community events not available")
 async def api_v25_community_safety_tips(engine, context: str = None):
     """Get community safety tips."""
@@ -802,28 +928,28 @@ async def api_v25_community_safety_tips(engine, context: str = None):
 #  ENTERTAINMENT & CULTURE (new)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/entertainment/status", dependencies=[Depends(require_auth)])
+@router.get("/entertainment/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("entertainment_culture", "EntertainmentCulture", "Entertainment culture not available")
 async def api_v25_entertainment_status(engine):
     """Get entertainment and culture module status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/entertainment/festivals", dependencies=[Depends(require_auth)])
+@router.get("/entertainment/festivals", dependencies={Depends(require_auth)])
 @_omega_endpoint("entertainment_culture", "EntertainmentCulture", "Entertainment culture not available")
 async def api_v25_entertainment_festivals(engine, province: str = None, month: str = None):
     """Get festival listings."""
     return JSONResponse({"success": True, **engine.get_festivals(province, month)})
 
 
-@router.get("/entertainment/cinemas", dependencies=[Depends(require_auth)])
+@router.get("/entertainment/cinemas", dependencies={Depends(require_auth)])
 @_omega_endpoint("entertainment_culture", "EntertainmentCulture", "Entertainment culture not available")
 async def api_v25_entertainment_cinemas(engine, city: str = None):
     """Get cinema listings."""
     return JSONResponse({"success": True, **engine.get_cinemas(city)})
 
 
-@router.get("/entertainment/heritage-sites", dependencies=[Depends(require_auth)])
+@router.get("/entertainment/heritage-sites", dependencies={Depends(require_auth)])
 @_omega_endpoint("entertainment_culture", "EntertainmentCulture", "Entertainment culture not available")
 async def api_v25_entertainment_heritage_sites(engine, province: str = None, unesco_only: bool = False):
     """Get heritage sites."""
@@ -834,21 +960,21 @@ async def api_v25_entertainment_heritage_sites(engine, province: str = None, une
 #  TENDER ASSISTANT (v27.2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/tenders/status", dependencies=[Depends(require_auth)])
+@router.get("/tenders/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("tender_assistant", "TenderAssistant", "Tender assistant not available")
 async def api_v25_tenders_status(engine):
     """Get tender assistant overview."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/tenders/types", dependencies=[Depends(require_auth)])
+@router.get("/tenders/types", dependencies={Depends(require_auth)])
 @_omega_endpoint("tender_assistant", "TenderAssistant", "Tender assistant not available")
 async def api_v25_tenders_types(engine):
     """Get tender types and processes."""
     return JSONResponse({"success": True, "tender_types": engine.get_tender_types()})
 
 
-@router.post("/tenders/checklist", dependencies=[Depends(require_auth)])
+@router.post("/tenders/checklist", dependencies={Depends(require_auth)])
 @_omega_endpoint("tender_assistant", "TenderAssistant", "Tender assistant not available")
 async def api_v25_tenders_checklist(engine, request: Request):
     """Generate document checklist for tender application."""
@@ -861,7 +987,7 @@ async def api_v25_tenders_checklist(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/tenders/calculate-points", dependencies=[Depends(require_auth)])
+@router.post("/tenders/calculate-points", dependencies={Depends(require_auth)])
 @_omega_endpoint("tender_assistant", "TenderAssistant", "Tender assistant not available")
 async def api_v25_tenders_calculate_points(engine, request: Request):
     """Calculate B-BBEE preference points for tender."""
@@ -879,14 +1005,14 @@ async def api_v25_tenders_calculate_points(engine, request: Request):
 #  FUNDING ASSISTANT (v27.2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/funding/status", dependencies=[Depends(require_auth)])
+@router.get("/funding/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("funding_assistant", "FundingAssistant", "Funding assistant not available")
 async def api_v25_funding_status(engine):
     """Get funding assistant overview."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/funding/sources", dependencies=[Depends(require_auth)])
+@router.get("/funding/sources", dependencies={Depends(require_auth)])
 @_omega_endpoint("funding_assistant", "FundingAssistant", "Funding assistant not available")
 async def api_v25_funding_sources(engine, category: str = None):
     """Get all funding sources by category."""
@@ -901,7 +1027,7 @@ async def api_v25_funding_sources(engine, category: str = None):
     return JSONResponse({"success": True, "categories": ["government", "private", "international", "crowdfunding"]})
 
 
-@router.post("/funding/check-eligibility", dependencies=[Depends(require_auth)])
+@router.post("/funding/check-eligibility", dependencies={Depends(require_auth)])
 @_omega_endpoint("funding_assistant", "FundingAssistant", "Funding assistant not available")
 async def api_v25_funding_check_eligibility(engine, request: Request):
     """Check funding eligibility based on profile."""
@@ -910,7 +1036,7 @@ async def api_v25_funding_check_eligibility(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/funding/calculate", dependencies=[Depends(require_auth)])
+@router.post("/funding/calculate", dependencies={Depends(require_auth)])
 @_omega_endpoint("funding_assistant", "FundingAssistant", "Funding assistant not available")
 async def api_v25_funding_calculate(engine, request: Request):
     """Calculate funding repayment and cash flow projections."""
@@ -929,21 +1055,21 @@ async def api_v25_funding_calculate(engine, request: Request):
 #  Teaches how to use loans as wealth-building tools, not debt traps
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/loan-mastery/status", dependencies=[Depends(require_auth)])
+@router.get("/loan-mastery/status", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_status(engine):
     """Get loan mastery advisor overview."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
-@router.get("/loan-mastery/good-vs-bad-debt", dependencies=[Depends(require_auth)])
+@router.get("/loan-mastery/good-vs-bad-debt", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_good_vs_bad(engine):
     """Learn the difference between good debt and bad debt."""
     return JSONResponse({"success": True, **engine.get_good_vs_bad_debt()})
 
 
-@router.post("/loan-mastery/compare-scenarios", dependencies=[Depends(require_auth)])
+@router.post("/loan-mastery/compare-scenarios", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_compare(engine, request: Request):
     """Compare loan scenarios (deposit, term, rate variations)."""
@@ -957,7 +1083,7 @@ async def api_v25_loan_mastery_compare(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/loan-mastery/wealth-from-debt", dependencies=[Depends(require_auth)])
+@router.post("/loan-mastery/wealth-from-debt", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_wealth(engine, request: Request):
     """Calculate wealth building through strategic debt (e.g., property)."""
@@ -971,7 +1097,7 @@ async def api_v25_loan_mastery_wealth(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/loan-mastery/debt-consolidation", dependencies=[Depends(require_auth)])
+@router.post("/loan-mastery/debt-consolidation", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_consolidation(engine, request: Request):
     """Calculate savings from consolidating multiple high-interest debts."""
@@ -980,7 +1106,7 @@ async def api_v25_loan_mastery_consolidation(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/loan-mastery/refinance", dependencies=[Depends(require_auth)])
+@router.post("/loan-mastery/refinance", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_refinance(engine, request: Request):
     """Analyze refinancing — break-even point and total savings."""
@@ -995,14 +1121,14 @@ async def api_v25_loan_mastery_refinance(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.get("/loan-mastery/credit-score", dependencies=[Depends(require_auth)])
+@router.get("/loan-mastery/credit-score", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_credit(engine):
     """Get SA credit score guide with bureau info and improvement tips."""
     return JSONResponse({"success": True, **engine.credit_score_guide()})
 
 
-@router.post("/loan-mastery/early-settlement", dependencies=[Depends(require_auth)])
+@router.post("/loan-mastery/early-settlement", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_early_settlement(engine, request: Request):
     """Calculate savings from early/extra loan repayments."""
@@ -1016,7 +1142,7 @@ async def api_v25_loan_mastery_early_settlement(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.post("/loan-mastery/settlement-vs-investing", dependencies=[Depends(require_auth)])
+@router.post("/loan-mastery/settlement-vs-investing", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_settle_vs_invest(engine, request: Request):
     """Should you pay off your loan early or invest the extra money?"""
@@ -1030,7 +1156,7 @@ async def api_v25_loan_mastery_settle_vs_invest(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.get("/loan-mastery/red-flags", dependencies=[Depends(require_auth)])
+@router.get("/loan-mastery/red-flags", dependencies={Depends(require_auth)])
 @_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
 async def api_v25_loan_mastery_red_flags(engine):
     """Get debt warning signs and help resources."""
@@ -1041,28 +1167,28 @@ async def api_v25_loan_mastery_red_flags(engine):
 #  SKILLS ENGINE (v27.2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@router.get("/skills/trades", dependencies=[Depends(require_auth)])
+@router.get("/skills/trades", dependencies={Depends(require_auth)])
 @_omega_endpoint("skills_engine", "SkillsEngine", "Skills engine not available")
 async def api_v25_skills_trades(engine, category: str = None):
     """Get all vocational trades and skills data."""
     return JSONResponse({"success": True, **engine.get_trades(category)})
 
 
-@router.get("/skills/trades/{trade_id}", dependencies=[Depends(require_auth)])
+@router.get("/skills/trades/{trade_id}", dependencies={Depends(require_auth)])
 @_omega_endpoint("skills_engine", "SkillsEngine", "Skills engine not available")
 async def api_v25_skills_trade_detail(engine, trade_id: str):
     """Get detailed info for a specific trade."""
     return JSONResponse({"success": True, **engine.get_trade_detail(trade_id)})
 
 
-@router.get("/skills/setas", dependencies=[Depends(require_auth)])
+@router.get("/skills/setas", dependencies={Depends(require_auth)])
 @_omega_endpoint("skills_engine", "SkillsEngine", "Skills engine not available")
 async def api_v25_skills_setas(engine, seta_code: str = None):
     """Get SETA (Sector Education and Training Authority) information."""
     return JSONResponse({"success": True, **engine.get_seta_info(seta_code)})
 
 
-@router.post("/skills/apprenticeship-cost", dependencies=[Depends(require_auth)])
+@router.post("/skills/apprenticeship-cost", dependencies={Depends(require_auth)])
 @_omega_endpoint("skills_engine", "SkillsEngine", "Skills engine not available")
 async def api_v25_skills_apprenticeship_cost(engine, request: Request):
     """Calculate estimated apprenticeship cost for a trade."""
@@ -1074,7 +1200,7 @@ async def api_v25_skills_apprenticeship_cost(engine, request: Request):
     return JSONResponse({"success": True, **result})
 
 
-@router.get("/skills/search", dependencies=[Depends(require_auth)])
+@router.get("/skills/search", dependencies={Depends(require_auth)])
 @_omega_endpoint("skills_engine", "SkillsEngine", "Skills engine not available")
 async def api_v25_skills_search(engine, q: str = ""):
     """Search trades and skills."""
@@ -1090,7 +1216,7 @@ logger.info(
 # Notification Hub Endpoints (v29.0.0)
 # ---------------------------------------------------------------------------
 
-@router.get("/notifications", dependencies=[Depends(require_auth)])
+@router.get("/notifications", dependencies={Depends(require_auth)}])
 async def api_v25_notifications(
     request: Request,
     user_id: Optional[str] = None,
@@ -1124,7 +1250,7 @@ async def api_v25_notifications(
 
 
 
-@router.get("/notifications/unread-count", dependencies=[Depends(require_auth)])
+@router.get("/notifications/unread-count", dependencies={Depends(require_auth)}])
 async def api_v25_notifications_unread_count(
     request: Request,
     user_id: Optional[str] = None,
@@ -1145,7 +1271,7 @@ async def api_v25_notifications_unread_count(
 
 
 
-@router.post("/notifications/mark-read", dependencies=[Depends(require_auth)])
+@router.post("/notifications/mark-read", dependencies={Depends(require_auth)}])
 async def api_v25_notifications_mark_read(request: Request):
     """Mark a single notification as read.
 
@@ -1167,7 +1293,7 @@ async def api_v25_notifications_mark_read(request: Request):
 
 
 
-@router.post("/notifications/mark-all-read", dependencies=[Depends(require_auth)])
+@router.post("/notifications/mark-all-read", dependencies={Depends(require_auth)}])
 async def api_v25_notifications_mark_all_read(request: Request):
     """Mark all notifications as read for a user.
 
@@ -1187,7 +1313,7 @@ async def api_v25_notifications_mark_all_read(request: Request):
 
 
 
-@router.get("/notifications/settings", dependencies=[Depends(require_auth)])
+@router.get("/notifications/settings", dependencies={Depends(require_auth)}])
 async def api_v25_notification_settings(
     request: Request,
     user_id: Optional[str] = None,
@@ -1204,7 +1330,7 @@ async def api_v25_notification_settings(
 
 
 
-@router.post("/notifications/settings", dependencies=[Depends(require_auth)])
+@router.post("/notifications/settings", dependencies={Depends(require_auth)}])
 async def api_v25_notification_settings_update(request: Request):
     """Update notification preferences (partial merge).
 
@@ -1229,7 +1355,7 @@ async def api_v25_notification_settings_update(request: Request):
 
 
 
-@router.post("/notifications/seed", dependencies=[Depends(require_auth)])
+@router.post("/notifications/seed", dependencies={Depends(require_auth)}])
 async def api_v25_notifications_seed(request: Request):
     """Generate sample notifications for demo / onboarding.
 
@@ -1257,7 +1383,7 @@ async def api_v25_notifications_seed(request: Request):
 # AI Brain Endpoints (v29.0.0) — LLM-powered chat with streaming
 # ---------------------------------------------------------------------------
 
-@router.post("/ai-brain/chat", dependencies=[Depends(require_auth)])
+@router.post("/ai-brain/chat", dependencies={Depends(require_auth)}])
 async def api_v25_ai_brain_chat(request: Request):
     """Main AI brain chat endpoint — processes natural language queries.
 
@@ -1286,7 +1412,7 @@ async def api_v25_ai_brain_chat(request: Request):
 
 
 
-@router.post("/ai-brain/chat/stream", dependencies=[Depends(require_auth)])
+@router.post("/ai-brain/chat/stream", dependencies={Depends(require_auth)}])
 async def api_v25_ai_brain_chat_stream(request: Request):
     """Stream AI Brain response in real-time via Server-Sent Events (SSE).
 
@@ -1340,7 +1466,7 @@ async def api_v25_ai_brain_chat_stream(request: Request):
 
 
 
-@router.get("/ai-brain/capabilities", dependencies=[Depends(require_auth)])
+@router.get("/ai-brain/capabilities", dependencies={Depends(require_auth)}])
 async def api_v25_ai_brain_capabilities():
     """List all capabilities the AI Brain can access."""
     try:
@@ -1358,7 +1484,7 @@ async def api_v25_ai_brain_capabilities():
 
 
 
-@router.get("/ai-brain/status", dependencies=[Depends(require_auth)])
+@router.get("/ai-brain/status", dependencies={Depends(require_auth)}])
 async def api_v25_ai_brain_status():
     """Get AI Brain health status including LLM activation state."""
     try:
