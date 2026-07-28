@@ -83,19 +83,20 @@ import VoiceInterfacePage from "@/pages/VoiceInterfacePage";
 import AdminPage from "@/pages/AdminPage";
 import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
 import OnboardingPage from "@/pages/OnboardingPage";
-import AIBrainPage from "@/pages/AIBrainPage";
-import SearchPage from "@/pages/SearchPage";
-import MoreMenuPage from "@/pages/MoreMenuPage";
-import LoginPage from "@/pages/LoginPage";
-import SignupPage from "@/pages/SignupPage";
-import FavoritesPage from "@/pages/FavoritesPage";
-import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
-import NotificationsPage from "@/pages/NotificationsPage";
-import TermsPage from "@/pages/TermsPage";
-import PrivacyPage from "@/pages/PrivacyPage";
-import ContactPage from "@/pages/ContactPage";
+import AIBrainPage from "./pages/AIBrainPage";
+import SearchPage from "./pages/SearchPage";
+import MoreMenuPage from "./pages/MoreMenuPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import ContactPage from "./pages/ContactPage";
 import CookieConsent from "@/components/CookieConsent";
 import WelcomeModal from "@/components/WelcomeModal";
+import ReportBugButton from "@/components/ReportBugButton";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import {
@@ -775,6 +776,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Pre-launch components */}
       <CookieConsent />
       <WelcomeModal />
+      <ReportBugButton />
     </div>
   );
 }
