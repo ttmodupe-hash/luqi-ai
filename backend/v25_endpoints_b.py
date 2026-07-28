@@ -1,5 +1,28 @@
-from backend.v25_endpoints import router
+"""
+LUQI AI v29 — Omega Endpoints Part B
+Continues from v25_endpoints.py.  DO NOT import directly —
+v25_endpoints_b registers its routes on the *same* router instance.
+"""
+from __future__ import annotations
 
+import json
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse
+
+# Re-use the same router object from Part A
+from backend.v25_endpoints import router, _omega_endpoint, require_auth
+
+logger = logging.getLogger(__name__)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PERSONAL ASSISTANT (v4.0.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/assistant/tasks", dependencies=[Depends(require_auth)])
 async def api_v25_assistant_tasks(status: str = None, priority: str = None):
 
     try:
