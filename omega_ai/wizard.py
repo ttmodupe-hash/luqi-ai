@@ -177,7 +177,7 @@ def wizard_mining_setup() -> str:
     daily_rev = daily_btc * btc
     daily_pwr = (asic["power"] / 1000) * 24 * cost
     daily_profit = daily_rev - daily_pwr
-    roi = asic["price"] / daily_profit if daily_profit > 0 else float("inf")
+    roi = asic["price"] / daily_profit if daily_profit > 0 else 999_999_999
 
     lines = [
         f"{B}Configuration:{R}  ${cost:.4f}/kWh | Budget: ${budget:,.0f} | {country}",
@@ -187,7 +187,7 @@ def wizard_mining_setup() -> str:
         f"{B}Daily:{R}     Revenue: ${daily_rev:.2f} | Power: ${daily_pwr:.2f} | Profit: {_c(f'${daily_profit:.2f}', G if daily_profit > 0 else RD)}",
         f"{B}Monthly:{R}   Profit: {_c(f'${daily_profit*30:.2f}', G if daily_profit > 0 else RD)}",
         f"{B}Yearly:{R}    Profit: {_c(f'${daily_profit*365:.2f}', G if daily_profit > 0 else RD)}",
-        f"{B}ROI:{R}       {roi:.0f} days" if roi != float("inf") else f"{B}ROI:{R} Unprofitable",
+        f"{B}ROI:{R}       {roi:.0f} days" if roi != 999_999_999 else f"{B}ROI:{R} Unprofitable",
         "",
         f"{Y}⚠ Risk ({risk}):{R}",
         f"  • Monitor difficulty adjustments monthly",
