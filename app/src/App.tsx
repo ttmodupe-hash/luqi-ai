@@ -85,6 +85,7 @@ import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import AIBrainPage from "@/pages/AIBrainPage";
 import SearchPage from "@/pages/SearchPage";
+import OmniLabPage from "@/pages/OmniLabPage";
 import MoreMenuPage from "@/pages/MoreMenuPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
@@ -211,6 +212,7 @@ const navGroups: NavGroup[] = [
       { id: "assistant", label: "Assistant", icon: Bot, path: "/assistant" },
       { id: "workspace", label: "Workspace", icon: Briefcase, path: "/workspace" },
       { id: "local-llm", label: "Local AI", icon: Cpu, path: "/local-llm" },
+      { id: "omnilab", label: "OmniLab", icon: GraduationCap, path: "/omnilab" },
     ],
   },
   {
@@ -428,7 +430,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    getInitialExpandedGroups
+    getInitialExpandedGroups()
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -869,6 +871,7 @@ export default function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/agriculture-advisor" element={<AgricultureAdvisorPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/omnilab" element={<OmniLabPage />} />
         <Route path="/menu" element={<MoreMenuPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
