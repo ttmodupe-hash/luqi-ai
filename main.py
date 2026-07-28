@@ -234,6 +234,13 @@ def mount_routers():
 
 def mount_static():
     """Mount static file directories."""
+    # Docker production: static files from Vite build
+    static_dir = settings.PROJECT_ROOT / "static"
+    if static_dir.exists():
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+        logger.info(f"Mounted static files: {static_dir} at /")
+        return
+    # Local dev: web/v25 directory
     web_dir = settings.PROJECT_ROOT / "web" / "v25"
     if web_dir.exists():
         app.mount("/v25", StaticFiles(directory=str(web_dir), html=True), name="v25_web")

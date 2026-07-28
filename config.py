@@ -56,3 +56,93 @@ DB_PATH = DATA_DIR / "luqi.db"
 ENABLE_SANDBOX = os.environ.get("ENABLE_SANDBOX", "true").lower() in ("1", "true", "yes")
 ENABLE_VOICE = os.environ.get("ENABLE_VOICE", "true").lower() in ("1", "true", "yes")
 ENABLE_WEBSOCKET = os.environ.get("ENABLE_WEBSOCKET", "true").lower() in ("1", "true", "yes")
+
+# ---------------------------------------------------------------------------
+# Settings singleton (for main.py compatibility)
+# ---------------------------------------------------------------------------
+
+class _Settings:
+    """Unified settings object — mirrors all module-level constants."""
+
+    # Version
+    version = "29.0.0"
+    codename = "Prometheus"
+    environment = "development" if DEBUG else "production"
+
+    # Paths
+    PROJECT_ROOT = PROJECT_ROOT
+    DATA_DIR = DATA_DIR
+    STATIC_DIR = STATIC_DIR
+    UPLOADS_DIR = UPLOADS_DIR
+    LOG_DIR = DATA_DIR / "logs"
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Server
+    host = HOST
+    port = PORT
+    workers = int(os.environ.get("WORKERS", "1"))
+    reload = DEBUG
+
+    # Logging
+    log_to_file = os.environ.get("LOG_TO_FILE", "false").lower() in ("1", "true", "yes")
+    log_level = os.environ.get("LOG_LEVEL", "INFO")
+
+    # DB
+    db_path = DB_PATH
+
+    # AI
+    openai_api_key = OPENAI_API_KEY
+    openai_model = DEFAULT_MODEL
+
+    # CORS
+    cors_origins = CORS_ORIGINS
+
+    @staticmethod
+    def health_info():
+        import sqlite3, shutil, datetime
+        healthy = True
+        checks = {}
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            conn.execute("SELECT 1")
+            conn.close()
+            checks["database"] = "ok"
+        except Exception as e:
+            checks["database"] = f"error: {e}"
+            healthy = False
+        try:
+            du = shutil.disk_usage(DATA_DIR)
+            checks["disk_free_gb"] = round(du.free / (1024**3), 2)
+        except Exception as e:
+            checks["disk"] = f"error: {e}"
+            healthy = False
+        checks["timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
+        return {"healthy": healthy, "checks": checks}
+
+
+settings = _Settings()
+
+# Legacy CONFIG dict (for omega_ai modules)
+CONFIG = {
+    "version": settings.version,
+    "codename": settings.codename,
+    "environment": settings.environment,
+    "debug": DEBUG,
+    "host": HOST,
+    "port": PORT,
+    "data_dir": str(DATA_DIR),
+    "db_path": str(DB_PATH),
+    "openai_api_key": OPENAI_API_KEY,
+    "openai_model": DEFAULT_MODEL,
+    "cors_origins": CORS_ORIGINS,
+    "enable_sandbox": ENABLE_SANDBOX,
+    "enable_voice": ENABLE_VOICE,
+    "enable_websocket": ENABLE_WEBSOCKET,
+}
+
+
+def get_memory_dir(subdir: str = ""):
+    """Return the path to a memory subdirectory."""
+    d = DATA_DIR / "memory" / subdir
+    d.mkdir(parents=True, exist_ok=True)
+    return str(d)

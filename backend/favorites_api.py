@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Any
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-router = APIRouter(prefix="/api/v25", tags=["favorites"])
+router = APIRouter(tags=["favorites"])
 
 # In-memory store (replace with DB in production)
 _favorites_store: Dict[str, List[Dict[str, Any]]] = {}
