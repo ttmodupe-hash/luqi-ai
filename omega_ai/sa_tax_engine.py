@@ -301,7 +301,7 @@ class SATaxEngine:
         """Return the upper bound of a tax bracket."""
         if index + 1 < len(self.brackets):
             return self.brackets[index + 1]["threshold"] - 1
-        return float("inf")
+        return 999_999_999
 
     def _get_rebate(self, age: int) -> float:
         """Calculate total rebate based on age."""
