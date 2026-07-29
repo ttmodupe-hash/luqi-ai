@@ -85,17 +85,18 @@ import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import AIBrainPage from "@/pages/AIBrainPage";
 import SearchPage from "@/pages/SearchPage";
-import OmniLabPage from "@/pages/OmniLabPage";
 import MoreMenuPage from "@/pages/MoreMenuPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import FavoritesPage from "@/pages/FavoritesPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import NotificationsPage from "@/pages/NotificationsPage";
+import OmniLabPage from "@/pages/OmniLabPage";
+import OmniLabEvolverPage from "@/pages/OmniLabEvolverPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ContactPage from "@/pages/ContactPage";
-import NotFoundPage from "@/pages/NotFoundPage";
 import CookieConsent from "@/components/CookieConsent";
 import WelcomeModal from "@/components/WelcomeModal";
 import ReportBugButton from "@/components/ReportBugButton";
@@ -118,6 +119,8 @@ import {
   Puzzle,
   BookOpen,
   FileText,
+  FlaskConical,
+  Dna,
   Banknote,
   Brain,
   TrendingUp,
@@ -212,7 +215,6 @@ const navGroups: NavGroup[] = [
       { id: "assistant", label: "Assistant", icon: Bot, path: "/assistant" },
       { id: "workspace", label: "Workspace", icon: Briefcase, path: "/workspace" },
       { id: "local-llm", label: "Local AI", icon: Cpu, path: "/local-llm" },
-      { id: "omnilab", label: "OmniLab", icon: GraduationCap, path: "/omnilab" },
     ],
   },
   {
@@ -303,6 +305,7 @@ const navGroups: NavGroup[] = [
       { id: "tenders", label: "Tenders", icon: FileText, path: "/tenders" },
       { id: "funding", label: "Funding", icon: Banknote, path: "/funding" },
       { id: "loan-mastery", label: "Loan Mastery", icon: TrendingUp, path: "/loan-mastery" },
+      { id: "omnilab-evolver", label: "OmniLab Evolver", icon: Dna, path: "/omnilab-evolver" },
     ],
   },
   {
@@ -430,7 +433,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    getInitialExpandedGroups()
+    getInitialExpandedGroups
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -871,7 +874,6 @@ export default function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/agriculture-advisor" element={<AgricultureAdvisorPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/omnilab" element={<OmniLabPage />} />
         <Route path="/menu" element={<MoreMenuPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
@@ -879,6 +881,8 @@ export default function App() {
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/omnilab" element={<OmniLabPage />} />
+        <Route path="/omnilab-evolver" element={<OmniLabEvolverPage />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/contact" element={<ContactPage />} />
