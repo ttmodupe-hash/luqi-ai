@@ -1,13 +1,1 @@
-FROM python:3.12-slim
-WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY backend/ ./backend/
-COPY web_core/ ./web_core/
-COPY omega_ai/ ./omega_ai/
-COPY app/dist/ ./static/
-COPY main.py .
-COPY config.py .
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+RlJPTSBweXRob246My4xMS1zbGltCgpXT1JLRElSIC9hcHAKQ09QWSByZXF1aXJlbWVudHMudHh0IC4KUlVOIHBpcCBpbnN0YWxsIC0tbm8tY2FjaGUtZGlyIC1yIHJlcXVpcmVtZW50cy50eHQKCkNPUFkgLiAuCgpDTUQgWyJ1dmljb3JuIiwgImJhY2tlbmQubWFpbjphcHAiLCAiLS1ob3N0IiwgIjAuMC4wLjAiLCAiLS1wb3J0IiwgIjgwODAiLCAiLS13b3JrZXJzIiwgIjQiXQo=
