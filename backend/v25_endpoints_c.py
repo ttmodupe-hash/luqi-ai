@@ -9,7 +9,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 # Re-use the same router and helpers from Part A
 from backend.v25_endpoints import router, _omega_endpoint, require_auth, _omega, rate_limit_check
@@ -496,7 +496,7 @@ async def api_v25_university_status(engine):
 @_omega_endpoint("university_guide", "UniversityGuide", "University guide not available")
 async def api_v25_university_universities(engine, province: str = None, type: str = None):
     """List universities."""
-    return JSONResponse({"success": True, **engine.get_universities(province, type)})
+    return JSONResponse({"success": True, **engine.get_courses(field, university)})
 
 
 @router.get("/university/courses", dependencies=[Depends(require_auth)])
@@ -549,8 +549,7 @@ async def api_v25_jobs_interview_questions(engine, role: str = None, level: str 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  WATER & SANITATION (new)
-# ═══════════════════════════════════════════════════════════════════════════════
-
+# ═════════════════════════════════════════════════════════════════════════════ESIS ROUTE
 @router.get("/water/status", dependencies=[Depends(require_auth)])
 @_omega_endpoint("water_sanitation", "WaterSanitation", "Water sanitation not available")
 async def api_v25_water_status(engine):
@@ -619,28 +618,28 @@ async def api_v25_emergency_disaster_response(engine, disaster_type: str = None)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @router.get("/farming/status", dependencies=[Depends(require_auth)])
-@_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
+@_omega_endpoint("farming_guide", "FarmingGuide", "Farming farming not available")
 async def api_v25_farming_status(engine):
     """Get farming guide status."""
     return JSONResponse({"success": True, **engine.get_status()})
 
 
 @router.get("/farming/crops", dependencies=[Depends(require_auth)])
-@_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
+@_omega_endpoint("farming_guide", "FarmingGuide", "Farming farming not available")
 async def api_v25_farming_crops(engine, region: str = None, season: str = None):
     """Get crop recommendations."""
     return JSONResponse({"success": True, **engine.get_crop_recommendations(region, season)})
 
 
 @router.get("/farming/livestock", dependencies=[Depends(require_auth)])
-@_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
+@_omega_endpoint("farming_guide", "FarmingGuide", "Farming farming not available")
 async def api_v25_farming_livestock(engine, type: str = None):
     """Get livestock farming info."""
     return JSONResponse({"success": True, **engine.get_livestock_info(type)})
 
 
 @router.get("/farming/prices", dependencies=[Depends(require_auth)])
-@_omega_endpoint("farming_guide", "FarmingGuide", "Farming guide not available")
+@_omega_endpoint("farming_guide", "FarmingGuide", "Farming farming not available")
 async def api_v25_farming_prices(engine, commodity: str = None, market: str = None):
     """Get farming commodity prices."""
     return JSONResponse({"success": True, **engine.get_commodity_prices(commodity, market)})
@@ -746,7 +745,7 @@ async def api_v25_news_check_claim(engine, request: Request):
     """Check a news claim for accuracy."""
     data = json.loads(await request.body())
     result = engine.check_claim(data.get("claim", ""), data.get("context", ""))
-    return JSONResponse({"success": True, **result})
+    return JSONResponse({JSONResponse({"success": True, **result})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1092,6 +1091,7 @@ async def api_v25_tenders_calculate_points(engine, request: Request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
 #  FUNDING ASSISTANT (v27.2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1160,7 +1160,7 @@ async def api_v25_loan_mastery_good_vs_bad(engine):
 
 
 @router.post("/loan-mastery/compare-scenarios", dependencies=[Depends(require_auth)])
-@_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery advisor not available")
+@_omega_endpoint("loan_mastery", "LoanMasteryAdvisor", "Loan mastery not available")
 async def api_v25_loan_mastery_compare(engine, request: Request):
     """Compare loan scenarios (deposit, term, rate variations)."""
     data = json.loads(await request.body())
