@@ -1,0 +1,17 @@
+# Secrets and runtime artifacts — NEVER commit
+.env
+omega_memory.json
+omega_memory.json.bak
+omega_log.jsonl
+omega_export_*.md
+omega_report_*.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
