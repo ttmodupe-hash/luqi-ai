@@ -1266,8 +1266,7 @@ class OmegaMasterEngine:
             result = self.execute_omega_subsystem(topic, {"query": topic})
             subsystem = str(result.get("subsystem", "Master Core"))
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            filename = "omega_report_%s_%s.md" % (_slugify(topic),
- stamp)
+            filename = "omega_report_%s_%s.md" % (_slugify(topic), stamp)
             findings = self._report_findings(result)
             actions = list(REPORT_GENERIC_ACTIONS)
             actions.extend(REPORT_NEXT_ACTIONS.get(
@@ -1528,7 +1527,7 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             for entry in entries:
                 print("  %s | %-5s | %s" % (
                     entry.get("ts", "?"),
-                    str(entry.get("role", ""))[:5],
+                    str(entry.get("role", "?"))[:5],
                     str(entry.get("text", ""))[:70],
                 ))
         engine._audit("Memory", "history", "Success")
