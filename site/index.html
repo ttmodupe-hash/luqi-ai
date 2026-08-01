@@ -3,173 +3,368 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LUQI AI v29.5.0 - The Professor | Unified Master Engine</title>
-<meta name="description" content="LUQI AI v29.5.0 'The Professor': a single-file, stdlib-only Python master engine with a conversational mentor, 100 language packs, sandboxed self-evolution and launch-grade checks. Built in South Africa.">
+<title>LUQI AI - Unified Master Engine</title>
+<meta name="description" content="LUQI AI v29.5.0 is a personal AI Unified Master Engine built in South Africa. One engine. Every domain. Ten capability subsystems, one hundred languages.">
 <style>
-  :root{
-    --bg:#0a0f1e; --bg2:#0e1530; --card:#121a36; --line:#223055;
-    --txt:#e8ecf8; --mut:#93a0c4; --acc:#38bdf8; --acc2:#a78bfa;
-    --gold:#fbbf24; --ok:#34d399;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:radial-gradient(1200px 600px at 70% -10%,#1b2a5e33,transparent),var(--bg);color:var(--txt);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  header{padding:72px 0 40px;text-align:center}
-  .badge{display:inline-block;background:linear-gradient(90deg,var(--acc),var(--acc2));color:#06121f;font-weight:700;font-size:13px;padding:6px 14px;border-radius:999px;letter-spacing:.4px}
-  h1{font-size:clamp(34px,6vw,58px);line-height:1.1;margin:18px 0 10px;letter-spacing:-.5px}
-  h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .sub{color:var(--mut);font-size:18px;max-width:760px;margin:0 auto}
-  .cta{margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-  .btn{display:inline-block;padding:13px 26px;border-radius:12px;font-weight:700;text-decoration:none;border:1px solid var(--line)}
-  .btn.pri{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#06121f;border:none}
-  .btn.sec{color:var(--txt);background:var(--card)}
-  section{padding:44px 0}
-  h2{font-size:28px;margin-bottom:8px;letter-spacing:-.3px}
-  .lead{color:var(--mut);margin-bottom:26px;max-width:780px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-  .card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:16px;padding:22px}
-  .card h3{font-size:17px;margin-bottom:6px}
-  .card p{color:var(--mut);font-size:14.5px}
-  .prof{border:1px solid var(--gold);box-shadow:0 0 40px #fbbf2415}
-  .prof h3{color:var(--gold)}
-  .tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:2px 10px;margin-bottom:10px;letter-spacing:.5px}
-  table{width:100%;border-collapse:collapse;font-size:14.5px}
-  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
-  th{color:var(--mut);font-weight:600}
-  code,.cmd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px}
-  .term{background:#070b18;border:1px solid var(--line);border-radius:14px;padding:18px 20px;overflow-x:auto}
-  .term .p{color:var(--ok)}
-  .term .c{color:var(--mut)}
-  .langs{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:13px;color:var(--mut)}
-  .chip b{color:var(--txt);font-weight:600}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;text-align:center}
-  .stat .n{font-size:30px;font-weight:800;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .stat .l{color:var(--mut);font-size:13px}
-  footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--mut);font-size:13.5px;text-align:center}
-  .watch{background:#1a1408;border:1px solid #57440f;border-radius:14px;padding:16px 18px;font-size:14px;color:#e7d9ad}
-  ul.tight{padding-left:20px;color:var(--mut)}
-  ul.tight li{margin:6px 0}
+:root{
+  --bg:#faf7f2;
+  --surface:#ffffff;
+  --ink:#2b2620;
+  --ink-soft:#5c554b;
+  --accent:#c96f4a;
+  --accent-soft:#f4e3d9;
+  --olive:#7a7a52;
+  --line:#e8e0d4;
+  --radius:14px;
+  --shadow:0 2px 10px rgba(43,38,32,.06);
+  --shadow-lg:0 8px 28px rgba(43,38,32,.09);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+h1,h2,h3{line-height:1.2;font-weight:700;letter-spacing:-.01em}
+a{color:inherit;text-decoration:none}
+.section{padding:88px 0}
+.eyebrow{
+  display:inline-block;font-size:.8rem;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:14px;
+}
+.section h2{font-size:clamp(1.7rem,3.5vw,2.4rem);margin-bottom:14px}
+.section .lead{color:var(--ink-soft);max-width:640px;margin-bottom:48px}
+
+/* Header */
+header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(250,247,242,.9);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:1.15rem;letter-spacing:.02em}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.badge{
+  font-size:.72rem;font-weight:600;color:var(--olive);
+  background:#efeee6;border:1px solid var(--line);
+  padding:3px 10px;border-radius:999px;
+}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:.95rem;color:var(--ink-soft)}
+.nav-links a:hover{color:var(--accent)}
+@media(max-width:680px){.nav-links{gap:16px;font-size:.85rem}}
+
+/* Hero */
+.hero{padding:120px 0 96px;text-align:center}
+.hero h1{font-size:clamp(2.4rem,6vw,3.9rem);margin-bottom:18px}
+.hero h1 span{color:var(--accent)}
+.hero p{font-size:clamp(1.05rem,2vw,1.25rem);color:var(--ink-soft);max-width:620px;margin:0 auto 36px}
+.btn-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-block;padding:14px 30px;border-radius:12px;font-weight:600;font-size:1rem;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:var(--shadow)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+
+/* Capabilities */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:26px;box-shadow:var(--shadow);transition:transform .15s ease,box-shadow .15s ease;
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.card .icon{
+  width:44px;height:44px;border-radius:12px;background:var(--accent-soft);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--accent);
+}
+.card h3{font-size:1.05rem;margin-bottom:6px}
+.card p{font-size:.9rem;color:var(--ink-soft)}
+
+/* Languages */
+.langs{background:#f3eee5;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:8px 18px;font-size:.9rem;color:var(--ink-soft);box-shadow:var(--shadow);
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+
+/* How it works */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:28px;box-shadow:var(--shadow);
+}
+.step .num{
+  width:38px;height:38px;border-radius:50%;background:var(--olive);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;margin-bottom:16px;
+}
+.step h3{font-size:1.05rem;margin-bottom:6px}
+.step p{font-size:.9rem;color:var(--ink-soft)}
+
+/* Roadmap */
+.roadmap{background:#f3eee5;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.r-item{
+  display:flex;align-items:center;gap:18px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);padding:20px 24px;
+  margin-bottom:14px;box-shadow:var(--shadow);
+}
+.r-item h3{font-size:1rem;flex:1}
+.tag{
+  font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 12px;border-radius:999px;white-space:nowrap;
+}
+.tag.shipped{background:#e6e8d8;color:#5c6138}
+.tag.progress{background:var(--accent-soft);color:var(--accent)}
+
+/* Footer */
+footer{padding:56px 0;border-top:1px solid var(--line)}
+.foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;color:var(--ink-soft);font-size:.9rem}
+.foot .fbrand{font-weight:800;color:var(--ink);font-size:1.05rem}
 </style>
 </head>
 <body>
-<div class="wrap">
 
 <header>
-  <span class="badge">v29.5.0 &ldquo;The Professor&rdquo; &middot; selftest 83/83 PASS</span>
-  <h1>LUQI AI <span>Unified Master Engine</span></h1>
-  <p class="sub">One engine. Every domain. A single-file, zero-dependency Python master engine &mdash; now with a true conversational mentor. Built in South Africa, tuned for the world.</p>
-  <div class="cta">
-    <a class="btn pri" href="https://github.com/ttmodupe-hash/luqi-ai">Get omega.py on GitHub</a>
-    <a class="btn sec" href="https://github.com/ttmodupe-hash/luqi-ai#readme">Read the docs</a>
+  <div class="wrap nav">
+    <a href="#top" class="brand"><span class="dot"></span>LUQI AI</a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#capabilities">Capabilities</a>
+      <a href="#languages">Languages</a>
+      <a href="#how">How it works</a>
+      <a href="#why">Why different</a>
+      <a href="#roadmap">Roadmap</a>
+      <span class="badge">v29.5.0</span>
+    </nav>
   </div>
 </header>
 
-<section>
-  <div class="stats">
-    <div class="stat"><div class="n">1</div><div class="l">single Python file</div></div>
-    <div class="stat"><div class="n">0</div><div class="l">dependencies (pure stdlib)</div></div>
-    <div class="stat"><div class="n">10</div><div class="l">capability subsystems</div></div>
-    <div class="stat"><div class="n">100</div><div class="l">language packs (70 African)</div></div>
-    <div class="stat"><div class="n">83/83</div><div class="l">selftest checks pass</div></div>
-  </div>
-</section>
+<main id="top">
 
-<section>
-  <div class="card prof">
-    <span class="tag">NEW IN v29.5.0</span>
-    <h2>The Professor &mdash; a mentor that actually teaches</h2>
-    <p class="lead" style="margin-bottom:14px">Type <code>teach mathematics</code> and a classroom opens. Online, Professor LUQI holds a real multi-turn conversation with full session context &mdash; it explains, asks one question at a time, and grades strictly. Offline, it never fakes a chat: you get an honest notice plus a real classroom with built-in 10-lesson syllabi and self-check quiz cards.</p>
-    <div class="grid">
-      <div>
-        <h3>Conversational classroom</h3>
-        <p>Rolling 40-message context keeps the professor on-topic. In-class commands: <code>syllabus</code>, <code>quiz me</code>, <code>hint</code>, <code>next</code>, <code>progress</code>, <code>end class</code>.</p>
-      </div>
-      <div>
-        <h3>Syllabus &amp; quizzes</h3>
-        <p><code>syllabus &lt;subject&gt;</code> renders a 10-lesson outline &mdash; LLM-generated online, 8 built-in curricula offline. Quizzes are graded and every score is recorded.</p>
-      </div>
-      <div>
-        <h3>Persistent learner profile</h3>
-        <p><code>progress</code> shows lessons completed, average quiz score and weak points per subject &mdash; remembered across sessions in <code>omega_memory.json</code>.</p>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="wrap">
+      <h1>One engine.<br><span>Every domain.</span></h1>
+      <p>LUQI AI is a personal Unified Master Engine built in South Africa, bringing nine capability subsystems together across fifteen African languages.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="#capabilities">Explore Capabilities</a>
+        <a class="btn btn-ghost" href="#roadmap">Roadmap</a>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section>
-  <h2>Ten subsystems, one router</h2>
-  <p class="lead">Every capability lives behind the original OmegaMasterEngine router pattern &mdash; one file, no installs, boots fully offline.</p>
-  <div class="grid">
-    <div class="card"><h3>Infrastructure Build &amp; Sync</h3><p>Integrity checks, node sync status, GitHub auto-sync of the engine and memory.</p></div>
-    <div class="card"><h3>Mining &amp; Investment</h3><p>Strategy snapshots, allocation drift triggers, dataset-aware notes.</p></div>
-    <div class="card"><h3>Global Tax Support</h3><p>Ledger-first guidance with disclaimers; LLM-enhanced when a key is present.</p></div>
-    <div class="card"><h3>API Security Gatekeeper</h3><p>Masked key reports, leak protection, handshake health.</p></div>
-    <div class="card"><h3>Deep Research</h3><p>Serper live search when keyed; a disciplined offline research plan otherwise.</p></div>
-    <div class="card"><h3>Learning Companion</h3><p>Study scaffolds &mdash; and the v29.5.0 Professor classroom on top.</p></div>
-    <div class="card"><h3>Opportunity Engine</h3><p>Demand, supply-gap, edge, monetization and validation scans.</p></div>
-    <div class="card"><h3>Finance Literacy</h3><p>Budgets, debt avalanche, scam red flags &mdash; education, not advice.</p></div>
-    <div class="card"><h3>Self-Improvement</h3><p>Append-only audit trail; every session leaves a verifiable log.</p></div>
-    <div class="card"><h3>Evolution Engine</h3><p>Sandboxed self-evolution: AST whitelist, process-isolated contract tests, fitness gate, SHA-256 pillars.</p></div>
-  </div>
-</section>
+  <!-- Capabilities -->
+  <section class="section" id="capabilities">
+    <div class="wrap">
+      <span class="eyebrow">Capabilities</span>
+      <h2>Nine subsystems, one engine</h2>
+      <p class="lead">Each subsystem is a focused capability, routed and orchestrated by the master engine.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="6.5" x2="6" y2="6.5"/><line x1="6" y1="17.5" x2="6" y2="17.5"/></svg></div>
+          <h3>Infrastructure Build &amp; Sync</h3>
+          <p>Provisions, configures, and keeps your systems in sync.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></div>
+          <h3>Mining &amp; Investment</h3>
+          <p>Analyzes opportunities across mining and investment domains.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 010 20"/><path d="M12 2a15 15 0 000 20"/></svg></div>
+          <h3>Global Tax Support</h3>
+          <p>Guides tax questions across jurisdictions with clear context.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h3>API Security Gatekeeper</h3>
+          <p>Audits and guards your APIs against misconfiguration and abuse.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <h3>Deep Research</h3>
+          <p>Multi-source investigation with traceable, cited answers.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 014 4v12a3 3 0 00-3-3H2z"/><path d="M22 4h-6a4 4 0 00-4 4v12a3 3 0 013-3h7z"/></svg></div>
+          <h3>The Professor</h3>
+          <p>A true classroom: converse, follow a syllabus, take quizzes, and track your progress in any subject.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+          <h3>Opportunity Engine</h3>
+          <p>Surfaces grants, markets, and openings matched to you.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+          <h3>Finance Literacy</h3>
+          <p>Plain-language guidance on money, budgeting, and saving.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg></div>
+          <h3>Self-Improvement</h3>
+          <p>Reflects on its own outputs to get better with every use.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<section>
-  <h2>Quickstart</h2>
-  <p class="lead">Python 3.11+. No pip installs. No account needed to boot.</p>
-  <div class="term">
-    <div><span class="c"># verify the build (83 checks)</span></div>
-    <div><span class="p">$</span> py -3.11 omega.py --selftest</div>
-    <div><span class="c"># interactive terminal</span></div>
-    <div><span class="p">$</span> py -3.11 omega.py</div>
-    <div><span class="c"># open a classroom</span></div>
-    <div><span class="p">[OMEGA] &gt;</span> teach physics</div>
-    <div><span class="p">[CLASS:physics] &gt;</span> quiz me</div>
-    <div><span class="c"># one-shot mode</span></div>
-    <div><span class="p">$</span> py -3.11 omega.py "tax south africa"</div>
-  </div>
-</section>
+  <!-- Languages -->
+  <section class="section langs" id="languages">
+    <div class="wrap">
+      <span class="eyebrow">Languages</span>
+      <h2>100 languages. African-first, global by design.</h2>
+      <p class="lead">Seventy African languages and thirty world languages — ask and answer in the language you think in.</p>
+      <div class="chips">
+        <span class="chip">isiZulu</span>
+        <span class="chip">isiXhosa</span>
+        <span class="chip">Sesotho</span>
+        <span class="chip">Setswana</span>
+        <span class="chip">Sepedi</span>
+        <span class="chip">Xitsonga</span>
+        <span class="chip">Tshivenda</span>
+        <span class="chip">siSwati</span>
+        <span class="chip">isiNdebele</span>
+        <span class="chip">Afrikaans</span>
+        <span class="chip">Swahili</span>
+        <span class="chip">Amharic</span>
+        <span class="chip">Yoruba</span>
+        <span class="chip">Hausa</span>
+        <span class="chip">Igbo</span>
+        <span class="chip">Somali</span>
+        <span class="chip">Oromo</span>
+        <span class="chip">Wolof</span>
+        <span class="chip">Kinyarwanda</span>
+        <span class="chip">Shona</span>
+        <span class="chip">Nigerian Pidgin</span>
+        <span class="chip">SePitori</span>
+        <span class="chip">Arabic</span>
+        <span class="chip">Mandarin</span>
+        <span class="chip">Hindi</span>
+        <span class="chip">Spanish</span>
+        <span class="chip">French</span>
+        <span class="chip">Portuguese</span>
+        <span class="chip">Russian</span>
+        <span class="chip">Japanese</span>
+        <span class="chip">+ 70 more</span>
+      </div>
+    </div>
+  </section>
 
-<section>
-  <h2>100 languages, African-first</h2>
-  <p class="lead">70 African language packs &mdash; including Nigerian Pidgin and a SePitori tribute &mdash; plus 30 world majors. Switch with <code>lang &lt;code&gt;</code>; translate with <code>translate &lt;code&gt; &lt;text&gt;</code>.</p>
-  <div class="langs">
-    <span class="chip"><b>isiZulu</b></span><span class="chip"><b>isiXhosa</b></span><span class="chip"><b>Sesotho</b></span><span class="chip"><b>Setswana</b></span><span class="chip"><b>Sepedi</b></span><span class="chip"><b>Xitsonga</b></span><span class="chip"><b>Tshivenda</b></span><span class="chip"><b>siSwati</b></span><span class="chip"><b>isiNdebele</b></span><span class="chip"><b>Afrikaans</b></span><span class="chip">Swahili</span><span class="chip">Amharic</span><span class="chip">Yoruba</span><span class="chip">Hausa</span><span class="chip">Igbo</span><span class="chip">Shona</span><span class="chip">Oromo</span><span class="chip">Wolof</span><span class="chip">Fula</span><span class="chip">Akan</span><span class="chip">Nigerian Pidgin</span><span class="chip">SePitori</span><span class="chip">+ 75 more</span>
-  </div>
-</section>
+  <!-- How it works -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <span class="eyebrow">How it works</span>
+      <h2>Ask. Route. Answer.</h2>
+      <p class="lead">The master engine understands your question, sends it to the right subsystem, and returns a sourced answer.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>Ask</h3>
+          <p>Ask anything, in any of the fifteen supported languages.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <h3>Route</h3>
+          <p>The engine routes your question to the right subsystem.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <h3>Answer with sources</h3>
+          <p>You get a clear answer, backed by traceable sources.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<section>
-  <h2>Free to run, cheap to scale</h2>
-  <table>
-    <tr><th>Model</th><th>Cost</th><th>Notes</th></tr>
-    <tr><td>LUQI AI engine</td><td><b>Free forever</b></td><td>Pure stdlib Python, runs offline, no subscription.</td></tr>
-    <tr><td>BYOK model calls</td><td>Cents</td><td>Bring your own key; pay-per-use fractions of a cent to cents per call.</td></tr>
-    <tr><td>Big-AI subscriptions</td><td>~$20/month</td><td>Per seat, recurring, lock-in included.</td></tr>
-  </table>
-</section>
+  <!-- Why different -->
+  <section class="section" id="why">
+    <div class="wrap">
+      <span class="eyebrow">Why LUQI AI is different</span>
+      <h2>Not another cookie-cutter AI tool</h2>
+      <p class="lead">Six design principles that separate LUQI AI from disposable no-code toys.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>Integration-first</h3>
+          <p>Connects to GitHub, Excel, Serper, OpenAI and OpenRouter. Not a silo.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <h3>Built to last</h3>
+          <p>Versioned releases, a full audit trail, and a selftest on every boot.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <h3>Teaches while it works</h3>
+          <p>The Professor mode and finance literacy build your skill, not dependence.</p>
+        </div>
+        <div class="step">
+          <div class="num">4</div>
+          <h3>Yours, not cookie-cutter</h3>
+          <p>Local memory, your languages, your data stays on your machine.</p>
+        </div>
+        <div class="step">
+          <div class="num">5</div>
+          <h3>Free to run</h3>
+          <p>Pure standard library. Offline-first. No subscription.</p>
+        </div>
+        <div class="step">
+          <div class="num">6</div>
+          <h3>Makes you more capable</h3>
+          <p>Opportunity engine and reports you own. AI that grows your career.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<section>
-  <h2>Built to be verified, not trusted</h2>
-  <ul class="tight">
-    <li><b>83-check selftest</b> ships inside the same file &mdash; <code>--selftest</code> before every release.</li>
-    <li><b>Launch pre-flight</b> &mdash; <code>launch</code> prints a GO/NO-GO checklist; blockers are pillars, memory and core-router failures only.</li>
-    <li><b>Tamper-proof pillars</b> &mdash; SHA-256-verified immutable pillars, auto-restored on any edit.</li>
-    <li><b>Sandboxed evolution</b> &mdash; candidate mutations run process-isolated with a 256&nbsp;MB ceiling and a kill switch. No zombies.</li>
-    <li><b>Graceful degradation</b> &mdash; no key, no network, no problem: every subsystem answers honestly.</li>
-  </ul>
-</section>
+  <!-- Roadmap -->
+  <section class="section roadmap" id="roadmap">
+    <div class="wrap">
+      <span class="eyebrow">Roadmap</span>
+      <h2>Where we are headed</h2>
+      <p class="lead">A short, honest view of what is shipped and what is in progress.</p>
+      <div class="r-item">
+        <h3>Persistent memory</h3>
+        <span class="tag shipped">Shipped</span>
+      </div>
+      <div class="r-item">
+        <h3>GitHub auto-sync</h3>
+        <span class="tag shipped">Shipped</span>
+      </div>
+      <div class="r-item">
+        <h3>Excel data import</h3>
+        <span class="tag shipped">Shipped</span>
+      </div>
+      <div class="r-item">
+        <h3>Safe evolution engine</h3>
+        <span class="tag shipped">Shipped</span>
+      </div>
+      <div class="r-item">
+        <h3>Public launch</h3>
+        <span class="tag progress">In progress</span>
+      </div>
+    </div>
+  </section>
 
-<section>
-  <div class="watch">
-    <b>Integration watch-items:</b> GitHub Models retires <b>2026-07-30</b> (LUQI AI is unaffected &mdash; it routes via OpenAI / Serper / OpenRouter directly). Copilot default model enablement lands <b>2026-08-26</b> for Business/Enterprise orgs &mdash; review org model settings before that date.
-  </div>
-</section>
+</main>
 
 <footer>
-  <p><b>LUQI AI v29.5.0 &ldquo;The Professor&rdquo;</b> &middot; (c) 2026 Luqi AI &middot; Built in South Africa</p>
-  <p>Engine: <code>omega.py</code> &middot; Spec: <code>docs/SPEC_v295.md</code> &middot; Repo: <a href="https://github.com/ttmodupe-hash/luqi-ai" style="color:var(--acc)">github.com/ttmodupe-hash/luqi-ai</a></p>
+  <div class="wrap foot">
+    <span class="fbrand">Luqi AI</span>
+    <span>Contact: hello at luqi dot ai</span>
+    <span>&copy; 2026 Luqi AI. Built in South Africa.</span>
+  </div>
 </footer>
 
-</div>
 </body>
 </html>
