@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LUQI AI v29.3.0 - Unified Master Engine (omega.py)
+LUQI AI v29.4.0 - Unified Master Engine (omega.py)
 
 Single-file, stdlib-only CLI engine unifying 10 subsystems behind the
 user's original OmegaMasterEngine router pattern.
@@ -68,6 +68,22 @@ v29.3.0 additions (SPEC_v293.md) - "Launch-Grade":
 - LAUNCH_CHECKLIST.md: human launch runbook (engine selftest, .env
   keys, launch GO, sync github push, site publish + smoke, rollback).
 
+v29.4.0 additions (SPEC_v294.md) - "Global Citizen":
+- LANG_PACKS mega-expansion: 15 -> exactly 100 packs (70 african +
+  30 world). Existing 15 packs' strings byte-unchanged; every pack has
+  a name label, a region tag ("african"/"world") and the same 6 UI
+  strings (ASCII-safe transliterations, real greetings/goodbyes).
+  'lang' with no/unknown code now prints a GROUPED list:
+  "African languages (N)" then "World languages (M)".
+- New 'translate <lang-code> <text>' command: validates the code,
+  routes through the existing LLM path (bridge-first, urllib
+  fallback) with a translation-only prompt. Offline/no key -> a
+  graceful enable-hint (never a traceback). Audit-logged.
+- New 'cost' command: the pricing-disruption table (engine free
+  forever, BYOK pay-per-use cents, big-AI subscriptions ~= $20/month).
+- 'why' sharpened: #4 mentions 100 languages African-first; #5 is now
+  "Free to run, cheap to scale" with a cost proof line.
+
 - Python 3.11, standard library only, ASCII-only source.
 - Boots with no .env, no network, no third-party packages.
 - Windows/macOS/Linux compatible:  py -3.11 omega.py
@@ -104,7 +120,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.3.0"
+ENGINE_VERSION = "29.4.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
@@ -308,6 +324,7 @@ DEFAULT_LANG = "en"
 LANG_PACKS: Dict[str, Dict[str, str]] = {
     "en": {
         "name": "English",
+        "region": "african",
         "greeting": "Type 'help' for commands. 'exit' to quit.",
         "goodbye": "OMEGA shutting down. Stay sovereign.",
         "help_header": "Commands:",
@@ -318,6 +335,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "zu": {
         "name": "isiZulu",
+        "region": "african",
         "greeting": "Sawubona! Thayipha 'help' ukuze ubone imiyalo. 'exit' ukuze uphume.",
         "goodbye": "OMEGA iyacima. Sala kahle, hlala ukhululekile.",
         "help_header": "Imiyalo:",
@@ -328,6 +346,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "xh": {
         "name": "isiXhosa",
+        "region": "african",
         "greeting": "Molo! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
         "goodbye": "OMEGA iyacima. Sala kakuhle, hlala ukhululekile.",
         "help_header": "Imiyalo:",
@@ -338,6 +357,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "st": {
         "name": "Sesotho",
+        "region": "african",
         "greeting": "Dumela! Tlanya 'help' ho bona ditaelo. 'exit' ho tswa.",
         "goodbye": "OMEGA e tima. Sala hantle, dula o lokolohile.",
         "help_header": "Ditaelo:",
@@ -348,6 +368,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "af": {
         "name": "Afrikaans",
+        "region": "african",
         "greeting": "Hallo! Tik 'help' vir bevele. 'exit' om af te sluit.",
         "goodbye": "OMEGA skakel af. Bly soewerein.",
         "help_header": "Bevele:",
@@ -359,6 +380,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     # v29.3.0: the remaining 10 packs (data-only, ASCII transliterations).
     "tn": {
         "name": "Setswana",
+        "region": "african",
         "greeting": "Dumela! Tlanya 'help' go bona ditaelo. 'exit' go tswa.",
         "goodbye": "OMEGA e tima. Sala sentle, nna o ikemetse.",
         "help_header": "Ditaelo:",
@@ -369,6 +391,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "nso": {
         "name": "Sepedi",
+        "region": "african",
         "greeting": "Dumela! Tlanya 'help' go bona ditaelo. 'exit' go tswa.",
         "goodbye": "OMEGA e tima. Sala gabotse, dula o ikemetse.",
         "help_header": "Ditaelo:",
@@ -379,6 +402,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "ts": {
         "name": "Xitsonga",
+        "region": "african",
         "greeting": "Avuxeni! Tlanya 'help' ku vona swileriso. 'exit' ku huma.",
         "goodbye": "OMEGA yi cima. Sala kahle, tshama u ntshunxekile.",
         "help_header": "Swileriso:",
@@ -389,6 +413,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "ve": {
         "name": "Tshivenda",
+        "region": "african",
         "greeting": "Ndaa! Tlanya 'help' u vhona milayo. 'exit' u bva.",
         "goodbye": "OMEGA i a ima. Salani zwavhudi, dzulani ni tsho itsho.",
         "help_header": "Milayo:",
@@ -399,6 +424,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "ss": {
         "name": "siSwati",
+        "region": "african",
         "greeting": "Sawubona! Thayipha 'help' kubona imiyalo. 'exit' kuphuma.",
         "goodbye": "OMEGA iyacima. Sala kahle, hlala ukhululekile.",
         "help_header": "Imiyalo:",
@@ -409,6 +435,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "nr": {
         "name": "isiNdebele",
+        "region": "african",
         "greeting": "Lotjhani! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
         "goodbye": "OMEGA iyacima. Sala kuhle, hlala ukhululekile.",
         "help_header": "Imiyalo:",
@@ -419,6 +446,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "sw": {
         "name": "Swahili",
+        "region": "african",
         "greeting": "Habari! Andika 'help' kuona amri. 'exit' kutoka.",
         "goodbye": "OMEGA inazimwa. Kwaheri, kaa huru.",
         "help_header": "Amri:",
@@ -429,6 +457,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "am": {
         "name": "Amharic",
+        "region": "african",
         "greeting": ("Selam! t'azzazochin lemareg 'help' yigetsu. "
                      "'exit' lemewt'at."),
         "goodbye": "OMEGA tet'ewalech. Dehna hun, dehna neh.",
@@ -440,6 +469,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "yo": {
         "name": "Yoruba",
+        "region": "african",
         "greeting": "Pele o! Te 'help' lati ri awon ase. 'exit' lati jade.",
         "goodbye": "OMEGA ti pare. Odabo, wa laafin.",
         "help_header": "Awon ase:",
@@ -450,6 +480,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     },
     "ha": {
         "name": "Hausa",
+        "region": "african",
         "greeting": "Sannu! Rubuta 'help' don ganin umarni. 'exit' don fita.",
         "goodbye": "OMEGA ta rufe. Sai anjima, kasance da 'yanci.",
         "help_header": "Umarni:",
@@ -457,6 +488,858 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
                             "master core don bincike."),
         "remembered": "Gaskiya #%d an adana: %s",
         "forgot": "Gaskiya #%d an manta: %s",
+    },
+    # v29.4.0: 55 new African packs (SPEC_v294.md section 2).
+    "sn": {
+        "name": "Shona",
+        "region": "african",
+        "greeting": "Mhoro! Taipa 'help' kuona mirairo. 'exit' kubuda.",
+        "goodbye": "Sara zvakanaka.",
+        "help_header": "Mirairo:",
+        "unknown_command": "Murairo usingazivikanwi - utumirwe ku-master core kuti uongororwe.",
+        "remembered": "Chokwadi #%d chayecharangarirwa: %s",
+        "forgot": "Chokwadi #%d chakanganiswa: %s",
+    },
+    "nd": {
+        "name": "isiNdebele (Zimbabwe)",
+        "region": "african",
+        "greeting": "Salibonani! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
+        "goodbye": "Sala kuhle.",
+        "help_header": "Imiyalo:",
+        "unknown_command": "Umyalo ongaziwa - uthunyiwe ku-master core ukuhlolwa.",
+        "remembered": "Iqiniso #%d likhunjulwe: %s",
+        "forgot": "Iqiniso #%d likhohliwe: %s",
+    },
+    "rw": {
+        "name": "Kinyarwanda",
+        "region": "african",
+        "greeting": "Muraho! Andika 'help' kureba amabwiriza. 'exit' gusohoka.",
+        "goodbye": "Murabeho.",
+        "help_header": "Amabwiriza:",
+        "unknown_command": "Itegeko ridazwi - ryoherejwe ku-master core gusuzumwa.",
+        "remembered": "Ukuri #%d kwibutswe: %s",
+        "forgot": "Ukuri #%d kwibagiwe: %s",
+    },
+    "rn": {
+        "name": "Kirundi",
+        "region": "african",
+        "greeting": "Amakuru! Andika 'help' kubona amabwirizwa. 'exit' gusohoka.",
+        "goodbye": "Urabeho.",
+        "help_header": "Amabwirizwa:",
+        "unknown_command": "Itegeko ritazwi - ryoherejwe ku-master core gugenzurwa.",
+        "remembered": "Ukuri #%d kwibutse: %s",
+        "forgot": "Ukuri #%d kwibagiwe: %s",
+    },
+    "lg": {
+        "name": "Luganda",
+        "region": "african",
+        "greeting": "Oli otya! Wandiika 'help' okulaba ebiragiro. 'exit' okuva.",
+        "goodbye": "Weeraba.",
+        "help_header": "Ebiragiro:",
+        "unknown_command": "Ekiragiro ekitamanyiddwa - kiweereddwayo eri master core.",
+        "remembered": "Ekituufu #%d kikunjidde: %s",
+        "forgot": "Ekituufu #%d kyerabiddwa: %s",
+    },
+    "so": {
+        "name": "Somali",
+        "region": "african",
+        "greeting": "Salaam! Qor 'help' si aad u aragto amaarrada. 'exit' si aad u baxdo.",
+        "goodbye": "Nabadgelyo.",
+        "help_header": "Amaarro:",
+        "unknown_command": "Amaar aan la aqoon - waa loo diray master core si loo qiimeeyo.",
+        "remembered": "Xaqiiqda #%d waa la xusay: %s",
+        "forgot": "Xaqiiqda #%d waa la ilaaway: %s",
+    },
+    "om": {
+        "name": "Oromo",
+        "region": "african",
+        "greeting": "Nagaa! 'help' barreessi ajajawwan ilaaluuf. 'exit' ba'uuf.",
+        "goodbye": "Nagaan baa'i.",
+        "help_header": "Ajajawwan:",
+        "unknown_command": "Ajaja hin beekamne - gara master coretti ergamee madaalama.",
+        "remembered": "Dhugaa #%d yaadatame: %s",
+        "forgot": "Dhugaa #%d irraanfatame: %s",
+    },
+    "ti": {
+        "name": "Tigrinya",
+        "region": "african",
+        "greeting": "Selam! 'help' gits'i t'ezazat lemank'al. 'exit' lemawts'at.",
+        "goodbye": "Dehna kun.",
+        "help_header": "T'ezazat:",
+        "unknown_command": "T'ezazi dhay'aweqe - nabo master core t'lkeb.",
+        "remembered": "T'ewen #%d t'zeyebey: %s",
+        "forgot": "T'ewen #%d t'rishey: %s",
+    },
+    "wo": {
+        "name": "Wolof",
+        "region": "african",
+        "greeting": "Salaam alekum! Bind 'help' ngir gis ndigalu yi. 'exit' ngir dem.",
+        "goodbye": "Ba beneen yoon.",
+        "help_header": "Ndigalu yi:",
+        "unknown_command": "Ndigal mu xamuwul - yonnee ko ci master core ngir saytu.",
+        "remembered": "Xel #%d dafa denc: %s",
+        "forgot": "Xel #%d dafa fatte: %s",
+    },
+    "ff": {
+        "name": "Fula (Fulfulde)",
+        "region": "african",
+        "greeting": "Jam tan! Windu 'help' ngam yamiroore. 'exit' ngam yaltude.",
+        "goodbye": "Jam waali.",
+        "help_header": "Yamiroore:",
+        "unknown_command": "Yamiroore nde anndaa - neldaama to master core ngam fercitaade.",
+        "remembered": "Goonga #%d tettinaama: %s",
+        "forgot": "Goonga #%d yejjitinaama: %s",
+    },
+    "ig": {
+        "name": "Igbo",
+        "region": "african",
+        "greeting": "Ndewo! Dee 'help' ka i hu iwu. 'exit' ka i puo.",
+        "goodbye": "Ka o di.",
+        "help_header": "Iwu:",
+        "unknown_command": "Iwu a maghi - e zigara ya master core ka e lelee ya.",
+        "remembered": "Eziokwu #%d echekwara: %s",
+        "forgot": "Eziokwu #%d echefuru: %s",
+    },
+    "ak": {
+        "name": "Akan (Twi)",
+        "region": "african",
+        "greeting": "Akwaba! Kyerew 'help' na woahu nhyehyee. 'exit' na woafi.",
+        "goodbye": "Nante yie.",
+        "help_header": "Nhyehyee:",
+        "unknown_command": "Nhyehyee a wonnim - wokoo master core hwehwee.",
+        "remembered": "Nokware #%d wokae: %s",
+        "forgot": "Nokware #%d wo werew firi: %s",
+    },
+    "ee": {
+        "name": "Ewe",
+        "region": "african",
+        "greeting": "Woezo! Nlo 'help' be ye kpom sededeawo. 'exit' be ye do go.",
+        "goodbye": "Hede nyuie.",
+        "help_header": "Sededeawo:",
+        "unknown_command": "Sedede si wonyam - wodo de master core kpoo.",
+        "remembered": "Nyatefe #%d woda: %s",
+        "forgot": "Nyatefe #%d wo nlo: %s",
+    },
+    "kr": {
+        "name": "Kanuri",
+        "region": "african",
+        "greeting": "Woye! 'help' ro komand, 'exit' ro fero.",
+        "goodbye": "Fero yenaram.",
+        "help_header": "Komand:",
+        "unknown_command": "Komand ngawo-ba - master core ro cidin.",
+        "remembered": "Fact #%d sawa: %s",
+        "forgot": "Fact #%d sawa-ba: %s",
+    },
+    "bm": {
+        "name": "Bambara",
+        "region": "african",
+        "greeting": "I ni ce! Sebena 'help' ka kumafolow ye. 'exit' ka bolo.",
+        "goodbye": "K'an ben.",
+        "help_header": "Kumafolow:",
+        "unknown_command": "Kumafolo min don na - o ci master core ka o ye.",
+        "remembered": "Tiiji #%d mara: %s",
+        "forgot": "Tiiji #%d na: %s",
+    },
+    "ln": {
+        "name": "Lingala",
+        "region": "african",
+        "greeting": "Mbote! Komisa 'help' mpo na komona makonzi. 'exit' mpo na kobima.",
+        "goodbye": "Kende malamu.",
+        "help_header": "Makonzi:",
+        "unknown_command": "Mokonzi oyo eyebani te - etindami epai ya master core.",
+        "remembered": "Solo #%d ebombami: %s",
+        "forgot": "Solo #%d ebosanwani: %s",
+    },
+    "kg": {
+        "name": "Kikongo",
+        "region": "african",
+        "greeting": "Mbote! Soneka 'help' vanga makonzi. 'exit' ku bima.",
+        "goodbye": "Sala mbote.",
+        "help_header": "Makonzi:",
+        "unknown_command": "Mokonzi yo ke zebi ve - etindiki na master core.",
+        "remembered": "Solo #%d ebombi: %s",
+        "forgot": "Solo #%d evidikidi: %s",
+    },
+    "ki": {
+        "name": "Kikuyu",
+        "region": "african",
+        "greeting": "Wi mwega? Andika 'help' kuona mawatho. 'exit' kuma.",
+        "goodbye": "Tigwo.",
+        "help_header": "Mawatho:",
+        "unknown_command": "Watho utamenyekaine - utumitwo master core kugatirwo.",
+        "remembered": "Uhoro #%d wigitwo: %s",
+        "forgot": "Uhoro #%d wariganiirwo: %s",
+    },
+    "luo": {
+        "name": "Luo (Dholuo)",
+        "region": "african",
+        "greeting": "Amosi! Ndik 'help' mondo ine chike. 'exit' mondo owuok.",
+        "goodbye": "Oriti.",
+        "help_header": "Chike:",
+        "unknown_command": "Chik ma ok ong'eyo - oseor ne master core mondo onon.",
+        "remembered": "Adiera #%d opog' e paro: %s",
+        "forgot": "Adiera #%d owil: %s",
+    },
+    "ny": {
+        "name": "Chewa (Nyanja)",
+        "region": "african",
+        "greeting": "Moni! Lembani 'help' kuwona malamulo. 'exit' kutuluka.",
+        "goodbye": "Sala bwino.",
+        "help_header": "Malamulo:",
+        "unknown_command": "Lamulo losadziwika - latumizidwa kwa master core.",
+        "remembered": "Zowona #%d zasungidwa: %s",
+        "forgot": "Zowona #%d zayiwalidwa: %s",
+    },
+    "bem": {
+        "name": "Bemba",
+        "region": "african",
+        "greeting": "Shani! Lembela 'help' ukulole amalango. 'exit' ukufuma.",
+        "goodbye": "Sala bwino.",
+        "help_header": "Amalango:",
+        "unknown_command": "Ilango ilyeshetekwa - lyatumwa ku master core ukulinganya.",
+        "remembered": "Icine #%d cabikwa: %s",
+        "forgot": "Icine #%d caibukwa: %s",
+    },
+    "to": {
+        "name": "Tonga (Zambia)",
+        "region": "african",
+        "greeting": "Mwabuka! Nolemba 'help' kubona milao. 'exit' kuzwa.",
+        "goodbye": "Sala kabotu.",
+        "help_header": "Milao:",
+        "unknown_command": "Mulao ujisi kuyezya - utumwa ku master core kulangwa.",
+        "remembered": "Lubone #%d lwasigwa: %s",
+        "forgot": "Lubone #%d lwa abidwe: %s",
+    },
+    "loz": {
+        "name": "Lozi",
+        "region": "african",
+        "greeting": "Lumela! Nola 'help' ku bona mitaelo. 'exit' ku tswa.",
+        "goodbye": "Sala hande.",
+        "help_header": "Mitaelo:",
+        "unknown_command": "Taelo ye si itseki - e romilwe ku master core ku shekwa.",
+        "remembered": "Nnete #%d e bolokiwa: %s",
+        "forgot": "Nnete #%d e sabilwe: %s",
+    },
+    "hz": {
+        "name": "Herero",
+        "region": "african",
+        "greeting": "Moro! Ripo 'help' ku matara ovyandjavero. 'exit' ku pu.",
+        "goodbye": "Kara nawa.",
+        "help_header": "Ovyandjavero:",
+        "unknown_command": "Otjandjavero tji ha ri tjaziva - tja tumbirwa ku master core.",
+        "remembered": "Omatuneno #%d ma pitire: %s",
+        "forgot": "Omatuneno #%d ma rendere: %s",
+    },
+    "naq": {
+        "name": "Khoekhoegowab",
+        "region": "african",
+        "greeting": "Gai tses! Khari 'help' tam-e !na. 'exit' !hao.",
+        "goodbye": "Goe !na.",
+        "help_header": "Tamsaob:",
+        "unknown_command": "Tam-e ge !hai-oa - master core tsu tama.",
+        "remembered": "Xawe #%d ge !nau: %s",
+        "forgot": "Xawe #%d ge goro: %s",
+    },
+    "ng": {
+        "name": "Oshiwambo",
+        "region": "african",
+        "greeting": "Ongiini? Shanga 'help' okumona omayele. 'exit' okupita.",
+        "goodbye": "Kala po nawa.",
+        "help_header": "Omayele:",
+        "unknown_command": "Ondjambulu ye li zi - yi tumu ku master core.",
+        "remembered": "Oshidiyadini #%d sha pungwa: %s",
+        "forgot": "Oshidiyadini #%d sha dhimbiwa: %s",
+    },
+    "mg": {
+        "name": "Malagasy",
+        "region": "african",
+        "greeting": "Salama! Soraty 'help' raha te-hahita baiko ianao. 'exit' raha te-hivoaka.",
+        "goodbye": "Veloma.",
+        "help_header": "Baiko:",
+        "unknown_command": "Baiko tsy fantatra - nalefa tany amin'ny master core hodinihina.",
+        "remembered": "Zava-misy #%d voatazona: %s",
+        "forgot": "Zava-misy #%d nanadino: %s",
+    },
+    "zgh": {
+        "name": "Tamazight",
+        "region": "african",
+        "greeting": "Azul! Aru 'help' i tinhdin. 'exit' i tuffra.",
+        "goodbye": "Bslama.",
+        "help_header": "Tinhdin:",
+        "unknown_command": "Tinhdin ur nezri - tettuyuzn ar master core.",
+        "remembered": "Tidet #%d tettuhemmed: %s",
+        "forgot": "Tidet #%d tettukkes: %s",
+    },
+    "tzm": {
+        "name": "Central Atlas Tamazight",
+        "region": "african",
+        "greeting": "Azul! Aru 'help' i timaynutin. 'exit' i tuffra.",
+        "goodbye": "Ad nemmiz.",
+        "help_header": "Timaynutin:",
+        "unknown_command": "Timaynutin ur ttunzint - tzuzn i master core.",
+        "remembered": "Tidet #%d tethedem: %s",
+        "forgot": "Tidet #%d tetthessem: %s",
+    },
+    "kri": {
+        "name": "Krio",
+        "region": "african",
+        "greeting": "Kushe! Rayt 'help' fo si di komand den. 'exit' fo lef.",
+        "goodbye": "Wi go si.",
+        "help_header": "Komand den:",
+        "unknown_command": "Komand we wi no no - dem don sen am go master core.",
+        "remembered": "Fakt #%d wi don memba: %s",
+        "forgot": "Fakt #%d wi don figet: %s",
+    },
+    "pcm": {
+        "name": "Nigerian Pidgin",
+        "region": "african",
+        "greeting": "How far! Write 'help' make you see di komand dem. 'exit' make you commot.",
+        "goodbye": "I dey go o.",
+        "help_header": "Komand dem:",
+        "unknown_command": "Dat komand we no sabi - dem don carry am go master core.",
+        "remembered": "Fact #%d don dey my mind: %s",
+        "forgot": "Fact #%d don comot: %s",
+    },
+    "crs": {
+        "name": "Seselwa (Seychellois Creole)",
+        "region": "african",
+        "greeting": "Bonzour! Ekrir 'help' pou trouv komannman. 'exit' pou kit.",
+        "goodbye": "Orevwar.",
+        "help_header": "Komannman:",
+        "unknown_command": "Komannman ki nou pa kone - li pe ale kot master core.",
+        "remembered": "Fe #%d in ganny gard: %s",
+        "forgot": "Fe #%d in bliye: %s",
+    },
+    "mfe": {
+        "name": "Morisien (Mauritian Creole)",
+        "region": "african",
+        "greeting": "Bonzur! Ekrir 'help' pou trouv komannman. 'exit' pou sorti.",
+        "goodbye": "Orevwar.",
+        "help_header": "Komannman:",
+        "unknown_command": "Komannman ki nu pa kone - li pe ale kot master core.",
+        "remembered": "Fe #%d inn ganny gard: %s",
+        "forgot": "Fe #%d inn bliye: %s",
+    },
+    "umb": {
+        "name": "Umbundu",
+        "region": "african",
+        "greeting": "Kalunga! Soneka 'help' kubona ovyanduvelo. 'exit' kubima.",
+        "goodbye": "Ndanda!",
+        "help_header": "Ovyanduvelo:",
+        "unknown_command": "Onduvelo yosi kuliwa - yetuminu ku master core.",
+        "remembered": "Eli #%d lyatetelwa: %s",
+        "forgot": "Eli #%d lyasulwa: %s",
+    },
+    "tum": {
+        "name": "Tumbuka",
+        "region": "african",
+        "greeting": "Muli uli! Lembani 'help' kuwona majambu. 'exit' kutuluka.",
+        "goodbye": "Sala makora.",
+        "help_header": "Majambu:",
+        "unknown_command": "Jambu liso manyikwa - latumika ku master core.",
+        "remembered": "Zowona #%d zasungika: %s",
+        "forgot": "Zowona #%d zaiwala: %s",
+    },
+    "kea": {
+        "name": "Kabuverdianu",
+        "region": "african",
+        "greeting": "Ola! Skrebe 'help' pa bu odja komandu. 'exit' pa bu sai.",
+        "goodbye": "Te logu.",
+        "help_header": "Komandu:",
+        "unknown_command": "Komandu ka konxedu - el manda-ba pa master core.",
+        "remembered": "Fetu #%d gurdadu: %s",
+        "forgot": "Fetu #%d skesedu: %s",
+    },
+    "dyo": {
+        "name": "Jola-Fonyi",
+        "region": "african",
+        "greeting": "Kasumai! Etibi 'help' fo buga bifayi. 'exit' fo uyon.",
+        "goodbye": "Kasumai kay.",
+        "help_header": "Bifayi:",
+        "unknown_command": "Lafu yi an naw - fubaw master core.",
+        "remembered": "Ejamu #%d fu kata: %s",
+        "forgot": "Ejamu #%d fu ebulen: %s",
+    },
+    "mni": {
+        "name": "Mursi",
+        "region": "african",
+        "greeting": "Beriny! 'help' duga ilo. 'exit' waa.",
+        "goodbye": "Kori.",
+        "help_header": "Duga:",
+        "unknown_command": "Duga te bera - master core ka loi.",
+        "remembered": "Karo #%d dano: %s",
+        "forgot": "Karo #%d goro: %s",
+    },
+    "spt": {
+        "name": "SePitori",
+        "region": "african",
+        "greeting": "Awe! Tlanya 'help' go bona ditaelo. 'exit' go tswa. Sharp!",
+        "goodbye": "Sharp sharp. OMEGA e tima.",
+        "help_header": "Ditaelo:",
+        "unknown_command": "Taelo ye re sa e tsebeng - e isiwe go master core.",
+        "remembered": "Fact #%d e sharp: %s",
+        "forgot": "Fact #%d e lebetswe: %s",
+    },
+    "mos": {
+        "name": "Moore (Mossi)",
+        "region": "african",
+        "greeting": "Laafi! Saba 'help' yeel toodo. 'exit' yam.",
+        "goodbye": "Beogo.",
+        "help_header": "Toodo:",
+        "unknown_command": "Toodo ti zi ye - a koll master core.",
+        "remembered": "Yel-waongo #%d a paama: %s",
+        "forgot": "Yel-waongo #%d a yi: %s",
+    },
+    "suk": {
+        "name": "Sukuma",
+        "region": "african",
+        "greeting": "Mwapola! Nolemba 'help' kubona milimo. 'exit' kuzwa.",
+        "goodbye": "Sala bhutogi.",
+        "help_header": "Milimo:",
+        "unknown_command": "Ilaka lisa manyikana - lyatumilwe ku master core.",
+        "remembered": "Chaduda #%d chasigwa: %s",
+        "forgot": "Chaduda #%d chalibwa: %s",
+    },
+    "sg": {
+        "name": "Sango",
+        "region": "african",
+        "greeting": "Bara mo! Soro 'help' ti bata tene. 'exit' ti sigi.",
+        "goodbye": "Gue nzoni.",
+        "help_header": "Tene:",
+        "unknown_command": "Tene ti yanga - a tene na master core.",
+        "remembered": "Marango #%d a doko: %s",
+        "forgot": "Marango #%d a baba: %s",
+    },
+    "fon": {
+        "name": "Fon",
+        "region": "african",
+        "greeting": "Kudo! Nlo 'help' be lodo. 'exit' be do.",
+        "goodbye": "A wa do.",
+        "help_header": "Lodo:",
+        "unknown_command": "Lodo vo a je - yi do master core.",
+        "remembered": "Nyamu #%d do: %s",
+        "forgot": "Nyamu #%d yi: %s",
+    },
+    "kab": {
+        "name": "Kabyle",
+        "region": "african",
+        "greeting": "Azul! Aru 'help' i tinirin. 'exit' i tuffra.",
+        "goodbye": "Iliwn yelhan.",
+        "help_header": "Tinirin:",
+        "unknown_command": "Tinrit ur tturar - tuzn ar master core.",
+        "remembered": "Tidet #%d tewwa: %s",
+        "forgot": "Tidet #%d tekkes: %s",
+    },
+    "shi": {
+        "name": "Tachelhit",
+        "region": "african",
+        "greeting": "Azul! Aru 'help' i tinirin. 'exit' i tuffra.",
+        "goodbye": "Bslama.",
+        "help_header": "Tinirin:",
+        "unknown_command": "Tinrit ur ittzri - tzuzn i master core.",
+        "remembered": "Tidet #%d tuhf: %s",
+        "forgot": "Tidet #%d tuhs: %s",
+    },
+    "din": {
+        "name": "Dinka",
+        "region": "african",
+        "greeting": "Nhiam! Koc 'help' ci ke. 'exit' loi.",
+        "goodbye": "Yin nhiam.",
+        "help_header": "Koc:",
+        "unknown_command": "Koc te cii nhiaar - cuat master core.",
+        "remembered": "Yic #%d cuat: %s",
+        "forgot": "Yic #%d thol: %s",
+    },
+    "tiv": {
+        "name": "Tiv",
+        "region": "african",
+        "greeting": "Msugh! Gber 'help' ka kase. 'exit' ka dedoo.",
+        "goodbye": "M dedoo.",
+        "help_header": "Kase:",
+        "unknown_command": "Kase ka shi ciir - shigu master core.",
+        "remembered": "Mnyam #%d ve: %s",
+        "forgot": "Mnyam #%d kwaghe: %s",
+    },
+    "ibb": {
+        "name": "Ibibio",
+        "region": "african",
+        "greeting": "Idem! Okop 'help' nkpo. 'exit' ida.",
+        "goodbye": "Ka di.",
+        "help_header": "Nkpo:",
+        "unknown_command": "Nkpo edi owo - odo master core.",
+        "remembered": "Nkpo #%d ofon: %s",
+        "forgot": "Nkpo #%d ifiok: %s",
+    },
+    "bin": {
+        "name": "Edo (Bini)",
+        "region": "african",
+        "greeting": "Obokhian! Gbe 'help' rhee ukhun. 'exit' do.",
+        "goodbye": "Deghe.",
+        "help_header": "Ukhun:",
+        "unknown_command": "Ukhun nii a rhee - gha master core.",
+        "remembered": "Eke #%d mu: %s",
+        "forgot": "Eke #%d gbegbe: %s",
+    },
+    "lua": {
+        "name": "Luba-Kasai",
+        "region": "african",
+        "greeting": "Moyo! Songa 'help' mfumu. 'exit' bima.",
+        "goodbye": "Sala bimpe.",
+        "help_header": "Mfumu:",
+        "unknown_command": "Mfumu kena - tuma master core.",
+        "remembered": "Buetu #%d bua: %s",
+        "forgot": "Buetu #%d kale: %s",
+    },
+    "kam": {
+        "name": "Kamba",
+        "region": "african",
+        "greeting": "Wi ata! Andika 'help' maundu. 'exit' kuma.",
+        "goodbye": "Ti navisa.",
+        "help_header": "Maundu:",
+        "unknown_command": "Maundu ma uti - master core me.",
+        "remembered": "Uhoro #%d wi: %s",
+        "forgot": "Uhoro #%d kwau: %s",
+    },
+    "nyn": {
+        "name": "Nyankore",
+        "region": "african",
+        "greeting": "Agandi! Handiika 'help' ebiragiro. 'exit' okuruga.",
+        "goodbye": "Kare.",
+        "help_header": "Ebiragiro:",
+        "unknown_command": "Ekiragiro kitutakimanya - kihirwe aha master core.",
+        "remembered": "Eky'amazima #%d katiirwe: %s",
+        "forgot": "Eky'amazima #%d kya irwe: %s",
+    },
+    "dag": {
+        "name": "Dagbani",
+        "region": "african",
+        "greeting": "Dasiba! Sabu 'help' daham. 'exit' yam.",
+        "goodbye": "N ga be.",
+        "help_header": "Daham:",
+        "unknown_command": "Daham nii be - ni master core.",
+        "remembered": "Toli #%d mali: %s",
+        "forgot": "Toli #%d yela: %s",
+    },
+    "mer": {
+        "name": "Meru (Kimeru)",
+        "region": "african",
+        "greeting": "Mwuga! Andika 'help' mawatho. 'exit' kuma.",
+        "goodbye": "Thii na wega.",
+        "help_header": "Mawatho:",
+        "unknown_command": "Watho utamenyekaine - utumitwo master core.",
+        "remembered": "Uhoro #%d wigitwo: %s",
+        "forgot": "Uhoro #%d wariganirwo: %s",
+    },
+    "ach": {
+        "name": "Acholi",
+        "region": "african",
+        "greeting": "Ibera! Coyo 'help' cik. 'exit' kat.",
+        "goodbye": "Bed maber.",
+        "help_header": "Cik:",
+        "unknown_command": "Cik ma pe ong'eyo - ci master core.",
+        "remembered": "Adiera #%d kano: %s",
+        "forgot": "Adiera #%d owil: %s",
+    },
+    # v29.4.0: 30 world-major packs (SPEC_v294.md section 2).
+    "ar": {
+        "name": "Arabic",
+        "region": "world",
+        "greeting": "As-salamu alaykum! Iktub 'help' lil-awamer. 'exit' lil-khuruj.",
+        "goodbye": "Ma'a as-salama.",
+        "help_header": "Al-awamer:",
+        "unknown_command": "Amr ghayr ma'ruf - tamma tahwilih ila master core lil-taqyim.",
+        "remembered": "Haqeeqa #%d tamma hifzuha: %s",
+        "forgot": "Haqeeqa #%d tamma nasyanuha: %s",
+    },
+    "zh": {
+        "name": "Mandarin (pinyin)",
+        "region": "world",
+        "greeting": "Ni hao! Shu ru 'help' cha kan mingling. 'exit' tui chu.",
+        "goodbye": "Zaijian.",
+        "help_header": "Mingling:",
+        "unknown_command": "Weizhi mingling - yi zhuan jiao master core pinggu.",
+        "remembered": "Shishi #%d yi jilu: %s",
+        "forgot": "Shishi #%d yi yiwang: %s",
+    },
+    "hi": {
+        "name": "Hindi",
+        "region": "world",
+        "greeting": "Namaste! 'help' likhein aadesh dekhne ke liye. 'exit' bahar nikalne ke liye.",
+        "goodbye": "Alvida.",
+        "help_header": "Aadesh:",
+        "unknown_command": "Agyaat aadesh - master core ko mulyankan hetu bheja gaya.",
+        "remembered": "Tathya #%d yaad rakha gaya: %s",
+        "forgot": "Tathya #%d bhoola diya gaya: %s",
+    },
+    "es": {
+        "name": "Spanish",
+        "region": "world",
+        "greeting": "Hola! Escribe 'help' para ver comandos. 'exit' para salir.",
+        "goodbye": "Adios.",
+        "help_header": "Comandos:",
+        "unknown_command": "Comando no reconocido - enviado al master core para evaluacion.",
+        "remembered": "Hecho #%d recordado: %s",
+        "forgot": "Hecho #%d olvidado: %s",
+    },
+    "fr": {
+        "name": "French",
+        "region": "world",
+        "greeting": "Bonjour! Tapez 'help' pour les commandes. 'exit' pour quitter.",
+        "goodbye": "Au revoir.",
+        "help_header": "Commandes:",
+        "unknown_command": "Commande inconnue - envoyee au master core pour evaluation.",
+        "remembered": "Fait #%d memorise: %s",
+        "forgot": "Fait #%d oublie: %s",
+    },
+    "pt": {
+        "name": "Portuguese",
+        "region": "world",
+        "greeting": "Ola! Digite 'help' para ver comandos. 'exit' para sair.",
+        "goodbye": "Adeus.",
+        "help_header": "Comandos:",
+        "unknown_command": "Comando nao reconhecido - enviado ao master core para avaliacao.",
+        "remembered": "Fato #%d lembrado: %s",
+        "forgot": "Fato #%d esquecido: %s",
+    },
+    "bn": {
+        "name": "Bengali",
+        "region": "world",
+        "greeting": "Nomoskar! 'help' likhun nirdesh dekhte. 'exit' ber hote.",
+        "goodbye": "Abar dekha hobe.",
+        "help_header": "Nirdesh:",
+        "unknown_command": "Achin nirdesh - master core-e mullayoner jonno pathano hoyeche.",
+        "remembered": "Tothyo #%d mone rakha holo: %s",
+        "forgot": "Tothyo #%d bhule gela: %s",
+    },
+    "ru": {
+        "name": "Russian",
+        "region": "world",
+        "greeting": "Privet! Vvedite 'help' dlya spiska komand. 'exit' dlya vykhoda.",
+        "goodbye": "Do svidaniya.",
+        "help_header": "Komandy:",
+        "unknown_command": "Neizvestnaya komanda - otpravlena v master core dlya otsenki.",
+        "remembered": "Fakt #%d zapomnen: %s",
+        "forgot": "Fakt #%d zabyt: %s",
+    },
+    "ja": {
+        "name": "Japanese (romaji)",
+        "region": "world",
+        "greeting": "Konnichiwa! 'help' de komando ichiran. 'exit' de shuuryou.",
+        "goodbye": "Sayonara.",
+        "help_header": "Komando:",
+        "unknown_command": "Mishiri no komando - master core ni okurare, hyoka saremasu.",
+        "remembered": "Jijitsu #%d o kioku shimashita: %s",
+        "forgot": "Jijitsu #%d o wasuremashita: %s",
+    },
+    "pa": {
+        "name": "Punjabi",
+        "region": "world",
+        "greeting": "Sat Sri Akal! 'help' likho hukam vekhan layi. 'exit' bahar aun layi.",
+        "goodbye": "Rab rakha.",
+        "help_header": "Hukam:",
+        "unknown_command": "Ajaan hukam - master core nu mulaankan lai bhejeya.",
+        "remembered": "Tath #%d yaad rakheya: %s",
+        "forgot": "Tath #%d bhul gaya: %s",
+    },
+    "de": {
+        "name": "German",
+        "region": "world",
+        "greeting": "Hallo! Tippe 'help' fuer Befehle. 'exit' zum Beenden.",
+        "goodbye": "Tschuess.",
+        "help_header": "Befehle:",
+        "unknown_command": "Unbekannter Befehl - an den Master-Kern zur Auswertung gesendet.",
+        "remembered": "Fakt #%d gemerkt: %s",
+        "forgot": "Fakt #%d vergessen: %s",
+    },
+    "ko": {
+        "name": "Korean (romanized)",
+        "region": "world",
+        "greeting": "Annyeonghaseyo! 'help' reul ipryeokhamyeon myeongryeong. 'exit' jongryo.",
+        "goodbye": "Annyeonghi gaseyo.",
+        "help_header": "Myeongryeong:",
+        "unknown_command": "Al su eomneun myeongryeong - master core-ro jeonsongdoeeo pyeonggadoem.",
+        "remembered": "Sasil #%d gieokham: %s",
+        "forgot": "Sasil #%d ijeobeorim: %s",
+    },
+    "vi": {
+        "name": "Vietnamese",
+        "region": "world",
+        "greeting": "Xin chao! Go 'help' de xem lenh. 'exit' de thoat.",
+        "goodbye": "Tam biet.",
+        "help_header": "Lenh:",
+        "unknown_command": "Lenh khong duoc nhan ra - da chuyen den master core de danh gia.",
+        "remembered": "Su that #%d da ghi nho: %s",
+        "forgot": "Su that #%d da quen: %s",
+    },
+    "tr": {
+        "name": "Turkish",
+        "region": "world",
+        "greeting": "Merhaba! Komutlar icin 'help' yazin. Cikmak icin 'exit'.",
+        "goodbye": "Gule gule.",
+        "help_header": "Komutlar:",
+        "unknown_command": "Taninmayan komut - degerlendirme icin master core'a gonderildi.",
+        "remembered": "Gercek #%d hatirlandi: %s",
+        "forgot": "Gercek #%d unutuldu: %s",
+    },
+    "it": {
+        "name": "Italian",
+        "region": "world",
+        "greeting": "Ciao! Scrivi 'help' per i comandi. 'exit' per uscire.",
+        "goodbye": "Arrivederci.",
+        "help_header": "Comandi:",
+        "unknown_command": "Comando non riconosciuto - inviato al master core per la valutazione.",
+        "remembered": "Fatto #%d ricordato: %s",
+        "forgot": "Fatto #%d dimenticato: %s",
+    },
+    "ta": {
+        "name": "Tamil",
+        "region": "world",
+        "greeting": "Vanakkam! 'help' ezhutha kattalaigal kaana. 'exit' veliyera.",
+        "goodbye": "Poy varen.",
+        "help_header": "Kattalaigal:",
+        "unknown_command": "Ariyatha kattalai - master core-kku anuppapattathu.",
+        "remembered": "Unmai #%d ninaivagam: %s",
+        "forgot": "Unmai #%d maranthathu: %s",
+    },
+    "ur": {
+        "name": "Urdu",
+        "region": "world",
+        "greeting": "Assalam-o-alaikum! 'help' likhein hukum dekhne ke liye. 'exit' nikalne ke liye.",
+        "goodbye": "Khuda hafiz.",
+        "help_header": "Hukum:",
+        "unknown_command": "Namaloom hukum - master core ko jaanch ke liye bheja gaya.",
+        "remembered": "Haqeeqat #%d yaad rakh li gayi: %s",
+        "forgot": "Haqeeqat #%d bhool gaye: %s",
+    },
+    "pl": {
+        "name": "Polish",
+        "region": "world",
+        "greeting": "Czesc! Wpisz 'help' aby zobaczyc polecenia. 'exit' aby wyjsc.",
+        "goodbye": "Do widzenia.",
+        "help_header": "Polecenia:",
+        "unknown_command": "Nierozpoznane polecenie - wyslane do master core do oceny.",
+        "remembered": "Fakt #%d zapamietano: %s",
+        "forgot": "Fakt #%d zapomniano: %s",
+    },
+    "uk": {
+        "name": "Ukrainian",
+        "region": "world",
+        "greeting": "Pryvit! Vvedit' 'help' shchob pobyachyty komandy. 'exit' shchob vyjty.",
+        "goodbye": "Do pobachennya.",
+        "help_header": "Komandy:",
+        "unknown_command": "Nevidoma komanda - napravlena do master core dlya otsinky.",
+        "remembered": "Fakt #%d zapam'yatano: %s",
+        "forgot": "Fakt #%d zabuto: %s",
+    },
+    "nl": {
+        "name": "Dutch",
+        "region": "world",
+        "greeting": "Hallo! Typ 'help' voor commando's. 'exit' om af te sluiten.",
+        "goodbye": "Tot ziens.",
+        "help_header": "Commando's:",
+        "unknown_command": "Onbekend commando - doorgestuurd naar de master core voor beoordeling.",
+        "remembered": "Feit #%d onthouden: %s",
+        "forgot": "Feit #%d vergeten: %s",
+    },
+    "th": {
+        "name": "Thai",
+        "region": "world",
+        "greeting": "Sawasdee! Phim 'help' phuea du kham sang. 'exit' phuea ok.",
+        "goodbye": "La gon.",
+        "help_header": "Kham sang:",
+        "unknown_command": "Kham sang thi mai rujak - sueng pai thi master core phuea pramoen.",
+        "remembered": "Kor thet jing #%d thuk bantuek: %s",
+        "forgot": "Kor thet jing #%d thuk luem: %s",
+    },
+    "el": {
+        "name": "Greek",
+        "region": "world",
+        "greeting": "Yia sou! Grapse 'help' gia entoles. 'exit' gia eksodo.",
+        "goodbye": "Adio.",
+        "help_header": "Entoles:",
+        "unknown_command": "Agnosti entoli - apestalmeni sto master core gia axiologisi.",
+        "remembered": "Gegonos #%d apomnimonevthike: %s",
+        "forgot": "Gegonos #%d ksechastike: %s",
+    },
+    "he": {
+        "name": "Hebrew (translit)",
+        "region": "world",
+        "greeting": "Shalom! Katav 'help' le-peekudot. 'exit' la-yetsia.",
+        "goodbye": "Lehitraot.",
+        "help_header": "Pekudot:",
+        "unknown_command": "Pekuda lo mekuva - nishlecha le-master core le-hachra'a.",
+        "remembered": "Uvda #%d nizkeret: %s",
+        "forgot": "Uvda #%d nishkechat: %s",
+    },
+    "fa": {
+        "name": "Persian",
+        "region": "world",
+        "greeting": "Salaam! 'help' ra type konid ta dastoorat ra bebinid. 'exit' baraye khoruj.",
+        "goodbye": "Khoda hafez.",
+        "help_header": "Dastoorat:",
+        "unknown_command": "Dastoor-e nashenakhte - be master core ersal shod.",
+        "remembered": "Haghighat #%d zakhire shod: %s",
+        "forgot": "Haghighat #%d faramoosh shod: %s",
+    },
+    "id": {
+        "name": "Indonesian",
+        "region": "world",
+        "greeting": "Halo! Ketik 'help' untuk perintah. 'exit' untuk keluar.",
+        "goodbye": "Sampai jumpa.",
+        "help_header": "Perintah:",
+        "unknown_command": "Perintah tidak dikenali - diteruskan ke master core untuk dievaluasi.",
+        "remembered": "Fakta #%d diingat: %s",
+        "forgot": "Fakta #%d dilupakan: %s",
+    },
+    "ms": {
+        "name": "Malay",
+        "region": "world",
+        "greeting": "Halo! Taip 'help' untuk perintah. 'exit' untuk keluar.",
+        "goodbye": "Selamat tinggal.",
+        "help_header": "Perintah:",
+        "unknown_command": "Perintah tidak dikenali - dihantar ke master core untuk dinilai.",
+        "remembered": "Fakta #%d diingat: %s",
+        "forgot": "Fakta #%d dilupakan: %s",
+    },
+    "tl": {
+        "name": "Filipino",
+        "region": "world",
+        "greeting": "Kamusta! I-type ang 'help' para sa mga utos. 'exit' para umalis.",
+        "goodbye": "Paalam.",
+        "help_header": "Mga utos:",
+        "unknown_command": "Hindi kilalang utos - ipinadala sa master core para suriin.",
+        "remembered": "Katotohanan #%d naalala: %s",
+        "forgot": "Katotohanan #%d nakalimutan: %s",
+    },
+    "ro": {
+        "name": "Romanian",
+        "region": "world",
+        "greeting": "Buna! Scrie 'help' pentru comenzi. 'exit' pentru a iesi.",
+        "goodbye": "La revedere.",
+        "help_header": "Comenzi:",
+        "unknown_command": "Comanda necunoscuta - trimisa la master core pentru evaluare.",
+        "remembered": "Fapt #%d retinut: %s",
+        "forgot": "Fapt #%d uitat: %s",
+    },
+    "hu": {
+        "name": "Hungarian",
+        "region": "world",
+        "greeting": "Szia! Ird be: 'help' a parancsokhoz. 'exit' a kilepeshez.",
+        "goodbye": "Viszlat.",
+        "help_header": "Parancsok:",
+        "unknown_command": "Ismeretlen parancs - elkuldve a master core-nak ertekelesre.",
+        "remembered": "Teny #%d megjegyezve: %s",
+        "forgot": "Teny #%d elfelejtve: %s",
+    },
+    "sv": {
+        "name": "Swedish",
+        "region": "world",
+        "greeting": "Hej! Skriv 'help' for kommandon. 'exit' for att avsluta.",
+        "goodbye": "Hej da.",
+        "help_header": "Kommandon:",
+        "unknown_command": "Okant kommando - skickat till master core for utvardering.",
+        "remembered": "Fakta #%d sparat: %s",
+        "forgot": "Fakta #%d glomt: %s",
     },
 }
 
@@ -2649,15 +3532,32 @@ def why_lines() -> List[str]:
         "3. Teaches while it works.",
         "   proof: companion + finance literacy subsystems build YOUR "
         "skill, not dependency.",
-        "4. Yours, not cookie-cutter.",
-        "   proof: local memory, your language packs, your data stays on "
-        "your machine.",
-        "5. Free to run.",
-        "   proof: pure stdlib Python, offline-first, no subscription, "
-        "no lock-in.",
+        "4. 100 languages, African-first, yours.",
+        "   proof: 100 UI language packs (70 African) ship offline in one "
+        "file - local memory, your language, your data on your machine.",
+        "5. Free to run, cheap to scale.",
+        "   proof: pure stdlib Python, offline-first, no subscription - "
+        "engine free forever; BYOK calls cost cents ('cost').",
         "6. Makes you more capable, not obsolete.",
         "   proof: opportunity engine + reports you own and can export "
         "anytime.",
+    ]
+
+
+def cost_lines() -> List[str]:
+    """v29.4.0 'cost' command: the pricing-disruption table.
+
+    Honest ranges only - no fabricated precision.
+    """
+    return [
+        "LUQI AI cost model - the pricing disruption:",
+        "  LUQI AI engine        : free forever - pure Python stdlib, "
+        "runs offline, no subscription, no lock-in.",
+        "  BYOK model calls      : pay-per-use cents - fractions of a "
+        "cent to a few cents per call depending on model.",
+        "  Big-AI subscriptions  : typically around $20/month per seat.",
+        "",
+        "World-best capabilities, African-friendly price.",
     ]
 
 
@@ -2892,8 +3792,11 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("opportunities <domain>", "opportunity scan framework"),
         ("finance <topic>", "finance literacy / scam avoidance"),
         ("languages", "African language support list"),
-        ("lang <code>", "switch UI language (15 packs: en zu xh st af tn "
-         "nso ts ve ss nr sw am yo ha)"),
+        ("lang <code>", "switch UI language (100 packs: 70 African + "
+         "30 world, grouped list)"),
+        ("translate <code> <text>", "translate text into a language "
+         "(needs OPENAI_API_KEY or bridge)"),
+        ("cost", "pricing-disruption table (free engine, BYOK cents)"),
         ("selfimprove <note>", "log a self-improvement entry"),
         ("evolve [sub]", "evolution engine: run | run online | rollback | "
          "lineage | pillars | test <query>"),
@@ -3032,13 +3935,62 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
         else:
             if code:
                 print("Unknown language code '%s'." % code)
+            # v29.4.0: grouped list - African languages, then world.
+            african = sorted(c for c in LANG_PACKS
+                             if LANG_PACKS[c].get("region") == "african")
+            world = sorted(c for c in LANG_PACKS
+                           if LANG_PACKS[c].get("region") == "world")
             print("Available language packs (* = active):")
-            for pack_code in sorted(LANG_PACKS):
+            print("African languages (%d):" % len(african))
+            for pack_code in african:
+                mark = "*" if pack_code == engine.lang else " "
+                print("  %s %-4s %s" % (mark, pack_code,
+                                        LANG_PACKS[pack_code]["name"]))
+            print("World languages (%d):" % len(world))
+            for pack_code in world:
                 mark = "*" if pack_code == engine.lang else " "
                 print("  %s %-4s %s" % (mark, pack_code,
                                         LANG_PACKS[pack_code]["name"]))
             print("Usage: lang <code>")
         engine._audit("CLI", "lang %s" % (code or "(list)"), "Success")
+        return True
+    # --- v29.4.0: translate + cost commands ---
+    if lowered == "translate" or lowered.startswith("translate "):
+        args = line[len("translate"):].strip()
+        parts = args.split(None, 1)
+        code = parts[0].lower() if parts else ""
+        text = parts[1].strip() if len(parts) > 1 else ""
+        if not code or code not in LANG_PACKS:
+            print("Unknown language code '%s'." % code)
+            print("Usage: translate <lang-code> <text>  (see 'lang' for "
+                  "the 100 codes)")
+            engine._audit("CLI", "translate %s" % (code or "(none)"),
+                          "Failed")
+            return True
+        if not text:
+            print("Usage: translate <lang-code> <text>")
+            engine._audit("CLI", "translate %s" % code, "Failed")
+            return True
+        pack = LANG_PACKS[code]
+        prompt = ("Translate the following text into %s (language code "
+                  "'%s'). Return the translation only, with no "
+                  "explanation, no notes and no quotes.\n\nText: %s"
+                  % (pack["name"], code, text))
+        reply = engine._llm(prompt)
+        if reply:
+            print(reply.strip())
+            engine._audit("CLI", "translate %s" % code, "Success")
+        else:
+            print("Translation unavailable offline.")
+            print("To enable: set OPENAI_API_KEY in .env (optionally "
+                  "install the claude_engine bridge - see 'bridge') and "
+                  "run again.")
+            engine._audit("CLI", "translate %s" % code, "Offline")
+        return True
+    if lowered == "cost":
+        for out_line in cost_lines():
+            print(out_line)
+        engine._audit("CLI", "cost", "Success")
         return True
     if lowered == "export" or lowered.startswith("export "):
         ok, message = engine.export_markdown()
@@ -3466,8 +4418,8 @@ def run_selftest() -> int:
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.3.0 + 10 subsystems + session/facts",
-                       bool(keep) and "29.3.0" in out
+        checks.append(("version: shows 29.4.0 + 10 subsystems + session/facts",
+                       bool(keep) and "29.4.0" in out
                        and "Subsystems: 10" in out
                        and "Session: #" in out and "Facts:" in out))
     except Exception as exc:
@@ -3844,23 +4796,97 @@ def run_selftest() -> int:
     except Exception as exc:
         checks.append(("bridge: command (exception: %s)" % exc, False))
 
-    # Language packs: exactly 15 complete packs, all ASCII-safe.
+    # Language packs (v29.4.0): exactly 100 complete packs, every one
+    # with 6 non-empty ASCII UI strings + name + valid region tag.
     try:
-        pack_keys = ("name", "greeting", "goodbye", "help_header",
+        pack_keys = ("greeting", "goodbye", "help_header",
                      "unknown_command", "remembered", "forgot")
-        complete = all(all(k in pack for k in pack_keys)
-                       for pack in LANG_PACKS.values())
-        checks.append(("lang: 15 complete language packs",
-                       len(LANG_PACKS) == 15 and complete))
+        complete = all(
+            all(isinstance(pack.get(k), str) and pack.get(k)
+                for k in pack_keys)
+            and isinstance(pack.get("name"), str) and bool(pack.get("name"))
+            for pack in LANG_PACKS.values())
+        checks.append(("lang: 100 complete language packs",
+                       len(LANG_PACKS) == 100 and complete))
         ascii_safe = all(
             all(ord(ch) < 128 for ch in str(value))
             for pack in LANG_PACKS.values() for value in pack.values())
         checks.append(("lang: all pack strings ASCII-safe", ascii_safe))
+        regions_ok = all(pack.get("region") in ("african", "world")
+                         for pack in LANG_PACKS.values())
+        african_n = sum(1 for pack in LANG_PACKS.values()
+                        if pack.get("region") == "african")
+        checks.append(("lang: region tags valid + >= 56 African packs",
+                       regions_ok and african_n >= 56))
     except Exception as exc:
         checks.append(("lang: pack audit (exception: %s)" % exc, False))
 
-    # Roundtrips through 2 of the new packs (sw + am), then back to en.
-    for new_code in ("sw", "am"):
+    # v29.4.0: real-phrase spot strings across flagship packs.
+    try:
+        spots = {
+            "zu": "Sawubona", "sw": "Habari", "pcm": "How far!",
+            "spt": "Awe!", "ar": "As-salamu alaykum", "zh": "Ni hao",
+            "ja": "Konnichiwa", "hi": "Namaste",
+        }
+        spot_ok = all(spots[c] in LANG_PACKS[c]["greeting"] for c in spots)
+        checks.append(("lang: spot greetings (zu sw pcm spt ar zh ja hi)",
+                       spot_ok))
+    except Exception as exc:
+        checks.append(("lang: spot greetings (exception: %s)" % exc, False))
+
+    # v29.4.0: grouped 'lang' list shows both group headers.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "lang")
+        out = buf.getvalue()
+        checks.append(("lang: grouped list (African + World headers)",
+                       bool(keep) and "African languages (" in out
+                       and "World languages (" in out))
+    except Exception as exc:
+        checks.append(("lang: grouped list (exception: %s)" % exc, False))
+
+    # v29.4.0: translate unknown code -> graceful, no traceback.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "translate zz hello")
+        out = buf.getvalue()
+        checks.append(("translate: unknown code graceful",
+                       bool(keep) and "Unknown language code 'zz'" in out))
+    except Exception as exc:
+        checks.append(("translate: unknown code (exception: %s)" % exc,
+                       False))
+
+    # v29.4.0: translate offline -> graceful enable-hint, no traceback.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(offline_engine, "translate sw hello world")
+        out = buf.getvalue()
+        checks.append(("translate: offline graceful (enable-hint)",
+                       bool(keep) and "Translation unavailable offline."
+                       in out and "OPENAI_API_KEY" in out
+                       and "Traceback" not in out))
+    except Exception as exc:
+        checks.append(("translate: offline (exception: %s)" % exc, False))
+
+    # v29.4.0: cost command prints the pricing-disruption table.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "cost")
+        out = buf.getvalue()
+        checks.append(("cost: free engine + $20 subscription anchor",
+                       bool(keep) and "free forever" in out
+                       and "$20" in out
+                       and "African-friendly price" in out))
+    except Exception as exc:
+        checks.append(("cost: (exception: %s)" % exc, False))
+
+    # Roundtrips through 4 packs (sw + am from v29.3.0, spt + pcm from
+    # v29.4.0), then back to en.
+    for new_code in ("sw", "am", "spt", "pcm"):
         try:
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
