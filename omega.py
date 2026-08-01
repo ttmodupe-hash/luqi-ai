@@ -2575,7 +2575,7 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             for entry in entries:
                 print("  %s | %-5s | %s" % (
                     entry.get("ts", "?"),
-                    str(entry.get("role", ""))[:5],
+                    str(entry.get("role", "?"))[:5],
                     str(entry.get("text", ""))[:70],
                 ))
         engine._audit("Memory", "history", "Success")
