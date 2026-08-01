@@ -1,4 +1,4 @@
-# LUQI AI v29.1.0 — Unified Master Engine
+# LUQI AI v29.2.0 — Unified Master Engine
 
 One engine. Every domain. A single-file, zero-dependency Python AI engine built in South Africa.
 
@@ -26,6 +26,7 @@ One engine. Every domain. A single-file, zero-dependency Python AI engine built 
 - `sync status` / `sync github` — commits and pushes `omega.py` + memory + logs via local git (set `GITHUB_REPO` in `.env`).
 - `import <file.csv|.xlsx>` / `analyze` / `query <text>` — stdlib-only spreadsheet ingestion (xlsx read via zipfile + XML), 50k-row cap.
 - **v29.1.0:** `version`, `export` (memory + audit to markdown), `report <topic>` (subsystem-routed .md reports), `lang <code>` (UI packs: en / isiZulu / isiXhosa / Sesotho / Afrikaans, persisted).
+- **v29.2.0 — Enterprise Evolution:** subsystem #10 Evolution Engine — safe self-improvement with real enforcement: AST whitelist sandbox + restricted exec + fitness gate (adopt only if better), SHA-256-verified immutable pillars with tamper auto-restore, generation lineage + `evolve rollback`, offline evolution by default, optional `evolve run online` via OpenRouter. Plus `why` (6 differentiators) and `integrations` (live connector manifest). See `REVIEW_OMEGA_HYPER_ENGINE.md` for the hardening story.
 
 15 African languages on the roadmap strip: isiZulu, isiXhosa, Sesotho, Setswana, Sepedi, Xitsonga, Tshivenda, siSwati, isiNdebele, Afrikaans, English, Swahili, Amharic, Yoruba, Hausa.
 
@@ -37,13 +38,18 @@ py -3.11 omega.py              # interactive [OMEGA] > terminal
 py -3.11 omega.py "tax south africa"   # one-shot mode
 ```
 
+## Integration watch-items
+
+- **2026-07-30 — GitHub Models fully retired** (playground, catalog, inference API, BYOK). LUQI AI is unaffected: the engine routes through OpenAI / Serper / OpenRouter directly. OpenRouter (`evolve run online`) is a recommended migration path for anyone moving off GitHub Models.
+- **2026-08-26 — Copilot default model enablement** takes effect for Business/Enterprise orgs (GA models switch on by default unless the org policy opts out). Review org model settings before this date.
+
 ## Configuration (.env — all optional)
 
 Copy `.env.example` to `.env`. Without keys the engine runs fully offline with graceful degradation.
 
 ## Built-in verification
 
-`--selftest` runs 32 checks: router smoke tests over all 9 subsystems, .env parser tolerance, secret masking, memory roundtrip + corruption recovery, CSV and real-XLSX import, git-missing graceful paths. Exit code 0 = all pass.
+`--selftest` runs 48 checks: router smoke tests over all 9 subsystems, .env parser tolerance, secret masking, memory roundtrip + corruption recovery, CSV and real-XLSX import, git-missing graceful paths. Exit code 0 = all pass.
 
 ## Repo layout
 
