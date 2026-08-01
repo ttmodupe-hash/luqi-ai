@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LUQI AI v29.2.0 - Unified Master Engine (omega.py)
+LUQI AI v29.3.0 - Unified Master Engine (omega.py)
 
 Single-file, stdlib-only CLI engine unifying 10 subsystems behind the
 user's original OmegaMasterEngine router pattern.
@@ -48,6 +48,26 @@ v29.2.0 additions (SPEC_v292.md) - "Enterprise Evolution":
 - 'why' command: the 6 LUQI AI differentiators with proofs.
 - 'integrations' command: 5-connector live status manifest.
 
+v29.3.0 additions (SPEC_v293.md) - "Launch-Grade":
+- Evolution gate 2 (contract exec) is now PROCESS-ISOLATED:
+  multiprocessing.get_context("spawn") child process per candidate,
+  results via Queue, join(3.0) then terminate() on timeout, and an
+  assertion that no child processes remain alive after every gate run
+  (kills the v29.2.0 zombie-thread limit). POSIX children also get a
+  256 MB RLIMIT_AS memory ceiling (MemoryError -> rejection); Windows
+  is documented as timeout-only. AST gate and fitness gate unchanged.
+- Optional claude_engine bridge (dogfooding): guarded import that is
+  NEVER a hard dependency. When present + OPENAI_API_KEY set, _llm()
+  routes through a lazy singleton ClaudeLikeEngine (anthropic fallback
+  when ANTHROPIC_API_KEY set); ANY exception falls back to the stdlib
+  urllib path. New 'bridge' command; 'integrations' gains a 6th row.
+- LANG_PACKS completed to 15 packs: tn, nso, ts, ve, ss, nr, sw, am
+  (ASCII transliteration), yo, ha added to en/zu/xh/st/af.
+- New 'launch' command: GO/NO-GO pre-flight table (blockers are
+  pillars/memory/selftest-core failures ONLY; optional keys are WARN).
+- LAUNCH_CHECKLIST.md: human launch runbook (engine selftest, .env
+  keys, launch GO, sync github push, site publish + smoke, rollback).
+
 - Python 3.11, standard library only, ASCII-only source.
 - Boots with no .env, no network, no third-party packages.
 - Windows/macOS/Linux compatible:  py -3.11 omega.py
@@ -64,6 +84,7 @@ import csv
 import hashlib
 import io
 import json
+import multiprocessing
 import os
 import re
 import shutil
@@ -83,7 +104,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.2.0"
+ENGINE_VERSION = "29.3.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
@@ -97,6 +118,21 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = "gpt-4o-mini"
 
 # ---------------------------------------------------------------------------
+# v29.3.0: optional claude_engine bridge (dogfooding)
+# ---------------------------------------------------------------------------
+# Guarded import: the bridge is NEVER a hard dependency. When the module is
+# absent the flag stays False and every surface degrades silently; the whole
+# engine keeps working exactly as before (urllib fallback path).
+try:
+    from claude_engine import ClaudeLikeEngine  # type: ignore
+    BRIDGE_AVAILABLE = True
+except Exception:
+    ClaudeLikeEngine = None  # type: ignore
+    BRIDGE_AVAILABLE = False
+
+CLAUDE_FALLBACK_MODEL = "claude-3-5-sonnet-latest"
+
+# ---------------------------------------------------------------------------
 # v29.2.0: Evolution Engine constants (SPEC_v292.md)
 # ---------------------------------------------------------------------------
 
@@ -104,8 +140,9 @@ PILLARS_FILE = "omega_pillars.json"
 STRATEGY_FILE = "omega_strategy_gen.py"
 EVOLUTION_FILE = "omega_evolution.json"
 EVO_ARCHIVE_KEEP = 5           # keep the last 5 archived generations
-EVO_TEST_TIMEOUT = 3.0         # seconds per sandboxed contract test
+EVO_TEST_TIMEOUT = 3.0         # seconds the sandbox child may run (join timeout)
 EVO_HTTP_TIMEOUT = 30          # seconds for the optional online proposal
+EVO_MEMORY_LIMIT = 268435456   # 256 MB RLIMIT_AS ceiling inside the child (POSIX)
 # Correct OpenRouter chat-completions endpoint (the uploaded code used the
 # bare https://openrouter.ai host, which is not a valid API path).
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -318,6 +355,108 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
                             "vir evaluasie."),
         "remembered": "Feit #%d onthou: %s",
         "forgot": "Feit #%d vergeet: %s",
+    },
+    # v29.3.0: the remaining 10 packs (data-only, ASCII transliterations).
+    "tn": {
+        "name": "Setswana",
+        "greeting": "Dumela! Tlanya 'help' go bona ditaelo. 'exit' go tswa.",
+        "goodbye": "OMEGA e tima. Sala sentle, nna o ikemetse.",
+        "help_header": "Ditaelo:",
+        "unknown_command": ("Taelo e e sa itsiweng - e rometswe go master "
+                            "core go sekasekwa."),
+        "remembered": "Nnete #%d e gakolotswe: %s",
+        "forgot": "Nnete #%d e lebetswe: %s",
+    },
+    "nso": {
+        "name": "Sepedi",
+        "greeting": "Dumela! Tlanya 'help' go bona ditaelo. 'exit' go tswa.",
+        "goodbye": "OMEGA e tima. Sala gabotse, dula o ikemetse.",
+        "help_header": "Ditaelo:",
+        "unknown_command": ("Taelo ye e sa tsebjego - e rometswe go master "
+                            "core go hlahlobjwa."),
+        "remembered": "Nnete #%d e gopolotswe: %s",
+        "forgot": "Nnete #%d e lebetswe: %s",
+    },
+    "ts": {
+        "name": "Xitsonga",
+        "greeting": "Avuxeni! Tlanya 'help' ku vona swileriso. 'exit' ku huma.",
+        "goodbye": "OMEGA yi cima. Sala kahle, tshama u ntshunxekile.",
+        "help_header": "Swileriso:",
+        "unknown_command": ("Xileriso lexi nga tiviwiki - xi rhumeliwe eka "
+                            "master core ku kamberiwa."),
+        "remembered": "Xiyimo #%d xi tsariwe: %s",
+        "forgot": "Xiyimo #%d xi rivariwe: %s",
+    },
+    "ve": {
+        "name": "Tshivenda",
+        "greeting": "Ndaa! Tlanya 'help' u vhona milayo. 'exit' u bva.",
+        "goodbye": "OMEGA i a ima. Salani zwavhudi, dzulani ni tsho itsho.",
+        "help_header": "Milayo:",
+        "unknown_command": ("Mulayo u sa divheyiwi - u rumelwe kha master "
+                            "core u toliwa."),
+        "remembered": "Ndivho #%d yo dzulwa: %s",
+        "forgot": "Ndivho #%d yo hangwelwa: %s",
+    },
+    "ss": {
+        "name": "siSwati",
+        "greeting": "Sawubona! Thayipha 'help' kubona imiyalo. 'exit' kuphuma.",
+        "goodbye": "OMEGA iyacima. Sala kahle, hlala ukhululekile.",
+        "help_header": "Imiyalo:",
+        "unknown_command": ("Umyalo longatiwa - udluliselwe ku-master core "
+                            "kuhlolwa."),
+        "remembered": "Liqiniso #%d likhunjulwe: %s",
+        "forgot": "Liqiniso #%d lishiyiwe: %s",
+    },
+    "nr": {
+        "name": "isiNdebele",
+        "greeting": "Lotjhani! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
+        "goodbye": "OMEGA iyacima. Sala kuhle, hlala ukhululekile.",
+        "help_header": "Imiyalo:",
+        "unknown_command": ("Umyalo ongaziwa - uthunyiwe ku-master core "
+                            "ukuhlolwa."),
+        "remembered": "Iqiniso #%d likhunjulwe: %s",
+        "forgot": "Iqiniso #%d liyekelelwe: %s",
+    },
+    "sw": {
+        "name": "Swahili",
+        "greeting": "Habari! Andika 'help' kuona amri. 'exit' kutoka.",
+        "goodbye": "OMEGA inazimwa. Kwaheri, kaa huru.",
+        "help_header": "Amri:",
+        "unknown_command": ("Amri isiyojulikana - imeelekezwa kwa master "
+                            "core kwa tathmini."),
+        "remembered": "Ukweli #%d umekumbukwa: %s",
+        "forgot": "Ukweli #%d umesahauliwa: %s",
+    },
+    "am": {
+        "name": "Amharic",
+        "greeting": ("Selam! t'azzazochin lemareg 'help' yigetsu. "
+                     "'exit' lemewt'at."),
+        "goodbye": "OMEGA tet'ewalech. Dehna hun, dehna neh.",
+        "help_header": "T'azzazochin:",
+        "unknown_command": ("Yelayaweqe t'azzaz - wede master core "
+                            "t'lkebwal."),
+        "remembered": "Ewnet #%d t'zegnwal: %s",
+        "forgot": "Ewnet #%d t'rshegnwal: %s",
+    },
+    "yo": {
+        "name": "Yoruba",
+        "greeting": "Pele o! Te 'help' lati ri awon ase. 'exit' lati jade.",
+        "goodbye": "OMEGA ti pare. Odabo, wa laafin.",
+        "help_header": "Awon ase:",
+        "unknown_command": ("Ase ti a ko mo - a ti ran si master core fun "
+                            "ayewo."),
+        "remembered": "Otito #%d ti se akosile: %s",
+        "forgot": "Otito #%d ti gbagbe: %s",
+    },
+    "ha": {
+        "name": "Hausa",
+        "greeting": "Sannu! Rubuta 'help' don ganin umarni. 'exit' don fita.",
+        "goodbye": "OMEGA ta rufe. Sai anjima, kasance da 'yanci.",
+        "help_header": "Umarni:",
+        "unknown_command": ("Umarin da ba a sani ba - an tura shi zuwa "
+                            "master core don bincike."),
+        "remembered": "Gaskiya #%d an adana: %s",
+        "forgot": "Gaskiya #%d an manta: %s",
     },
 }
 
@@ -691,6 +830,17 @@ class OmegaMasterEngine:
             self.env.get("OPENROUTER_MODEL")
             or os.environ.get("OPENROUTER_MODEL", "")
         ).strip() or OPENROUTER_DEFAULT_MODEL
+        # v29.3.0: optional claude_engine bridge config. The engine itself is
+        # created lazily on the first LLM call (never at boot).
+        self.anthropic_key = self.env.get("ANTHROPIC_API_KEY") or os.environ.get(
+            "ANTHROPIC_API_KEY", ""
+        )
+        self.omega_llm_model = (
+            self.env.get("OMEGA_LLM_MODEL")
+            or os.environ.get("OMEGA_LLM_MODEL", "")
+        ).strip() or OPENAI_MODEL
+        self._bridge_engine: Any = None
+        self._bridge_attempted = False
         # v29.2.0: Subsystem #10 - Evolution Engine. Boot verifies/restores
         # omega_pillars.json (sha256 tamper detection) and bootstraps
         # omega_strategy_gen.py + omega_evolution.json when missing.
@@ -803,10 +953,76 @@ class OmegaMasterEngine:
         except Exception:
             return None
 
+    def _get_bridge(self) -> Any:
+        """Lazy singleton ClaudeLikeEngine. Returns None when unavailable.
+
+        Never instantiated at boot and NEVER a hard dependency: when
+        claude_engine is not installed (BRIDGE_AVAILABLE False) or no
+        OPENAI_API_KEY is set, this simply returns None.
+        """
+        if self._bridge_attempted:
+            return self._bridge_engine
+        self._bridge_attempted = True
+        if not BRIDGE_AVAILABLE or not self.openai_key:
+            return None
+        try:
+            kwargs: Dict[str, Any] = {
+                "model": self.omega_llm_model,
+                "provider": "openai",
+                "api_key": self.openai_key,
+            }
+            if self.anthropic_key:
+                # Anthropic fallback provider for the circuit breaker.
+                kwargs["fallback_provider"] = "anthropic"
+                kwargs["fallback_model"] = CLAUDE_FALLBACK_MODEL
+                kwargs["fallback_api_key"] = self.anthropic_key
+            try:
+                self._bridge_engine = ClaudeLikeEngine(**kwargs)
+            except TypeError:
+                # Tolerate a leaner constructor signature.
+                self._bridge_engine = ClaudeLikeEngine(
+                    model=self.omega_llm_model,
+                    provider="openai",
+                    api_key=self.openai_key,
+                )
+        except Exception:
+            self._bridge_engine = None
+        return self._bridge_engine
+
+    def _bridge_llm(self, prompt: str) -> Optional[str]:
+        """Try the claude_engine bridge; return text or None on ANY issue."""
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            reply = bridge.chat(prompt)
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
     def _llm(self, prompt: str) -> Optional[str]:
-        """POST to OpenAI chat completions; return text or None on failure."""
+        """Return LLM text or None on failure.
+
+        v29.3.0: routes through the optional claude_engine bridge first when
+        it is installed and OPENAI_API_KEY is set; ANY exception (or empty
+        reply) falls back to the stdlib urllib path below. Externally the
+        behavior is identical.
+        """
         if not self.openai_key:
             return None
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm(prompt)
+            if bridged:
+                return bridged
+            # Bridge failed -> fall through to the urllib path.
         try:
             body = json.dumps({
                 "model": OPENAI_MODEL,
@@ -1492,6 +1708,116 @@ class OmegaMasterEngine:
 
 
 # ---------------------------------------------------------------------------
+# v29.3.0: process-isolated sandbox for evolution gate 2 (SPEC_v293.md 2)
+# ---------------------------------------------------------------------------
+# The worker target MUST be a module-level function so the spawn context can
+# pickle it. multiprocessing is never invoked at import time (only inside
+# exec_contract_gate), and omega.py is already __main__-guarded, so spawning
+# is safe on every platform.
+
+def _sandbox_worker(code: str, tests: List[Any], queue: Any) -> None:
+    """Child-process target: exec the candidate and run the contract tests.
+
+    BEFORE exec'ing candidate code, POSIX children install a hard 256 MB
+    address-space ceiling (resource.RLIMIT_AS) so a memory bomb dies with a
+    catchable MemoryError -> rejection. On Windows the 'resource' module is
+    missing (and other platforms may raise ValueError/OSError), so the
+    ceiling is skipped inside try/except - REVIEW note: on Windows gate 2 is
+    timeout-only protection (no memory ceiling), by design.
+
+    The result is reported back through the multiprocessing.Queue as a plain
+    dict: {ok, reason, pass_rate, latency_avg}.
+    """
+    result: Dict[str, Any] = {
+        "ok": False,
+        "reason": "sandbox worker crashed before producing a result",
+        "pass_rate": 0.0,
+        "latency_avg": 0.0,
+    }
+    try:
+        try:
+            import resource  # POSIX only; absent on Windows
+            resource.setrlimit(resource.RLIMIT_AS,
+                               (EVO_MEMORY_LIMIT, EVO_MEMORY_LIMIT))
+        except (ImportError, ValueError, OSError):
+            # Windows / restricted hosts: no memory ceiling (timeout-only).
+            pass
+        namespace = EvolutionEngine._restricted_namespace()
+        compiled = compile(code, "<omega_candidate>", "exec")
+        exec(compiled, namespace)
+        fn = namespace.get("execute_logic")
+        if not callable(fn):
+            result["reason"] = "execute_logic is not defined"
+        else:
+            total = float(len(tests)) or 1.0
+            passed = 0
+            latencies: List[float] = []
+            failure: Optional[str] = None
+            for query, telemetry in tests:
+                start = time.perf_counter()
+                output = fn(query, list(telemetry))
+                latency = time.perf_counter() - start
+                if not isinstance(output, str):
+                    failure = ("contract test %r returned non-string" % query)
+                    break
+                if "<omega_analysis>" not in output:
+                    failure = ("contract test %r missing <omega_analysis> tag"
+                               % query)
+                    break
+                passed += 1
+                latencies.append(latency)
+            result["pass_rate"] = passed / total
+            if failure is None:
+                result["ok"] = True
+                result["reason"] = "ok"
+                if latencies:
+                    result["latency_avg"] = sum(latencies) / len(latencies)
+            else:
+                result["reason"] = failure
+    except MemoryError:
+        result["reason"] = ("memory ceiling exceeded (MemoryError, 256 MB "
+                            "RLIMIT_AS)")
+    except Exception as exc:
+        result["reason"] = "%s: %s" % (type(exc).__name__, exc)
+    try:
+        queue.put(result)
+    except Exception:
+        pass
+
+
+def _close_sandbox_queue(queue: Any) -> None:
+    """Release queue resources without ever raising."""
+    try:
+        queue.cancel_join_thread()
+    except Exception:
+        pass
+    try:
+        queue.close()
+    except Exception:
+        pass
+
+
+def sandbox_live_children() -> int:
+    """Count live multiprocessing children of THIS process (spawn context).
+
+    Used by the gate-2 no-zombie assertion and by the selftest's
+    process-isolation proof. Never raises.
+    """
+    try:
+        ctx = multiprocessing.get_context("spawn")
+        count = 0
+        for proc in ctx.active_children():
+            try:
+                if proc.is_alive():
+                    count += 1
+            except Exception:
+                pass
+        return count
+    except Exception:
+        return 0
+
+
+# ---------------------------------------------------------------------------
 # v29.2.0: Subsystem #10 - Evolution Engine (SAFE self-improvement)
 # ---------------------------------------------------------------------------
 
@@ -1738,7 +2064,11 @@ class EvolutionEngine:
             return False, "AST analysis failed: %s" % exc
 
     # ------------------------------------------------------------------
-    # Gate 2: restricted exec + contract tests (Windows-safe timeouts)
+    # Gate 2: restricted exec + contract tests
+    # v29.3.0: gate 2 itself is PROCESS-ISOLATED (see exec_contract_gate and
+    # the module-level _sandbox_worker above). The thread-timeout helper
+    # below is kept ONLY for 'evolve test <query>', which runs the already
+    # vetted live strategy module (never a candidate mutation).
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -1797,41 +2127,120 @@ class EvolutionEngine:
 
     @classmethod
     def exec_contract_gate(cls, code: str) -> Tuple[bool, str, float, float]:
-        """Gate 2: restricted exec + 3 fixed contract tests.
+        """Gate 2: restricted exec + 3 fixed contract tests, PROCESS-ISOLATED.
+
+        v29.3.0: the candidate runs in a spawned child process
+        (multiprocessing.get_context("spawn")) instead of a daemon thread:
+          * results come back through a multiprocessing.Queue,
+          * join(3.0s); if the child is still alive -> terminate() + join()
+            -> the candidate is rejected as a timeout,
+          * POSIX children get a 256 MB RLIMIT_AS memory ceiling before the
+            candidate execs (MemoryError -> rejection); on Windows the
+            ceiling is unavailable, documented as timeout-only (see the
+            REVIEW note in _sandbox_worker),
+          * after every gate run we assert that NO child process remains
+            alive - this kills the v29.2.0 zombie-thread limit for good.
+
+        The AST gate (gate 1, unchanged) runs BEFORE this gate, and the
+        same restricted-builtins namespace is used inside the child.
 
         Returns (ok, reason, contract_pass_rate, latency_avg).
         """
-        total = float(len(cls.CONTRACT_TESTS))
+        queue = None
+        proc = None
         try:
-            namespace = cls._restricted_namespace()
+            ctx = multiprocessing.get_context("spawn")
+            queue = ctx.Queue()
+            proc = ctx.Process(
+                target=_sandbox_worker,
+                args=(code, list(cls.CONTRACT_TESTS), queue),
+                daemon=True,
+            )
+            proc.start()
         except Exception as exc:
-            return False, "namespace build failed: %s" % exc, 0.0, 0.0
+            if queue is not None:
+                _close_sandbox_queue(queue)
+            return False, "sandbox process spawn failed: %s" % exc, 0.0, 0.0
+
         try:
-            compiled = compile(code, "<omega_candidate>", "exec")
-            exec(compiled, namespace)
+            proc.join(EVO_TEST_TIMEOUT)
+            if proc.is_alive():
+                # Infinite loop / hang: hard-kill the child. Unlike the old
+                # daemon thread, a terminated process leaves NO zombie behind.
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                proc.join(EVO_TEST_TIMEOUT)
+                if proc.is_alive():
+                    try:
+                        proc.kill()  # SIGKILL fallback (py3.7+)
+                    except Exception:
+                        pass
+                    proc.join(1.0)
+                _close_sandbox_queue(queue)
+                cls._reap_stray_children()
+                return False, ("timeout after %.1fs (candidate process "
+                               "terminated, no child processes left)"
+                               % EVO_TEST_TIMEOUT), 0.0, 0.0
+
+            # Child exited: fetch its result dict (short wait for flush).
+            result: Optional[Dict[str, Any]] = None
+            try:
+                result = queue.get(timeout=2.0)
+            except Exception:
+                result = None
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            if not isinstance(result, dict):
+                exit_code = proc.exitcode
+                return False, ("sandbox worker exited without a result "
+                               "(exit code %s)" % exit_code), 0.0, 0.0
+            try:
+                pass_rate = float(result.get("pass_rate", 0.0))
+            except Exception:
+                pass_rate = 0.0
+            try:
+                latency_avg = float(result.get("latency_avg", 0.0))
+            except Exception:
+                latency_avg = 0.0
+            return (bool(result.get("ok")), str(result.get("reason", "?")),
+                    pass_rate, latency_avg)
         except Exception as exc:
-            return False, "sandbox exec failed: %s" % exc, 0.0, 0.0
-        fn = namespace.get("execute_logic")
-        if not callable(fn):
-            return False, "execute_logic is not defined", 0.0, 0.0
-        passed = 0
-        latencies: List[float] = []
-        for query, telemetry in cls.CONTRACT_TESTS:
-            output, latency, error = cls._run_call_with_timeout(
-                fn, query, telemetry)
-            if error is not None:
-                return False, ("contract test %r failed: %s"
-                               % (query, error)), passed / total, 0.0
-            if not isinstance(output, str):
-                return False, ("contract test %r returned non-string"
-                               % query), passed / total, 0.0
-            if "<omega_analysis>" not in output:
-                return False, ("contract test %r missing <omega_analysis> "
-                               "tag" % query), passed / total, 0.0
-            passed += 1
-            latencies.append(float(latency or 0.0))
-        latency_avg = (sum(latencies) / len(latencies)) if latencies else 0.0
-        return True, "ok", passed / total, latency_avg
+            # Belt-and-braces: never leak a live child on any failure.
+            try:
+                if proc.is_alive():
+                    proc.terminate()
+                    proc.join(1.0)
+            except Exception:
+                pass
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            return False, "sandbox gate failed safely: %s" % exc, 0.0, 0.0
+        finally:
+            try:
+                if proc is not None and not proc.is_alive():
+                    proc.close()
+            except Exception:
+                pass
+
+    @staticmethod
+    def _reap_stray_children() -> None:
+        """No-zombie assertion: after a gate run no child may stay alive.
+
+        Any stray child (should never happen) is terminated immediately.
+        """
+        try:
+            ctx = multiprocessing.get_context("spawn")
+            for stray in ctx.active_children():
+                try:
+                    if stray.is_alive():
+                        stray.terminate()
+                        stray.join(1.0)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Gate 3: fitness gate
@@ -2282,12 +2691,168 @@ def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
     else:
         rows.append(("OpenRouter", "missing",
                      "set OPENROUTER_API_KEY (+ OPENROUTER_MODEL) in .env"))
-    lines = ["Integrations manifest (5 connectors):"]
-    lines.append("  %-11s %-11s %s" % ("connector", "status",
+    # v29.3.0: 6th row - optional claude_engine bridge (never a hard dep).
+    if BRIDGE_AVAILABLE and engine.openai_key:
+        rows.append(("claude_engine", "available",
+                     "bridge active - LLM calls route through it ('bridge')"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("claude_engine", "no key",
+                     "installed; set OPENAI_API_KEY to activate the bridge"))
+    else:
+        rows.append(("claude_engine", "not installed",
+                     "optional; clone repo + pip install -e . ('bridge')"))
+    lines = ["Integrations manifest (6 connectors):"]
+    lines.append("  %-13s %-13s %s" % ("connector", "status",
                                        "how to enable / use"))
     for name, status, hint in rows:
-        lines.append("  %-11s %-11s %s" % (name, status, hint))
+        lines.append("  %-13s %-13s %s" % (name, status, hint))
     return lines
+
+
+def bridge_lines(engine: OmegaMasterEngine) -> List[str]:
+    """v29.3.0 'bridge' command: claude_engine bridge status report."""
+    lines = ["claude_engine bridge status:"]
+    if BRIDGE_AVAILABLE:
+        lines.append("  module: AVAILABLE (claude_engine importable)")
+    else:
+        lines.append("  module: NOT INSTALLED (engine works fully without it)")
+        lines.append("  how to enable: clone the claude_engine repo and run "
+                     "'pip install -e .' inside it, then restart omega.py")
+    if engine.openai_key:
+        lines.append("  primary provider: openai / %s (key %s)"
+                     % (engine.omega_llm_model,
+                        mask_secret(engine.openai_key)))
+    else:
+        lines.append("  primary provider: inactive (set OPENAI_API_KEY in "
+                     ".env to activate)")
+    if engine.anthropic_key:
+        lines.append("  fallback provider: anthropic / %s (key %s)"
+                     % (CLAUDE_FALLBACK_MODEL,
+                        mask_secret(engine.anthropic_key)))
+    else:
+        lines.append("  fallback provider: none (set ANTHROPIC_API_KEY for "
+                     "the anthropic fallback)")
+    if engine._bridge_engine is not None:
+        stats_fn = getattr(engine._bridge_engine, "stats", None)
+        if callable(stats_fn):
+            try:
+                lines.append("  circuit-breaker stats: %s" % (stats_fn(),))
+            except Exception:
+                lines.append("  circuit-breaker stats: unavailable")
+        else:
+            lines.append("  circuit-breaker stats: engine has no stats()")
+    else:
+        lines.append("  engine instance: not instantiated (lazy - created on "
+                     "the first bridged LLM call)")
+    lines.append("  routing: _llm() uses the bridge when available; ANY "
+                 "exception falls back to the stdlib urllib path")
+    return lines
+
+
+# Router smoke list used by the selftest AND the 'launch' pre-flight check.
+CORE_SMOKE: List[Tuple[str, str]] = [
+    ("build and deploy sync", "Omega Infrastructure Build & Sync"),
+    ("crypto mining portfolio", "Omega Mining & Investment Engine"),
+    ("tax vat sars compliance", "Omega Tax & Audit Support"),
+    ("api key security status", "Omega Security Gatekeeper"),
+    ("deep research search", "Omega Deep Research"),
+    ("teach me companion explain", "Omega Companion/Tutor"),
+    ("business hustle opportunities", "Omega Opportunity Engine"),
+    ("finance budget scam debt", "Omega Finance Literacy"),
+    ("selfimprove evolve", "Omega Self-Improvement"),
+    ("evolution mutation engine", "Omega Evolution Engine"),
+]
+
+
+def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
+    """v29.3.0 'launch' command: GO/NO-GO pre-flight checklist.
+
+    Blockers are missing pillars / unwritable memory / selftest-core failure
+    ONLY. Optional integration keys are WARN, never blockers.
+    Returns (lines, blockers).
+    """
+    rows: List[Tuple[str, str, str]] = []
+    blockers: List[str] = []
+
+    # 1. Version current (informational; always matches the running build).
+    rows.append(("version", "OK", "v%s Launch-Grade" % ENGINE_VERSION))
+
+    # 2. Selftest core pass: router smoke over all 10 subsystems.
+    core_failures = []
+    for domain, expected in CORE_SMOKE:
+        try:
+            result = engine.execute_omega_subsystem(domain, {"query": domain})
+            if result.get("subsystem") != expected:
+                core_failures.append(domain)
+        except Exception:
+            core_failures.append(domain)
+    if core_failures:
+        rows.append(("selftest core", "FAIL",
+                     "router smoke failed for: " + ", ".join(core_failures)))
+        blockers.append("selftest core failure")
+    else:
+        rows.append(("selftest core", "OK",
+                     "router smoke: %d/%d subsystems" % (len(CORE_SMOKE),
+                                                         len(CORE_SMOKE))))
+
+    # 3. Pillars integrity.
+    pillars = engine.evolution.pillars_status()
+    rows.append(("pillars integrity", "OK" if pillars == "OK" else "FAIL",
+                 "sha256 verified" if pillars == "OK"
+                 else "tampered/missing - run 'evolve pillars'"))
+    if pillars != "OK":
+        blockers.append("pillars integrity")
+
+    # 4. Memory writable.
+    mem_ok = save_memory(engine.memory_path, engine.memory)
+    rows.append(("memory writable", "OK" if mem_ok else "FAIL",
+                 engine.memory_path if mem_ok
+                 else "cannot write " + engine.memory_path))
+    if not mem_ok:
+        blockers.append("memory not writable")
+
+    # 5. Strategy module present (auto-bootstraps; WARN if missing).
+    strategy_ok = os.path.isfile(STRATEGY_FILE)
+    rows.append(("strategy module", "OK" if strategy_ok else "WARN",
+                 STRATEGY_FILE if strategy_ok
+                 else "missing - auto-bootstraps on next evolution cycle"))
+
+    # 6. Per-integration key status (WARN, never blockers).
+    rows.append(("github key", "OK" if engine.github_repo else "WARN",
+                 "GITHUB_REPO configured" if engine.github_repo
+                 else "set GITHUB_REPO (+ GITHUB_TOKEN) in .env"))
+    rows.append(("serper key", "OK" if engine.serper_key else "WARN",
+                 "live search ready" if engine.serper_key
+                 else "set SERPER_API_KEY in .env"))
+    rows.append(("openai key", "OK" if engine.openai_key else "WARN",
+                 "LLM enhancement ready" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    rows.append(("openrouter key", "OK" if engine.openrouter_key else "WARN",
+                 "online evolution ready" if engine.openrouter_key
+                 else "set OPENROUTER_API_KEY in .env"))
+    bridge_ok = BRIDGE_AVAILABLE and bool(engine.openai_key)
+    if bridge_ok:
+        rows.append(("bridge", "OK", "claude_engine bridge active"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("bridge", "WARN", "installed; set OPENAI_API_KEY"))
+    else:
+        rows.append(("bridge", "WARN",
+                     "claude_engine not installed (optional)"))
+
+    # 7. Site version note (informational).
+    rows.append(("site version", "INFO",
+                 "badge v%s - publish via the platform publish button"
+                 % ENGINE_VERSION))
+
+    lines = ["Launch pre-flight checklist (%s):" % ENGINE_NAME]
+    lines.append("  %-18s %-6s %s" % ("check", "status", "detail"))
+    for name, status, detail in rows:
+        lines.append("  %-18s %-6s %s" % (name, status, detail))
+    if blockers:
+        lines.append("NOT READY: " + ", ".join(blockers))
+    else:
+        lines.append("LAUNCH READY")
+    return lines, blockers
 
 
 # ---------------------------------------------------------------------------
@@ -2327,12 +2892,15 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("opportunities <domain>", "opportunity scan framework"),
         ("finance <topic>", "finance literacy / scam avoidance"),
         ("languages", "African language support list"),
-        ("lang <code>", "switch UI language (en/zu/xh/st/af)"),
+        ("lang <code>", "switch UI language (15 packs: en zu xh st af tn "
+         "nso ts ve ss nr sw am yo ha)"),
         ("selfimprove <note>", "log a self-improvement entry"),
         ("evolve [sub]", "evolution engine: run | run online | rollback | "
          "lineage | pillars | test <query>"),
         ("why", "the 6 LUQI AI differentiators"),
-        ("integrations", "5-connector live status manifest"),
+        ("integrations", "6-connector live status manifest"),
+        ("bridge", "claude_engine bridge status (optional, never required)"),
+        ("launch", "GO/NO-GO launch pre-flight checklist"),
         ("remember <fact>", "persist a fact to omega_memory.json"),
         ("recall", "list all remembered facts (numbered)"),
         ("forget <n>", "delete fact #n"),
@@ -2529,6 +3097,19 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             print(out_line)
         engine._audit("CLI", "integrations", "Success")
         return True
+    # --- v29.3.0: bridge + launch commands ---
+    if lowered == "bridge":
+        for out_line in bridge_lines(engine):
+            print(out_line)
+        engine._audit("CLI", "bridge", "Success")
+        return True
+    if lowered == "launch":
+        out_lines, blockers = launch_lines(engine)
+        for out_line in out_lines:
+            print(out_line)
+        engine._audit("CLI", "launch",
+                      "Success" if not blockers else "Blocked")
+        return True
 
     # --- v29 Module A: persistent memory commands ---
     if lowered == "remember" or lowered.startswith("remember "):
@@ -2610,7 +3191,7 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
     if lowered == "query" or lowered.startswith("query "):
         for out_line in engine.query_dataset(line[len("query"):].strip()):
             print(out_line)
-        engine._audit("Dataset", "query", "Success")
+        engine._audit("Dataset", "query %s" % text, "Success")
         return True
 
     # Commands with arguments -> routed into the engine.
@@ -2727,19 +3308,8 @@ def run_selftest() -> int:
     checks = []
     engine = OmegaMasterEngine()
 
-    # Router smoke test over all 9 subsystems.
-    smoke = [
-        ("build and deploy sync", "Omega Infrastructure Build & Sync"),
-        ("crypto mining portfolio", "Omega Mining & Investment Engine"),
-        ("tax vat sars compliance", "Omega Tax & Audit Support"),
-        ("api key security status", "Omega Security Gatekeeper"),
-        ("deep research search", "Omega Deep Research"),
-        ("teach me companion explain", "Omega Companion/Tutor"),
-        ("business hustle opportunities", "Omega Opportunity Engine"),
-        ("finance budget scam debt", "Omega Finance Literacy"),
-        ("selfimprove evolve", "Omega Self-Improvement"),
-    ]
-    for domain, expected in smoke:
+    # Router smoke test over all 10 subsystems (shared with 'launch').
+    for domain, expected in CORE_SMOKE:
         try:
             result = engine.execute_omega_subsystem(domain, {"query": domain})
             ok = result.get("subsystem") == expected
@@ -2896,8 +3466,8 @@ def run_selftest() -> int:
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.2.0 + 10 subsystems + session/facts",
-                       bool(keep) and "29.2.0" in out
+        checks.append(("version: shows 29.3.0 + 10 subsystems + session/facts",
+                       bool(keep) and "29.3.0" in out
                        and "Subsystems: 10" in out
                        and "Session: #" in out and "Facts:" in out))
     except Exception as exc:
@@ -3142,10 +3712,10 @@ def run_selftest() -> int:
         out = buf.getvalue()
         checks.append(("why: 6 differentiators printed",
                        bool(keep1) and out.count("proof:") >= 6))
-        checks.append(("integrations: 5-connector manifest printed",
+        checks.append(("integrations: 6-connector manifest printed",
                        bool(keep2) and all(name in out for name in (
                            "GitHub", "Excel/CSV", "Serper", "OpenAI",
-                           "OpenRouter"))))
+                           "OpenRouter", "claude_engine"))))
     except Exception as exc:
         checks.append(("why/integrations: (exception: %s)" % exc, False))
 
@@ -3175,6 +3745,149 @@ def run_selftest() -> int:
                        and "p5_security" in out))
     except Exception as exc:
         checks.append(("evolve: status render (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
+    # ------------------------------------------------------------------
+
+    # (a) Infinite-loop candidate -> rejected via timeout; the child process
+    # is terminated and NO live child processes remain afterwards.
+    infinite_loop = (
+        "def execute_logic(query, telemetry):\n"
+        "    while True:\n"
+        "        pass\n"
+    )
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
+        checks.append(("evolve: process isolation rejects infinite loop",
+                       not ok and "timeout" in reason.lower()))
+    except Exception as exc:
+        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
+    try:
+        checks.append(("evolve: no live child processes after timeout kill",
+                       sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
+
+    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
+    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
+    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
+    memory_bomb = (
+        "def execute_logic(query, telemetry):\n"
+        "    data = list(range(10**8))\n"
+        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
+    )
+    try:
+        import resource as _resource_probe  # noqa: F401
+        _posix_ceiling = True
+    except Exception:
+        _posix_ceiling = False
+    if _posix_ceiling:
+        try:
+            ok, reason, _pr, _lat = evo.exec_contract_gate(memory_bomb)
+            checks.append(("evolve: POSIX memory bomb rejected (256MB cap)",
+                           not ok and ("memory" in reason.lower()
+                                       or "timeout" in reason.lower()
+                                       or "exit" in reason.lower())))
+            checks.append(("evolve: no live children after memory bomb",
+                           sandbox_live_children() == 0))
+        except Exception as exc:
+            checks.append(("evolve: memory bomb (exception: %s)" % exc,
+                           False))
+    else:
+        checks.append(("evolve: memory ceiling skip (non-POSIX, documented)",
+                       True))
+
+    # (c) Safe candidate still accepted end-to-end through the process-
+    # isolated gate (all 3 contract tests pass inside the child).
+    try:
+        ok, reason, pass_rate, lat = evo.exec_contract_gate(EVO_TEMPLATES[1])
+        checks.append(("evolve: safe candidate accepted end-to-end (child)",
+                       ok and pass_rate == 1.0 and lat >= 0.0
+                       and sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: safe end-to-end (exception: %s)" % exc,
+                       False))
+
+    # Bridge-absent safety: claude_engine is NOT installed in this sandbox;
+    # everything must work without it (the natural test condition).
+    try:
+        checks.append(("bridge: guarded import flag is a plain bool",
+                       isinstance(BRIDGE_AVAILABLE, bool)))
+    except Exception as exc:
+        checks.append(("bridge: flag (exception: %s)" % exc, False))
+    try:
+        if BRIDGE_AVAILABLE:
+            # Installed elsewhere: lazy singleton must still be safe.
+            bridge_ok = True
+        else:
+            bridge_ok = engine._get_bridge() is None
+        checks.append(("bridge: lazy singleton safe when module absent",
+                       bridge_ok))
+    except Exception as exc:
+        checks.append(("bridge: lazy singleton (exception: %s)" % exc, False))
+    try:
+        offline_engine._bridge_attempted = False
+        offline_engine._bridge_engine = None
+        checks.append(("bridge: _llm falls back cleanly (offline -> None)",
+                       offline_engine._llm("bridge safety probe") is None))
+    except Exception as exc:
+        checks.append(("bridge: _llm fallback (exception: %s)" % exc, False))
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "bridge")
+        out = buf.getvalue()
+        checks.append(("bridge: command reports status without keys/module",
+                       bool(keep) and "claude_engine bridge status" in out
+                       and "fallback provider" in out))
+    except Exception as exc:
+        checks.append(("bridge: command (exception: %s)" % exc, False))
+
+    # Language packs: exactly 15 complete packs, all ASCII-safe.
+    try:
+        pack_keys = ("name", "greeting", "goodbye", "help_header",
+                     "unknown_command", "remembered", "forgot")
+        complete = all(all(k in pack for k in pack_keys)
+                       for pack in LANG_PACKS.values())
+        checks.append(("lang: 15 complete language packs",
+                       len(LANG_PACKS) == 15 and complete))
+        ascii_safe = all(
+            all(ord(ch) < 128 for ch in str(value))
+            for pack in LANG_PACKS.values() for value in pack.values())
+        checks.append(("lang: all pack strings ASCII-safe", ascii_safe))
+    except Exception as exc:
+        checks.append(("lang: pack audit (exception: %s)" % exc, False))
+
+    # Roundtrips through 2 of the new packs (sw + am), then back to en.
+    for new_code in ("sw", "am"):
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                handle_command(engine, "lang " + new_code)
+                out_new = buf.getvalue()
+                handle_command(engine, "lang en")
+            ok = (engine.lang == "en"
+                  and LANG_PACKS[new_code]["name"] in out_new
+                  and load_memory(engine.memory_path).get("lang") == "en")
+            checks.append(("lang: new pack '%s' roundtrip" % new_code, ok))
+        except Exception as exc:
+            checks.append(("lang: '%s' roundtrip (exception: %s)"
+                           % (new_code, exc), False))
+
+    # Launch pre-flight: GO/NO-GO table renders; clean room -> LAUNCH READY.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "launch")
+        out = buf.getvalue()
+        checks.append(("launch: pre-flight table + LAUNCH READY",
+                       bool(keep) and "pillars integrity" in out
+                       and "memory writable" in out
+                       and "LAUNCH READY" in out
+                       and "NOT READY" not in out))
+    except Exception as exc:
+        checks.append(("launch: (exception: %s)" % exc, False))
 
     # Report.
     failures = 0
