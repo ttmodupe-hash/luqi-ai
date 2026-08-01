@@ -3191,7 +3191,7 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
     if lowered == "query" or lowered.startswith("query "):
         for out_line in engine.query_dataset(line[len("query"):].strip()):
             print(out_line)
-        engine._audit("Dataset", "query %s" % text, "Success")
+        engine._audit("Dataset", "query", "Success")
         return True
 
     # Commands with arguments -> routed into the engine.
