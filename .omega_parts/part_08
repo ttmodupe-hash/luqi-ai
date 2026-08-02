@@ -1,0 +1,537 @@
+           daemon=True,
+            )
+            proc.start()
+        except Exception as exc:
+            if queue is not None:
+                _close_sandbox_queue(queue)
+            return False, "sandbox process spawn failed: %s" % exc, 0.0, 0.0
+
+        try:
+            proc.join(EVO_TEST_TIMEOUT)
+            if proc.is_alive():
+                # Infinite loop / hang: hard-kill the child. Unlike the old
+                # daemon thread, a terminated process leaves NO zombie behind.
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                proc.join(EVO_TEST_TIMEOUT)
+                if proc.is_alive():
+                    try:
+                        proc.kill()  # SIGKILL fallback (py3.7+)
+                    except Exception:
+                        pass
+                    proc.join(1.0)
+                _close_sandbox_queue(queue)
+                cls._reap_stray_children()
+                return False, ("timeout after %.1fs (candidate process "
+                               "terminated, no child processes left)"
+                               % EVO_TEST_TIMEOUT), 0.0, 0.0
+
+            # Child exited: fetch its result dict (short wait for flush).
+            result: Optional[Dict[str, Any]] = None
+            try:
+                result = queue.get(timeout=2.0)
+            except Exception:
+                result = None
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            if not isinstance(result, dict):
+                exit_code = proc.exitcode
+                return False, ("sandbox worker exited without a result "
+                               "(exit code %s)" % exit_code), 0.0, 0.0
+            try:
+                pass_rate = float(result.get("pass_rate", 0.0))
+            except Exception:
+                pass_rate = 0.0
+            try:
+                latency_avg = float(result.get("latency_avg", 0.0))
+            except Exception:
+                latency_avg = 0.0
+            return (bool(result.get("ok")), str(result.get("reason", "?")),
+                    pass_rate, latency_avg)
+        except Exception as exc:
+            # Belt-and-braces: never leak a live child on any failure.
+            try:
+                if proc.is_alive():
+                    proc.terminate()
+                    proc.join(1.0)
+            except Exception:
+                pass
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            return False, "sandbox gate failed safely: %s" % exc, 0.0, 0.0
+        finally:
+            try:
+                if proc is not None and not proc.is_alive():
+                    proc.close()
+            except Exception:
+                pass
+
+    @staticmethod
+    def _reap_stray_children() -> None:
+        """No-zombie assertion: after a gate run no child may stay alive.
+
+        Any stray child (should never happen) is terminated immediately.
+        """
+        try:
+            ctx = multiprocessing.get_context("spawn")
+            for stray in ctx.active_children():
+                try:
+                    if stray.is_alive():
+                        stray.terminate()
+                        stray.join(1.0)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Gate 3: fitness gate
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def fitness(pass_rate: float, latency_avg: float, health: float) -> float:
+        """fitness = 0.5*pass + 0.3*latency_score + 0.2*health, clamped."""
+        try:
+            lat_score = 1.0 if float(latency_avg) <= 2.0 else 0.0
+            value = (0.5 * float(pass_rate) + 0.3 * lat_score
+                     + 0.2 * float(health))
+            return max(0.0, min(1.0, value))
+        except Exception:
+            return 0.0
+
+    def current_fitness(self) -> Optional[float]:
+        fitness = self.state.get("current_fitness")
+        return float(fitness) if isinstance(fitness, (int, float)) else None
+
+    # ------------------------------------------------------------------
+    # Lineage / archives / adoption / rollback
+    # ------------------------------------------------------------------
+
+    def _next_generation(self) -> int:
+        gens = [self.generation()]
+        for entry in self.state.get("lineage", []):
+            try:
+                gens.append(int(entry.get("generation", 1)))
+            except Exception:
+                continue
+        return max(gens) + 1
+
+    def _archive_names(self) -> List[Tuple[int, str]]:
+        archives: List[Tuple[int, str]] = []
+        try:
+            for name in os.listdir("."):
+                match = re.fullmatch(r"omega_gen_(\d+)\.py", name)
+                if match:
+                    archives.append((int(match.group(1)), name))
+        except Exception:
+            pass
+        archives.sort()
+        return archives
+
+    def _prune_archives(self, keep: int = EVO_ARCHIVE_KEEP) -> None:
+        try:
+            archives = self._archive_names()
+            for _gen, name in archives[:-keep] if len(archives) > keep else []:
+                try:
+                    os.remove(name)
+                except Exception:
+                    pass
+            remaining = {str(gen) for gen, _name in archives[-keep:]}
+            fitness_map = self.state.setdefault("archive_fitness", {})
+            for key in list(fitness_map.keys()):
+                if key not in remaining:
+                    fitness_map.pop(key, None)
+        except Exception:
+            pass
+
+    def _adopt(self, code: str, fitness: float, source: str) -> int:
+        """Archive the current generation, write the candidate, log lineage."""
+        current = self.generation()
+        try:
+            if os.path.isfile(self.strategy_path):
+                with open(self.strategy_path, "r", encoding="utf-8",
+                          errors="replace") as src:
+                    blob = src.read()
+                with open("omega_gen_%d.py" % current, "w",
+                          encoding="utf-8") as dst:
+                    dst.write(blob)
+                prior = self.current_fitness()
+                self.state.setdefault("archive_fitness", {})[str(current)] = (
+                    prior if prior is not None else 0.0)
+        except Exception:
+            pass
+        self._prune_archives()
+        new_gen = self._next_generation()
+        try:
+            with open(self.strategy_path, "w", encoding="utf-8") as handle:
+                handle.write(code if code.endswith("\n") else code + "\n")
+        except Exception:
+            pass
+        self.state["generation"] = new_gen
+        self.state["current_fitness"] = fitness
+        self.state.setdefault("lineage", []).append({
+            "generation": new_gen,
+            "fitness": fitness,
+            "adopted_at": utc_now_iso(),
+            "parent": current,
+            "source": source,
+        })
+        self._save_state()
+        return new_gen
+
+    def rollback(self) -> Tuple[bool, List[str]]:
+        """Restore the highest-fitness archived generation as current."""
+        lines = ["[Evolution Engine] Rollback requested."]
+        try:
+            fitness_map = self.state.get("archive_fitness") or {}
+            candidates = []
+            for gen, name in self._archive_names():
+                try:
+                    fit = float(fitness_map.get(str(gen), 0.0))
+                except Exception:
+                    fit = 0.0
+                candidates.append((fit, gen, name))
+            if not candidates:
+                lines.append("  no archived generations - nothing to roll "
+                             "back to.")
+                return False, lines
+            candidates.sort(reverse=True)  # highest fitness first
+            fit, gen, name = candidates[0]
+            with open(name, "r", encoding="utf-8", errors="replace") as src:
+                blob = src.read()
+            with open(self.strategy_path, "w", encoding="utf-8") as dst:
+                dst.write(blob)
+            current = self.generation()
+            self.state["generation"] = gen
+            self.state["current_fitness"] = fit
+            self.state.setdefault("lineage", []).append({
+                "generation": gen,
+                "fitness": fit,
+                "adopted_at": utc_now_iso(),
+                "parent": current,
+                "action": "rollback",
+            })
+            self._save_state()
+            lines.append("  restored generation %d (fitness %.3f) from %s."
+                         % (gen, fit, name))
+            lines.append("  omega_strategy_gen.py now runs generation %d."
+                         % gen)
+            self.engine._audit("Evolution", "evolve rollback", "Success")
+            return True, lines
+        except Exception as exc:
+            lines.append("  rollback failed safely: %s" % exc)
+            return False, lines
+
+    # ------------------------------------------------------------------
+    # Online proposal (guarded; correct OpenRouter endpoint; urllib)
+    # ------------------------------------------------------------------
+
+    def _openrouter_propose(self) -> Tuple[Optional[str], str]:
+        """Ask the LLM for a candidate mutation. Returns (code, error)."""
+        try:
+            key = self.engine.openrouter_key
+            if not key:
+                return None, ("OPENROUTER_API_KEY not set (.env or "
+                              "environment)")
+            pillars_json = json.dumps(CANONICAL_PILLARS, ensure_ascii=True)
+            system_prompt = EVO_META_SYSTEM_PROMPT.replace(
+                "{pillars}", pillars_json)
+            recent = json.dumps((self.state.get("scores") or [])[-5:])
+            user_prompt = ("LOG TELEMETRY:\n%s\n\nCompile optimized python "
+                           "code execution matrix:" % recent)
+            body = json.dumps({
+                "model": self.engine.openrouter_model,
+                "temperature": 0.25,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENROUTER_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request,
+                                        timeout=EVO_HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8",
+                                                     errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None, "empty response from gateway"
+            content = str((choices[0].get("message") or {}).get("content")
+                          or "").strip()
+            if content.startswith("```"):
+                # Strip markdown fences if the model added them anyway.
+                fence_lines = content.splitlines()
+                if fence_lines and fence_lines[0].startswith("```"):
+                    fence_lines = fence_lines[1:]
+                if fence_lines and fence_lines[-1].strip().startswith("```"):
+                    fence_lines = fence_lines[:-1]
+                content = "\n".join(fence_lines).strip()
+            if not content:
+                return None, "gateway returned empty code"
+            return content, ""
+        except Exception as exc:
+            return None, str(exc)
+
+    # ------------------------------------------------------------------
+    # One evolution cycle: propose -> gate 1 -> gate 2 -> gate 3 -> adopt
+    # ------------------------------------------------------------------
+
+    def run_cycle(self, online: bool = False) -> Tuple[bool, List[str]]:
+        lines = ["[Evolution Engine] Mutation cycle starting."]
+        try:
+            # Pillars are re-verified on every cycle (SPEC 2.1).
+            if self.verify_pillars(announce=True) == "RESTORED":
+                lines.append("  pillars restored to canonical form.")
+            if online:
+                code, error = self._openrouter_propose()
+                if code is None:
+                    lines.append("  online proposal failed: %s" % error)
+                    lines.append("  cycle aborted safely. Hint: 'evolve run' "
+                                 "uses the offline template engine.")
+                    self.engine._audit("Evolution", "evolve run online",
+                                       "Failed")
+                    return False, lines
+                source = "openrouter:" + self.engine.openrouter_model
+                lines.append("  mode: online LLM proposal (%s)."
+                             % self.engine.openrouter_model)
+            else:
+                index = (self._next_generation() - 2) % len(EVO_TEMPLATES)
+                code = EVO_TEMPLATES[index]
+                source = "offline-template-%d" % (index + 1)
+                lines.append("  mode: offline template mutation "
+                             "(no network, no LLM).")
+            lines.append("  candidate source: %s" % source)
+
+            ok, reason = self.ast_gate(code)
+            lines.append("  gate 1 (AST whitelist): %s"
+                         % ("PASS" if ok else "REJECT - " + reason))
+            if not ok:
+                self.engine._audit("Evolution", "evolve run (%s)" % source,
+                                   "Rejected-AST")
+                return False, lines
+
+            ok, reason, pass_rate, latency_avg = self.exec_contract_gate(code)
+            lines.append("  gate 2 (sandbox + 3 contract tests): %s"
+                         % ("PASS" if ok else "REJECT - " + reason))
+            if not ok:
+                self.engine._audit("Evolution", "evolve run (%s)" % source,
+                                   "Rejected-Sandbox")
+                return False, lines
+
+            candidate_fitness = self.fitness(pass_rate, latency_avg,
+                                             self.health())
+            current = self.current_fitness()
+            current_txt = ("%.3f" % current) if current is not None \
+                else "(none recorded)"
+            lines.append("  gate 3 (fitness): candidate=%.3f current=%s"
+                         % (candidate_fitness, current_txt))
+            if current is not None and candidate_fitness < current:
+                lines.append("  REJECT - candidate fitness below current "
+                             "generation.")
+                self.engine._audit("Evolution", "evolve run (%s)" % source,
+                                   "Rejected-Fitness")
+                return False, lines
+
+            new_gen = self._adopt(code, candidate_fitness, source)
+            lines.append("  ADOPTED: generation %d now live (fitness %.3f)."
+                         % (new_gen, candidate_fitness))
+            lines.append("  previous generation archived (last %d kept)."
+                         % EVO_ARCHIVE_KEEP)
+            self.engine._audit("Evolution", "evolve run (%s)" % source,
+                               "Success")
+            return True, lines
+        except Exception as exc:
+            lines.append("  cycle aborted safely: %s" % exc)
+            return False, lines
+
+    # ------------------------------------------------------------------
+    # Telemetry (clamped scoring - fixes the negative-health bug)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def score_result(success: bool, output: str, latency: float) -> float:
+        """Score one exchange; clamped to [0.0, 1.0] (never negative)."""
+        try:
+            score = 1.0 if success else 0.0
+            if "<omega_analysis>" not in (output or ""):
+                score -= 0.3
+            if float(latency) > 2.0:
+                score -= 0.2
+            return max(0.0, min(1.0, score))
+        except Exception:
+            return 0.0
+
+    def _record_score(self, score: float) -> None:
+        try:
+            scores = self.state.setdefault("scores", [])
+            scores.append(round(max(0.0, min(1.0, float(score))), 4))
+            del scores[:-10]  # keep the last 10 scores only
+            tail = scores[-10:]
+            health = (sum(tail) / len(tail)) if tail else 1.0
+            self.state["health"] = round(max(0.0, min(1.0, health)), 4)
+            self._save_state()
+        except Exception:
+            pass
+
+    def test_query(self, query: str) -> List[str]:
+        """Run the live strategy against a query and score the exchange."""
+        query = str(query or "").strip() or "status"
+        lines = ["[Evolution Engine] strategy test: %s" % query]
+        try:
+            with open(self.strategy_path, "r", encoding="utf-8",
+                      errors="replace") as handle:
+                code = handle.read()
+        except Exception as exc:
+            lines.append("  could not load strategy module: %s" % exc)
+            return lines
+        telemetry = ["generation %d" % self.generation(),
+                     "health %.2f" % self.health()]
+        try:
+            for entry in list(self.engine.memory.get("history", []))[-3:]:
+                if isinstance(entry, dict):
+                    telemetry.append(str(entry.get("text", ""))[:60])
+        except Exception:
+            pass
+        output: Any = None
+        latency = 0.0
+        error: Optional[str] = None
+        try:
+            namespace = self._restricted_namespace()
+            exec(compile(code, "<omega_strategy>", "exec"), namespace)
+            fn = namespace.get("execute_logic")
+            if not callable(fn):
+                error = "execute_logic missing from strategy module"
+            else:
+                output, latency, error = self._run_call_with_timeout(
+                    fn, query, telemetry)
+        except Exception as exc:
+            error = str(exc)
+        success = error is None and isinstance(output, str)
+        text_out = output if isinstance(output, str) else ""
+        score = self.score_result(success, text_out, latency or 0.0)
+        self._record_score(score)
+        if success:
+            lines.append("  output:")
+            for out_line in (text_out.splitlines() or [""]):
+                lines.append("    " + out_line)
+        else:
+            lines.append("  execution failed safely: %s" % error)
+        lines.append("  latency: %.3fs | score: %.2f | health: %.2f"
+                     % (latency or 0.0, score, self.health()))
+        self.engine._audit("Evolution", "evolve test %s" % query[:60],
+                           "Success" if success else "Failed")
+        return lines
+
+    # ------------------------------------------------------------------
+    # Status / lineage presentation
+    # ------------------------------------------------------------------
+
+    def status_lines(self) -> List[str]:
+        fitness = self.current_fitness()
+        fitness_txt = ("%.3f" % fitness) if fitness is not None \
+            else "(none recorded)"
+        return [
+            "Evolution Engine status:",
+            "  current generation: %d" % self.generation(),
+            "  current fitness: %s" % fitness_txt,
+            "  telemetry health: %.2f" % self.health(),
+            "  pillars integrity: %s" % self.pillars_status(),
+            "  lineage length: %d" % len(self.state.get("lineage", [])),
+            "  strategy module: %s" % self.strategy_path,
+            "  lineage log: %s" % self.state_path,
+        ]
+
+    def lineage_lines(self) -> List[str]:
+        lines = ["Evolution lineage (current generation %d):"
+                 % self.generation()]
+        lineage = self.state.get("lineage", [])
+        if not lineage:
+            lines.append("  (no adoptions yet - generation 1 bootstrap "
+                         "active)")
+            return lines
+        lines.append("  %-4s %-8s %-21s %-7s %s"
+                     % ("gen", "fitness", "adopted_at", "parent", "source"))
+        for entry in lineage:
+            fitness = entry.get("fitness")
+            fitness_txt = ("%.3f" % fitness) \
+                if isinstance(fitness, (int, float)) else "?"
+            marker = " (rollback)" if entry.get("action") == "rollback" \
+                else ""
+            lines.append("  %-4s %-8s %-21s %-7s %s" % (
+                str(entry.get("generation", "?")),
+                fitness_txt,
+                str(entry.get("adopted_at", "?"))[:21],
+                str(entry.get("parent", "?")),
+                str(entry.get("source", "?")) + marker,
+            ))
+        return lines
+
+
+# ---------------------------------------------------------------------------
+# v29.2.0: differentiation layer ('why' + 'integrations')
+# ---------------------------------------------------------------------------
+
+def why_lines() -> List[str]:
+    """The 6 LUQI AI differentiators, each with a one-line proof."""
+    return [
+        "Why LUQI AI - 6 differentiators:",
+        "1. Integration-first, not siloed.",
+        "   proof: connects GitHub, Excel/CSV, Serper, OpenAI, OpenRouter "
+        "- run 'integrations'.",
+        "2. Built to last, not a trend.",
+        "   proof: versioned releases, append-only audit trail, selftest "
+        "suite ships with every build.",
+        "3. Teaches while it works.",
+        "   proof: companion + finance literacy subsystems build YOUR "
+        "skill, not dependency.",
+        "4. 100 languages, African-first, yours.",
+        "   proof: 100 UI language packs (70 African) ship offline in one "
+        "file - local memory, your language, your data on your machine.",
+        "5. Free to run, cheap to scale.",
+        "   proof: pure stdlib Python, offline-first, no subscription - "
+        "engine free forever; BYOK calls cost cents ('cost').",
+        "6. Makes you more capable, not obsolete.",
+        "   proof: opportunity engine + reports you own and can export "
+        "anytime.",
+    ]
+
+
+def cost_lines() -> List[str]:
+    """v29.4.0 'cost' command: the pricing-disruption table.
+
+    Honest ranges only - no fabricated precision.
+    """
+    return [
+        "LUQI AI cost model - the pricing disruption:",
+        "  LUQI AI engine        : free forever - pure Python stdlib, "
+        "runs offline, no subscription, no lock-in.",
+        "  BYOK model calls      : pay-per-use cents - fractions of a "
+        "cent to a few cents per call depending on model.",
+        "  Big-AI subscriptions  : typically around $20/month per seat.",
+        "",
+        "World-best capabilities, African-friendly price.",
+    ]
+
+
+def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
+    """Live status manifest for the 5 connectors."""
+    rows = []
+    if engine._git_path() and engine.github_repo:
+        rows.append(("GitHub", "configured", "ready - run 'sync github'"))
+    elif engine._git_path():
+        rows.append(("GitHub", "available",
+                     "git found; set GITHUB_REPO in .env to enable"))
+    else:
+        rows.append(("GitHub", "missing",
+                     "install git and set GITHUB_REPO in .env"))
+    rows.append(("Excel/CSV", "available",
+                 "stdlib reader built in - us
