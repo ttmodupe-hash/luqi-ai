@@ -1,0 +1,556 @@
+ple quadratics.",
+            "The quadratic formula.",
+            "Parabolas and their turning points."]),
+        ("Capstone: Problem-Solving Strategies", [
+            "Breaking multi-step word problems into parts.",
+            "Choosing a strategy: draw, table, equation, estimate.",
+            "Reviewing and connecting all nine units."]),
+    ],
+    "physics": [
+        ("Motion and Speed", [
+            "Distance vs displacement.",
+            "Speed and velocity; the speed equation.",
+            "Reading distance-time graphs."]),
+        ("Forces and Newton's Laws", [
+            "First law: objects keep doing what they are doing.",
+            "Second law: F = ma.",
+            "Third law: every action has an equal opposite reaction."]),
+        ("Energy and Work", [
+            "Kinetic and potential energy.",
+            "Conservation of energy.",
+            "Work and power in everyday machines."]),
+        ("Momentum and Collisions", [
+            "Momentum p = mv.",
+            "Impulse changes momentum.",
+            "Conservation of momentum in collisions."]),
+        ("Waves and Sound", [
+            "Wavelength, frequency and amplitude.",
+            "The wave equation v = f x wavelength.",
+            "Sound as a pressure wave."]),
+        ("Light and Optics", [
+            "Reflection and refraction.",
+            "Lenses and mirrors.",
+            "The electromagnetic spectrum."]),
+        ("Electricity Basics", [
+            "Charge, current and voltage.",
+            "Ohm's law V = IR.",
+            "Series vs parallel circuits."]),
+        ("Magnetism", [
+            "Magnetic fields and poles.",
+            "Electromagnets.",
+            "Motors and generators."]),
+        ("Heat and Thermodynamics", [
+            "Temperature vs heat.",
+            "Conduction, convection and radiation.",
+            "The laws of thermodynamics in plain language."]),
+        ("Capstone: Modern Physics Survey", [
+            "Atoms, nuclei and radioactivity.",
+            "Relativity in one big idea.",
+            "Quantum thinking: probability at small scales."]),
+    ],
+    "chemistry": [
+        ("Matter and Its States", [
+            "Solids, liquids and gases.",
+            "Physical vs chemical change.",
+            "Mixtures and pure substances."]),
+        ("Atoms and Elements", [
+            "Protons, neutrons and electrons.",
+            "Atomic number and mass number.",
+            "Reading an element on the periodic table."]),
+        ("The Periodic Table", [
+            "Groups and periods.",
+            "Metals vs nonmetals.",
+            "Trends in reactivity."]),
+        ("Chemical Bonding", [
+            "Ionic bonds transfer electrons.",
+            "Covalent bonds share electrons.",
+            "Molecules and compounds."]),
+        ("Chemical Reactions", [
+            "Reactants and products.",
+            "Balancing equations.",
+            "Common reaction types."]),
+        ("The Mole and Stoichiometry", [
+            "Avogadro's number and the mole.",
+            "Molar mass.",
+            "Mole-to-mass conversions."]),
+        ("Acids and Bases", [
+            "The pH scale from 0 to 14.",
+            "Neutralization reactions.",
+            "Everyday acids and alkalis."]),
+        ("Solutions and Concentration", [
+            "Solutes, solvents and solutions.",
+            "Concentration and molarity.",
+            "Basic solubility rules."]),
+        ("Energy in Chemistry", [
+            "Exothermic vs endothermic reactions.",
+            "Activation energy.",
+            "What controls reaction rates."]),
+        ("Capstone: Organic Chemistry Intro", [
+            "Carbon chains and rings.",
+            "Common functional groups.",
+            "Organic molecules in daily life."]),
+    ],
+    "biology": [
+        ("The Cell", [
+            "Cell theory: all living things are made of cells.",
+            "Organelles and their jobs.",
+            "Plant vs animal cells."]),
+        ("Cell Energy", [
+            "Photosynthesis captures light energy.",
+            "Respiration releases energy from glucose.",
+            "How the two processes balance the carbon cycle."]),
+        ("DNA and Genetics", [
+            "The double helix stores instructions.",
+            "Genes and chromosomes.",
+            "Dominant and recessive traits."]),
+        ("Evolution by Natural Selection", [
+            "Variation exists in every population.",
+            "Helpful traits spread over generations.",
+            "Evidence: fossils, anatomy, DNA."]),
+        ("Human Body Systems", [
+            "Circulatory and respiratory systems.",
+            "Digestive and nervous systems.",
+            "How body systems cooperate."]),
+        ("Ecology and Ecosystems", [
+            "Food chains and food webs.",
+            "Energy flow through trophic levels.",
+            "Why biodiversity matters."]),
+        ("Classification of Life", [
+            "Domains and kingdoms.",
+            "Binomial (two-name) naming.",
+            "Reading the tree of life."]),
+        ("Microorganisms and Disease", [
+            "Bacteria vs viruses.",
+            "How the immune system defends you.",
+            "How vaccines train immunity."]),
+        ("Reproduction and Development", [
+            "Mitosis for growth; meiosis for reproduction.",
+            "Life cycles across species.",
+            "Growth and development stages."]),
+        ("Capstone: Homeostasis and Health", [
+            "Feedback loops keep conditions stable.",
+            "Temperature, water and sugar balance.",
+            "Using biology in daily health decisions."]),
+    ],
+    "english": [
+        ("Sentence Foundations", [
+            "Every sentence needs a subject and a verb.",
+            "Statement, question, command, exclamation.",
+            "Capital letters and end punctuation."]),
+        ("Parts of Speech", [
+            "Nouns, verbs and adjectives.",
+            "Adverbs and prepositions.",
+            "Conjunctions join ideas."]),
+        ("Vocabulary Building", [
+            "Using context clues for new words.",
+            "Roots, prefixes and suffixes.",
+            "Choosing precise words for tone."]),
+        ("Paragraph Writing", [
+            "A strong topic sentence.",
+            "Supporting details and examples.",
+            "Transitions that guide the reader."]),
+        ("Reading Comprehension", [
+            "Main idea vs supporting detail.",
+            "Making inferences from evidence.",
+            "Summarizing in your own words."]),
+        ("Grammar in Depth", [
+            "Verb tenses and subject-verb agreement.",
+            "Fixing common errors.",
+            "Active vs passive voice."]),
+        ("Essay Structure", [
+            "Introduction with a clear thesis.",
+            "Body paragraphs: one idea each.",
+            "Conclusions that answer 'so what'."]),
+        ("Persuasive Writing", [
+            "Claims backed by evidence.",
+            "Addressing counterarguments.",
+            "Ethos, pathos and logos."]),
+        ("Literature and Analysis", [
+            "Theme and character development.",
+            "Figurative language: metaphor, simile, imagery.",
+            "Supporting analysis with quotations."]),
+        ("Capstone: Communication Skills", [
+            "Speaking and active listening.",
+            "Formal vs informal registers.",
+            "Editing and revising your own work."]),
+    ],
+    "computer-science": [
+        ("Computing and Python Setup", [
+            "What a program is and how it runs.",
+            "Running your first Python script.",
+            "Variables and the print() function."]),
+        ("Data Types and Operations", [
+            "Integers, floats and strings.",
+            "Converting between types.",
+            "Building output with f-strings."]),
+        ("Control Flow: Decisions", [
+            "if, elif and else.",
+            "Comparison operators.",
+            "Boolean logic with and/or/not."]),
+        ("Loops and Iteration", [
+            "for loops and range().",
+            "while loops for unknown counts.",
+            "break and continue."]),
+        ("Data Structures", [
+            "Lists and tuples for ordered data.",
+            "Dictionaries for key-value lookup.",
+            "Sets and when to use them."]),
+        ("Functions", [
+            "Defining and calling functions.",
+            "Arguments and return values.",
+            "Variable scope basics."]),
+        ("Files and Errors", [
+            "Reading and writing text files.",
+            "try/except for graceful failure.",
+            "Debugging: read the traceback bottom-up."]),
+        ("Object-Oriented Basics", [
+            "Classes bundle data and behavior.",
+            "Methods and attributes.",
+            "Simple inheritance."]),
+        ("Algorithms and Problem Solving", [
+            "Searching and sorting ideas.",
+            "Big-O intuition: what scales.",
+            "Plan in pseudocode before coding."]),
+        ("Capstone: Build a Project", [
+            "Plan a small command-line app.",
+            "Structure code into functions and files.",
+            "Test it, then choose your next topic."]),
+    ],
+    "finance": [
+        ("Money Mindset and Goals", [
+            "Needs vs wants.",
+            "Setting SMART money goals.",
+            "Tracking where every unit goes."]),
+        ("Budgeting Basics", [
+            "Listing income and expenses.",
+            "The 50/30/20 rule as a starting point.",
+            "Building your first written budget."]),
+        ("Saving and Emergency Funds", [
+            "Why an emergency fund comes first.",
+            "Automating savings on payday.",
+            "Where to keep savings safely."]),
+        ("Banking and Interest", [
+            "Account types and their purposes.",
+            "Simple vs compound interest.",
+            "Reading APR and APY."]),
+        ("Debt and Credit", [
+            "Good debt vs bad debt.",
+            "How credit scores work.",
+            "The avalanche payoff method."]),
+        ("Scam and Fraud Defense", [
+            "Red flags: guaranteed returns, urgency, secrecy.",
+            "Verifying platforms and advisors.",
+            "Protecting your personal data."]),
+        ("Investing Fundamentals", [
+            "The risk-return trade-off.",
+            "Stocks, bonds and funds.",
+            "Diversification spreads risk."]),
+        ("Long-Term Planning", [
+            "Why starting early wins (compounding).",
+            "Employer and government retirement plans.",
+            "Setting a decades-long horizon."]),
+        ("Taxes and Payslips", [
+            "Reading a payslip line by line.",
+            "Common deductions and credits.",
+            "Basic filing obligations."]),
+        ("Capstone: Your Personal Finance Plan", [
+            "Reviewing all nine units.",
+            "Building a one-page money plan.",
+            "Habits that make it stick."]),
+    ],
+    "history": [
+        ("Studying the Past", [
+            "Primary vs secondary sources.",
+            "Chronology and timelines.",
+            "Spotting bias and perspective."]),
+        ("Early Civilizations", [
+            "Mesopotamia and Egypt.",
+            "The Indus Valley.",
+            "Early Chinese dynasties."]),
+        ("Classical Empires", [
+            "Greece and Rome.",
+            "The Mali Empire and its gold wealth.",
+            "Han China."]),
+        ("Religions and Ideas", [
+            "The major world religions.",
+            "Philosophical traditions East and West.",
+            "How ideas spread along trade routes."]),
+        ("The Medieval World", [
+            "Feudalism in Europe and Japan.",
+            "The Islamic golden age.",
+            "African kingdoms and Indian Ocean trade."]),
+        ("Exploration and Exchange", [
+            "The Columbian exchange.",
+            "Ocean trade networks.",
+            "Consequences for indigenous peoples."]),
+        ("Revolutions", [
+            "The American and French revolutions.",
+            "The Industrial Revolution.",
+            "Ideas of rights and citizenship."]),
+        ("The World Wars", [
+            "Causes and alliance systems.",
+            "Turning points of both wars.",
+            "Aftermath: the UN and a new order."]),
+        ("Decolonization and Civil Rights", [
+            "Independence movements in Africa and Asia.",
+            "Civil rights struggles worldwide.",
+            "Challenges facing new nations."]),
+        ("Capstone: The Modern World", [
+            "Globalization and interdependence.",
+            "Technology reshaping society.",
+            "Applying history's lessons today."]),
+    ],
+}
+
+
+def generic_scaffold(subject: str) -> List[Dict[str, Any]]:
+    """Generic 10-lesson mastery scaffold for an unknown subject."""
+    name = subject or "this subject"
+    titles_points = [
+        ("Foundations of %s" % name, [
+            "The core vocabulary of %s." % name,
+            "Why %s matters and who uses it." % name,
+            "How the field of %s is organized." % name]),
+        ("%s: Basic Principles" % name, [
+            "The three to five foundational ideas.",
+            "Simple worked examples.",
+            "Common beginner misconceptions."]),
+        ("Essential Skills in %s" % name, [
+            "The core techniques step by step.",
+            "Guided practice routines.",
+            "Self-check habits that catch errors early."]),
+        ("%s in the Real World" % name, [
+            "Everyday applications of %s." % name,
+            "Short case studies.",
+            "Careers and communities around %s." % name]),
+        ("Intermediate Concepts of %s" % name, [
+            "Deeper theory behind the basics.",
+            "Connecting ideas across topics.",
+            "Worked examples at medium difficulty."]),
+        ("Tools and Methods of %s" % name, [
+            "The standard tools practitioners use.",
+            "How experts approach a problem.",
+            "A hands-on mini-project."]),
+        ("Advanced Topics in %s" % name, [
+            "Current debates and open questions.",
+            "Advanced frameworks in plain language.",
+            "Stretch exercises beyond the basics."]),
+        ("Common Pitfalls in %s" % name, [
+            "Typical mistakes learners make.",
+            "How to spot and fix them.",
+            "Expert tips for avoiding rework."]),
+        ("Mastery Practice in %s" % name, [
+            "Mixed practice sets across all units.",
+            "Timed challenges.",
+            "Explaining ideas out loud to lock them in."]),
+        ("Capstone: Your %s Project" % name, [
+            "Plan a final project that shows your skills.",
+            "Demonstrate and review your work.",
+            "Map out your next learning steps."]),
+    ]
+    return [{"title": t, "points": list(p)} for t, p in titles_points]
+
+
+# Offline self-check quiz banks: accurate Q&A for the 8 core subjects.
+OFFLINE_QUIZ_BANKS: Dict[str, List[Tuple[str, str]]] = {
+    "mathematics": [
+        ("What is 7 x 8?", "56"),
+        ("Solve for x: x + 9 = 15", "x = 6"),
+        ("What is 25% of 80?", "20"),
+        ("What is the mean of 4, 8 and 12?", "8"),
+        ("What is the square root of 144?", "12"),
+        ("In y = 3x + 2, what is the slope?", "3"),
+    ],
+    "physics": [
+        ("State Newton's second law.", "F = ma (force = mass x acceleration)"),
+        ("What is the SI unit of force?", "The newton (N)"),
+        ("Speed equals distance divided by what?", "Time"),
+        ("What kind of energy does a moving object have?", "Kinetic energy"),
+        ("State Ohm's law.", "V = IR (voltage = current x resistance)"),
+        ("Roughly how fast is light in a vacuum?",
+         "About 300,000 km/s (3.0 x 10^8 m/s)"),
+    ],
+    "chemistry": [
+        ("Name the three subatomic particles.",
+         "Protons, neutrons and electrons"),
+        ("What is the chemical formula for water?", "H2O"),
+        ("What does the pH scale measure?",
+         "How acidic or basic a solution is (7 is neutral)"),
+        ("What is the atomic number of carbon?", "6"),
+        ("Ionic bonds form by transferring what?", "Electrons"),
+        ("Which gas do plants absorb for photosynthesis?",
+         "Carbon dioxide (CO2)"),
+    ],
+    "biology": [
+        ("Which organelle is called the powerhouse of the cell?",
+         "The mitochondrion"),
+        ("Which molecule carries genetic instructions?", "DNA"),
+        ("What process lets plants make food from sunlight?",
+         "Photosynthesis"),
+        ("What are the basic structural units of all living things?",
+         "Cells"),
+        ("Which blood cells fight infection?", "White blood cells"),
+        ("In one sentence, what is natural selection?",
+         "Traits that help survival and reproduction become more "
+         "common over generations"),
+    ],
+    "english": [
+        ("What is a noun?",
+         "A word naming a person, place, thing or idea"),
+        ("Which sentence usually states a paragraph's main idea?",
+         "The topic sentence"),
+        ("Give a synonym for 'happy'.", "Glad (also: joyful, content)"),
+        ("What does the prefix 'un-' mean?", "Not / the opposite of"),
+        ("What is the difference between 'their' and 'there'?",
+         "'Their' shows possession; 'there' refers to a place"),
+        ("What is a thesis statement?",
+         "The central claim of an essay, usually in the introduction"),
+    ],
+    "computer-science": [
+        ("Which keyword defines a function in Python?", "def"),
+        ("What does len([1, 2, 3]) return?", "3"),
+        ("What data type is the value True?", "A boolean (bool)"),
+        ("What does the 'in' operator test on a list?",
+         "Membership - whether a value is present"),
+        ("What error is raised by 1 / 0 in Python?", "ZeroDivisionError"),
+        ("What is the output of print(2 ** 3)?", "8"),
+    ],
+    "finance": [
+        ("What does the 50/30/20 rule allocate?",
+         "50% needs, 30% wants, 20% savings"),
+        ("What is compound interest?",
+         "Interest earned on both the principal and the interest "
+         "already earned"),
+        ("What is an emergency fund?",
+         "Savings covering about 3-6 months of essential expenses"),
+        ("What does a credit score summarize?",
+         "Your creditworthiness - how reliably you repay debt"),
+        ("What is diversification?",
+         "Spreading money across different investments to reduce risk"),
+        ("Name one classic red flag of a financial scam.",
+         "Guaranteed high returns, pressure to act fast, or secrecy"),
+    ],
+    "history": [
+        ("What is a primary source?",
+         "A firsthand record created at the time being studied"),
+        ("Which civilization built the pyramids at Giza?",
+         "Ancient Egypt"),
+        ("In which year did World War II end?", "1945"),
+        ("What was the Industrial Revolution?",
+         "The shift to machine manufacturing and factory production"),
+        ("What was the Mali Empire famous for?",
+         "West African gold wealth and trade (Mansa Musa, Timbuktu)"),
+        ("Which document begins with 'We the People'?",
+         "The United States Constitution"),
+    ],
+}
+
+
+def _cap_messages(messages: List[Dict[str, str]],
+                  limit: int = MAX_TEACH_MESSAGES) -> List[Dict[str, str]]:
+    """Cap a chat message list at `limit`, preserving the system message."""
+    if len(messages) <= limit:
+        return list(messages)
+    head: List[Dict[str, str]] = []
+    if messages and messages[0].get("role") == "system":
+        head = [messages[0]]
+    keep = max(1, limit - len(head))
+    return head + list(messages[-keep:])
+
+
+# ---------------------------------------------------------------------------
+# Module C: dataset readers (CSV + stdlib-only minimal XLSX)
+# ---------------------------------------------------------------------------
+
+def _read_csv_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
+    """Read a CSV file; first row = headers. Returns (headers, rows)."""
+    with open(path, "r", encoding="utf-8", errors="replace", newline="") as handle:
+        raw_rows = [row for row in csv.reader(handle)
+                    if any(str(cell).strip() for cell in row)]
+    if not raw_rows:
+        return [], []
+    headers = [str(h).strip() or "col_%d" % (i + 1)
+               for i, h in enumerate(raw_rows[0])]
+    width = len(headers)
+    data = []
+    for row in raw_rows[1:]:
+        padded = (list(row) + [""] * width)[:width]
+        data.append([str(cell) for cell in padded])
+    return headers, data
+
+
+def _xlsx_localname(tag: str) -> str:
+    """Strip an XML namespace prefix from a tag name."""
+    return str(tag).rsplit("}", 1)[-1]
+
+
+def _xlsx_col_index(ref: str) -> Optional[int]:
+    """Convert a cell reference like 'B12' to a zero-based column index."""
+    letters = ""
+    for ch in str(ref):
+        if ch.isalpha():
+            letters += ch.upper()
+        else:
+            break
+    if not letters:
+        return None
+    index = 0
+    for ch in letters:
+        index = index * 26 + (ord(ch) - 64)
+    return index - 1
+
+
+def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
+    """Minimal stdlib-only .xlsx reader.
+
+    An .xlsx file is a ZIP of XML parts. We parse xl/sharedStrings.xml and
+    the first xl/worksheets/sheet*.xml with ElementTree. Handles shared
+    strings, inline strings, booleans, and numbers. First row = headers.
+    """
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        shared: List[str] = []
+        if "xl/sharedStrings.xml" in names:
+            root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+            for si in root:
+                if _xlsx_localname(si.tag) != "si":
+                    continue
+                parts = [node.text or "" for node in si.iter()
+                         if _xlsx_localname(node.tag) == "t"]
+                shared.append("".join(parts))
+        sheets = sorted(n for n in names
+                        if n.startswith("xl/worksheets/") and n.endswith(".xml"))
+        if not sheets:
+            return [], []
+        sheet = ET.fromstring(archive.read(sheets[0]))
+
+    table: List[List[str]] = []
+    for row_el in sheet.iter():
+        if _xlsx_localname(row_el.tag) != "row":
+            continue
+        cells: Dict[int, str] = {}
+        next_col = 0
+        for cell_el in row_el:
+            if _xlsx_localname(cell_el.tag) != "c":
+                continue
+            col_idx = _xlsx_col_index(cell_el.get("r") or "")
+            if col_idx is None:
+                col_idx = next_col
+            cell_type = cell_el.get("t") or ""
+            value = ""
+            if cell_type == "inlineStr":
+                value = "".join(node.text or "" for node in cell_el.iter()
+                                if _xlsx_localname(node.tag) == "t")
+            else:
+                v_text = None
+                for child in cell_el:
+                    if _xlsx_localname(child.tag) == "v":
+                        v_text = child.text
+                        break
+                if v_text is not None:
+                    if cell_type == "s":
+                        try:
+                            value = shared[int(v_text)]
+                        except Exception:
+                            value = v_text
+                    elif cell_type ==
