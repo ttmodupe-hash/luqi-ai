@@ -1,0 +1,543 @@
+ "b":
+                        value = "TRUE" if v_text == "1" else "FALSE"
+                    else:
+                        value = v_text
+            cells[col_idx] = value
+            next_col = col_idx + 1
+        if cells:
+            width = max(cells.keys()) + 1
+            table.append([cells.get(i, "") for i in range(width)])
+    if not table:
+        return [], []
+    headers = [str(h).strip() or "col_%d" % (i + 1)
+               for i, h in enumerate(table[0])]
+    width = len(headers)
+    data = []
+    for row in table[1:]:
+        padded = (row + [""] * width)[:width]
+        if any(str(cell).strip() for cell in padded):
+            data.append([str(cell) for cell in padded])
+    return headers, data
+
+
+# ---------------------------------------------------------------------------
+# OmegaMasterEngine
+# ---------------------------------------------------------------------------
+
+class OmegaMasterEngine:
+    """Unified master engine preserving the user's original router backbone."""
+
+    def __init__(self) -> None:
+        # Preserved verbatim from the user's blueprint.
+        self.system_state = {
+            "build_sync_status": "Deployed & Synced",
+            "mining_investment_active": True,
+            "tax_compliance_region": "Global/US-Compliant",
+            "api_key_status": "Verified & Secure",
+        }
+        self.env = parse_env_file()
+        self.openai_key = self.env.get("OPENAI_API_KEY") or os.environ.get(
+            "OPENAI_API_KEY", ""
+        )
+        self.serper_key = self.env.get("SERPER_API_KEY") or os.environ.get(
+            "SERPER_API_KEY", ""
+        )
+        self.session_log: List[Dict[str, Any]] = []
+        # v29: GitHub sync configuration (token never printed in full).
+        self.github_repo = self.env.get("GITHUB_REPO") or os.environ.get(
+            "GITHUB_REPO", ""
+        )
+        self.github_token = self.env.get("GITHUB_TOKEN") or os.environ.get(
+            "GITHUB_TOKEN", ""
+        )
+        # v29 Module A: persistent memory (load, count session, save).
+        self.memory_path = resolve_memory_path()
+        self.memory = load_memory(self.memory_path)
+        self.memory["sessions"] = int(self.memory.get("sessions", 0)) + 1
+        # v29.1.0: restore persisted UI language (defaults to English).
+        self.lang = str(self.memory.get("lang") or DEFAULT_LANG)
+        if self.lang not in LANG_PACKS:
+            self.lang = DEFAULT_LANG
+        self.memory["lang"] = self.lang
+        save_memory(self.memory_path, self.memory)
+        # v29 Module C: currently loaded dataset (restored from memory).
+        self.dataset: Optional[Dict[str, Any]] = None
+        self._restore_last_import()
+        # v29.2.0: OpenRouter config for the optional online evolution mode.
+        self.openrouter_key = self.env.get("OPENROUTER_API_KEY") or os.environ.get(
+            "OPENROUTER_API_KEY", ""
+        )
+        self.openrouter_model = (
+            self.env.get("OPENROUTER_MODEL")
+            or os.environ.get("OPENROUTER_MODEL", "")
+        ).strip() or OPENROUTER_DEFAULT_MODEL
+        # v29.3.0: optional claude_engine bridge config. The engine itself is
+        # created lazily on the first LLM call (never at boot).
+        self.anthropic_key = self.env.get("ANTHROPIC_API_KEY") or os.environ.get(
+            "ANTHROPIC_API_KEY", ""
+        )
+        self.omega_llm_model = (
+            self.env.get("OMEGA_LLM_MODEL")
+            or os.environ.get("OMEGA_LLM_MODEL", "")
+        ).strip() or OPENAI_MODEL
+        self._bridge_engine: Any = None
+        self._bridge_attempted = False
+        # v29.2.0: Subsystem #10 - Evolution Engine. Boot verifies/restores
+        # omega_pillars.json (sha256 tamper detection) and bootstraps
+        # omega_strategy_gen.py + omega_evolution.json when missing.
+        self.evolution = EvolutionEngine(self)
+
+    # ------------------------------------------------------------------
+    # Availability matrix
+    # ------------------------------------------------------------------
+
+    def availability_matrix(self) -> List[Dict[str, str]]:
+        """Return per-subsystem availability (Available / Degraded + reason)."""
+        rows = [
+            ("Build & Sync", "Available", "local integrity checks"),
+            ("Mining & Investment", "Available", "local strategy snapshot"),
+            (
+                "Tax Support",
+                "Available" if self.openai_key else "Degraded",
+                "LLM-enhanced" if self.openai_key else "offline guidance (no OPENAI_API_KEY)",
+            ),
+            ("API & Security", "Available", "local gatekeeper checks"),
+            (
+                "Deep Research",
+                "Available" if self.serper_key else "Degraded",
+                "Serper live search" if self.serper_key else "offline research plan (no SERPER_API_KEY)",
+            ),
+            ("Companion/Tutor", "Available", "local study scaffolds"),
+            ("Opportunity Engine", "Available", "local scan framework"),
+            ("Finance Literacy", "Available", "local literacy guidance"),
+            ("Self-Improvement", "Available", "local audit log"),
+            (
+                "Evolution Engine",
+                "Available",
+                "sandboxed self-evolution, pillars enforced",
+            ),
+        ]
+        return [
+            {"subsystem": name, "status": status, "detail": detail}
+            for name, status, detail in rows
+        ]
+
+    # ------------------------------------------------------------------
+    # Audit logging (all file I/O guarded)
+    # ------------------------------------------------------------------
+
+    def _audit(self, subsystem: str, input_summary: str, status: str,
+               entry_type: str = "audit") -> Dict[str, Any]:
+        entry = {
+            "ts": utc_now_iso(),
+            "type": entry_type,
+            "subsystem": subsystem,
+            "input_summary": str(input_summary)[:200],
+            "status": status,
+        }
+        self.session_log.append(entry)
+        try:
+            with open(LOG_FILE, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, ensure_ascii=True) + "\n")
+        except Exception:
+            pass  # logging must never crash the engine
+        return entry
+
+    def read_log_tail(self, count: int = 10) -> List[Dict[str, Any]]:
+        """Read the last `count` audit entries from omega_log.jsonl."""
+        entries: List[Dict[str, Any]] = []
+        try:
+            if not os.path.isfile(LOG_FILE):
+                return self.session_log[-count:]
+            with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entries.append(json.loads(line))
+                    except Exception:
+                        continue
+        except Exception:
+            return self.session_log[-count:]
+        return entries[-count:]
+
+    # ------------------------------------------------------------------
+    # Guarded online capabilities (stdlib urllib, 15s timeout)
+    # ------------------------------------------------------------------
+
+    def _serper_search(self, query: str) -> Optional[List[Dict[str, str]]]:
+        """POST to Serper; return top 5 results or None on any failure."""
+        if not self.serper_key:
+            return None
+        try:
+            body = json.dumps({"q": query, "num": 5}).encode("utf-8")
+            request = urllib.request.Request(
+                SERPER_URL,
+                data=body,
+                headers={
+                    "X-API-KEY": self.serper_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            results = []
+            for item in (data.get("organic") or [])[:5]:
+                results.append({
+                    "title": str(item.get("title", "")),
+                    "link": str(item.get("link", "")),
+                    "snippet": str(item.get("snippet", "")),
+                })
+            return results or None
+        except Exception:
+            return None
+
+    def _get_bridge(self) -> Any:
+        """Lazy singleton ClaudeLikeEngine. Returns None when unavailable.
+
+        Never instantiated at boot and NEVER a hard dependency: when
+        claude_engine is not installed (BRIDGE_AVAILABLE False) or no
+        OPENAI_API_KEY is set, this simply returns None.
+        """
+        if self._bridge_attempted:
+            return self._bridge_engine
+        self._bridge_attempted = True
+        if not BRIDGE_AVAILABLE or not self.openai_key:
+            return None
+        try:
+            kwargs: Dict[str, Any] = {
+                "model": self.omega_llm_model,
+                "provider": "openai",
+                "api_key": self.openai_key,
+            }
+            if self.anthropic_key:
+                # Anthropic fallback provider for the circuit breaker.
+                kwargs["fallback_provider"] = "anthropic"
+                kwargs["fallback_model"] = CLAUDE_FALLBACK_MODEL
+                kwargs["fallback_api_key"] = self.anthropic_key
+            try:
+                self._bridge_engine = ClaudeLikeEngine(**kwargs)
+            except TypeError:
+                # Tolerate a leaner constructor signature.
+                self._bridge_engine = ClaudeLikeEngine(
+                    model=self.omega_llm_model,
+                    provider="openai",
+                    api_key=self.openai_key,
+                )
+        except Exception:
+            self._bridge_engine = None
+        return self._bridge_engine
+
+    def _bridge_llm(self, prompt: str) -> Optional[str]:
+        """Try the claude_engine bridge; return text or None on ANY issue."""
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            reply = bridge.chat(prompt)
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
+    def _llm(self, prompt: str) -> Optional[str]:
+        """Return LLM text or None on failure.
+
+        v29.3.0: routes through the optional claude_engine bridge first when
+        it is installed and OPENAI_API_KEY is set; ANY exception (or empty
+        reply) falls back to the stdlib urllib path below. Externally the
+        behavior is identical.
+        """
+        if not self.openai_key:
+            return None
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm(prompt)
+            if bridged:
+                return bridged
+            # Bridge failed -> fall through to the urllib path.
+        try:
+            body = json.dumps({
+                "model": OPENAI_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 512,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None
+            message = choices[0].get("message") or {}
+            content = message.get("content")
+            return str(content) if content else None
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # v29.5.0: multi-turn chat (messages lists) for the Professor classroom
+    # ------------------------------------------------------------------
+
+    def _bridge_llm_messages(self,
+                             messages: List[Dict[str, str]]) -> Optional[str]:
+        """Bridge path for a messages list.
+
+        The claude_engine bridge exposes a single-string chat(); the
+        rolling context is serialized into one transcript prompt so the
+        professor still sees the full conversation. None on ANY issue.
+        """
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            parts = []
+            for msg in messages:
+                role = str(msg.get("role", "user"))
+                content = str(msg.get("content", ""))
+                if role == "system":
+                    parts.append("System: " + content)
+                elif role == "assistant":
+                    parts.append("Professor: " + content)
+                else:
+                    parts.append("Student: " + content)
+            parts.append("Professor:")
+            reply = bridge.chat("\n\n".join(parts))
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
+    def _llm_messages(self, messages: List[Dict[str, str]],
+                      max_tokens: int = 700) -> Optional[str]:
+        """Chat-completions call with a full messages list.
+
+        Bridge-first (when installed), stdlib urllib fallback. Returns
+        None without a key or on ANY failure - callers must fall back
+        gracefully and never fake a reply.
+        """
+        if not self.openai_key:
+            return None
+        clean = []
+        for msg in messages:
+            role = str(msg.get("role", "user"))
+            if role not in ("system", "user", "assistant"):
+                role = "user"
+            clean.append({"role": role,
+                          "content": str(msg.get("content", ""))})
+        if not clean:
+            return None
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm_messages(clean)
+            if bridged:
+                return bridged
+            # Bridge failed -> fall through to the urllib path.
+        try:
+            body = json.dumps({
+                "model": OPENAI_MODEL,
+                "messages": clean,
+                "max_tokens": max_tokens,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None
+            message = choices[0].get("message") or {}
+            content = message.get("content")
+            return str(content) if content else None
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # Master router (user's backbone, extended to 9 subsystems)
+    # ------------------------------------------------------------------
+
+    def execute_omega_subsystem(self, domain: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        domain = (domain or "").lower().strip()
+        entry_type = "audit"
+
+        if any(k in domain for k in ("build", "sync", "deploy", KW_BUILT_ZH)):
+            result = {
+                "status": "Success",
+                "subsystem": "Omega Infrastructure Build & Sync",
+                "message": ("System integrity verified. Nodes synchronized. "
+                            "Operational baseline steady."),
+                "build_sync_status": self.system_state["build_sync_status"],
+            }
+        elif any(k in domain for k in ("mining", "investment", "invest",
+                                       "portfolio", "crypto")):
+            result = {
+                "status": "Active",
+                "subsystem": "Omega Mining & Investment Engine",
+                "metrics": {
+                    "hashrate_allocation": "Optimized",
+                    "portfolio_rebalancing": "Automated",
+                },
+                "message": ("Yield optimization models running. "
+                            "Market trend vectors updated."),
+                "strategy_snapshot": self._mining_strategy(payload),
+            }
+            note = self.dataset_note()
+            if note:
+                result["dataset_note"] = note
+        elif any(k in domain for k in ("tax", KW_TAX_ZH, "vat", "sars",
+                                       "compliance")):
+            result = self._tax_support(payload)
+        elif any(k in domain for k in ("api", "key", "status", "security")):
+            result = {
+                "status": "Authenticated",
+                "subsystem": "Omega Security Gatekeeper",
+                "token_leak_protection": "Enabled",
+                "message": ("API key handshakes secure. Rate limits healthy. "
+                            "Encryption keys active."),
+                "keys": {
+                    "OPENAI_API_KEY": mask_secret(self.openai_key),
+                    "SERPER_API_KEY": mask_secret(self.serper_key),
+                },
+            }
+        elif any(k in domain for k in ("research", "search", "deep", "find out")):
+            result = self._deep_research(payload)
+        elif any(k in domain for k in ("companion", "teach", "learn", "explain",
+                                       "professor", "tutor", "classroom",
+                                       "mentor")):
+            result = self._companion(payload)
+        elif any(k in domain for k in ("opportunity", "opportunities",
+                                       "hustle", "business")):
+            result = self._opportunity(payload)
+        elif any(k in domain for k in ("finance", "scam", "budget", "debt",
+                                       "saving")):
+            result = self._finance_literacy(payload)
+        elif any(k in domain for k in ("evolution", "mutation",
+                                       "self improve engine")):
+            result = {
+                "status": "Ready",
+                "subsystem": "Omega Evolution Engine",
+                "message": ("Evolution engine standing by. Control it with "
+                            "'evolve', 'evolve run', 'evolve lineage', "
+                            "'evolve pillars', 'evolve rollback', "
+                            "'evolve test <query>'."),
+                "generation": self.evolution.generation(),
+                "pillars_integrity": self.evolution.pillars_status(),
+            }
+        elif any(k in domain for k in ("selfimprove", "improve yourself",
+                                       "evolve")):
+            note = str(payload.get("query", "")).strip() or "General self-improvement pass."
+            entry_type = "selfimprove"
+            result = {
+                "status": "Logged",
+                "subsystem": "Omega Self-Improvement",
+                "message": "Improvement note recorded to audit trail.",
+                "note": note,
+                "logged_at": utc_now_iso(),
+            }
+        else:
+            result = {
+                "status": "Unknown",
+                "message": ("Domain '%s' routed to master core for generic "
+                            "evaluation." % domain),
+            }
+
+        self._audit(result.get("subsystem", "Master Core"),
+                    payload.get("query", domain),
+                    result.get("status", "Unknown"),
+                    entry_type=entry_type)
+        return result
+
+    # ------------------------------------------------------------------
+    # Subsystem handlers
+    # ------------------------------------------------------------------
+
+    def _mining_strategy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "active": self.system_state["mining_investment_active"],
+            "allocation": "60% BTC / 25% ETH / 15% stable yield",
+            "risk_mode": "Balanced",
+            "rebalance_trigger": "+/- 5% drift",
+            "note": ("Educational snapshot only - not financial advice."),
+        }
+
+    def _tax_support(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        topic = str(payload.get("query", "")).strip() or "general"
+        guidance = [
+            "Map all taxable events: income, capital gains, VAT/GST where applicable.",
+            "Keep transaction ledgers with dates, amounts, and counterparty records.",
+            "Track cost basis per asset for capital gains calculations.",
+            "Check filing deadlines and registration thresholds for your region.",
+            "Separate personal and business accounts for clean audit trails.",
+        ]
+        result: Dict[str, Any] = {
+            "status": "Compliant",
+            "subsystem": "Omega Tax & Audit Support",
+            "topic": topic,
+            "region": self.system_state["tax_compliance_region"],
+            "message": ("Tax brackets mapped. Transaction ledgers formatted for "
+                        "capital gains tracking."),
+            "guidance": guidance,
+            "disclaimer": TAX_DISCLAIMER,
+        }
+        # LLM-enhanced if key present (guarded; falls back silently).
+        llm_note = self._llm(
+            "Give brief, general, educational tax guidance for the topic: "
+            + topic + ". Include a reminder to consult a professional."
+        )
+        if llm_note:
+            result["llm_enhanced"] = llm_note
+        # v29: a loaded dataset is referenceable by the tax subsystem.
+        note = self.dataset_note()
+        if note:
+            result["dataset_note"] = note
+        return result
+
+    def _deep_research(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        query = str(payload.get("query", "")).strip() or "unspecified topic"
+        hits = self._serper_search(query)
+        if hits:
+            return {
+                "status": "Success",
+                "subsystem": "Omega Deep Research",
+                "mode": "live (Serper)",
+                "query": query,
+                "results": hits,
+            }
+        return {
+            "status": "Degraded",
+            "subsystem": "Omega Deep Research",
+            "mode": "offline research plan",
+            "query": query,
+            "research_plan": [
+                "1. Define the precise question and success criteria.",
+                "2. Gather primary sources: official docs, papers, data sets.",
+                "3. Cross-check at least 3 independent secondary sources.",
+                "4. Extract claims, evidence qua
