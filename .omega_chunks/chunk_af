@@ -1,0 +1,166 @@
+)
+        checks.append(("syllabus: unknown subject -> 10-lesson scaffold",
+                       ok))
+    except Exception as exc:
+        checks.append(("syllabus: scaffold (exception: %s)" % exc, False))
+
+    # syllabus command renders + persists; unknown subject graceful.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                syl_engine = OmegaMasterEngine()
+                syl_engine.openai_key = ""
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(syl_engine, "syllabus physics")
+                out = buf.getvalue()
+                ok = (bool(keep) and "Lesson 1:" in out
+                      and "Lesson 10:" in out
+                      and "physics" in
+                      (syl_engine.memory.get("learning") or {}))
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    handle_command(syl_engine, "syllabus quantum computing")
+                out2 = buf.getvalue()
+                ok = ok and "generic mastery scaffold" in out2
+                checks.append(("syllabus: command render + persist + "
+                               "unknown graceful", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("syllabus: command (exception: %s)" % exc, False))
+
+    # Offline quiz scoring math: right + wrong, early-exit leftover cmd.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                quiz_engine = OmegaMasterEngine()
+                quiz_engine.openai_key = ""
+                scripted = iter(["reveal", "right", "reveal", "wrong",
+                                 "next"])
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    score, asked, leftover = run_offline_quiz(
+                        quiz_engine, "mathematics",
+                        input_fn=lambda prompt="": next(scripted),
+                        out=print)
+                out = buf.getvalue()
+                entry = (quiz_engine.memory.get("learning") or {}).get(
+                    "mathematics") or {}
+                ok = (score == 1 and asked == 2 and leftover == "next"
+                      and "self-check quiz" in out
+                      and len(entry.get("weak_points") or []) == 1)
+                checks.append(("quiz: offline scoring math (1 right, "
+                               "1 wrong, early exit)", ok))
+                # Unknown subject -> graceful, no score.
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    score2, asked2, _l = run_offline_quiz(
+                        quiz_engine, "underwater basketweaving",
+                        input_fn=lambda prompt="": next(iter([])),
+                        out=print)
+                out2 = buf.getvalue()
+                ok = (score2 is None and asked2 == 0
+                      and "No offline quiz bank" in out2
+                      and "OPENAI_API_KEY" in out2)
+                checks.append(("quiz: unknown subject graceful "
+                               "(no crash)", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("quiz: scoring (exception: %s)" % exc, False))
+
+    # progress renders the empty state AND the populated table.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                prog_engine = OmegaMasterEngine()
+                prog_engine.openai_key = ""
+                empty = progress_lines(prog_engine)
+                ok = any("teach <subject>" in line for line in empty)
+                prog_engine.record_quiz_score("biology", 4, 5)
+                prog_engine.get_syllabus("biology")
+                full = progress_lines(prog_engine)
+                ok = (ok and any("biology" in line for line in full)
+                      and any("80%" in line for line in full)
+                      and any("Subject" in line for line in full))
+                checks.append(("progress: empty guidance + populated "
+                               "table", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("progress: render (exception: %s)" % exc, False))
+
+    # 20-subject cap: oldest evicted with notice returned.
+    try:
+        cap_engine = OmegaMasterEngine()
+        cap_engine.memory["learning"] = {}  # isolate from any saved profile
+        learning = cap_engine.memory.setdefault("learning", {})
+        for i in range(MAX_LEARNING_SUBJECTS):
+            learning["filler-%02d" % i] = {
+                "syllabus": [], "current_lesson": 0, "quiz_scores": [],
+                "weak_points": [],
+                "started": "2020-01-%02dT00:00:00Z" % (i + 1),
+                "last_session": "",
+            }
+        entry, evicted = cap_engine.learning_entry("new-subject")
+        ok = (evicted == "filler-00"
+              and len(cap_engine.memory["learning"]) ==
+              MAX_LEARNING_SUBJECTS
+              and "new-subject" in cap_engine.memory["learning"])
+        checks.append(("learning: 20-subject cap evicts oldest + notice",
+                       ok))
+    except Exception as exc:
+        checks.append(("learning: cap (exception: %s)" % exc, False))
+
+    # Report.
+    failures = 0
+    for name, ok in checks:
+        print("  [%s] %s" % ("PASS" if ok else "FAIL", name))
+        if not ok:
+            failures += 1
+    print("-" * 60)
+    print("%d/%d checks passed." % (len(checks) - failures, len(checks)))
+    if failures:
+        print("SELF TEST: FAIL")
+        return 1
+    print("SELF TEST: PASS")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main(argv: List[str]) -> int:
+    args = argv[1:]
+    if args and args[0] == "--selftest":
+        return run_selftest()
+    engine = OmegaMasterEngine()
+    if args:
+        # One-shot mode: process once, exit.
+        query = " ".join(args)
+        engine.add_history("user", query)
+        try:
+            handle_command(engine, query)
+        except Exception as exc:
+            print("[Error] recovered: %s" % exc)
+            save_memory(engine.memory_path, engine.memory)
+            return 1
+        save_memory(engine.memory_path, engine.memory)
+        return 0
+    return run_repl(engine)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv))
+    except KeyboardInterrupt:
+        print("\nOMEGA interrupted. Stay sovereign.")
+        sys.exit(0)
