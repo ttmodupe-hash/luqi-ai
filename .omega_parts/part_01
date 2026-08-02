@@ -1,0 +1,503 @@
+#!/usr/bin/env python3
+"""
+LUQI AI v29.4.0 - Unified Master Engine (omega.py)
+
+Single-file, stdlib-only CLI engine unifying 10 subsystems behind the
+user's original OmegaMasterEngine router pattern.
+
+v29.0.0 additions (SPEC_v29.md):
+- Module A: persistent memory (omega_memory.json) with
+  remember/recall/forget/history commands.
+- Module B: GitHub auto-sync (sync github / sync status) via subprocess git,
+  GITHUB_REPO / GITHUB_TOKEN from .env, token always masked.
+- Module C: Excel/CSV data import (import / analyze / query) with a
+  stdlib-only .xlsx reader (zipfile + xml.etree.ElementTree).
+
+v29.1.0 additions (SPEC_v291.md):
+- 'version' command: version, subsystem count, session number, facts count.
+- 'export' command: omega_export_<UTCts>.md snapshot (system_state, facts,
+  last import, last 50 history entries, last 50 audit entries).
+- 'report <topic>' command: routes through execute_omega_subsystem and
+  writes omega_report_<slug>_<UTCts>.md with findings + next actions.
+- 'lang <code>' command: UI string packs (en/zu/xh/st/af) for greeting,
+  goodbye, help-header, unknown-command, remembered, forgot. Persisted in
+  memory and restored on boot; new languages are data-only pack entries.
+
+v29.2.0 additions (SPEC_v292.md) - "Enterprise Evolution":
+- Subsystem #10: Evolution Engine (SAFE self-improvement). Absorbs the
+  uploaded OmegaHyperEngine concept with real hardening:
+  * Immutable pillars enforced for real: omega_pillars.json carries a
+    sha256 of the canonical pillar JSON; every boot and every 'evolve run'
+    re-verifies it, and any tamper is detected, reported, and restored.
+  * Evolvable strategy module omega_strategy_gen.py exporting
+    execute_logic(query, telemetry) -> str containing '<omega_analysis>'.
+    Generation lineage in omega_evolution.json; last 5 generations
+    archived as omega_gen_<N>.py; 'evolve rollback' restores the
+    highest-fitness archive.
+  * 3-gate safety pipeline for every candidate mutation:
+    gate 1 = AST whitelist (no imports, no banned names, no dunders),
+    gate 2 = restricted exec (whitelisted builtins only) + 3 contract
+    tests with Windows-safe daemon-thread timeouts,
+    gate 3 = fitness gate (adopt only if >= current generation fitness).
+  * 'evolve run' is OFFLINE by default (deterministic template mutation,
+    no network, no LLM). 'evolve run online' uses the correct OpenRouter
+    endpoint with OPENROUTER_API_KEY / OPENROUTER_MODEL from .env.
+  * Telemetry health is the clamped [0.0, 1.0] mean of the last 10 scores
+    ('evolve test <query>'); the uploaded code's negative-score bug is
+    fixed by clamping.
+- 'why' command: the 6 LUQI AI differentiators with proofs.
+- 'integrations' command: 5-connector live status manifest.
+
+v29.3.0 additions (SPEC_v293.md) - "Launch-Grade":
+- Evolution gate 2 (contract exec) is now PROCESS-ISOLATED:
+  multiprocessing.get_context("spawn") child process per candidate,
+  results via Queue, join(3.0) then terminate() on timeout, and an
+  assertion that no child processes remain alive after every gate run
+  (kills the v29.2.0 zombie-thread limit). POSIX children also get a
+  256 MB RLIMIT_AS memory ceiling (MemoryError -> rejection); Windows
+  is documented as timeout-only. AST gate and fitness gate unchanged.
+- Optional claude_engine bridge (dogfooding): guarded import that is
+  NEVER a hard dependency. When present + OPENAI_API_KEY set, _llm()
+  routes through a lazy singleton ClaudeLikeEngine (anthropic fallback
+  when ANTHROPIC_API_KEY set); ANY exception falls back to the stdlib
+  urllib path. New 'bridge' command; 'integrations' gains a 6th row.
+- LANG_PACKS completed to 15 packs: tn, nso, ts, ve, ss, nr, sw, am
+  (ASCII transliteration), yo, ha added to en/zu/xh/st/af.
+- New 'launch' command: GO/NO-GO pre-flight table (blockers are
+  pillars/memory/selftest-core failures ONLY; optional keys are WARN).
+- LAUNCH_CHECKLIST.md: human launch runbook (engine selftest, .env
+  keys, launch GO, sync github push, site publish + smoke, rollback).
+
+v29.4.0 additions (SPEC_v294.md) - "Global Citizen":
+- LANG_PACKS mega-expansion: 15 -> exactly 100 packs (70 african +
+  30 world). Existing 15 packs' strings byte-unchanged; every pack has
+  a name label, a region tag ("african"/"world") and the same 6 UI
+  strings (ASCII-safe transliterations, real greetings/goodbyes).
+  'lang' with no/unknown code now prints a GROUPED list:
+  "African languages (N)" then "World languages (M)".
+- New 'translate <lang-code> <text>' command: validates the code,
+  routes through the existing LLM path (bridge-first, urllib
+  fallback) with a translation-only prompt. Offline/no key -> a
+  graceful enable-hint (never a traceback). Audit-logged.
+- New 'cost' command: the pricing-disruption table (engine free
+  forever, BYOK pay-per-use cents, big-AI subscriptions ~= $20/month).
+- 'why' sharpened: #4 mentions 100 languages African-first; #5 is now
+  "Free to run, cheap to scale" with a cost proof line.
+
+v29.5.0 "The Professor":
+- 'teach <subject>' opens a classroom sub-REPL ([CLASS:<subject>] >).
+  Online (OPENAI_API_KEY): multi-turn professor conversation with a
+  rolling 40-message context (bridge + urllib both accept messages
+  lists). Offline: one honest 'needs key' line, then a real offline
+  classroom (built-in 10-lesson syllabi for 8 core subjects, generic
+  scaffold otherwise, offline self-check quiz banks) - never a fake
+  conversation, never a crash, EOF/KeyboardInterrupt safe.
+- 'syllabus <subject> [new]' (10-lesson outlines), 'quiz <subject>'
+  (graded/self-check, scores recorded), 'progress' (learner-profile
+  table). Learner profiles persist in omega_memory.json['learning']
+  (20-subject cap, oldest evicted with notice).
+
+- Python 3.11, standard library only, ASCII-only source.
+- Boots with no .env, no network, no third-party packages.
+- Windows/macOS/Linux compatible:  py -3.11 omega.py
+- Modes:
+    py -3.11 omega.py                -> interactive REPL
+    py -3.11 omega.py "question"     -> one-shot mode
+    py -3.11 omega.py --selftest     -> non-interactive self test
+"""
+
+import ast
+import builtins
+import contextlib
+import csv
+import hashlib
+import io
+import json
+import multiprocessing
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.error
+import urllib.request
+import zipfile
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+ENGINE_VERSION = "29.5.0"
+ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
+LOG_FILE = "omega_log.jsonl"
+ENV_FILE = ".env"
+MEMORY_FILE = "omega_memory.json"
+MAX_HISTORY_ENTRIES = 200  # cap for persistent REPL history
+MAX_DATASET_ROWS = 50000   # refuse larger datasets with a clear message
+GIT_TIMEOUT = 30           # seconds, per SPEC_v29
+HTTP_TIMEOUT = 15  # seconds, per spec
+SERPER_URL = "https://google.serper.dev/search"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_MODEL = "gpt-4o-mini"
+
+# v29.5.0 "The Professor": conversational tutor classroom constants.
+MAX_TEACH_MESSAGES = 40     # rolling session context cap (incl. system msg)
+MAX_LEARNING_SUBJECTS = 20  # learner-profile subject cap (oldest evicted)
+PROFESSOR_PROMPT = (
+    "You are Professor LUQI, a patient world-class professor of %s. "
+    "Teach lesson by lesson. Explain clearly, then ask ONE question to "
+    "check understanding. Adapt depth to the student's answers. "
+    "Encourage honestly, grade strictly. Keep answers under 200 words "
+    "unless asked for more."
+)
+
+# ---------------------------------------------------------------------------
+# v29.3.0: optional claude_engine bridge (dogfooding)
+# ---------------------------------------------------------------------------
+# Guarded import: the bridge is NEVER a hard dependency. When the module is
+# absent the flag stays False and every surface degrades silently; the whole
+# engine keeps working exactly as before (urllib fallback path).
+try:
+    from claude_engine import ClaudeLikeEngine  # type: ignore
+    BRIDGE_AVAILABLE = True
+except Exception:
+    ClaudeLikeEngine = None  # type: ignore
+    BRIDGE_AVAILABLE = False
+
+CLAUDE_FALLBACK_MODEL = "claude-3-5-sonnet-latest"
+
+# ---------------------------------------------------------------------------
+# v29.2.0: Evolution Engine constants (SPEC_v292.md)
+# ---------------------------------------------------------------------------
+
+PILLARS_FILE = "omega_pillars.json"
+STRATEGY_FILE = "omega_strategy_gen.py"
+EVOLUTION_FILE = "omega_evolution.json"
+EVO_ARCHIVE_KEEP = 5           # keep the last 5 archived generations
+EVO_TEST_TIMEOUT = 3.0         # seconds the sandbox child may run (join timeout)
+EVO_HTTP_TIMEOUT = 30          # seconds for the optional online proposal
+EVO_MEMORY_LIMIT = 268435456   # 256 MB RLIMIT_AS ceiling inside the child (POSIX)
+# Correct OpenRouter chat-completions endpoint (the uploaded code used the
+# bare https://openrouter.ai host, which is not a valid API path).
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_DEFAULT_MODEL = "openai/gpt-4o-mini"
+
+# Canonical immutable pillars (exact strings from the uploaded code; the
+# Chinese text is stored ASCII-safe via unicode escapes). This dict is the
+# module-level constant used for tamper restoration.
+CANONICAL_PILLARS: Dict[str, str] = {
+    "p1_build_sync": "Omega AI Build & Sync (Continuous Mesh Matrix)",
+    "p2_status": "Omega AI\u5df2\u5efa\u6210 (System Baseline Operational Verification)",
+    "p3_mining": "Omega AI Mining & Investment (Quantitative Yield Automation)",
+    "p4_tax": "Omega AI\u7a0e\u52a1\u652f\u6301 (Automated Transaction Ledger Tracking)",
+    "p5_security": "API Key Status (Multi-Tenant Cryptographic Gateway)",
+}
+
+# Generation-01 bootstrap strategy: the uploaded code's initial logic
+# matrix, cleaned and ASCII-only. Contract: execute_logic(query, telemetry)
+# returns a string containing '<omega_analysis>'.
+EVO_GEN1_CODE = (
+    "def execute_logic(query, telemetry):\n"
+    "    # Generation 01 Initial Logic Matrix\n"
+    "    analysis = f'<omega_analysis>Parsing variables for query: {query}</omega_analysis>'\n"
+    "    response = f'Omega AI Core Active. Data streams processed successfully.'\n"
+    "    return f'{analysis}\\n{response}'\n"
+)
+
+# Offline deterministic mutation templates (>= 3), varying the analysis
+# block structure / detail level. All of them pass the 3-gate pipeline.
+EVO_TEMPLATES: List[str] = [
+    # Template 1: structured multi-line analysis block.
+    (
+        "def execute_logic(query, telemetry):\n"
+        "    # Template: structured analysis matrix\n"
+        "    text = str(query)\n"
+        "    signals = len(list(telemetry))\n"
+        "    parts = []\n"
+        "    parts.append('<omega_analysis>')\n"
+        "    parts.append('mode: structured | query: ' + text)\n"
+        "    parts.append('telemetry signals: ' + str(signals))\n"
+        "    parts.append('</omega_analysis>')\n"
+        "    block = '\\n'.join(parts)\n"
+        "    return block + '\\nOmega AI Core Active. Structured pass complete.'\n"
+    ),
+    # Template 2: compact single-line analysis block.
+    (
+        "def execute_logic(query, telemetry):\n"
+        "    # Template: compact analysis matrix\n"
+        "    text = str(query)\n"
+        "    count = len(list(telemetry))\n"
+        "    summary = 'compact | query: ' + text + ' | signals: ' + str(count)\n"
+        "    return '<omega_analysis>' + summary + '</omega_analysis> Omega AI Core Active.'\n"
+    ),
+    # Template 3: detailed per-signal analysis block.
+    (
+        "def execute_logic(query, telemetry):\n"
+        "    # Template: detailed per-signal analysis matrix\n"
+        "    lines = []\n"
+        "    lines.append('<omega_analysis> detailed scan')\n"
+        "    for item in list(telemetry):\n"
+        "        lines.append('signal: ' + str(item))\n"
+        "    lines.append('query: ' + str(query))\n"
+        "    lines.append('</omega_analysis>')\n"
+        "    return '\\n'.join(lines)\n"
+    ),
+]
+
+# Meta-compiler system prompt from the uploaded code (pillars injected).
+EVO_META_SYSTEM_PROMPT = (
+    "You are the Meta-Cognitive Sandbox Compiler of Omega AI.\n"
+    "You are bound by these unalterable anchors:\n{pillars}\n"
+    "Your task is to write a raw Python code string that fixes processing "
+    "inefficiencies or formatting drifts found in telemetry.\n"
+    "CRITICAL EXPORT RULES:\n"
+    "1. You must export a single python function named "
+    "'execute_logic(query, telemetry)'.\n"
+    "2. It must return a string containing an internal structural logic "
+    "block wrapped inside '<omega_analysis>'.\n"
+    "3. Do not include markdown code block formatting (e.g., no "
+    "```python). Output purely executable code script text."
+)
+
+# AST gate: names that may never appear in a candidate mutation.
+EVO_BANNED_NAMES = frozenset([
+    "os", "sys", "subprocess", "socket", "requests", "urllib", "eval",
+    "exec", "open", "__import__", "globals", "locals", "compile", "input",
+    "exit", "quit", "breakpoint", "ctypes", "shutil", "pathlib",
+    "memoryview", "getattr", "setattr", "delattr", "vars", "dir", "help",
+])
+
+# AST gate: the ONLY bare-name functions a candidate may call.
+EVO_SAFE_FUNCS = frozenset([
+    "len", "str", "int", "float", "list", "dict", "tuple", "set", "sorted",
+    "min", "max", "sum", "abs", "round", "enumerate", "range", "zip",
+    "isinstance", "format",
+])
+
+# AST gate: the ONLY attribute (method) calls a candidate may make
+# (str / list / dict / set methods).
+EVO_SAFE_METHODS = frozenset([
+    "join", "append", "extend", "insert", "remove", "pop", "index",
+    "count", "sort", "reverse", "copy", "clear", "get", "keys", "values",
+    "items", "update", "setdefault", "add", "discard", "union",
+    "intersection", "difference", "issubset", "issuperset", "lower",
+    "upper", "title", "capitalize", "swapcase", "strip", "lstrip",
+    "rstrip", "split", "rsplit", "splitlines", "replace", "startswith",
+    "endswith", "find", "rfind", "format", "format_map", "zfill", "rjust",
+    "ljust", "center", "partition", "rpartition", "isdigit", "isalpha",
+    "isalnum", "isspace", "isnumeric", "islower", "isupper", "istitle",
+])
+
+# AST gate: whitelisted node types. Operator/context abstract bases cover
+# every concrete operator (Add, Eq, Not, Load, Store, ...).
+_EVO_ALLOWED_NODES = (
+    ast.Module, ast.FunctionDef, ast.arguments, ast.arg, ast.Return,
+    ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Constant,
+    ast.Name, ast.BinOp, ast.UnaryOp, ast.BoolOp, ast.Compare, ast.If,
+    ast.For, ast.While, ast.Try, ast.ExceptHandler, ast.List, ast.Tuple,
+    ast.Dict, ast.Set, ast.Subscript, ast.Slice, ast.JoinedStr,
+    ast.FormattedValue, ast.Call, ast.Attribute, ast.IfExp, ast.ListComp,
+    ast.SetComp, ast.DictComp, ast.GeneratorExp, ast.comprehension,
+    ast.Pass, ast.Break, ast.Continue, ast.Assert, ast.keyword,
+    ast.operator, ast.unaryop, ast.boolop, ast.cmpop, ast.expr_context,
+)
+
+# Non-ASCII trigger keywords kept ASCII-safe via unicode escapes:
+#   "yi jian cheng" (built/deployed) and "shui wu" (tax affairs).
+KW_BUILT_ZH = "\u5df2\u5efa\u6210"  # "yi jian cheng" (built/deployed)
+KW_TAX_ZH = "\u7a0e\u52a1"  # "shui wu" (tax affairs)
+
+AFRICAN_LANGUAGES = [
+    ("isiZulu", "South Africa"),
+    ("isiXhosa", "South Africa"),
+    ("Sesotho", "South Africa / Lesotho"),
+    ("Setswana", "Botswana / South Africa"),
+    ("Sepedi", "South Africa"),
+    ("Xitsonga", "South Africa / Mozambique"),
+    ("Tshivenda", "South Africa / Zimbabwe"),
+    ("Afrikaans", "South Africa / Namibia"),
+    ("Swahili", "Kenya / Tanzania / East Africa"),
+    ("Amharic", "Ethiopia"),
+    ("Hausa", "Nigeria / West Africa"),
+    ("Yoruba", "Nigeria / Benin"),
+    ("Igbo", "Nigeria"),
+    ("Shona", "Zimbabwe"),
+    ("Oromo", "Ethiopia / Kenya"),
+]
+
+TAX_DISCLAIMER = (
+    "Disclaimer: general educational guidance only, not professional tax, "
+    "legal, or financial advice. Consult a registered tax practitioner for "
+    "your jurisdiction."
+)
+
+# ---------------------------------------------------------------------------
+# v29.1.0: UI language packs (data-only; add more languages as new entries)
+# ---------------------------------------------------------------------------
+# Every pack MUST define these keys (ASCII-safe transliterations only):
+#   greeting, goodbye, help_header, unknown_command, remembered, forgot
+# 'remembered'/'forgot' are printf-style templates taking (number, fact).
+DEFAULT_LANG = "en"
+
+LANG_PACKS: Dict[str, Dict[str, str]] = {
+    "en": {
+        "name": "English",
+        "region": "african",
+        "greeting": "Type 'help' for commands. 'exit' to quit.",
+        "goodbye": "OMEGA shutting down. Stay sovereign.",
+        "help_header": "Commands:",
+        "unknown_command": ("Unrecognized command - routed to the master "
+                            "core for evaluation."),
+        "remembered": "Remembered fact #%d: %s",
+        "forgot": "Forgot fact #%d: %s",
+    },
+    "zu": {
+        "name": "isiZulu",
+        "region": "african",
+        "greeting": "Sawubona! Thayipha 'help' ukuze ubone imiyalo. 'exit' ukuze uphume.",
+        "goodbye": "OMEGA iyacima. Sala kahle, hlala ukhululekile.",
+        "help_header": "Imiyalo:",
+        "unknown_command": ("Umyalo ongaziwa - udluliselwe ku-master core "
+                            "ukuze uhlolwe."),
+        "remembered": "Iqiniso #%d likhunjulwe: %s",
+        "forgot": "Iqiniso #%d lishiwe: %s",
+    },
+    "xh": {
+        "name": "isiXhosa",
+        "region": "african",
+        "greeting": "Molo! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
+        "goodbye": "OMEGA iyacima. Sala kakuhle, hlala ukhululekile.",
+        "help_header": "Imiyalo:",
+        "unknown_command": ("Umyalo ongaziwayo - ugqithiselwe ku-master core "
+                            "ukuvavanywa."),
+        "remembered": "Inyani #%d likhunjulwe: %s",
+        "forgot": "Inyani #%d liyekiwe: %s",
+    },
+    "st": {
+        "name": "Sesotho",
+        "region": "african",
+        "greeting": "Dumela! Tlanya 'help' ho bona ditaelo. 'exit' ho tswa.",
+        "goodbye": "OMEGA e tima. Sala hantle, dula o lokolohile.",
+        "help_header": "Ditaelo:",
+        "unknown_command": ("Taelo e sa tsejweng - e rometswe ho master core "
+                            "ho hlahlojwa."),
+        "remembered": "Nnete #%d e gopolotswe: %s",
+        "forgot": "Nnete #%d e lebetswe: %s",
+    },
+    "af": {
+        "name": "Afrikaans",
+        "region": "african",
+        "greeting": "Hallo! Tik 'help' vir bevele. 'exit' om af te sluit.",
+        "goodbye": "OMEGA skakel af. Bly soewerein.",
+        "help_header": "Bevele:",
+        "unknown_command": ("Onbekende bevel - na die meesterkern gestuur "
+                            "vir evaluasie."),
+        "remembered": "Feit #%d onthou: %s",
+        "forgot": "Feit #%d vergeet: %s",
+    },
+    # v29.3.0: the remaining 10 packs (data-only, ASCII transliterations).
+    "tn": {
+        "name": "Setswana",
+        "region": "african",
+        "greeting": "Dumela! Tlanya 'help' go bona ditaelo. 'exit' go tswa.",
+        "goodbye": "OMEGA e tima. Sala sentle, nna o ikemetse.",
+        "help_header": "Ditaelo:",
+        "unknown_command": ("Taelo e e sa itsiweng - e rometswe go master "
+                            "core go sekasekwa."),
+        "remembered": "Nnete #%d e gakolotswe: %s",
+        "forgot": "Nnete #%d e lebetswe: %s",
+    },
+    "nso": {
+        "name": "Sepedi",
+        "region": "african",
+        "greeting": "Dumela! Tlanya 'help' go bona ditaelo. 'exit' go tswa.",
+        "goodbye": "OMEGA e tima. Sala gabotse, dula o ikemetse.",
+        "help_header": "Ditaelo:",
+        "unknown_command": ("Taelo ye e sa tsebjego - e rometswe go master "
+                            "core go hlahlobjwa."),
+        "remembered": "Nnete #%d e gopolotswe: %s",
+        "forgot": "Nnete #%d e lebetswe: %s",
+    },
+    "ts": {
+        "name": "Xitsonga",
+        "region": "african",
+        "greeting": "Avuxeni! Tlanya 'help' ku vona swileriso. 'exit' ku huma.",
+        "goodbye": "OMEGA yi cima. Sala kahle, tshama u ntshunxekile.",
+        "help_header": "Swileriso:",
+        "unknown_command": ("Xileriso lexi nga tiviwiki - xi rhumeliwe eka "
+                            "master core ku kamberiwa."),
+        "remembered": "Xiyimo #%d xi tsariwe: %s",
+        "forgot": "Xiyimo #%d xi rivariwe: %s",
+    },
+    "ve": {
+        "name": "Tshivenda",
+        "region": "african",
+        "greeting": "Ndaa! Tlanya 'help' u vhona milayo. 'exit' u bva.",
+        "goodbye": "OMEGA i a ima. Salani zwavhudi, dzulani ni tsho itsho.",
+        "help_header": "Milayo:",
+        "unknown_command": ("Mulayo u sa divheyiwi - u rumelwe kha master "
+                            "core u toliwa."),
+        "remembered": "Ndivho #%d yo dzulwa: %s",
+        "forgot": "Ndivho #%d yo hangwelwa: %s",
+    },
+    "ss": {
+        "name": "siSwati",
+        "region": "african",
+        "greeting": "Sawubona! Thayipha 'help' kubona imiyalo. 'exit' kuphuma.",
+        "goodbye": "OMEGA iyacima. Sala kahle, hlala ukhululekile.",
+        "help_header": "Imiyalo:",
+        "unknown_command": ("Umyalo longatiwa - udluliselwe ku-master core "
+                            "kuhlolwa."),
+        "remembered": "Liqiniso #%d likhunjulwe: %s",
+        "forgot": "Liqiniso #%d lishiyiwe: %s",
+    },
+    "nr": {
+        "name": "isiNdebele",
+        "region": "african",
+        "greeting": "Lotjhani! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
+        "goodbye": "OMEGA iyacima. Sala kuhle, hlala ukhululekile.",
+        "help_header": "Imiyalo:",
+        "unknown_command": ("Umyalo ongaziwa - uthunyiwe ku-master core "
+                            "ukuhlolwa."),
+        "remembered": "Iqiniso #%d likhunjulwe: %s",
+        "forgot": "Iqiniso #%d liyekelelwe: %s",
+    },
+    "sw": {
+        "name": "Swahili",
+        "region": "african",
+        "greeting": "Habari! Andika 'help' kuona amri. 'exit' kutoka.",
+        "goodbye": "OMEGA inazimwa. Kwaheri, kaa huru.",
+        "help_header": "Amri:",
+        "unknown_command": ("Amri isiyojulikana - imeelekezwa kwa master "
+                            "core kwa tathmini."),
+        "remembered": "Ukweli #%d umekumbukwa: %s",
+        "forgot": "Ukweli #%d umesahauliwa: %s",
+    },
+    "am": {
+        "name": "Amharic",
+        "region": "african",
+        "greeting": ("Selam! t'azzazochin lemareg 'help' yigetsu. "
+                     "'exit' lemewt'at."),
+        "goodbye": "OMEGA tet'ewalech. Dehna hun, dehna neh.",
+        "help_header": "T'azzazochin:",
+        "unknown_command": ("Yelayaweqe t'azzaz - wede master core "
+                            "t'lkebwal."),
+        "remembered": "Ewnet #%d t'zegnwal: %s",
+        "forgot": "Ewnet #%d t'rshegnwal: %s",
+    },
+    "yo": {
+        "name": "Yoruba",
+        "region": "african",
+        "greeting": "Pele o! Te 'help' lati ri awon ase. 'exit' lati jade.",
+        "goodbye": "OMEGA ti pare. Odabo, wa laafin.",
+        "help_header": "Awon ase:",
+        "unknown_command": ("Ase ti a ko mo - a ti ran si master core fun "
+                            "ayewo."),
+        "remembered": "Otito #%d ti se akosile: %s",
+        "forgot": "Otito #%d t
