@@ -1,0 +1,536 @@
+e 'import <path>'"))
+    if engine.serper_key:
+        rows.append(("Serper", "configured",
+                     "live web search ready - use 'research <query>'"))
+    else:
+        rows.append(("Serper", "missing", "set SERPER_API_KEY in .env"))
+    if engine.openai_key:
+        rows.append(("OpenAI", "configured",
+                     "LLM-enhanced tax guidance ready"))
+    else:
+        rows.append(("OpenAI", "missing", "set OPENAI_API_KEY in .env"))
+    if engine.openrouter_key:
+        rows.append(("OpenRouter", "configured",
+                     "model %s - use 'evolve run online'"
+                     % engine.openrouter_model))
+    else:
+        rows.append(("OpenRouter", "missing",
+                     "set OPENROUTER_API_KEY (+ OPENROUTER_MODEL) in .env"))
+    # v29.3.0: 6th row - optional claude_engine bridge (never a hard dep).
+    if BRIDGE_AVAILABLE and engine.openai_key:
+        rows.append(("claude_engine", "available",
+                     "bridge active - LLM calls route through it ('bridge')"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("claude_engine", "no key",
+                     "installed; set OPENAI_API_KEY to activate the bridge"))
+    else:
+        rows.append(("claude_engine", "not installed",
+                     "optional; clone repo + pip install -e . ('bridge')"))
+    lines = ["Integrations manifest (6 connectors):"]
+    lines.append("  %-13s %-13s %s" % ("connector", "status",
+                                       "how to enable / use"))
+    for name, status, hint in rows:
+        lines.append("  %-13s %-13s %s" % (name, status, hint))
+    return lines
+
+
+def bridge_lines(engine: OmegaMasterEngine) -> List[str]:
+    """v29.3.0 'bridge' command: claude_engine bridge status report."""
+    lines = ["claude_engine bridge status:"]
+    if BRIDGE_AVAILABLE:
+        lines.append("  module: AVAILABLE (claude_engine importable)")
+    else:
+        lines.append("  module: NOT INSTALLED (engine works fully without it)")
+        lines.append("  how to enable: clone the claude_engine repo and run "
+                     "'pip install -e .' inside it, then restart omega.py")
+    if engine.openai_key:
+        lines.append("  primary provider: openai / %s (key %s)"
+                     % (engine.omega_llm_model,
+                        mask_secret(engine.openai_key)))
+    else:
+        lines.append("  primary provider: inactive (set OPENAI_API_KEY in "
+                     ".env to activate)")
+    if engine.anthropic_key:
+        lines.append("  fallback provider: anthropic / %s (key %s)"
+                     % (CLAUDE_FALLBACK_MODEL,
+                        mask_secret(engine.anthropic_key)))
+    else:
+        lines.append("  fallback provider: none (set ANTHROPIC_API_KEY for "
+                     "the anthropic fallback)")
+    if engine._bridge_engine is not None:
+        stats_fn = getattr(engine._bridge_engine, "stats", None)
+        if callable(stats_fn):
+            try:
+                lines.append("  circuit-breaker stats: %s" % (stats_fn(),))
+            except Exception:
+                lines.append("  circuit-breaker stats: unavailable")
+        else:
+            lines.append("  circuit-breaker stats: engine has no stats()")
+    else:
+        lines.append("  engine instance: not instantiated (lazy - created on "
+                     "the first bridged LLM call)")
+    lines.append("  routing: _llm() uses the bridge when available; ANY "
+                 "exception falls back to the stdlib urllib path")
+    return lines
+
+
+# Router smoke list used by the selftest AND the 'launch' pre-flight check.
+CORE_SMOKE: List[Tuple[str, str]] = [
+    ("build and deploy sync", "Omega Infrastructure Build & Sync"),
+    ("crypto mining portfolio", "Omega Mining & Investment Engine"),
+    ("tax vat sars compliance", "Omega Tax & Audit Support"),
+    ("api key security status", "Omega Security Gatekeeper"),
+    ("deep research search", "Omega Deep Research"),
+    ("teach me companion explain", "Omega Companion/Tutor"),
+    ("business hustle opportunities", "Omega Opportunity Engine"),
+    ("finance budget scam debt", "Omega Finance Literacy"),
+    ("selfimprove evolve", "Omega Self-Improvement"),
+    ("evolution mutation engine", "Omega Evolution Engine"),
+]
+
+
+def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
+    """v29.3.0 'launch' command: GO/NO-GO pre-flight checklist.
+
+    Blockers are missing pillars / unwritable memory / selftest-core failure
+    ONLY. Optional integration keys are WARN, never blockers.
+    Returns (lines, blockers).
+    """
+    rows: List[Tuple[str, str, str]] = []
+    blockers: List[str] = []
+
+    # 1. Version current (informational; always matches the running build).
+    rows.append(("version", "OK", "v%s Launch-Grade" % ENGINE_VERSION))
+
+    # 2. Selftest core pass: router smoke over all 10 subsystems.
+    core_failures = []
+    for domain, expected in CORE_SMOKE:
+        try:
+            result = engine.execute_omega_subsystem(domain, {"query": domain})
+            if result.get("subsystem") != expected:
+                core_failures.append(domain)
+        except Exception:
+            core_failures.append(domain)
+    if core_failures:
+        rows.append(("selftest core", "FAIL",
+                     "router smoke failed for: " + ", ".join(core_failures)))
+        blockers.append("selftest core failure")
+    else:
+        rows.append(("selftest core", "OK",
+                     "router smoke: %d/%d subsystems" % (len(CORE_SMOKE),
+                                                         len(CORE_SMOKE))))
+
+    # 3. Pillars integrity.
+    pillars = engine.evolution.pillars_status()
+    rows.append(("pillars integrity", "OK" if pillars == "OK" else "FAIL",
+                 "sha256 verified" if pillars == "OK"
+                 else "tampered/missing - run 'evolve pillars'"))
+    if pillars != "OK":
+        blockers.append("pillars integrity")
+
+    # 4. Memory writable.
+    mem_ok = save_memory(engine.memory_path, engine.memory)
+    rows.append(("memory writable", "OK" if mem_ok else "FAIL",
+                 engine.memory_path if mem_ok
+                 else "cannot write " + engine.memory_path))
+    if not mem_ok:
+        blockers.append("memory not writable")
+
+    # 5. Strategy module present (auto-bootstraps; WARN if missing).
+    strategy_ok = os.path.isfile(STRATEGY_FILE)
+    rows.append(("strategy module", "OK" if strategy_ok else "WARN",
+                 STRATEGY_FILE if strategy_ok
+                 else "missing - auto-bootstraps on next evolution cycle"))
+
+    # 6. Per-integration key status (WARN, never blockers).
+    rows.append(("github key", "OK" if engine.github_repo else "WARN",
+                 "GITHUB_REPO configured" if engine.github_repo
+                 else "set GITHUB_REPO (+ GITHUB_TOKEN) in .env"))
+    rows.append(("serper key", "OK" if engine.serper_key else "WARN",
+                 "live search ready" if engine.serper_key
+                 else "set SERPER_API_KEY in .env"))
+    rows.append(("openai key", "OK" if engine.openai_key else "WARN",
+                 "LLM enhancement ready" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    rows.append(("openrouter key", "OK" if engine.openrouter_key else "WARN",
+                 "online evolution ready" if engine.openrouter_key
+                 else "set OPENROUTER_API_KEY in .env"))
+    bridge_ok = BRIDGE_AVAILABLE and bool(engine.openai_key)
+    if bridge_ok:
+        rows.append(("bridge", "OK", "claude_engine bridge active"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("bridge", "WARN", "installed; set OPENAI_API_KEY"))
+    else:
+        rows.append(("bridge", "WARN",
+                     "claude_engine not installed (optional)"))
+
+    # 7. Site version note (informational).
+    rows.append(("site version", "INFO",
+                 "badge v%s - publish via the platform publish button"
+                 % ENGINE_VERSION))
+
+    lines = ["Launch pre-flight checklist (%s):" % ENGINE_NAME]
+    lines.append("  %-18s %-6s %s" % ("check", "status", "detail"))
+    for name, status, detail in rows:
+        lines.append("  %-18s %-6s %s" % (name, status, detail))
+    if blockers:
+        lines.append("NOT READY: " + ", ".join(blockers))
+    else:
+        lines.append("LAUNCH READY")
+    return lines, blockers
+
+
+# ---------------------------------------------------------------------------
+# CLI presentation helpers
+# ---------------------------------------------------------------------------
+
+def print_banner(engine: OmegaMasterEngine) -> None:
+    line = "=" * 60
+    print(line)
+    print(ENGINE_NAME)
+    print(line)
+    print("Subsystem availability:")
+    for row in engine.availability_matrix():
+        print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
+    print(line)
+    facts = len(engine.memory.get("facts", []))
+    sessions = engine.memory.get("sessions", 1)
+    print("Memory: %d remembered fact(s) | session #%d | %s"
+          % (facts, sessions, engine.memory_path))
+    print("Evolution: generation %d | health %.2f | pillars %s"
+          % (engine.evolution.generation(), engine.evolution.health(),
+             engine.evolution.pillars_status()))
+    print(line)
+    print(engine.ui("greeting"))
+
+
+def print_help(engine: OmegaMasterEngine) -> None:
+    commands = [
+        ("help", "show this command list"),
+        ("status", "subsystem matrix + system_state"),
+        ("version", "version, subsystem count, session, facts"),
+        ("keys", "masked API key report"),
+        ("research <query>", "deep research (Serper live or offline plan)"),
+        ("mine", "mining/investment subsystem"),
+        ("tax <country or topic>", "tax support with disclaimer"),
+        ("companion <topic>", "study-companion scaffold ('teach' = full "
+         "classroom)"),
+        ("teach <subject>", "Professor classroom: conversational tutor "
+         "session"),
+        ("syllabus <subject> [new]", "show / regenerate a 10-lesson "
+         "outline"),
+        ("quiz <subject>", "graded quiz (inside a class: 'quiz me')"),
+        ("progress", "learner profile: lessons, quiz average, weak "
+         "points"),
+        ("opportunities <domain>", "opportunity scan framework"),
+        ("finance <topic>", "finance literacy / scam avoidance"),
+        ("languages", "African language support list"),
+        ("lang <code>", "switch UI language (100 packs: 70 African + "
+         "30 world, grouped list)"),
+        ("translate <code> <text>", "translate text into a language "
+         "(needs OPENAI_API_KEY or bridge)"),
+        ("cost", "pricing-disruption table (free engine, BYOK cents)"),
+        ("selfimprove <note>", "log a self-improvement entry"),
+        ("evolve [sub]", "evolution engine: run | run online | rollback | "
+         "lineage | pillars | test <query>"),
+        ("why", "the 6 LUQI AI differentiators"),
+        ("integrations", "6-connector live status manifest"),
+        ("bridge", "claude_engine bridge status (optional, never required)"),
+        ("launch", "GO/NO-GO launch pre-flight checklist"),
+        ("remember <fact>", "persist a fact to omega_memory.json"),
+        ("recall", "list all remembered facts (numbered)"),
+        ("forget <n>", "delete fact #n"),
+        ("history [n]", "show last n exchanges (default 10)"),
+        ("import <path>", "import a .csv or .xlsx dataset"),
+        ("analyze", "summarize the loaded dataset"),
+        ("query <text>", "filter dataset rows containing text"),
+        ("export", "write omega_export_<UTCts>.md snapshot"),
+        ("report <topic>", "write omega_report_<slug>_<UTCts>.md"),
+        ("sync github", "git add/commit/push sync (needs GITHUB_REPO)"),
+        ("sync status", "git + GitHub sync configuration status"),
+        ("log", "last 10 audit entries"),
+        ("clear", "clear the screen"),
+        ("exit / quit", "graceful shutdown"),
+    ]
+    print(engine.ui("help_header"))
+    for name, desc in commands:
+        print("  %-26s %s" % (name, desc))
+    print("Anything else is routed through the master router.")
+
+
+def print_result(result: Dict[str, Any]) -> None:
+    """Human-readable rendering of a subsystem result dict."""
+    subsystem = result.get("subsystem", "Master Core")
+    status = result.get("status", "Unknown")
+    print("[%s] %s" % (status, subsystem))
+    if result.get("message"):
+        print("  " + str(result["message"]))
+    for key, value in result.items():
+        if key in ("subsystem", "status", "message"):
+            continue
+        if isinstance(value, dict):
+            print("  %s:" % key)
+            for sub_key, sub_val in value.items():
+                print("    %s: %s" % (sub_key, sub_val))
+        elif isinstance(value, list):
+            print("  %s:" % key)
+            for item in value:
+                if isinstance(item, dict):
+                    print("    - " + "; ".join("%s: %s" % (k, v) for k, v in item.items()))
+                else:
+                    print("    - " + str(item))
+        else:
+            print("  %s: %s" % (key, value))
+
+
+def clear_screen() -> None:
+    try:
+        os.system("cls" if os.name == "nt" else "clear")
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# v29.5.0 "The Professor": classroom session, syllabus, quiz, progress
+# ---------------------------------------------------------------------------
+
+def lesson_intro_lines(entry: Dict[str, Any], subject: str) -> List[str]:
+    """Render the current lesson (title + key points) for a profile entry."""
+    syllabus = entry.get("syllabus") or []
+    if not syllabus:
+        return ["No syllabus yet for %s - type 'syllabus' to build one."
+                % subject]
+    try:
+        idx = int(entry.get("current_lesson", 0))
+    except Exception:
+        idx = 0
+    idx = min(max(0, idx), len(syllabus) - 1)
+    lesson = syllabus[idx]
+    lines = ["Lesson %d/%d: %s" % (idx + 1, len(syllabus),
+                                   lesson.get("title", "?"))]
+    for point in lesson.get("points") or []:
+        lines.append("  - " + str(point))
+    return lines
+
+
+def syllabus_lines(engine: OmegaMasterEngine, subject: str,
+                   regenerate: bool = False) -> List[str]:
+    """Render a subject's 10-lesson outline (LLM online, offline built-in)."""
+    subject = normalize_subject(subject)
+    syllabus, evicted, source = engine.get_syllabus(subject, regenerate)
+    lines: List[str] = []
+    if evicted:
+        lines.append("Note: learner profile full (%d subjects) - oldest "
+                     "subject '%s' was evicted."
+                     % (MAX_LEARNING_SUBJECTS, evicted))
+    label = {
+        "saved": "saved syllabus",
+        "llm": "LLM-generated outline",
+        "builtin": "built-in outline",
+        "scaffold": "generic mastery scaffold",
+    }.get(source, source)
+    lines.append("Syllabus for %s (%s, %d lessons):"
+                 % (subject, label, len(syllabus)))
+    for i, lesson in enumerate(syllabus, 1):
+        lines.append("  Lesson %d: %s" % (i, lesson.get("title", "?")))
+        for point in (lesson.get("points") or [])[:3]:
+            lines.append("    - " + str(point))
+    if source == "scaffold":
+        lines.append("(Generic scaffold - add OPENAI_API_KEY for a custom "
+                     "LLM-generated outline.)")
+    lines.append("Regenerate with: syllabus %s new" % subject)
+    return lines
+
+
+def progress_lines(engine: OmegaMasterEngine) -> List[str]:
+    """Render the learner-profile table (empty + populated states)."""
+    learning = engine.memory.get("learning") or {}
+    if not learning:
+        return ["No learning progress yet.",
+                "Start a class with: teach <subject>  "
+                "(e.g. teach mathematics)"]
+    lines = ["Learner progress (%d subject%s):"
+             % (len(learning), "" if len(learning) == 1 else "s")]
+    lines.append("  %-18s %-9s %-9s %-6s %s"
+                 % ("Subject", "Lesson", "Avg quiz", "Weak", "Last session"))
+    for subject in sorted(learning):
+        entry = learning[subject] or {}
+        syllabus = entry.get("syllabus") or []
+        total_lessons = len(syllabus) or 10
+        try:
+            current = int(entry.get("current_lesson", 0)) + 1
+        except Exception:
+            current = 1
+        lesson_txt = "%d/%d" % (min(current, total_lessons), total_lessons)
+        scores = entry.get("quiz_scores") or []
+        pcts = [100.0 * s.get("score", 0) / s.get("total", 1)
+                for s in scores if s.get("total")]
+        avg_txt = ("%d%%" % round(sum(pcts) / len(pcts))) if pcts else "-"
+        weak = entry.get("weak_points") or []
+        last = str(entry.get("last_session") or "")[:10] or "-"
+        lines.append("  %-18s %-9s %-9s %-6d %s"
+                     % (str(subject)[:18], lesson_txt, avg_txt,
+                        len(weak), last))
+    return lines
+
+
+def run_offline_quiz(engine: OmegaMasterEngine, subject: str,
+                     input_fn: Any, out: Any
+                     ) -> Tuple[Optional[int], int, Optional[str]]:
+    """Offline self-check quiz.
+
+    Shows built-in questions one by one; 'reveal' shows the answer, then
+    the student self-marks 'right'/'wrong'. Returns (score, asked,
+    leftover_line) where leftover_line is an intercepted classroom command
+    that ended the quiz early (to be processed by the session loop).
+    (None, 0, None) when no bank exists for the subject.
+    """
+    subject = normalize_subject(subject)
+    bank = OFFLINE_QUIZ_BANKS.get(subject)
+    if not bank:
+        out("No offline quiz bank for '%s' yet - add OPENAI_API_KEY for "
+            "generated quizzes." % subject)
+        return None, 0, None
+    out("Offline self-check quiz: %d cards. For each: think, type "
+        "'reveal', then mark 'right' or 'wrong'." % len(bank))
+    score = 0
+    asked = 0
+    for qnum, (question, answer) in enumerate(bank, 1):
+        out("Q%d: %s" % (qnum, question))
+        revealed = False
+        while True:
+            try:
+                raw = input_fn("[QUIZ] > ")
+            except EOFError:
+                out("")
+                out("(End of input - closing the quiz.)")
+                return score, asked, None
+            except KeyboardInterrupt:
+                out("")
+                continue
+            cmd = raw.strip().lower()
+            if not cmd:
+                continue
+            if cmd in ("end class", "next", "progress", "syllabus",
+                       "hint", "quiz me", "exit", "quit"):
+                out("Quiz ended early (%d card%s marked)."
+                    % (asked, "" if asked == 1 else "s"))
+                return score, asked, raw.strip()
+            if not revealed:
+                if cmd == "reveal":
+                    out("Answer: %s" % answer)
+                    out("Be honest - mark 'right' or 'wrong'.")
+                    revealed = True
+                else:
+                    out("Think first, then type 'reveal' to see the "
+                        "answer.")
+            else:
+                if cmd == "right":
+                    score += 1
+                    asked += 1
+                    out("Marked right. Well done.")
+                    break
+                if cmd == "wrong":
+                    asked += 1
+                    engine.add_weak_point(subject, question)
+                    out("Marked wrong - noted as a weak point to review.")
+                    break
+                if cmd == "reveal":
+                    out("Answer: %s" % answer)
+                else:
+                    out("Type 'right' or 'wrong' (or 'reveal' to see the "
+                        "answer again).")
+    out("Self-check complete: %d/%d correct." % (score, asked))
+    return score, asked, None
+
+
+def run_online_quiz(engine: OmegaMasterEngine, subject: str,
+                    messages: List[Dict[str, str]], input_fn: Any,
+                    out: Any) -> Optional[Tuple[int, int]]:
+    """Online 3-question graded exchange with the professor.
+
+    Returns (score, total) or None when the LLM is unreachable before
+    the first question (caller falls back to the offline self-check).
+    """
+    convo = list(messages)
+    score = 0
+    asked = 0
+    for i in range(3):
+        convo.append({"role": "user", "content": (
+            "Quiz time: ask me question %d of 3 about %s. Ask ONLY the "
+            "question, do not give the answer." % (i + 1, subject))})
+        convo = _cap_messages(convo)
+        question = engine._llm_messages(convo)
+        if not question:
+            return (score, asked) if asked else None
+        question = question.strip()
+        out("Professor asks: %s" % question)
+        convo.append({"role": "assistant", "content": question})
+        try:
+            answer = input_fn("[QUIZ] > ")
+        except EOFError:
+            out("")
+            return (score, asked) if asked else None
+        except KeyboardInterrupt:
+            out("")
+            return (score, asked) if asked else None
+        convo.append({"role": "user", "content": answer.strip()})
+        convo.append({"role": "user", "content": (
+            "Grade my answer strictly. Start your reply with RIGHT or "
+            "WRONG, then one short line of feedback.")})
+        convo = _cap_messages(convo)
+        grading = engine._llm_messages(convo)
+        asked += 1
+        if not grading:
+            out("(Grading unavailable - LLM call failed; this question "
+                "was not scored.)")
+            continue
+        grading = grading.strip()
+        convo.append({"role": "assistant", "content": grading})
+        out("Professor: %s" % grading)
+        if grading.upper().startswith("RIGHT"):
+            score += 1
+        else:
+            engine.add_weak_point(subject, question[:80])
+    out("Professor's grade: %d/%d." % (score, asked))
+    if score < asked:
+        out("Review the questions marked wrong before the next class.")
+    return score, asked
+
+
+def teach_session(engine: OmegaMasterEngine, subject: str,
+                  input_fn: Any = input, out: Any = print) -> None:
+    """Run one tutor session (sub-REPL) for `subject`.
+
+    ONLINE: multi-turn professor conversation with the full rolling
+    context (capped at the last 40 messages) through _llm_messages.
+    OFFLINE: one honest 'needs key' line, then the offline classroom
+    (built-in syllabus lessons + self-check quiz). NEVER fakes a
+    conversation and NEVER crashes; EOF/KeyboardInterrupt safe.
+    """
+    subject = normalize_subject(subject)
+    if not subject:
+        out("Usage: teach <subject>")
+        return
+    online = bool(engine.openai_key)
+    syllabus, evicted, _source = engine.get_syllabus(subject)
+    if evicted:
+        out("Note: learner profile full (%d subjects) - oldest subject "
+            "'%s' was evicted." % (MAX_LEARNING_SUBJECTS, evicted))
+    entry, _ = engine.learning_entry(subject)
+    out("=" * 60)
+    out("CLASSROOM: %s with Professor LUQI" % subject)
+    out("=" * 60)
+    messages: List[Dict[str, str]] = []
+    if online:
+        messages.append({"role": "system",
+                         "content": PROFESSOR_PROMPT % subject})
+    else:
+        out("Live professor conversation needs OPENAI_API_KEY - running "
+            "offline classroom.")
+    out("In class: end class | syllabus | quiz me | hint | progress | next")
+    for line in lesson_intro_lines(entry, subject):
+        out(line)
+
+    turns = 0
+    quiz_results: List[Tuple[int, int]] 
