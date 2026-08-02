@@ -1,4 +1,0 @@
-    "p2_status": "Omega AI已建\未 (System Baseline Operational Verification)",
-    "p4_tax": "Omega AI税务支\未 (Automated Transaction Ledger Tracking)",
-KW_BUILT_ZH = "已建\未"  # "yi jian cheng" (built/deployed)
-KW_TAX_ZH = "税务"  # "shui wu" (tax affairs)
