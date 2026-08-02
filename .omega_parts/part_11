@@ -1,0 +1,505 @@
+e: %s" % exc)
+    # Clean exit (exit/quit or EOF): persist memory.
+    save_memory(engine.memory_path, engine.memory)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Self-test
+# ---------------------------------------------------------------------------
+
+def _selftest_build_xlsx(path: str) -> None:
+    """Build a minimal but real .xlsx (ZIP of XML parts) for the selftest.
+
+    Covers shared strings, inline strings, and plain numbers.
+    """
+    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/'
+        'vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="applic'
+        'ation/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        '<Override PartName="/xl/sharedStrings.xml" ContentType="applicatio'
+        'n/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
+        '</Types>'
+    )
+    workbook = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="%s" xmlns:r="http://schemas.openxmlformats.org/'
+        'officeDocument/2006/relationships">'
+        '<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>'
+        '</workbook>' % ns
+    )
+    shared_strings = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<sst xmlns="%s" count="4" uniqueCount="4">'
+        '<si><t>name</t></si><si><t>score</t></si>'
+        '<si><t>alice</t></si><si><t>bob</t></si>'
+        '</sst>' % ns
+    )
+    sheet = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<worksheet xmlns="%s"><sheetData>'
+        '<row r="1"><c r="A1" t="s"><v>0</v></c>'
+        '<c r="B1" t="s"><v>1</v></c></row>'
+        '<row r="2"><c r="A2" t="s"><v>2</v></c>'
+        '<c r="B2"><v>42</v></c></row>'
+        '<row r="3"><c r="A3" t="s"><v>3</v></c>'
+        '<c r="B3"><v>7</v></c></row>'
+        '<row r="4"><c r="A4" t="inlineStr"><is><t>carol</t></is></c>'
+        '<c r="B4"><v>5</v></c></row>'
+        '</sheetData></worksheet>' % ns
+    )
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", content_types)
+        archive.writestr("xl/workbook.xml", workbook)
+        archive.writestr("xl/sharedStrings.xml", shared_strings)
+        archive.writestr("xl/worksheets/sheet1.xml", sheet)
+
+
+def run_selftest() -> int:
+    print(ENGINE_NAME + " - SELF TEST")
+    checks = []
+    engine = OmegaMasterEngine()
+
+    # Router smoke test over all 10 subsystems (shared with 'launch').
+    for domain, expected in CORE_SMOKE:
+        try:
+            result = engine.execute_omega_subsystem(domain, {"query": domain})
+            ok = result.get("subsystem") == expected
+            checks.append(("router: %-30s -> %s" % (domain, expected), ok))
+        except Exception as exc:
+            checks.append(("router: %s (exception: %s)" % (domain, exc), False))
+
+    # Unknown domain -> generic core fallback.
+    try:
+        result = engine.execute_omega_subsystem("zzz unknown zzz", {"query": "x"})
+        checks.append(("router: unknown domain -> generic core",
+                       result.get("status") == "Unknown"))
+    except Exception as exc:
+        checks.append(("router: unknown domain (exception: %s)" % exc, False))
+
+    # .env manual parser (tolerates missing/malformed).
+    try:
+        parsed = parse_env_file("__definitely_missing__.env")
+        checks.append((".env parser: missing file tolerated", parsed == {}))
+    except Exception as exc:
+        checks.append((".env parser: missing file (exception: %s)" % exc, False))
+    try:
+        tmp = "__omega_selftest__.env"
+        with open(tmp, "w", encoding="ascii") as handle:
+            handle.write("# comment\n\nOPENAI_API_KEY='sk-test123456'\n"
+                         "BROKEN LINE\nEMPTY=\n")
+        parsed = parse_env_file(tmp)
+        os.remove(tmp)
+        checks.append((".env parser: quotes/comments/malformed handled",
+                       parsed.get("OPENAI_API_KEY") == "sk-test123456"
+                       and parsed.get("EMPTY") == ""))
+    except Exception as exc:
+        checks.append((".env parser: malformed (exception: %s)" % exc, False))
+
+    # Secret masking never exposes the full key.
+    checks.append(("masking: full secret never printed",
+                   mask_secret("sk-secret-value-99") == "sk-s...99"))
+
+    # Log write + read back.
+    try:
+        engine._audit("SelfTest", "selftest write", "Success")
+        tail = engine.read_log_tail(1)
+        ok = bool(tail) and tail[-1].get("subsystem") == "SelfTest"
+        checks.append(("log: write + read omega_log.jsonl", ok))
+    except Exception as exc:
+        checks.append(("log: write/read (exception: %s)" % exc, False))
+
+    # Offline online-calls return None, never raise.
+    offline_engine = OmegaMasterEngine()
+    offline_engine.serper_key = ""
+    offline_engine.openai_key = ""
+    try:
+        checks.append(("guarded: _serper_search offline -> None",
+                       offline_engine._serper_search("test") is None))
+        checks.append(("guarded: _llm offline -> None",
+                       offline_engine._llm("test") is None))
+    except Exception as exc:
+        checks.append(("guarded: online calls (exception: %s)" % exc, False))
+
+    # Module A: memory roundtrip (remember/recall/forget) + corrupt recovery.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mem_path = os.path.join(tmpdir, MEMORY_FILE)
+            mem = fresh_memory()
+            mem["facts"].append("alpha fact")
+            mem["facts"].append("beta fact")
+            ok = save_memory(mem_path, mem)
+            loaded = load_memory(mem_path)
+            ok = ok and loaded.get("facts") == ["alpha fact", "beta fact"]
+            loaded["facts"].pop(0)  # forget fact #1
+            ok = save_memory(mem_path, loaded) and ok
+            reloaded = load_memory(mem_path)
+            ok = ok and reloaded.get("facts") == ["beta fact"]
+            checks.append(("memory: remember/recall/forget roundtrip", ok))
+
+            with open(mem_path, "w", encoding="ascii") as handle:
+                handle.write("{corrupt json !!!")
+            recovered = load_memory(mem_path)
+            ok = (recovered.get("facts") == []
+                  and os.path.isfile(mem_path + ".bak"))
+            checks.append(("memory: corrupt JSON -> .bak + fresh start", ok))
+    except Exception as exc:
+        checks.append(("memory: roundtrip (exception: %s)" % exc, False))
+
+    # Module C: generated CSV import + analyze + query.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = os.path.join(tmpdir, "sales.csv")
+            with open(csv_path, "w", encoding="ascii", newline="") as handle:
+                handle.write("name,region,amount\n"
+                             "alpha,north,10\n"
+                             "beta,south,20\n"
+                             "gamma,north,30\n"
+                             "delta,east,40\n"
+                             "epsilon,north,50\n")
+            ok, _msg = engine.import_dataset(csv_path)
+            ok = (ok and engine.dataset is not None
+                  and len(engine.dataset["rows"]) == 5
+                  and len(engine.dataset["headers"]) == 3)
+            checks.append(("import: generated CSV (3 cols x 5 rows)", ok))
+            analysis = engine.analyze_dataset()
+            ok = (any("Rows: 5" in line for line in analysis)
+                  and any(line.startswith("  amount:") for line in analysis)
+                  and any("min=10" in line and "max=50" in line
+                          and "mean=30.00" in line for line in analysis))
+            checks.append(("analyze: row count + numeric min/max/mean", ok))
+            results = engine.query_dataset("north")
+            hits = sum(1 for line in results
+                       if line.strip().startswith("row "))
+            checks.append(("query: substring filter finds 3 'north' rows",
+                           hits == 3))
+            note = engine.dataset_note()
+            checks.append(("dataset note: tax/mine can reference dataset",
+                           bool(note) and "5 rows" in note))
+    except Exception as exc:
+        checks.append(("dataset: CSV import/analyze/query (exception: %s)"
+                       % exc, False))
+
+    # Module C: generated real .xlsx import (built via zipfile above).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xlsx_path = os.path.join(tmpdir, "people.xlsx")
+            _selftest_build_xlsx(xlsx_path)
+            ok, _msg = engine.import_dataset(xlsx_path)
+            headers = engine.dataset["headers"] if engine.dataset else []
+            rows = engine.dataset["rows"] if engine.dataset else []
+            ok = (ok and headers == ["name", "score"] and len(rows) == 3
+                  and rows[0] == ["alice", "42"]
+                  and rows[1] == ["bob", "7"]
+                  and rows[2] == ["carol", "5"])
+            checks.append(("import: generated XLSX (shared/inline/number)",
+                           ok))
+    except Exception as exc:
+        checks.append(("dataset: XLSX import (exception: %s)" % exc, False))
+
+    # Module B: sync status outside a git repo must be graceful.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                lines = engine.sync_status_lines()
+            finally:
+                os.chdir(previous)
+            ok = (isinstance(lines, list) and bool(lines)
+                  and any("git binary" in line for line in lines))
+            checks.append(("sync status: no git repo -> graceful report", ok))
+    except Exception as exc:
+        checks.append(("sync status: (exception: %s)" % exc, False))
+
+    # v29.1.0: version command output (version + subsystem count).
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "version")
+        out = buf.getvalue()
+        checks.append(("version: shows 29.5.0 + 10 subsystems + session/facts",
+                       bool(keep) and "29.5.0" in out
+                       and "Subsystems: 10" in out
+                       and "Session: #" in out and "Facts:" in out))
+    except Exception as exc:
+        checks.append(("version: (exception: %s)" % exc, False))
+
+    # v29.1.0: lang switch to zu persists to disk; restored on fresh boot.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            handle_command(engine, "lang zu")
+        out_zu = buf.getvalue()
+        ok = (engine.lang == "zu" and "isiZulu" in out_zu
+              and load_memory(engine.memory_path).get("lang") == "zu")
+        checks.append(("lang: switch to zu + persisted to memory", ok))
+        rebooted = OmegaMasterEngine()
+        restored_ok = rebooted.lang == "zu"
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            handle_command(rebooted, "lang en")
+        out_en = buf.getvalue()
+        roundtrip = (restored_ok and rebooted.lang == "en"
+                     and "English" in out_en
+                     and load_memory(rebooted.memory_path).get("lang") == "en")
+        checks.append(("lang: restored on boot + zu->en roundtrip", roundtrip))
+    except Exception as exc:
+        checks.append(("lang: roundtrip (exception: %s)" % exc, False))
+
+    # v29.1.0: unknown lang code -> graceful pack list, language unchanged.
+    try:
+        before = engine.lang
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "lang xx")
+        out = buf.getvalue()
+        checks.append(("lang: unknown code graceful (packs listed)",
+                       bool(keep) and engine.lang == before
+                       and "Unknown language code" in out
+                       and "Available language packs" in out))
+    except Exception as exc:
+        checks.append(("lang: unknown code (exception: %s)" % exc, False))
+
+    # v29.1.0: export writes a markdown snapshot containing a planted fact.
+    try:
+        planted = "selftest planted fact v291"
+        engine.remember_fact(planted)
+        ok, message = engine.export_markdown()
+        fname = message.rsplit(" ", 1)[-1].strip() if ok else ""
+        created = (ok and fname.startswith("omega_export_")
+                   and fname.endswith(".md") and os.path.isfile(fname))
+        checks.append(("export: omega_export_<UTCts>.md created", created))
+        contains = False
+        if created:
+            with open(fname, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            contains = (planted in content and "## System State" in content
+                        and "## Audit" in content)
+        checks.append(("export: file contains planted fact + sections",
+                       contains))
+        engine.forget_fact(len(engine.memory.get("facts", [])))
+    except Exception as exc:
+        checks.append(("export: (exception: %s)" % exc, False))
+
+    # v29.1.0: report <topic> routes and writes omega_report_<slug>_<ts>.md.
+    try:
+        ok, message = engine.write_report("mining")
+        fname = message.rsplit(" ", 1)[-1].strip() if ok else ""
+        created = (ok and fname.startswith("omega_report_mining_")
+                   and fname.endswith(".md") and os.path.isfile(fname))
+        checks.append(("report: omega_report_mining_<UTCts>.md created",
+                       created))
+        routed = False
+        if created:
+            with open(fname, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            routed = ("Omega Mining & Investment Engine" in content
+                      and "## Key Findings" in content
+                      and "## Suggested Next Actions" in content)
+        checks.append(("report: routed subsystem + findings + actions", routed))
+    except Exception as exc:
+        checks.append(("report: (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.2.0: Evolution Engine checks (incl. adversarial sandbox proofs)
+    # ------------------------------------------------------------------
+    evo = engine.evolution
+
+    # Router: evolution keywords reach subsystem #10.
+    try:
+        result = engine.execute_omega_subsystem("evolution mutation engine",
+                                                {"query": "x"})
+        checks.append(("router: evolution keywords -> Evolution Engine",
+                       result.get("subsystem") == "Omega Evolution Engine"))
+    except Exception as exc:
+        checks.append(("router: evolution (exception: %s)" % exc, False))
+
+    # (d) Safe whitelisted sample passes gate 1 AND gate 2 (3/3 contracts).
+    try:
+        ok_ast, _why = evo.ast_gate(EVO_GEN1_CODE)
+        ok_exec, _r, pass_rate, _lat = evo.exec_contract_gate(EVO_GEN1_CODE)
+        checks.append(("evolve: safe sample passes AST + sandbox gates",
+                       ok_ast and ok_exec and pass_rate == 1.0))
+    except Exception as exc:
+        checks.append(("evolve: safe sample (exception: %s)" % exc, False))
+
+    # (a) AST gate REJECTS a candidate containing 'import os' + os.system.
+    bad_import = (
+        "import os\n"
+        "def execute_logic(query, telemetry):\n"
+        "    os.system('echo pwned')\n"
+        "    return '<omega_analysis>x</omega_analysis>'\n"
+    )
+    try:
+        ok, reason = evo.ast_gate(bad_import)
+        checks.append(("evolve: AST gate rejects 'import os' + os.system",
+                       not ok and "import" in reason))
+    except Exception as exc:
+        checks.append(("evolve: import rejection (exception: %s)" % exc,
+                       False))
+
+    # (b) AST gate REJECTS a candidate calling open('omega_pillars.json').
+    bad_open = (
+        "def execute_logic(query, telemetry):\n"
+        "    data = open('omega_pillars.json').read()\n"
+        "    return '<omega_analysis>' + data + '</omega_analysis>'\n"
+    )
+    try:
+        ok, _reason = evo.ast_gate(bad_open)
+        checks.append(("evolve: AST gate rejects open() file read", not ok))
+    except Exception as exc:
+        checks.append(("evolve: open rejection (exception: %s)" % exc, False))
+
+    # (c) AST gate REJECTS __import__ and dunder-attribute tricks.
+    bad_dunder_import = (
+        "def execute_logic(query, telemetry):\n"
+        "    mod = __import__('os')\n"
+        "    return '<omega_analysis>' + str(mod) + '</omega_analysis>'\n"
+    )
+    bad_dunder_attr = (
+        "def execute_logic(query, telemetry):\n"
+        "    return '<omega_analysis>' + str(query.__class__) + '</omega_analysis>'\n"
+    )
+    try:
+        ok1, _r1 = evo.ast_gate(bad_dunder_import)
+        ok2, _r2 = evo.ast_gate(bad_dunder_attr)
+        checks.append(("evolve: AST gate rejects __import__ + dunder attr",
+                       not ok1 and not ok2))
+    except Exception as exc:
+        checks.append(("evolve: dunder rejection (exception: %s)" % exc,
+                       False))
+
+    # (e) Restricted exec cannot read files: bypass gate 1 and feed the
+    # file-reading candidate straight to the sandbox; it must fail with a
+    # rejection (NameError on 'open'), never with file contents.
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(bad_open)
+        checks.append(("evolve: restricted exec cannot read files",
+                       not ok and "open" in reason
+                       and "p1_build_sync" not in reason))
+    except Exception as exc:
+        checks.append(("evolve: sandbox file read (exception: %s)" % exc,
+                       False))
+
+    # (f) Contract tests enforce the '<omega_analysis>' tag.
+    no_tag = (
+        "def execute_logic(query, telemetry):\n"
+        "    return 'plain text with no tag'\n"
+    )
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(no_tag)
+        checks.append(("evolve: contract gate enforces <omega_analysis>",
+                       not ok and "omega_analysis" in reason))
+    except Exception as exc:
+        checks.append(("evolve: tag enforcement (exception: %s)" % exc,
+                       False))
+
+    # (g) Fitness gate rejects a lower-fitness candidate.
+    try:
+        low = evo.fitness(1.0, 0.1, 0.0)    # 0.8
+        high = evo.fitness(1.0, 0.1, 1.0)   # 1.0
+        checks.append(("evolve: fitness gate rejects lower fitness",
+                       low < high and not (low >= high)
+                       and abs(high - 1.0) < 1e-9))
+    except Exception as exc:
+        checks.append(("evolve: fitness gate (exception: %s)" % exc, False))
+
+    # Telemetry scoring is clamped to [0.0, 1.0] (negative-score bug fix).
+    try:
+        s_mid = evo.score_result(True, "no tag here", 3.0)   # 1-.3-.2 = 0.5
+        s_floor = evo.score_result(False, "", 9.0)           # clamps to 0.0
+        checks.append(("evolve: telemetry score clamped to [0,1]",
+                       abs(s_mid - 0.5) < 1e-9 and s_floor == 0.0))
+    except Exception as exc:
+        checks.append(("evolve: score clamp (exception: %s)" % exc, False))
+
+    # (k) Offline 'evolve run' completes with no keys and no network.
+    try:
+        engine.openrouter_key = ""
+        gen_before = evo.generation()
+        ok, out_lines = evo.run_cycle(online=False)
+        adopted = ok and evo.generation() > gen_before
+        files_ok = (os.path.isfile(STRATEGY_FILE)
+                    and os.path.isfile(EVOLUTION_FILE)
+                    and os.path.isfile(PILLARS_FILE))
+        joined = "\n".join(out_lines)
+        checks.append(("evolve: offline run adopts (no keys/no network)",
+                       adopted and files_ok and "ADOPTED" in joined))
+    except Exception as exc:
+        checks.append(("evolve: offline run (exception: %s)" % exc, False))
+
+    # (i) Rollback restores an archived (prior) generation.
+    try:
+        gen_now = evo.generation()
+        ok, out_lines = evo.rollback()
+        checks.append(("evolve: rollback restores archived generation",
+                       ok and evo.generation() < gen_now
+                       and any("restored generation" in line
+                               for line in out_lines)))
+    except Exception as exc:
+        checks.append(("evolve: rollback (exception: %s)" % exc, False))
+
+    # (h) Pillar tamper: corrupt omega_pillars.json -> detected + restored.
+    try:
+        with open(PILLARS_FILE, "w", encoding="utf-8") as handle:
+            handle.write('{"pillars": {"p1_build_sync": "HACKED"}, '
+                         '"sha256": "deadbeef"}')
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            status = evo.verify_pillars(announce=True)
+        checks.append(("evolve: pillar tamper detected + restored",
+                       status == "RESTORED"
+                       and evo.pillars_status() == "OK"
+                       and "PILLAR TAMPER DETECTED" in buf.getvalue()))
+    except Exception as exc:
+        checks.append(("evolve: pillar tamper (exception: %s)" % exc, False))
+
+    # (j) 'why' + 'integrations' CLI output present.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep1 = handle_command(engine, "why")
+            keep2 = handle_command(engine, "integrations")
+        out = buf.getvalue()
+        checks.append(("why: 6 differentiators printed",
+                       bool(keep1) and out.count("proof:") >= 6))
+        checks.append(("integrations: 6-connector manifest printed",
+                       bool(keep2) and all(name in out for name in (
+                           "GitHub", "Excel/CSV", "Serper", "OpenAI",
+                           "OpenRouter", "claude_engine"))))
+    except Exception as exc:
+        checks.append(("why/integrations: (exception: %s)" % exc, False))
+
+    # 'evolve test <query>' executes the live strategy and scores telemetry.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "evolve test check mining health")
+        out = buf.getvalue()
+        checks.append(("evolve test: strategy executes + telemetry scored",
+                       bool(keep) and "<omega_analysis>" in out
+                       and "health:" in out))
+    except Exception as exc:
+        checks.append(("evolve test: (exception: %s)" % exc, False))
+
+    # 'evolve' status + lineage + pillars commands render without crashing.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            handle_command(engine, "evolve")
+            handle_command(engine, "evolve lineage")
+            handle_command(engine, "evolve pillars")
+        out = buf.getvalue()
+        checks.append(("evolve: status/lineage/pillars render",
+                       "current generation:" in out
+                       and "pillars integrity:" in out
+                       and "p5_security" in out))
+    except Exception as exc:
+        checks.append(("evolve: status render (exception: %s
