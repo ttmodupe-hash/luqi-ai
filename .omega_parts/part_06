@@ -1,0 +1,521 @@
+lity, and dates into a table.",
+                "5. Synthesize findings; flag uncertainties and conflicts.",
+                "6. Record sources with links and access dates.",
+            ],
+            "hint": ("Set SERPER_API_KEY in .env to enable live web search."),
+        }
+
+    def _companion(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        topic = str(payload.get("query", "")).strip() or "your chosen topic"
+        return {
+            "status": "Ready",
+            "subsystem": "Omega Companion/Tutor",
+            "topic": topic,
+            "scaffold": [
+                "ELI5: core idea of '%s' in one plain sentence." % topic,
+                "Key terms: list 5 vocabulary words to master first.",
+                "Mental model: one analogy that maps to something familiar.",
+                "Worked example: walk through one concrete case step by step.",
+                "Active recall: 3 questions to test yourself without notes.",
+                "Next step: one small practice task to do today.",
+            ],
+        }
+
+    def _opportunity(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        domain = str(payload.get("query", "")).strip() or "general market"
+        return {
+            "status": "Scanned",
+            "subsystem": "Omega Opportunity Engine",
+            "domain": domain,
+            "scan_framework": [
+                "Demand: who hurts enough to pay for a solution in '%s'?" % domain,
+                "Supply gap: what are incumbents ignoring or doing poorly?",
+                "Edge: what skill, asset, or access do you already have?",
+                "Monetization: 3 realistic revenue models and price points.",
+                "Validation: cheapest 7-day test to prove real demand.",
+                "Risk: top 2 failure modes and how to cap downside.",
+            ],
+            "note": "Framework output - validate locally before investing money.",
+        }
+
+    def _finance_literacy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        topic = str(payload.get("query", "")).strip() or "general money skills"
+        return {
+            "status": "Ready",
+            "subsystem": "Omega Finance Literacy",
+            "topic": topic,
+            "guidance": [
+                "Budget first: 50/30/20 rule (needs / wants / saving) as a start.",
+                "Emergency fund: target 3-6 months of essential expenses.",
+                "Debt: pay highest-interest debt first (avalanche method).",
+                "Scam check: guaranteed high returns + urgency + secrecy = walk away.",
+                "Verify: check any advisor/platform against your regulator's register.",
+                "Never invest money you cannot afford to lose.",
+            ],
+            "disclaimer": TAX_DISCLAIMER,
+        }
+
+    # ------------------------------------------------------------------
+    # v29.5.0: learner profile helpers (memory["learning"])
+    # ------------------------------------------------------------------
+
+    def learning_entry(self, subject: str) -> Tuple[Dict[str, Any], Optional[str]]:
+        """Return (entry, evicted_subject_or_None) for `subject`.
+
+        Creates the entry on first use, enforcing the 20-subject cap by
+        evicting the oldest-started subject (the caller prints the
+        eviction notice).
+        """
+        learning = self.memory.setdefault("learning", {})
+        evicted = None
+        if subject not in learning:
+            if len(learning) >= MAX_LEARNING_SUBJECTS:
+                oldest = min(
+                    learning,
+                    key=lambda s: (str(learning[s].get("started", "")),
+                                   str(learning[s].get("last_session", ""))),
+                )
+                del learning[oldest]
+                evicted = oldest
+            learning[subject] = {
+                "syllabus": [],
+                "current_lesson": 0,
+                "quiz_scores": [],
+                "weak_points": [],
+                "started": utc_now_iso(),
+                "last_session": "",
+            }
+        return learning[subject], evicted
+
+    def _llm_syllabus(self, subject: str) -> Optional[List[Dict[str, Any]]]:
+        """Ask the LLM for a 10-lesson outline; None on any failure.
+
+        Expected per-line format: "Lesson N: title | point | point | point".
+        Parsing is tolerant; fewer than 5 usable lessons -> None so the
+        caller falls back to the offline outline.
+        """
+        reply = self._llm_messages([
+            {"role": "system", "content": PROFESSOR_PROMPT % subject},
+            {"role": "user", "content": (
+                "Write a 10-lesson leveled course outline for %s, from "
+                "foundations to a capstone. Reply with EXACTLY 10 lines, "
+                "one per lesson, in this format:\n"
+                "Lesson N: <title> | <key point> | <key point> | "
+                "<key point>\nNo other text." % subject)},
+        ], max_tokens=1200)
+        if not reply:
+            return None
+        lessons: List[Dict[str, Any]] = []
+        try:
+            for raw_line in reply.splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                # Strip "Lesson N:" / "N." / "N)" style prefixes.
+                line = re.sub(r"^(lesson\s*)?\d+\s*[:.\)]\s*", "",
+                              line, flags=re.IGNORECASE).strip()
+                if not line:
+                    continue
+                if "|" in line:
+                    parts = [p.strip() for p in line.split("|")]
+                    title, points = parts[0], [p for p in parts[1:] if p]
+                elif " - " in line:
+                    parts = [p.strip() for p in line.split(" - ")]
+                    title, points = parts[0], [p for p in parts[1:] if p]
+                else:
+                    title, points = line, []
+                if title:
+                    lessons.append({"title": title,
+                                    "points": (points + ["", "", ""])[:3]})
+            if len(lessons) < 5:
+                return None
+            return lessons[:10]
+        except Exception:
+            return None
+
+    def get_syllabus(self, subject: str,
+                     regenerate: bool = False) -> Tuple[List[Dict[str, Any]],
+                                                        Optional[str], str]:
+        """Return (syllabus, evicted, source) for `subject`.
+
+        source is 'saved', 'llm', 'builtin' or 'scaffold'. A saved
+        syllabus is reused unless regenerate=True; a fresh one is LLM-
+        generated when online, else the built-in outline (or the generic
+        mastery scaffold for unknown subjects). Persisted on change.
+        """
+        subject = normalize_subject(subject)
+        entry, evicted = self.learning_entry(subject)
+        if entry.get("syllabus") and not regenerate:
+            return entry["syllabus"], evicted, "saved"
+        syllabus = None
+        source = "builtin"
+        if self.openai_key:
+            syllabus = self._llm_syllabus(subject)
+            if syllabus:
+                source = "llm"
+        if syllabus is None:
+            builtin = BUILTIN_SYLLABI.get(subject)
+            if builtin:
+                syllabus = [{"title": t, "points": list(p)}
+                            for t, p in builtin]
+                source = "builtin"
+            else:
+                syllabus = generic_scaffold(subject)
+                source = "scaffold"
+        entry["syllabus"] = syllabus
+        entry["current_lesson"] = min(int(entry.get("current_lesson", 0)),
+                                      max(0, len(syllabus) - 1))
+        save_memory(self.memory_path, self.memory)
+        return syllabus, evicted, source
+
+    def record_quiz_score(self, subject: str, score: int, total: int) -> None:
+        """Append a graded quiz result to the learner profile and save."""
+        subject = normalize_subject(subject)
+        entry, _evicted = self.learning_entry(subject)
+        entry.setdefault("quiz_scores", []).append({
+            "ts": utc_now_iso(),
+            "score": int(score),
+            "total": int(total),
+        })
+        entry["last_session"] = utc_now_iso()
+        save_memory(self.memory_path, self.memory)
+
+    def add_weak_point(self, subject: str, point: str) -> None:
+        """Track a question the student marked wrong (dedup, cap 20)."""
+        subject = normalize_subject(subject)
+        entry, _evicted = self.learning_entry(subject)
+        weak = entry.setdefault("weak_points", [])
+        point = str(point).strip()
+        if point and point not in weak:
+            weak.append(point)
+            del weak[:-20]
+
+    # ------------------------------------------------------------------
+    # Module A: persistent memory commands
+    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # v29.1.0: UI language packs
+    # ------------------------------------------------------------------
+
+    def ui(self, key: str) -> str:
+        """Look up a UI string in the active language pack (en fallback)."""
+        pack = LANG_PACKS.get(self.lang) or LANG_PACKS[DEFAULT_LANG]
+        value = pack.get(key)
+        if value is None:
+            value = LANG_PACKS[DEFAULT_LANG].get(key, key)
+        return str(value)
+
+    def ui_format(self, key: str, *args: Any) -> str:
+        """Format a UI string; fall back to the raw template on mismatch."""
+        template = self.ui(key)
+        try:
+            return template % args
+        except Exception:
+            return template
+
+    def set_lang(self, code: str) -> bool:
+        """Switch the active UI language and persist it. Returns success."""
+        code = str(code or "").strip().lower()
+        if code not in LANG_PACKS:
+            return False
+        self.lang = code
+        self.memory["lang"] = code
+        save_memory(self.memory_path, self.memory)
+        return True
+
+    def remember_fact(self, fact: str) -> str:
+        """Append a fact to persistent memory and save."""
+        fact = str(fact).strip()
+        if not fact:
+            return "Usage: remember <fact>"
+        facts = self.memory.setdefault("facts", [])
+        facts.append(fact)
+        if save_memory(self.memory_path, self.memory):
+            return self.ui_format("remembered", len(facts), fact)
+        return "Kept in session memory (disk save failed): %s" % fact
+
+    def forget_fact(self, index: int) -> Optional[str]:
+        """Delete fact #index (1-based). Returns the removed fact or None."""
+        facts = self.memory.setdefault("facts", [])
+        if 1 <= index <= len(facts):
+            removed = str(facts.pop(index - 1))
+            save_memory(self.memory_path, self.memory)
+            return removed
+        return None
+
+    def add_history(self, role: str, text: str) -> None:
+        """Append one exchange to history (capped, oldest trimmed)."""
+        try:
+            history = self.memory.setdefault("history", [])
+            history.append({
+                "ts": utc_now_iso(),
+                "role": str(role),
+                "text": str(text)[:500],
+            })
+            if len(history) > MAX_HISTORY_ENTRIES:
+                del history[: len(history) - MAX_HISTORY_ENTRIES]
+        except Exception:
+            pass  # history must never crash the engine
+
+    # ------------------------------------------------------------------
+    # Module C: dataset import / analyze / query
+    # ------------------------------------------------------------------
+
+    def dataset_note(self) -> Optional[str]:
+        """One-line note for tax/mine subsystems when a dataset is loaded."""
+        if self.dataset:
+            return ("Dataset note: %d rows from '%s' are loaded and "
+                    "available for analysis." % (
+                        len(self.dataset.get("rows", [])),
+                        self.dataset.get("name", "dataset")))
+        return None
+
+    def _restore_last_import(self) -> None:
+        """Reload the dataset referenced by memory datasets.last_import."""
+        try:
+            datasets = self.memory.get("datasets") or {}
+            meta = datasets.get("last_import")
+            if not isinstance(meta, dict):
+                return
+            path = str(meta.get("path") or "")
+            if path and os.path.isfile(path):
+                ok, _msg = self.import_dataset(path, save=False)
+                if not ok:
+                    self.dataset = None
+        except Exception:
+            self.dataset = None
+
+    def import_dataset(self, path: str, save: bool = True) -> Tuple[bool, str]:
+        """Load a .csv or .xlsx dataset. Returns (ok, message). Never raises."""
+        try:
+            path = str(path or "").strip()
+            if not path:
+                return False, "Usage: import <path-to-csv-or-xlsx>"
+            if not os.path.isfile(path):
+                return False, "File not found: %s" % path
+            ext = os.path.splitext(path)[1].lower()
+            if ext == ".csv":
+                headers, rows = _read_csv_dataset(path)
+            elif ext == ".xlsx":
+                headers, rows = _read_xlsx_dataset(path)
+            else:
+                return False, ("Unsupported extension '%s'. Only .csv and "
+                               ".xlsx are supported." % (ext or "(none)"))
+            if not headers:
+                return False, "No header row found in %s." % path
+            if len(rows) > MAX_DATASET_ROWS:
+                return False, ("Dataset has %d rows; the limit is %d. "
+                               "Import refused." % (len(rows), MAX_DATASET_ROWS))
+            self.dataset = {
+                "path": os.path.abspath(path),
+                "name": os.path.basename(path),
+                "source": ext.lstrip("."),
+                "headers": headers,
+                "rows": rows,
+            }
+            self.memory.setdefault("datasets", {})["last_import"] = {
+                "path": os.path.abspath(path),
+                "name": os.path.basename(path),
+                "source": ext.lstrip("."),
+                "rows": len(rows),
+                "columns": len(headers),
+                "headers": headers,
+                "ts": utc_now_iso(),
+            }
+            if save:
+                save_memory(self.memory_path, self.memory)
+            return True, ("Imported %d row(s) x %d column(s) from %s "
+                          "(%s)." % (len(rows), len(headers),
+                                     os.path.basename(path), ext.lstrip(".")))
+        except Exception as exc:
+            return False, "Import failed safely: %s" % exc
+
+    def analyze_dataset(self) -> List[str]:
+        """Summarize the loaded dataset: counts, numeric stats, top values."""
+        if not self.dataset:
+            return ["No dataset loaded. Use: import <path-to-csv-or-xlsx>"]
+        headers = self.dataset.get("headers", [])
+        rows = self.dataset.get("rows", [])
+        lines = [
+            "Dataset: %s" % self.dataset.get("name", "?"),
+            "Path: %s" % self.dataset.get("path", "?"),
+            "Rows: %d | Columns: %d" % (len(rows), len(headers)),
+            "Columns: " + ", ".join(str(h) for h in headers),
+        ]
+        for ci in range(len(headers)):
+            column = [str(r[ci]) if ci < len(r) else "" for r in rows]
+            non_empty = [c for c in column if c.strip()]
+            lines.append("  %s: non-empty %d/%d"
+                         % (headers[ci], len(non_empty), len(rows)))
+            numbers: List[float] = []
+            numeric = bool(non_empty)
+            for cell in non_empty:
+                try:
+                    numbers.append(float(cell.replace(",", "")))
+                except (ValueError, TypeError):
+                    numeric = False
+                    break
+            if numeric:
+                mean = sum(numbers) / len(numbers)
+                lines.append("    numeric: min=%g max=%g mean=%.2f"
+                             % (min(numbers), max(numbers), mean))
+            elif non_empty:
+                counts: Dict[str, int] = {}
+                for cell in non_empty:
+                    counts[cell] = counts.get(cell, 0) + 1
+                top = sorted(counts.items(),
+                             key=lambda kv: (-kv[1], kv[0]))[:5]
+                lines.append("    top values: "
+                             + ", ".join("%s (x%d)" % (v, n) for v, n in top))
+        return lines
+
+    def query_dataset(self, text: str) -> List[str]:
+        """Case-insensitive substring filter over all cells (max 15 rows)."""
+        if not self.dataset:
+            return ["No dataset loaded. Use: import <path-to-csv-or-xlsx>"]
+        needle = str(text).strip().lower()
+        if not needle:
+            return ["Usage: query <text>"]
+        rows = self.dataset.get("rows", [])
+        matches = [(i, row) for i, row in enumerate(rows, 1)
+                   if any(needle in str(cell).lower() for cell in row)]
+        if not matches:
+            return ["No rows match '%s'." % text]
+        lines = ["%d row(s) match '%s' (showing up to 15):"
+                 % (len(matches), text)]
+        for i, row in matches[:15]:
+            lines.append("  row %d: %s" % (i, " | ".join(str(c) for c in row)))
+        if len(matches) > 15:
+            lines.append("  ... and %d more." % (len(matches) - 15))
+        return lines
+
+    # ------------------------------------------------------------------
+    # Module B: GitHub auto-sync (git via subprocess, token always masked)
+    # ------------------------------------------------------------------
+
+    def _git_path(self) -> Optional[str]:
+        try:
+            return shutil.which("git")
+        except Exception:
+            return None
+
+    def _mask_sync_output(self, text: str) -> str:
+        """Ensure GITHUB_TOKEN (and credentialed repo URL) never print."""
+        masked = str(text)
+        try:
+            if self.github_token:
+                masked = masked.replace(self.github_token,
+                                        mask_secret(self.github_token))
+            if self.github_repo and "://" in self.github_repo:
+                masked = masked.replace(self.github_repo,
+                                        mask_secret(self.github_repo))
+        except Exception:
+            pass
+        return masked
+
+    def _run_git(self, args: List[str],
+                 timeout: int = GIT_TIMEOUT) -> Tuple[bool, str]:
+        """Run a git command; return (ok, masked combined output)."""
+        try:
+            proc = subprocess.run(
+                ["git"] + list(args),
+                capture_output=True, text=True, timeout=timeout,
+            )
+            output = ((proc.stdout or "") + (proc.stderr or "")).strip()
+            return proc.returncode == 0, self._mask_sync_output(output)
+        except Exception as exc:
+            return False, self._mask_sync_output(str(exc))
+
+    def sync_status_lines(self) -> List[str]:
+        """Report git availability, repo config, last commit. Never raises."""
+        lines = []
+        git_path = self._git_path()
+        lines.append("git binary: %s" % (git_path if git_path else "NOT FOUND"))
+        if self.github_repo:
+            repo_display = (mask_secret(self.github_repo)
+                            if "://" in self.github_repo else self.github_repo)
+            lines.append("GITHUB_REPO: configured (%s)" % repo_display)
+        else:
+            lines.append("GITHUB_REPO: not configured")
+        lines.append("GITHUB_TOKEN: %s" % mask_secret(self.github_token))
+        if git_path:
+            ok, out = self._run_git(["rev-parse", "--is-inside-work-tree"],
+                                    timeout=15)
+            inside = ok and out.lower().startswith("true")
+            lines.append("inside git repo: %s" % ("yes" if inside else "no"))
+            if inside:
+                ok_log, log_line = self._run_git(["log", "-1", "--oneline"],
+                                                 timeout=15)
+                if ok_log and log_line:
+                    lines.append("last commit: %s" % log_line)
+                else:
+                    lines.append("last commit: (none)")
+        hints = []
+        if not git_path:
+            hints.append("install git to enable sync")
+        if not self.github_repo:
+            hints.append("set GITHUB_REPO=owner/repo in .env")
+        if hints:
+            lines.append("hint: " + "; ".join(hints) + ".")
+        return lines
+
+    def sync_github(self) -> List[str]:
+        """git add + commit + push the engine files. Always graceful."""
+        lines = ["GitHub sync:"]
+        if not self._git_path():
+            lines.append("  git binary not found. Install git and retry.")
+            return lines
+        if not self.github_repo:
+            lines.append("  GITHUB_REPO not set. Add GITHUB_REPO=owner/repo "
+                         "(or full URL) to .env and retry.")
+            return lines
+        ok, out = self._run_git(["rev-parse", "--is-inside-work-tree"],
+                                timeout=15)
+        if not (ok and out.lower().startswith("true")):
+            lines.append("  current directory is not a git repository.")
+            lines.append("  hint: run 'git init' and add a remote first.")
+            return lines
+        targets = [f for f in ("omega.py", MEMORY_FILE, LOG_FILE)
+                   if os.path.isfile(f)]
+        if not targets:
+            lines.append("  nothing to sync: omega.py / %s / %s not present "
+                         "here." % (MEMORY_FILE, LOG_FILE))
+            return lines
+        ok, out = self._run_git(["add"] + targets)
+        lines.append("  git add %s: %s" % (
+            " ".join(targets), "ok" if ok else "FAILED - " + (out or "error")))
+        if not ok:
+            return lines
+        commit_msg = "LUQI AI sync " + utc_now_iso()
+        ok, out = self._run_git(["commit", "-m", commit_msg])
+        if ok:
+            lines.append("  git commit: ok (%s)" % commit_msg)
+        elif "nothing to commit" in out.lower() or "no changes added" in out.lower():
+            lines.append("  git commit: nothing new to commit.")
+        else:
+            lines.append("  git commit: FAILED - " + (out or "error"))
+            return lines
+        ok, out = self._run_git(["push"])
+        if ok:
+            remote = (mask_secret(self.github_repo)
+                      if "://" in self.github_repo else self.github_repo)
+            lines.append("  git push: ok. Synced to %s." % remote)
+        else:
+            lines.append("  git push: FAILED - "
+                         + (out or "error (check credentials/GITHUB_TOKEN)"))
+        return lines
+
+    # ------------------------------------------------------------------
+    # v29.1.0: export + report markdown writers (guarded I/O)
+    # ------------------------------------------------------------------
+
+    def export_markdown(self) -> Tuple[bool, str]:
+        """Write omega_export_<UTCts>.md: state, facts, import, history, audit."""
+        try:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_export_%s.md" % stamp
+            facts = [str(f) for f in self.memory.get("facts", [])]
+            history = list(self.memory.get("history", []))[-50:]
+            audit_entries = self.read_log_tail(50
