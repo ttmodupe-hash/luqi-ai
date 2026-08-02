@@ -1,0 +1,563 @@
+= []
+    leftover: Optional[str] = None
+    while True:
+        try:
+            if leftover is not None:
+                raw = leftover
+                leftover = None
+            else:
+                raw = input_fn("[CLASS:%s] > " % subject)
+        except EOFError:
+            out("")
+            out("(End of input - closing the classroom safely.)")
+            break
+        except KeyboardInterrupt:
+            out("")  # newline, then reprompt
+            continue
+        cmd = raw.strip().lower()
+        if not cmd:
+            continue
+
+        if cmd == "end class":
+            break
+        if cmd == "syllabus":
+            for line in syllabus_lines(engine, subject):
+                out(line)
+            continue
+        if cmd == "progress":
+            for line in progress_lines(engine):
+                out(line)
+            continue
+        if cmd == "quiz me":
+            graded: Optional[Tuple[int, int]] = None
+            if online:
+                graded = run_online_quiz(engine, subject, messages,
+                                         input_fn, out)
+                if graded is None:
+                    out("Live quiz unavailable - switching to offline "
+                        "self-check cards.")
+            if graded is None:
+                score, asked, leftover = run_offline_quiz(
+                    engine, subject, input_fn, out)
+                if asked:
+                    graded = (score, asked)
+            if graded is not None:
+                engine.record_quiz_score(subject, graded[0], graded[1])
+                out("Quiz score recorded: %d/%d." % graded)
+                quiz_results.append(graded)
+            continue
+        if cmd == "hint":
+            if online:
+                messages.append({"role": "user", "content": (
+                    "I am stuck. Re-explain the current point more "
+                    "simply and give me a hint, not the full answer.")})
+                messages = _cap_messages(messages)
+                reply = engine._llm_messages(messages)
+                if reply:
+                    reply = reply.strip()
+                    out(reply)
+                    messages.append({"role": "assistant",
+                                     "content": reply})
+                else:
+                    out("The professor is unreachable right now (LLM "
+                        "call failed) - no hint was generated.")
+                    for line in lesson_intro_lines(entry, subject):
+                        out(line)
+            else:
+                lesson_lines = lesson_intro_lines(entry, subject)
+                if len(lesson_lines) > 1:
+                    out("Hint: focus on this key point first - "
+                        + lesson_lines[1].strip(" -"))
+                else:
+                    out("Hint: re-read the lesson title and look up one "
+                        "example.")
+            continue
+        if cmd == "next":
+            if entry.get("current_lesson", 0) < len(syllabus) - 1:
+                entry["current_lesson"] = int(
+                    entry.get("current_lesson", 0)) + 1
+                for line in lesson_intro_lines(entry, subject):
+                    out(line)
+                if online:
+                    messages.append({"role": "user", "content": (
+                        "Let's move to the next lesson: %s."
+                        % syllabus[entry["current_lesson"]].get(
+                            "title", ""))})
+                    messages = _cap_messages(messages)
+                    reply = engine._llm_messages(messages)
+                    if reply:
+                        reply = reply.strip()
+                        out(reply)
+                        messages.append({"role": "assistant",
+                                         "content": reply})
+                    else:
+                        out("(Professor unreachable - showing the "
+                            "offline key points above.)")
+            else:
+                out("You are on the final lesson - try 'quiz me' or "
+                    "'end class'.")
+            continue
+
+        # Free text -> student turn.
+        turns += 1
+        if online:
+            messages.append({"role": "user", "content": raw.strip()})
+            messages = _cap_messages(messages)
+            reply = engine._llm_messages(messages)
+            if reply:
+                reply = reply.strip()
+                out(reply)
+                messages.append({"role": "assistant", "content": reply})
+            else:
+                out("The professor is unreachable right now (LLM call "
+                    "failed) - no reply was generated.")
+                out("You can still use: syllabus | next | quiz me | "
+                    "hint | progress | end class.")
+        else:
+            out("(Offline classroom: there is no live conversation "
+                "without OPENAI_API_KEY.)")
+            out("Review the current lesson key points:")
+            for line in lesson_intro_lines(entry, subject):
+                out(line)
+            out("Type 'next' to advance, 'quiz me' to self-check, or "
+                "'end class' to finish.")
+
+    # Session close: summary + persist progress (always, even on EOF).
+    entry["last_session"] = utc_now_iso()
+    save_memory(engine.memory_path, engine.memory)
+    out("-" * 60)
+    out("Class summary - %s" % subject)
+    out("  Turns this session: %d" % turns)
+    total_lessons = len(syllabus) or 10
+    out("  Lesson position: %d/%d"
+        % (min(int(entry.get("current_lesson", 0)) + 1, total_lessons),
+           total_lessons))
+    if quiz_results:
+        out("  Quiz scores this session: "
+            + ", ".join("%d/%d" % q for q in quiz_results))
+    else:
+        out("  Quiz scores this session: none")
+    out("Progress saved to your learner profile ('progress' to view).")
+    engine._audit("Classroom", "teach %s" % subject, "Success")
+    engine.add_history("assistant",
+                       "Taught a %s class (%d turns)." % (subject, turns))
+
+
+def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
+                        input_fn: Any = input, out: Any = print) -> None:
+    """Top-level 'quiz <subject>' command (online grading or self-check)."""
+    subject = normalize_subject(subject)
+    if not subject:
+        out("Usage: quiz <subject>   (inside a class, just say 'quiz me')")
+        return
+    graded: Optional[Tuple[int, int]] = None
+    if engine.openai_key:
+        graded = run_online_quiz(
+            engine, subject,
+            [{"role": "system", "content": PROFESSOR_PROMPT % subject}],
+            input_fn, out)
+        if graded is None:
+            out("Live quiz unavailable - switching to offline "
+                "self-check cards.")
+    if graded is None:
+        score, asked, leftover = run_offline_quiz(engine, subject,
+                                                  input_fn, out)
+        if leftover:
+            out("(Ignored outside a class: '%s')" % leftover)
+        if asked:
+            graded = (score, asked)
+    if graded is not None:
+        engine.record_quiz_score(subject, graded[0], graded[1])
+        out("Quiz score recorded: %d/%d. See 'progress'." % graded)
+
+
+# ---------------------------------------------------------------------------
+# REPL
+# ---------------------------------------------------------------------------
+
+def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
+    """Process one line of input. Return False to exit the REPL."""
+    line = raw.strip()
+    if not line:
+        return True
+    lowered = line.lower()
+
+    if lowered in ("exit", "quit"):
+        print(engine.ui("goodbye"))
+        return False
+    if lowered == "help":
+        print_help(engine)
+        return True
+    if lowered == "clear":
+        clear_screen()
+        return True
+    if lowered == "version":
+        print(ENGINE_NAME)
+        print("Subsystems: %d" % len(engine.availability_matrix()))
+        print("Session: #%d" % engine.memory.get("sessions", 1))
+        print("Facts: %d" % len(engine.memory.get("facts", [])))
+        engine._audit("CLI", "version", "Success")
+        return True
+    if lowered == "status":
+        print("Version: %s" % ENGINE_NAME)
+        print("Language: %s (%s)" % (LANG_PACKS[engine.lang]["name"],
+                                     engine.lang))
+        print("Evolution: generation %d | pillars integrity %s"
+              % (engine.evolution.generation(),
+                 engine.evolution.pillars_status()))
+        print("Learning: %d active subject(s) in learner profile"
+              % len(engine.memory.get("learning") or {}))
+        print("Subsystem matrix:")
+        for row in engine.availability_matrix():
+            print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
+        print("system_state:")
+        print(json.dumps(engine.system_state, indent=2))
+        engine._audit("CLI", "status", "Success")
+        return True
+    if lowered == "keys":
+        print("API key report (masked):")
+        print("  OPENAI_API_KEY: %s" % mask_secret(engine.openai_key))
+        print("  SERPER_API_KEY: %s" % mask_secret(engine.serper_key))
+        engine._audit("CLI", "keys", "Success")
+        return True
+    if lowered == "log":
+        entries = engine.read_log_tail(10)
+        if not entries:
+            print("No audit entries yet.")
+        else:
+            print("Last %d audit entries:" % len(entries))
+            for entry in entries:
+                print("  %s | %-28s | %-12s | %s" % (
+                    entry.get("ts", "?"),
+                    str(entry.get("subsystem", "?"))[:28],
+                    entry.get("status", "?"),
+                    str(entry.get("input_summary", ""))[:60],
+                ))
+        return True
+    if lowered == "languages":
+        print("African language support (%d languages):" % len(AFRICAN_LANGUAGES))
+        for name, region in AFRICAN_LANGUAGES:
+            print("  %-12s - %s" % (name, region))
+        engine._audit("CLI", "languages", "Success")
+        return True
+
+    # --- v29.1.0: language packs / export / report commands ---
+    if lowered == "lang" or lowered.startswith("lang "):
+        code = line[len("lang"):].strip().lower()
+        if code and engine.set_lang(code):
+            pack = LANG_PACKS[engine.lang]
+            print("Language set to %s (%s)." % (pack["name"], engine.lang))
+            print(engine.ui("greeting"))
+        else:
+            if code:
+                print("Unknown language code '%s'." % code)
+            # v29.4.0: grouped list - African languages, then world.
+            african = sorted(c for c in LANG_PACKS
+                             if LANG_PACKS[c].get("region") == "african")
+            world = sorted(c for c in LANG_PACKS
+                           if LANG_PACKS[c].get("region") == "world")
+            print("Available language packs (* = active):")
+            print("African languages (%d):" % len(african))
+            for pack_code in african:
+                mark = "*" if pack_code == engine.lang else " "
+                print("  %s %-4s %s" % (mark, pack_code,
+                                        LANG_PACKS[pack_code]["name"]))
+            print("World languages (%d):" % len(world))
+            for pack_code in world:
+                mark = "*" if pack_code == engine.lang else " "
+                print("  %s %-4s %s" % (mark, pack_code,
+                                        LANG_PACKS[pack_code]["name"]))
+            print("Usage: lang <code>")
+        engine._audit("CLI", "lang %s" % (code or "(list)"), "Success")
+        return True
+    # --- v29.4.0: translate + cost commands ---
+    if lowered == "translate" or lowered.startswith("translate "):
+        args = line[len("translate"):].strip()
+        parts = args.split(None, 1)
+        code = parts[0].lower() if parts else ""
+        text = parts[1].strip() if len(parts) > 1 else ""
+        if not code or code not in LANG_PACKS:
+            print("Unknown language code '%s'." % code)
+            print("Usage: translate <lang-code> <text>  (see 'lang' for "
+                  "the 100 codes)")
+            engine._audit("CLI", "translate %s" % (code or "(none)"),
+                          "Failed")
+            return True
+        if not text:
+            print("Usage: translate <lang-code> <text>")
+            engine._audit("CLI", "translate %s" % code, "Failed")
+            return True
+        pack = LANG_PACKS[code]
+        prompt = ("Translate the following text into %s (language code "
+                  "'%s'). Return the translation only, with no "
+                  "explanation, no notes and no quotes.\n\nText: %s"
+                  % (pack["name"], code, text))
+        reply = engine._llm(prompt)
+        if reply:
+            print(reply.strip())
+            engine._audit("CLI", "translate %s" % code, "Success")
+        else:
+            print("Translation unavailable offline.")
+            print("To enable: set OPENAI_API_KEY in .env (optionally "
+                  "install the claude_engine bridge - see 'bridge') and "
+                  "run again.")
+            engine._audit("CLI", "translate %s" % code, "Offline")
+        return True
+    if lowered == "cost":
+        for out_line in cost_lines():
+            print(out_line)
+        engine._audit("CLI", "cost", "Success")
+        return True
+    if lowered == "export" or lowered.startswith("export "):
+        ok, message = engine.export_markdown()
+        print(message)
+        engine._audit("CLI", "export", "Success" if ok else "Failed")
+        return True
+    if lowered == "report" or lowered.startswith("report "):
+        topic = line[len("report"):].strip()
+        ok, message = engine.write_report(topic)
+        print(message)
+        engine._audit("CLI", "report %s" % (topic or "(none)"),
+                      "Success" if ok else "Failed")
+        return True
+
+    # --- v29.2.0: Evolution Engine + differentiation layer commands ---
+    if lowered == "evolve" or lowered.startswith("evolve "):
+        args = line[len("evolve"):].strip()
+        sub = args.lower()
+        if not sub:
+            out_lines = engine.evolution.status_lines()
+            audit_status = "Success"
+        elif sub == "run":
+            _ok, out_lines = engine.evolution.run_cycle(online=False)
+            audit_status = "Success" if _ok else "Rejected"
+        elif sub == "run online":
+            _ok, out_lines = engine.evolution.run_cycle(online=True)
+            audit_status = "Success" if _ok else "Rejected"
+        elif sub == "rollback":
+            _ok, out_lines = engine.evolution.rollback()
+            audit_status = "Success" if _ok else "Rejected"
+        elif sub == "lineage":
+            out_lines = engine.evolution.lineage_lines()
+            audit_status = "Success"
+        elif sub == "pillars":
+            out_lines = engine.evolution.pillars_lines()
+            audit_status = "Success"
+        elif sub == "test" or sub.startswith("test "):
+            out_lines = engine.evolution.test_query(args[len("test"):].strip())
+            audit_status = "Success"
+        else:
+            out_lines = ["Usage: evolve [run | run online | rollback | "
+                         "lineage | pillars | test <query>]"]
+            audit_status = "Failed"
+        for out_line in out_lines:
+            print(out_line)
+        engine._audit("Evolution", "evolve %s" % (sub or "status"),
+                      audit_status)
+        return True
+    if lowered == "why":
+        for out_line in why_lines():
+            print(out_line)
+        engine._audit("CLI", "why", "Success")
+        return True
+    if lowered == "integrations":
+        for out_line in integrations_lines(engine):
+            print(out_line)
+        engine._audit("CLI", "integrations", "Success")
+        return True
+    # --- v29.3.0: bridge + launch commands ---
+    if lowered == "bridge":
+        for out_line in bridge_lines(engine):
+            print(out_line)
+        engine._audit("CLI", "bridge", "Success")
+        return True
+    if lowered == "launch":
+        out_lines, blockers = launch_lines(engine)
+        for out_line in out_lines:
+            print(out_line)
+        engine._audit("CLI", "launch",
+                      "Success" if not blockers else "Blocked")
+        return True
+
+    # --- v29.5.0: Professor classroom commands ---
+    if lowered == "teach" or lowered.startswith("teach "):
+        subject = line[len("teach"):].strip()
+        if not subject:
+            print("Usage: teach <subject>  (e.g. teach mathematics)")
+            engine._audit("Classroom", "teach (no subject)", "Failed")
+            return True
+        try:
+            teach_session(engine, subject)
+        except Exception as exc:  # belt-and-braces: classroom never crashes
+            print("[Error] classroom recovered from: %s" % exc)
+        return True
+    if lowered == "syllabus" or lowered.startswith("syllabus "):
+        args = line[len("syllabus"):].strip()
+        regenerate = False
+        if args.lower().endswith(" new"):
+            regenerate = True
+            args = args[:-4].strip()
+        if not args:
+            print("Usage: syllabus <subject> [new]")
+            engine._audit("Classroom", "syllabus (no subject)", "Failed")
+            return True
+        try:
+            for out_line in syllabus_lines(engine, args,
+                                           regenerate=regenerate):
+                print(out_line)
+            engine._audit("Classroom", "syllabus %s" % args, "Success")
+        except Exception as exc:
+            print("[Error] syllabus recovered from: %s" % exc)
+        return True
+    if lowered == "progress":
+        try:
+            for out_line in progress_lines(engine):
+                print(out_line)
+            engine._audit("Classroom", "progress", "Success")
+        except Exception as exc:
+            print("[Error] progress recovered from: %s" % exc)
+        return True
+    if lowered == "quiz" or lowered.startswith("quiz "):
+        subject = line[len("quiz"):].strip()
+        if subject.lower() == "me":
+            print("'quiz me' works inside a class. From here use: "
+                  "quiz <subject>")
+            return True
+        try:
+            run_standalone_quiz(engine, subject)
+            engine._audit("Classroom", "quiz %s" % (subject or "(none)"),
+                          "Success")
+        except Exception as exc:
+            print("[Error] quiz recovered from: %s" % exc)
+        return True
+
+    # --- v29 Module A: persistent memory commands ---
+    if lowered == "remember" or lowered.startswith("remember "):
+        print(engine.remember_fact(line[len("remember"):].strip()))
+        engine._audit("Memory", "remember", "Success")
+        return True
+    if lowered == "recall":
+        facts = engine.memory.get("facts", [])
+        if not facts:
+            print("No facts remembered yet. Use: remember <fact>")
+        else:
+            print("Remembered facts (%d):" % len(facts))
+            for i, fact in enumerate(facts, 1):
+                print("  %d. %s" % (i, fact))
+        engine._audit("Memory", "recall", "Success")
+        return True
+    if lowered == "forget" or lowered.startswith("forget "):
+        arg = line[len("forget"):].strip()
+        try:
+            index = int(arg)
+        except ValueError:
+            print("Usage: forget <number>  (see 'recall' for numbers)")
+            return True
+        removed = engine.forget_fact(index)
+        if removed is None:
+            print("No fact #%d. Use 'recall' to list numbered facts." % index)
+        else:
+            print(engine.ui_format("forgot", index, removed))
+        engine._audit("Memory", "forget %s" % arg, "Success")
+        return True
+    if lowered == "history" or lowered.startswith("history "):
+        arg = line[len("history"):].strip()
+        count = 10
+        if arg:
+            try:
+                count = max(1, int(arg))
+            except ValueError:
+                print("Usage: history [n]  (showing default 10)")
+        entries = engine.memory.get("history", [])[-count:]
+        if not entries:
+            print("No history yet.")
+        else:
+            print("Last %d history entries:" % len(entries))
+            for entry in entries:
+                print("  %s | %-5s | %s" % (
+                    entry.get("ts", "?"),
+                    str(entry.get("role", "?"))[:5],
+                    str(entry.get("text", ""))[:70],
+                ))
+        engine._audit("Memory", "history", "Success")
+        return True
+
+    # --- v29 Module B: GitHub auto-sync commands ---
+    if lowered == "sync github" or lowered.startswith("sync github "):
+        for out_line in engine.sync_github():
+            print(out_line)
+        engine._audit("Sync", "sync github", "Success")
+        return True
+    if lowered == "sync status":
+        print("GitHub sync status:")
+        for out_line in engine.sync_status_lines():
+            print("  " + out_line)
+        engine._audit("Sync", "sync status", "Success")
+        return True
+
+    # --- v29 Module C: dataset commands ---
+    if lowered == "import" or lowered.startswith("import "):
+        path = line[len("import"):].strip().strip("'\"")
+        ok, message = engine.import_dataset(path)
+        print(message)
+        engine._audit("Dataset", "import %s" % path,
+                      "Success" if ok else "Failed")
+        return True
+    if lowered == "analyze":
+        for out_line in engine.analyze_dataset():
+            print(out_line)
+        engine._audit("Dataset", "analyze", "Success")
+        return True
+    if lowered == "query" or lowered.startswith("query "):
+        for out_line in engine.query_dataset(line[len("query"):].strip()):
+            print(out_line)
+        engine._audit("Dataset", "query", "Success")
+        return True
+
+    # Commands with arguments -> routed into the engine.
+    def route(domain: str, arg: str) -> None:
+        result = engine.execute_omega_subsystem(domain, {"query": arg})
+        print_result(result)
+
+    if lowered == "mine":
+        route("mining", "mining status")
+        return True
+    for prefix, domain in (
+        ("research", "research"),
+        ("tax", "tax"),
+        ("companion", "companion"),
+        ("opportunities", "opportunity"),
+        ("finance", "finance"),
+        ("selfimprove", "selfimprove"),
+    ):
+        if lowered == prefix or lowered.startswith(prefix + " "):
+            arg = line[len(prefix):].strip()
+            route(domain, arg)
+            return True
+
+    # Free text -> master router keyword detection -> generic core fallback.
+    result = engine.execute_omega_subsystem(line, {"query": line})
+    if result.get("status") == "Unknown":
+        print(engine.ui("unknown_command"))
+    print_result(result)
+    return True
+
+
+def run_repl(engine: OmegaMasterEngine) -> int:
+    print_banner(engine)
+    while True:
+        try:
+            raw = input("[OMEGA] > ")
+        except KeyboardInterrupt:
+            print()  # newline, then reprompt
+            continue
+        except EOFError:
+            print("\nOMEGA shutting down (EOF). Stay sovereign.")
+            break
+        if raw.strip():
+            engine.add_history("user", raw)
+        try:
+            if not handle_command(engine, raw):
+                break
+        except Exception as exc:  # belt-and-braces: never crash the REPL
+            print("[Error] recovered from unexpected failur
