@@ -1,0 +1,1342 @@
+kudot. 'exit' la-yetsia.",
+        "goodbye": "Lehitraot.",
+        "help_header": "Pekudot:",
+        "unknown_command": "Pekuda lo mekuva - nishlecha le-master core le-hachra'a.",
+        "remembered": "Uvda #%d nizkeret: %s",
+        "forgot": "Uvda #%d nishkechat: %s",
+    },
+    "fa": {
+        "name": "Persian",
+        "region": "world",
+        "greeting": "Salaam! 'help' ra type konid ta dastoorat ra bebinid. 'exit' baraye khoruj.",
+        "goodbye": "Khoda hafez.",
+        "help_header": "Dastoorat:",
+        "unknown_command": "Dastoor-e nashenakhte - be master core ersal shod.",
+        "remembered": "Haghighat #%d zakhire shod: %s",
+        "forgot": "Haghighat #%d faramoosh shod: %s",
+    },
+    "id": {
+        "name": "Indonesian",
+        "region": "world",
+        "greeting": "Halo! Ketik 'help' untuk perintah. 'exit' untuk keluar.",
+        "goodbye": "Sampai jumpa.",
+        "help_header": "Perintah:",
+        "unknown_command": "Perintah tidak dikenali - diteruskan ke master core untuk dievaluasi.",
+        "remembered": "Fakta #%d diingat: %s",
+        "forgot": "Fakta #%d dilupakan: %s",
+    },
+    "ms": {
+        "name": "Malay",
+        "region": "world",
+        "greeting": "Halo! Taip 'help' untuk perintah. 'exit' untuk keluar.",
+        "goodbye": "Selamat tinggal.",
+        "help_header": "Perintah:",
+        "unknown_command": "Perintah tidak dikenali - dihantar ke master core untuk dinilai.",
+        "remembered": "Fakta #%d diingat: %s",
+        "forgot": "Fakta #%d dilupakan: %s",
+    },
+    "tl": {
+        "name": "Filipino",
+        "region": "world",
+        "greeting": "Kamusta! I-type ang 'help' para sa mga utos. 'exit' para umalis.",
+        "goodbye": "Paalam.",
+        "help_header": "Mga utos:",
+        "unknown_command": "Hindi kilalang utos - ipinadala sa master core para suriin.",
+        "remembered": "Katotohanan #%d naalala: %s",
+        "forgot": "Katotohanan #%d nakalimutan: %s",
+    },
+    "ro": {
+        "name": "Romanian",
+        "region": "world",
+        "greeting": "Buna! Scrie 'help' pentru comenzi. 'exit' pentru a iesi.",
+        "goodbye": "La revedere.",
+        "help_header": "Comenzi:",
+        "unknown_command": "Comanda necunoscuta - trimisa la master core pentru evaluare.",
+        "remembered": "Fapt #%d retinut: %s",
+        "forgot": "Fapt #%d uitat: %s",
+    },
+    "hu": {
+        "name": "Hungarian",
+        "region": "world",
+        "greeting": "Szia! Ird be: 'help' a parancsokhoz. 'exit' a kilepeshez.",
+        "goodbye": "Viszlat.",
+        "help_header": "Parancsok:",
+        "unknown_command": "Ismeretlen parancs - elkuldve a master core-nak ertekelesre.",
+        "remembered": "Teny #%d megjegyezve: %s",
+        "forgot": "Teny #%d elfelejtve: %s",
+    },
+    "sv": {
+        "name": "Swedish",
+        "region": "world",
+        "greeting": "Hej! Skriv 'help' for kommandon. 'exit' for att avsluta.",
+        "goodbye": "Hej da.",
+        "help_header": "Kommandon:",
+        "unknown_command": "Okant kommando - skickat till master core for utvardering.",
+        "remembered": "Fakta #%d sparat: %s",
+        "forgot": "Fakta #%d glomt: %s",
+    },
+}
+
+# v29.1.0: 'report' command - next-action tables (3 generic + 2 specific).
+REPORT_GENERIC_ACTIONS = [
+    "Review the findings above and confirm they match your priorities.",
+    "Run 'research <topic>' to add external sources to these findings.",
+    "Persist any decision you make with 'remember <fact>'.",
+]
+
+REPORT_DEFAULT_ACTIONS = [
+    "Re-run 'report <topic>' with a more specific topic.",
+    "Check 'status' to confirm subsystem availability.",
+]
+
+REPORT_NEXT_ACTIONS: Dict[str, List[str]] = {
+    "Omega Infrastructure Build & Sync": [
+        "Re-run 'sync status' to confirm git sync health.",
+        "Schedule the next integrity check after any deploy.",
+    ],
+    "Omega Mining & Investment Engine": [
+        "Review allocation drift against the +/- 5% rebalance trigger.",
+        "Run 'analyze' if a portfolio dataset has been imported.",
+    ],
+    "Omega Tax & Audit Support": [
+        "Export transactions and confirm cost-basis records are complete.",
+        "Confirm filing deadlines for your region with a practitioner.",
+    ],
+    "Omega Security Gatekeeper": [
+        "Rotate any API key that has been shared outside this machine.",
+        "Run 'keys' to verify the masked key status report.",
+    ],
+    "Omega Deep Research": [
+        "Set SERPER_API_KEY in .env and re-run for live web sources.",
+        "Save key sources as facts with 'remember <fact>'.",
+    ],
+    "Omega Companion/Tutor": [
+        "Do the one small practice task from the scaffold today.",
+        "Teach the topic back in your own words to test recall.",
+    ],
+    "Omega Opportunity Engine": [
+        "Pick one revenue model and design the 7-day validation test.",
+        "Interview 3 potential customers before spending money.",
+    ],
+    "Omega Finance Literacy": [
+        "Write a 50/30/20 budget for this month.",
+        "Check one advisor or platform against your regulator's register.",
+    ],
+    "Omega Self-Improvement": [
+        "Review the last 10 audit entries with 'log'.",
+        "Pick one recurring issue and define a concrete fix.",
+    ],
+}
+
+
+# ---------------------------------------------------------------------------
+# .env manual parser (no python-dotenv)
+# ---------------------------------------------------------------------------
+
+def parse_env_file(path: str = ENV_FILE) -> Dict[str, str]:
+    """Parse a .env file manually.
+
+    Reads KEY=VALUE lines, strips surrounding quotes, ignores blank lines
+    and '#' comments, and tolerates malformed lines. Never raises.
+    """
+    values: Dict[str, str] = {}
+    try:
+        if not os.path.isfile(path):
+            return values
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue  # tolerate malformed lines
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip()
+                if not key:
+                    continue
+                # Strip one layer of matching surrounding quotes.
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                    value = value[1:-1]
+                values[key] = value
+    except Exception:
+        # .env parsing must never crash the engine.
+        return values
+    return values
+
+
+def mask_secret(secret: Optional[str]) -> str:
+    """Mask a secret: first 4 chars + '...' + last 2. Never print in full."""
+    if not secret:
+        return "(not set)"
+    secret = str(secret)
+    if len(secret) <= 6:
+        return secret[:1] + "..." + secret[-1:]
+    return secret[:4] + "..." + secret[-2:]
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ---------------------------------------------------------------------------
+# Module A: persistent memory (omega_memory.json)
+# ---------------------------------------------------------------------------
+
+def fresh_memory() -> Dict[str, Any]:
+    """Return a new, empty memory structure.
+
+    SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile.
+    """
+    return {
+        "facts": [],
+        "history": [],
+        "datasets": {"last_import": None},
+        "sessions": 0,
+        "lang": DEFAULT_LANG,
+        "learning": {},
+    }
+
+
+def _slugify(text: str) -> str:
+    """Turn a report topic into a filesystem-safe ASCII slug."""
+    slug = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")
+    return slug or "topic"
+
+
+def resolve_memory_path() -> str:
+    """Prefer cwd/omega_memory.json; fall back to the user home dir."""
+    try:
+        cwd_path = os.path.join(os.getcwd(), MEMORY_FILE)
+        if os.path.isfile(cwd_path):
+            if os.access(cwd_path, os.W_OK):
+                return cwd_path
+        elif os.access(os.getcwd(), os.W_OK):
+            return cwd_path
+    except Exception:
+        pass
+    try:
+        return os.path.join(os.path.expanduser("~"), MEMORY_FILE)
+    except Exception:
+        return MEMORY_FILE
+
+
+def load_memory(path: str) -> Dict[str, Any]:
+    """Load memory JSON from disk.
+
+    On corrupt/malformed data, back the file up to `<path>.bak` and start
+    fresh. Never raises.
+    """
+    memory = fresh_memory()
+    try:
+        if not os.path.isfile(path):
+            return memory
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            data = json.load(handle)
+        if not isinstance(data, dict):
+            raise ValueError("memory root is not a JSON object")
+        if isinstance(data.get("facts"), list):
+            memory["facts"] = [str(f) for f in data["facts"]]
+        if isinstance(data.get("history"), list):
+            history = []
+            for item in data["history"]:
+                if isinstance(item, dict):
+                    history.append({
+                        "ts": str(item.get("ts", "")),
+                        "role": str(item.get("role", "")),
+                        "text": str(item.get("text", "")),
+                    })
+            memory["history"] = history[-MAX_HISTORY_ENTRIES:]
+        if isinstance(data.get("datasets"), dict):
+            memory["datasets"] = {
+                "last_import": data["datasets"].get("last_import")
+            }
+        try:
+            memory["sessions"] = int(data.get("sessions", 0))
+        except Exception:
+            memory["sessions"] = 0
+        # v29.1.0: persisted UI language choice.
+        lang = data.get("lang")
+        if isinstance(lang, str) and lang in LANG_PACKS:
+            memory["lang"] = lang
+        # v29.5.0: learner profile, validated entry by entry (corrupt-safe).
+        learning = data.get("learning")
+        if isinstance(learning, dict):
+            clean: Dict[str, Any] = {}
+            for subj, raw_entry in learning.items():
+                if not isinstance(subj, str) or not isinstance(raw_entry, dict):
+                    continue
+                entry = _clean_learning_entry(raw_entry)
+                if entry is not None:
+                    clean[subj] = entry
+            memory["learning"] = clean
+        return memory
+    except Exception:
+        # Corrupt memory: back up the broken file, start fresh.
+        try:
+            if os.path.isfile(path):
+                with open(path, "rb") as src:
+                    blob = src.read()
+                with open(path + ".bak", "wb") as dst:
+                    dst.write(blob)
+        except Exception:
+            pass
+        return fresh_memory()
+
+
+def save_memory(path: str, memory: Dict[str, Any]) -> bool:
+    """Persist memory JSON to disk. Guarded; returns success flag."""
+    try:
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(memory, handle, ensure_ascii=True, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# v29.5.0 "The Professor": learner profile schema + classroom data
+# ---------------------------------------------------------------------------
+
+def _clean_learning_entry(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Validate one learner-profile subject entry. None when unusable."""
+    try:
+        syllabus = []
+        for item in raw.get("syllabus") or []:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title", "")).strip()
+            points = [str(p) for p in (item.get("points") or [])]
+            if title:
+                syllabus.append({"title": title, "points": points})
+        quiz_scores = []
+        for item in raw.get("quiz_scores") or []:
+            if not isinstance(item, dict):
+                continue
+            quiz_scores.append({
+                "ts": str(item.get("ts", "")),
+                "score": int(item.get("score", 0)),
+                "total": int(item.get("total", 0)),
+            })
+        weak_points = [str(p) for p in (raw.get("weak_points") or [])]
+        try:
+            current_lesson = max(0, int(raw.get("current_lesson", 0)))
+        except Exception:
+            current_lesson = 0
+        return {
+            "syllabus": syllabus,
+            "current_lesson": current_lesson,
+            "quiz_scores": quiz_scores,
+            "weak_points": weak_points,
+            "started": str(raw.get("started", "")),
+            "last_session": str(raw.get("last_session", "")),
+        }
+    except Exception:
+        return None
+
+
+# Friendly aliases -> canonical core-subject keys.
+SUBJECT_ALIASES: Dict[str, str] = {
+    "math": "mathematics",
+    "maths": "mathematics",
+    "arithmetic": "mathematics",
+    "algebra": "mathematics",
+    "computer science": "computer-science",
+    "computerscience": "computer-science",
+    "cs": "computer-science",
+    "python": "computer-science",
+    "coding": "computer-science",
+    "programming": "computer-science",
+    "personal finance": "finance",
+    "money": "finance",
+    "economics": "finance",
+    "language arts": "english",
+    "grammar": "english",
+    "writing": "english",
+}
+
+
+def normalize_subject(name: str) -> str:
+    """Lowercase/strip a subject name and map friendly aliases."""
+    key = " ".join(str(name or "").lower().split())
+    return SUBJECT_ALIASES.get(key, key)
+
+
+# Offline built-in syllabi: 8 core subjects x 10 lessons x 3 key points.
+BUILTIN_SYLLABI: Dict[str, List[Tuple[str, List[str]]]] = {
+    "mathematics": [
+        ("Numbers and Arithmetic", [
+            "Place value and the types of numbers.",
+            "Order of operations (parentheses, exponents, x//, +-).",
+            "Estimate first, then check the exact answer."]),
+        ("Fractions, Decimals and Percentages", [
+            "Equivalent fractions and simplifying.",
+            "Converting between fractions, decimals and percentages.",
+            "Finding a percentage of a quantity."]),
+        ("Introduction to Algebra", [
+            "Variables stand for unknown numbers.",
+            "Writing and simplifying expressions.",
+            "Solving one-step equations by balancing both sides."]),
+        ("Linear Equations and Graphs", [
+            "Slope measures steepness; intercept is where it crosses.",
+            "Plotting points and drawing lines.",
+            "Reading information off a graph."]),
+        ("Geometry Basics", [
+            "Angles, triangles and their properties.",
+            "Perimeter and area of common shapes.",
+            "Properties of quadrilaterals."]),
+        ("Ratios and Proportion", [
+            "Simplifying ratios to their simplest form.",
+            "Unit rates for fair comparisons.",
+            "Solving proportional problems."]),
+        ("Exponents and Roots", [
+            "The laws of exponents.",
+            "Square roots and cube roots.",
+            "Scientific notation for very large or small numbers."]),
+        ("Statistics Essentials", [
+            "Mean, median and mode - and when each is best.",
+            "Reading bar charts, line graphs and pie charts.",
+            "Basic probability language (likely, unlikely, certain)."]),
+        ("Quadratic Foundations", [
+            "Expanding and factoring simple quadratics.",
+            "The quadratic formula.",
+            "Parabolas and their turning points."]),
+        ("Capstone: Problem-Solving Strategies", [
+            "Breaking multi-step word problems into parts.",
+            "Choosing a strategy: draw, table, equation, estimate.",
+            "Reviewing and connecting all nine units."]),
+    ],
+    "physics": [
+        ("Motion and Speed", [
+            "Distance vs displacement.",
+            "Speed and velocity; the speed equation.",
+            "Reading distance-time graphs."]),
+        ("Forces and Newton's Laws", [
+            "First law: objects keep doing what they are doing.",
+            "Second law: F = ma.",
+            "Third law: every action has an equal opposite reaction."]),
+        ("Energy and Work", [
+            "Kinetic and potential energy.",
+            "Conservation of energy.",
+            "Work and power in everyday machines."]),
+        ("Momentum and Collisions", [
+            "Momentum p = mv.",
+            "Impulse changes momentum.",
+            "Conservation of momentum in collisions."]),
+        ("Waves and Sound", [
+            "Wavelength, frequency and amplitude.",
+            "The wave equation v = f x wavelength.",
+            "Sound as a pressure wave."]),
+        ("Light and Optics", [
+            "Reflection and refraction.",
+            "Lenses and mirrors.",
+            "The electromagnetic spectrum."]),
+        ("Electricity Basics", [
+            "Charge, current and voltage.",
+            "Ohm's law V = IR.",
+            "Series vs parallel circuits."]),
+        ("Magnetism", [
+            "Magnetic fields and poles.",
+            "Electromagnets.",
+            "Motors and generators."]),
+        ("Heat and Thermodynamics", [
+            "Temperature vs heat.",
+            "Conduction, convection and radiation.",
+            "The laws of thermodynamics in plain language."]),
+        ("Capstone: Modern Physics Survey", [
+            "Atoms, nuclei and radioactivity.",
+            "Relativity in one big idea.",
+            "Quantum thinking: probability at small scales."]),
+    ],
+    "chemistry": [
+        ("Matter and Its States", [
+            "Solids, liquids and gases.",
+            "Physical vs chemical change.",
+            "Mixtures and pure substances."]),
+        ("Atoms and Elements", [
+            "Protons, neutrons and electrons.",
+            "Atomic number and mass number.",
+            "Reading an element on the periodic table."]),
+        ("The Periodic Table", [
+            "Groups and periods.",
+            "Metals vs nonmetals.",
+            "Trends in reactivity."]),
+        ("Chemical Bonding", [
+            "Ionic bonds transfer electrons.",
+            "Covalent bonds share electrons.",
+            "Molecules and compounds."]),
+        ("Chemical Reactions", [
+            "Reactants and products.",
+            "Balancing equations.",
+            "Common reaction types."]),
+        ("The Mole and Stoichiometry", [
+            "Avogadro's number and the mole.",
+            "Molar mass.",
+            "Mole-to-mass conversions."]),
+        ("Acids and Bases", [
+            "The pH scale from 0 to 14.",
+            "Neutralization reactions.",
+            "Everyday acids and alkalis."]),
+        ("Solutions and Concentration", [
+            "Solutes, solvents and solutions.",
+            "Concentration and molarity.",
+            "Basic solubility rules."]),
+        ("Energy in Chemistry", [
+            "Exothermic vs endothermic reactions.",
+            "Activation energy.",
+            "What controls reaction rates."]),
+        ("Capstone: Organic Chemistry Intro", [
+            "Carbon chains and rings.",
+            "Common functional groups.",
+            "Organic molecules in daily life."]),
+    ],
+    "biology": [
+        ("The Cell", [
+            "Cell theory: all living things are made of cells.",
+            "Organelles and their jobs.",
+            "Plant vs animal cells."]),
+        ("Cell Energy", [
+            "Photosynthesis captures light energy.",
+            "Respiration releases energy from glucose.",
+            "How the two processes balance the carbon cycle."]),
+        ("DNA and Genetics", [
+            "The double helix stores instructions.",
+            "Genes and chromosomes.",
+            "Dominant and recessive traits."]),
+        ("Evolution by Natural Selection", [
+            "Variation exists in every population.",
+            "Helpful traits spread over generations.",
+            "Evidence: fossils, anatomy, DNA."]),
+        ("Human Body Systems", [
+            "Circulatory and respiratory systems.",
+            "Digestive and nervous systems.",
+            "How body systems cooperate."]),
+        ("Ecology and Ecosystems", [
+            "Food chains and food webs.",
+            "Energy flow through trophic levels.",
+            "Why biodiversity matters."]),
+        ("Classification of Life", [
+            "Domains and kingdoms.",
+            "Binomial (two-name) naming.",
+            "Reading the tree of life."]),
+        ("Microorganisms and Disease", [
+            "Bacteria vs viruses.",
+            "How the immune system defends you.",
+            "How vaccines train immunity."]),
+        ("Reproduction and Development", [
+            "Mitosis for growth; meiosis for reproduction.",
+            "Life cycles across species.",
+            "Growth and development stages."]),
+        ("Capstone: Homeostasis and Health", [
+            "Feedback loops keep conditions stable.",
+            "Temperature, water and sugar balance.",
+            "Using biology in daily health decisions."]),
+    ],
+    "english": [
+        ("Sentence Foundations", [
+            "Every sentence needs a subject and a verb.",
+            "Statement, question, command, exclamation.",
+            "Capital letters and end punctuation."]),
+        ("Parts of Speech", [
+            "Nouns, verbs and adjectives.",
+            "Adverbs and prepositions.",
+            "Conjunctions join ideas."]),
+        ("Vocabulary Building", [
+            "Using context clues for new words.",
+            "Roots, prefixes and suffixes.",
+            "Choosing precise words for tone."]),
+        ("Paragraph Writing", [
+            "A strong topic sentence.",
+            "Supporting details and examples.",
+            "Transitions that guide the reader."]),
+        ("Reading Comprehension", [
+            "Main idea vs supporting detail.",
+            "Making inferences from evidence.",
+            "Summarizing in your own words."]),
+        ("Grammar in Depth", [
+            "Verb tenses and subject-verb agreement.",
+            "Fixing common errors.",
+            "Active vs passive voice."]),
+        ("Essay Structure", [
+            "Introduction with a clear thesis.",
+            "Body paragraphs: one idea each.",
+            "Conclusions that answer 'so what'."]),
+        ("Persuasive Writing", [
+            "Claims backed by evidence.",
+            "Addressing counterarguments.",
+            "Ethos, pathos and logos."]),
+        ("Literature and Analysis", [
+            "Theme and character development.",
+            "Figurative language: metaphor, simile, imagery.",
+            "Supporting analysis with quotations."]),
+        ("Capstone: Communication Skills", [
+            "Speaking and active listening.",
+            "Formal vs informal registers.",
+            "Editing and revising your own work."]),
+    ],
+    "computer-science": [
+        ("Computing and Python Setup", [
+            "What a program is and how it runs.",
+            "Running your first Python script.",
+            "Variables and the print() function."]),
+        ("Data Types and Operations", [
+            "Integers, floats and strings.",
+            "Converting between types.",
+            "Building output with f-strings."]),
+        ("Control Flow: Decisions", [
+            "if, elif and else.",
+            "Comparison operators.",
+            "Boolean logic with and/or/not."]),
+        ("Loops and Iteration", [
+            "for loops and range().",
+            "while loops for unknown counts.",
+            "break and continue."]),
+        ("Data Structures", [
+            "Lists and tuples for ordered data.",
+            "Dictionaries for key-value lookup.",
+            "Sets and when to use them."]),
+        ("Functions", [
+            "Defining and calling functions.",
+            "Arguments and return values.",
+            "Variable scope basics."]),
+        ("Files and Errors", [
+            "Reading and writing text files.",
+            "try/except for graceful failure.",
+            "Debugging: read the traceback bottom-up."]),
+        ("Object-Oriented Basics", [
+            "Classes bundle data and behavior.",
+            "Methods and attributes.",
+            "Simple inheritance."]),
+        ("Algorithms and Problem Solving", [
+            "Searching and sorting ideas.",
+            "Big-O intuition: what scales.",
+            "Plan in pseudocode before coding."]),
+        ("Capstone: Build a Project", [
+            "Plan a small command-line app.",
+            "Structure code into functions and files.",
+            "Test it, then choose your next topic."]),
+    ],
+    "finance": [
+        ("Money Mindset and Goals", [
+            "Needs vs wants.",
+            "Setting SMART money goals.",
+            "Tracking where every unit goes."]),
+        ("Budgeting Basics", [
+            "Listing income and expenses.",
+            "The 50/30/20 rule as a starting point.",
+            "Building your first written budget."]),
+        ("Saving and Emergency Funds", [
+            "Why an emergency fund comes first.",
+            "Automating savings on payday.",
+            "Where to keep savings safely."]),
+        ("Banking and Interest", [
+            "Account types and their purposes.",
+            "Simple vs compound interest.",
+            "Reading APR and APY."]),
+        ("Debt and Credit", [
+            "Good debt vs bad debt.",
+            "How credit scores work.",
+            "The avalanche payoff method."]),
+        ("Scam and Fraud Defense", [
+            "Red flags: guaranteed returns, urgency, secrecy.",
+            "Verifying platforms and advisors.",
+            "Protecting your personal data."]),
+        ("Investing Fundamentals", [
+            "The risk-return trade-off.",
+            "Stocks, bonds and funds.",
+            "Diversification spreads risk."]),
+        ("Long-Term Planning", [
+            "Why starting early wins (compounding).",
+            "Employer and government retirement plans.",
+            "Setting a decades-long horizon."]),
+        ("Taxes and Payslips", [
+            "Reading a payslip line by line.",
+            "Common deductions and credits.",
+            "Basic filing obligations."]),
+        ("Capstone: Your Personal Finance Plan", [
+            "Reviewing all nine units.",
+            "Building a one-page money plan.",
+            "Habits that make it stick."]),
+    ],
+    "history": [
+        ("Studying the Past", [
+            "Primary vs secondary sources.",
+            "Chronology and timelines.",
+            "Spotting bias and perspective."]),
+        ("Early Civilizations", [
+            "Mesopotamia and Egypt.",
+            "The Indus Valley.",
+            "Early Chinese dynasties."]),
+        ("Classical Empires", [
+            "Greece and Rome.",
+            "The Mali Empire and its gold wealth.",
+            "Han China."]),
+        ("Religions and Ideas", [
+            "The major world religions.",
+            "Philosophical traditions East and West.",
+            "How ideas spread along trade routes."]),
+        ("The Medieval World", [
+            "Feudalism in Europe and Japan.",
+            "The Islamic golden age.",
+            "African kingdoms and Indian Ocean trade."]),
+        ("Exploration and Exchange", [
+            "The Columbian exchange.",
+            "Ocean trade networks.",
+            "Consequences for indigenous peoples."]),
+        ("Revolutions", [
+            "The American and French revolutions.",
+            "The Industrial Revolution.",
+            "Ideas of rights and citizenship."]),
+        ("The World Wars", [
+            "Causes and alliance systems.",
+            "Turning points of both wars.",
+            "Aftermath: the UN and a new order."]),
+        ("Decolonization and Civil Rights", [
+            "Independence movements in Africa and Asia.",
+            "Civil rights struggles worldwide.",
+            "Challenges facing new nations."]),
+        ("Capstone: The Modern World", [
+            "Globalization and interdependence.",
+            "Technology reshaping society.",
+            "Applying history's lessons today."]),
+    ],
+}
+
+
+def generic_scaffold(subject: str) -> List[Dict[str, Any]]:
+    """Generic 10-lesson mastery scaffold for an unknown subject."""
+    name = subject or "this subject"
+    titles_points = [
+        ("Foundations of %s" % name, [
+            "The core vocabulary of %s." % name,
+            "Why %s matters and who uses it." % name,
+            "How the field of %s is organized." % name]),
+        ("%s: Basic Principles" % name, [
+            "The three to five foundational ideas.",
+            "Simple worked examples.",
+            "Common beginner misconceptions."]),
+        ("Essential Skills in %s" % name, [
+            "The core techniques step by step.",
+            "Guided practice routines.",
+            "Self-check habits that catch errors early."]),
+        ("%s in the Real World" % name, [
+            "Everyday applications of %s." % name,
+            "Short case studies.",
+            "Careers and communities around %s." % name]),
+        ("Intermediate Concepts of %s" % name, [
+            "Deeper theory behind the basics.",
+            "Connecting ideas across topics.",
+            "Worked examples at medium difficulty."]),
+        ("Tools and Methods of %s" % name, [
+            "The standard tools practitioners use.",
+            "How experts approach a problem.",
+            "A hands-on mini-project."]),
+        ("Advanced Topics in %s" % name, [
+            "Current debates and open questions.",
+            "Advanced frameworks in plain language.",
+            "Stretch exercises beyond the basics."]),
+        ("Common Pitfalls in %s" % name, [
+            "Typical mistakes learners make.",
+            "How to spot and fix them.",
+            "Expert tips for avoiding rework."]),
+        ("Mastery Practice in %s" % name, [
+            "Mixed practice sets across all units.",
+            "Timed challenges.",
+            "Explaining ideas out loud to lock them in."]),
+        ("Capstone: Your %s Project" % name, [
+            "Plan a final project that shows your skills.",
+            "Demonstrate and review your work.",
+            "Map out your next learning steps."]),
+    ]
+    return [{"title": t, "points": list(p)} for t, p in titles_points]
+
+
+# Offline self-check quiz banks: accurate Q&A for the 8 core subjects.
+OFFLINE_QUIZ_BANKS: Dict[str, List[Tuple[str, str]]] = {
+    "mathematics": [
+        ("What is 7 x 8?", "56"),
+        ("Solve for x: x + 9 = 15", "x = 6"),
+        ("What is 25% of 80?", "20"),
+        ("What is the mean of 4, 8 and 12?", "8"),
+        ("What is the square root of 144?", "12"),
+        ("In y = 3x + 2, what is the slope?", "3"),
+    ],
+    "physics": [
+        ("State Newton's second law.", "F = ma (force = mass x acceleration)"),
+        ("What is the SI unit of force?", "The newton (N)"),
+        ("Speed equals distance divided by what?", "Time"),
+        ("What kind of energy does a moving object have?", "Kinetic energy"),
+        ("State Ohm's law.", "V = IR (voltage = current x resistance)"),
+        ("Roughly how fast is light in a vacuum?",
+         "About 300,000 km/s (3.0 x 10^8 m/s)"),
+    ],
+    "chemistry": [
+        ("Name the three subatomic particles.",
+         "Protons, neutrons and electrons"),
+        ("What is the chemical formula for water?", "H2O"),
+        ("What does the pH scale measure?",
+         "How acidic or basic a solution is (7 is neutral)"),
+        ("What is the atomic number of carbon?", "6"),
+        ("Ionic bonds form by transferring what?", "Electrons"),
+        ("Which gas do plants absorb for photosynthesis?",
+         "Carbon dioxide (CO2)"),
+    ],
+    "biology": [
+        ("Which organelle is called the powerhouse of the cell?",
+         "The mitochondrion"),
+        ("Which molecule carries genetic instructions?", "DNA"),
+        ("What process lets plants make food from sunlight?",
+         "Photosynthesis"),
+        ("What are the basic structural units of all living things?",
+         "Cells"),
+        ("Which blood cells fight infection?", "White blood cells"),
+        ("In one sentence, what is natural selection?",
+         "Traits that help survival and reproduction become more "
+         "common over generations"),
+    ],
+    "english": [
+        ("What is a noun?",
+         "A word naming a person, place, thing or idea"),
+        ("Which sentence usually states a paragraph's main idea?",
+         "The topic sentence"),
+        ("Give a synonym for 'happy'.", "Glad (also: joyful, content)"),
+        ("What does the prefix 'un-' mean?", "Not / the opposite of"),
+        ("What is the difference between 'their' and 'there'?",
+         "'Their' shows possession; 'there' refers to a place"),
+        ("What is a thesis statement?",
+         "The central claim of an essay, usually in the introduction"),
+    ],
+    "computer-science": [
+        ("Which keyword defines a function in Python?", "def"),
+        ("What does len([1, 2, 3]) return?", "3"),
+        ("What data type is the value True?", "A boolean (bool)"),
+        ("What does the 'in' operator test on a list?",
+         "Membership - whether a value is present"),
+        ("What error is raised by 1 / 0 in Python?", "ZeroDivisionError"),
+        ("What is the output of print(2 ** 3)?", "8"),
+    ],
+    "finance": [
+        ("What does the 50/30/20 rule allocate?",
+         "50% needs, 30% wants, 20% savings"),
+        ("What is compound interest?",
+         "Interest earned on both the principal and the interest "
+         "already earned"),
+        ("What is an emergency fund?",
+         "Savings covering about 3-6 months of essential expenses"),
+        ("What does a credit score summarize?",
+         "Your creditworthiness - how reliably you repay debt"),
+        ("What is diversification?",
+         "Spreading money across different investments to reduce risk"),
+        ("Name one classic red flag of a financial scam.",
+         "Guaranteed high returns, pressure to act fast, or secrecy"),
+    ],
+    "history": [
+        ("What is a primary source?",
+         "A firsthand record created at the time being studied"),
+        ("Which civilization built the pyramids at Giza?",
+         "Ancient Egypt"),
+        ("In which year did World War II end?", "1945"),
+        ("What was the Industrial Revolution?",
+         "The shift to machine manufacturing and factory production"),
+        ("What was the Mali Empire famous for?",
+         "West African gold wealth and trade (Mansa Musa, Timbuktu)"),
+        ("Which document begins with 'We the People'?",
+         "The United States Constitution"),
+    ],
+}
+
+
+def _cap_messages(messages: List[Dict[str, str]],
+                  limit: int = MAX_TEACH_MESSAGES) -> List[Dict[str, str]]:
+    """Cap a chat message list at `limit`, preserving the system message."""
+    if len(messages) <= limit:
+        return list(messages)
+    head: List[Dict[str, str]] = []
+    if messages and messages[0].get("role") == "system":
+        head = [messages[0]]
+    keep = max(1, limit - len(head))
+    return head + list(messages[-keep:])
+
+
+# ---------------------------------------------------------------------------
+# Module C: dataset readers (CSV + stdlib-only minimal XLSX)
+# ---------------------------------------------------------------------------
+
+def _read_csv_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
+    """Read a CSV file; first row = headers. Returns (headers, rows)."""
+    with open(path, "r", encoding="utf-8", errors="replace", newline="") as handle:
+        raw_rows = [row for row in csv.reader(handle)
+                    if any(str(cell).strip() for cell in row)]
+    if not raw_rows:
+        return [], []
+    headers = [str(h).strip() or "col_%d" % (i + 1)
+               for i, h in enumerate(raw_rows[0])]
+    width = len(headers)
+    data = []
+    for row in raw_rows[1:]:
+        padded = (list(row) + [""] * width)[:width]
+        data.append([str(cell) for cell in padded])
+    return headers, data
+
+
+def _xlsx_localname(tag: str) -> str:
+    """Strip an XML namespace prefix from a tag name."""
+    return str(tag).rsplit("}", 1)[-1]
+
+
+def _xlsx_col_index(ref: str) -> Optional[int]:
+    """Convert a cell reference like 'B12' to a zero-based column index."""
+    letters = ""
+    for ch in str(ref):
+        if ch.isalpha():
+            letters += ch.upper()
+        else:
+            break
+    if not letters:
+        return None
+    index = 0
+    for ch in letters:
+        index = index * 26 + (ord(ch) - 64)
+    return index - 1
+
+
+def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
+    """Minimal stdlib-only .xlsx reader.
+
+    An .xlsx file is a ZIP of XML parts. We parse xl/sharedStrings.xml and
+    the first xl/worksheets/sheet*.xml with ElementTree. Handles shared
+    strings, inline strings, booleans, and numbers. First row = headers.
+    """
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        shared: List[str] = []
+        if "xl/sharedStrings.xml" in names:
+            root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+            for si in root:
+                if _xlsx_localname(si.tag) != "si":
+                    continue
+                parts = [node.text or "" for node in si.iter()
+                         if _xlsx_localname(node.tag) == "t"]
+                shared.append("".join(parts))
+        sheets = sorted(n for n in names
+                        if n.startswith("xl/worksheets/") and n.endswith(".xml"))
+        if not sheets:
+            return [], []
+        sheet = ET.fromstring(archive.read(sheets[0]))
+
+    table: List[List[str]] = []
+    for row_el in sheet.iter():
+        if _xlsx_localname(row_el.tag) != "row":
+            continue
+        cells: Dict[int, str] = {}
+        next_col = 0
+        for cell_el in row_el:
+            if _xlsx_localname(cell_el.tag) != "c":
+                continue
+            col_idx = _xlsx_col_index(cell_el.get("r") or "")
+            if col_idx is None:
+                col_idx = next_col
+            cell_type = cell_el.get("t") or ""
+            value = ""
+            if cell_type == "inlineStr":
+                value = "".join(node.text or "" for node in cell_el.iter()
+                                if _xlsx_localname(node.tag) == "t")
+            else:
+                v_text = None
+                for child in cell_el:
+                    if _xlsx_localname(child.tag) == "v":
+                        v_text = child.text
+                        break
+                if v_text is not None:
+                    if cell_type == "s":
+                        try:
+                            value = shared[int(v_text)]
+                        except Exception:
+                            value = v_text
+                    elif cell_type == "b":
+                        value = "TRUE" if v_text == "1" else "FALSE"
+                    else:
+                        value = v_text
+            cells[col_idx] = value
+            next_col = col_idx + 1
+        if cells:
+            width = max(cells.keys()) + 1
+            table.append([cells.get(i, "") for i in range(width)])
+    if not table:
+        return [], []
+    headers = [str(h).strip() or "col_%d" % (i + 1)
+               for i, h in enumerate(table[0])]
+    width = len(headers)
+    data = []
+    for row in table[1:]:
+        padded = (row + [""] * width)[:width]
+        if any(str(cell).strip() for cell in padded):
+            data.append([str(cell) for cell in padded])
+    return headers, data
+
+
+# ---------------------------------------------------------------------------
+# OmegaMasterEngine
+# ---------------------------------------------------------------------------
+
+class OmegaMasterEngine:
+    """Unified master engine preserving the user's original router backbone."""
+
+    def __init__(self) -> None:
+        # Preserved verbatim from the user's blueprint.
+        self.system_state = {
+            "build_sync_status": "Deployed & Synced",
+            "mining_investment_active": True,
+            "tax_compliance_region": "Global/US-Compliant",
+            "api_key_status": "Verified & Secure",
+        }
+        self.env = parse_env_file()
+        self.openai_key = self.env.get("OPENAI_API_KEY") or os.environ.get(
+            "OPENAI_API_KEY", ""
+        )
+        self.serper_key = self.env.get("SERPER_API_KEY") or os.environ.get(
+            "SERPER_API_KEY", ""
+        )
+        self.session_log: List[Dict[str, Any]] = []
+        # v29: GitHub sync configuration (token never printed in full).
+        self.github_repo = self.env.get("GITHUB_REPO") or os.environ.get(
+            "GITHUB_REPO", ""
+        )
+        self.github_token = self.env.get("GITHUB_TOKEN") or os.environ.get(
+            "GITHUB_TOKEN", ""
+        )
+        # v29 Module A: persistent memory (load, count session, save).
+        self.memory_path = resolve_memory_path()
+        self.memory = load_memory(self.memory_path)
+        self.memory["sessions"] = int(self.memory.get("sessions", 0)) + 1
+        # v29.1.0: restore persisted UI language (defaults to English).
+        self.lang = str(self.memory.get("lang") or DEFAULT_LANG)
+        if self.lang not in LANG_PACKS:
+            self.lang = DEFAULT_LANG
+        self.memory["lang"] = self.lang
+        save_memory(self.memory_path, self.memory)
+        # v29 Module C: currently loaded dataset (restored from memory).
+        self.dataset: Optional[Dict[str, Any]] = None
+        self._restore_last_import()
+        # v29.2.0: OpenRouter config for the optional online evolution mode.
+        self.openrouter_key = self.env.get("OPENROUTER_API_KEY") or os.environ.get(
+            "OPENROUTER_API_KEY", ""
+        )
+        self.openrouter_model = (
+            self.env.get("OPENROUTER_MODEL")
+            or os.environ.get("OPENROUTER_MODEL", "")
+        ).strip() or OPENROUTER_DEFAULT_MODEL
+        # v29.3.0: optional claude_engine bridge config. The engine itself is
+        # created lazily on the first LLM call (never at boot).
+        self.anthropic_key = self.env.get("ANTHROPIC_API_KEY") or os.environ.get(
+            "ANTHROPIC_API_KEY", ""
+        )
+        self.omega_llm_model = (
+            self.env.get("OMEGA_LLM_MODEL")
+            or os.environ.get("OMEGA_LLM_MODEL", "")
+        ).strip() or OPENAI_MODEL
+        self._bridge_engine: Any = None
+        self._bridge_attempted = False
+        # v29.2.0: Subsystem #10 - Evolution Engine. Boot verifies/restores
+        # omega_pillars.json (sha256 tamper detection) and bootstraps
+        # omega_strategy_gen.py + omega_evolution.json when missing.
+        self.evolution = EvolutionEngine(self)
+
+    # ------------------------------------------------------------------
+    # Availability matrix
+    # ------------------------------------------------------------------
+
+    def availability_matrix(self) -> List[Dict[str, str]]:
+        """Return per-subsystem availability (Available / Degraded + reason)."""
+        rows = [
+            ("Build & Sync", "Available", "local integrity checks"),
+            ("Mining & Investment", "Available", "local strategy snapshot"),
+            (
+                "Tax Support",
+                "Available" if self.openai_key else "Degraded",
+                "LLM-enhanced" if self.openai_key else "offline guidance (no OPENAI_API_KEY)",
+            ),
+            ("API & Security", "Available", "local gatekeeper checks"),
+            (
+                "Deep Research",
+                "Available" if self.serper_key else "Degraded",
+                "Serper live search" if self.serper_key else "offline research plan (no SERPER_API_KEY)",
+            ),
+            ("Companion/Tutor", "Available", "local study scaffolds"),
+            ("Opportunity Engine", "Available", "local scan framework"),
+            ("Finance Literacy", "Available", "local literacy guidance"),
+            ("Self-Improvement", "Available", "local audit log"),
+            (
+                "Evolution Engine",
+                "Available",
+                "sandboxed self-evolution, pillars enforced",
+            ),
+        ]
+        return [
+            {"subsystem": name, "status": status, "detail": detail}
+            for name, status, detail in rows
+        ]
+
+    # ------------------------------------------------------------------
+    # Audit logging (all file I/O guarded)
+    # ------------------------------------------------------------------
+
+    def _audit(self, subsystem: str, input_summary: str, status: str,
+               entry_type: str = "audit") -> Dict[str, Any]:
+        entry = {
+            "ts": utc_now_iso(),
+            "type": entry_type,
+            "subsystem": subsystem,
+            "input_summary": str(input_summary)[:200],
+            "status": status,
+        }
+        self.session_log.append(entry)
+        try:
+            with open(LOG_FILE, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, ensure_ascii=True) + "\n")
+        except Exception:
+            pass  # logging must never crash the engine
+        return entry
+
+    def read_log_tail(self, count: int = 10) -> List[Dict[str, Any]]:
+        """Read the last `count` audit entries from omega_log.jsonl."""
+        entries: List[Dict[str, Any]] = []
+        try:
+            if not os.path.isfile(LOG_FILE):
+                return self.session_log[-count:]
+            with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entries.append(json.loads(line))
+                    except Exception:
+                        continue
+        except Exception:
+            return self.session_log[-count:]
+        return entries[-count:]
+
+    # ------------------------------------------------------------------
+    # Guarded online capabilities (stdlib urllib, 15s timeout)
+    # ------------------------------------------------------------------
+
+    def _serper_search(self, query: str) -> Optional[List[Dict[str, str]]]:
+        """POST to Serper; return top 5 results or None on any failure."""
+        if not self.serper_key:
+            return None
+        try:
+            body = json.dumps({"q": query, "num": 5}).encode("utf-8")
+            request = urllib.request.Request(
+                SERPER_URL,
+                data=body,
+                headers={
+                    "X-API-KEY": self.serper_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            results = []
+            for item in (data.get("organic") or [])[:5]:
+                results.append({
+                    "title": str(item.get("title", "")),
+                    "link": str(item.get("link", "")),
+                    "snippet": str(item.get("snippet", "")),
+                })
+            return results or None
+        except Exception:
+            return None
+
+    def _get_bridge(self) -> Any:
+        """Lazy singleton ClaudeLikeEngine. Returns None when unavailable.
+
+        Never instantiated at boot and NEVER a hard dependency: when
+        claude_engine is not installed (BRIDGE_AVAILABLE False) or no
+        OPENAI_API_KEY is set, this simply returns None.
+        """
+        if self._bridge_attempted:
+            return self._bridge_engine
+        self._bridge_attempted = True
+        if not BRIDGE_AVAILABLE or not self.openai_key:
+            return None
+        try:
+            kwargs: Dict[str, Any] = {
+                "model": self.omega_llm_model,
+                "provider": "openai",
+                "api_key": self.openai_key,
+            }
+            if self.anthropic_key:
+                # Anthropic fallback provider for the circuit breaker.
+                kwargs["fallback_provider"] = "anthropic"
+                kwargs["fallback_model"] = CLAUDE_FALLBACK_MODEL
+                kwargs["fallback_api_key"] = self.anthropic_key
+            try:
+                self._bridge_engine = ClaudeLikeEngine(**kwargs)
+            except TypeError:
+                # Tolerate a leaner constructor signature.
+                self._bridge_engine = ClaudeLikeEngine(
+                    model=self.omega_llm_model,
+                    provider="openai",
+                    api_key=self.openai_key,
+                )
+        except Exception:
+            self._bridge_engine = None
+        return self._bridge_engine
+
+    def _bridge_llm(self, prompt: str) -> Optional[str]:
+        """Try the claude_engine bridge; return text or None on ANY issue."""
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            reply = bridge.chat(prompt)
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
+    def _llm(self, prompt: str) -> Optional[str]:
+        """Return LLM text or None on failure.
+
+        v29.3.0: routes through the optional claude_engine bridge first when
+        it is installed and OPENAI_API_KEY is set; ANY exception (or empty
+        reply) falls back to the stdlib urllib path below. Externally the
+        behavior is identical.
+        """
+        if not self.openai_key:
+            return None
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm(prompt)
+            if bridged:
+                return bridged
+            # Bridge failed -> fall through to the urllib path.
+        try:
+            body = json.dumps({
+                "model": OPENAI_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 512,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None
+            message = choices[0].get("message") or {}
+            content = message.get("content")
+            return str(content) if content else None
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # v29.5.0: multi-turn chat (messages lists) for the Professor classroom
+    # ------------------------------------------------------------------
+
+    def _bridge_llm_messages(self,
+                             messages: List[Dict[str, str]]) -> Optional[str]:
+        """Bridge path for a messages list.
+
+        The claude_engine bridge exposes a single-string chat(); the
+        rolling context is serialized into one transcript prompt so the
+        professor still sees the full conversation. None on ANY issue.
+        """
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            parts = []
+            for msg in messages:
+                role = str(msg.get("role", "user"))
+                content = str(msg.get("content", ""))
+                if role == "system":
+                    parts.append("System: " + content)
+                elif role == "assistant":
+                    parts.append("Professor: " + content)
+                else:
+                    parts.append("Student: " + content)
+            parts.append("Professor:")
+            reply = bridge.chat("\n\n".join(parts))
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
+    def _llm_messages(self, messages: List[Dict[str, str]],
+                      max_tokens: int = 700) -> Optional[str]:
+        """Chat-completions call with a full messages list.
+
+        Bridge-first (when installed), stdlib urllib fallback. Returns
+        None without a key or on ANY failure - callers must fall back
+        gracefully and never fake a reply.
+        """
+        if not self.openai_key:
+            return None
+        clean = []
+        for msg in messages:
+            role = str(msg.get("role", "user"))
+            if role not in ("system", "user", "assistant"):
+                role = "user"
+            clean.append({"role": role,
+                          "content": str(msg.get("content", ""))})
+        if not clean:
+            return None
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm_messages(clean)
+            if bridged:
+                return bridged
+            # Bridge failed -> fall through to the urllib path.
+        try:
+            body = json.dumps({
+                "model": OPENAI_MODEL,
+                "messages": clean,
+                "max_tokens": max_tokens,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None
+            message = choices[0].get("message") or {}
+            content = message.get("content")
+            return str(content) if content else None
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # Master router (user's backbone, extended to 9 subsystems)
+    # ------------------------------------------------------------------
+
+    def execute_omega_subsystem(se
