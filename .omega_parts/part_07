@@ -1,0 +1,564 @@
+)
+            datasets = self.memory.get("datasets") or {}
+            last_import = datasets.get("last_import")
+            lines = [
+                "# " + ENGINE_NAME + " - Export",
+                "",
+                "Generated: %s (UTC)" % utc_now_iso(),
+                "Session: #%d | Language: %s" % (
+                    self.memory.get("sessions", 1), self.lang),
+                "",
+                "## System State",
+            ]
+            for key, value in self.system_state.items():
+                lines.append("- %s: %s" % (key, value))
+            lines.append("")
+            lines.append("## Facts (%d)" % len(facts))
+            if facts:
+                for i, fact in enumerate(facts, 1):
+                    lines.append("%d. %s" % (i, fact))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            lines.append("## Last Import")
+            if isinstance(last_import, dict) and last_import:
+                for key, value in last_import.items():
+                    lines.append("- %s: %s" % (key, value))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            lines.append("## History (last %d)" % len(history))
+            if history:
+                for entry in history:
+                    lines.append("- %s | %s | %s" % (
+                        entry.get("ts", "?"), entry.get("role", "?"),
+                        entry.get("text", "")))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            lines.append("## Audit (last %d)" % len(audit_entries))
+            if audit_entries:
+                for entry in audit_entries:
+                    lines.append("- %s | %s | %s | %s" % (
+                        entry.get("ts", "?"), entry.get("subsystem", "?"),
+                        entry.get("status", "?"),
+                        entry.get("input_summary", "")))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            with open(filename, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(lines))
+            return True, "Export saved: %s" % filename
+        except Exception as exc:
+            return False, "Export failed safely: %s" % exc
+
+    def _report_findings(self, result: Dict[str, Any]) -> List[str]:
+        """Flatten a subsystem result dict into key-finding bullet lines."""
+        findings: List[str] = []
+        if result.get("message"):
+            findings.append(str(result["message"]))
+        for key, value in result.items():
+            if key in ("subsystem", "status", "message"):
+                continue
+            if isinstance(value, dict):
+                for sub_key, sub_val in value.items():
+                    findings.append("%s.%s: %s" % (key, sub_key, sub_val))
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        findings.append("; ".join(
+                            "%s: %s" % (k, v) for k, v in item.items()))
+                    else:
+                        findings.append(str(item))
+            else:
+                findings.append("%s: %s" % (key, value))
+        return findings
+
+    def write_report(self, topic: str) -> Tuple[bool, str]:
+        """Route topic through the master router, write a markdown report."""
+        try:
+            topic = str(topic or "").strip()
+            if not topic:
+                return False, "Usage: report <topic>"
+            result = self.execute_omega_subsystem(topic, {"query": topic})
+            subsystem = str(result.get("subsystem", "Master Core"))
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_report_%s_%s.md" % (_slugify(topic), stamp)
+            findings = self._report_findings(result)
+            actions = list(REPORT_GENERIC_ACTIONS)
+            actions.extend(REPORT_NEXT_ACTIONS.get(
+                subsystem, REPORT_DEFAULT_ACTIONS))
+            lines = [
+                "# Report: %s" % topic,
+                "",
+                "Generated: %s (UTC)" % utc_now_iso(),
+                "Engine: " + ENGINE_NAME,
+                "Subsystem: %s" % subsystem,
+                "Status: %s" % str(result.get("status", "Unknown")),
+                "",
+                "## Key Findings",
+            ]
+            if findings:
+                lines.extend("- " + str(f) for f in findings)
+            else:
+                lines.append("- (no findings)")
+            lines.append("")
+            lines.append("## Suggested Next Actions")
+            for i, action in enumerate(actions, 1):
+                lines.append("%d. %s" % (i, action))
+            lines.append("")
+            with open(filename, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(lines))
+            return True, "Report saved: %s" % filename
+        except Exception as exc:
+            return False, "Report failed safely: %s" % exc
+
+
+# ---------------------------------------------------------------------------
+# v29.3.0: process-isolated sandbox for evolution gate 2 (SPEC_v293.md 2)
+# ---------------------------------------------------------------------------
+# The worker target MUST be a module-level function so the spawn context can
+# pickle it. multiprocessing is never invoked at import time (only inside
+# exec_contract_gate), and omega.py is already __main__-guarded, so spawning
+# is safe on every platform.
+
+def _sandbox_worker(code: str, tests: List[Any], queue: Any) -> None:
+    """Child-process target: exec the candidate and run the contract tests.
+
+    BEFORE exec'ing candidate code, POSIX children install a hard 256 MB
+    address-space ceiling (resource.RLIMIT_AS) so a memory bomb dies with a
+    catchable MemoryError -> rejection. On Windows the 'resource' module is
+    missing (and other platforms may raise ValueError/OSError), so the
+    ceiling is skipped inside try/except - REVIEW note: on Windows gate 2 is
+    timeout-only protection (no memory ceiling), by design.
+
+    The result is reported back through the multiprocessing.Queue as a plain
+    dict: {ok, reason, pass_rate, latency_avg}.
+    """
+    result: Dict[str, Any] = {
+        "ok": False,
+        "reason": "sandbox worker crashed before producing a result",
+        "pass_rate": 0.0,
+        "latency_avg": 0.0,
+    }
+    try:
+        try:
+            import resource  # POSIX only; absent on Windows
+            resource.setrlimit(resource.RLIMIT_AS,
+                               (EVO_MEMORY_LIMIT, EVO_MEMORY_LIMIT))
+        except (ImportError, ValueError, OSError):
+            # Windows / restricted hosts: no memory ceiling (timeout-only).
+            pass
+        namespace = EvolutionEngine._restricted_namespace()
+        compiled = compile(code, "<omega_candidate>", "exec")
+        exec(compiled, namespace)
+        fn = namespace.get("execute_logic")
+        if not callable(fn):
+            result["reason"] = "execute_logic is not defined"
+        else:
+            total = float(len(tests)) or 1.0
+            passed = 0
+            latencies: List[float] = []
+            failure: Optional[str] = None
+            for query, telemetry in tests:
+                start = time.perf_counter()
+                output = fn(query, list(telemetry))
+                latency = time.perf_counter() - start
+                if not isinstance(output, str):
+                    failure = ("contract test %r returned non-string" % query)
+                    break
+                if "<omega_analysis>" not in output:
+                    failure = ("contract test %r missing <omega_analysis> tag"
+                               % query)
+                    break
+                passed += 1
+                latencies.append(latency)
+            result["pass_rate"] = passed / total
+            if failure is None:
+                result["ok"] = True
+                result["reason"] = "ok"
+                if latencies:
+                    result["latency_avg"] = sum(latencies) / len(latencies)
+            else:
+                result["reason"] = failure
+    except MemoryError:
+        result["reason"] = ("memory ceiling exceeded (MemoryError, 256 MB "
+                            "RLIMIT_AS)")
+    except Exception as exc:
+        result["reason"] = "%s: %s" % (type(exc).__name__, exc)
+    try:
+        queue.put(result)
+    except Exception:
+        pass
+
+
+def _close_sandbox_queue(queue: Any) -> None:
+    """Release queue resources without ever raising."""
+    try:
+        queue.cancel_join_thread()
+    except Exception:
+        pass
+    try:
+        queue.close()
+    except Exception:
+        pass
+
+
+def sandbox_live_children() -> int:
+    """Count live multiprocessing children of THIS process (spawn context).
+
+    Used by the gate-2 no-zombie assertion and by the selftest's
+    process-isolation proof. Never raises.
+    """
+    try:
+        ctx = multiprocessing.get_context("spawn")
+        count = 0
+        for proc in ctx.active_children():
+            try:
+                if proc.is_alive():
+                    count += 1
+            except Exception:
+                pass
+        return count
+    except Exception:
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# v29.2.0: Subsystem #10 - Evolution Engine (SAFE self-improvement)
+# ---------------------------------------------------------------------------
+
+class EvolutionEngine:
+    """Hardened absorption of the uploaded OmegaHyperEngine concept.
+
+    Keeps the concepts (immutable pillars, hot-swappable
+    execute_logic(query, telemetry) contract, telemetry scoring, evolution
+    cycles) and fixes the flaws: pillars are enforced via sha256 tamper
+    detection instead of prompt text, mutations pass a real 3-gate safety
+    pipeline instead of a full-privilege exec, the OpenRouter endpoint is
+    correct, and the health score is clamped to [0.0, 1.0].
+    """
+
+    # The 3 fixed contract tests every candidate must pass (SPEC 2.3).
+    CONTRACT_TESTS = [
+        ("Test Verify Parameter", ["Telemetry Operational"]),
+        ("health check", []),
+        ("rebalance portfolio", ["mining cluster alpha"]),
+    ]
+
+    def __init__(self, engine: "OmegaMasterEngine") -> None:
+        self.engine = engine
+        self.pillars_path = PILLARS_FILE
+        self.strategy_path = STRATEGY_FILE
+        self.state_path = EVOLUTION_FILE
+        self.state = self._load_state()
+        # Boot: real pillar enforcement (create / verify / restore).
+        try:
+            self.verify_pillars(announce=True)
+        except Exception:
+            pass
+        # Boot: bootstrap the evolvable strategy module (Generation 01).
+        self._bootstrap_strategy()
+
+    # ------------------------------------------------------------------
+    # State (omega_evolution.json) - all I/O guarded
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _default_state() -> Dict[str, Any]:
+        return {
+            "generation": 1,
+            "current_fitness": None,
+            "health": 1.0,
+            "scores": [],
+            "lineage": [],
+            "archive_fitness": {},
+        }
+
+    def _load_state(self) -> Dict[str, Any]:
+        state = self._default_state()
+        try:
+            if not os.path.isfile(self.state_path):
+                return state
+            with open(self.state_path, "r", encoding="utf-8",
+                      errors="replace") as handle:
+                data = json.load(handle)
+            if not isinstance(data, dict):
+                return state
+            try:
+                state["generation"] = max(1, int(data.get("generation", 1)))
+            except Exception:
+                pass
+            fitness = data.get("current_fitness")
+            if isinstance(fitness, (int, float)):
+                state["current_fitness"] = float(fitness)
+            try:
+                state["health"] = max(0.0, min(1.0, float(
+                    data.get("health", 1.0))))
+            except Exception:
+                pass
+            if isinstance(data.get("scores"), list):
+                state["scores"] = [float(s) for s in data["scores"]
+                                   if isinstance(s, (int, float))][-10:]
+            if isinstance(data.get("lineage"), list):
+                state["lineage"] = [e for e in data["lineage"]
+                                    if isinstance(e, dict)]
+            if isinstance(data.get("archive_fitness"), dict):
+                state["archive_fitness"] = {
+                    str(k): v for k, v in data["archive_fitness"].items()
+                }
+        except Exception:
+            return self._default_state()
+        return state
+
+    def _save_state(self) -> bool:
+        try:
+            with open(self.state_path, "w", encoding="utf-8") as handle:
+                json.dump(self.state, handle, ensure_ascii=True, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def generation(self) -> int:
+        try:
+            return max(1, int(self.state.get("generation", 1)))
+        except Exception:
+            return 1
+
+    def health(self) -> float:
+        try:
+            return max(0.0, min(1.0, float(self.state.get("health", 1.0))))
+        except Exception:
+            return 1.0
+
+    # ------------------------------------------------------------------
+    # Immutable pillars - REAL enforcement (sha256 tamper detection)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def canonical_pillars_json() -> str:
+        return json.dumps(CANONICAL_PILLARS, ensure_ascii=True,
+                          sort_keys=True)
+
+    @classmethod
+    def canonical_pillars_sha256(cls) -> str:
+        blob = cls.canonical_pillars_json().encode("utf-8")
+        return hashlib.sha256(blob).hexdigest()
+
+    def _write_canonical_pillars(self) -> bool:
+        try:
+            payload = {
+                "pillars": dict(CANONICAL_PILLARS),
+                "sha256": self.canonical_pillars_sha256(),
+            }
+            with open(self.pillars_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=True, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def pillars_status(self) -> str:
+        """Silent integrity check: 'OK' or 'TAMPERED'. Never raises."""
+        try:
+            with open(self.pillars_path, "r", encoding="utf-8",
+                      errors="replace") as handle:
+                payload = json.load(handle)
+            if not isinstance(payload, dict):
+                return "TAMPERED"
+            if payload.get("sha256") != self.canonical_pillars_sha256():
+                return "TAMPERED"
+            if payload.get("pillars") != dict(CANONICAL_PILLARS):
+                return "TAMPERED"
+            return "OK"
+        except Exception:
+            return "TAMPERED"
+
+    def verify_pillars(self, announce: bool = True) -> str:
+        """Create the pillar file if missing; detect + restore tampering.
+
+        Returns 'CREATED' / 'OK' / 'RESTORED'. On tamper, prints the
+        spec-mandated message and logs to the audit trail.
+        """
+        try:
+            if not os.path.isfile(self.pillars_path):
+                self._write_canonical_pillars()
+                return "CREATED"
+            if self.pillars_status() == "OK":
+                return "OK"
+            self._write_canonical_pillars()
+            if announce:
+                print("PILLAR TAMPER DETECTED - restored canonical pillars")
+            try:
+                self.engine._audit("Evolution", "pillar tamper detected",
+                                   "Restored")
+            except Exception:
+                pass
+            return "RESTORED"
+        except Exception:
+            return "OK"
+
+    def pillars_lines(self) -> List[str]:
+        lines = ["Immutable pillars (integrity: %s):" % self.pillars_status()]
+        for key, value in CANONICAL_PILLARS.items():
+            lines.append("  %s: %s" % (key, value))
+        lines.append("  sha256: %s" % self.canonical_pillars_sha256())
+        return lines
+
+    # ------------------------------------------------------------------
+    # Evolvable strategy module (omega_strategy_gen.py)
+    # ------------------------------------------------------------------
+
+    def _bootstrap_strategy(self) -> None:
+        try:
+            if not os.path.isfile(self.strategy_path):
+                with open(self.strategy_path, "w", encoding="utf-8") as handle:
+                    handle.write(EVO_GEN1_CODE)
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Gate 1: AST whitelist
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def ast_gate(code: str) -> Tuple[bool, str]:
+        """Static analysis gate. Returns (ok, reason). Never raises."""
+        try:
+            tree = ast.parse(code)
+        except SyntaxError as exc:
+            return False, "syntax error: %s" % exc
+        except Exception as exc:
+            return False, "unparseable candidate: %s" % exc
+        try:
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    return False, "imports are not allowed"
+                if not isinstance(node, _EVO_ALLOWED_NODES):
+                    return False, ("disallowed syntax: %s"
+                                   % type(node).__name__)
+                if isinstance(node, ast.Name):
+                    if node.id in EVO_BANNED_NAMES:
+                        return False, "banned name: %s" % node.id
+                    if node.id.startswith("__"):
+                        return False, "dunder name not allowed: %s" % node.id
+                if isinstance(node, ast.Attribute):
+                    if node.attr.startswith("_"):
+                        return False, ("private/dunder attribute not "
+                                       "allowed: %s" % node.attr)
+                if isinstance(node, ast.Call):
+                    func = node.func
+                    if isinstance(func, ast.Name):
+                        if func.id not in EVO_SAFE_FUNCS:
+                            return False, ("call to non-whitelisted "
+                                           "function: %s" % func.id)
+                    elif isinstance(func, ast.Attribute):
+                        if func.attr not in EVO_SAFE_METHODS:
+                            return False, ("call to non-whitelisted "
+                                           "method: %s" % func.attr)
+                    else:
+                        return False, "unsupported call target"
+            body = [n for n in tree.body if not isinstance(n, ast.Expr)
+                    or not isinstance(getattr(n, "value", None),
+                                      ast.Constant)]
+            funcs = [n for n in tree.body
+                     if isinstance(n, ast.FunctionDef)]
+            if len(funcs) != 1 or funcs[0].name != "execute_logic" \
+                    or len(body) != 1:
+                return False, ("candidate must define exactly one function: "
+                               "execute_logic")
+            return True, "ok"
+        except Exception as exc:
+            return False, "AST analysis failed: %s" % exc
+
+    # ------------------------------------------------------------------
+    # Gate 2: restricted exec + contract tests
+    # v29.3.0: gate 2 itself is PROCESS-ISOLATED (see exec_contract_gate and
+    # the module-level _sandbox_worker above). The thread-timeout helper
+    # below is kept ONLY for 'evolve test <query>', which runs the already
+    # vetted live strategy module (never a candidate mutation).
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _restricted_namespace() -> Dict[str, Any]:
+        """Namespace whose __builtins__ is the whitelisted subset ONLY.
+
+        No open/eval/exec/__import__/print: print is redirected to an
+        in-memory buffer so candidates cannot write to the console.
+        """
+        capture = io.StringIO()
+
+        def sandbox_print(*args: Any, **kwargs: Any) -> None:
+            kwargs.pop("file", None)
+            try:
+                print(*args, file=capture, **kwargs)
+            except Exception:
+                pass
+
+        safe: Dict[str, Any] = {}
+        for name in EVO_SAFE_FUNCS:
+            func = getattr(builtins, name, None)
+            if func is not None:
+                safe[name] = func
+        safe["print"] = sandbox_print
+        return {"__builtins__": safe}
+
+    @staticmethod
+    def _run_call_with_timeout(fn: Any, query: str, telemetry: List[str],
+                               timeout: float = EVO_TEST_TIMEOUT
+                               ) -> Tuple[Any, float, Optional[str]]:
+        """Run fn(query, telemetry) in a daemon thread with join(timeout).
+
+        Windows-safe (no signals). Returns (output, latency, error).
+        """
+        result: Dict[str, Any] = {}
+
+        def target() -> None:
+            try:
+                start = time.perf_counter()
+                result["output"] = fn(query, list(telemetry))
+                result["latency"] = time.perf_counter() - start
+            except Exception as exc:  # candidate failure is data, not a crash
+                result["error"] = "%s: %s" % (type(exc).__name__, exc)
+
+        try:
+            worker = threading.Thread(target=target, daemon=True)
+            worker.start()
+            worker.join(timeout)
+            if worker.is_alive():
+                return None, timeout, "timeout after %.1fs" % timeout
+            if "error" in result:
+                return None, result.get("latency", 0.0), result["error"]
+            return result.get("output"), result.get("latency", 0.0), None
+        except Exception as exc:
+            return None, 0.0, str(exc)
+
+    @classmethod
+    def exec_contract_gate(cls, code: str) -> Tuple[bool, str, float, float]:
+        """Gate 2: restricted exec + 3 fixed contract tests, PROCESS-ISOLATED.
+
+        v29.3.0: the candidate runs in a spawned child process
+        (multiprocessing.get_context("spawn")) instead of a daemon thread:
+          * results come back through a multiprocessing.Queue,
+          * join(3.0s); if the child is still alive -> terminate() + join()
+            -> the candidate is rejected as a timeout,
+          * POSIX children get a 256 MB RLIMIT_AS memory ceiling before the
+            candidate execs (MemoryError -> rejection); on Windows the
+            ceiling is unavailable, documented as timeout-only (see the
+            REVIEW note in _sandbox_worker),
+          * after every gate run we assert that NO child process remains
+            alive - this kills the v29.2.0 zombie-thread limit for good.
+
+        The AST gate (gate 1, unchanged) runs BEFORE this gate, and the
+        same restricted-builtins namespace is used inside the child.
+
+        Returns (ok, reason, contract_pass_rate, latency_avg).
+        """
+        queue = None
+        proc = None
+        try:
+            ctx = multiprocessing.get_context("spawn")
+            queue = ctx.Queue()
+            proc = ctx.Process(
+                target=_sandbox_worker,
+                args=(code, list(cls.CONTRACT_TESTS), queue),
+     
