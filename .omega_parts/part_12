@@ -1,41 +1,4 @@
-)" % exc, False))
-
-    # ------------------------------------------------------------------
-    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
-    # ------------------------------------------------------------------
-
-    # (a) Infinite-loop candidate -> rejected via timeout; the child process
-    # is terminated and NO live child processes remain afterwards.
-    infinite_loop = (
-        "def execute_logic(query, telemetry):\n"
-        "    while True:\n"
-        "        pass\n"
-    )
-    try:
-        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
-        checks.append(("evolve: process isolation rejects infinite loop",
-                       not ok and "timeout" in reason.lower()))
-    except Exception as exc:
-        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
-    try:
-        checks.append(("evolve: no live child processes after timeout kill",
-                       sandbox_live_children() == 0))
-    except Exception as exc:
-        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
-
-    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
-    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
-    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
-    memory_bomb = (
-        "def execute_logic(query, telemetry):\n"
-        "    data = list(range(10**8))\n"
-        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
-    )
-    try:
-        import resource as _resource_probe  # noqa: F401
-        _posix_ceiling = True
-    except Exception:
-        _posix_ceiling = False
+ix_ceiling = False
     if _posix_ceiling:
         try:
             ok, reason, _pr, _lat = evo.exec_contract_gate(memory_bomb)
@@ -475,6 +438,90 @@
                        ok))
     except Exception as exc:
         checks.append(("learning: cap (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.6.0: voice/image/github/reminder command checks (all offline)
+    # ------------------------------------------------------------------
+
+    # Reminder parser: relative + absolute accepted, junk rejected.
+    checks.append(("remind: parse in/at",
+                   _parse_remind_when("in 30m") is not None
+                   and _parse_remind_when("at 23:59") is not None
+                   and _parse_remind_when("junk") is None))
+
+    # Reminder store -> due cycle fires exactly once -> persisted on disk.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                rem_engine = OmegaMasterEngine()
+                rem_engine.openai_key = ""
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(rem_engine,
+                                          "remind selftest ping in 0m")
+                out = buf.getvalue()
+                first = _due_reminders(rem_engine)
+                second = _due_reminders(rem_engine)
+                persisted = load_memory(rem_engine.memory_path)
+                saved_reminders = persisted.get("reminders") or []
+                ok = (bool(keep) and "Reminder set for" in out
+                      and first == ["selftest ping"] and second == []
+                      and len(saved_reminders) == 1
+                      and saved_reminders[0].get("done") is True)
+                checks.append(("remind: store -> due once -> persisted", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("remind: due cycle (exception: %s)" % exc, False))
+
+    # Voice flag + reminders schema persist via save/load roundtrip.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mem_path = os.path.join(tmpdir, MEMORY_FILE)
+            mem = fresh_memory()
+            mem["voice_enabled"] = True
+            mem["reminders"].append({"text": "x", "due": "2030-01-01 00:00",
+                                     "done": False})
+            ok = save_memory(mem_path, mem)
+            loaded = load_memory(mem_path)
+            ok = (ok and loaded.get("voice_enabled") is True
+                  and loaded.get("reminders")
+                  and loaded["reminders"][0].get("text") == "x"
+                  and "reminders" in fresh_memory()
+                  and "voice_enabled" in fresh_memory())
+            checks.append(("voice: flag + reminders schema roundtrip", ok))
+    except Exception as exc:
+        checks.append(("voice: flag roundtrip (exception: %s)" % exc, False))
+
+    # Launch pre-flight rows include the v29.6.0 connectors + 14/14 smoke.
+    try:
+        launch_out, _launch_blockers = launch_lines(offline_engine)
+        text = "\n".join(launch_out)
+        checks.append(("launch: voice tts + image gen rows + 14/14 smoke",
+                       "voice tts" in text and "image gen" in text
+                       and "router smoke: 14/14 subsystems" in text))
+    except Exception as exc:
+        checks.append(("launch: v29.6 rows (exception: %s)" % exc, False))
+
+    # Keyless CLI commands route (return True) and degrade gracefully.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keeps = [handle_command(offline_engine, "say hi"),
+                     handle_command(offline_engine, "image test"),
+                     handle_command(offline_engine, "github info"),
+                     handle_command(offline_engine, "voice"),
+                     handle_command(offline_engine, "reminders")]
+        out = buf.getvalue()
+        checks.append(("v29.6 cli: say/image/github/voice/reminders graceful",
+                       all(keeps)
+                       and "voice needs OPENAI_API_KEY in .env" in out
+                       and "image generation failed safely" not in out
+                       and "github info needs GITHUB_REPO" in out))
+    except Exception as exc:
+        checks.append(("v29.6 cli: graceful (exception: %s)" % exc, False))
 
     # Report.
     failures = 0
