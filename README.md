@@ -1,3 +1,4 @@
+- **2026-08-03 -- v29.6.0 "The Sovereign Voice"**: voice output (TTS via OpenAI), image generation, GitHub REST probe, OpenRouter LLM fallback, reminders. 14 subsystems, 103 selftest checks. Keys stay in `.env`; guard_secrets.py blocks committing real keys.
 # LUQI AI v29.5.0 — Unified Master Engine
 
 One engine. Every domain. A single-file, zero-dependency Python AI engine built in South Africa.
