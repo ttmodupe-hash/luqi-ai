@@ -1,203 +1,4 @@
-           daemon=True,
-            )
-            proc.start()
-        except Exception as exc:
-            if queue is not None:
-                _close_sandbox_queue(queue)
-            return False, "sandbox process spawn failed: %s" % exc, 0.0, 0.0
-
-        try:
-            proc.join(EVO_TEST_TIMEOUT)
-            if proc.is_alive():
-                # Infinite loop / hang: hard-kill the child. Unlike the old
-                # daemon thread, a terminated process leaves NO zombie behind.
-                try:
-                    proc.terminate()
-                except Exception:
-                    pass
-                proc.join(EVO_TEST_TIMEOUT)
-                if proc.is_alive():
-                    try:
-                        proc.kill()  # SIGKILL fallback (py3.7+)
-                    except Exception:
-                        pass
-                    proc.join(1.0)
-                _close_sandbox_queue(queue)
-                cls._reap_stray_children()
-                return False, ("timeout after %.1fs (candidate process "
-                               "terminated, no child processes left)"
-                               % EVO_TEST_TIMEOUT), 0.0, 0.0
-
-            # Child exited: fetch its result dict (short wait for flush).
-            result: Optional[Dict[str, Any]] = None
-            try:
-                result = queue.get(timeout=2.0)
-            except Exception:
-                result = None
-            _close_sandbox_queue(queue)
-            cls._reap_stray_children()
-            if not isinstance(result, dict):
-                exit_code = proc.exitcode
-                return False, ("sandbox worker exited without a result "
-                               "(exit code %s)" % exit_code), 0.0, 0.0
-            try:
-                pass_rate = float(result.get("pass_rate", 0.0))
-            except Exception:
-                pass_rate = 0.0
-            try:
-                latency_avg = float(result.get("latency_avg", 0.0))
-            except Exception:
-                latency_avg = 0.0
-            return (bool(result.get("ok")), str(result.get("reason", "?")),
-                    pass_rate, latency_avg)
-        except Exception as exc:
-            # Belt-and-braces: never leak a live child on any failure.
-            try:
-                if proc.is_alive():
-                    proc.terminate()
-                    proc.join(1.0)
-            except Exception:
-                pass
-            _close_sandbox_queue(queue)
-            cls._reap_stray_children()
-            return False, "sandbox gate failed safely: %s" % exc, 0.0, 0.0
-        finally:
-            try:
-                if proc is not None and not proc.is_alive():
-                    proc.close()
-            except Exception:
-                pass
-
-    @staticmethod
-    def _reap_stray_children() -> None:
-        """No-zombie assertion: after a gate run no child may stay alive.
-
-        Any stray child (should never happen) is terminated immediately.
-        """
-        try:
-            ctx = multiprocessing.get_context("spawn")
-            for stray in ctx.active_children():
-                try:
-                    if stray.is_alive():
-                        stray.terminate()
-                        stray.join(1.0)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    # ------------------------------------------------------------------
-    # Gate 3: fitness gate
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def fitness(pass_rate: float, latency_avg: float, health: float) -> float:
-        """fitness = 0.5*pass + 0.3*latency_score + 0.2*health, clamped."""
-        try:
-            lat_score = 1.0 if float(latency_avg) <= 2.0 else 0.0
-            value = (0.5 * float(pass_rate) + 0.3 * lat_score
-                     + 0.2 * float(health))
-            return max(0.0, min(1.0, value))
-        except Exception:
-            return 0.0
-
-    def current_fitness(self) -> Optional[float]:
-        fitness = self.state.get("current_fitness")
-        return float(fitness) if isinstance(fitness, (int, float)) else None
-
-    # ------------------------------------------------------------------
-    # Lineage / archives / adoption / rollback
-    # ------------------------------------------------------------------
-
-    def _next_generation(self) -> int:
-        gens = [self.generation()]
-        for entry in self.state.get("lineage", []):
-            try:
-                gens.append(int(entry.get("generation", 1)))
-            except Exception:
-                continue
-        return max(gens) + 1
-
-    def _archive_names(self) -> List[Tuple[int, str]]:
-        archives: List[Tuple[int, str]] = []
-        try:
-            for name in os.listdir("."):
-                match = re.fullmatch(r"omega_gen_(\d+)\.py", name)
-                if match:
-                    archives.append((int(match.group(1)), name))
-        except Exception:
-            pass
-        archives.sort()
-        return archives
-
-    def _prune_archives(self, keep: int = EVO_ARCHIVE_KEEP) -> None:
-        try:
-            archives = self._archive_names()
-            for _gen, name in archives[:-keep] if len(archives) > keep else []:
-                try:
-                    os.remove(name)
-                except Exception:
-                    pass
-            remaining = {str(gen) for gen, _name in archives[-keep:]}
-            fitness_map = self.state.setdefault("archive_fitness", {})
-            for key in list(fitness_map.keys()):
-                if key not in remaining:
-                    fitness_map.pop(key, None)
-        except Exception:
-            pass
-
-    def _adopt(self, code: str, fitness: float, source: str) -> int:
-        """Archive the current generation, write the candidate, log lineage."""
-        current = self.generation()
-        try:
-            if os.path.isfile(self.strategy_path):
-                with open(self.strategy_path, "r", encoding="utf-8",
-                          errors="replace") as src:
-                    blob = src.read()
-                with open("omega_gen_%d.py" % current, "w",
-                          encoding="utf-8") as dst:
-                    dst.write(blob)
-                prior = self.current_fitness()
-                self.state.setdefault("archive_fitness", {})[str(current)] = (
-                    prior if prior is not None else 0.0)
-        except Exception:
-            pass
-        self._prune_archives()
-        new_gen = self._next_generation()
-        try:
-            with open(self.strategy_path, "w", encoding="utf-8") as handle:
-                handle.write(code if code.endswith("\n") else code + "\n")
-        except Exception:
-            pass
-        self.state["generation"] = new_gen
-        self.state["current_fitness"] = fitness
-        self.state.setdefault("lineage", []).append({
-            "generation": new_gen,
-            "fitness": fitness,
-            "adopted_at": utc_now_iso(),
-            "parent": current,
-            "source": source,
-        })
-        self._save_state()
-        return new_gen
-
-    def rollback(self) -> Tuple[bool, List[str]]:
-        """Restore the highest-fitness archived generation as current."""
-        lines = ["[Evolution Engine] Rollback requested."]
-        try:
-            fitness_map = self.state.get("archive_fitness") or {}
-            candidates = []
-            for gen, name in self._archive_names():
-                try:
-                    fit = float(fitness_map.get(str(gen), 0.0))
-                except Exception:
-                    fit = 0.0
-                candidates.append((fit, gen, name))
-            if not candidates:
-                lines.append("  no archived generations - nothing to roll "
-                             "back to.")
-                return False, lines
-            candidates.sort(reverse=True)  # highest fitness first
+   candidates.sort(reverse=True)  # highest fitness first
             fit, gen, name = candidates[0]
             with open(name, "r", encoding="utf-8", errors="replace") as src:
                 blob = src.read()
@@ -523,7 +324,7 @@ def cost_lines() -> List[str]:
 
 
 def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
-    """Live status manifest for the 5 connectors."""
+    """Live status manifest for the 8 connectors."""
     rows = []
     if engine._git_path() and engine.github_repo:
         rows.append(("GitHub", "configured", "ready - run 'sync github'"))
@@ -534,4 +335,227 @@ def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
         rows.append(("GitHub", "missing",
                      "install git and set GITHUB_REPO in .env"))
     rows.append(("Excel/CSV", "available",
-                 "stdlib reader built in - us
+                 "stdlib reader built in - use 'import <path>'"))
+    if engine.serper_key:
+        rows.append(("Serper", "configured",
+                     "live web search ready - use 'research <query>'"))
+    else:
+        rows.append(("Serper", "missing", "set SERPER_API_KEY in .env"))
+    if engine.openai_key:
+        rows.append(("OpenAI", "configured",
+                     "LLM-enhanced tax guidance ready"))
+    else:
+        rows.append(("OpenAI", "missing", "set OPENAI_API_KEY in .env"))
+    if engine.openrouter_key:
+        rows.append(("OpenRouter", "configured",
+                     "model %s - use 'evolve run online'"
+                     % engine.openrouter_model))
+    else:
+        rows.append(("OpenRouter", "missing",
+                     "set OPENROUTER_API_KEY (+ OPENROUTER_MODEL) in .env"))
+    # v29.3.0: 6th row - optional claude_engine bridge (never a hard dep).
+    if BRIDGE_AVAILABLE and engine.openai_key:
+        rows.append(("claude_engine", "available",
+                     "bridge active - LLM calls route through it ('bridge')"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("claude_engine", "no key",
+                     "installed; set OPENAI_API_KEY to activate the bridge"))
+    else:
+        rows.append(("claude_engine", "not installed",
+                     "optional; clone repo + pip install -e . ('bridge')"))
+    # v29.6.0: voice + image ride the existing OPENAI_API_KEY.
+    if engine.openai_key:
+        rows.append(("voice tts", "via openai",
+                     "speech ready - use 'say <text>'"))
+        rows.append(("image gen", "via openai",
+                     "images ready - use 'image <prompt>'"))
+    else:
+        rows.append(("voice tts", "via openai",
+                     "set OPENAI_API_KEY in .env"))
+        rows.append(("image gen", "via openai",
+                     "set OPENAI_API_KEY in .env"))
+    lines = ["Integrations manifest (8 connectors):"]
+    lines.append("  %-13s %-13s %s" % ("connector", "status",
+                                       "how to enable / use"))
+    for name, status, hint in rows:
+        lines.append("  %-13s %-13s %s" % (name, status, hint))
+    return lines
+
+
+def bridge_lines(engine: OmegaMasterEngine) -> List[str]:
+    """v29.3.0 'bridge' command: claude_engine bridge status report."""
+    lines = ["claude_engine bridge status:"]
+    if BRIDGE_AVAILABLE:
+        lines.append("  module: AVAILABLE (claude_engine importable)")
+    else:
+        lines.append("  module: NOT INSTALLED (engine works fully without it)")
+        lines.append("  how to enable: clone the claude_engine repo and run "
+                     "'pip install -e .' inside it, then restart omega.py")
+    if engine.openai_key:
+        lines.append("  primary provider: openai / %s (key %s)"
+                     % (engine.omega_llm_model,
+                        mask_secret(engine.openai_key)))
+    else:
+        lines.append("  primary provider: inactive (set OPENAI_API_KEY in "
+                     ".env to activate)")
+    if engine.anthropic_key:
+        lines.append("  fallback provider: anthropic / %s (key %s)"
+                     % (CLAUDE_FALLBACK_MODEL,
+                        mask_secret(engine.anthropic_key)))
+    else:
+        lines.append("  fallback provider: none (set ANTHROPIC_API_KEY for "
+                     "the anthropic fallback)")
+    if engine._bridge_engine is not None:
+        stats_fn = getattr(engine._bridge_engine, "stats", None)
+        if callable(stats_fn):
+            try:
+                lines.append("  circuit-breaker stats: %s" % (stats_fn(),))
+            except Exception:
+                lines.append("  circuit-breaker stats: unavailable")
+        else:
+            lines.append("  circuit-breaker stats: engine has no stats()")
+    else:
+        lines.append("  engine instance: not instantiated (lazy - created on "
+                     "the first bridged LLM call)")
+    lines.append("  routing: _llm() uses the bridge when available; ANY "
+                 "exception falls back to the stdlib urllib path")
+    return lines
+
+
+# Router smoke list used by the selftest AND the 'launch' pre-flight check.
+CORE_SMOKE: List[Tuple[str, str]] = [
+    ("build and deploy sync", "Omega Infrastructure Build & Sync"),
+    ("crypto mining portfolio", "Omega Mining & Investment Engine"),
+    ("tax vat sars compliance", "Omega Tax & Audit Support"),
+    ("api key security status", "Omega Security Gatekeeper"),
+    ("deep research search", "Omega Deep Research"),
+    ("teach me companion explain", "Omega Companion/Tutor"),
+    ("business hustle opportunities", "Omega Opportunity Engine"),
+    ("finance budget scam debt", "Omega Finance Literacy"),
+    ("selfimprove evolve", "Omega Self-Improvement"),
+    ("evolution mutation engine", "Omega Evolution Engine"),
+    # v29.6.0: CLI command smoke. "cli" entries run through handle_command
+    # and pass when the command degrades gracefully (keyless-safe).
+    ("voice", "cli"),
+    ("say selftest hello", "cli"),
+    ("image selftest dot", "cli"),
+    ("reminders", "cli"),
+]
+
+
+def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
+    """v29.3.0 'launch' command: GO/NO-GO pre-flight checklist.
+
+    Blockers are missing pillars / unwritable memory / selftest-core failure
+    ONLY. Optional integration keys are WARN, never blockers.
+    Returns (lines, blockers).
+    """
+    rows: List[Tuple[str, str, str]] = []
+    blockers: List[str] = []
+
+    # 1. Version current (informational; always matches the running build).
+    rows.append(("version", "OK", "v%s Launch-Grade" % ENGINE_VERSION))
+
+    # 2. Selftest core pass: router smoke over all 14 subsystems.
+    core_failures = []
+    for domain, expected in CORE_SMOKE:
+        try:
+            if expected == "cli":
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    ok = bool(handle_command(engine, domain))
+            else:
+                result = engine.execute_omega_subsystem(domain,
+                                                        {"query": domain})
+                ok = result.get("subsystem") == expected
+            if not ok:
+                core_failures.append(domain)
+        except Exception:
+            core_failures.append(domain)
+    if core_failures:
+        rows.append(("selftest core", "FAIL",
+                     "router smoke failed for: " + ", ".join(core_failures)))
+        blockers.append("selftest core failure")
+    else:
+        rows.append(("selftest core", "OK",
+                     "router smoke: %d/%d subsystems" % (len(CORE_SMOKE),
+                                                         len(CORE_SMOKE))))
+
+    # 3. Pillars integrity.
+    pillars = engine.evolution.pillars_status()
+    rows.append(("pillars integrity", "OK" if pillars == "OK" else "FAIL",
+                 "sha256 verified" if pillars == "OK"
+                 else "tampered/missing - run 'evolve pillars'"))
+    if pillars != "OK":
+        blockers.append("pillars integrity")
+
+    # 4. Memory writable.
+    mem_ok = save_memory(engine.memory_path, engine.memory)
+    rows.append(("memory writable", "OK" if mem_ok else "FAIL",
+                 engine.memory_path if mem_ok
+                 else "cannot write " + engine.memory_path))
+    if not mem_ok:
+        blockers.append("memory not writable")
+
+    # 5. Strategy module present (auto-bootstraps; WARN if missing).
+    strategy_ok = os.path.isfile(STRATEGY_FILE)
+    rows.append(("strategy module", "OK" if strategy_ok else "WARN",
+                 STRATEGY_FILE if strategy_ok
+                 else "missing - auto-bootstraps on next evolution cycle"))
+
+    # 6. Per-integration key status (WARN, never blockers).
+    github_ok = bool(engine.github_repo and engine.github_token)
+    if github_ok:
+        # v29.6.0: one cached REST probe; guarded, never blocks/raises.
+        if engine._github_probe_cache is None:
+            engine._github_probe_cache = engine._github_api(
+                "/repos/" + engine.github_repo) or {}
+        probe = engine._github_probe_cache
+        github_detail = ("api ok: %s" % probe.get("full_name",
+                                                  engine.github_repo)
+                         if probe else "configured (api unreachable)")
+    else:
+        github_detail = "set GITHUB_REPO (+ GITHUB_TOKEN) in .env"
+    rows.append(("github key", "OK" if github_ok else "WARN", github_detail))
+    rows.append(("serper key", "OK" if engine.serper_key else "WARN",
+                 "live search ready" if engine.serper_key
+                 else "set SERPER_API_KEY in .env"))
+    rows.append(("openai key", "OK" if engine.openai_key else "WARN",
+                 "LLM enhancement ready" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    rows.append(("openrouter key", "OK" if engine.openrouter_key else "WARN",
+                 "fallback LLM ready (%s)" % engine.openrouter_model
+                 if engine.openrouter_key
+                 else "set OPENROUTER_API_KEY in .env"))
+    rows.append(("voice tts", "OK" if engine.openai_key else "WARN",
+                 "speech ready (uses OPENAI_API_KEY)" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    rows.append(("image gen", "OK" if engine.openai_key else "WARN",
+                 "images ready (uses OPENAI_API_KEY)" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    bridge_ok = BRIDGE_AVAILABLE and bool(engine.openai_key)
+    if bridge_ok:
+        rows.append(("bridge", "OK", "claude_engine bridge active"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("bridge", "WARN", "installed; set OPENAI_API_KEY"))
+    else:
+        rows.append(("bridge", "WARN",
+                     "claude_engine not installed (optional)"))
+
+    # 7. Site version note (informational).
+    rows.append(("site version", "INFO",
+                 "badge v%s - publish via the platform publish button"
+                 % ENGINE_VERSION))
+
+    lines = ["Launch pre-flight checklist (%s):" % ENGINE_NAME]
+    lines.append("  %-18s %-6s %s" % ("check", "status", "detail"))
+    for name, status, detail in rows:
+        lines.append("  %-18s %-6s %s" % (name, status, detail))
+    if blockers:
+        lines.append("NOT READY: " + ", ".join(blockers))
+    else:
+        lines.append("LAUNCH READY")
+    return lines, blockers
+
+
+# ----------------------------------------------------------
