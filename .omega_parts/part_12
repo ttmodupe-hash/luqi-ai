@@ -1,0 +1,523 @@
+)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
+    # ------------------------------------------------------------------
+
+    # (a) Infinite-loop candidate -> rejected via timeout; the child process
+    # is terminated and NO live child processes remain afterwards.
+    infinite_loop = (
+        "def execute_logic(query, telemetry):\n"
+        "    while True:\n"
+        "        pass\n"
+    )
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
+        checks.append(("evolve: process isolation rejects infinite loop",
+                       not ok and "timeout" in reason.lower()))
+    except Exception as exc:
+        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
+    try:
+        checks.append(("evolve: no live child processes after timeout kill",
+                       sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
+
+    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
+    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
+    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
+    memory_bomb = (
+        "def execute_logic(query, telemetry):\n"
+        "    data = list(range(10**8))\n"
+        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
+    )
+    try:
+        import resource as _resource_probe  # noqa: F401
+        _posix_ceiling = True
+    except Exception:
+        _posix_ceiling = False
+    if _posix_ceiling:
+        try:
+            ok, reason, _pr, _lat = evo.exec_contract_gate(memory_bomb)
+            checks.append(("evolve: POSIX memory bomb rejected (256MB cap)",
+                           not ok and ("memory" in reason.lower()
+                                       or "timeout" in reason.lower()
+                                       or "exit" in reason.lower())))
+            checks.append(("evolve: no live children after memory bomb",
+                           sandbox_live_children() == 0))
+        except Exception as exc:
+            checks.append(("evolve: memory bomb (exception: %s)" % exc,
+                           False))
+    else:
+        checks.append(("evolve: memory ceiling skip (non-POSIX, documented)",
+                       True))
+
+    # (c) Safe candidate still accepted end-to-end through the process-
+    # isolated gate (all 3 contract tests pass inside the child).
+    try:
+        ok, reason, pass_rate, lat = evo.exec_contract_gate(EVO_TEMPLATES[1])
+        checks.append(("evolve: safe candidate accepted end-to-end (child)",
+                       ok and pass_rate == 1.0 and lat >= 0.0
+                       and sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: safe end-to-end (exception: %s)" % exc,
+                       False))
+
+    # Bridge-absent safety: claude_engine is NOT installed in this sandbox;
+    # everything must work without it (the natural test condition).
+    try:
+        checks.append(("bridge: guarded import flag is a plain bool",
+                       isinstance(BRIDGE_AVAILABLE, bool)))
+    except Exception as exc:
+        checks.append(("bridge: flag (exception: %s)" % exc, False))
+    try:
+        if BRIDGE_AVAILABLE:
+            # Installed elsewhere: lazy singleton must still be safe.
+            bridge_ok = True
+        else:
+            bridge_ok = engine._get_bridge() is None
+        checks.append(("bridge: lazy singleton safe when module absent",
+                       bridge_ok))
+    except Exception as exc:
+        checks.append(("bridge: lazy singleton (exception: %s)" % exc, False))
+    try:
+        offline_engine._bridge_attempted = False
+        offline_engine._bridge_engine = None
+        checks.append(("bridge: _llm falls back cleanly (offline -> None)",
+                       offline_engine._llm("bridge safety probe") is None))
+    except Exception as exc:
+        checks.append(("bridge: _llm fallback (exception: %s)" % exc, False))
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "bridge")
+        out = buf.getvalue()
+        checks.append(("bridge: command reports status without keys/module",
+                       bool(keep) and "claude_engine bridge status" in out
+                       and "fallback provider" in out))
+    except Exception as exc:
+        checks.append(("bridge: command (exception: %s)" % exc, False))
+
+    # Language packs (v29.4.0): exactly 100 complete packs, every one
+    # with 6 non-empty ASCII UI strings + name + valid region tag.
+    try:
+        pack_keys = ("greeting", "goodbye", "help_header",
+                     "unknown_command", "remembered", "forgot")
+        complete = all(
+            all(isinstance(pack.get(k), str) and pack.get(k)
+                for k in pack_keys)
+            and isinstance(pack.get("name"), str) and bool(pack.get("name"))
+            for pack in LANG_PACKS.values())
+        checks.append(("lang: 100 complete language packs",
+                       len(LANG_PACKS) == 100 and complete))
+        ascii_safe = all(
+            all(ord(ch) < 128 for ch in str(value))
+            for pack in LANG_PACKS.values() for value in pack.values())
+        checks.append(("lang: all pack strings ASCII-safe", ascii_safe))
+        regions_ok = all(pack.get("region") in ("african", "world")
+                         for pack in LANG_PACKS.values())
+        african_n = sum(1 for pack in LANG_PACKS.values()
+                        if pack.get("region") == "african")
+        checks.append(("lang: region tags valid + >= 56 African packs",
+                       regions_ok and african_n >= 56))
+    except Exception as exc:
+        checks.append(("lang: pack audit (exception: %s)" % exc, False))
+
+    # v29.4.0: real-phrase spot strings across flagship packs.
+    try:
+        spots = {
+            "zu": "Sawubona", "sw": "Habari", "pcm": "How far!",
+            "spt": "Awe!", "ar": "As-salamu alaykum", "zh": "Ni hao",
+            "ja": "Konnichiwa", "hi": "Namaste",
+        }
+        spot_ok = all(spots[c] in LANG_PACKS[c]["greeting"] for c in spots)
+        checks.append(("lang: spot greetings (zu sw pcm spt ar zh ja hi)",
+                       spot_ok))
+    except Exception as exc:
+        checks.append(("lang: spot greetings (exception: %s)" % exc, False))
+
+    # v29.4.0: grouped 'lang' list shows both group headers.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "lang")
+        out = buf.getvalue()
+        checks.append(("lang: grouped list (African + World headers)",
+                       bool(keep) and "African languages (" in out
+                       and "World languages (" in out))
+    except Exception as exc:
+        checks.append(("lang: grouped list (exception: %s)" % exc, False))
+
+    # v29.4.0: translate unknown code -> graceful, no traceback.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "translate zz hello")
+        out = buf.getvalue()
+        checks.append(("translate: unknown code graceful",
+                       bool(keep) and "Unknown language code 'zz'" in out))
+    except Exception as exc:
+        checks.append(("translate: unknown code (exception: %s)" % exc,
+                       False))
+
+    # v29.4.0: translate offline -> graceful enable-hint, no traceback.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(offline_engine, "translate sw hello world")
+        out = buf.getvalue()
+        checks.append(("translate: offline graceful (enable-hint)",
+                       bool(keep) and "Translation unavailable offline."
+                       in out and "OPENAI_API_KEY" in out
+                       and "Traceback" not in out))
+    except Exception as exc:
+        checks.append(("translate: offline (exception: %s)" % exc, False))
+
+    # v29.4.0: cost command prints the pricing-disruption table.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "cost")
+        out = buf.getvalue()
+        checks.append(("cost: free engine + $20 subscription anchor",
+                       bool(keep) and "free forever" in out
+                       and "$20" in out
+                       and "African-friendly price" in out))
+    except Exception as exc:
+        checks.append(("cost: (exception: %s)" % exc, False))
+
+    # Roundtrips through 4 packs (sw + am from v29.3.0, spt + pcm from
+    # v29.4.0), then back to en.
+    for new_code in ("sw", "am", "spt", "pcm"):
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                handle_command(engine, "lang " + new_code)
+                out_new = buf.getvalue()
+                handle_command(engine, "lang en")
+            ok = (engine.lang == "en"
+                  and LANG_PACKS[new_code]["name"] in out_new
+                  and load_memory(engine.memory_path).get("lang") == "en")
+            checks.append(("lang: new pack '%s' roundtrip" % new_code, ok))
+        except Exception as exc:
+            checks.append(("lang: '%s' roundtrip (exception: %s)"
+                           % (new_code, exc), False))
+
+    # Launch pre-flight: GO/NO-GO table renders; clean room -> LAUNCH READY.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "launch")
+        out = buf.getvalue()
+        checks.append(("launch: pre-flight table + LAUNCH READY",
+                       bool(keep) and "pillars integrity" in out
+                       and "memory writable" in out
+                       and "LAUNCH READY" in out
+                       and "NOT READY" not in out))
+    except Exception as exc:
+        checks.append(("launch: (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.5.0: Professor classroom checks
+    # ------------------------------------------------------------------
+
+    # Message-history cap: system message preserved, capped at 40.
+    try:
+        msgs = [{"role": "system", "content": "sys"}]
+        for i in range(50):
+            msgs.append({"role": "user", "content": "u%d" % i})
+            msgs.append({"role": "assistant", "content": "a%d" % i})
+        capped = _cap_messages(msgs)
+        ok = (len(capped) == MAX_TEACH_MESSAGES
+              and capped[0]["role"] == "system"
+              and capped[-1]["content"] == "a49")
+        short = _cap_messages(msgs[:5])
+        ok = ok and len(short) == 5
+        checks.append(("teach: message history capped at 40 (system kept)",
+                       ok))
+    except Exception as exc:
+        checks.append(("teach: cap (exception: %s)" % exc, False))
+
+    # Online path guarded without a key: messages call returns None.
+    try:
+        checks.append(("teach: _llm_messages without key -> None (no fake)",
+                       offline_engine._llm_messages(
+                           [{"role": "user", "content": "hi"}]) is None))
+    except Exception as exc:
+        checks.append(("teach: guarded messages (exception: %s)" % exc,
+                       False))
+
+    # Offline teach end-to-end: honesty line, 2 exchanges, summary, saved.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                prof_engine = OmegaMasterEngine()
+                prof_engine.openai_key = ""
+                scripted = iter(["hello professor", "what is algebra",
+                                 "end class"])
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    teach_session(prof_engine, "mathematics",
+                                  input_fn=lambda prompt="": next(scripted))
+                out = buf.getvalue()
+                entry = (prof_engine.memory.get("learning") or {}).get(
+                    "mathematics") or {}
+                ok = ("Live professor conversation needs OPENAI_API_KEY"
+                      in out
+                      and "Class summary - mathematics" in out
+                      and "Turns this session: 2" in out
+                      and entry.get("last_session", "") != ""
+                      and len(entry.get("syllabus") or []) == 10)
+                checks.append(("teach: offline end-to-end + progress "
+                               "recorded", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("teach: offline end-to-end (exception: %s)" % exc,
+                       False))
+
+    # EOF mid-class: no crash, progress still saved.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                eof_engine = OmegaMasterEngine()
+                eof_engine.openai_key = ""
+
+                def _raise_eof(prompt: str = "") -> str:
+                    raise EOFError
+
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    teach_session(eof_engine, "physics",
+                                  input_fn=_raise_eof)
+                out = buf.getvalue()
+                persisted = load_memory(eof_engine.memory_path)
+                entry = (persisted.get("learning") or {}).get("physics")
+                checks.append(("teach: EOF mid-class safe + progress saved",
+                               "closing the classroom safely" in out
+                               and "Class summary" in out
+                               and entry is not None))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("teach: EOF mid-class (exception: %s)" % exc, False))
+
+    # Learner profile persists across a process restart (fresh engine).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                first = OmegaMasterEngine()
+                first.openai_key = ""
+                scripted = iter(["end class"])
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    teach_session(first, "mathematics",
+                                  input_fn=lambda prompt="": next(scripted))
+                second = OmegaMasterEngine()  # simulated restart
+                entry = (second.memory.get("learning") or {}).get(
+                    "mathematics")
+                ok = (entry is not None
+                      and len(entry.get("syllabus") or []) == 10
+                      and entry.get("last_session", "") != "")
+                checks.append(("teach: learner profile survives restart",
+                               ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("teach: restart (exception: %s)" % exc, False))
+
+    # Built-in syllabi: all 8 core subjects, 10 lessons, 3 points each.
+    try:
+        core = ("mathematics", "physics", "chemistry", "biology",
+                "english", "computer-science", "finance", "history")
+        ok = all(subj in BUILTIN_SYLLABI for subj in core)
+        ok = ok and all(len(BUILTIN_SYLLABI[subj]) == 10 for subj in core)
+        ok = ok and all(len(points) == 3
+                        for subj in core
+                        for _t, points in BUILTIN_SYLLABI[subj])
+        ok = ok and all(subj in OFFLINE_QUIZ_BANKS
+                        and len(OFFLINE_QUIZ_BANKS[subj]) >= 5
+                        for subj in core)
+        checks.append(("syllabus: 8 core subjects, 10 lessons x 3 points "
+                       "+ quiz banks", ok))
+    except Exception as exc:
+        checks.append(("syllabus: core data (exception: %s)" % exc, False))
+
+    # Unknown subject -> generic 10-lesson scaffold templated with name.
+    try:
+        scaffold = generic_scaffold("quantum computing")
+        ok = (len(scaffold) == 10
+              and all(len(l.get("points") or []) == 3 for l in scaffold)
+              and any("quantum computing" in l.get("title", "")
+                      for l in scaffold))
+        checks.append(("syllabus: unknown subject -> 10-lesson scaffold",
+                       ok))
+    except Exception as exc:
+        checks.append(("syllabus: scaffold (exception: %s)" % exc, False))
+
+    # syllabus command renders + persists; unknown subject graceful.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                syl_engine = OmegaMasterEngine()
+                syl_engine.openai_key = ""
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(syl_engine, "syllabus physics")
+                out = buf.getvalue()
+                ok = (bool(keep) and "Lesson 1:" in out
+                      and "Lesson 10:" in out
+                      and "physics" in
+                      (syl_engine.memory.get("learning") or {}))
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    handle_command(syl_engine, "syllabus quantum computing")
+                out2 = buf.getvalue()
+                ok = ok and "generic mastery scaffold" in out2
+                checks.append(("syllabus: command render + persist + "
+                               "unknown graceful", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("syllabus: command (exception: %s)" % exc, False))
+
+    # Offline quiz scoring math: right + wrong, early-exit leftover cmd.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                quiz_engine = OmegaMasterEngine()
+                quiz_engine.openai_key = ""
+                scripted = iter(["reveal", "right", "reveal", "wrong",
+                                 "next"])
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    score, asked, leftover = run_offline_quiz(
+                        quiz_engine, "mathematics",
+                        input_fn=lambda prompt="": next(scripted),
+                        out=print)
+                out = buf.getvalue()
+                entry = (quiz_engine.memory.get("learning") or {}).get(
+                    "mathematics") or {}
+                ok = (score == 1 and asked == 2 and leftover == "next"
+                      and "self-check quiz" in out
+                      and len(entry.get("weak_points") or []) == 1)
+                checks.append(("quiz: offline scoring math (1 right, "
+                               "1 wrong, early exit)", ok))
+                # Unknown subject -> graceful, no score.
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    score2, asked2, _l = run_offline_quiz(
+                        quiz_engine, "underwater basketweaving",
+                        input_fn=lambda prompt="": next(iter([])),
+                        out=print)
+                out2 = buf.getvalue()
+                ok = (score2 is None and asked2 == 0
+                      and "No offline quiz bank" in out2
+                      and "OPENAI_API_KEY" in out2)
+                checks.append(("quiz: unknown subject graceful "
+                               "(no crash)", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("quiz: scoring (exception: %s)" % exc, False))
+
+    # progress renders the empty state AND the populated table.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                prog_engine = OmegaMasterEngine()
+                prog_engine.openai_key = ""
+                empty = progress_lines(prog_engine)
+                ok = any("teach <subject>" in line for line in empty)
+                prog_engine.record_quiz_score("biology", 4, 5)
+                prog_engine.get_syllabus("biology")
+                full = progress_lines(prog_engine)
+                ok = (ok and any("biology" in line for line in full)
+                      and any("80%" in line for line in full)
+                      and any("Subject" in line for line in full))
+                checks.append(("progress: empty guidance + populated "
+                               "table", ok))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("progress: render (exception: %s)" % exc, False))
+
+    # 20-subject cap: oldest evicted with notice returned.
+    try:
+        cap_engine = OmegaMasterEngine()
+        cap_engine.memory["learning"] = {}  # isolate from any saved profile
+        learning = cap_engine.memory.setdefault("learning", {})
+        for i in range(MAX_LEARNING_SUBJECTS):
+            learning["filler-%02d" % i] = {
+                "syllabus": [], "current_lesson": 0, "quiz_scores": [],
+                "weak_points": [],
+                "started": "2020-01-%02dT00:00:00Z" % (i + 1),
+                "last_session": "",
+            }
+        entry, evicted = cap_engine.learning_entry("new-subject")
+        ok = (evicted == "filler-00"
+              and len(cap_engine.memory["learning"]) ==
+              MAX_LEARNING_SUBJECTS
+              and "new-subject" in cap_engine.memory["learning"])
+        checks.append(("learning: 20-subject cap evicts oldest + notice",
+                       ok))
+    except Exception as exc:
+        checks.append(("learning: cap (exception: %s)" % exc, False))
+
+    # Report.
+    failures = 0
+    for name, ok in checks:
+        print("  [%s] %s" % ("PASS" if ok else "FAIL", name))
+        if not ok:
+            failures += 1
+    print("-" * 60)
+    print("%d/%d checks passed." % (len(checks) - failures, len(checks)))
+    if failures:
+        print("SELF TEST: FAIL")
+        return 1
+    print("SELF TEST: PASS")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main(argv: List[str]) -> int:
+    args = argv[1:]
+    if args and args[0] == "--selftest":
+        return run_selftest()
+    engine = OmegaMasterEngine()
+    if args:
+        # One-shot mode: process once, exit.
+        query = " ".join(args)
+        engine.add_history("user", query)
+        try:
+            handle_command(engine, query)
+        except Exception as exc:
+            print("[Error] recovered: %s" % exc)
+            save_memory(engine.memory_path, engine.memory)
+            return 1
+        save_memory(engine.memory_path, engine.memory)
+        return 0
+    return run_repl(engine)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv))
+    except KeyboardInterrupt:
+        print("\nOMEGA interrupted. Stay sovereign.")
+        sys.exit(0)
