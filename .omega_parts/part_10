@@ -1,296 +1,25 @@
-ngine._tts_speech(text)
-            if not data:
-                return
-            try:
-                with open("omega_voice_last.mp3", "wb") as handle:
-                    handle.write(data)
-                os.startfile("omega_voice_last.mp3")  # type: ignore
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-    return wrapped
-
-
-def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
-    """Process one line of input. Return False to exit the REPL."""
-    line = raw.strip()
-    if not line:
-        return True
-    lowered = line.lower()
-
-    # v29.6.0: due reminders fire before any routing (never raises).
-    for reminder_text in _due_reminders(engine):
-        print("REMINDER: %s" % reminder_text)
-
-    if lowered in ("exit", "quit"):
-        print(engine.ui("goodbye"))
-        return False
-    if lowered == "help":
-        print_help(engine)
-        return True
-    if lowered == "clear":
-        clear_screen()
-        return True
-    if lowered == "version":
-        print(ENGINE_NAME)
-        print("Subsystems: %d" % len(engine.availability_matrix()))
-        print("Session: #%d" % engine.memory.get("sessions", 1))
-        print("Facts: %d" % len(engine.memory.get("facts", [])))
-        engine._audit("CLI", "version", "Success")
-        return True
-    if lowered == "status":
-        print("Version: %s" % ENGINE_NAME)
-        print("Language: %s (%s)" % (LANG_PACKS[engine.lang]["name"],
-                                     engine.lang))
-        print("Evolution: generation %d | pillars integrity %s"
-              % (engine.evolution.generation(),
-                 engine.evolution.pillars_status()))
-        print("Learning: %d active subject(s) in learner profile"
-              % len(engine.memory.get("learning") or {}))
-        print("Subsystem matrix:")
-        for row in engine.availability_matrix():
-            print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
-        print("system_state:")
-        print(json.dumps(engine.system_state, indent=2))
-        engine._audit("CLI", "status", "Success")
-        return True
-    if lowered == "keys":
-        print("API key report (masked):")
-        print("  OPENAI_API_KEY: %s" % mask_secret(engine.openai_key))
-        print("  SERPER_API_KEY: %s" % mask_secret(engine.serper_key))
-        engine._audit("CLI", "keys", "Success")
-        return True
-    if lowered == "log":
-        entries = engine.read_log_tail(10)
-        if not entries:
-            print("No audit entries yet.")
-        else:
-            print("Last %d audit entries:" % len(entries))
-            for entry in entries:
-                print("  %s | %-28s | %-12s | %s" % (
-                    entry.get("ts", "?"),
-                    str(entry.get("subsystem", "?"))[:28],
-                    entry.get("status", "?"),
-                    str(entry.get("input_summary", ""))[:60],
-                ))
-        return True
-    if lowered == "languages":
-        print("African language support (%d languages):" % len(AFRICAN_LANGUAGES))
-        for name, region in AFRICAN_LANGUAGES:
-            print("  %-12s - %s" % (name, region))
-        engine._audit("CLI", "languages", "Success")
-        return True
-
-    # --- v29.1.0: language packs / export / report commands ---
-    if lowered == "lang" or lowered.startswith("lang "):
-        code = line[len("lang"):].strip().lower()
-        if code and engine.set_lang(code):
-            pack = LANG_PACKS[engine.lang]
-            print("Language set to %s (%s)." % (pack["name"], engine.lang))
-            print(engine.ui("greeting"))
-        else:
-            if code:
-                print("Unknown language code '%s'." % code)
-            # v29.4.0: grouped list - African languages, then world.
-            african = sorted(c for c in LANG_PACKS
-                             if LANG_PACKS[c].get("region") == "african")
-            world = sorted(c for c in LANG_PACKS
-                           if LANG_PACKS[c].get("region") == "world")
-            print("Available language packs (* = active):")
-            print("African languages (%d):" % len(african))
-            for pack_code in african:
-                mark = "*" if pack_code == engine.lang else " "
-                print("  %s %-4s %s" % (mark, pack_code,
-                                        LANG_PACKS[pack_code]["name"]))
-            print("World languages (%d):" % len(world))
-            for pack_code in world:
-                mark = "*" if pack_code == engine.lang else " "
-                print("  %s %-4s %s" % (mark, pack_code,
-                                        LANG_PACKS[pack_code]["name"]))
-            print("Usage: lang <code>")
-        engine._audit("CLI", "lang %s" % (code or "(list)"), "Success")
-        return True
-    # --- v29.4.0: translate + cost commands ---
-    if lowered == "translate" or lowered.startswith("translate "):
-        args = line[len("translate"):].strip()
-        parts = args.split(None, 1)
-        code = parts[0].lower() if parts else ""
-        text = parts[1].strip() if len(parts) > 1 else ""
-        if not code or code not in LANG_PACKS:
-            print("Unknown language code '%s'." % code)
-            print("Usage: translate <lang-code> <text>  (see 'lang' for "
-                  "the 100 codes)")
-            engine._audit("CLI", "translate %s" % (code or "(none)"),
-                          "Failed")
+   name = arg[len("doc"):].strip()
+            if not name:
+                print("Usage: forget doc <name>")
+                engine._audit("CLI", "forget doc (no name)", "Failed")
+                return True
+            docs = engine.memory.setdefault("documents", [])
+            match = None
+            for doc in docs:
+                if (isinstance(doc, dict)
+                        and str(doc.get("name", "")).lower()
+                        == name.lower()):
+                    match = doc
+                    break
+            if match is None:
+                print("no document named %s" % name)
+                engine._audit("CLI", "forget doc %s" % name, "Failed")
+                return True
+            docs.remove(match)
+            save_memory(engine.memory_path, engine.memory)
+            print("forgot document: %s" % match.get("name", name))
+            engine._audit("CLI", "forget doc %s" % name, "Success")
             return True
-        if not text:
-            print("Usage: translate <lang-code> <text>")
-            engine._audit("CLI", "translate %s" % code, "Failed")
-            return True
-        pack = LANG_PACKS[code]
-        prompt = ("Translate the following text into %s (language code "
-                  "'%s'). Return the translation only, with no "
-                  "explanation, no notes and no quotes.\n\nText: %s"
-                  % (pack["name"], code, text))
-        reply = engine._llm(prompt)
-        if reply:
-            print(reply.strip())
-            engine._audit("CLI", "translate %s" % code, "Success")
-        else:
-            print("Translation unavailable offline.")
-            print("To enable: set OPENAI_API_KEY in .env (optionally "
-                  "install the claude_engine bridge - see 'bridge') and "
-                  "run again.")
-            engine._audit("CLI", "translate %s" % code, "Offline")
-        return True
-    if lowered == "cost":
-        for out_line in cost_lines():
-            print(out_line)
-        engine._audit("CLI", "cost", "Success")
-        return True
-    if lowered == "export" or lowered.startswith("export "):
-        ok, message = engine.export_markdown()
-        print(message)
-        engine._audit("CLI", "export", "Success" if ok else "Failed")
-        return True
-    if lowered == "report" or lowered.startswith("report "):
-        topic = line[len("report"):].strip()
-        ok, message = engine.write_report(topic)
-        print(message)
-        engine._audit("CLI", "report %s" % (topic or "(none)"),
-                      "Success" if ok else "Failed")
-        return True
-
-    # --- v29.2.0: Evolution Engine + differentiation layer commands ---
-    if lowered == "evolve" or lowered.startswith("evolve "):
-        args = line[len("evolve"):].strip()
-        sub = args.lower()
-        if not sub:
-            out_lines = engine.evolution.status_lines()
-            audit_status = "Success"
-        elif sub == "run":
-            _ok, out_lines = engine.evolution.run_cycle(online=False)
-            audit_status = "Success" if _ok else "Rejected"
-        elif sub == "run online":
-            _ok, out_lines = engine.evolution.run_cycle(online=True)
-            audit_status = "Success" if _ok else "Rejected"
-        elif sub == "rollback":
-            _ok, out_lines = engine.evolution.rollback()
-            audit_status = "Success" if _ok else "Rejected"
-        elif sub == "lineage":
-            out_lines = engine.evolution.lineage_lines()
-            audit_status = "Success"
-        elif sub == "pillars":
-            out_lines = engine.evolution.pillars_lines()
-            audit_status = "Success"
-        elif sub == "test" or sub.startswith("test "):
-            out_lines = engine.evolution.test_query(args[len("test"):].strip())
-            audit_status = "Success"
-        else:
-            out_lines = ["Usage: evolve [run | run online | rollback | "
-                         "lineage | pillars | test <query>]"]
-            audit_status = "Failed"
-        for out_line in out_lines:
-            print(out_line)
-        engine._audit("Evolution", "evolve %s" % (sub or "status"),
-                      audit_status)
-        return True
-    if lowered == "why":
-        for out_line in why_lines():
-            print(out_line)
-        engine._audit("CLI", "why", "Success")
-        return True
-    if lowered == "integrations":
-        for out_line in integrations_lines(engine):
-            print(out_line)
-        engine._audit("CLI", "integrations", "Success")
-        return True
-    # --- v29.3.0: bridge + launch commands ---
-    if lowered == "bridge":
-        for out_line in bridge_lines(engine):
-            print(out_line)
-        engine._audit("CLI", "bridge", "Success")
-        return True
-    if lowered == "launch":
-        out_lines, blockers = launch_lines(engine)
-        for out_line in out_lines:
-            print(out_line)
-        engine._audit("CLI", "launch",
-                      "Success" if not blockers else "Blocked")
-        return True
-
-    # --- v29.5.0: Professor classroom commands ---
-    if lowered == "teach" or lowered.startswith("teach "):
-        subject = line[len("teach"):].strip()
-        if not subject:
-            print("Usage: teach <subject>  (e.g. teach mathematics)")
-            engine._audit("Classroom", "teach (no subject)", "Failed")
-            return True
-        try:
-            teach_session(engine, subject, out=_voice_out(engine, print))
-        except Exception as exc:  # belt-and-braces: classroom never crashes
-            print("[Error] classroom recovered from: %s" % exc)
-        return True
-    if lowered == "syllabus" or lowered.startswith("syllabus "):
-        args = line[len("syllabus"):].strip()
-        regenerate = False
-        if args.lower().endswith(" new"):
-            regenerate = True
-            args = args[:-4].strip()
-        if not args:
-            print("Usage: syllabus <subject> [new]")
-            engine._audit("Classroom", "syllabus (no subject)", "Failed")
-            return True
-        try:
-            for out_line in syllabus_lines(engine, args,
-                                           regenerate=regenerate):
-                print(out_line)
-            engine._audit("Classroom", "syllabus %s" % args, "Success")
-        except Exception as exc:
-            print("[Error] syllabus recovered from: %s" % exc)
-        return True
-    if lowered == "progress":
-        try:
-            for out_line in progress_lines(engine):
-                print(out_line)
-            engine._audit("Classroom", "progress", "Success")
-        except Exception as exc:
-            print("[Error] progress recovered from: %s" % exc)
-        return True
-    if lowered == "quiz" or lowered.startswith("quiz "):
-        subject = line[len("quiz"):].strip()
-        if subject.lower() == "me":
-            print("'quiz me' works inside a class. From here use: "
-                  "quiz <subject>")
-            return True
-        try:
-            run_standalone_quiz(engine, subject,
-                                out=_voice_out(engine, print))
-            engine._audit("Classroom", "quiz %s" % (subject or "(none)"),
-                          "Success")
-        except Exception as exc:
-            print("[Error] quiz recovered from: %s" % exc)
-        return True
-
-    # --- v29 Module A: persistent memory commands ---
-    if lowered == "remember" or lowered.startswith("remember "):
-        print(engine.remember_fact(line[len("remember"):].strip()))
-        engine._audit("Memory", "remember", "Success")
-        return True
-    if lowered == "recall":
-        facts = engine.memory.get("facts", [])
-        if not facts:
-            print("No facts remembered yet. Use: remember <fact>")
-        else:
-            print("Remembered facts (%d):" % len(facts))
-            for i, fact in enumerate(facts, 1):
-                print("  %d. %s" % (i, fact))
-        engine._audit("Memory", "recall", "Success")
-        return True
-    if lowered == "forget" or lowered.startswith("forget "):
-        arg = line[len("forget"):].strip()
         try:
             index = int(arg)
         except ValueError:
@@ -341,6 +70,19 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
     # --- v29 Module C: dataset commands ---
     if lowered == "import" or lowered.startswith("import "):
         path = line[len("import"):].strip().strip("'\"")
+        # v29.7.0: 'import doc <path>' is an alias for 'ingest <path>'
+        # (handled here because bare 'import' claims the prefix).
+        if path.lower() == "doc" or path.lower().startswith("doc "):
+            doc_path = path[len("doc"):].strip().strip("'\"")
+            if not doc_path:
+                print("Usage: import doc <path>  (or: ingest <path>)")
+                engine._audit("CLI", "import doc (no path)", "Failed")
+                return True
+            ok, message = engine.import_document(doc_path)
+            print(message)
+            engine._audit("CLI", "import doc %s" % doc_path,
+                          "Success" if ok else "Failed")
+            return True
         ok, message = engine.import_dataset(path)
         print(message)
         engine._audit("Dataset", "import %s" % path,
@@ -507,6 +249,143 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
         engine._audit("Memory", "remind", "Success")
         return True
 
+    # --- v29.7.0 commands (document Q&A) ---
+    # (Same pre-router position as the v29.6.0 block above. The
+    # 'import doc <path>' and 'forget doc <name>' aliases are handled
+    # earlier, at the bare 'import'/'forget' handlers they shadow.)
+    if lowered == "ingest" or lowered.startswith("ingest "):
+        path = line[len("ingest"):].strip().strip("'\"")
+        if not path:
+            print("Usage: ingest <path>  (.txt .md .csv .log .json)")
+            engine._audit("CLI", "ingest (no path)", "Failed")
+            return True
+        ok, message = engine.import_document(path)
+        print(message)
+        engine._audit("CLI", "ingest %s" % path,
+                      "Success" if ok else "Failed")
+        return True
+    if lowered == "docs":
+        docs = [d for d in engine.memory.setdefault("documents", [])
+                if isinstance(d, dict)]
+        if not docs:
+            print("no documents yet - ingest <path> to add one")
+            engine._audit("CLI", "docs", "Success")
+            return True
+        print("#  name                 chunks    chars  ingested")
+        for idx, doc in enumerate(docs, 1):
+            chunks = doc.get("chunks") or []
+            if not isinstance(chunks, list):
+                chunks = []
+            try:
+                chars = int(doc.get("chars") or 0)
+            except Exception:
+                chars = 0
+            print("%-2d %-20s %6d %8d  %s"
+                  % (idx, str(doc.get("name", "?"))[:20], len(chunks),
+                     chars, str(doc.get("ts", ""))[:10]))
+        total = sum(len(d.get("chunks") or []) for d in docs
+                    if isinstance(d.get("chunks") or [], list))
+        print("%d documents, %d chunks (max %d docs / %d chunks)"
+              % (len(docs), total, MAX_DOCUMENTS, MAX_TOTAL_CHUNKS))
+        engine._audit("CLI", "docs", "Success")
+        return True
+    if lowered == "ask" or lowered.startswith("ask "):
+        question = line[len("ask"):].strip()
+        if not question:
+            print("Usage: ask <question>   (or: ask save)")
+            engine._audit("CLI", "ask (no question)", "Failed")
+            return True
+        if question.lower() == "save":
+            last = getattr(engine, "_last_answer", None)
+            if not last:
+                print("no answer to save yet")
+                engine._audit("CLI", "ask save", "Failed")
+                return True
+            try:
+                stamp = datetime.now(timezone.utc).strftime(
+                    "%Y%m%dT%H%M%SZ")
+                filename = "omega_answer_%s_%s.md" % (
+                    _slugify(str(last.get("q", "question"))), stamp)
+                answer_lines = [
+                    "# Answer: %s" % last.get("q", ""),
+                    "",
+                    "Generated: %s (UTC)" % utc_now_iso(),
+                    "Engine: " + ENGINE_NAME,
+                    "",
+                    "## Question",
+                    str(last.get("q", "")),
+                    "",
+                    "## Answer",
+                    str(last.get("text", "")),
+                    "",
+                    "## Sources",
+                ]
+                sources = last.get("sources") or []
+                if sources:
+                    answer_lines.extend("- " + str(s) for s in sources)
+                else:
+                    answer_lines.append("- (none)")
+                answer_lines.append("")
+                with open(filename, "w", encoding="utf-8") as handle:
+                    handle.write("\n".join(answer_lines))
+                print("saved: %s" % filename)
+                engine._audit("CLI", "ask save", "Success")
+            except Exception as exc:
+                print("answer save failed safely: %s" % exc)
+                engine._audit("CLI", "ask save", "Failed")
+            return True
+        docs = [d for d in engine.memory.setdefault("documents", [])
+                if isinstance(d, dict)]
+        if not docs:
+            print("no documents yet - ingest <path> first")
+            engine._audit("CLI", "ask %s" % question[:60], "Failed")
+            return True
+        hits = search_documents(question, docs)
+        if not hits:
+            print("no relevant passages - try different words")
+            print("documents: " + ", ".join(
+                str(d.get("name", "?")) for d in docs))
+            engine._audit("CLI", "ask %s" % question[:60], "Failed")
+            return True
+        passages = []
+        for num, (_score, name, chunk_idx, chunk) in enumerate(hits, 1):
+            passages.append("[%d] (%s #%d) %s"
+                            % (num, name, chunk_idx, chunk))
+        block = "\n".join(passages)
+        try:
+            reply = engine._llm_messages([
+                {"role": "system",
+                 "content": ("Answer ONLY from the provided passages. "
+                             "Cite sources like [name]. If the passages "
+                             "do not answer, say so briefly.")},
+                {"role": "user",
+                 "content": question + "\n\nPassages:\n" + block},
+            ])
+        except Exception:
+            reply = None
+        sources = ["%s #%d" % (name, chunk_idx)
+                   for _s, name, chunk_idx, _c in hits]
+        if reply:
+            answer_text = reply.strip()
+            print(answer_text)
+            print()
+            print("sources: " + ", ".join(sources))
+        else:
+            print("offline mode - top passages:")
+            offline_lines = []
+            for num, (_score, name, chunk_idx, chunk) in enumerate(
+                    hits, 1):
+                shown = chunk if len(chunk) <= 600 else chunk[:600] + "..."
+                offline_lines.append("[%d] (%s #%d) %s"
+                                     % (num, name, chunk_idx, shown))
+            answer_text = "\n".join(offline_lines)
+            print(answer_text)
+            print("set OPENAI_API_KEY in .env for synthesized answers")
+        engine._last_answer = {"q": question, "text": answer_text,
+                               "sources": sources, "ts": utc_now_iso()}
+        engine._audit("CLI", "ask %s" % question[:60], "Success")
+        return True
+
     # Commands with arguments -> routed into the engine.
     def route(domain: str, arg: str) -> None:
         result = engine.execute_omega_subsystem(domain, {"query": arg})
@@ -605,4 +484,149 @@ def _selftest_build_xlsx(path: str) -> None:
         '<row r="1"><c r="A1" t="s"><v>0</v></c>'
         '<c r="B1" t="s"><v>1</v></c></row>'
         '<row r="2"><c r="A2" t="s"><v>2</v></c>'
-    
+        '<c r="B2"><v>42</v></c></row>'
+        '<row r="3"><c r="A3" t="s"><v>3</v></c>'
+        '<c r="B3"><v>7</v></c></row>'
+        '<row r="4"><c r="A4" t="inlineStr"><is><t>carol</t></is></c>'
+        '<c r="B4"><v>5</v></c></row>'
+        '</sheetData></worksheet>' % ns
+    )
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", content_types)
+        archive.writestr("xl/workbook.xml", workbook)
+        archive.writestr("xl/sharedStrings.xml", shared_strings)
+        archive.writestr("xl/worksheets/sheet1.xml", sheet)
+
+
+def run_selftest() -> int:
+    print(ENGINE_NAME + " - SELF TEST")
+    checks = []
+    engine = OmegaMasterEngine()
+
+    # Router smoke test over all 16 subsystems (shared with 'launch').
+    for domain, expected in CORE_SMOKE:
+        try:
+            if expected == "cli":
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    ok = bool(handle_command(engine, domain))
+            else:
+                result = engine.execute_omega_subsystem(domain,
+                                                        {"query": domain})
+                ok = result.get("subsystem") == expected
+            checks.append(("router: %-30s -> %s" % (domain, expected), ok))
+        except Exception as exc:
+            checks.append(("router: %s (exception: %s)" % (domain, exc), False))
+
+    # Unknown domain -> generic core fallback.
+    try:
+        result = engine.execute_omega_subsystem("zzz unknown zzz", {"query": "x"})
+        checks.append(("router: unknown domain -> generic core",
+                       result.get("status") == "Unknown"))
+    except Exception as exc:
+        checks.append(("router: unknown domain (exception: %s)" % exc, False))
+
+    # .env manual parser (tolerates missing/malformed).
+    try:
+        parsed = parse_env_file("__definitely_missing__.env")
+        checks.append((".env parser: missing file tolerated", parsed == {}))
+    except Exception as exc:
+        checks.append((".env parser: missing file (exception: %s)" % exc, False))
+    try:
+        tmp = "__omega_selftest__.env"
+        with open(tmp, "w", encoding="ascii") as handle:
+            handle.write("# comment\n\nOPENAI_API_KEY='sk-test123456'\n"
+                         "BROKEN LINE\nEMPTY=\n")
+        parsed = parse_env_file(tmp)
+        os.remove(tmp)
+        checks.append((".env parser: quotes/comments/malformed handled",
+                       parsed.get("OPENAI_API_KEY") == "sk-test123456"
+                       and parsed.get("EMPTY") == ""))
+    except Exception as exc:
+        checks.append((".env parser: malformed (exception: %s)" % exc, False))
+
+    # Secret masking never exposes the full key.
+    checks.append(("masking: full secret never printed",
+                   mask_secret("sk-secret-value-99") == "sk-s...99"))
+
+    # Log write + read back.
+    try:
+        engine._audit("SelfTest", "selftest write", "Success")
+        tail = engine.read_log_tail(1)
+        ok = bool(tail) and tail[-1].get("subsystem") == "SelfTest"
+        checks.append(("log: write + read omega_log.jsonl", ok))
+    except Exception as exc:
+        checks.append(("log: write/read (exception: %s)" % exc, False))
+
+    # Offline online-calls return None, never raise.
+    offline_engine = OmegaMasterEngine()
+    offline_engine.serper_key = ""
+    offline_engine.openai_key = ""
+    offline_engine.github_token = ""
+    offline_engine.github_repo = ""
+    offline_engine.openrouter_key = ""
+    try:
+        checks.append(("guarded: _serper_search offline -> None",
+                       offline_engine._serper_search("test") is None))
+        checks.append(("guarded: _llm offline -> None",
+                       offline_engine._llm("test") is None))
+        checks.append(("guarded: _llm_messages offline -> None",
+                       offline_engine._llm_messages(
+                           [{"role": "user", "content": "test"}]) is None))
+        checks.append(("guarded: _tts_speech offline -> None",
+                       offline_engine._tts_speech("hi") is None))
+        checks.append(("guarded: _image_generate offline -> None",
+                       offline_engine._image_generate("dot") is None))
+        checks.append(("guarded: _github_api offline -> None",
+                       offline_engine._github_api("/repos/x/y") is None))
+        checks.append(("guarded: _openrouter_chat offline -> None",
+                       offline_engine._openrouter_chat("hi") is None))
+    except Exception as exc:
+        checks.append(("guarded: online calls (exception: %s)" % exc, False))
+
+    # v29.6.0 connector layer: constants, guarded writers (no files
+    # written - only the empty-data guard path is exercised), b64 helper.
+    checks.append(("v29.6: tts/image/github connector constants",
+                   TTS_MAX_CHARS == 500 and TTS_VOICE_DEFAULT == "alloy"
+                   and TTS_MODEL == "tts-1" and IMAGE_MODEL == "dall-e-3"
+                   and IMAGE_SIZE == "1024x1024" and GITHUB_API_TIMEOUT == 8
+                   and GITHUB_API_BASE == "https://api.github.com"))
+    checks.append(("v29.6: speech/image writers reject empty data",
+                   engine._save_speech(b"", "x")[0] is False
+                   and engine._save_image(b"", "x")[0] is False))
+    checks.append(("v29.6: b64 image decode roundtrip",
+                   base64.b64decode(base64.b64encode(b"png").decode("ascii"))
+                   == b"png"))
+    checks.append(("v29.6: tts voice + image model attrs defaulted",
+                   bool(engine.tts_voice) and bool(engine.image_model)))
+
+    # v29.6.0: _llm/_llm_messages fall through to OpenRouter (monkeypatched
+    # responder, pure offline - no network).
+    try:
+        fb_engine = OmegaMasterEngine()
+        fb_engine.openai_key = ""
+        fb_engine.openrouter_key = "selftest-token"
+        fb_engine._openrouter_chat = lambda prompt: "fallback-reply"  # type: ignore
+        checks.append(("v29.6: _llm falls back to openrouter",
+                       fb_engine._llm("test") == "fallback-reply"))
+        checks.append(("v29.6: _llm_messages falls back to openrouter",
+                       fb_engine._llm_messages(
+                           [{"role": "system", "content": "s"},
+                            {"role": "user", "content": "test"}])
+                       == "fallback-reply"))
+    except Exception as exc:
+        checks.append(("v29.6: llm openrouter fallback (exception: %s)" % exc,
+                       False))
+
+    # Module A: memory roundtrip (remember/recall/forget) + corrupt recovery.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mem_path = os.path.join(tmpdir, MEMORY_FILE)
+            mem = fresh_memory()
+            mem["facts"].append("alpha fact")
+            mem["facts"].append("beta fact")
+            ok = save_memory(mem_path, mem)
+            loaded = load_memory(mem_path)
+            ok = ok and loaded.get("facts") == ["alpha fact", "beta fact"]
+            loaded["facts"].pop(0)  # forget fact #1
+        
