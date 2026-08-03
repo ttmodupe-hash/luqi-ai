@@ -651,4 +651,4 @@ def run_offline_quiz(engine: OmegaMasterEngine, subject: str,
                     out("Marked wrong - noted as a weak point to review.")
                     break
                 if cmd == "reveal":
-                      out
+                    out
