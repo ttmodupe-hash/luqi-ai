@@ -1,179 +1,17 @@
-= []
-    leftover: Optional[str] = None
-    while True:
-        try:
-            if leftover is not None:
-                raw = leftover
-                leftover = None
-            else:
-                raw = input_fn("[CLASS:%s] > " % subject)
-        except EOFError:
-            out("")
-            out("(End of input - closing the classroom safely.)")
-            break
-        except KeyboardInterrupt:
-            out("")  # newline, then reprompt
-            continue
-        cmd = raw.strip().lower()
-        if not cmd:
-            continue
+ngine._tts_speech(text)
+            if not data:
+                return
+            try:
+                with open("omega_voice_last.mp3", "wb") as handle:
+                    handle.write(data)
+                os.startfile("omega_voice_last.mp3")  # type: ignore
+            except Exception:
+                pass
+        except Exception:
+            pass
 
-        if cmd == "end class":
-            break
-        if cmd == "syllabus":
-            for line in syllabus_lines(engine, subject):
-                out(line)
-            continue
-        if cmd == "progress":
-            for line in progress_lines(engine):
-                out(line)
-            continue
-        if cmd == "quiz me":
-            graded: Optional[Tuple[int, int]] = None
-            if online:
-                graded = run_online_quiz(engine, subject, messages,
-                                         input_fn, out)
-                if graded is None:
-                    out("Live quiz unavailable - switching to offline "
-                        "self-check cards.")
-            if graded is None:
-                score, asked, leftover = run_offline_quiz(
-                    engine, subject, input_fn, out)
-                if asked:
-                    graded = (score, asked)
-            if graded is not None:
-                engine.record_quiz_score(subject, graded[0], graded[1])
-                out("Quiz score recorded: %d/%d." % graded)
-                quiz_results.append(graded)
-            continue
-        if cmd == "hint":
-            if online:
-                messages.append({"role": "user", "content": (
-                    "I am stuck. Re-explain the current point more "
-                    "simply and give me a hint, not the full answer.")})
-                messages = _cap_messages(messages)
-                reply = engine._llm_messages(messages)
-                if reply:
-                    reply = reply.strip()
-                    out(reply)
-                    messages.append({"role": "assistant",
-                                     "content": reply})
-                else:
-                    out("The professor is unreachable right now (LLM "
-                        "call failed) - no hint was generated.")
-                    for line in lesson_intro_lines(entry, subject):
-                        out(line)
-            else:
-                lesson_lines = lesson_intro_lines(entry, subject)
-                if len(lesson_lines) > 1:
-                    out("Hint: focus on this key point first - "
-                        + lesson_lines[1].strip(" -"))
-                else:
-                    out("Hint: re-read the lesson title and look up one "
-                        "example.")
-            continue
-        if cmd == "next":
-            if entry.get("current_lesson", 0) < len(syllabus) - 1:
-                entry["current_lesson"] = int(
-                    entry.get("current_lesson", 0)) + 1
-                for line in lesson_intro_lines(entry, subject):
-                    out(line)
-                if online:
-                    messages.append({"role": "user", "content": (
-                        "Let's move to the next lesson: %s."
-                        % syllabus[entry["current_lesson"]].get(
-                            "title", ""))})
-                    messages = _cap_messages(messages)
-                    reply = engine._llm_messages(messages)
-                    if reply:
-                        reply = reply.strip()
-                        out(reply)
-                        messages.append({"role": "assistant",
-                                         "content": reply})
-                    else:
-                        out("(Professor unreachable - showing the "
-                            "offline key points above.)")
-            else:
-                out("You are on the final lesson - try 'quiz me' or "
-                    "'end class'.")
-            continue
+    return wrapped
 
-        # Free text -> student turn.
-        turns += 1
-        if online:
-            messages.append({"role": "user", "content": raw.strip()})
-            messages = _cap_messages(messages)
-            reply = engine._llm_messages(messages)
-            if reply:
-                reply = reply.strip()
-                out(reply)
-                messages.append({"role": "assistant", "content": reply})
-            else:
-                out("The professor is unreachable right now (LLM call "
-                    "failed) - no reply was generated.")
-                out("You can still use: syllabus | next | quiz me | "
-                    "hint | progress | end class.")
-        else:
-            out("(Offline classroom: there is no live conversation "
-                "without OPENAI_API_KEY.)")
-            out("Review the current lesson key points:")
-            for line in lesson_intro_lines(entry, subject):
-                out(line)
-            out("Type 'next' to advance, 'quiz me' to self-check, or "
-                "'end class' to finish.")
-
-    # Session close: summary + persist progress (always, even on EOF).
-    entry["last_session"] = utc_now_iso()
-    save_memory(engine.memory_path, engine.memory)
-    out("-" * 60)
-    out("Class summary - %s" % subject)
-    out("  Turns this session: %d" % turns)
-    total_lessons = len(syllabus) or 10
-    out("  Lesson position: %d/%d"
-        % (min(int(entry.get("current_lesson", 0)) + 1, total_lessons),
-           total_lessons))
-    if quiz_results:
-        out("  Quiz scores this session: "
-            + ", ".join("%d/%d" % q for q in quiz_results))
-    else:
-        out("  Quiz scores this session: none")
-    out("Progress saved to your learner profile ('progress' to view).")
-    engine._audit("Classroom", "teach %s" % subject, "Success")
-    engine.add_history("assistant",
-                       "Taught a %s class (%d turns)." % (subject, turns))
-
-
-def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
-                        input_fn: Any = input, out: Any = print) -> None:
-    """Top-level 'quiz <subject>' command (online grading or self-check)."""
-    subject = normalize_subject(subject)
-    if not subject:
-        out("Usage: quiz <subject>   (inside a class, just say 'quiz me')")
-        return
-    graded: Optional[Tuple[int, int]] = None
-    if engine.openai_key:
-        graded = run_online_quiz(
-            engine, subject,
-            [{"role": "system", "content": PROFESSOR_PROMPT % subject}],
-            input_fn, out)
-        if graded is None:
-            out("Live quiz unavailable - switching to offline "
-                "self-check cards.")
-    if graded is None:
-        score, asked, leftover = run_offline_quiz(engine, subject,
-                                                  input_fn, out)
-        if leftover:
-            out("(Ignored outside a class: '%s')" % leftover)
-        if asked:
-            graded = (score, asked)
-    if graded is not None:
-        engine.record_quiz_score(subject, graded[0], graded[1])
-        out("Quiz score recorded: %d/%d. See 'progress'." % graded)
-
-
-# ---------------------------------------------------------------------------
-# REPL
-# ---------------------------------------------------------------------------
 
 def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
     """Process one line of input. Return False to exit the REPL."""
@@ -181,6 +19,10 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
     if not line:
         return True
     lowered = line.lower()
+
+    # v29.6.0: due reminders fire before any routing (never raises).
+    for reminder_text in _due_reminders(engine):
+        print("REMINDER: %s" % reminder_text)
 
     if lowered in ("exit", "quit"):
         print(engine.ui("goodbye"))
@@ -387,7 +229,7 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             engine._audit("Classroom", "teach (no subject)", "Failed")
             return True
         try:
-            teach_session(engine, subject)
+            teach_session(engine, subject, out=_voice_out(engine, print))
         except Exception as exc:  # belt-and-braces: classroom never crashes
             print("[Error] classroom recovered from: %s" % exc)
         return True
@@ -424,7 +266,8 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
                   "quiz <subject>")
             return True
         try:
-            run_standalone_quiz(engine, subject)
+            run_standalone_quiz(engine, subject,
+                                out=_voice_out(engine, print))
             engine._audit("Classroom", "quiz %s" % (subject or "(none)"),
                           "Success")
         except Exception as exc:
@@ -514,6 +357,156 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
         engine._audit("Dataset", "query", "Success")
         return True
 
+    # --- v29.6.0 commands: voice, image, github info, reminders ---
+    # (Placed before the prefix-routing loop so no prefix can shadow them.)
+    if lowered == "say" or lowered.startswith("say "):
+        text = line[len("say"):].strip()
+        if not text:
+            print("Usage: say <text>")
+            engine._audit("CLI", "say (no text)", "Failed")
+            return True
+        if not engine.openai_key:
+            print("voice needs OPENAI_API_KEY in .env; text was: %s" % text)
+            engine._audit("CLI", "say", "Offline")
+            return True
+        data = engine._tts_speech(text)
+        if data:
+            ok, message = engine._save_speech(data, text)
+            if ok:
+                print("saved: %s (voice %s)"
+                      % (message.rsplit(" ", 1)[-1].strip(),
+                         engine.tts_voice))
+            else:
+                print(message)
+            engine._audit("CLI", "say", "Success" if ok else "Failed")
+        else:
+            print("speech failed safely (offline?)")
+            engine._audit("CLI", "say", "Failed")
+        return True
+    if lowered == "voice" or lowered.startswith("voice "):
+        arg = line[len("voice"):].strip().lower()
+        if arg in ("on", "off"):
+            engine.memory["voice_enabled"] = (arg == "on")
+            save_memory(engine.memory_path, engine.memory)
+            print("voice output %s."
+                  % ("ENABLED" % arg == "on" if False else ("ENABLED" if arg == "on" else "DISABLED")))
+            engine._audit("CLI", "voice %s" % arg, "Success")
+            return True
+        enabled = bool(engine.memory.setdefault("voice_enabled", False))
+        print("voice status:")
+        print("  voice output: %s" % ("on" if enabled else "off"))
+        print("  tts voice: %s" % engine.tts_voice)
+        print("  OPENAI_API_KEY present: %s"
+              % ("yes" if engine.openai_key else "no"))
+        print("Usage: voice [on|off]")
+        engine._audit("CLI", "voice", "Success")
+        return True
+    if lowered == "image" or lowered.startswith("image "):
+        prompt = line[len("image"):].strip()
+        if not prompt:
+            print("Usage: image <prompt>")
+            engine._audit("CLI", "image (no prompt)", "Failed")
+            return True
+        if not engine.openai_key:
+            print("image generation needs OPENAI_API_KEY in .env; "
+                  "prompt was: %s" % prompt)
+            engine._audit("CLI", "image", "Offline")
+            return True
+        data = engine._image_generate(prompt)
+        if data:
+            ok, message = engine._save_image(data, prompt)
+            if ok:
+                print("saved: %s" % message.rsplit(" ", 1)[-1].strip())
+            else:
+                print(message)
+            engine._audit("CLI", "image", "Success" if ok else "Failed")
+        else:
+            print("image generation failed safely (offline?)")
+            engine._audit("CLI", "image", "Failed")
+        return True
+    if lowered == "github info":
+        if not (engine.github_repo and engine.github_token):
+            print("github info needs GITHUB_REPO (+ GITHUB_TOKEN) in .env")
+            engine._audit("CLI", "github info", "Offline")
+            return True
+        info = engine._github_api("/repos/" + engine.github_repo)
+        if info:
+            print("GitHub repo:")
+            print("  full_name: %s" % info.get("full_name", "?"))
+            print("  visibility: %s" % info.get("visibility", "?"))
+            print("  default_branch: %s" % info.get("default_branch", "?"))
+            print("  open_issues_count: %s"
+                  % info.get("open_issues_count", "?"))
+            engine._audit("CLI", "github info", "Success")
+        else:
+            print("github api unreachable (offline or token invalid)")
+            engine._audit("CLI", "github info", "Failed")
+        return True
+    if lowered == "reminders":
+        reminders = engine.memory.setdefault("reminders", [])
+        pending = [(idx, item) for idx, item in enumerate(reminders, 1)
+                   if not item.get("done")]
+        done_count = sum(1 for item in reminders if item.get("done"))
+        if not pending:
+            print("No pending reminders (%d done)." % done_count)
+        else:
+            print("Reminders (%d pending, %d done):"
+                  % (len(pending), done_count))
+            for idx, item in pending:
+                print("  %d. [%s] %s" % (idx, item.get("due", "?"),
+                                         item.get("text", "")))
+        engine._audit("Memory", "reminders", "Success")
+        return True
+    if lowered == "remind" or lowered.startswith("remind "):
+        args = line[len("remind"):].strip()
+        reminders = engine.memory.setdefault("reminders", [])
+        low_args = args.lower()
+        if low_args == "clear":
+            kept = [item for item in reminders if item.get("done")]
+            cleared = len(reminders) - len(kept)
+            engine.memory["reminders"] = kept
+            save_memory(engine.memory_path, engine.memory)
+            print("Cleared %d pending reminder(s)." % cleared)
+            engine._audit("Memory", "remind clear", "Success")
+            return True
+        if low_args == "done" or low_args.startswith("done "):
+            num = args[len("done"):].strip()
+            try:
+                index = int(num)
+            except ValueError:
+                index = 0
+            if 1 <= index <= len(reminders):
+                reminders[index - 1]["done"] = True
+                save_memory(engine.memory_path, engine.memory)
+                print("Reminder #%d marked done: %s"
+                      % (index, reminders[index - 1].get("text", "")))
+                engine._audit("Memory", "remind done %d" % index,
+                              "Success")
+            else:
+                print("No reminder #%s. See 'reminders' for numbers."
+                      % (num or "?"))
+                engine._audit("Memory", "remind done %s" % (num or "?"),
+                              "Failed")
+            return True
+        when = re.search(r"\s+(in\s+\d+\s*[mhd]|at\s+\d{1,2}:\d{2})\s*$",
+                         low_args)
+        due = _parse_remind_when(when.group(1)) if when else None
+        text = args[:when.start()].strip() if when else ""
+        if not text or due is None:
+            print("Usage: remind <text> in <N>m|h|d   or   "
+                  "remind <text> at HH:MM")
+            print("       reminders | remind done <n> | remind clear")
+            engine._audit("Memory", "remind (usage)", "Failed")
+            return True
+        reminders.append({"text": text,
+                          "due": due.strftime("%Y-%m-%d %H:%M"),
+                          "done": False})
+        save_memory(engine.memory_path, engine.memory)
+        print("Reminder set for %s: %s"
+              % (due.strftime("%Y-%m-%d %H:%M"), text))
+        engine._audit("Memory", "remind", "Success")
+        return True
+
     # Commands with arguments -> routed into the engine.
     def route(domain: str, arg: str) -> None:
         result = engine.execute_omega_subsystem(domain, {"query": arg})
@@ -545,6 +538,9 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
 
 def run_repl(engine: OmegaMasterEngine) -> int:
     print_banner(engine)
+    # v29.6.0: fire any due reminders once at REPL start (never raises).
+    for reminder_text in _due_reminders(engine):
+        print("REMINDER: %s" % reminder_text)
     while True:
         try:
             raw = input("[OMEGA] > ")
@@ -560,4 +556,53 @@ def run_repl(engine: OmegaMasterEngine) -> int:
             if not handle_command(engine, raw):
                 break
         except Exception as exc:  # belt-and-braces: never crash the REPL
-            print("[Error] recovered from unexpected failur
+            print("[Error] recovered from unexpected failure: %s" % exc)
+    # Clean exit (exit/quit or EOF): persist memory.
+    save_memory(engine.memory_path, engine.memory)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Self-test
+# ---------------------------------------------------------------------------
+
+def _selftest_build_xlsx(path: str) -> None:
+    """Build a minimal but real .xlsx (ZIP of XML parts) for the selftest.
+
+    Covers shared strings, inline strings, and plain numbers.
+    """
+    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/xl/workbook.xml" ContentType="application/'
+        'vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="applic'
+        'ation/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        '<Override PartName="/xl/sharedStrings.xml" ContentType="applicatio'
+        'n/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
+        '</Types>'
+    )
+    workbook = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="%s" xmlns:r="http://schemas.openxmlformats.org/'
+        'officeDocument/2006/relationships">'
+        '<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>'
+        '</workbook>' % ns
+    )
+    shared_strings = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<sst xmlns="%s" count="4" uniqueCount="4">'
+        '<si><t>name</t></si><si><t>score</t></si>'
+        '<si><t>alice</t></si><si><t>bob</t></si>'
+        '</sst>' % ns
+    )
+    sheet = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<worksheet xmlns="%s"><sheetData>'
+        '<row r="1"><c r="A1" t="s"><v>0</v></c>'
+        '<c r="B1" t="s"><v>1</v></c></row>'
+        '<row r="2"><c r="A2" t="s"><v>2</v></c>'
+     
