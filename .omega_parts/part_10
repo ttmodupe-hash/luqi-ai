@@ -389,7 +389,7 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             engine.memory["voice_enabled"] = (arg == "on")
             save_memory(engine.memory_path, engine.memory)
             print("voice output %s."
-                  % ("ENABLED" % arg == "on" if False else ("ENABLED" if arg == "on" else "DISABLED")))
+                  % ("ENABLED" if arg == "on" else "DISABLED"))
             engine._audit("CLI", "voice %s" % arg, "Success")
             return True
         enabled = bool(engine.memory.setdefault("voice_enabled", False))
