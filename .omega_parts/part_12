@@ -1,4 +1,22 @@
-))
+ferentiators printed",
+                       bool(keep1) and out.count("proof:") >= 6))
+        checks.append(("integrations: 8-connector manifest printed",
+                       bool(keep2) and all(name in out for name in (
+                           "GitHub", "Excel/CSV", "Serper", "OpenAI",
+                           "OpenRouter", "claude_engine",
+                           "voice tts", "image gen"))))
+    except Exception as exc:
+        checks.append(("why/integrations: (exception: %s)" % exc, False))
+
+    # 'evolve test <query>' executes the live strategy and scores telemetry.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "evolve test check mining health")
+        out = buf.getvalue()
+        checks.append(("evolve test: strategy executes + telemetry scored",
+                       bool(keep) and "<omega_analysis>" in out
+                       and "health:" in out))
     except Exception as exc:
         checks.append(("evolve test: (exception: %s)" % exc, False))
 
@@ -549,13 +567,13 @@
     except Exception as exc:
         checks.append(("voice: flag roundtrip (exception: %s)" % exc, False))
 
-    # Launch pre-flight rows include the v29.6.0 connectors + 16/16 smoke.
+    # Launch pre-flight rows include the v29.6.0 connectors + 17/17 smoke.
     try:
         launch_out, _launch_blockers = launch_lines(offline_engine)
         text = "\n".join(launch_out)
-        checks.append(("launch: voice tts + image gen rows + 16/16 smoke",
+        checks.append(("launch: voice tts + image gen rows + 17/17 smoke",
                        "voice tts" in text and "image gen" in text
-                       and "router smoke: 16/16 subsystems" in text))
+                       and "router smoke: 17/17 subsystems" in text))
     except Exception as exc:
         checks.append(("launch: v29.6 rows (exception: %s)" % exc, False))
 
