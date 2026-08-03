@@ -1,10 +1,4 @@
-utf-8")
-            request = urllib.request.Request(
-                OPENAI_URL,
-                data=body,
-                headers={
-                    "Authorization": "Bearer " + self.openai_key,
-                    "Content-Type": "application/json",
+  "Content-Type": "application/json",
                 },
                 method="POST",
             )
@@ -637,4 +631,34 @@ utf-8")
         return str(value)
 
     def ui_format(self, key: str, *args: Any) -> str:
-        """Format a UI string; fall bac
+        """Format a UI string; fall back to the raw template on mismatch."""
+        template = self.ui(key)
+        try:
+            return template % args
+        except Exception:
+            return template
+
+    def set_lang(self, code: str) -> bool:
+        """Switch the active UI language and persist it. Returns success."""
+        code = str(code or "").strip().lower()
+        if code not in LANG_PACKS:
+            return False
+        self.lang = code
+        self.memory["lang"] = code
+        save_memory(self.memory_path, self.memory)
+        return True
+
+    def remember_fact(self, fact: str) -> str:
+        """Append a fact to persistent memory and save."""
+        fact = str(fact).strip()
+        if not fact:
+            return "Usage: remember <fact>"
+        facts = self.memory.setdefault("facts", [])
+        facts.append(fact)
+        if save_memory(self.memory_path, self.memory):
+            return self.ui_format("remembered", len(facts), fact)
+        return "Kept in session memory (disk save failed): %s" % fact
+
+    def forget_fact(self, index: int) -> Optional[str]:
+        """Delete fact #index (1-based). Returns the removed fact or None."""
+lf.memory.setdefault
