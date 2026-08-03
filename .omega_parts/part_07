@@ -1,123 +1,4 @@
-)
-            datasets = self.memory.get("datasets") or {}
-            last_import = datasets.get("last_import")
-            lines = [
-                "# " + ENGINE_NAME + " - Export",
-                "",
-                "Generated: %s (UTC)" % utc_now_iso(),
-                "Session: #%d | Language: %s" % (
-                    self.memory.get("sessions", 1), self.lang),
-                "",
-                "## System State",
-            ]
-            for key, value in self.system_state.items():
-                lines.append("- %s: %s" % (key, value))
-            lines.append("")
-            lines.append("## Facts (%d)" % len(facts))
-            if facts:
-                for i, fact in enumerate(facts, 1):
-                    lines.append("%d. %s" % (i, fact))
-            else:
-                lines.append("(none)")
-            lines.append("")
-            lines.append("## Last Import")
-            if isinstance(last_import, dict) and last_import:
-                for key, value in last_import.items():
-                    lines.append("- %s: %s" % (key, value))
-            else:
-                lines.append("(none)")
-            lines.append("")
-            lines.append("## History (last %d)" % len(history))
-            if history:
-                for entry in history:
-                    lines.append("- %s | %s | %s" % (
-                        entry.get("ts", "?"), entry.get("role", "?"),
-                        entry.get("text", "")))
-            else:
-                lines.append("(none)")
-            lines.append("")
-            lines.append("## Audit (last %d)" % len(audit_entries))
-            if audit_entries:
-                for entry in audit_entries:
-                    lines.append("- %s | %s | %s | %s" % (
-                        entry.get("ts", "?"), entry.get("subsystem", "?"),
-                        entry.get("status", "?"),
-                        entry.get("input_summary", "")))
-            else:
-                lines.append("(none)")
-            lines.append("")
-            with open(filename, "w", encoding="utf-8") as handle:
-                handle.write("\n".join(lines))
-            return True, "Export saved: %s" % filename
-        except Exception as exc:
-            return False, "Export failed safely: %s" % exc
-
-    def _report_findings(self, result: Dict[str, Any]) -> List[str]:
-        """Flatten a subsystem result dict into key-finding bullet lines."""
-        findings: List[str] = []
-        if result.get("message"):
-            findings.append(str(result["message"]))
-        for key, value in result.items():
-            if key in ("subsystem", "status", "message"):
-                continue
-            if isinstance(value, dict):
-                for sub_key, sub_val in value.items():
-                    findings.append("%s.%s: %s" % (key, sub_key, sub_val))
-            elif isinstance(value, list):
-                for item in value:
-                    if isinstance(item, dict):
-                        findings.append("; ".join(
-                            "%s: %s" % (k, v) for k, v in item.items()))
-                    else:
-                        findings.append(str(item))
-            else:
-                findings.append("%s: %s" % (key, value))
-        return findings
-
-    def write_report(self, topic: str) -> Tuple[bool, str]:
-        """Route topic through the master router, write a markdown report."""
-        try:
-            topic = str(topic or "").strip()
-            if not topic:
-                return False, "Usage: report <topic>"
-            result = self.execute_omega_subsystem(topic, {"query": topic})
-            subsystem = str(result.get("subsystem", "Master Core"))
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            filename = "omega_report_%s_%s.md" % (_slugify(topic), stamp)
-            findings = self._report_findings(result)
-            actions = list(REPORT_GENERIC_ACTIONS)
-            actions.extend(REPORT_NEXT_ACTIONS.get(
-                subsystem, REPORT_DEFAULT_ACTIONS))
-            lines = [
-                "# Report: %s" % topic,
-                "",
-                "Generated: %s (UTC)" % utc_now_iso(),
-                "Engine: " + ENGINE_NAME,
-                "Subsystem: %s" % subsystem,
-                "Status: %s" % str(result.get("status", "Unknown")),
-                "",
-                "## Key Findings",
-            ]
-            if findings:
-                lines.extend("- " + str(f) for f in findings)
-            else:
-                lines.append("- (no findings)")
-            lines.append("")
-            lines.append("## Suggested Next Actions")
-            for i, action in enumerate(actions, 1):
-                lines.append("%d. %s" % (i, action))
-            lines.append("")
-            with open(filename, "w", encoding="utf-8") as handle:
-                handle.write("\n".join(lines))
-            return True, "Report saved: %s" % filename
-        except Exception as exc:
-            return False, "Report failed safely: %s" % exc
-
-
-# ---------------------------------------------------------------------------
-# v29.3.0: process-isolated sandbox for evolution gate 2 (SPEC_v293.md 2)
-# ---------------------------------------------------------------------------
-# The worker target MUST be a module-level function so the spawn context can
+nction so the spawn context can
 # pickle it. multiprocessing is never invoked at import time (only inside
 # exec_contract_gate), and omega.py is already __main__-guarded, so spawning
 # is safe on every platform.
@@ -561,4 +442,203 @@ class EvolutionEngine:
             proc = ctx.Process(
                 target=_sandbox_worker,
                 args=(code, list(cls.CONTRACT_TESTS), queue),
-     
+                daemon=True,
+            )
+            proc.start()
+        except Exception as exc:
+            if queue is not None:
+                _close_sandbox_queue(queue)
+            return False, "sandbox process spawn failed: %s" % exc, 0.0, 0.0
+
+        try:
+            proc.join(EVO_TEST_TIMEOUT)
+            if proc.is_alive():
+                # Infinite loop / hang: hard-kill the child. Unlike the old
+                # daemon thread, a terminated process leaves NO zombie behind.
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                proc.join(EVO_TEST_TIMEOUT)
+                if proc.is_alive():
+                    try:
+                        proc.kill()  # SIGKILL fallback (py3.7+)
+                    except Exception:
+                        pass
+                    proc.join(1.0)
+                _close_sandbox_queue(queue)
+                cls._reap_stray_children()
+                return False, ("timeout after %.1fs (candidate process "
+                               "terminated, no child processes left)"
+                               % EVO_TEST_TIMEOUT), 0.0, 0.0
+
+            # Child exited: fetch its result dict (short wait for flush).
+            result: Optional[Dict[str, Any]] = None
+            try:
+                result = queue.get(timeout=2.0)
+            except Exception:
+                result = None
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            if not isinstance(result, dict):
+                exit_code = proc.exitcode
+                return False, ("sandbox worker exited without a result "
+                               "(exit code %s)" % exit_code), 0.0, 0.0
+            try:
+                pass_rate = float(result.get("pass_rate", 0.0))
+            except Exception:
+                pass_rate = 0.0
+            try:
+                latency_avg = float(result.get("latency_avg", 0.0))
+            except Exception:
+                latency_avg = 0.0
+            return (bool(result.get("ok")), str(result.get("reason", "?")),
+                    pass_rate, latency_avg)
+        except Exception as exc:
+            # Belt-and-braces: never leak a live child on any failure.
+            try:
+                if proc.is_alive():
+                    proc.terminate()
+                    proc.join(1.0)
+            except Exception:
+                pass
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            return False, "sandbox gate failed safely: %s" % exc, 0.0, 0.0
+        finally:
+            try:
+                if proc is not None and not proc.is_alive():
+                    proc.close()
+            except Exception:
+                pass
+
+    @staticmethod
+    def _reap_stray_children() -> None:
+        """No-zombie assertion: after a gate run no child may stay alive.
+
+        Any stray child (should never happen) is terminated immediately.
+        """
+        try:
+            ctx = multiprocessing.get_context("spawn")
+            for stray in ctx.active_children():
+                try:
+                    if stray.is_alive():
+                        stray.terminate()
+                        stray.join(1.0)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Gate 3: fitness gate
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def fitness(pass_rate: float, latency_avg: float, health: float) -> float:
+        """fitness = 0.5*pass + 0.3*latency_score + 0.2*health, clamped."""
+        try:
+            lat_score = 1.0 if float(latency_avg) <= 2.0 else 0.0
+            value = (0.5 * float(pass_rate) + 0.3 * lat_score
+                     + 0.2 * float(health))
+            return max(0.0, min(1.0, value))
+        except Exception:
+            return 0.0
+
+    def current_fitness(self) -> Optional[float]:
+        fitness = self.state.get("current_fitness")
+        return float(fitness) if isinstance(fitness, (int, float)) else None
+
+    # ------------------------------------------------------------------
+    # Lineage / archives / adoption / rollback
+    # ------------------------------------------------------------------
+
+    def _next_generation(self) -> int:
+        gens = [self.generation()]
+        for entry in self.state.get("lineage", []):
+            try:
+                gens.append(int(entry.get("generation", 1)))
+            except Exception:
+                continue
+        return max(gens) + 1
+
+    def _archive_names(self) -> List[Tuple[int, str]]:
+        archives: List[Tuple[int, str]] = []
+        try:
+            for name in os.listdir("."):
+                match = re.fullmatch(r"omega_gen_(\d+)\.py", name)
+                if match:
+                    archives.append((int(match.group(1)), name))
+        except Exception:
+            pass
+        archives.sort()
+        return archives
+
+    def _prune_archives(self, keep: int = EVO_ARCHIVE_KEEP) -> None:
+        try:
+            archives = self._archive_names()
+            for _gen, name in archives[:-keep] if len(archives) > keep else []:
+                try:
+                    os.remove(name)
+                except Exception:
+                    pass
+            remaining = {str(gen) for gen, _name in archives[-keep:]}
+            fitness_map = self.state.setdefault("archive_fitness", {})
+            for key in list(fitness_map.keys()):
+                if key not in remaining:
+                    fitness_map.pop(key, None)
+        except Exception:
+            pass
+
+    def _adopt(self, code: str, fitness: float, source: str) -> int:
+        """Archive the current generation, write the candidate, log lineage."""
+        current = self.generation()
+        try:
+            if os.path.isfile(self.strategy_path):
+                with open(self.strategy_path, "r", encoding="utf-8",
+                          errors="replace") as src:
+                    blob = src.read()
+                with open("omega_gen_%d.py" % current, "w",
+                          encoding="utf-8") as dst:
+                    dst.write(blob)
+                prior = self.current_fitness()
+                self.state.setdefault("archive_fitness", {})[str(current)] = (
+                    prior if prior is not None else 0.0)
+        except Exception:
+            pass
+        self._prune_archives()
+        new_gen = self._next_generation()
+        try:
+            with open(self.strategy_path, "w", encoding="utf-8") as handle:
+                handle.write(code if code.endswith("\n") else code + "\n")
+        except Exception:
+            pass
+        self.state["generation"] = new_gen
+        self.state["current_fitness"] = fitness
+        self.state.setdefault("lineage", []).append({
+            "generation": new_gen,
+            "fitness": fitness,
+            "adopted_at": utc_now_iso(),
+            "parent": current,
+            "source": source,
+        })
+        self._save_state()
+        return new_gen
+
+    def rollback(self) -> Tuple[bool, List[str]]:
+        """Restore the highest-fitness archived generation as current."""
+        lines = ["[Evolution Engine] Rollback requested."]
+        try:
+            fitness_map = self.state.get("archive_fitness") or {}
+            candidates = []
+            for gen, name in self._archive_names():
+                try:
+                    fit = float(fitness_map.get(str(gen), 0.0))
+                except Exception:
+                    fit = 0.0
+                candidates.append((fit, gen, name))
+            if not candidates:
+                lines.append("  no archived generations - nothing to roll "
+                             "back to.")
+                return False, lines
+         
