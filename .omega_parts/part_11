@@ -1,53 +1,4 @@
-e: %s" % exc)
-    # Clean exit (exit/quit or EOF): persist memory.
-    save_memory(engine.memory_path, engine.memory)
-    return 0
-
-
-# ---------------------------------------------------------------------------
-# Self-test
-# ---------------------------------------------------------------------------
-
-def _selftest_build_xlsx(path: str) -> None:
-    """Build a minimal but real .xlsx (ZIP of XML parts) for the selftest.
-
-    Covers shared strings, inline strings, and plain numbers.
-    """
-    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-    content_types = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
-        'content-types">'
-        '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" ContentType="application/'
-        'vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="applic'
-        'ation/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        '<Override PartName="/xl/sharedStrings.xml" ContentType="applicatio'
-        'n/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
-        '</Types>'
-    )
-    workbook = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<workbook xmlns="%s" xmlns:r="http://schemas.openxmlformats.org/'
-        'officeDocument/2006/relationships">'
-        '<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>'
-        '</workbook>' % ns
-    )
-    shared_strings = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<sst xmlns="%s" count="4" uniqueCount="4">'
-        '<si><t>name</t></si><si><t>score</t></si>'
-        '<si><t>alice</t></si><si><t>bob</t></si>'
-        '</sst>' % ns
-    )
-    sheet = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<worksheet xmlns="%s"><sheetData>'
-        '<row r="1"><c r="A1" t="s"><v>0</v></c>'
-        '<c r="B1" t="s"><v>1</v></c></row>'
-        '<row r="2"><c r="A2" t="s"><v>2</v></c>'
-        '<c r="B2"><v>42</v></c></row>'
+    '<c r="B2"><v>42</v></c></row>'
         '<row r="3"><c r="A3" t="s"><v>3</v></c>'
         '<c r="B3"><v>7</v></c></row>'
         '<row r="4"><c r="A4" t="inlineStr"><is><t>carol</t></is></c>'
@@ -66,11 +17,17 @@ def run_selftest() -> int:
     checks = []
     engine = OmegaMasterEngine()
 
-    # Router smoke test over all 10 subsystems (shared with 'launch').
+    # Router smoke test over all 14 subsystems (shared with 'launch').
     for domain, expected in CORE_SMOKE:
         try:
-            result = engine.execute_omega_subsystem(domain, {"query": domain})
-            ok = result.get("subsystem") == expected
+            if expected == "cli":
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    ok = bool(handle_command(engine, domain))
+            else:
+                result = engine.execute_omega_subsystem(domain,
+                                                        {"query": domain})
+                ok = result.get("subsystem") == expected
             checks.append(("router: %-30s -> %s" % (domain, expected), ok))
         except Exception as exc:
             checks.append(("router: %s (exception: %s)" % (domain, exc), False))
@@ -119,13 +76,61 @@ def run_selftest() -> int:
     offline_engine = OmegaMasterEngine()
     offline_engine.serper_key = ""
     offline_engine.openai_key = ""
+    offline_engine.github_token = ""
+    offline_engine.github_repo = ""
+    offline_engine.openrouter_key = ""
     try:
         checks.append(("guarded: _serper_search offline -> None",
                        offline_engine._serper_search("test") is None))
         checks.append(("guarded: _llm offline -> None",
                        offline_engine._llm("test") is None))
+        checks.append(("guarded: _llm_messages offline -> None",
+                       offline_engine._llm_messages(
+                           [{"role": "user", "content": "test"}]) is None))
+        checks.append(("guarded: _tts_speech offline -> None",
+                       offline_engine._tts_speech("hi") is None))
+        checks.append(("guarded: _image_generate offline -> None",
+                       offline_engine._image_generate("dot") is None))
+        checks.append(("guarded: _github_api offline -> None",
+                       offline_engine._github_api("/repos/x/y") is None))
+        checks.append(("guarded: _openrouter_chat offline -> None",
+                       offline_engine._openrouter_chat("hi") is None))
     except Exception as exc:
         checks.append(("guarded: online calls (exception: %s)" % exc, False))
+
+    # v29.6.0 connector layer: constants, guarded writers (no files
+    # written - only the empty-data guard path is exercised), b64 helper.
+    checks.append(("v29.6: tts/image/github connector constants",
+                   TTS_MAX_CHARS == 500 and TTS_VOICE_DEFAULT == "alloy"
+                   and TTS_MODEL == "tts-1" and IMAGE_MODEL == "dall-e-3"
+                   and IMAGE_SIZE == "1024x1024" and GITHUB_API_TIMEOUT == 8
+                   and GITHUB_API_BASE == "https://api.github.com"))
+    checks.append(("v29.6: speech/image writers reject empty data",
+                   engine._save_speech(b"", "x")[0] is False
+                   and engine._save_image(b"", "x")[0] is False))
+    checks.append(("v29.6: b64 image decode roundtrip",
+                   base64.b64decode(base64.b64encode(b"png").decode("ascii"))
+                   == b"png"))
+    checks.append(("v29.6: tts voice + image model attrs defaulted",
+                   bool(engine.tts_voice) and bool(engine.image_model)))
+
+    # v29.6.0: _llm/_llm_messages fall through to OpenRouter (monkeypatched
+    # responder, pure offline - no network).
+    try:
+        fb_engine = OmegaMasterEngine()
+        fb_engine.openai_key = ""
+        fb_engine.openrouter_key = "selftest-token"
+        fb_engine._openrouter_chat = lambda prompt: "fallback-reply"  # type: ignore
+        checks.append(("v29.6: _llm falls back to openrouter",
+                       fb_engine._llm("test") == "fallback-reply"))
+        checks.append(("v29.6: _llm_messages falls back to openrouter",
+                       fb_engine._llm_messages(
+                           [{"role": "system", "content": "s"},
+                            {"role": "user", "content": "test"}])
+                       == "fallback-reply"))
+    except Exception as exc:
+        checks.append(("v29.6: llm openrouter fallback (exception: %s)" % exc,
+                       False))
 
     # Module A: memory roundtrip (remember/recall/forget) + corrupt recovery.
     try:
@@ -224,9 +229,9 @@ def run_selftest() -> int:
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.5.0 + 10 subsystems + session/facts",
-                       bool(keep) and "29.5.0" in out
-                       and "Subsystems: 10" in out
+        checks.append(("version: shows 29.6.0 + 14 subsystems + session/facts",
+                       bool(keep) and "29.6.0" in out
+                       and "Subsystems: 14" in out
                        and "Session: #" in out and "Facts:" in out))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
@@ -470,10 +475,11 @@ def run_selftest() -> int:
         out = buf.getvalue()
         checks.append(("why: 6 differentiators printed",
                        bool(keep1) and out.count("proof:") >= 6))
-        checks.append(("integrations: 6-connector manifest printed",
+        checks.append(("integrations: 8-connector manifest printed",
                        bool(keep2) and all(name in out for name in (
                            "GitHub", "Excel/CSV", "Serper", "OpenAI",
-                           "OpenRouter", "claude_engine"))))
+                           "OpenRouter", "claude_engine",
+                           "voice tts", "image gen"))))
     except Exception as exc:
         checks.append(("why/integrations: (exception: %s)" % exc, False))
 
@@ -502,4 +508,41 @@ def run_selftest() -> int:
                        and "pillars integrity:" in out
                        and "p5_security" in out))
     except Exception as exc:
-        checks.append(("evolve: status render (exception: %s
+        checks.append(("evolve: status render (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
+    # ------------------------------------------------------------------
+
+    # (a) Infinite-loop candidate -> rejected via timeout; the child process
+    # is terminated and NO live child processes remain afterwards.
+    infinite_loop = (
+        "def execute_logic(query, telemetry):\n"
+        "    while True:\n"
+        "        pass\n"
+    )
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
+        checks.append(("evolve: process isolation rejects infinite loop",
+                       not ok and "timeout" in reason.lower()))
+    except Exception as exc:
+        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
+    try:
+        checks.append(("evolve: no live child processes after timeout kill",
+                       sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
+
+    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
+    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
+    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
+    memory_bomb = (
+        "def execute_logic(query, telemetry):\n"
+        "    data = list(range(10**8))\n"
+        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
+    )
+    try:
+        import resource as _resource_probe  # noqa: F401
+        _posix_ceiling = True
+    except Exception:
+        _pos
