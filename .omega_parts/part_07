@@ -1,4 +1,20 @@
-tate()
+  # ------------------------------------------------------------------
+    # State (omega_evolution.json) - all I/O guarded
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _default_state() -> Dict[str, Any]:
+        return {
+            "generation": 1,
+            "current_fitness": None,
+            "health": 1.0,
+            "scores": [],
+            "lineage": [],
+            "archive_fitness": {},
+        }
+
+    def _load_state(self) -> Dict[str, Any]:
+        state = self._default_state()
         try:
             if not os.path.isfile(self.state_path):
                 return state
@@ -655,4 +671,12 @@ tate()
         except Exception:
             return 0.0
 
-    def _record_sco
+    def _record_score(self, score: float) -> None:
+        try:
+            scores = self.state.setdefault("scores", [])
+            scores.append(round(max(0.0, min(1.0, float(score))), 4))
+            del scores[:-10]  # keep the last 10 scores only
+            tail = scores[-10:]
+            health = (sum(tail) / len(tail)) if tail else 1.0
+            self.state["health"] = round(max(0.0, min(1.0, health)), 4)
+            self
