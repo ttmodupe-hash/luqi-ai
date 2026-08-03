@@ -1,144 +1,4 @@
-ple quadratics.",
-            "The quadratic formula.",
-            "Parabolas and their turning points."]),
-        ("Capstone: Problem-Solving Strategies", [
-            "Breaking multi-step word problems into parts.",
-            "Choosing a strategy: draw, table, equation, estimate.",
-            "Reviewing and connecting all nine units."]),
-    ],
-    "physics": [
-        ("Motion and Speed", [
-            "Distance vs displacement.",
-            "Speed and velocity; the speed equation.",
-            "Reading distance-time graphs."]),
-        ("Forces and Newton's Laws", [
-            "First law: objects keep doing what they are doing.",
-            "Second law: F = ma.",
-            "Third law: every action has an equal opposite reaction."]),
-        ("Energy and Work", [
-            "Kinetic and potential energy.",
-            "Conservation of energy.",
-            "Work and power in everyday machines."]),
-        ("Momentum and Collisions", [
-            "Momentum p = mv.",
-            "Impulse changes momentum.",
-            "Conservation of momentum in collisions."]),
-        ("Waves and Sound", [
-            "Wavelength, frequency and amplitude.",
-            "The wave equation v = f x wavelength.",
-            "Sound as a pressure wave."]),
-        ("Light and Optics", [
-            "Reflection and refraction.",
-            "Lenses and mirrors.",
-            "The electromagnetic spectrum."]),
-        ("Electricity Basics", [
-            "Charge, current and voltage.",
-            "Ohm's law V = IR.",
-            "Series vs parallel circuits."]),
-        ("Magnetism", [
-            "Magnetic fields and poles.",
-            "Electromagnets.",
-            "Motors and generators."]),
-        ("Heat and Thermodynamics", [
-            "Temperature vs heat.",
-            "Conduction, convection and radiation.",
-            "The laws of thermodynamics in plain language."]),
-        ("Capstone: Modern Physics Survey", [
-            "Atoms, nuclei and radioactivity.",
-            "Relativity in one big idea.",
-            "Quantum thinking: probability at small scales."]),
-    ],
-    "chemistry": [
-        ("Matter and Its States", [
-            "Solids, liquids and gases.",
-            "Physical vs chemical change.",
-            "Mixtures and pure substances."]),
-        ("Atoms and Elements", [
-            "Protons, neutrons and electrons.",
-            "Atomic number and mass number.",
-            "Reading an element on the periodic table."]),
-        ("The Periodic Table", [
-            "Groups and periods.",
-            "Metals vs nonmetals.",
-            "Trends in reactivity."]),
-        ("Chemical Bonding", [
-            "Ionic bonds transfer electrons.",
-            "Covalent bonds share electrons.",
-            "Molecules and compounds."]),
-        ("Chemical Reactions", [
-            "Reactants and products.",
-            "Balancing equations.",
-            "Common reaction types."]),
-        ("The Mole and Stoichiometry", [
-            "Avogadro's number and the mole.",
-            "Molar mass.",
-            "Mole-to-mass conversions."]),
-        ("Acids and Bases", [
-            "The pH scale from 0 to 14.",
-            "Neutralization reactions.",
-            "Everyday acids and alkalis."]),
-        ("Solutions and Concentration", [
-            "Solutes, solvents and solutions.",
-            "Concentration and molarity.",
-            "Basic solubility rules."]),
-        ("Energy in Chemistry", [
-            "Exothermic vs endothermic reactions.",
-            "Activation energy.",
-            "What controls reaction rates."]),
-        ("Capstone: Organic Chemistry Intro", [
-            "Carbon chains and rings.",
-            "Common functional groups.",
-            "Organic molecules in daily life."]),
-    ],
-    "biology": [
-        ("The Cell", [
-            "Cell theory: all living things are made of cells.",
-            "Organelles and their jobs.",
-            "Plant vs animal cells."]),
-        ("Cell Energy", [
-            "Photosynthesis captures light energy.",
-            "Respiration releases energy from glucose.",
-            "How the two processes balance the carbon cycle."]),
-        ("DNA and Genetics", [
-            "The double helix stores instructions.",
-            "Genes and chromosomes.",
-            "Dominant and recessive traits."]),
-        ("Evolution by Natural Selection", [
-            "Variation exists in every population.",
-            "Helpful traits spread over generations.",
-            "Evidence: fossils, anatomy, DNA."]),
-        ("Human Body Systems", [
-            "Circulatory and respiratory systems.",
-            "Digestive and nervous systems.",
-            "How body systems cooperate."]),
-        ("Ecology and Ecosystems", [
-            "Food chains and food webs.",
-            "Energy flow through trophic levels.",
-            "Why biodiversity matters."]),
-        ("Classification of Life", [
-            "Domains and kingdoms.",
-            "Binomial (two-name) naming.",
-            "Reading the tree of life."]),
-        ("Microorganisms and Disease", [
-            "Bacteria vs viruses.",
-            "How the immune system defends you.",
-            "How vaccines train immunity."]),
-        ("Reproduction and Development", [
-            "Mitosis for growth; meiosis for reproduction.",
-            "Life cycles across species.",
-            "Growth and development stages."]),
-        ("Capstone: Homeostasis and Health", [
-            "Feedback loops keep conditions stable.",
-            "Temperature, water and sugar balance.",
-            "Using biology in daily health decisions."]),
-    ],
-    "english": [
-        ("Sentence Foundations", [
-            "Every sentence needs a subject and a verb.",
-            "Statement, question, command, exclamation.",
-            "Capital letters and end punctuation."]),
-        ("Parts of Speech", [
-            "Nouns, verbs and adjectives.",
+s.",
             "Adverbs and prepositions.",
             "Conjunctions join ideas."]),
         ("Vocabulary Building", [
@@ -553,4 +413,197 @@ def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
                             value = shared[int(v_text)]
                         except Exception:
                             value = v_text
-                    elif cell_type ==
+                    elif cell_type == "b":
+                        value = "TRUE" if v_text == "1" else "FALSE"
+                    else:
+                        value = v_text
+            cells[col_idx] = value
+            next_col = col_idx + 1
+        if cells:
+            width = max(cells.keys()) + 1
+            table.append([cells.get(i, "") for i in range(width)])
+    if not table:
+        return [], []
+    headers = [str(h).strip() or "col_%d" % (i + 1)
+               for i, h in enumerate(table[0])]
+    width = len(headers)
+    data = []
+    for row in table[1:]:
+        padded = (row + [""] * width)[:width]
+        if any(str(cell).strip() for cell in padded):
+            data.append([str(cell) for cell in padded])
+    return headers, data
+
+
+# ---------------------------------------------------------------------------
+# OmegaMasterEngine
+# ---------------------------------------------------------------------------
+
+class OmegaMasterEngine:
+    """Unified master engine preserving the user's original router backbone."""
+
+    def __init__(self) -> None:
+        # Preserved verbatim from the user's blueprint.
+        self.system_state = {
+            "build_sync_status": "Deployed & Synced",
+            "mining_investment_active": True,
+            "tax_compliance_region": "Global/US-Compliant",
+            "api_key_status": "Verified & Secure",
+        }
+        self.env = parse_env_file()
+        self.openai_key = self.env.get("OPENAI_API_KEY") or os.environ.get(
+            "OPENAI_API_KEY", ""
+        )
+        self.serper_key = self.env.get("SERPER_API_KEY") or os.environ.get(
+            "SERPER_API_KEY", ""
+        )
+        self.session_log: List[Dict[str, Any]] = []
+        # v29: GitHub sync configuration (token never printed in full).
+        self.github_repo = self.env.get("GITHUB_REPO") or os.environ.get(
+            "GITHUB_REPO", ""
+        )
+        self.github_token = self.env.get("GITHUB_TOKEN") or os.environ.get(
+            "GITHUB_TOKEN", ""
+        )
+        # v29 Module A: persistent memory (load, count session, save).
+        self.memory_path = resolve_memory_path()
+        self.memory = load_memory(self.memory_path)
+        self.memory["sessions"] = int(self.memory.get("sessions", 0)) + 1
+        # v29.1.0: restore persisted UI language (defaults to English).
+        self.lang = str(self.memory.get("lang") or DEFAULT_LANG)
+        if self.lang not in LANG_PACKS:
+            self.lang = DEFAULT_LANG
+        self.memory["lang"] = self.lang
+        save_memory(self.memory_path, self.memory)
+        # v29 Module C: currently loaded dataset (restored from memory).
+        self.dataset: Optional[Dict[str, Any]] = None
+        self._restore_last_import()
+        # v29.2.0: OpenRouter config for the optional online evolution mode.
+        self.openrouter_key = self.env.get("OPENROUTER_API_KEY") or os.environ.get(
+            "OPENROUTER_API_KEY", ""
+        )
+        self.openrouter_model = (
+            self.env.get("OPENROUTER_MODEL")
+            or os.environ.get("OPENROUTER_MODEL", "")
+        ).strip() or OPENROUTER_DEFAULT_MODEL
+        # v29.3.0: optional claude_engine bridge config. The engine itself is
+        # created lazily on the first LLM call (never at boot).
+        self.anthropic_key = self.env.get("ANTHROPIC_API_KEY") or os.environ.get(
+            "ANTHROPIC_API_KEY", ""
+        )
+        self.omega_llm_model = (
+            self.env.get("OMEGA_LLM_MODEL")
+            or os.environ.get("OMEGA_LLM_MODEL", "")
+        ).strip() or OPENAI_MODEL
+        # v29.6.0: voice (TTS) + image generation config. No new keys -
+        # both connectors use the existing OPENAI_API_KEY.
+        self.tts_voice = self.env.get("OMEGA_TTS_VOICE") or os.environ.get(
+            "OMEGA_TTS_VOICE", TTS_VOICE_DEFAULT
+        )
+        self.image_model = self.env.get("OMEGA_IMAGE_MODEL") or os.environ.get(
+            "OMEGA_IMAGE_MODEL", IMAGE_MODEL
+        )
+        # v29.6.0: one-shot cached GitHub REST probe for 'launch'
+        # (None = not probed yet, {} = probed and unreachable).
+        self._github_probe_cache: Optional[Dict[str, Any]] = None
+        self._bridge_engine: Any = None
+        self._bridge_attempted = False
+        # v29.2.0: Subsystem #10 - Evolution Engine. Boot verifies/restores
+        # omega_pillars.json (sha256 tamper detection) and bootstraps
+        # omega_strategy_gen.py + omega_evolution.json when missing.
+        self.evolution = EvolutionEngine(self)
+
+    # ------------------------------------------------------------------
+    # Availability matrix
+    # ------------------------------------------------------------------
+
+    def availability_matrix(self) -> List[Dict[str, str]]:
+        """Return per-subsystem availability (Available / Degraded + reason)."""
+        rows = [
+            ("Build & Sync", "Available", "local integrity checks"),
+            ("Mining & Investment", "Available", "local strategy snapshot"),
+            (
+                "Tax Support",
+                "Available" if self.openai_key else "Degraded",
+                "LLM-enhanced" if self.openai_key else "offline guidance (no OPENAI_API_KEY)",
+            ),
+            ("API & Security", "Available", "local gatekeeper checks"),
+            (
+                "Deep Research",
+                "Available" if self.serper_key else "Degraded",
+                "Serper live search" if self.serper_key else "offline research plan (no SERPER_API_KEY)",
+            ),
+            ("Companion/Tutor", "Available", "local study scaffolds"),
+            ("Opportunity Engine", "Available", "local scan framework"),
+            ("Finance Literacy", "Available", "local literacy guidance"),
+            ("Self-Improvement", "Available", "local audit log"),
+            (
+                "Evolution Engine",
+                "Available",
+                "sandboxed self-evolution, pillars enforced",
+            ),
+            (
+                "Voice (TTS)",
+                "Available" if self.openai_key else "Degraded",
+                "speech ready" if self.openai_key else "print-only (no OPENAI_API_KEY)",
+            ),
+            (
+                "Image Generation",
+                "Available" if self.openai_key else "Degraded",
+                "images ready" if self.openai_key else "hint-only (no OPENAI_API_KEY)",
+            ),
+            (
+                "GitHub REST",
+                "Available" if (self.github_repo and self.github_token)
+                else "Degraded",
+                "repo probe ready" if (self.github_repo and self.github_token)
+                else "set GITHUB_REPO (+ GITHUB_TOKEN)",
+            ),
+            ("Reminders", "Available", "offline, memory-backed"),
+        ]
+        return [
+            {"subsystem": name, "status": status, "detail": detail}
+            for name, status, detail in rows
+        ]
+
+    # ------------------------------------------------------------------
+    # Audit logging (all file I/O guarded)
+    # ------------------------------------------------------------------
+
+    def _audit(self, subsystem: str, input_summary: str, status: str,
+               entry_type: str = "audit") -> Dict[str, Any]:
+        entry = {
+            "ts": utc_now_iso(),
+            "type": entry_type,
+            "subsystem": subsystem,
+            "input_summary": str(input_summary)[:200],
+            "status": status,
+        }
+        self.session_log.append(entry)
+        try:
+            with open(LOG_FILE, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, ensure_ascii=True) + "\n")
+        except Exception:
+            pass  # logging must never crash the engine
+        return entry
+
+    def read_log_tail(self, count: int = 10) -> List[Dict[str, Any]]:
+        """Read the last `count` audit entries from omega_log.jsonl."""
+        entries: List[Dict[str, Any]] = []
+        try:
+            if not os.path.isfile(LOG_FILE):
+                return self.session_log[-count:]
+            with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entries.append(json.loads(line))
+                    except Exception:
+                        continue
+        except Exception:
+            return self.session_log[-count:]
+        return entries[-count:]
+
+    # -------------------------------------------
