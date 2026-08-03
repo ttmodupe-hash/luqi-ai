@@ -1,12 +1,4 @@
-re(self, score: float) -> None:
-        try:
-            scores = self.state.setdefault("scores", [])
-            scores.append(round(max(0.0, min(1.0, float(score))), 4))
-            del scores[:-10]  # keep the last 10 scores only
-            tail = scores[-10:]
-            health = (sum(tail) / len(tail)) if tail else 1.0
-            self.state["health"] = round(max(0.0, min(1.0, health)), 4)
-            self._save_state()
+._save_state()
         except Exception:
             pass
 
@@ -270,6 +262,8 @@ CORE_SMOKE: List[Tuple[str, str]] = [
     # v29.7.0: document Q&A smoke - keyless-safe with zero documents.
     ("docs", "cli"),
     ("ask selftest question", "cli"),
+    # v29.8.0: URL ingest smoke - refused cleanly with no network target.
+    ("ingest http://127.0.0.1:1/x", "cli"),
 ]
 
 
@@ -439,7 +433,7 @@ def print_help(engine: OmegaMasterEngine) -> None:
          "(needs OPENAI_API_KEY or bridge)"),
         ("cost", "pricing-disruption table (free engine, BYOK cents)"),
         ("say <text>", "speak text via TTS (needs OPENAI_API_KEY)"),
-        ("voice [on|off]", "voice output status / classroom toggle"),
+        ("voice [on|off|prof|all]", "voice output: off / professor / all"),
         ("image <prompt>", "generate an image (needs OPENAI_API_KEY)"),
         ("github info", "GitHub repo info via REST probe"),
         ("remind <text> in Nm|h|d", "set a reminder (also: at HH:MM)"),
@@ -460,7 +454,7 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("import <path>", "import a .csv or .xlsx dataset"),
         ("analyze", "summarize the loaded dataset"),
         ("query <text>", "filter dataset rows containing text"),
-        ("ingest <path>", "ingest a document (.txt .md .csv .log .json)"),
+        ("ingest <path|url>", "ingest a document or web page"),
         ("docs", "list ingested documents (chunks/chars/date)"),
         ("forget doc <name>", "remove an ingested document"),
         ("ask <question> | ask save", "document Q&A; save exports last "
@@ -626,4 +620,35 @@ def run_offline_quiz(engine: OmegaMasterEngine, subject: str,
                 out("")
                 out("(End of input - closing the quiz.)")
                 return score, asked, None
-            except Keybo
+            except KeyboardInterrupt:
+                out("")
+                continue
+            cmd = raw.strip().lower()
+            if not cmd:
+                continue
+            if cmd in ("end class", "next", "progress", "syllabus",
+                       "hint", "quiz me", "exit", "quit"):
+                out("Quiz ended early (%d card%s marked)."
+                    % (asked, "" if asked == 1 else "s"))
+                return score, asked, raw.strip()
+            if not revealed:
+                if cmd == "reveal":
+                    out("Answer: %s" % answer)
+                    out("Be honest - mark 'right' or 'wrong'.")
+                    revealed = True
+                else:
+                    out("Think first, then type 'reveal' to see the "
+                        "answer.")
+            else:
+                if cmd == "right":
+                    score += 1
+                    asked += 1
+                    out("Marked right. Well done.")
+                    break
+                if cmd == "wrong":
+                    asked += 1
+                    engine.add_weak_point(subject, question)
+                    out("Marked wrong - noted as a weak point to review.")
+                    break
+                if cmd == "reveal":
+                      out
