@@ -1,3 +1,4 @@
+- v29.8.0 "Deep Reader": IDF-ranked document Q&A, ingest <url> web page ingestion, professor-only classroom voice (voice all restores full speech).
 - **2026-08-03 -- v29.7.0 "Document Mind"**: persistent document store (`ingest`/`docs`/`forget doc`), stdlib retrieval, `ask`/`ask save` Q&A -- offline passages, LLM synthesis when keyed. 15 subsystems, 122 selftest checks.
 - **2026-08-03 -- v29.6.0 "The Sovereign Voice"**: voice output (TTS via OpenAI), image generation, GitHub REST probe, OpenRouter LLM fallback, reminders. 14 subsystems, 103 selftest checks. Keys stay in `.env`; guard_secrets.py blocks committing real keys.
 # LUQI AI v29.5.0 — Unified Master Engine
