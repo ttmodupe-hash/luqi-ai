@@ -1,132 +1,4 @@
-s.",
-            "Adverbs and prepositions.",
-            "Conjunctions join ideas."]),
-        ("Vocabulary Building", [
-            "Using context clues for new words.",
-            "Roots, prefixes and suffixes.",
-            "Choosing precise words for tone."]),
-        ("Paragraph Writing", [
-            "A strong topic sentence.",
-            "Supporting details and examples.",
-            "Transitions that guide the reader."]),
-        ("Reading Comprehension", [
-            "Main idea vs supporting detail.",
-            "Making inferences from evidence.",
-            "Summarizing in your own words."]),
-        ("Grammar in Depth", [
-            "Verb tenses and subject-verb agreement.",
-            "Fixing common errors.",
-            "Active vs passive voice."]),
-        ("Essay Structure", [
-            "Introduction with a clear thesis.",
-            "Body paragraphs: one idea each.",
-            "Conclusions that answer 'so what'."]),
-        ("Persuasive Writing", [
-            "Claims backed by evidence.",
-            "Addressing counterarguments.",
-            "Ethos, pathos and logos."]),
-        ("Literature and Analysis", [
-            "Theme and character development.",
-            "Figurative language: metaphor, simile, imagery.",
-            "Supporting analysis with quotations."]),
-        ("Capstone: Communication Skills", [
-            "Speaking and active listening.",
-            "Formal vs informal registers.",
-            "Editing and revising your own work."]),
-    ],
-    "computer-science": [
-        ("Computing and Python Setup", [
-            "What a program is and how it runs.",
-            "Running your first Python script.",
-            "Variables and the print() function."]),
-        ("Data Types and Operations", [
-            "Integers, floats and strings.",
-            "Converting between types.",
-            "Building output with f-strings."]),
-        ("Control Flow: Decisions", [
-            "if, elif and else.",
-            "Comparison operators.",
-            "Boolean logic with and/or/not."]),
-        ("Loops and Iteration", [
-            "for loops and range().",
-            "while loops for unknown counts.",
-            "break and continue."]),
-        ("Data Structures", [
-            "Lists and tuples for ordered data.",
-            "Dictionaries for key-value lookup.",
-            "Sets and when to use them."]),
-        ("Functions", [
-            "Defining and calling functions.",
-            "Arguments and return values.",
-            "Variable scope basics."]),
-        ("Files and Errors", [
-            "Reading and writing text files.",
-            "try/except for graceful failure.",
-            "Debugging: read the traceback bottom-up."]),
-        ("Object-Oriented Basics", [
-            "Classes bundle data and behavior.",
-            "Methods and attributes.",
-            "Simple inheritance."]),
-        ("Algorithms and Problem Solving", [
-            "Searching and sorting ideas.",
-            "Big-O intuition: what scales.",
-            "Plan in pseudocode before coding."]),
-        ("Capstone: Build a Project", [
-            "Plan a small command-line app.",
-            "Structure code into functions and files.",
-            "Test it, then choose your next topic."]),
-    ],
-    "finance": [
-        ("Money Mindset and Goals", [
-            "Needs vs wants.",
-            "Setting SMART money goals.",
-            "Tracking where every unit goes."]),
-        ("Budgeting Basics", [
-            "Listing income and expenses.",
-            "The 50/30/20 rule as a starting point.",
-            "Building your first written budget."]),
-        ("Saving and Emergency Funds", [
-            "Why an emergency fund comes first.",
-            "Automating savings on payday.",
-            "Where to keep savings safely."]),
-        ("Banking and Interest", [
-            "Account types and their purposes.",
-            "Simple vs compound interest.",
-            "Reading APR and APY."]),
-        ("Debt and Credit", [
-            "Good debt vs bad debt.",
-            "How credit scores work.",
-            "The avalanche payoff method."]),
-        ("Scam and Fraud Defense", [
-            "Red flags: guaranteed returns, urgency, secrecy.",
-            "Verifying platforms and advisors.",
-            "Protecting your personal data."]),
-        ("Investing Fundamentals", [
-            "The risk-return trade-off.",
-            "Stocks, bonds and funds.",
-            "Diversification spreads risk."]),
-        ("Long-Term Planning", [
-            "Why starting early wins (compounding).",
-            "Employer and government retirement plans.",
-            "Setting a decades-long horizon."]),
-        ("Taxes and Payslips", [
-            "Reading a payslip line by line.",
-            "Common deductions and credits.",
-            "Basic filing obligations."]),
-        ("Capstone: Your Personal Finance Plan", [
-            "Reviewing all nine units.",
-            "Building a one-page money plan.",
-            "Habits that make it stick."]),
-    ],
-    "history": [
-        ("Studying the Past", [
-            "Primary vs secondary sources.",
-            "Chronology and timelines.",
-            "Spotting bias and perspective."]),
-        ("Early Civilizations", [
-            "Mesopotamia and Egypt.",
-            "The Indus Valley.",
-            "Early Chinese dynasties."]),
+ly Chinese dynasties."]),
         ("Classical Empires", [
             "Greece and Rome.",
             "The Mali Empire and its gold wealth.",
@@ -436,6 +308,92 @@ def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
 
 
 # ---------------------------------------------------------------------------
+# v29.7.0: document retrieval helpers (pure functions, no engine state)
+# ---------------------------------------------------------------------------
+
+def _tokenize(text: str) -> List[str]:
+    """Lowercase word tokens (a-z0-9) for retrieval scoring."""
+    return re.findall(r"[a-z0-9]+", (text or "").lower())
+
+
+def _chunk_text(text: str, max_chars: int = DOC_CHUNK_CHARS) -> List[str]:
+    """Split text into <= max_chars chunks on blank-line paragraphs.
+
+    Paragraphs pack greedily (joined by a blank line); a paragraph longer
+    than max_chars is hard-split into max_chars pieces. Empty input -> [].
+    """
+    try:
+        max_chars = max(1, int(max_chars or DOC_CHUNK_CHARS))
+    except Exception:
+        max_chars = DOC_CHUNK_CHARS
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text or "")]
+    paragraphs = [p for p in paragraphs if p]
+    chunks: List[str] = []
+    current = ""
+    for para in paragraphs:
+        while len(para) > max_chars:
+            # Hard-split an oversize paragraph into max_chars pieces.
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.append(para[:max_chars])
+            para = para[max_chars:]
+        candidate = (current + "\n\n" + para) if current else para
+        if current and len(candidate) > max_chars:
+            chunks.append(current)
+            current = para
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _score_chunk(query_tokens: List[str], chunk: str) -> int:
+    """Token-overlap score: summed per-token frequency in the chunk."""
+    chunk_tokens = _tokenize(chunk)
+    score = 0
+    for tok in set(query_tokens or []):
+        score += chunk_tokens.count(tok)
+    return score
+
+
+def search_documents(query: str, docs: List[Dict[str, Any]],
+                     top_k: int = DOC_TOP_K
+                     ) -> List[Tuple[int, str, int, str]]:
+    """Rank document chunks by token overlap. Never raises.
+
+    Returns (score, doc_name, chunk_index, chunk_text) with score > 0,
+    best first, ties broken toward shorter chunks, truncated to top_k.
+    """
+    hits: List[Tuple[int, str, int, str]] = []
+    try:
+        query_tokens = _tokenize(query)
+        if not query_tokens or not isinstance(docs, list):
+            return hits
+        for doc in docs:
+            try:
+                if not isinstance(doc, dict):
+                    continue
+                name = str(doc.get("name", "?"))
+                chunks = doc.get("chunks") or []
+                if not isinstance(chunks, list):
+                    continue
+                for idx, chunk in enumerate(chunks):
+                    if not isinstance(chunk, str):
+                        continue
+                    score = _score_chunk(query_tokens, chunk)
+                    if score > 0:
+                        hits.append((score, name, idx, chunk))
+            except Exception:
+                continue
+        hits.sort(key=lambda hit: (-hit[0], len(hit[3])))
+        return hits[:max(0, int(top_k))]
+    except Exception:
+        return []
+
+
+# ---------------------------------------------------------------------------
 # OmegaMasterEngine
 # ---------------------------------------------------------------------------
 
@@ -560,6 +518,11 @@ class OmegaMasterEngine:
                 else "set GITHUB_REPO (+ GITHUB_TOKEN)",
             ),
             ("Reminders", "Available", "offline, memory-backed"),
+            (
+                "Document Q&A",
+                "Available",
+                "always (offline passages; LLM synthesis when keyed)",
+            ),
         ]
         return [
             {"subsystem": name, "status": status, "detail": detail}
@@ -606,4 +569,112 @@ class OmegaMasterEngine:
             return self.session_log[-count:]
         return entries[-count:]
 
-    # -------------------------------------------
+    # ------------------------------------------------------------------
+    # Guarded online capabilities (stdlib urllib, 15s timeout)
+    # ------------------------------------------------------------------
+
+    def _serper_search(self, query: str) -> Optional[List[Dict[str, str]]]:
+        """POST to Serper; return top 5 results or None on any failure."""
+        if not self.serper_key:
+            return None
+        try:
+            body = json.dumps({"q": query, "num": 5}).encode("utf-8")
+            request = urllib.request.Request(
+                SERPER_URL,
+                data=body,
+                headers={
+                    "X-API-KEY": self.serper_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            results = []
+            for item in (data.get("organic") or [])[:5]:
+                results.append({
+                    "title": str(item.get("title", "")),
+                    "link": str(item.get("link", "")),
+                    "snippet": str(item.get("snippet", "")),
+                })
+            return results or None
+        except Exception:
+            return None
+
+    def _get_bridge(self) -> Any:
+        """Lazy singleton ClaudeLikeEngine. Returns None when unavailable.
+
+        Never instantiated at boot and NEVER a hard dependency: when
+        claude_engine is not installed (BRIDGE_AVAILABLE False) or no
+        OPENAI_API_KEY is set, this simply returns None.
+        """
+        if self._bridge_attempted:
+            return self._bridge_engine
+        self._bridge_attempted = True
+        if not BRIDGE_AVAILABLE or not self.openai_key:
+            return None
+        try:
+            kwargs: Dict[str, Any] = {
+                "model": self.omega_llm_model,
+                "provider": "openai",
+                "api_key": self.openai_key,
+            }
+            if self.anthropic_key:
+                # Anthropic fallback provider for the circuit breaker.
+                kwargs["fallback_provider"] = "anthropic"
+                kwargs["fallback_model"] = CLAUDE_FALLBACK_MODEL
+                kwargs["fallback_api_key"] = self.anthropic_key
+            try:
+                self._bridge_engine = ClaudeLikeEngine(**kwargs)
+            except TypeError:
+                # Tolerate a leaner constructor signature.
+                self._bridge_engine = ClaudeLikeEngine(
+                    model=self.omega_llm_model,
+                    provider="openai",
+                    api_key=self.openai_key,
+                )
+        except Exception:
+            self._bridge_engine = None
+        return self._bridge_engine
+
+    def _bridge_llm(self, prompt: str) -> Optional[str]:
+        """Try the claude_engine bridge; return text or None on ANY issue."""
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            reply = bridge.chat(prompt)
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
+    def _llm(self, prompt: str) -> Optional[str]:
+        """Return LLM text or None on failure.
+
+        v29.3.0: routes through the optional claude_engine bridge first when
+        it is installed and OPENAI_API_KEY is set; ANY exception (or empty
+        reply) falls back to the stdlib urllib path below. Externally the
+        behavior is identical.
+        """
+        if not self.openai_key:
+            # v29.6.0: OpenRouter fallback also works without an OpenAI key.
+            return self._openrouter_chat(prompt)
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm(prompt)
+            if bridged:
+                return bridged
+            # Bridge failed -> fall through to the urllib path.
+        try:
+            body = json.dumps({
+                "model": OPENAI_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 512,
+            }).encode("
