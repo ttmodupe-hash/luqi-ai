@@ -1,186 +1,4 @@
-e 'import <path>'"))
-    if engine.serper_key:
-        rows.append(("Serper", "configured",
-                     "live web search ready - use 'research <query>'"))
-    else:
-        rows.append(("Serper", "missing", "set SERPER_API_KEY in .env"))
-    if engine.openai_key:
-        rows.append(("OpenAI", "configured",
-                     "LLM-enhanced tax guidance ready"))
-    else:
-        rows.append(("OpenAI", "missing", "set OPENAI_API_KEY in .env"))
-    if engine.openrouter_key:
-        rows.append(("OpenRouter", "configured",
-                     "model %s - use 'evolve run online'"
-                     % engine.openrouter_model))
-    else:
-        rows.append(("OpenRouter", "missing",
-                     "set OPENROUTER_API_KEY (+ OPENROUTER_MODEL) in .env"))
-    # v29.3.0: 6th row - optional claude_engine bridge (never a hard dep).
-    if BRIDGE_AVAILABLE and engine.openai_key:
-        rows.append(("claude_engine", "available",
-                     "bridge active - LLM calls route through it ('bridge')"))
-    elif BRIDGE_AVAILABLE:
-        rows.append(("claude_engine", "no key",
-                     "installed; set OPENAI_API_KEY to activate the bridge"))
-    else:
-        rows.append(("claude_engine", "not installed",
-                     "optional; clone repo + pip install -e . ('bridge')"))
-    lines = ["Integrations manifest (6 connectors):"]
-    lines.append("  %-13s %-13s %s" % ("connector", "status",
-                                       "how to enable / use"))
-    for name, status, hint in rows:
-        lines.append("  %-13s %-13s %s" % (name, status, hint))
-    return lines
-
-
-def bridge_lines(engine: OmegaMasterEngine) -> List[str]:
-    """v29.3.0 'bridge' command: claude_engine bridge status report."""
-    lines = ["claude_engine bridge status:"]
-    if BRIDGE_AVAILABLE:
-        lines.append("  module: AVAILABLE (claude_engine importable)")
-    else:
-        lines.append("  module: NOT INSTALLED (engine works fully without it)")
-        lines.append("  how to enable: clone the claude_engine repo and run "
-                     "'pip install -e .' inside it, then restart omega.py")
-    if engine.openai_key:
-        lines.append("  primary provider: openai / %s (key %s)"
-                     % (engine.omega_llm_model,
-                        mask_secret(engine.openai_key)))
-    else:
-        lines.append("  primary provider: inactive (set OPENAI_API_KEY in "
-                     ".env to activate)")
-    if engine.anthropic_key:
-        lines.append("  fallback provider: anthropic / %s (key %s)"
-                     % (CLAUDE_FALLBACK_MODEL,
-                        mask_secret(engine.anthropic_key)))
-    else:
-        lines.append("  fallback provider: none (set ANTHROPIC_API_KEY for "
-                     "the anthropic fallback)")
-    if engine._bridge_engine is not None:
-        stats_fn = getattr(engine._bridge_engine, "stats", None)
-        if callable(stats_fn):
-            try:
-                lines.append("  circuit-breaker stats: %s" % (stats_fn(),))
-            except Exception:
-                lines.append("  circuit-breaker stats: unavailable")
-        else:
-            lines.append("  circuit-breaker stats: engine has no stats()")
-    else:
-        lines.append("  engine instance: not instantiated (lazy - created on "
-                     "the first bridged LLM call)")
-    lines.append("  routing: _llm() uses the bridge when available; ANY "
-                 "exception falls back to the stdlib urllib path")
-    return lines
-
-
-# Router smoke list used by the selftest AND the 'launch' pre-flight check.
-CORE_SMOKE: List[Tuple[str, str]] = [
-    ("build and deploy sync", "Omega Infrastructure Build & Sync"),
-    ("crypto mining portfolio", "Omega Mining & Investment Engine"),
-    ("tax vat sars compliance", "Omega Tax & Audit Support"),
-    ("api key security status", "Omega Security Gatekeeper"),
-    ("deep research search", "Omega Deep Research"),
-    ("teach me companion explain", "Omega Companion/Tutor"),
-    ("business hustle opportunities", "Omega Opportunity Engine"),
-    ("finance budget scam debt", "Omega Finance Literacy"),
-    ("selfimprove evolve", "Omega Self-Improvement"),
-    ("evolution mutation engine", "Omega Evolution Engine"),
-]
-
-
-def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
-    """v29.3.0 'launch' command: GO/NO-GO pre-flight checklist.
-
-    Blockers are missing pillars / unwritable memory / selftest-core failure
-    ONLY. Optional integration keys are WARN, never blockers.
-    Returns (lines, blockers).
-    """
-    rows: List[Tuple[str, str, str]] = []
-    blockers: List[str] = []
-
-    # 1. Version current (informational; always matches the running build).
-    rows.append(("version", "OK", "v%s Launch-Grade" % ENGINE_VERSION))
-
-    # 2. Selftest core pass: router smoke over all 10 subsystems.
-    core_failures = []
-    for domain, expected in CORE_SMOKE:
-        try:
-            result = engine.execute_omega_subsystem(domain, {"query": domain})
-            if result.get("subsystem") != expected:
-                core_failures.append(domain)
-        except Exception:
-            core_failures.append(domain)
-    if core_failures:
-        rows.append(("selftest core", "FAIL",
-                     "router smoke failed for: " + ", ".join(core_failures)))
-        blockers.append("selftest core failure")
-    else:
-        rows.append(("selftest core", "OK",
-                     "router smoke: %d/%d subsystems" % (len(CORE_SMOKE),
-                                                         len(CORE_SMOKE))))
-
-    # 3. Pillars integrity.
-    pillars = engine.evolution.pillars_status()
-    rows.append(("pillars integrity", "OK" if pillars == "OK" else "FAIL",
-                 "sha256 verified" if pillars == "OK"
-                 else "tampered/missing - run 'evolve pillars'"))
-    if pillars != "OK":
-        blockers.append("pillars integrity")
-
-    # 4. Memory writable.
-    mem_ok = save_memory(engine.memory_path, engine.memory)
-    rows.append(("memory writable", "OK" if mem_ok else "FAIL",
-                 engine.memory_path if mem_ok
-                 else "cannot write " + engine.memory_path))
-    if not mem_ok:
-        blockers.append("memory not writable")
-
-    # 5. Strategy module present (auto-bootstraps; WARN if missing).
-    strategy_ok = os.path.isfile(STRATEGY_FILE)
-    rows.append(("strategy module", "OK" if strategy_ok else "WARN",
-                 STRATEGY_FILE if strategy_ok
-                 else "missing - auto-bootstraps on next evolution cycle"))
-
-    # 6. Per-integration key status (WARN, never blockers).
-    rows.append(("github key", "OK" if engine.github_repo else "WARN",
-                 "GITHUB_REPO configured" if engine.github_repo
-                 else "set GITHUB_REPO (+ GITHUB_TOKEN) in .env"))
-    rows.append(("serper key", "OK" if engine.serper_key else "WARN",
-                 "live search ready" if engine.serper_key
-                 else "set SERPER_API_KEY in .env"))
-    rows.append(("openai key", "OK" if engine.openai_key else "WARN",
-                 "LLM enhancement ready" if engine.openai_key
-                 else "set OPENAI_API_KEY in .env"))
-    rows.append(("openrouter key", "OK" if engine.openrouter_key else "WARN",
-                 "online evolution ready" if engine.openrouter_key
-                 else "set OPENROUTER_API_KEY in .env"))
-    bridge_ok = BRIDGE_AVAILABLE and bool(engine.openai_key)
-    if bridge_ok:
-        rows.append(("bridge", "OK", "claude_engine bridge active"))
-    elif BRIDGE_AVAILABLE:
-        rows.append(("bridge", "WARN", "installed; set OPENAI_API_KEY"))
-    else:
-        rows.append(("bridge", "WARN",
-                     "claude_engine not installed (optional)"))
-
-    # 7. Site version note (informational).
-    rows.append(("site version", "INFO",
-                 "badge v%s - publish via the platform publish button"
-                 % ENGINE_VERSION))
-
-    lines = ["Launch pre-flight checklist (%s):" % ENGINE_NAME]
-    lines.append("  %-18s %-6s %s" % ("check", "status", "detail"))
-    for name, status, detail in rows:
-        lines.append("  %-18s %-6s %s" % (name, status, detail))
-    if blockers:
-        lines.append("NOT READY: " + ", ".join(blockers))
-    else:
-        lines.append("LAUNCH READY")
-    return lines, blockers
-
-
-# ---------------------------------------------------------------------------
+-----------------
 # CLI presentation helpers
 # ---------------------------------------------------------------------------
 
@@ -230,11 +48,19 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("translate <code> <text>", "translate text into a language "
          "(needs OPENAI_API_KEY or bridge)"),
         ("cost", "pricing-disruption table (free engine, BYOK cents)"),
+        ("say <text>", "speak text via TTS (needs OPENAI_API_KEY)"),
+        ("voice [on|off]", "voice output status / classroom toggle"),
+        ("image <prompt>", "generate an image (needs OPENAI_API_KEY)"),
+        ("github info", "GitHub repo info via REST probe"),
+        ("remind <text> in Nm|h|d", "set a reminder (also: at HH:MM)"),
+        ("reminders", "list pending reminders"),
+        ("remind done <n>", "mark reminder #n done"),
+        ("remind clear", "clear all pending reminders"),
         ("selfimprove <note>", "log a self-improvement entry"),
         ("evolve [sub]", "evolution engine: run | run online | rollback | "
          "lineage | pillars | test <query>"),
         ("why", "the 6 LUQI AI differentiators"),
-        ("integrations", "6-connector live status manifest"),
+        ("integrations", "8-connector live status manifest"),
         ("bridge", "claude_engine bridge status (optional, never required)"),
         ("launch", "GO/NO-GO launch pre-flight checklist"),
         ("remember <fact>", "persist a fact to omega_memory.json"),
@@ -533,4 +359,260 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
         out(line)
 
     turns = 0
-    quiz_results: List[Tuple[int, int]] 
+    quiz_results: List[Tuple[int, int]] = []
+    leftover: Optional[str] = None
+    while True:
+        try:
+            if leftover is not None:
+                raw = leftover
+                leftover = None
+            else:
+                raw = input_fn("[CLASS:%s] > " % subject)
+        except EOFError:
+            out("")
+            out("(End of input - closing the classroom safely.)")
+            break
+        except KeyboardInterrupt:
+            out("")  # newline, then reprompt
+            continue
+        cmd = raw.strip().lower()
+        if not cmd:
+            continue
+
+        if cmd == "end class":
+            break
+        if cmd == "syllabus":
+            for line in syllabus_lines(engine, subject):
+                out(line)
+            continue
+        if cmd == "progress":
+            for line in progress_lines(engine):
+                out(line)
+            continue
+        if cmd == "quiz me":
+            graded: Optional[Tuple[int, int]] = None
+            if online:
+                graded = run_online_quiz(engine, subject, messages,
+                                         input_fn, out)
+                if graded is None:
+                    out("Live quiz unavailable - switching to offline "
+                        "self-check cards.")
+            if graded is None:
+                score, asked, leftover = run_offline_quiz(
+                    engine, subject, input_fn, out)
+                if asked:
+                    graded = (score, asked)
+            if graded is not None:
+                engine.record_quiz_score(subject, graded[0], graded[1])
+                out("Quiz score recorded: %d/%d." % graded)
+                quiz_results.append(graded)
+            continue
+        if cmd == "hint":
+            if online:
+                messages.append({"role": "user", "content": (
+                    "I am stuck. Re-explain the current point more "
+                    "simply and give me a hint, not the full answer.")})
+                messages = _cap_messages(messages)
+                reply = engine._llm_messages(messages)
+                if reply:
+                    reply = reply.strip()
+                    out(reply)
+                    messages.append({"role": "assistant",
+                                     "content": reply})
+                else:
+                    out("The professor is unreachable right now (LLM "
+                        "call failed) - no hint was generated.")
+                    for line in lesson_intro_lines(entry, subject):
+                        out(line)
+            else:
+                lesson_lines = lesson_intro_lines(entry, subject)
+                if len(lesson_lines) > 1:
+                    out("Hint: focus on this key point first - "
+                        + lesson_lines[1].strip(" -"))
+                else:
+                    out("Hint: re-read the lesson title and look up one "
+                        "example.")
+            continue
+        if cmd == "next":
+            if entry.get("current_lesson", 0) < len(syllabus) - 1:
+                entry["current_lesson"] = int(
+                    entry.get("current_lesson", 0)) + 1
+                for line in lesson_intro_lines(entry, subject):
+                    out(line)
+                if online:
+                    messages.append({"role": "user", "content": (
+                        "Let's move to the next lesson: %s."
+                        % syllabus[entry["current_lesson"]].get(
+                            "title", ""))})
+                    messages = _cap_messages(messages)
+                    reply = engine._llm_messages(messages)
+                    if reply:
+                        reply = reply.strip()
+                        out(reply)
+                        messages.append({"role": "assistant",
+                                         "content": reply})
+                    else:
+                        out("(Professor unreachable - showing the "
+                            "offline key points above.)")
+            else:
+                out("You are on the final lesson - try 'quiz me' or "
+                    "'end class'.")
+            continue
+
+        # Free text -> student turn.
+        turns += 1
+        if online:
+            messages.append({"role": "user", "content": raw.strip()})
+            messages = _cap_messages(messages)
+            reply = engine._llm_messages(messages)
+            if reply:
+                reply = reply.strip()
+                out(reply)
+                messages.append({"role": "assistant", "content": reply})
+            else:
+                out("The professor is unreachable right now (LLM call "
+                    "failed) - no reply was generated.")
+                out("You can still use: syllabus | next | quiz me | "
+                    "hint | progress | end class.")
+        else:
+            out("(Offline classroom: there is no live conversation "
+                "without OPENAI_API_KEY.)")
+            out("Review the current lesson key points:")
+            for line in lesson_intro_lines(entry, subject):
+                out(line)
+            out("Type 'next' to advance, 'quiz me' to self-check, or "
+                "'end class' to finish.")
+
+    # Session close: summary + persist progress (always, even on EOF).
+    entry["last_session"] = utc_now_iso()
+    save_memory(engine.memory_path, engine.memory)
+    out("-" * 60)
+    out("Class summary - %s" % subject)
+    out("  Turns this session: %d" % turns)
+    total_lessons = len(syllabus) or 10
+    out("  Lesson position: %d/%d"
+        % (min(int(entry.get("current_lesson", 0)) + 1, total_lessons),
+           total_lessons))
+    if quiz_results:
+        out("  Quiz scores this session: "
+            + ", ".join("%d/%d" % q for q in quiz_results))
+    else:
+        out("  Quiz scores this session: none")
+    out("Progress saved to your learner profile ('progress' to view).")
+    engine._audit("Classroom", "teach %s" % subject, "Success")
+    engine.add_history("assistant",
+                       "Taught a %s class (%d turns)." % (subject, turns))
+
+
+def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
+                        input_fn: Any = input, out: Any = print) -> None:
+    """Top-level 'quiz <subject>' command (online grading or self-check)."""
+    subject = normalize_subject(subject)
+    if not subject:
+        out("Usage: quiz <subject>   (inside a class, just say 'quiz me')")
+        return
+    graded: Optional[Tuple[int, int]] = None
+    if engine.openai_key:
+        graded = run_online_quiz(
+            engine, subject,
+            [{"role": "system", "content": PROFESSOR_PROMPT % subject}],
+            input_fn, out)
+        if graded is None:
+            out("Live quiz unavailable - switching to offline "
+                "self-check cards.")
+    if graded is None:
+        score, asked, leftover = run_offline_quiz(engine, subject,
+                                                  input_fn, out)
+        if leftover:
+            out("(Ignored outside a class: '%s')" % leftover)
+        if asked:
+            graded = (score, asked)
+    if graded is not None:
+        engine.record_quiz_score(subject, graded[0], graded[1])
+        out("Quiz score recorded: %d/%d. See 'progress'." % graded)
+
+
+# ---------------------------------------------------------------------------
+# REPL
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# v29.6.0: reminders (memory-based, zero keys, fully offline) + voice out
+# ---------------------------------------------------------------------------
+
+def _parse_remind_when(arg: str) -> Optional[datetime]:
+    """Parse 'in <N>m|h|d' or 'at HH:MM' into a due datetime (None if bad)."""
+    try:
+        text = (arg or "").strip().lower()
+        now = datetime.now()
+        match = re.fullmatch(r"in\s+(\d+)\s*([mhd])", text)
+        if match:
+            amount = int(match.group(1))
+            seconds = {"m": 60, "h": 3600, "d": 86400}[match.group(2)]
+            return now + timedelta(seconds=amount * seconds)
+        match = re.fullmatch(r"at\s+(\d{1,2}):(\d{2})", text)
+        if match:
+            hour, minute = int(match.group(1)), int(match.group(2))
+            if hour > 23 or minute > 59:
+                return None
+            due = now.replace(hour=hour, minute=minute,
+                              second=0, microsecond=0)
+            if due <= now:  # time already passed today -> tomorrow
+                due = due + timedelta(days=1)
+            return due
+        return None
+    except Exception:
+        return None
+
+
+def _due_reminders(engine: OmegaMasterEngine) -> List[str]:
+    """Texts of due-and-undone reminders; marks them done + saves memory.
+
+    Runs at REPL start and at the top of every command - never raises.
+    """
+    fired: List[str] = []
+    try:
+        reminders = engine.memory.setdefault("reminders", [])
+        now = datetime.now()
+        changed = False
+        for item in reminders:
+            try:
+                if item.get("done"):
+                    continue
+                due = datetime.strptime(str(item.get("due", "")),
+                                        "%Y-%m-%d %H:%M")
+                if due <= now:
+                    item["done"] = True
+                    changed = True
+                    fired.append(str(item.get("text", "")))
+            except Exception:
+                continue
+        if changed:
+            save_memory(engine.memory_path, engine.memory)
+    except Exception:
+        pass
+    return fired
+
+
+def _voice_out(engine: OmegaMasterEngine, base_out: Any) -> Any:
+    """Wrap a classroom out= callable: print, then speak when voice is on.
+
+    Windows: synthesize to omega_voice_last.mp3 (overwritten) and auto-play
+    it. Other platforms: one-time notice on the first line, then print-only.
+    Every failure degrades to print-only (never raises).
+    """
+    if not engine.memory.setdefault("voice_enabled", False):
+        return base_out
+    state = {"noticed": False}
+
+    def wrapped(line: Any = "") -> None:
+        text = str(line)
+        base_out(text)
+        try:
+            if sys.platform != "win32":
+                if not state["noticed"]:
+                    state["noticed"] = True
+                    base_out("(voice playback auto-plays on Windows; "
+                             "mp3 saved)")
+                return
+            data = e
