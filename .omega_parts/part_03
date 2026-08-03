@@ -1,49 +1,4 @@
-nown_command": "Dastoor-e nashenakhte - be master core ersal shod.",
-        "remembered": "Haghighat #%d zakhire shod: %s",
-        "forgot": "Haghighat #%d faramoosh shod: %s",
-    },
-    "id": {
-        "name": "Indonesian",
-        "region": "world",
-        "greeting": "Halo! Ketik 'help' untuk perintah. 'exit' untuk keluar.",
-        "goodbye": "Sampai jumpa.",
-        "help_header": "Perintah:",
-        "unknown_command": "Perintah tidak dikenali - diteruskan ke master core untuk dievaluasi.",
-        "remembered": "Fakta #%d diingat: %s",
-        "forgot": "Fakta #%d dilupakan: %s",
-    },
-    "ms": {
-        "name": "Malay",
-        "region": "world",
-        "greeting": "Halo! Taip 'help' untuk perintah. 'exit' untuk keluar.",
-        "goodbye": "Selamat tinggal.",
-        "help_header": "Perintah:",
-        "unknown_command": "Perintah tidak dikenali - dihantar ke master core untuk dinilai.",
-        "remembered": "Fakta #%d diingat: %s",
-        "forgot": "Fakta #%d dilupakan: %s",
-    },
-    "tl": {
-        "name": "Filipino",
-        "region": "world",
-        "greeting": "Kamusta! I-type ang 'help' para sa mga utos. 'exit' para umalis.",
-        "goodbye": "Paalam.",
-        "help_header": "Mga utos:",
-        "unknown_command": "Hindi kilalang utos - ipinadala sa master core para suriin.",
-        "remembered": "Katotohanan #%d naalala: %s",
-        "forgot": "Katotohanan #%d nakalimutan: %s",
-    },
-    "ro": {
-        "name": "Romanian",
-        "region": "world",
-        "greeting": "Buna! Scrie 'help' pentru comenzi. 'exit' pentru a iesi.",
-        "goodbye": "La revedere.",
-        "help_header": "Comenzi:",
-        "unknown_command": "Comanda necunoscuta - trimisa la master core pentru evaluare.",
-        "remembered": "Fapt #%d retinut: %s",
-        "forgot": "Fapt #%d uitat: %s",
-    },
-    "hu": {
-        "name": "Hungarian",
+ngarian",
         "region": "world",
         "greeting": "Szia! Ird be: 'help' a parancsokhoz. 'exit' a kilepeshez.",
         "goodbye": "Viszlat.",
@@ -185,6 +140,7 @@ def fresh_memory() -> Dict[str, Any]:
         "learning": {},
         "reminders": [],
         "voice_enabled": False,
+        "voice_scope": "prof",
         "documents": [],
     }
 
@@ -264,6 +220,8 @@ def load_memory(path: str) -> Dict[str, Any]:
         # v29.6.0: voice flag + reminders, validated entry by entry
         # (corrupt-safe; old memory files simply lack the keys).
         memory["voice_enabled"] = bool(data.get("voice_enabled", False))
+        scope = str(data.get("voice_scope", "prof") or "prof").lower()
+        memory["voice_scope"] = scope if scope in ("prof", "all") else "prof"
         reminders = data.get("reminders")
         if isinstance(reminders, list):
             clean_reminders: List[Dict[str, Any]] = []
@@ -697,4 +655,66 @@ BUILTIN_SYLLABI: Dict[str, List[Tuple[str, List[str]]]] = {
         ("Early Civilizations", [
             "Mesopotamia and Egypt.",
             "The Indus Valley.",
-            "Ear
+            "Early Chinese dynasties."]),
+        ("Classical Empires", [
+            "Greece and Rome.",
+            "The Mali Empire and its gold wealth.",
+            "Han China."]),
+        ("Religions and Ideas", [
+            "The major world religions.",
+            "Philosophical traditions East and West.",
+            "How ideas spread along trade routes."]),
+        ("The Medieval World", [
+            "Feudalism in Europe and Japan.",
+            "The Islamic golden age.",
+            "African kingdoms and Indian Ocean trade."]),
+        ("Exploration and Exchange", [
+            "The Columbian exchange.",
+            "Ocean trade networks.",
+            "Consequences for indigenous peoples."]),
+        ("Revolutions", [
+            "The American and French revolutions.",
+            "The Industrial Revolution.",
+            "Ideas of rights and citizenship."]),
+        ("The World Wars", [
+            "Causes and alliance systems.",
+            "Turning points of both wars.",
+            "Aftermath: the UN and a new order."]),
+        ("Decolonization and Civil Rights", [
+            "Independence movements in Africa and Asia.",
+            "Civil rights struggles worldwide.",
+            "Challenges facing new nations."]),
+        ("Capstone: The Modern World", [
+            "Globalization and interdependence.",
+            "Technology reshaping society.",
+            "Applying history's lessons today."]),
+    ],
+}
+
+
+def generic_scaffold(subject: str) -> List[Dict[str, Any]]:
+    """Generic 10-lesson mastery scaffold for an unknown subject."""
+    name = subject or "this subject"
+    titles_points = [
+        ("Foundations of %s" % name, [
+            "The core vocabulary of %s." % name,
+            "Why %s matters and who uses it." % name,
+            "How the field of %s is organized." % name]),
+        ("%s: Basic Principles" % name, [
+            "The three to five foundational ideas.",
+            "Simple worked examples.",
+            "Common beginner misconceptions."]),
+        ("Essential Skills in %s" % name, [
+            "The core techniques step by step.",
+            "Guided practice routines.",
+            "Self-check habits that catch errors early."]),
+        ("%s in the Real World" % name, [
+            "Everyday applications of %s." % name,
+            "Short case studies.",
+            "Careers and communities around %s." % name]),
+        ("Intermediate Concepts of %s" % name, [
+            "Deeper theory behind the basics.",
+            "Connecting ideas across topics.",
+            "Worked examples at medium difficulty."]),
+        ("Tools and Methods of %s" % name, [
+            "The st
