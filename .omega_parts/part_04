@@ -1,66 +1,4 @@
-ly Chinese dynasties."]),
-        ("Classical Empires", [
-            "Greece and Rome.",
-            "The Mali Empire and its gold wealth.",
-            "Han China."]),
-        ("Religions and Ideas", [
-            "The major world religions.",
-            "Philosophical traditions East and West.",
-            "How ideas spread along trade routes."]),
-        ("The Medieval World", [
-            "Feudalism in Europe and Japan.",
-            "The Islamic golden age.",
-            "African kingdoms and Indian Ocean trade."]),
-        ("Exploration and Exchange", [
-            "The Columbian exchange.",
-            "Ocean trade networks.",
-            "Consequences for indigenous peoples."]),
-        ("Revolutions", [
-            "The American and French revolutions.",
-            "The Industrial Revolution.",
-            "Ideas of rights and citizenship."]),
-        ("The World Wars", [
-            "Causes and alliance systems.",
-            "Turning points of both wars.",
-            "Aftermath: the UN and a new order."]),
-        ("Decolonization and Civil Rights", [
-            "Independence movements in Africa and Asia.",
-            "Civil rights struggles worldwide.",
-            "Challenges facing new nations."]),
-        ("Capstone: The Modern World", [
-            "Globalization and interdependence.",
-            "Technology reshaping society.",
-            "Applying history's lessons today."]),
-    ],
-}
-
-
-def generic_scaffold(subject: str) -> List[Dict[str, Any]]:
-    """Generic 10-lesson mastery scaffold for an unknown subject."""
-    name = subject or "this subject"
-    titles_points = [
-        ("Foundations of %s" % name, [
-            "The core vocabulary of %s." % name,
-            "Why %s matters and who uses it." % name,
-            "How the field of %s is organized." % name]),
-        ("%s: Basic Principles" % name, [
-            "The three to five foundational ideas.",
-            "Simple worked examples.",
-            "Common beginner misconceptions."]),
-        ("Essential Skills in %s" % name, [
-            "The core techniques step by step.",
-            "Guided practice routines.",
-            "Self-check habits that catch errors early."]),
-        ("%s in the Real World" % name, [
-            "Everyday applications of %s." % name,
-            "Short case studies.",
-            "Careers and communities around %s." % name]),
-        ("Intermediate Concepts of %s" % name, [
-            "Deeper theory behind the basics.",
-            "Connecting ideas across topics.",
-            "Worked examples at medium difficulty."]),
-        ("Tools and Methods of %s" % name, [
-            "The standard tools practitioners use.",
+andard tools practitioners use.",
             "How experts approach a problem.",
             "A hands-on mini-project."]),
         ("Advanced Topics in %s" % name, [
@@ -308,7 +246,7 @@ def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
 
 
 # ---------------------------------------------------------------------------
-# v29.7.0: document retrieval helpers (pure functions, no engine state)
+# v29.7.0/v29.8.0: document retrieval + web text helpers (pure functions)
 # ---------------------------------------------------------------------------
 
 def _tokenize(text: str) -> List[str]:
@@ -358,19 +296,58 @@ def _score_chunk(query_tokens: List[str], chunk: str) -> int:
     return score
 
 
+def _idf_scores(docs: List[Dict[str, Any]]) -> Dict[str, float]:
+    """Smoothed inverse-document-frequency over every stored chunk.
+
+    idf(t) = math.log(1.0 + (N + 1.0) / (df + 1.0)) where N is the total
+    chunk count and df the number of chunks containing t. Rare terms score
+    high, corpus-common terms sink. Never raises; empty corpus -> {}.
+    """
+    try:
+        chunk_texts: List[str] = []
+        for doc in docs or []:
+            try:
+                if not isinstance(doc, dict):
+                    continue
+                chunks = doc.get("chunks") or []
+                if not isinstance(chunks, list):
+                    continue
+                for chunk in chunks:
+                    if isinstance(chunk, str) and chunk:
+                        chunk_texts.append(chunk)
+            except Exception:
+                continue
+        total = len(chunk_texts)
+        if not total:
+            return {}
+        df: Dict[str, int] = {}
+        for chunk in chunk_texts:
+            for tok in set(_tokenize(chunk)):
+                df[tok] = df.get(tok, 0) + 1
+        return {tok: math.log(1.0 + (total + 1.0) / (count + 1.0))
+                for tok, count in df.items()}
+    except Exception:
+        return {}
+
+
 def search_documents(query: str, docs: List[Dict[str, Any]],
                      top_k: int = DOC_TOP_K
-                     ) -> List[Tuple[int, str, int, str]]:
-    """Rank document chunks by token overlap. Never raises.
+                     ) -> List[Tuple[float, str, int, str]]:
+    """Rank document chunks by IDF-weighted token overlap. Never raises.
 
+    v29.8.0: each unique query token contributes idf(t) * log(1 + tf)
+    in the chunk, with idf from _idf_scores(docs) - rare decisive terms
+    outrank repeated common ones (sublinear term-frequency stops a chunk
+    repeating a corpus-common word from beating the rare-term chunk).
     Returns (score, doc_name, chunk_index, chunk_text) with score > 0,
     best first, ties broken toward shorter chunks, truncated to top_k.
     """
-    hits: List[Tuple[int, str, int, str]] = []
+    hits: List[Tuple[float, str, int, str]] = []
     try:
         query_tokens = _tokenize(query)
         if not query_tokens or not isinstance(docs, list):
             return hits
+        idf = _idf_scores(docs)
         for doc in docs:
             try:
                 if not isinstance(doc, dict):
@@ -382,7 +359,11 @@ def search_documents(query: str, docs: List[Dict[str, Any]],
                 for idx, chunk in enumerate(chunks):
                     if not isinstance(chunk, str):
                         continue
-                    score = _score_chunk(query_tokens, chunk)
+                    chunk_tokens = _tokenize(chunk)
+                    score = 0.0
+                    for tok in set(query_tokens):
+                        score += (idf.get(tok, 0.0)
+                                  * math.log(1.0 + chunk_tokens.count(tok)))
                     if score > 0:
                         hits.append((score, name, idx, chunk))
             except Exception:
@@ -391,6 +372,55 @@ def search_documents(query: str, docs: List[Dict[str, Any]],
         return hits[:max(0, int(top_k))]
     except Exception:
         return []
+
+
+class _TextExtractor(HTMLParser):
+    """Collect visible page text; skip script/style/noscript/head."""
+
+    _SKIP_TAGS = {"script", "style", "noscript", "head"}
+    _BLOCK_TAGS = {"p", "div", "br", "li", "tr", "table", "section",
+                   "article", "header", "footer", "h1", "h2", "h3",
+                   "h4", "h5", "h6"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._skip = 0
+        self.parts: List[str] = []
+
+    def handle_starttag(self, tag: str, attrs: Any) -> None:
+        if tag in self._SKIP_TAGS:
+            self._skip += 1
+        elif tag in self._BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._SKIP_TAGS and self._skip:
+            self._skip -= 1
+        elif tag in self._BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip and data:
+            self.parts.append(data)
+
+
+def _html_to_text(html_text: str) -> str:
+    """HTML -> plain text. Entities unescaped, whitespace normalized.
+
+    Block tags become newlines, runs of spaces collapse, more than two
+    consecutive blank lines become one. Never raises; "" on bad input.
+    """
+    try:
+        extractor = _TextExtractor()
+        extractor.feed(html_text or "")
+        extractor.close()
+        raw = "".join(extractor.parts)
+        raw = re.sub(r"[ \t\r\f\v]+", " ", raw)
+        raw = re.sub(r" *\n *", "\n", raw)
+        raw = re.sub(r"\n{3,}", "\n\n", raw)
+        return raw.strip()
+    except Exception:
+        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -677,4 +707,10 @@ class OmegaMasterEngine:
                 "model": OPENAI_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 512,
-            }).encode("
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                  
