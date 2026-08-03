@@ -210,9 +210,9 @@ OPENROUTER_DEFAULT_MODEL = "openai/gpt-4o-mini"
 # module-level constant used for tamper restoration.
 CANONICAL_PILLARS: Dict[str, str] = {
     "p1_build_sync": "Omega AI Build & Sync (Continuous Mesh Matrix)",
-    "p2_status": "Omega AI\\u5df2\\u5efa\\u6210 (System Baseline Operational Verification)",
+    "p2_status": "Omega AIu5df2u5efau6210 (System Baseline Operational Verification)",
     "p3_mining": "Omega AI Mining & Investment (Quantitative Yield Automation)",
-    "p4_tax": "Omega AI\\u7a0e\\u52a1\\u652f\\u6301 (Automated Transaction Ledger Tracking)",
+    "p4_tax": "Omega AIu7a0eu52a1u652fu6301 (Automated Transaction Ledger Tracking)",
     "p5_security": "API Key Status (Multi-Tenant Cryptographic Gateway)",
 }
 
@@ -327,8 +327,8 @@ _EVO_ALLOWED_NODES = (
 
 # Non-ASCII trigger keywords kept ASCII-safe via unicode escapes:
 #   "yi jian cheng" (built/deployed) and "shui wu" (tax affairs).
-KW_BUILT_ZH = "\\u5df2\\u5efa\\u6210"  # "yi jian cheng" (built/deployed)
-KW_TAX_ZH = "\\u7a0e\\u52a1"  # "shui wu" (tax affairs)
+KW_BUILT_ZH = "u5df2u5efau6210"  # "yi jian cheng" (built/deployed)
+KW_TAX_ZH = "u7a0eu52a1"  # "shui wu" (tax affairs)
 
 AFRICAN_LANGUAGES = [
     ("isiZulu", "South Africa"),
