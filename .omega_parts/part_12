@@ -1,4 +1,58 @@
-ix_ceiling = False
+))
+    except Exception as exc:
+        checks.append(("evolve test: (exception: %s)" % exc, False))
+
+    # 'evolve' status + lineage + pillars commands render without crashing.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            handle_command(engine, "evolve")
+            handle_command(engine, "evolve lineage")
+            handle_command(engine, "evolve pillars")
+        out = buf.getvalue()
+        checks.append(("evolve: status/lineage/pillars render",
+                       "current generation:" in out
+                       and "pillars integrity:" in out
+                       and "p5_security" in out))
+    except Exception as exc:
+        checks.append(("evolve: status render (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
+    # ------------------------------------------------------------------
+
+    # (a) Infinite-loop candidate -> rejected via timeout; the child process
+    # is terminated and NO live child processes remain afterwards.
+    infinite_loop = (
+        "def execute_logic(query, telemetry):\n"
+        "    while True:\n"
+        "        pass\n"
+    )
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
+        checks.append(("evolve: process isolation rejects infinite loop",
+                       not ok and "timeout" in reason.lower()))
+    except Exception as exc:
+        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
+    try:
+        checks.append(("evolve: no live child processes after timeout kill",
+                       sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
+
+    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
+    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
+    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
+    memory_bomb = (
+        "def execute_logic(query, telemetry):\n"
+        "    data = list(range(10**8))\n"
+        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
+    )
+    try:
+        import resource as _resource_probe  # noqa: F401
+        _posix_ceiling = True
+    except Exception:
+        _posix_ceiling = False
     if _posix_ceiling:
         try:
             ok, reason, _pr, _lat = evo.exec_contract_gate(memory_bomb)
@@ -495,13 +549,13 @@ ix_ceiling = False
     except Exception as exc:
         checks.append(("voice: flag roundtrip (exception: %s)" % exc, False))
 
-    # Launch pre-flight rows include the v29.6.0 connectors + 14/14 smoke.
+    # Launch pre-flight rows include the v29.6.0 connectors + 16/16 smoke.
     try:
         launch_out, _launch_blockers = launch_lines(offline_engine)
         text = "\n".join(launch_out)
-        checks.append(("launch: voice tts + image gen rows + 14/14 smoke",
+        checks.append(("launch: voice tts + image gen rows + 16/16 smoke",
                        "voice tts" in text and "image gen" in text
-                       and "router smoke: 14/14 subsystems" in text))
+                       and "router smoke: 16/16 subsystems" in text))
     except Exception as exc:
         checks.append(("launch: v29.6 rows (exception: %s)" % exc, False))
 
