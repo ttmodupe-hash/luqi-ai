@@ -2,7 +2,7 @@
 """
 LUQI AI v29.4.0 - Unified Master Engine (omega.py)
 
-Single-file, stdlib-only CLI engine unifying 10 subsystems behind the
+Single-file, stdlib-only CLI engine unifying 14 subsystems behind the
 user's original OmegaMasterEngine router pattern.
 
 v29.0.0 additions (SPEC_v29.md):
@@ -97,6 +97,11 @@ v29.5.0 "The Professor":
   table). Learner profiles persist in omega_memory.json['learning']
   (20-subject cap, oldest evicted with notice).
 
+v29.6.0 "The Sovereign Voice":
+- Voice (TTS 'say'/'voice'), image generation ('image'), GitHub REST
+  probe ('github info' + cached launch row), OpenRouter LLM fallback,
+  and offline reminders ('remind'/'reminders') - all key-guarded.
+
 - Python 3.11, standard library only, ASCII-only source.
 - Boots with no .env, no network, no third-party packages.
 - Windows/macOS/Linux compatible:  py -3.11 omega.py
@@ -107,6 +112,7 @@ v29.5.0 "The Professor":
 """
 
 import ast
+import base64
 import builtins
 import contextlib
 import csv
@@ -126,14 +132,14 @@ import urllib.error
 import urllib.request
 import zipfile
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.5.0"
+ENGINE_VERSION = "29.6.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
@@ -145,6 +151,17 @@ HTTP_TIMEOUT = 15  # seconds, per spec
 SERPER_URL = "https://google.serper.dev/search"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = "gpt-4o-mini"
+# v29.6.0: voice (TTS) + image generation ride the existing OPENAI_API_KEY.
+OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech"
+OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations"
+TTS_MODEL = "tts-1"
+TTS_VOICE_DEFAULT = "alloy"
+TTS_MAX_CHARS = 500
+IMAGE_MODEL = "dall-e-3"
+IMAGE_SIZE = "1024x1024"
+# v29.6.0: GitHub REST probe (closes the launch WARN for github sync).
+GITHUB_API_BASE = "https://api.github.com"
+GITHUB_API_TIMEOUT = 8
 
 # v29.5.0 "The Professor": conversational tutor classroom constants.
 MAX_TEACH_MESSAGES = 40     # rolling session context cap (incl. system msg)
@@ -193,7 +210,7 @@ OPENROUTER_DEFAULT_MODEL = "openai/gpt-4o-mini"
 # module-level constant used for tamper restoration.
 CANONICAL_PILLARS: Dict[str, str] = {
     "p1_build_sync": "Omega AI Build & Sync (Continuous Mesh Matrix)",
-    "p2_status": "Omega AI\u5df2\u5efa\u6210 (System Baseline Operational Verification)",
+    "p2_status": "Omega AI已建\u6210 (System Baseline Operational Verification)",
     "p3_mining": "Omega AI Mining & Investment (Quantitative Yield Automation)",
     "p4_tax": "Omega AI\u7a0e\u52a1\u652f\u6301 (Automated Transaction Ledger Tracking)",
     "p5_security": "API Key Status (Multi-Tenant Cryptographic Gateway)",
@@ -310,8 +327,8 @@ _EVO_ALLOWED_NODES = (
 
 # Non-ASCII trigger keywords kept ASCII-safe via unicode escapes:
 #   "yi jian cheng" (built/deployed) and "shui wu" (tax affairs).
-KW_BUILT_ZH = "\u5df2\u5efa\u6210"  # "yi jian cheng" (built/deployed)
-KW_TAX_ZH = "\u7a0e\u52a1"  # "shui wu" (tax affairs)
+KW_BUILT_ZH = "已建成"  # "yi jian cheng" (built/deployed)
+KW_TAX_ZH = "税务"  # "shui wu" (tax affairs)
 
 AFRICAN_LANGUAGES = [
     ("isiZulu", "South Africa"),
@@ -500,4 +517,46 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
         "unknown_command": ("Ase ti a ko mo - a ti ran si master core fun "
                             "ayewo."),
         "remembered": "Otito #%d ti se akosile: %s",
-        "forgot": "Otito #%d t
+        "forgot": "Otito #%d ti gbagbe: %s",
+    },
+    "ha": {
+        "name": "Hausa",
+        "region": "african",
+        "greeting": "Sannu! Rubuta 'help' don ganin umarni. 'exit' don fita.",
+        "goodbye": "OMEGA ta rufe. Sai anjima, kasance da 'yanci.",
+        "help_header": "Umarni:",
+        "unknown_command": ("Umarin da ba a sani ba - an tura shi zuwa "
+                            "master core don bincike."),
+        "remembered": "Gaskiya #%d an adana: %s",
+        "forgot": "Gaskiya #%d an manta: %s",
+    },
+    # v29.4.0: 55 new African packs (SPEC_v294.md section 2).
+    "sn": {
+        "name": "Shona",
+        "region": "african",
+        "greeting": "Mhoro! Taipa 'help' kuona mirairo. 'exit' kubuda.",
+        "goodbye": "Sara zvakanaka.",
+        "help_header": "Mirairo:",
+        "unknown_command": "Murairo usingazivikanwi - utumirwe ku-master core kuti uongororwe.",
+        "remembered": "Chokwadi #%d chayecharangarirwa: %s",
+        "forgot": "Chokwadi #%d chakanganiswa: %s",
+    },
+    "nd": {
+        "name": "isiNdebele (Zimbabwe)",
+        "region": "african",
+        "greeting": "Salibonani! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
+        "goodbye": "Sala kuhle.",
+        "help_header": "Imiyalo:",
+        "unknown_command": "Umyalo ongaziwa - uthunyiwe ku-master core ukuhlolwa.",
+        "remembered": "Iqiniso #%d likhunjulwe: %s",
+        "forgot": "Iqiniso #%d likhohliwe: %s",
+    },
+    "rw": {
+        "name": "Kinyarwanda",
+        "region": "african",
+        "greeting": "Muraho! Andika 'help' kureba amabwiriza. 'exit' gusohoka.",
+        "goodbye": "Murabeho.",
+        "help_header": "Amabwiriza:",
+        "unknown_command": "Itegeko ridazwi - ryoherejwe ku-master core gusuzumwa.",
+        "remembered": "Ukuri #%d kwibutswe: %s",
+        "forgot": "Ukuri #%d kwibagiwe: %s",
