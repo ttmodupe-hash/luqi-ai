@@ -661,4 +661,4 @@
 
     def forget_fact(self, index: int) -> Optional[str]:
         """Delete fact #index (1-based). Returns the removed fact or None."""
-lf.memory.setdefault
+        facts = self.memory.setdefault
