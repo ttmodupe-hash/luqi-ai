@@ -1,30 +1,4 @@
-    ok = save_memory(mem_path, loaded) and ok
-            reloaded = load_memory(mem_path)
-            ok = ok and reloaded.get("facts") == ["beta fact"]
-            checks.append(("memory: remember/recall/forget roundtrip", ok))
 
-            with open(mem_path, "w", encoding="ascii") as handle:
-                handle.write("{corrupt json !!!")
-            recovered = load_memory(mem_path)
-            ok = (recovered.get("facts") == []
-                  and os.path.isfile(mem_path + ".bak"))
-            checks.append(("memory: corrupt JSON -> .bak + fresh start", ok))
-    except Exception as exc:
-        checks.append(("memory: roundtrip (exception: %s)" % exc, False))
-
-    # Module C: generated CSV import + analyze + query.
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            csv_path = os.path.join(tmpdir, "sales.csv")
-            with open(csv_path, "w", encoding="ascii", newline="") as handle:
-                handle.write("name,region,amount\n"
-                             "alpha,north,10\n"
-                             "beta,south,20\n"
-                             "gamma,north,30\n"
-                             "delta,east,40\n"
-                             "epsilon,north,50\n")
-            ok, _msg = engine.import_dataset(csv_path)
-            ok = (ok and engine.dataset is not None
                   and len(engine.dataset["rows"]) == 5
                   and len(engine.dataset["headers"]) == 3)
             checks.append(("import: generated CSV (3 cols x 5 rows)", ok))
@@ -177,6 +151,71 @@
     except Exception as exc:
         checks.append(("docs: eviction (exception: %s)" % exc, False))
 
+    # v29.8.0: IDF ranking - rare beats repeated-common (log(1+tf) scoring).
+    try:
+        idf_docs = [
+            {"name": "common.txt", "chunks": ["panel panel panel panel",
+                                              "panel and panel again",
+                                              "still more panel here"]},
+            {"name": "rare.txt", "chunks": ["quantum entanglement panel"]},
+        ]
+        hits = search_documents("quantum panel", idf_docs)
+        idf = _idf_scores(idf_docs)
+        checks.append(("idf: rare term outranks repeated common term",
+                       bool(hits) and hits[0][1] == "rare.txt"))
+        checks.append(("idf: float scores, zero-overlap -> []",
+                       bool(hits) and isinstance(hits[0][0], float)
+                       and hits[0][0] > 0
+                       and search_documents("zzqzxv", idf_docs) == []))
+        checks.append(("idf: _idf_scores empty -> {}, df up => idf down",
+                       _idf_scores([]) == {}
+                       and idf.get("quantum", 0.0) > idf.get("panel", 1.0)))
+    except Exception as exc:
+        checks.append(("idf: (exception: %s)" % exc, False))
+
+    # v29.8.0: HTML-to-text extraction (pure, offline).
+    try:
+        sample = ("<html><head><style>body{color:red}</style></head>"
+                  "<body><h1>Title</h1><p>Tom &amp; Jerry</p>"
+                  "<script>var q = 1;</script><p>Second para</p>"
+                  "</body></html>")
+        text = _html_to_text(sample)
+        checks.append(("web: html_to_text strips script/style, unescapes",
+                       "Tom & Jerry" in text and "Second para" in text
+                       and "var q" not in text
+                       and "color:red" not in text
+                       and _html_to_text("") == ""))
+    except Exception as exc:
+        checks.append(("web: html_to_text (exception: %s)" % exc, False))
+
+    # v29.8.0: import_url failure paths (offline-safe, no external net).
+    try:
+        ok_s, msg_s = engine.import_url("ftp://example.com/x")
+        ok_r, msg_r = engine.import_url("http://127.0.0.1:1/x")
+        checks.append(("web: import_url refuses bad scheme",
+                       (not ok_s) and "unsupported scheme" in msg_s))
+        checks.append(("web: import_url fetch failure is graceful",
+                       (not ok_r) and "fetch failed" in msg_r))
+    except Exception as exc:
+        checks.append(("web: import_url (exception: %s)" % exc, False))
+
+    # v29.8.0: voice scope memory + routing helpers.
+    try:
+        checks.append(("voice scope: fresh_memory defaults to prof",
+                       fresh_memory().get("voice_scope") == "prof"))
+        engine.memory["voice_enabled"] = True
+        try:
+            scoped = _voice_out(engine, lambda _line: None)
+            seen: List[str] = []
+            _professor_out(seen.append, "prof line")
+            checks.append(("voice scope: .speak exposed; fallback prints",
+                           callable(getattr(scoped, "speak", None))
+                           and seen == ["prof line"]))
+        finally:
+            engine.memory["voice_enabled"] = False
+    except Exception as exc:
+        checks.append(("voice scope: (exception: %s)" % exc, False))
+
     # v29.7.0: documents schema survives save/load; corrupt entries skipped.
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -312,12 +351,12 @@
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.7.0 + 15 subsystems + session/facts",
-                       bool(keep) and "29.7.0" in out
+        checks.append(("version: shows 29.8.0 + 15 subsystems + session/facts",
+                       bool(keep) and "29.8.0" in out
                        and "Subsystems: 15" in out
                        and "Session: #" in out and "Facts:" in out))
-        checks.append(("version: ENGINE_VERSION is 29.7.0",
-                       ENGINE_VERSION == "29.7.0"))
+        checks.append(("version: ENGINE_VERSION is 29.8.0",
+                       ENGINE_VERSION == "29.8.0"))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
 
@@ -558,22 +597,4 @@
             keep1 = handle_command(engine, "why")
             keep2 = handle_command(engine, "integrations")
         out = buf.getvalue()
-        checks.append(("why: 6 differentiators printed",
-                       bool(keep1) and out.count("proof:") >= 6))
-        checks.append(("integrations: 8-connector manifest printed",
-                       bool(keep2) and all(name in out for name in (
-                           "GitHub", "Excel/CSV", "Serper", "OpenAI",
-                           "OpenRouter", "claude_engine",
-                           "voice tts", "image gen"))))
-    except Exception as exc:
-        checks.append(("why/integrations: (exception: %s)" % exc, False))
-
-    # 'evolve test <query>' executes the live strategy and scores telemetry.
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            keep = handle_command(engine, "evolve test check mining health")
-        out = buf.getvalue()
-        checks.append(("evolve test: strategy executes + telemetry scored",
-                       bool(keep) and "<omega_analysis>" in out
-                       and "health:" in out
+        checks.append(("why: 6 dif
