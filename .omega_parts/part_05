@@ -1,168 +1,4 @@
- "b":
-                        value = "TRUE" if v_text == "1" else "FALSE"
-                    else:
-                        value = v_text
-            cells[col_idx] = value
-            next_col = col_idx + 1
-        if cells:
-            width = max(cells.keys()) + 1
-            table.append([cells.get(i, "") for i in range(width)])
-    if not table:
-        return [], []
-    headers = [str(h).strip() or "col_%d" % (i + 1)
-               for i, h in enumerate(table[0])]
-    width = len(headers)
-    data = []
-    for row in table[1:]:
-        padded = (row + [""] * width)[:width]
-        if any(str(cell).strip() for cell in padded):
-            data.append([str(cell) for cell in padded])
-    return headers, data
-
-
-# ---------------------------------------------------------------------------
-# OmegaMasterEngine
-# ---------------------------------------------------------------------------
-
-class OmegaMasterEngine:
-    """Unified master engine preserving the user's original router backbone."""
-
-    def __init__(self) -> None:
-        # Preserved verbatim from the user's blueprint.
-        self.system_state = {
-            "build_sync_status": "Deployed & Synced",
-            "mining_investment_active": True,
-            "tax_compliance_region": "Global/US-Compliant",
-            "api_key_status": "Verified & Secure",
-        }
-        self.env = parse_env_file()
-        self.openai_key = self.env.get("OPENAI_API_KEY") or os.environ.get(
-            "OPENAI_API_KEY", ""
-        )
-        self.serper_key = self.env.get("SERPER_API_KEY") or os.environ.get(
-            "SERPER_API_KEY", ""
-        )
-        self.session_log: List[Dict[str, Any]] = []
-        # v29: GitHub sync configuration (token never printed in full).
-        self.github_repo = self.env.get("GITHUB_REPO") or os.environ.get(
-            "GITHUB_REPO", ""
-        )
-        self.github_token = self.env.get("GITHUB_TOKEN") or os.environ.get(
-            "GITHUB_TOKEN", ""
-        )
-        # v29 Module A: persistent memory (load, count session, save).
-        self.memory_path = resolve_memory_path()
-        self.memory = load_memory(self.memory_path)
-        self.memory["sessions"] = int(self.memory.get("sessions", 0)) + 1
-        # v29.1.0: restore persisted UI language (defaults to English).
-        self.lang = str(self.memory.get("lang") or DEFAULT_LANG)
-        if self.lang not in LANG_PACKS:
-            self.lang = DEFAULT_LANG
-        self.memory["lang"] = self.lang
-        save_memory(self.memory_path, self.memory)
-        # v29 Module C: currently loaded dataset (restored from memory).
-        self.dataset: Optional[Dict[str, Any]] = None
-        self._restore_last_import()
-        # v29.2.0: OpenRouter config for the optional online evolution mode.
-        self.openrouter_key = self.env.get("OPENROUTER_API_KEY") or os.environ.get(
-            "OPENROUTER_API_KEY", ""
-        )
-        self.openrouter_model = (
-            self.env.get("OPENROUTER_MODEL")
-            or os.environ.get("OPENROUTER_MODEL", "")
-        ).strip() or OPENROUTER_DEFAULT_MODEL
-        # v29.3.0: optional claude_engine bridge config. The engine itself is
-        # created lazily on the first LLM call (never at boot).
-        self.anthropic_key = self.env.get("ANTHROPIC_API_KEY") or os.environ.get(
-            "ANTHROPIC_API_KEY", ""
-        )
-        self.omega_llm_model = (
-            self.env.get("OMEGA_LLM_MODEL")
-            or os.environ.get("OMEGA_LLM_MODEL", "")
-        ).strip() or OPENAI_MODEL
-        self._bridge_engine: Any = None
-        self._bridge_attempted = False
-        # v29.2.0: Subsystem #10 - Evolution Engine. Boot verifies/restores
-        # omega_pillars.json (sha256 tamper detection) and bootstraps
-        # omega_strategy_gen.py + omega_evolution.json when missing.
-        self.evolution = EvolutionEngine(self)
-
-    # ------------------------------------------------------------------
-    # Availability matrix
-    # ------------------------------------------------------------------
-
-    def availability_matrix(self) -> List[Dict[str, str]]:
-        """Return per-subsystem availability (Available / Degraded + reason)."""
-        rows = [
-            ("Build & Sync", "Available", "local integrity checks"),
-            ("Mining & Investment", "Available", "local strategy snapshot"),
-            (
-                "Tax Support",
-                "Available" if self.openai_key else "Degraded",
-                "LLM-enhanced" if self.openai_key else "offline guidance (no OPENAI_API_KEY)",
-            ),
-            ("API & Security", "Available", "local gatekeeper checks"),
-            (
-                "Deep Research",
-                "Available" if self.serper_key else "Degraded",
-                "Serper live search" if self.serper_key else "offline research plan (no SERPER_API_KEY)",
-            ),
-            ("Companion/Tutor", "Available", "local study scaffolds"),
-            ("Opportunity Engine", "Available", "local scan framework"),
-            ("Finance Literacy", "Available", "local literacy guidance"),
-            ("Self-Improvement", "Available", "local audit log"),
-            (
-                "Evolution Engine",
-                "Available",
-                "sandboxed self-evolution, pillars enforced",
-            ),
-        ]
-        return [
-            {"subsystem": name, "status": status, "detail": detail}
-            for name, status, detail in rows
-        ]
-
-    # ------------------------------------------------------------------
-    # Audit logging (all file I/O guarded)
-    # ------------------------------------------------------------------
-
-    def _audit(self, subsystem: str, input_summary: str, status: str,
-               entry_type: str = "audit") -> Dict[str, Any]:
-        entry = {
-            "ts": utc_now_iso(),
-            "type": entry_type,
-            "subsystem": subsystem,
-            "input_summary": str(input_summary)[:200],
-            "status": status,
-        }
-        self.session_log.append(entry)
-        try:
-            with open(LOG_FILE, "a", encoding="utf-8") as handle:
-                handle.write(json.dumps(entry, ensure_ascii=True) + "\n")
-        except Exception:
-            pass  # logging must never crash the engine
-        return entry
-
-    def read_log_tail(self, count: int = 10) -> List[Dict[str, Any]]:
-        """Read the last `count` audit entries from omega_log.jsonl."""
-        entries: List[Dict[str, Any]] = []
-        try:
-            if not os.path.isfile(LOG_FILE):
-                return self.session_log[-count:]
-            with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as handle:
-                for line in handle:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        entries.append(json.loads(line))
-                    except Exception:
-                        continue
-        except Exception:
-            return self.session_log[-count:]
-        return entries[-count:]
-
-    # ------------------------------------------------------------------
+-----------------------
     # Guarded online capabilities (stdlib urllib, 15s timeout)
     # ------------------------------------------------------------------
 
@@ -258,7 +94,8 @@ class OmegaMasterEngine:
         behavior is identical.
         """
         if not self.openai_key:
-            return None
+            # v29.6.0: OpenRouter fallback also works without an OpenAI key.
+            return self._openrouter_chat(prompt)
         if BRIDGE_AVAILABLE:
             bridged = self._bridge_llm(prompt)
             if bridged:
@@ -283,12 +120,16 @@ class OmegaMasterEngine:
                 data = json.loads(resp.read().decode("utf-8", errors="replace"))
             choices = data.get("choices") or []
             if not choices:
-                return None
+                return self._openrouter_chat(prompt)
             message = choices[0].get("message") or {}
             content = message.get("content")
-            return str(content) if content else None
+            if content:
+                return str(content)
+            # v29.6.0: empty OpenAI reply -> OpenRouter fallback.
+            return self._openrouter_chat(prompt)
         except Exception:
-            return None
+            # v29.6.0: OpenRouter is the final fallback before None.
+            return self._openrouter_chat(prompt)
 
     # ------------------------------------------------------------------
     # v29.5.0: multi-turn chat (messages lists) for the Professor classroom
@@ -338,8 +179,6 @@ class OmegaMasterEngine:
         None without a key or on ANY failure - callers must fall back
         gracefully and never fake a reply.
         """
-        if not self.openai_key:
-            return None
         clean = []
         for msg in messages:
             role = str(msg.get("role", "user"))
@@ -349,6 +188,15 @@ class OmegaMasterEngine:
                           "content": str(msg.get("content", ""))})
         if not clean:
             return None
+        # v29.6.0: OpenRouter fallback prompt (last user message, else last).
+        fallback_prompt = clean[-1]["content"]
+        for msg in reversed(clean):
+            if msg["role"] == "user":
+                fallback_prompt = msg["content"]
+                break
+        if not self.openai_key:
+            # v29.6.0: OpenRouter fallback also works without an OpenAI key.
+            return self._openrouter_chat(fallback_prompt)
         if BRIDGE_AVAILABLE:
             bridged = self._bridge_llm_messages(clean)
             if bridged:
@@ -373,10 +221,157 @@ class OmegaMasterEngine:
                 data = json.loads(resp.read().decode("utf-8", errors="replace"))
             choices = data.get("choices") or []
             if not choices:
-                return None
+                return self._openrouter_chat(fallback_prompt)
             message = choices[0].get("message") or {}
             content = message.get("content")
-            return str(content) if content else None
+            if content:
+                return str(content)
+            # v29.6.0: empty OpenAI reply -> OpenRouter fallback.
+            return self._openrouter_chat(fallback_prompt)
+        except Exception:
+            # v29.6.0: OpenRouter is the final fallback before None.
+            return self._openrouter_chat(fallback_prompt)
+
+    # ------------------------------------------------------------------
+    # v29.6.0: voice (TTS) + image connectors (guarded, stdlib urllib)
+    # ------------------------------------------------------------------
+
+    def _tts_speech(self, text: str,
+                    voice: Optional[str] = None) -> Optional[bytes]:
+        """POST text to OpenAI speech; return mp3 bytes or None on failure."""
+        if not self.openai_key:
+            return None
+        try:
+            body = json.dumps({
+                "model": TTS_MODEL,
+                "voice": voice or self.tts_voice,
+                "input": (text or "")[:TTS_MAX_CHARS],
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_SPEECH_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                return resp.read()
+        except Exception:
+            return None
+
+    def _save_speech(self, data: bytes, hint: str) -> Tuple[bool, str]:
+        """Write omega_speech_<slug>_<UTCts>.mp3 (guarded I/O)."""
+        if not data:
+            return False, "no audio data"
+        try:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_speech_%s_%s.mp3" % (_slugify(hint), stamp)
+            with open(filename, "wb") as handle:
+                handle.write(data)
+            return True, "Speech saved: %s" % filename
+        except Exception as exc:
+            return False, "Speech save failed safely: %s" % exc
+
+    def _image_generate(self, prompt: str) -> Optional[bytes]:
+        """POST prompt to OpenAI images; return png bytes or None on failure."""
+        if not self.openai_key:
+            return None
+        try:
+            body = json.dumps({
+                "model": self.image_model,
+                "prompt": (prompt or "")[:1000],
+                "n": 1,
+                "size": IMAGE_SIZE,
+                "response_format": "b64_json",
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_IMAGES_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            items = data.get("data") or []
+            if not items:
+                return None
+            b64 = items[0].get("b64_json")
+            if not b64:
+                return None
+            return base64.b64decode(b64)
+        except Exception:
+            return None
+
+    def _save_image(self, data: bytes, hint: str) -> Tuple[bool, str]:
+        """Write omega_image_<slug>_<UTCts>.png (guarded I/O)."""
+        if not data:
+            return False, "no image data"
+        try:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_image_%s_%s.png" % (_slugify(hint), stamp)
+            with open(filename, "wb") as handle:
+                handle.write(data)
+            return True, "Image saved: %s" % filename
+        except Exception as exc:
+            return False, "Image save failed safely: %s" % exc
+
+    # ------------------------------------------------------------------
+    # v29.6.0: GitHub REST probe + OpenRouter chat fallback (guarded)
+    # ------------------------------------------------------------------
+
+    def _github_api(self, path: str) -> Optional[Dict[str, Any]]:
+        """GET the GitHub REST API; return parsed JSON or None on failure."""
+        if not self.github_token:
+            return None
+        try:
+            request = urllib.request.Request(
+                GITHUB_API_BASE + str(path),
+                headers={
+                    "Authorization": "Bearer " + self.github_token,
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "luqi-ai",
+                },
+                method="GET",
+            )
+            with urllib.request.urlopen(request,
+                                        timeout=GITHUB_API_TIMEOUT) as resp:
+                return json.loads(resp.read().decode("utf-8",
+                                                     errors="replace"))
+        except Exception:
+            return None
+
+    def _openrouter_chat(self, prompt: str) -> Optional[str]:
+        """Chat-completions POST to OpenRouter; return text or None."""
+        if not self.openrouter_key:
+            return None
+        try:
+            body = json.dumps({
+                "model": self.openrouter_model,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 512,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENROUTER_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openrouter_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None
+            content = str((choices[0].get("message") or {}).get("content")
+                          or "").strip()
+            return content or None
         except Exception:
             return None
 
@@ -540,4 +535,58 @@ class OmegaMasterEngine:
                 "1. Define the precise question and success criteria.",
                 "2. Gather primary sources: official docs, papers, data sets.",
                 "3. Cross-check at least 3 independent secondary sources.",
-                "4. Extract claims, evidence qua
+                "4. Extract claims, evidence quality, and dates into a table.",
+                "5. Synthesize findings; flag uncertainties and conflicts.",
+                "6. Record sources with links and access dates.",
+            ],
+            "hint": ("Set SERPER_API_KEY in .env to enable live web search."),
+        }
+
+    def _companion(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        topic = str(payload.get("query", "")).strip() or "your chosen topic"
+        return {
+            "status": "Ready",
+            "subsystem": "Omega Companion/Tutor",
+            "topic": topic,
+            "scaffold": [
+                "ELI5: core idea of '%s' in one plain sentence." % topic,
+                "Key terms: list 5 vocabulary words to master first.",
+                "Mental model: one analogy that maps to something familiar.",
+                "Worked example: walk through one concrete case step by step.",
+                "Active recall: 3 questions to test yourself without notes.",
+                "Next step: one small practice task to do today.",
+            ],
+        }
+
+    def _opportunity(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        domain = str(payload.get("query", "")).strip() or "general market"
+        return {
+            "status": "Scanned",
+            "subsystem": "Omega Opportunity Engine",
+            "domain": domain,
+            "scan_framework": [
+                "Demand: who hurts enough to pay for a solution in '%s'?" % domain,
+                "Supply gap: what are incumbents ignoring or doing poorly?",
+                "Edge: what skill, asset, or access do you already have?",
+                "Monetization: 3 realistic revenue models and price points.",
+                "Validation: cheapest 7-day test to prove real demand.",
+                "Risk: top 2 failure modes and how to cap downside.",
+            ],
+            "note": "Framework output - validate locally before investing money.",
+        }
+
+    def _finance_literacy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        topic = str(payload.get("query", "")).strip() or "general money skills"
+        return {
+            "status": "Ready",
+            "subsystem": "Omega Finance Literacy",
+            "topic": topic,
+            "guidance": [
+                "Budget first: 50/30/20 rule (needs / wants / saving) as a start.",
+                "Emergency fund: target 3-6 months of essential expenses.",
+                "Debt: pay highest-interest debt first (avalanche method).",
+                "Scam check: guaranteed high returns + urgency + secrecy = walk away.",
+                "Verify: check any advisor/platform against your regulator's register.",
+                "Never invest money you cannot afford to lose.",
+            ],
+            "disclaime
