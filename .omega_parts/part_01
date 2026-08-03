@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LUQI AI v29.4.0 - Unified Master Engine (omega.py)
+LUQI AI v29.7.0 - Unified Master Engine (omega.py)
 
 Single-file, stdlib-only CLI engine unifying 14 subsystems behind the
 user's original OmegaMasterEngine router pattern.
@@ -102,6 +102,12 @@ v29.6.0 "The Sovereign Voice":
   probe ('github info' + cached launch row), OpenRouter LLM fallback,
   and offline reminders ('remind'/'reminders') - all key-guarded.
 
+v29.7.0 "Document Mind":
+- Persistent document store ('ingest <path>' / 'import doc <path>',
+  'docs', 'forget doc <name>') with stdlib token-overlap retrieval,
+  and 'ask <question>' / 'ask save' Q&A - offline passages by
+  default, LLM synthesis when keyed (rides OPENAI_API_KEY).
+
 - Python 3.11, standard library only, ASCII-only source.
 - Boots with no .env, no network, no third-party packages.
 - Windows/macOS/Linux compatible:  py -3.11 omega.py
@@ -139,13 +145,19 @@ from typing import Any, Dict, List, Optional, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.6.0"
+ENGINE_VERSION = "29.7.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
 MEMORY_FILE = "omega_memory.json"
 MAX_HISTORY_ENTRIES = 200  # cap for persistent REPL history
 MAX_DATASET_ROWS = 50000   # refuse larger datasets with a clear message
+# v29.7.0: document store (Document Mind) caps.
+MAX_DOCUMENT_BYTES = 200000  # per-file ingest cap
+MAX_DOCUMENTS = 20           # evict oldest beyond this
+DOC_CHUNK_CHARS = 1000       # document chunk size
+MAX_TOTAL_CHUNKS = 200       # memory-size discipline (~200 KB worst case)
+DOC_TOP_K = 3                # passages used per answer
 GIT_TIMEOUT = 30           # seconds, per SPEC_v29
 HTTP_TIMEOUT = 15  # seconds, per spec
 SERPER_URL = "https://google.serper.dev/search"
@@ -561,3 +573,47 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
         "remembered": "Ukuri #%d kwibutswe: %s",
         "forgot": "Ukuri #%d kwibagiwe: %s",
     },
+    "rn": {
+        "name": "Kirundi",
+        "region": "african",
+        "greeting": "Amakuru! Andika 'help' kubona amabwirizwa. 'exit' gusohoka.",
+        "goodbye": "Urabeho.",
+        "help_header": "Amabwirizwa:",
+        "unknown_command": "Itegeko ritazwi - ryoherejwe ku-master core gugenzurwa.",
+        "remembered": "Ukuri #%d kwibutse: %s",
+        "forgot": "Ukuri #%d kwibagiwe: %s",
+    },
+    "lg": {
+        "name": "Luganda",
+        "region": "african",
+        "greeting": "Oli otya! Wandiika 'help' okulaba ebiragiro. 'exit' okuva.",
+        "goodbye": "Weeraba.",
+        "help_header": "Ebiragiro:",
+        "unknown_command": "Ekiragiro ekitamanyiddwa - kiweereddwayo eri master core.",
+        "remembered": "Ekituufu #%d kikunjidde: %s",
+        "forgot": "Ekituufu #%d kyerabiddwa: %s",
+    },
+    "so": {
+        "name": "Somali",
+        "region": "african",
+        "greeting": "Salaam! Qor 'help' si aad u aragto amaarrada. 'exit' si aad u baxdo.",
+        "goodbye": "Nabadgelyo.",
+        "help_header": "Amaarro:",
+        "unknown_command": "Amaar aan la aqoon - waa loo diray master core si loo qiimeeyo.",
+        "remembered": "Xaqiiqda #%d waa la xusay: %s",
+        "forgot": "Xaqiiqda #%d waa la ilaaway: %s",
+    },
+    "om": {
+        "name": "Oromo",
+        "region": "african",
+        "greeting": "Nagaa! 'help' barreessi ajajawwan ilaaluuf. 'exit' ba'uuf.",
+        "goodbye": "Nagaan baa'i.",
+        "help_header": "Ajajawwan:",
+        "unknown_command": "Ajaja hin beekamne - gara master coretti ergamee madaalama.",
+        "remembered": "Dhugaa #%d yaadatame: %s",
+        "forgot": "Dhugaa #%d irraanfatame: %s",
+    },
+    "ti": {
+        "name": "Tigrinya",
+        "region": "african",
+        "greeting": "Se
