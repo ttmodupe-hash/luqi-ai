@@ -1,177 +1,4 @@
-   candidates.sort(reverse=True)  # highest fitness first
-            fit, gen, name = candidates[0]
-            with open(name, "r", encoding="utf-8", errors="replace") as src:
-                blob = src.read()
-            with open(self.strategy_path, "w", encoding="utf-8") as dst:
-                dst.write(blob)
-            current = self.generation()
-            self.state["generation"] = gen
-            self.state["current_fitness"] = fit
-            self.state.setdefault("lineage", []).append({
-                "generation": gen,
-                "fitness": fit,
-                "adopted_at": utc_now_iso(),
-                "parent": current,
-                "action": "rollback",
-            })
-            self._save_state()
-            lines.append("  restored generation %d (fitness %.3f) from %s."
-                         % (gen, fit, name))
-            lines.append("  omega_strategy_gen.py now runs generation %d."
-                         % gen)
-            self.engine._audit("Evolution", "evolve rollback", "Success")
-            return True, lines
-        except Exception as exc:
-            lines.append("  rollback failed safely: %s" % exc)
-            return False, lines
-
-    # ------------------------------------------------------------------
-    # Online proposal (guarded; correct OpenRouter endpoint; urllib)
-    # ------------------------------------------------------------------
-
-    def _openrouter_propose(self) -> Tuple[Optional[str], str]:
-        """Ask the LLM for a candidate mutation. Returns (code, error)."""
-        try:
-            key = self.engine.openrouter_key
-            if not key:
-                return None, ("OPENROUTER_API_KEY not set (.env or "
-                              "environment)")
-            pillars_json = json.dumps(CANONICAL_PILLARS, ensure_ascii=True)
-            system_prompt = EVO_META_SYSTEM_PROMPT.replace(
-                "{pillars}", pillars_json)
-            recent = json.dumps((self.state.get("scores") or [])[-5:])
-            user_prompt = ("LOG TELEMETRY:\n%s\n\nCompile optimized python "
-                           "code execution matrix:" % recent)
-            body = json.dumps({
-                "model": self.engine.openrouter_model,
-                "temperature": 0.25,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            }).encode("utf-8")
-            request = urllib.request.Request(
-                OPENROUTER_URL,
-                data=body,
-                headers={
-                    "Authorization": "Bearer " + key,
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(request,
-                                        timeout=EVO_HTTP_TIMEOUT) as resp:
-                data = json.loads(resp.read().decode("utf-8",
-                                                     errors="replace"))
-            choices = data.get("choices") or []
-            if not choices:
-                return None, "empty response from gateway"
-            content = str((choices[0].get("message") or {}).get("content")
-                          or "").strip()
-            if content.startswith("```"):
-                # Strip markdown fences if the model added them anyway.
-                fence_lines = content.splitlines()
-                if fence_lines and fence_lines[0].startswith("```"):
-                    fence_lines = fence_lines[1:]
-                if fence_lines and fence_lines[-1].strip().startswith("```"):
-                    fence_lines = fence_lines[:-1]
-                content = "\n".join(fence_lines).strip()
-            if not content:
-                return None, "gateway returned empty code"
-            return content, ""
-        except Exception as exc:
-            return None, str(exc)
-
-    # ------------------------------------------------------------------
-    # One evolution cycle: propose -> gate 1 -> gate 2 -> gate 3 -> adopt
-    # ------------------------------------------------------------------
-
-    def run_cycle(self, online: bool = False) -> Tuple[bool, List[str]]:
-        lines = ["[Evolution Engine] Mutation cycle starting."]
-        try:
-            # Pillars are re-verified on every cycle (SPEC 2.1).
-            if self.verify_pillars(announce=True) == "RESTORED":
-                lines.append("  pillars restored to canonical form.")
-            if online:
-                code, error = self._openrouter_propose()
-                if code is None:
-                    lines.append("  online proposal failed: %s" % error)
-                    lines.append("  cycle aborted safely. Hint: 'evolve run' "
-                                 "uses the offline template engine.")
-                    self.engine._audit("Evolution", "evolve run online",
-                                       "Failed")
-                    return False, lines
-                source = "openrouter:" + self.engine.openrouter_model
-                lines.append("  mode: online LLM proposal (%s)."
-                             % self.engine.openrouter_model)
-            else:
-                index = (self._next_generation() - 2) % len(EVO_TEMPLATES)
-                code = EVO_TEMPLATES[index]
-                source = "offline-template-%d" % (index + 1)
-                lines.append("  mode: offline template mutation "
-                             "(no network, no LLM).")
-            lines.append("  candidate source: %s" % source)
-
-            ok, reason = self.ast_gate(code)
-            lines.append("  gate 1 (AST whitelist): %s"
-                         % ("PASS" if ok else "REJECT - " + reason))
-            if not ok:
-                self.engine._audit("Evolution", "evolve run (%s)" % source,
-                                   "Rejected-AST")
-                return False, lines
-
-            ok, reason, pass_rate, latency_avg = self.exec_contract_gate(code)
-            lines.append("  gate 2 (sandbox + 3 contract tests): %s"
-                         % ("PASS" if ok else "REJECT - " + reason))
-            if not ok:
-                self.engine._audit("Evolution", "evolve run (%s)" % source,
-                                   "Rejected-Sandbox")
-                return False, lines
-
-            candidate_fitness = self.fitness(pass_rate, latency_avg,
-                                             self.health())
-            current = self.current_fitness()
-            current_txt = ("%.3f" % current) if current is not None \
-                else "(none recorded)"
-            lines.append("  gate 3 (fitness): candidate=%.3f current=%s"
-                         % (candidate_fitness, current_txt))
-            if current is not None and candidate_fitness < current:
-                lines.append("  REJECT - candidate fitness below current "
-                             "generation.")
-                self.engine._audit("Evolution", "evolve run (%s)" % source,
-                                   "Rejected-Fitness")
-                return False, lines
-
-            new_gen = self._adopt(code, candidate_fitness, source)
-            lines.append("  ADOPTED: generation %d now live (fitness %.3f)."
-                         % (new_gen, candidate_fitness))
-            lines.append("  previous generation archived (last %d kept)."
-                         % EVO_ARCHIVE_KEEP)
-            self.engine._audit("Evolution", "evolve run (%s)" % source,
-                               "Success")
-            return True, lines
-        except Exception as exc:
-            lines.append("  cycle aborted safely: %s" % exc)
-            return False, lines
-
-    # ------------------------------------------------------------------
-    # Telemetry (clamped scoring - fixes the negative-health bug)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def score_result(success: bool, output: str, latency: float) -> float:
-        """Score one exchange; clamped to [0.0, 1.0] (never negative)."""
-        try:
-            score = 1.0 if success else 0.0
-            if "<omega_analysis>" not in (output or ""):
-                score -= 0.3
-            if float(latency) > 2.0:
-                score -= 0.2
-            return max(0.0, min(1.0, score))
-        except Exception:
-            return 0.0
-
-    def _record_score(self, score: float) -> None:
+re(self, score: float) -> None:
         try:
             scores = self.state.setdefault("scores", [])
             scores.append(round(max(0.0, min(1.0, float(score))), 4))
@@ -440,6 +267,9 @@ CORE_SMOKE: List[Tuple[str, str]] = [
     ("say selftest hello", "cli"),
     ("image selftest dot", "cli"),
     ("reminders", "cli"),
+    # v29.7.0: document Q&A smoke - keyless-safe with zero documents.
+    ("docs", "cli"),
+    ("ask selftest question", "cli"),
 ]
 
 
@@ -456,7 +286,7 @@ def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
     # 1. Version current (informational; always matches the running build).
     rows.append(("version", "OK", "v%s Launch-Grade" % ENGINE_VERSION))
 
-    # 2. Selftest core pass: router smoke over all 14 subsystems.
+    # 2. Selftest core pass: router smoke over all 16 subsystems.
     core_failures = []
     for domain, expected in CORE_SMOKE:
         try:
@@ -558,4 +388,242 @@ def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
     return lines, blockers
 
 
-# ----------------------------------------------------------
+# ---------------------------------------------------------------------------
+# CLI presentation helpers
+# ---------------------------------------------------------------------------
+
+def print_banner(engine: OmegaMasterEngine) -> None:
+    line = "=" * 60
+    print(line)
+    print(ENGINE_NAME)
+    print(line)
+    print("Subsystem availability:")
+    for row in engine.availability_matrix():
+        print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
+    print(line)
+    facts = len(engine.memory.get("facts", []))
+    sessions = engine.memory.get("sessions", 1)
+    print("Memory: %d remembered fact(s) | session #%d | %s"
+          % (facts, sessions, engine.memory_path))
+    print("Evolution: generation %d | health %.2f | pillars %s"
+          % (engine.evolution.generation(), engine.evolution.health(),
+             engine.evolution.pillars_status()))
+    print(line)
+    print(engine.ui("greeting"))
+
+
+def print_help(engine: OmegaMasterEngine) -> None:
+    commands = [
+        ("help", "show this command list"),
+        ("status", "subsystem matrix + system_state"),
+        ("version", "version, subsystem count, session, facts"),
+        ("keys", "masked API key report"),
+        ("research <query>", "deep research (Serper live or offline plan)"),
+        ("mine", "mining/investment subsystem"),
+        ("tax <country or topic>", "tax support with disclaimer"),
+        ("companion <topic>", "study-companion scaffold ('teach' = full "
+         "classroom)"),
+        ("teach <subject>", "Professor classroom: conversational tutor "
+         "session"),
+        ("syllabus <subject> [new]", "show / regenerate a 10-lesson "
+         "outline"),
+        ("quiz <subject>", "graded quiz (inside a class: 'quiz me')"),
+        ("progress", "learner profile: lessons, quiz average, weak "
+         "points"),
+        ("opportunities <domain>", "opportunity scan framework"),
+        ("finance <topic>", "finance literacy / scam avoidance"),
+        ("languages", "African language support list"),
+        ("lang <code>", "switch UI language (100 packs: 70 African + "
+         "30 world, grouped list)"),
+        ("translate <code> <text>", "translate text into a language "
+         "(needs OPENAI_API_KEY or bridge)"),
+        ("cost", "pricing-disruption table (free engine, BYOK cents)"),
+        ("say <text>", "speak text via TTS (needs OPENAI_API_KEY)"),
+        ("voice [on|off]", "voice output status / classroom toggle"),
+        ("image <prompt>", "generate an image (needs OPENAI_API_KEY)"),
+        ("github info", "GitHub repo info via REST probe"),
+        ("remind <text> in Nm|h|d", "set a reminder (also: at HH:MM)"),
+        ("reminders", "list pending reminders"),
+        ("remind done <n>", "mark reminder #n done"),
+        ("remind clear", "clear all pending reminders"),
+        ("selfimprove <note>", "log a self-improvement entry"),
+        ("evolve [sub]", "evolution engine: run | run online | rollback | "
+         "lineage | pillars | test <query>"),
+        ("why", "the 6 LUQI AI differentiators"),
+        ("integrations", "8-connector live status manifest"),
+        ("bridge", "claude_engine bridge status (optional, never required)"),
+        ("launch", "GO/NO-GO launch pre-flight checklist"),
+        ("remember <fact>", "persist a fact to omega_memory.json"),
+        ("recall", "list all remembered facts (numbered)"),
+        ("forget <n>", "delete fact #n"),
+        ("history [n]", "show last n exchanges (default 10)"),
+        ("import <path>", "import a .csv or .xlsx dataset"),
+        ("analyze", "summarize the loaded dataset"),
+        ("query <text>", "filter dataset rows containing text"),
+        ("ingest <path>", "ingest a document (.txt .md .csv .log .json)"),
+        ("docs", "list ingested documents (chunks/chars/date)"),
+        ("forget doc <name>", "remove an ingested document"),
+        ("ask <question> | ask save", "document Q&A; save exports last "
+         "answer"),
+        ("export", "write omega_export_<UTCts>.md snapshot"),
+        ("report <topic>", "write omega_report_<slug>_<UTCts>.md"),
+        ("sync github", "git add/commit/push sync (needs GITHUB_REPO)"),
+        ("sync status", "git + GitHub sync configuration status"),
+        ("log", "last 10 audit entries"),
+        ("clear", "clear the screen"),
+        ("exit / quit", "graceful shutdown"),
+    ]
+    print(engine.ui("help_header"))
+    for name, desc in commands:
+        print("  %-26s %s" % (name, desc))
+    print("Anything else is routed through the master router.")
+
+
+def print_result(result: Dict[str, Any]) -> None:
+    """Human-readable rendering of a subsystem result dict."""
+    subsystem = result.get("subsystem", "Master Core")
+    status = result.get("status", "Unknown")
+    print("[%s] %s" % (status, subsystem))
+    if result.get("message"):
+        print("  " + str(result["message"]))
+    for key, value in result.items():
+        if key in ("subsystem", "status", "message"):
+            continue
+        if isinstance(value, dict):
+            print("  %s:" % key)
+            for sub_key, sub_val in value.items():
+                print("    %s: %s" % (sub_key, sub_val))
+        elif isinstance(value, list):
+            print("  %s:" % key)
+            for item in value:
+                if isinstance(item, dict):
+                    print("    - " + "; ".join("%s: %s" % (k, v) for k, v in item.items()))
+                else:
+                    print("    - " + str(item))
+        else:
+            print("  %s: %s" % (key, value))
+
+
+def clear_screen() -> None:
+    try:
+        os.system("cls" if os.name == "nt" else "clear")
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# v29.5.0 "The Professor": classroom session, syllabus, quiz, progress
+# ---------------------------------------------------------------------------
+
+def lesson_intro_lines(entry: Dict[str, Any], subject: str) -> List[str]:
+    """Render the current lesson (title + key points) for a profile entry."""
+    syllabus = entry.get("syllabus") or []
+    if not syllabus:
+        return ["No syllabus yet for %s - type 'syllabus' to build one."
+                % subject]
+    try:
+        idx = int(entry.get("current_lesson", 0))
+    except Exception:
+        idx = 0
+    idx = min(max(0, idx), len(syllabus) - 1)
+    lesson = syllabus[idx]
+    lines = ["Lesson %d/%d: %s" % (idx + 1, len(syllabus),
+                                   lesson.get("title", "?"))]
+    for point in lesson.get("points") or []:
+        lines.append("  - " + str(point))
+    return lines
+
+
+def syllabus_lines(engine: OmegaMasterEngine, subject: str,
+                   regenerate: bool = False) -> List[str]:
+    """Render a subject's 10-lesson outline (LLM online, offline built-in)."""
+    subject = normalize_subject(subject)
+    syllabus, evicted, source = engine.get_syllabus(subject, regenerate)
+    lines: List[str] = []
+    if evicted:
+        lines.append("Note: learner profile full (%d subjects) - oldest "
+                     "subject '%s' was evicted."
+                     % (MAX_LEARNING_SUBJECTS, evicted))
+    label = {
+        "saved": "saved syllabus",
+        "llm": "LLM-generated outline",
+        "builtin": "built-in outline",
+        "scaffold": "generic mastery scaffold",
+    }.get(source, source)
+    lines.append("Syllabus for %s (%s, %d lessons):"
+                 % (subject, label, len(syllabus)))
+    for i, lesson in enumerate(syllabus, 1):
+        lines.append("  Lesson %d: %s" % (i, lesson.get("title", "?")))
+        for point in (lesson.get("points") or [])[:3]:
+            lines.append("    - " + str(point))
+    if source == "scaffold":
+        lines.append("(Generic scaffold - add OPENAI_API_KEY for a custom "
+                     "LLM-generated outline.)")
+    lines.append("Regenerate with: syllabus %s new" % subject)
+    return lines
+
+
+def progress_lines(engine: OmegaMasterEngine) -> List[str]:
+    """Render the learner-profile table (empty + populated states)."""
+    learning = engine.memory.get("learning") or {}
+    if not learning:
+        return ["No learning progress yet.",
+                "Start a class with: teach <subject>  "
+                "(e.g. teach mathematics)"]
+    lines = ["Learner progress (%d subject%s):"
+             % (len(learning), "" if len(learning) == 1 else "s")]
+    lines.append("  %-18s %-9s %-9s %-6s %s"
+                 % ("Subject", "Lesson", "Avg quiz", "Weak", "Last session"))
+    for subject in sorted(learning):
+        entry = learning[subject] or {}
+        syllabus = entry.get("syllabus") or []
+        total_lessons = len(syllabus) or 10
+        try:
+            current = int(entry.get("current_lesson", 0)) + 1
+        except Exception:
+            current = 1
+        lesson_txt = "%d/%d" % (min(current, total_lessons), total_lessons)
+        scores = entry.get("quiz_scores") or []
+        pcts = [100.0 * s.get("score", 0) / s.get("total", 1)
+                for s in scores if s.get("total")]
+        avg_txt = ("%d%%" % round(sum(pcts) / len(pcts))) if pcts else "-"
+        weak = entry.get("weak_points") or []
+        last = str(entry.get("last_session") or "")[:10] or "-"
+        lines.append("  %-18s %-9s %-9s %-6d %s"
+                     % (str(subject)[:18], lesson_txt, avg_txt,
+                        len(weak), last))
+    return lines
+
+
+def run_offline_quiz(engine: OmegaMasterEngine, subject: str,
+                     input_fn: Any, out: Any
+                     ) -> Tuple[Optional[int], int, Optional[str]]:
+    """Offline self-check quiz.
+
+    Shows built-in questions one by one; 'reveal' shows the answer, then
+    the student self-marks 'right'/'wrong'. Returns (score, asked,
+    leftover_line) where leftover_line is an intercepted classroom command
+    that ended the quiz early (to be processed by the session loop).
+    (None, 0, None) when no bank exists for the subject.
+    """
+    subject = normalize_subject(subject)
+    bank = OFFLINE_QUIZ_BANKS.get(subject)
+    if not bank:
+        out("No offline quiz bank for '%s' yet - add OPENAI_API_KEY for "
+            "generated quizzes." % subject)
+        return None, 0, None
+    out("Offline self-check quiz: %d cards. For each: think, type "
+        "'reveal', then mark 'right' or 'wrong'." % len(bank))
+    score = 0
+    asked = 0
+    for qnum, (question, answer) in enumerate(bank, 1):
+        out("Q%d: %s" % (qnum, question))
+        revealed = False
+        while True:
+            try:
+                raw = input_fn("[QUIZ] > ")
+            except EOFError:
+                out("")
+                out("(End of input - closing the quiz.)")
+                return score, asked, None
+            except Keybo
