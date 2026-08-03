@@ -1,149 +1,4 @@
-    '<c r="B2"><v>42</v></c></row>'
-        '<row r="3"><c r="A3" t="s"><v>3</v></c>'
-        '<c r="B3"><v>7</v></c></row>'
-        '<row r="4"><c r="A4" t="inlineStr"><is><t>carol</t></is></c>'
-        '<c r="B4"><v>5</v></c></row>'
-        '</sheetData></worksheet>' % ns
-    )
-    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("[Content_Types].xml", content_types)
-        archive.writestr("xl/workbook.xml", workbook)
-        archive.writestr("xl/sharedStrings.xml", shared_strings)
-        archive.writestr("xl/worksheets/sheet1.xml", sheet)
-
-
-def run_selftest() -> int:
-    print(ENGINE_NAME + " - SELF TEST")
-    checks = []
-    engine = OmegaMasterEngine()
-
-    # Router smoke test over all 14 subsystems (shared with 'launch').
-    for domain, expected in CORE_SMOKE:
-        try:
-            if expected == "cli":
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    ok = bool(handle_command(engine, domain))
-            else:
-                result = engine.execute_omega_subsystem(domain,
-                                                        {"query": domain})
-                ok = result.get("subsystem") == expected
-            checks.append(("router: %-30s -> %s" % (domain, expected), ok))
-        except Exception as exc:
-            checks.append(("router: %s (exception: %s)" % (domain, exc), False))
-
-    # Unknown domain -> generic core fallback.
-    try:
-        result = engine.execute_omega_subsystem("zzz unknown zzz", {"query": "x"})
-        checks.append(("router: unknown domain -> generic core",
-                       result.get("status") == "Unknown"))
-    except Exception as exc:
-        checks.append(("router: unknown domain (exception: %s)" % exc, False))
-
-    # .env manual parser (tolerates missing/malformed).
-    try:
-        parsed = parse_env_file("__definitely_missing__.env")
-        checks.append((".env parser: missing file tolerated", parsed == {}))
-    except Exception as exc:
-        checks.append((".env parser: missing file (exception: %s)" % exc, False))
-    try:
-        tmp = "__omega_selftest__.env"
-        with open(tmp, "w", encoding="ascii") as handle:
-            handle.write("# comment\n\nOPENAI_API_KEY='sk-test123456'\n"
-                         "BROKEN LINE\nEMPTY=\n")
-        parsed = parse_env_file(tmp)
-        os.remove(tmp)
-        checks.append((".env parser: quotes/comments/malformed handled",
-                       parsed.get("OPENAI_API_KEY") == "sk-test123456"
-                       and parsed.get("EMPTY") == ""))
-    except Exception as exc:
-        checks.append((".env parser: malformed (exception: %s)" % exc, False))
-
-    # Secret masking never exposes the full key.
-    checks.append(("masking: full secret never printed",
-                   mask_secret("sk-secret-value-99") == "sk-s...99"))
-
-    # Log write + read back.
-    try:
-        engine._audit("SelfTest", "selftest write", "Success")
-        tail = engine.read_log_tail(1)
-        ok = bool(tail) and tail[-1].get("subsystem") == "SelfTest"
-        checks.append(("log: write + read omega_log.jsonl", ok))
-    except Exception as exc:
-        checks.append(("log: write/read (exception: %s)" % exc, False))
-
-    # Offline online-calls return None, never raise.
-    offline_engine = OmegaMasterEngine()
-    offline_engine.serper_key = ""
-    offline_engine.openai_key = ""
-    offline_engine.github_token = ""
-    offline_engine.github_repo = ""
-    offline_engine.openrouter_key = ""
-    try:
-        checks.append(("guarded: _serper_search offline -> None",
-                       offline_engine._serper_search("test") is None))
-        checks.append(("guarded: _llm offline -> None",
-                       offline_engine._llm("test") is None))
-        checks.append(("guarded: _llm_messages offline -> None",
-                       offline_engine._llm_messages(
-                           [{"role": "user", "content": "test"}]) is None))
-        checks.append(("guarded: _tts_speech offline -> None",
-                       offline_engine._tts_speech("hi") is None))
-        checks.append(("guarded: _image_generate offline -> None",
-                       offline_engine._image_generate("dot") is None))
-        checks.append(("guarded: _github_api offline -> None",
-                       offline_engine._github_api("/repos/x/y") is None))
-        checks.append(("guarded: _openrouter_chat offline -> None",
-                       offline_engine._openrouter_chat("hi") is None))
-    except Exception as exc:
-        checks.append(("guarded: online calls (exception: %s)" % exc, False))
-
-    # v29.6.0 connector layer: constants, guarded writers (no files
-    # written - only the empty-data guard path is exercised), b64 helper.
-    checks.append(("v29.6: tts/image/github connector constants",
-                   TTS_MAX_CHARS == 500 and TTS_VOICE_DEFAULT == "alloy"
-                   and TTS_MODEL == "tts-1" and IMAGE_MODEL == "dall-e-3"
-                   and IMAGE_SIZE == "1024x1024" and GITHUB_API_TIMEOUT == 8
-                   and GITHUB_API_BASE == "https://api.github.com"))
-    checks.append(("v29.6: speech/image writers reject empty data",
-                   engine._save_speech(b"", "x")[0] is False
-                   and engine._save_image(b"", "x")[0] is False))
-    checks.append(("v29.6: b64 image decode roundtrip",
-                   base64.b64decode(base64.b64encode(b"png").decode("ascii"))
-                   == b"png"))
-    checks.append(("v29.6: tts voice + image model attrs defaulted",
-                   bool(engine.tts_voice) and bool(engine.image_model)))
-
-    # v29.6.0: _llm/_llm_messages fall through to OpenRouter (monkeypatched
-    # responder, pure offline - no network).
-    try:
-        fb_engine = OmegaMasterEngine()
-        fb_engine.openai_key = ""
-        fb_engine.openrouter_key = "selftest-token"
-        fb_engine._openrouter_chat = lambda prompt: "fallback-reply"  # type: ignore
-        checks.append(("v29.6: _llm falls back to openrouter",
-                       fb_engine._llm("test") == "fallback-reply"))
-        checks.append(("v29.6: _llm_messages falls back to openrouter",
-                       fb_engine._llm_messages(
-                           [{"role": "system", "content": "s"},
-                            {"role": "user", "content": "test"}])
-                       == "fallback-reply"))
-    except Exception as exc:
-        checks.append(("v29.6: llm openrouter fallback (exception: %s)" % exc,
-                       False))
-
-    # Module A: memory roundtrip (remember/recall/forget) + corrupt recovery.
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            mem_path = os.path.join(tmpdir, MEMORY_FILE)
-            mem = fresh_memory()
-            mem["facts"].append("alpha fact")
-            mem["facts"].append("beta fact")
-            ok = save_memory(mem_path, mem)
-            loaded = load_memory(mem_path)
-            ok = ok and loaded.get("facts") == ["alpha fact", "beta fact"]
-            loaded["facts"].pop(0)  # forget fact #1
-            ok = save_memory(mem_path, loaded) and ok
+    ok = save_memory(mem_path, loaded) and ok
             reloaded = load_memory(mem_path)
             ok = ok and reloaded.get("facts") == ["beta fact"]
             checks.append(("memory: remember/recall/forget roundtrip", ok))
@@ -208,6 +63,234 @@ def run_selftest() -> int:
     except Exception as exc:
         checks.append(("dataset: XLSX import (exception: %s)" % exc, False))
 
+    # v29.7.0: document ingest (.txt first; deterministic from a clean list).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            engine.memory["documents"] = []
+            txt_path = os.path.join(tmpdir, "notes.txt")
+            content = ("Solar panels convert sunlight into electricity "
+                       "for homes and farms.\n\n"
+                       "Wind turbines harvest moving air on ridges "
+                       "and coastlines.\n\n"
+                       "Battery storage keeps surplus energy for "
+                       "calm nights.\n")
+            with open(txt_path, "w", encoding="ascii") as handle:
+                handle.write(content)
+            ok, msg = engine.import_document(txt_path, save=False)
+            docs = engine.memory.get("documents") or []
+            ok = (ok and len(docs) == 1
+                  and docs[0].get("name") == "notes.txt"
+                  and docs[0].get("path") == os.path.abspath(txt_path)
+                  and docs[0].get("chars") == len(content)
+                  and len(docs[0].get("chunks") or []) == 1
+                  and bool(docs[0].get("ts"))
+                  and "ingested: notes.txt (1 chunks, " in msg)
+            checks.append(("docs: ingest .txt -> stored entry + chunks", ok))
+            md_path = os.path.join(tmpdir, "notes.md")
+            with open(md_path, "w", encoding="ascii") as handle:
+                handle.write("# Meeting Notes\n\n"
+                             "Discuss roadmap and hiring plans.\n")
+            csv_path = os.path.join(tmpdir, "data.csv")
+            with open(csv_path, "w", encoding="ascii", newline="") as handle:
+                handle.write("city,population\nparis,2140000\nlyon,513000\n")
+            ok_md, _m1 = engine.import_document(md_path, save=False)
+            ok_csv, _m2 = engine.import_document(csv_path, save=False)
+            docs = engine.memory.get("documents") or []
+            csv_docs = [d for d in docs
+                        if isinstance(d, dict)
+                        and d.get("name") == "data.csv"]
+            ok = (ok_md and ok_csv and len(docs) == 3
+                  and bool(csv_docs)
+                  and any(" | " in c for c in csv_docs[0].get("chunks", [])))
+            checks.append(("docs: ingest .md + .csv (csv renders ' | ')",
+                           ok))
+            ok, _msg = engine.import_document(txt_path, save=False)
+            docs = engine.memory.get("documents") or []
+            names = [d.get("name") for d in docs if isinstance(d, dict)]
+            checks.append(("docs: re-ingest same name replaces, no dupe",
+                           ok and len(docs) == 3
+                           and names.count("notes.txt") == 1))
+    except Exception as exc:
+        checks.append(("docs: ingest (exception: %s)" % exc, False))
+
+    # v29.7.0: pure retrieval helpers.
+    try:
+        toks = _tokenize("Hello, WORLD 42")
+        hard = _chunk_text("x" * 2500)
+        ok = (toks == ["hello", "world", "42"]
+              and len(hard) == 3
+              and all(len(c) <= DOC_CHUNK_CHARS for c in hard)
+              and _chunk_text("") == []
+              and _score_chunk(["solar"], "solar solar wind") == 2
+              and _score_chunk(["zzz"], "solar wind") == 0)
+        checks.append(("docs: _tokenize/_chunk_text/_score_chunk pure", ok))
+    except Exception as exc:
+        checks.append(("docs: helpers (exception: %s)" % exc, False))
+
+    # v29.7.0: retrieval ranking over the ingested docs.
+    try:
+        docs = engine.memory.get("documents") or []
+        hits = search_documents("solar panels", docs)
+        ok = (bool(hits) and hits[0][0] > 0
+              and hits[0][1] == "notes.txt"
+              and "solar" in hits[0][3].lower())
+        checks.append(("docs: search ranks solar chunk first", ok))
+        checks.append(("docs: zero-overlap query -> empty",
+                       search_documents("zzqzxv", docs) == []))
+    except Exception as exc:
+        checks.append(("docs: retrieval (exception: %s)" % exc, False))
+
+    # v29.7.0: eviction via temporarily reassigned module caps.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            extra_path = os.path.join(tmpdir, "extra.txt")
+            with open(extra_path, "w", encoding="ascii") as handle:
+                handle.write("Extra document about quantum computing.\n")
+            saved_docs = MAX_DOCUMENTS
+            saved_chunks = MAX_TOTAL_CHUNKS
+            try:
+                globals()["MAX_DOCUMENTS"] = 2
+                ok, _msg = engine.import_document(extra_path, save=False)
+                docs = engine.memory.get("documents") or []
+                names = [d.get("name") for d in docs if isinstance(d, dict)]
+                evict_ok = (ok and len(docs) == 2
+                            and "notes.md" not in names
+                            and names == ["notes.txt", "extra.txt"])
+                # Chunk budget: trim oldest docs until total fits.
+                globals()["MAX_TOTAL_CHUNKS"] = 1
+                more_path = os.path.join(tmpdir, "more.txt")
+                with open(more_path, "w", encoding="ascii") as handle:
+                    handle.write("Another small document about tides.\n")
+                ok2, _msg = engine.import_document(more_path, save=False)
+                docs = engine.memory.get("documents") or []
+                names = [d.get("name") for d in docs if isinstance(d, dict)]
+                total = sum(len(d.get("chunks") or [])
+                            for d in docs if isinstance(d, dict))
+                trim_ok = ok2 and total <= 1 and names == ["more.txt"]
+            finally:
+                globals()["MAX_DOCUMENTS"] = saved_docs
+                globals()["MAX_TOTAL_CHUNKS"] = saved_chunks
+            checks.append(("docs: eviction drops oldest beyond cap",
+                           evict_ok))
+            checks.append(("docs: chunk budget trims oldest first",
+                           trim_ok))
+    except Exception as exc:
+        checks.append(("docs: eviction (exception: %s)" % exc, False))
+
+    # v29.7.0: documents schema survives save/load; corrupt entries skipped.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mem_path = os.path.join(tmpdir, MEMORY_FILE)
+            mem = fresh_memory()
+            mem["documents"].append({
+                "name": "roundtrip.txt",
+                "path": os.path.join(tmpdir, "roundtrip.txt"),
+                "chars": 42,
+                "chunks": ["alpha beta", "gamma"],
+                "ts": "2026-08-03T00:00:00Z",
+            })
+            mem["documents"].append({"name": 7, "path": 3,
+                                     "chunks": "nope", "chars": "x"})
+            mem["documents"].append("not-a-dict")
+            ok = save_memory(mem_path, mem)
+            loaded = load_memory(mem_path)
+            docs = loaded.get("documents") or []
+            ok = (ok and len(docs) == 1
+                  and docs[0].get("name") == "roundtrip.txt"
+                  and docs[0].get("chunks") == ["alpha beta", "gamma"]
+                  and docs[0].get("chars") == 42
+                  and "documents" in fresh_memory())
+            checks.append(("docs: memory roundtrip, corrupt skipped", ok))
+    except Exception as exc:
+        checks.append(("docs: roundtrip (exception: %s)" % exc, False))
+
+    # v29.7.0: document CLI commands (offline, isolated tmp memory).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                cli_engine = OmegaMasterEngine()
+                cli_engine.openai_key = ""
+                cli_engine.openrouter_key = ""
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(cli_engine, "docs")
+                checks.append(("docs cli: empty store -> guidance",
+                               bool(keep)
+                               and "no documents yet" in buf.getvalue()))
+                notes_path = os.path.join(tmpdir, "notes.txt")
+                with open(notes_path, "w", encoding="ascii") as handle:
+                    handle.write("Solar panels convert sunlight into "
+                                 "electricity for homes.\n\n"
+                                 "Battery storage keeps surplus energy "
+                                 "for calm nights.\n")
+                ok, _msg = cli_engine.import_document(notes_path)
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(cli_engine, "docs")
+                out = buf.getvalue()
+                checks.append(("docs cli: table lists ingested notes.txt",
+                               ok and bool(keep) and "notes.txt" in out
+                               and "1 documents," in out))
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(cli_engine, "ask solar")
+                out = buf.getvalue()
+                checks.append(("ask cli: offline passages cite notes.txt",
+                               bool(keep)
+                               and "offline mode - top passages:" in out
+                               and "notes.txt" in out))
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(cli_engine, "ask save")
+                out = buf.getvalue()
+                saved = [f for f in os.listdir(tmpdir)
+                         if f.startswith("omega_answer_")
+                         and f.endswith(".md")]
+                checks.append(("ask save: writes omega_answer_<ts>.md",
+                               bool(keep) and "saved: " in out
+                               and len(saved) == 1))
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(cli_engine,
+                                          "forget doc notes.txt")
+                out = buf.getvalue()
+                docs_now = cli_engine.memory.get("documents") or []
+                checks.append(("forget doc cli: removes + confirms",
+                               bool(keep) and "forgot document" in out
+                               and docs_now == []))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("docs cli: (exception: %s)" % exc, False))
+
+    # v29.7.0: ask guards on a keyless engine with zero documents.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                bare_engine = OmegaMasterEngine()
+                bare_engine.openai_key = ""
+                bare_engine.openrouter_key = ""
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(bare_engine, "ask anything")
+                checks.append(("ask cli: zero docs -> guidance",
+                               bool(keep) and "no documents yet"
+                               in buf.getvalue()))
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    keep = handle_command(bare_engine, "ask save")
+                checks.append(("ask save: nothing stashed -> graceful",
+                               bool(keep) and "no answer to save yet"
+                               in buf.getvalue()))
+            finally:
+                os.chdir(previous)
+    except Exception as exc:
+        checks.append(("ask cli guards: (exception: %s)" % exc, False))
+
     # Module B: sync status outside a git repo must be graceful.
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -229,10 +312,12 @@ def run_selftest() -> int:
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.6.0 + 14 subsystems + session/facts",
-                       bool(keep) and "29.6.0" in out
-                       and "Subsystems: 14" in out
+        checks.append(("version: shows 29.7.0 + 15 subsystems + session/facts",
+                       bool(keep) and "29.7.0" in out
+                       and "Subsystems: 15" in out
                        and "Session: #" in out and "Facts:" in out))
+        checks.append(("version: ENGINE_VERSION is 29.7.0",
+                       ENGINE_VERSION == "29.7.0"))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
 
@@ -491,58 +576,4 @@ def run_selftest() -> int:
         out = buf.getvalue()
         checks.append(("evolve test: strategy executes + telemetry scored",
                        bool(keep) and "<omega_analysis>" in out
-                       and "health:" in out))
-    except Exception as exc:
-        checks.append(("evolve test: (exception: %s)" % exc, False))
-
-    # 'evolve' status + lineage + pillars commands render without crashing.
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            handle_command(engine, "evolve")
-            handle_command(engine, "evolve lineage")
-            handle_command(engine, "evolve pillars")
-        out = buf.getvalue()
-        checks.append(("evolve: status/lineage/pillars render",
-                       "current generation:" in out
-                       and "pillars integrity:" in out
-                       and "p5_security" in out))
-    except Exception as exc:
-        checks.append(("evolve: status render (exception: %s)" % exc, False))
-
-    # ------------------------------------------------------------------
-    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
-    # ------------------------------------------------------------------
-
-    # (a) Infinite-loop candidate -> rejected via timeout; the child process
-    # is terminated and NO live child processes remain afterwards.
-    infinite_loop = (
-        "def execute_logic(query, telemetry):\n"
-        "    while True:\n"
-        "        pass\n"
-    )
-    try:
-        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
-        checks.append(("evolve: process isolation rejects infinite loop",
-                       not ok and "timeout" in reason.lower()))
-    except Exception as exc:
-        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
-    try:
-        checks.append(("evolve: no live child processes after timeout kill",
-                       sandbox_live_children() == 0))
-    except Exception as exc:
-        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
-
-    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
-    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
-    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
-    memory_bomb = (
-        "def execute_logic(query, telemetry):\n"
-        "    data = list(range(10**8))\n"
-        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
-    )
-    try:
-        import resource as _resource_probe  # noqa: F401
-        _posix_ceiling = True
-    except Exception:
-        _pos
+                       and "health:" in out
