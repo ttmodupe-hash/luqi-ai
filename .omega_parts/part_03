@@ -1,108 +1,4 @@
-        "region": "world",
-        "greeting": "Hola! Escribe 'help' para ver comandos. 'exit' para salir.",
-        "goodbye": "Adios.",
-        "help_header": "Comandos:",
-        "unknown_command": "Comando no reconocido - enviado al master core para evaluacion.",
-        "remembered": "Hecho #%d recordado: %s",
-        "forgot": "Hecho #%d olvidado: %s",
-    },
-    "fr": {
-        "name": "French",
-        "region": "world",
-        "greeting": "Bonjour! Tapez 'help' pour les commandes. 'exit' pour quitter.",
-        "goodbye": "Au revoir.",
-        "help_header": "Commandes:",
-        "unknown_command": "Commande inconnue - envoyee au master core pour evaluation.",
-        "remembered": "Fait #%d memorise: %s",
-        "forgot": "Fait #%d oublie: %s",
-    },
-    "pt": {
-        "name": "Portuguese",
-        "region": "world",
-        "greeting": "Ola! Digite 'help' para ver comandos. 'exit' para sair.",
-        "goodbye": "Adeus.",
-        "help_header": "Comandos:",
-        "unknown_command": "Comando nao reconhecido - enviado ao master core para avaliacao.",
-        "remembered": "Fato #%d lembrado: %s",
-        "forgot": "Fato #%d esquecido: %s",
-    },
-    "bn": {
-        "name": "Bengali",
-        "region": "world",
-        "greeting": "Nomoskar! 'help' likhun nirdesh dekhte. 'exit' ber hote.",
-        "goodbye": "Abar dekha hobe.",
-        "help_header": "Nirdesh:",
-        "unknown_command": "Achin nirdesh - master core-e mullayoner jonno pathano hoyeche.",
-        "remembered": "Tothyo #%d mone rakha holo: %s",
-        "forgot": "Tothyo #%d bhule gela: %s",
-    },
-    "ru": {
-        "name": "Russian",
-        "region": "world",
-        "greeting": "Privet! Vvedite 'help' dlya spiska komand. 'exit' dlya vykhoda.",
-        "goodbye": "Do svidaniya.",
-        "help_header": "Komandy:",
-        "unknown_command": "Neizvestnaya komanda - otpravlena v master core dlya otsenki.",
-        "remembered": "Fakt #%d zapomnen: %s",
-        "forgot": "Fakt #%d zabyt: %s",
-    },
-    "ja": {
-        "name": "Japanese (romaji)",
-        "region": "world",
-        "greeting": "Konnichiwa! 'help' de komando ichiran. 'exit' de shuuryou.",
-        "goodbye": "Sayonara.",
-        "help_header": "Komando:",
-        "unknown_command": "Mishiri no komando - master core ni okurare, hyoka saremasu.",
-        "remembered": "Jijitsu #%d o kioku shimashita: %s",
-        "forgot": "Jijitsu #%d o wasuremashita: %s",
-    },
-    "pa": {
-        "name": "Punjabi",
-        "region": "world",
-        "greeting": "Sat Sri Akal! 'help' likho hukam vekhan layi. 'exit' bahar aun layi.",
-        "goodbye": "Rab rakha.",
-        "help_header": "Hukam:",
-        "unknown_command": "Ajaan hukam - master core nu mulaankan lai bhejeya.",
-        "remembered": "Tath #%d yaad rakheya: %s",
-        "forgot": "Tath #%d bhul gaya: %s",
-    },
-    "de": {
-        "name": "German",
-        "region": "world",
-        "greeting": "Hallo! Tippe 'help' fuer Befehle. 'exit' zum Beenden.",
-        "goodbye": "Tschuess.",
-        "help_header": "Befehle:",
-        "unknown_command": "Unbekannter Befehl - an den Master-Kern zur Auswertung gesendet.",
-        "remembered": "Fakt #%d gemerkt: %s",
-        "forgot": "Fakt #%d vergessen: %s",
-    },
-    "ko": {
-        "name": "Korean (romanized)",
-        "region": "world",
-        "greeting": "Annyeonghaseyo! 'help' reul ipryeokhamyeon myeongryeong. 'exit' jongryo.",
-        "goodbye": "Annyeonghi gaseyo.",
-        "help_header": "Myeongryeong:",
-        "unknown_command": "Al su eomneun myeongryeong - master core-ro jeonsongdoeeo pyeonggadoem.",
-        "remembered": "Sasil #%d gieokham: %s",
-        "forgot": "Sasil #%d ijeobeorim: %s",
-    },
-    "vi": {
-        "name": "Vietnamese",
-        "region": "world",
-        "greeting": "Xin chao! Go 'help' de xem lenh. 'exit' de thoat.",
-        "goodbye": "Tam biet.",
-        "help_header": "Lenh:",
-        "unknown_command": "Lenh khong duoc nhan ra - da chuyen den master core de danh gia.",
-        "remembered": "Su that #%d da ghi nho: %s",
-        "forgot": "Su that #%d da quen: %s",
-    },
-    "tr": {
-        "name": "Turkish",
-        "region": "world",
-        "greeting": "Merhaba! Komutlar icin 'help' yazin. Cikmak icin 'exit'.",
-        "goodbye": "Gule gule.",
-        "help_header": "Komutlar:",
-        "unknown_command": "Taninmayan komut - degerlendirme icin master core'a gonderildi.",
+t - degerlendirme icin master core'a gonderildi.",
         "remembered": "Gercek #%d hatirlandi: %s",
         "forgot": "Gercek #%d unutuldu: %s",
     },
@@ -377,7 +273,8 @@ def utc_now_iso() -> str:
 def fresh_memory() -> Dict[str, Any]:
     """Return a new, empty memory structure.
 
-    SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile.
+    SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile
+    + v29.6.0 reminders / voice flag.
     """
     return {
         "facts": [],
@@ -386,6 +283,8 @@ def fresh_memory() -> Dict[str, Any]:
         "sessions": 0,
         "lang": DEFAULT_LANG,
         "learning": {},
+        "reminders": [],
+        "voice_enabled": False,
     }
 
 
@@ -461,6 +360,23 @@ def load_memory(path: str) -> Dict[str, Any]:
                 if entry is not None:
                     clean[subj] = entry
             memory["learning"] = clean
+        # v29.6.0: voice flag + reminders, validated entry by entry
+        # (corrupt-safe; old memory files simply lack the keys).
+        memory["voice_enabled"] = bool(data.get("voice_enabled", False))
+        reminders = data.get("reminders")
+        if isinstance(reminders, list):
+            clean_reminders: List[Dict[str, Any]] = []
+            for item in reminders:
+                if not isinstance(item, dict):
+                    continue
+                text = str(item.get("text", "")).strip()
+                due = str(item.get("due", "")).strip()
+                if not text or not due:
+                    continue
+                clean_reminders.append({"text": text, "due": due,
+                                        "done": bool(item.get("done",
+                                                              False))})
+            memory["reminders"] = clean_reminders
         return memory
     except Exception:
         # Corrupt memory: back up the broken file, start fresh.
@@ -589,4 +505,144 @@ BUILTIN_SYLLABI: Dict[str, List[Tuple[str, List[str]]]] = {
             "Reading bar charts, line graphs and pie charts.",
             "Basic probability language (likely, unlikely, certain)."]),
         ("Quadratic Foundations", [
-            "Expanding and factoring sim
+            "Expanding and factoring simple quadratics.",
+            "The quadratic formula.",
+            "Parabolas and their turning points."]),
+        ("Capstone: Problem-Solving Strategies", [
+            "Breaking multi-step word problems into parts.",
+            "Choosing a strategy: draw, table, equation, estimate.",
+            "Reviewing and connecting all nine units."]),
+    ],
+    "physics": [
+        ("Motion and Speed", [
+            "Distance vs displacement.",
+            "Speed and velocity; the speed equation.",
+            "Reading distance-time graphs."]),
+        ("Forces and Newton's Laws", [
+            "First law: objects keep doing what they are doing.",
+            "Second law: F = ma.",
+            "Third law: every action has an equal opposite reaction."]),
+        ("Energy and Work", [
+            "Kinetic and potential energy.",
+            "Conservation of energy.",
+            "Work and power in everyday machines."]),
+        ("Momentum and Collisions", [
+            "Momentum p = mv.",
+            "Impulse changes momentum.",
+            "Conservation of momentum in collisions."]),
+        ("Waves and Sound", [
+            "Wavelength, frequency and amplitude.",
+            "The wave equation v = f x wavelength.",
+            "Sound as a pressure wave."]),
+        ("Light and Optics", [
+            "Reflection and refraction.",
+            "Lenses and mirrors.",
+            "The electromagnetic spectrum."]),
+        ("Electricity Basics", [
+            "Charge, current and voltage.",
+            "Ohm's law V = IR.",
+            "Series vs parallel circuits."]),
+        ("Magnetism", [
+            "Magnetic fields and poles.",
+            "Electromagnets.",
+            "Motors and generators."]),
+        ("Heat and Thermodynamics", [
+            "Temperature vs heat.",
+            "Conduction, convection and radiation.",
+            "The laws of thermodynamics in plain language."]),
+        ("Capstone: Modern Physics Survey", [
+            "Atoms, nuclei and radioactivity.",
+            "Relativity in one big idea.",
+            "Quantum thinking: probability at small scales."]),
+    ],
+    "chemistry": [
+        ("Matter and Its States", [
+            "Solids, liquids and gases.",
+            "Physical vs chemical change.",
+            "Mixtures and pure substances."]),
+        ("Atoms and Elements", [
+            "Protons, neutrons and electrons.",
+            "Atomic number and mass number.",
+            "Reading an element on the periodic table."]),
+        ("The Periodic Table", [
+            "Groups and periods.",
+            "Metals vs nonmetals.",
+            "Trends in reactivity."]),
+        ("Chemical Bonding", [
+            "Ionic bonds transfer electrons.",
+            "Covalent bonds share electrons.",
+            "Molecules and compounds."]),
+        ("Chemical Reactions", [
+            "Reactants and products.",
+            "Balancing equations.",
+            "Common reaction types."]),
+        ("The Mole and Stoichiometry", [
+            "Avogadro's number and the mole.",
+            "Molar mass.",
+            "Mole-to-mass conversions."]),
+        ("Acids and Bases", [
+            "The pH scale from 0 to 14.",
+            "Neutralization reactions.",
+            "Everyday acids and alkalis."]),
+        ("Solutions and Concentration", [
+            "Solutes, solvents and solutions.",
+            "Concentration and molarity.",
+            "Basic solubility rules."]),
+        ("Energy in Chemistry", [
+            "Exothermic vs endothermic reactions.",
+            "Activation energy.",
+            "What controls reaction rates."]),
+        ("Capstone: Organic Chemistry Intro", [
+            "Carbon chains and rings.",
+            "Common functional groups.",
+            "Organic molecules in daily life."]),
+    ],
+    "biology": [
+        ("The Cell", [
+            "Cell theory: all living things are made of cells.",
+            "Organelles and their jobs.",
+            "Plant vs animal cells."]),
+        ("Cell Energy", [
+            "Photosynthesis captures light energy.",
+            "Respiration releases energy from glucose.",
+            "How the two processes balance the carbon cycle."]),
+        ("DNA and Genetics", [
+            "The double helix stores instructions.",
+            "Genes and chromosomes.",
+            "Dominant and recessive traits."]),
+        ("Evolution by Natural Selection", [
+            "Variation exists in every population.",
+            "Helpful traits spread over generations.",
+            "Evidence: fossils, anatomy, DNA."]),
+        ("Human Body Systems", [
+            "Circulatory and respiratory systems.",
+            "Digestive and nervous systems.",
+            "How body systems cooperate."]),
+        ("Ecology and Ecosystems", [
+            "Food chains and food webs.",
+            "Energy flow through trophic levels.",
+            "Why biodiversity matters."]),
+        ("Classification of Life", [
+            "Domains and kingdoms.",
+            "Binomial (two-name) naming.",
+            "Reading the tree of life."]),
+        ("Microorganisms and Disease", [
+            "Bacteria vs viruses.",
+            "How the immune system defends you.",
+            "How vaccines train immunity."]),
+        ("Reproduction and Development", [
+            "Mitosis for growth; meiosis for reproduction.",
+            "Life cycles across species.",
+            "Growth and development stages."]),
+        ("Capstone: Homeostasis and Health", [
+            "Feedback loops keep conditions stable.",
+            "Temperature, water and sugar balance.",
+            "Using biology in daily health decisions."]),
+    ],
+    "english": [
+        ("Sentence Foundations", [
+            "Every sentence needs a subject and a verb.",
+            "Statement, question, command, exclamation.",
+            "Capital letters and end punctuation."]),
+        ("Parts of Speech", [
+            "Nouns, verbs and adjective
