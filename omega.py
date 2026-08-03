@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LUQI AI v29.5.0 - Unified Master Engine (omega.py)
+LUQI AI v29.6.0 - Unified Master Engine (omega.py)
 
 Distribution note: the engine ships split across .omega_parts/ (the GitHub
 upload channel used for this release caps single messages, so the 282 KB
@@ -16,9 +16,9 @@ import hashlib
 import os
 import sys
 
-ENGINE_VERSION = "29.5.0"
-EXPECTED_SIZE = 281932
-EXPECTED_SHA256 = "7b3c33f740f0150ce78240d6fbf89f23dbda8149f2bc4c2d2da6fe95ecd072ca"
+ENGINE_VERSION = "29.6.0"
+EXPECTED_SIZE = 312540
+EXPECTED_SHA256 = "41864db2fa34a3973af94e97245ae14ca6ecf5c134625f0c21ce46e50f671c8e"
 
 
 def _assemble() -> str:
