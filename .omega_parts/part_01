@@ -404,7 +404,7 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
         "region": "african",
         "greeting": "Molo! Thayipha 'help' ukubona imiyalo. 'exit' ukuphuma.",
         "goodbye": "OMEGA iyacima. Sala kakuhle, hlala ukhululekile.",
-        "help_header": "Milayo:",
+        "help_header": "Imiyalo:",
         "unknown_command": ("Umyalo ongaziwayo - ugqithiselwe ku-master core "
                             "ukuvavanywa."),
         "remembered": "Inyani #%d likhunjulwe: %s",
