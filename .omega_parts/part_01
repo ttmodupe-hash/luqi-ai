@@ -210,9 +210,9 @@ OPENROUTER_DEFAULT_MODEL = "openai/gpt-4o-mini"
 # module-level constant used for tamper restoration.
 CANONICAL_PILLARS: Dict[str, str] = {
     "p1_build_sync": "Omega AI Build & Sync (Continuous Mesh Matrix)",
-    "p2_status": "Omega AI已建\u6210 (System Baseline Operational Verification)",
+    "p2_status": "Omega AI\\u5df2\\u5efa\\u6210 (System Baseline Operational Verification)",
     "p3_mining": "Omega AI Mining & Investment (Quantitative Yield Automation)",
-    "p4_tax": "Omega AI\u7a0e\u52a1\u652f\u6301 (Automated Transaction Ledger Tracking)",
+    "p4_tax": "Omega AI\\u7a0e\\u52a1\\u652f\\u6301 (Automated Transaction Ledger Tracking)",
     "p5_security": "API Key Status (Multi-Tenant Cryptographic Gateway)",
 }
 
@@ -327,8 +327,8 @@ _EVO_ALLOWED_NODES = (
 
 # Non-ASCII trigger keywords kept ASCII-safe via unicode escapes:
 #   "yi jian cheng" (built/deployed) and "shui wu" (tax affairs).
-KW_BUILT_ZH = "已建成"  # "yi jian cheng" (built/deployed)
-KW_TAX_ZH = "税务"  # "shui wu" (tax affairs)
+KW_BUILT_ZH = "\\u5df2\\u5efa\\u6210"  # "yi jian cheng" (built/deployed)
+KW_TAX_ZH = "\\u7a0e\\u52a1"  # "shui wu" (tax affairs)
 
 AFRICAN_LANGUAGES = [
     ("isiZulu", "South Africa"),
@@ -560,3 +560,4 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
         "unknown_command": "Itegeko ridazwi - ryoherejwe ku-master core gusuzumwa.",
         "remembered": "Ukuri #%d kwibutswe: %s",
         "forgot": "Ukuri #%d kwibagiwe: %s",
+    },
