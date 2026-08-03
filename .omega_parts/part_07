@@ -1,163 +1,4 @@
-nction so the spawn context can
-# pickle it. multiprocessing is never invoked at import time (only inside
-# exec_contract_gate), and omega.py is already __main__-guarded, so spawning
-# is safe on every platform.
-
-def _sandbox_worker(code: str, tests: List[Any], queue: Any) -> None:
-    """Child-process target: exec the candidate and run the contract tests.
-
-    BEFORE exec'ing candidate code, POSIX children install a hard 256 MB
-    address-space ceiling (resource.RLIMIT_AS) so a memory bomb dies with a
-    catchable MemoryError -> rejection. On Windows the 'resource' module is
-    missing (and other platforms may raise ValueError/OSError), so the
-    ceiling is skipped inside try/except - REVIEW note: on Windows gate 2 is
-    timeout-only protection (no memory ceiling), by design.
-
-    The result is reported back through the multiprocessing.Queue as a plain
-    dict: {ok, reason, pass_rate, latency_avg}.
-    """
-    result: Dict[str, Any] = {
-        "ok": False,
-        "reason": "sandbox worker crashed before producing a result",
-        "pass_rate": 0.0,
-        "latency_avg": 0.0,
-    }
-    try:
-        try:
-            import resource  # POSIX only; absent on Windows
-            resource.setrlimit(resource.RLIMIT_AS,
-                               (EVO_MEMORY_LIMIT, EVO_MEMORY_LIMIT))
-        except (ImportError, ValueError, OSError):
-            # Windows / restricted hosts: no memory ceiling (timeout-only).
-            pass
-        namespace = EvolutionEngine._restricted_namespace()
-        compiled = compile(code, "<omega_candidate>", "exec")
-        exec(compiled, namespace)
-        fn = namespace.get("execute_logic")
-        if not callable(fn):
-            result["reason"] = "execute_logic is not defined"
-        else:
-            total = float(len(tests)) or 1.0
-            passed = 0
-            latencies: List[float] = []
-            failure: Optional[str] = None
-            for query, telemetry in tests:
-                start = time.perf_counter()
-                output = fn(query, list(telemetry))
-                latency = time.perf_counter() - start
-                if not isinstance(output, str):
-                    failure = ("contract test %r returned non-string" % query)
-                    break
-                if "<omega_analysis>" not in output:
-                    failure = ("contract test %r missing <omega_analysis> tag"
-                               % query)
-                    break
-                passed += 1
-                latencies.append(latency)
-            result["pass_rate"] = passed / total
-            if failure is None:
-                result["ok"] = True
-                result["reason"] = "ok"
-                if latencies:
-                    result["latency_avg"] = sum(latencies) / len(latencies)
-            else:
-                result["reason"] = failure
-    except MemoryError:
-        result["reason"] = ("memory ceiling exceeded (MemoryError, 256 MB "
-                            "RLIMIT_AS)")
-    except Exception as exc:
-        result["reason"] = "%s: %s" % (type(exc).__name__, exc)
-    try:
-        queue.put(result)
-    except Exception:
-        pass
-
-
-def _close_sandbox_queue(queue: Any) -> None:
-    """Release queue resources without ever raising."""
-    try:
-        queue.cancel_join_thread()
-    except Exception:
-        pass
-    try:
-        queue.close()
-    except Exception:
-        pass
-
-
-def sandbox_live_children() -> int:
-    """Count live multiprocessing children of THIS process (spawn context).
-
-    Used by the gate-2 no-zombie assertion and by the selftest's
-    process-isolation proof. Never raises.
-    """
-    try:
-        ctx = multiprocessing.get_context("spawn")
-        count = 0
-        for proc in ctx.active_children():
-            try:
-                if proc.is_alive():
-                    count += 1
-            except Exception:
-                pass
-        return count
-    except Exception:
-        return 0
-
-
-# ---------------------------------------------------------------------------
-# v29.2.0: Subsystem #10 - Evolution Engine (SAFE self-improvement)
-# ---------------------------------------------------------------------------
-
-class EvolutionEngine:
-    """Hardened absorption of the uploaded OmegaHyperEngine concept.
-
-    Keeps the concepts (immutable pillars, hot-swappable
-    execute_logic(query, telemetry) contract, telemetry scoring, evolution
-    cycles) and fixes the flaws: pillars are enforced via sha256 tamper
-    detection instead of prompt text, mutations pass a real 3-gate safety
-    pipeline instead of a full-privilege exec, the OpenRouter endpoint is
-    correct, and the health score is clamped to [0.0, 1.0].
-    """
-
-    # The 3 fixed contract tests every candidate must pass (SPEC 2.3).
-    CONTRACT_TESTS = [
-        ("Test Verify Parameter", ["Telemetry Operational"]),
-        ("health check", []),
-        ("rebalance portfolio", ["mining cluster alpha"]),
-    ]
-
-    def __init__(self, engine: "OmegaMasterEngine") -> None:
-        self.engine = engine
-        self.pillars_path = PILLARS_FILE
-        self.strategy_path = STRATEGY_FILE
-        self.state_path = EVOLUTION_FILE
-        self.state = self._load_state()
-        # Boot: real pillar enforcement (create / verify / restore).
-        try:
-            self.verify_pillars(announce=True)
-        except Exception:
-            pass
-        # Boot: bootstrap the evolvable strategy module (Generation 01).
-        self._bootstrap_strategy()
-
-    # ------------------------------------------------------------------
-    # State (omega_evolution.json) - all I/O guarded
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _default_state() -> Dict[str, Any]:
-        return {
-            "generation": 1,
-            "current_fitness": None,
-            "health": 1.0,
-            "scores": [],
-            "lineage": [],
-            "archive_fitness": {},
-        }
-
-    def _load_state(self) -> Dict[str, Any]:
-        state = self._default_state()
+tate()
         try:
             if not os.path.isfile(self.state_path):
                 return state
@@ -641,4 +482,177 @@ class EvolutionEngine:
                 lines.append("  no archived generations - nothing to roll "
                              "back to.")
                 return False, lines
-         
+            candidates.sort(reverse=True)  # highest fitness first
+            fit, gen, name = candidates[0]
+            with open(name, "r", encoding="utf-8", errors="replace") as src:
+                blob = src.read()
+            with open(self.strategy_path, "w", encoding="utf-8") as dst:
+                dst.write(blob)
+            current = self.generation()
+            self.state["generation"] = gen
+            self.state["current_fitness"] = fit
+            self.state.setdefault("lineage", []).append({
+                "generation": gen,
+                "fitness": fit,
+                "adopted_at": utc_now_iso(),
+                "parent": current,
+                "action": "rollback",
+            })
+            self._save_state()
+            lines.append("  restored generation %d (fitness %.3f) from %s."
+                         % (gen, fit, name))
+            lines.append("  omega_strategy_gen.py now runs generation %d."
+                         % gen)
+            self.engine._audit("Evolution", "evolve rollback", "Success")
+            return True, lines
+        except Exception as exc:
+            lines.append("  rollback failed safely: %s" % exc)
+            return False, lines
+
+    # ------------------------------------------------------------------
+    # Online proposal (guarded; correct OpenRouter endpoint; urllib)
+    # ------------------------------------------------------------------
+
+    def _openrouter_propose(self) -> Tuple[Optional[str], str]:
+        """Ask the LLM for a candidate mutation. Returns (code, error)."""
+        try:
+            key = self.engine.openrouter_key
+            if not key:
+                return None, ("OPENROUTER_API_KEY not set (.env or "
+                              "environment)")
+            pillars_json = json.dumps(CANONICAL_PILLARS, ensure_ascii=True)
+            system_prompt = EVO_META_SYSTEM_PROMPT.replace(
+                "{pillars}", pillars_json)
+            recent = json.dumps((self.state.get("scores") or [])[-5:])
+            user_prompt = ("LOG TELEMETRY:\n%s\n\nCompile optimized python "
+                           "code execution matrix:" % recent)
+            body = json.dumps({
+                "model": self.engine.openrouter_model,
+                "temperature": 0.25,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENROUTER_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request,
+                                        timeout=EVO_HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8",
+                                                     errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return None, "empty response from gateway"
+            content = str((choices[0].get("message") or {}).get("content")
+                          or "").strip()
+            if content.startswith("```"):
+                # Strip markdown fences if the model added them anyway.
+                fence_lines = content.splitlines()
+                if fence_lines and fence_lines[0].startswith("```"):
+                    fence_lines = fence_lines[1:]
+                if fence_lines and fence_lines[-1].strip().startswith("```"):
+                    fence_lines = fence_lines[:-1]
+                content = "\n".join(fence_lines).strip()
+            if not content:
+                return None, "gateway returned empty code"
+            return content, ""
+        except Exception as exc:
+            return None, str(exc)
+
+    # ------------------------------------------------------------------
+    # One evolution cycle: propose -> gate 1 -> gate 2 -> gate 3 -> adopt
+    # ------------------------------------------------------------------
+
+    def run_cycle(self, online: bool = False) -> Tuple[bool, List[str]]:
+        lines = ["[Evolution Engine] Mutation cycle starting."]
+        try:
+            # Pillars are re-verified on every cycle (SPEC 2.1).
+            if self.verify_pillars(announce=True) == "RESTORED":
+                lines.append("  pillars restored to canonical form.")
+            if online:
+                code, error = self._openrouter_propose()
+                if code is None:
+                    lines.append("  online proposal failed: %s" % error)
+                    lines.append("  cycle aborted safely. Hint: 'evolve run' "
+                                 "uses the offline template engine.")
+                    self.engine._audit("Evolution", "evolve run online",
+                                       "Failed")
+                    return False, lines
+                source = "openrouter:" + self.engine.openrouter_model
+                lines.append("  mode: online LLM proposal (%s)."
+                             % self.engine.openrouter_model)
+            else:
+                index = (self._next_generation() - 2) % len(EVO_TEMPLATES)
+                code = EVO_TEMPLATES[index]
+                source = "offline-template-%d" % (index + 1)
+                lines.append("  mode: offline template mutation "
+                             "(no network, no LLM).")
+            lines.append("  candidate source: %s" % source)
+
+            ok, reason = self.ast_gate(code)
+            lines.append("  gate 1 (AST whitelist): %s"
+                         % ("PASS" if ok else "REJECT - " + reason))
+            if not ok:
+                self.engine._audit("Evolution", "evolve run (%s)" % source,
+                                   "Rejected-AST")
+                return False, lines
+
+            ok, reason, pass_rate, latency_avg = self.exec_contract_gate(code)
+            lines.append("  gate 2 (sandbox + 3 contract tests): %s"
+                         % ("PASS" if ok else "REJECT - " + reason))
+            if not ok:
+                self.engine._audit("Evolution", "evolve run (%s)" % source,
+                                   "Rejected-Sandbox")
+                return False, lines
+
+            candidate_fitness = self.fitness(pass_rate, latency_avg,
+                                             self.health())
+            current = self.current_fitness()
+            current_txt = ("%.3f" % current) if current is not None \
+                else "(none recorded)"
+            lines.append("  gate 3 (fitness): candidate=%.3f current=%s"
+                         % (candidate_fitness, current_txt))
+            if current is not None and candidate_fitness < current:
+                lines.append("  REJECT - candidate fitness below current "
+                             "generation.")
+                self.engine._audit("Evolution", "evolve run (%s)" % source,
+                                   "Rejected-Fitness")
+                return False, lines
+
+            new_gen = self._adopt(code, candidate_fitness, source)
+            lines.append("  ADOPTED: generation %d now live (fitness %.3f)."
+                         % (new_gen, candidate_fitness))
+            lines.append("  previous generation archived (last %d kept)."
+                         % EVO_ARCHIVE_KEEP)
+            self.engine._audit("Evolution", "evolve run (%s)" % source,
+                               "Success")
+            return True, lines
+        except Exception as exc:
+            lines.append("  cycle aborted safely: %s" % exc)
+            return False, lines
+
+    # ------------------------------------------------------------------
+    # Telemetry (clamped scoring - fixes the negative-health bug)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def score_result(success: bool, output: str, latency: float) -> float:
+        """Score one exchange; clamped to [0.0, 1.0] (never negative)."""
+        try:
+            score = 1.0 if success else 0.0
+            if "<omega_analysis>" not in (output or ""):
+                score -= 0.3
+            if float(latency) > 2.0:
+                score -= 0.2
+            return max(0.0, min(1.0, score))
+        except Exception:
+            return 0.0
+
+    def _record_sco
