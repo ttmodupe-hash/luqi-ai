@@ -1,58 +1,4 @@
-lity, and dates into a table.",
-                "5. Synthesize findings; flag uncertainties and conflicts.",
-                "6. Record sources with links and access dates.",
-            ],
-            "hint": ("Set SERPER_API_KEY in .env to enable live web search."),
-        }
-
-    def _companion(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        topic = str(payload.get("query", "")).strip() or "your chosen topic"
-        return {
-            "status": "Ready",
-            "subsystem": "Omega Companion/Tutor",
-            "topic": topic,
-            "scaffold": [
-                "ELI5: core idea of '%s' in one plain sentence." % topic,
-                "Key terms: list 5 vocabulary words to master first.",
-                "Mental model: one analogy that maps to something familiar.",
-                "Worked example: walk through one concrete case step by step.",
-                "Active recall: 3 questions to test yourself without notes.",
-                "Next step: one small practice task to do today.",
-            ],
-        }
-
-    def _opportunity(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        domain = str(payload.get("query", "")).strip() or "general market"
-        return {
-            "status": "Scanned",
-            "subsystem": "Omega Opportunity Engine",
-            "domain": domain,
-            "scan_framework": [
-                "Demand: who hurts enough to pay for a solution in '%s'?" % domain,
-                "Supply gap: what are incumbents ignoring or doing poorly?",
-                "Edge: what skill, asset, or access do you already have?",
-                "Monetization: 3 realistic revenue models and price points.",
-                "Validation: cheapest 7-day test to prove real demand.",
-                "Risk: top 2 failure modes and how to cap downside.",
-            ],
-            "note": "Framework output - validate locally before investing money.",
-        }
-
-    def _finance_literacy(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        topic = str(payload.get("query", "")).strip() or "general money skills"
-        return {
-            "status": "Ready",
-            "subsystem": "Omega Finance Literacy",
-            "topic": topic,
-            "guidance": [
-                "Budget first: 50/30/20 rule (needs / wants / saving) as a start.",
-                "Emergency fund: target 3-6 months of essential expenses.",
-                "Debt: pay highest-interest debt first (avalanche method).",
-                "Scam check: guaranteed high returns + urgency + secrecy = walk away.",
-                "Verify: check any advisor/platform against your regulator's register.",
-                "Never invest money you cannot afford to lose.",
-            ],
-            "disclaimer": TAX_DISCLAIMER,
+r": TAX_DISCLAIMER,
         }
 
     # ------------------------------------------------------------------
@@ -518,4 +464,123 @@ lity, and dates into a table.",
             filename = "omega_export_%s.md" % stamp
             facts = [str(f) for f in self.memory.get("facts", [])]
             history = list(self.memory.get("history", []))[-50:]
-            audit_entries = self.read_log_tail(50
+            audit_entries = self.read_log_tail(50)
+            datasets = self.memory.get("datasets") or {}
+            last_import = datasets.get("last_import")
+            lines = [
+                "# " + ENGINE_NAME + " - Export",
+                "",
+                "Generated: %s (UTC)" % utc_now_iso(),
+                "Session: #%d | Language: %s" % (
+                    self.memory.get("sessions", 1), self.lang),
+                "",
+                "## System State",
+            ]
+            for key, value in self.system_state.items():
+                lines.append("- %s: %s" % (key, value))
+            lines.append("")
+            lines.append("## Facts (%d)" % len(facts))
+            if facts:
+                for i, fact in enumerate(facts, 1):
+                    lines.append("%d. %s" % (i, fact))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            lines.append("## Last Import")
+            if isinstance(last_import, dict) and last_import:
+                for key, value in last_import.items():
+                    lines.append("- %s: %s" % (key, value))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            lines.append("## History (last %d)" % len(history))
+            if history:
+                for entry in history:
+                    lines.append("- %s | %s | %s" % (
+                        entry.get("ts", "?"), entry.get("role", "?"),
+                        entry.get("text", "")))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            lines.append("## Audit (last %d)" % len(audit_entries))
+            if audit_entries:
+                for entry in audit_entries:
+                    lines.append("- %s | %s | %s | %s" % (
+                        entry.get("ts", "?"), entry.get("subsystem", "?"),
+                        entry.get("status", "?"),
+                        entry.get("input_summary", "")))
+            else:
+                lines.append("(none)")
+            lines.append("")
+            with open(filename, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(lines))
+            return True, "Export saved: %s" % filename
+        except Exception as exc:
+            return False, "Export failed safely: %s" % exc
+
+    def _report_findings(self, result: Dict[str, Any]) -> List[str]:
+        """Flatten a subsystem result dict into key-finding bullet lines."""
+        findings: List[str] = []
+        if result.get("message"):
+            findings.append(str(result["message"]))
+        for key, value in result.items():
+            if key in ("subsystem", "status", "message"):
+                continue
+            if isinstance(value, dict):
+                for sub_key, sub_val in value.items():
+                    findings.append("%s.%s: %s" % (key, sub_key, sub_val))
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        findings.append("; ".join(
+                            "%s: %s" % (k, v) for k, v in item.items()))
+                    else:
+                        findings.append(str(item))
+            else:
+                findings.append("%s: %s" % (key, value))
+        return findings
+
+    def write_report(self, topic: str) -> Tuple[bool, str]:
+        """Route topic through the master router, write a markdown report."""
+        try:
+            topic = str(topic or "").strip()
+            if not topic:
+                return False, "Usage: report <topic>"
+            result = self.execute_omega_subsystem(topic, {"query": topic})
+            subsystem = str(result.get("subsystem", "Master Core"))
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_report_%s_%s.md" % (_slugify(topic), stamp)
+            findings = self._report_findings(result)
+            actions = list(REPORT_GENERIC_ACTIONS)
+            actions.extend(REPORT_NEXT_ACTIONS.get(
+                subsystem, REPORT_DEFAULT_ACTIONS))
+            lines = [
+                "# Report: %s" % topic,
+                "",
+                "Generated: %s (UTC)" % utc_now_iso(),
+                "Engine: " + ENGINE_NAME,
+                "Subsystem: %s" % subsystem,
+                "Status: %s" % str(result.get("status", "Unknown")),
+                "",
+                "## Key Findings",
+            ]
+            if findings:
+                lines.extend("- " + str(f) for f in findings)
+            else:
+                lines.append("- (no findings)")
+            lines.append("")
+            lines.append("## Suggested Next Actions")
+            for i, action in enumerate(actions, 1):
+                lines.append("%d. %s" % (i, action))
+            lines.append("")
+            with open(filename, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(lines))
+            return True, "Report saved: %s" % filename
+        except Exception as exc:
+            return False, "Report failed safely: %s" % exc
+
+
+# ---------------------------------------------------------------------------
+# v29.3.0: process-isolated sandbox for evolution gate 2 (SPEC_v293.md 2)
+# ---------------------------------------------------------------------------
+# The worker target MUST be a module-level fu
