@@ -1,104 +1,4 @@
-t - degerlendirme icin master core'a gonderildi.",
-        "remembered": "Gercek #%d hatirlandi: %s",
-        "forgot": "Gercek #%d unutuldu: %s",
-    },
-    "it": {
-        "name": "Italian",
-        "region": "world",
-        "greeting": "Ciao! Scrivi 'help' per i comandi. 'exit' per uscire.",
-        "goodbye": "Arrivederci.",
-        "help_header": "Comandi:",
-        "unknown_command": "Comando non riconosciuto - inviato al master core per la valutazione.",
-        "remembered": "Fatto #%d ricordato: %s",
-        "forgot": "Fatto #%d dimenticato: %s",
-    },
-    "ta": {
-        "name": "Tamil",
-        "region": "world",
-        "greeting": "Vanakkam! 'help' ezhutha kattalaigal kaana. 'exit' veliyera.",
-        "goodbye": "Poy varen.",
-        "help_header": "Kattalaigal:",
-        "unknown_command": "Ariyatha kattalai - master core-kku anuppapattathu.",
-        "remembered": "Unmai #%d ninaivagam: %s",
-        "forgot": "Unmai #%d maranthathu: %s",
-    },
-    "ur": {
-        "name": "Urdu",
-        "region": "world",
-        "greeting": "Assalam-o-alaikum! 'help' likhein hukum dekhne ke liye. 'exit' nikalne ke liye.",
-        "goodbye": "Khuda hafiz.",
-        "help_header": "Hukum:",
-        "unknown_command": "Namaloom hukum - master core ko jaanch ke liye bheja gaya.",
-        "remembered": "Haqeeqat #%d yaad rakh li gayi: %s",
-        "forgot": "Haqeeqat #%d bhool gaye: %s",
-    },
-    "pl": {
-        "name": "Polish",
-        "region": "world",
-        "greeting": "Czesc! Wpisz 'help' aby zobaczyc polecenia. 'exit' aby wyjsc.",
-        "goodbye": "Do widzenia.",
-        "help_header": "Polecenia:",
-        "unknown_command": "Nierozpoznane polecenie - wyslane do master core do oceny.",
-        "remembered": "Fakt #%d zapamietano: %s",
-        "forgot": "Fakt #%d zapomniano: %s",
-    },
-    "uk": {
-        "name": "Ukrainian",
-        "region": "world",
-        "greeting": "Pryvit! Vvedit' 'help' shchob pobyachyty komandy. 'exit' shchob vyjty.",
-        "goodbye": "Do pobachennya.",
-        "help_header": "Komandy:",
-        "unknown_command": "Nevidoma komanda - napravlena do master core dlya otsinky.",
-        "remembered": "Fakt #%d zapam'yatano: %s",
-        "forgot": "Fakt #%d zabuto: %s",
-    },
-    "nl": {
-        "name": "Dutch",
-        "region": "world",
-        "greeting": "Hallo! Typ 'help' voor commando's. 'exit' om af te sluiten.",
-        "goodbye": "Tot ziens.",
-        "help_header": "Commando's:",
-        "unknown_command": "Onbekend commando - doorgestuurd naar de master core voor beoordeling.",
-        "remembered": "Feit #%d onthouden: %s",
-        "forgot": "Feit #%d vergeten: %s",
-    },
-    "th": {
-        "name": "Thai",
-        "region": "world",
-        "greeting": "Sawasdee! Phim 'help' phuea du kham sang. 'exit' phuea ok.",
-        "goodbye": "La gon.",
-        "help_header": "Kham sang:",
-        "unknown_command": "Kham sang thi mai rujak - sueng pai thi master core phuea pramoen.",
-        "remembered": "Kor thet jing #%d thuk bantuek: %s",
-        "forgot": "Kor thet jing #%d thuk luem: %s",
-    },
-    "el": {
-        "name": "Greek",
-        "region": "world",
-        "greeting": "Yia sou! Grapse 'help' gia entoles. 'exit' gia eksodo.",
-        "goodbye": "Adio.",
-        "help_header": "Entoles:",
-        "unknown_command": "Agnosti entoli - apestalmeni sto master core gia axiologisi.",
-        "remembered": "Gegonos #%d apomnimonevthike: %s",
-        "forgot": "Gegonos #%d ksechastike: %s",
-    },
-    "he": {
-        "name": "Hebrew (translit)",
-        "region": "world",
-        "greeting": "Shalom! Katav 'help' le-peekudot. 'exit' la-yetsia.",
-        "goodbye": "Lehitraot.",
-        "help_header": "Pekudot:",
-        "unknown_command": "Pekuda lo mekuva - nishlecha le-master core le-hachra'a.",
-        "remembered": "Uvda #%d nizkeret: %s",
-        "forgot": "Uvda #%d nishkechat: %s",
-    },
-    "fa": {
-        "name": "Persian",
-        "region": "world",
-        "greeting": "Salaam! 'help' ra type konid ta dastoorat ra bebinid. 'exit' baraye khoruj.",
-        "goodbye": "Khoda hafez.",
-        "help_header": "Dastoorat:",
-        "unknown_command": "Dastoor-e nashenakhte - be master core ersal shod.",
+nown_command": "Dastoor-e nashenakhte - be master core ersal shod.",
         "remembered": "Haghighat #%d zakhire shod: %s",
         "forgot": "Haghighat #%d faramoosh shod: %s",
     },
@@ -274,7 +174,7 @@ def fresh_memory() -> Dict[str, Any]:
     """Return a new, empty memory structure.
 
     SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile
-    + v29.6.0 reminders / voice flag.
+    + v29.6.0 reminders / voice flag + v29.7.0 document store.
     """
     return {
         "facts": [],
@@ -285,6 +185,7 @@ def fresh_memory() -> Dict[str, Any]:
         "learning": {},
         "reminders": [],
         "voice_enabled": False,
+        "documents": [],
     }
 
 
@@ -377,6 +278,29 @@ def load_memory(path: str) -> Dict[str, Any]:
                                         "done": bool(item.get("done",
                                                               False))})
             memory["reminders"] = clean_reminders
+        # v29.7.0: document store, validated entry by entry (corrupt-safe).
+        documents = data.get("documents")
+        if isinstance(documents, list):
+            clean_docs: List[Dict[str, Any]] = []
+            for item in documents:
+                if not isinstance(item, dict):
+                    continue
+                name = item.get("name")
+                path = item.get("path")
+                chunks = item.get("chunks")
+                chars = item.get("chars")
+                ts = item.get("ts")
+                if not (isinstance(name, str) and isinstance(path, str)
+                        and isinstance(chunks, list)
+                        and all(isinstance(c, str) for c in chunks)
+                        and isinstance(chars, int)
+                        and not isinstance(chars, bool)
+                        and isinstance(ts, str)):
+                    continue
+                clean_docs.append({"name": name, "path": path,
+                                   "chars": chars, "chunks": list(chunks),
+                                   "ts": ts})
+            memory["documents"] = clean_docs
         return memory
     except Exception:
         # Corrupt memory: back up the broken file, start fresh.
@@ -645,4 +569,132 @@ BUILTIN_SYLLABI: Dict[str, List[Tuple[str, List[str]]]] = {
             "Statement, question, command, exclamation.",
             "Capital letters and end punctuation."]),
         ("Parts of Speech", [
-            "Nouns, verbs and adjective
+            "Nouns, verbs and adjectives.",
+            "Adverbs and prepositions.",
+            "Conjunctions join ideas."]),
+        ("Vocabulary Building", [
+            "Using context clues for new words.",
+            "Roots, prefixes and suffixes.",
+            "Choosing precise words for tone."]),
+        ("Paragraph Writing", [
+            "A strong topic sentence.",
+            "Supporting details and examples.",
+            "Transitions that guide the reader."]),
+        ("Reading Comprehension", [
+            "Main idea vs supporting detail.",
+            "Making inferences from evidence.",
+            "Summarizing in your own words."]),
+        ("Grammar in Depth", [
+            "Verb tenses and subject-verb agreement.",
+            "Fixing common errors.",
+            "Active vs passive voice."]),
+        ("Essay Structure", [
+            "Introduction with a clear thesis.",
+            "Body paragraphs: one idea each.",
+            "Conclusions that answer 'so what'."]),
+        ("Persuasive Writing", [
+            "Claims backed by evidence.",
+            "Addressing counterarguments.",
+            "Ethos, pathos and logos."]),
+        ("Literature and Analysis", [
+            "Theme and character development.",
+            "Figurative language: metaphor, simile, imagery.",
+            "Supporting analysis with quotations."]),
+        ("Capstone: Communication Skills", [
+            "Speaking and active listening.",
+            "Formal vs informal registers.",
+            "Editing and revising your own work."]),
+    ],
+    "computer-science": [
+        ("Computing and Python Setup", [
+            "What a program is and how it runs.",
+            "Running your first Python script.",
+            "Variables and the print() function."]),
+        ("Data Types and Operations", [
+            "Integers, floats and strings.",
+            "Converting between types.",
+            "Building output with f-strings."]),
+        ("Control Flow: Decisions", [
+            "if, elif and else.",
+            "Comparison operators.",
+            "Boolean logic with and/or/not."]),
+        ("Loops and Iteration", [
+            "for loops and range().",
+            "while loops for unknown counts.",
+            "break and continue."]),
+        ("Data Structures", [
+            "Lists and tuples for ordered data.",
+            "Dictionaries for key-value lookup.",
+            "Sets and when to use them."]),
+        ("Functions", [
+            "Defining and calling functions.",
+            "Arguments and return values.",
+            "Variable scope basics."]),
+        ("Files and Errors", [
+            "Reading and writing text files.",
+            "try/except for graceful failure.",
+            "Debugging: read the traceback bottom-up."]),
+        ("Object-Oriented Basics", [
+            "Classes bundle data and behavior.",
+            "Methods and attributes.",
+            "Simple inheritance."]),
+        ("Algorithms and Problem Solving", [
+            "Searching and sorting ideas.",
+            "Big-O intuition: what scales.",
+            "Plan in pseudocode before coding."]),
+        ("Capstone: Build a Project", [
+            "Plan a small command-line app.",
+            "Structure code into functions and files.",
+            "Test it, then choose your next topic."]),
+    ],
+    "finance": [
+        ("Money Mindset and Goals", [
+            "Needs vs wants.",
+            "Setting SMART money goals.",
+            "Tracking where every unit goes."]),
+        ("Budgeting Basics", [
+            "Listing income and expenses.",
+            "The 50/30/20 rule as a starting point.",
+            "Building your first written budget."]),
+        ("Saving and Emergency Funds", [
+            "Why an emergency fund comes first.",
+            "Automating savings on payday.",
+            "Where to keep savings safely."]),
+        ("Banking and Interest", [
+            "Account types and their purposes.",
+            "Simple vs compound interest.",
+            "Reading APR and APY."]),
+        ("Debt and Credit", [
+            "Good debt vs bad debt.",
+            "How credit scores work.",
+            "The avalanche payoff method."]),
+        ("Scam and Fraud Defense", [
+            "Red flags: guaranteed returns, urgency, secrecy.",
+            "Verifying platforms and advisors.",
+            "Protecting your personal data."]),
+        ("Investing Fundamentals", [
+            "The risk-return trade-off.",
+            "Stocks, bonds and funds.",
+            "Diversification spreads risk."]),
+        ("Long-Term Planning", [
+            "Why starting early wins (compounding).",
+            "Employer and government retirement plans.",
+            "Setting a decades-long horizon."]),
+        ("Taxes and Payslips", [
+            "Reading a payslip line by line.",
+            "Common deductions and credits.",
+            "Basic filing obligations."]),
+        ("Capstone: Your Personal Finance Plan", [
+            "Reviewing all nine units.",
+            "Building a one-page money plan.",
+            "Habits that make it stick."]),
+    ],
+    "history": [
+        ("Studying the Past", [
+            "Primary vs secondary sources.",
+            "Chronology and timelines.",
+            "Spotting bias and perspective."]),
+        ("Early Civilizations", [
+            "Mesopotamia and Egypt.",
+            "The Indus Valley.",
+            "Ear
