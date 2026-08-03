@@ -1,0 +1,11 @@
+#!/bin/sh
+# LUQI AI - secret guard pre-commit hook
+# Activate once with:  git config core.hooksPath .githooks
+# Blocks any commit that contains an API key or a .env file.
+if command -v py >/dev/null 2>&1; then
+    py -3.11 guard_secrets.py --staged
+elif command -v python3 >/dev/null 2>&1; then
+    python3 guard_secrets.py --staged
+else
+    python guard_secrets.py --staged
+fi
