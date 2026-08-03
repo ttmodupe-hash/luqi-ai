@@ -1,29 +1,4 @@
-   name = arg[len("doc"):].strip()
-            if not name:
-                print("Usage: forget doc <name>")
-                engine._audit("CLI", "forget doc (no name)", "Failed")
-                return True
-            docs = engine.memory.setdefault("documents", [])
-            match = None
-            for doc in docs:
-                if (isinstance(doc, dict)
-                        and str(doc.get("name", "")).lower()
-                        == name.lower()):
-                    match = doc
-                    break
-            if match is None:
-                print("no document named %s" % name)
-                engine._audit("CLI", "forget doc %s" % name, "Failed")
-                return True
-            docs.remove(match)
-            save_memory(engine.memory_path, engine.memory)
-            print("forgot document: %s" % match.get("name", name))
-            engine._audit("CLI", "forget doc %s" % name, "Success")
-            return True
-        try:
-            index = int(arg)
-        except ValueError:
-            print("Usage: forget <number>  (see 'recall' for numbers)")
+all' for numbers)")
             return True
         removed = engine.forget_fact(index)
         if removed is None:
@@ -127,20 +102,31 @@
         return True
     if lowered == "voice" or lowered.startswith("voice "):
         arg = line[len("voice"):].strip().lower()
-        if arg in ("on", "off"):
-            engine.memory["voice_enabled"] = (arg == "on")
+        if arg in ("on", "off", "prof", "all"):
+            if arg == "off":
+                engine.memory["voice_enabled"] = False
+            else:
+                engine.memory["voice_enabled"] = True
+                engine.memory["voice_scope"] = ("all" if arg == "all"
+                                                else "prof")
             save_memory(engine.memory_path, engine.memory)
+            enabled = bool(engine.memory.get("voice_enabled"))
             print("voice output %s."
-                  % ("ENABLED" if arg == "on" else "DISABLED"))
+                  % ("ENABLED" if enabled else "DISABLED"))
+            if enabled:
+                print("voice scope: %s"
+                      % engine.memory.get("voice_scope", "prof"))
             engine._audit("CLI", "voice %s" % arg, "Success")
             return True
         enabled = bool(engine.memory.setdefault("voice_enabled", False))
         print("voice status:")
         print("  voice output: %s" % ("on" if enabled else "off"))
+        print("  voice scope: %s"
+              % engine.memory.get("voice_scope", "prof"))
         print("  tts voice: %s" % engine.tts_voice)
         print("  OPENAI_API_KEY present: %s"
               % ("yes" if engine.openai_key else "no"))
-        print("Usage: voice [on|off]")
+        print("Usage: voice [on|off|prof|all]")
         engine._audit("CLI", "voice", "Success")
         return True
     if lowered == "image" or lowered.startswith("image "):
@@ -256,10 +242,14 @@
     if lowered == "ingest" or lowered.startswith("ingest "):
         path = line[len("ingest"):].strip().strip("'\"")
         if not path:
-            print("Usage: ingest <path>  (.txt .md .csv .log .json)")
+            print("Usage: ingest <path-or-url>  "
+                  "(.txt .md .csv .log .json or http(s)://...)")
             engine._audit("CLI", "ingest (no path)", "Failed")
             return True
-        ok, message = engine.import_document(path)
+        if path.lower().startswith(("http://", "https://")):
+            ok, message = engine.import_url(path)
+        else:
+            ok, message = engine.import_document(path)
         print(message)
         engine._audit("CLI", "ingest %s" % path,
                       "Success" if ok else "Failed")
@@ -629,4 +619,30 @@ def run_selftest() -> int:
             loaded = load_memory(mem_path)
             ok = ok and loaded.get("facts") == ["alpha fact", "beta fact"]
             loaded["facts"].pop(0)  # forget fact #1
-        
+            ok = save_memory(mem_path, loaded) and ok
+            reloaded = load_memory(mem_path)
+            ok = ok and reloaded.get("facts") == ["beta fact"]
+            checks.append(("memory: remember/recall/forget roundtrip", ok))
+
+            with open(mem_path, "w", encoding="ascii") as handle:
+                handle.write("{corrupt json !!!")
+            recovered = load_memory(mem_path)
+            ok = (recovered.get("facts") == []
+                  and os.path.isfile(mem_path + ".bak"))
+            checks.append(("memory: corrupt JSON -> .bak + fresh start", ok))
+    except Exception as exc:
+        checks.append(("memory: roundtrip (exception: %s)" % exc, False))
+
+    # Module C: generated CSV import + analyze + query.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            csv_path = os.path.join(tmpdir, "sales.csv")
+            with open(csv_path, "w", encoding="ascii", newline="") as handle:
+                handle.write("name,region,amount\n"
+                             "alpha,north,10\n"
+                             "beta,south,20\n"
+                             "gamma,north,30\n"
+                             "delta,east,40\n"
+                             "epsilon,north,50\n")
+            ok, _msg = engine.import_dataset(csv_path)
+            ok = (ok and engine.dataset is not None
