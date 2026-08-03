@@ -1,35 +1,4 @@
-ardInterrupt:
-                out("")
-                continue
-            cmd = raw.strip().lower()
-            if not cmd:
-                continue
-            if cmd in ("end class", "next", "progress", "syllabus",
-                       "hint", "quiz me", "exit", "quit"):
-                out("Quiz ended early (%d card%s marked)."
-                    % (asked, "" if asked == 1 else "s"))
-                return score, asked, raw.strip()
-            if not revealed:
-                if cmd == "reveal":
-                    out("Answer: %s" % answer)
-                    out("Be honest - mark 'right' or 'wrong'.")
-                    revealed = True
-                else:
-                    out("Think first, then type 'reveal' to see the "
-                        "answer.")
-            else:
-                if cmd == "right":
-                    score += 1
-                    asked += 1
-                    out("Marked right. Well done.")
-                    break
-                if cmd == "wrong":
-                    asked += 1
-                    engine.add_weak_point(subject, question)
-                    out("Marked wrong - noted as a weak point to review.")
-                    break
-                if cmd == "reveal":
-                    out("Answer: %s" % answer)
+("Answer: %s" % answer)
                 else:
                     out("Type 'right' or 'wrong' (or 'reveal' to see the "
                         "answer again).")
@@ -123,7 +92,7 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
             "offline classroom.")
     out("In class: end class | syllabus | quiz me | hint | progress | next")
     for line in lesson_intro_lines(entry, subject):
-        out(line)
+        _professor_out(out, line)
 
     turns = 0
     quiz_results: List[Tuple[int, int]] = []
@@ -183,7 +152,7 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
                 reply = engine._llm_messages(messages)
                 if reply:
                     reply = reply.strip()
-                    out(reply)
+                    _professor_out(out, reply)
                     messages.append({"role": "assistant",
                                      "content": reply})
                 else:
@@ -205,7 +174,7 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
                 entry["current_lesson"] = int(
                     entry.get("current_lesson", 0)) + 1
                 for line in lesson_intro_lines(entry, subject):
-                    out(line)
+                    _professor_out(out, line)
                 if online:
                     messages.append({"role": "user", "content": (
                         "Let's move to the next lesson: %s."
@@ -215,7 +184,7 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
                     reply = engine._llm_messages(messages)
                     if reply:
                         reply = reply.strip()
-                        out(reply)
+                        _professor_out(out, reply)
                         messages.append({"role": "assistant",
                                          "content": reply})
                     else:
@@ -234,7 +203,7 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
             reply = engine._llm_messages(messages)
             if reply:
                 reply = reply.strip()
-                out(reply)
+                _professor_out(out, reply)
                 messages.append({"role": "assistant", "content": reply})
             else:
                 out("The professor is unreachable right now (LLM call "
@@ -246,7 +215,7 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
                 "without OPENAI_API_KEY.)")
             out("Review the current lesson key points:")
             for line in lesson_intro_lines(entry, subject):
-                out(line)
+                _professor_out(out, line)
             out("Type 'next' to advance, 'quiz me' to self-check, or "
                 "'end class' to finish.")
 
@@ -362,19 +331,23 @@ def _due_reminders(engine: OmegaMasterEngine) -> List[str]:
 
 
 def _voice_out(engine: OmegaMasterEngine, base_out: Any) -> Any:
-    """Wrap a classroom out= callable: print, then speak when voice is on.
+    """Wrap a classroom out= callable: always print; speak per voice scope.
 
+    v29.8.0: scope "prof" (default) speaks only lines routed through the
+    returned callable's .speak() attribute (professor explanations);
+    scope "all" speaks every line (the v29.6.0 behavior).
     Windows: synthesize to omega_voice_last.mp3 (overwritten) and auto-play
-    it. Other platforms: one-time notice on the first line, then print-only.
-    Every failure degrades to print-only (never raises).
+    it. Other platforms: one-time notice on the first spoken line, then
+    print-only. Every failure degrades to print-only (never raises).
     """
     if not engine.memory.setdefault("voice_enabled", False):
         return base_out
+    scope = str(engine.memory.get("voice_scope", "prof") or "prof").lower()
+    if scope not in ("prof", "all"):
+        scope = "prof"
     state = {"noticed": False}
 
-    def wrapped(line: Any = "") -> None:
-        text = str(line)
-        base_out(text)
+    def _speak_line(text: str) -> None:
         try:
             if sys.platform != "win32":
                 if not state["noticed"]:
@@ -394,7 +367,35 @@ def _voice_out(engine: OmegaMasterEngine, base_out: Any) -> Any:
         except Exception:
             pass
 
+    def wrapped(line: Any = "") -> None:
+        text = str(line)
+        base_out(text)
+        if scope == "all":
+            _speak_line(text)
+
+    def speak(line: Any = "") -> None:
+        text = str(line)
+        base_out(text)
+        _speak_line(text)
+
+    wrapped.speak = speak  # type: ignore
     return wrapped
+
+
+def _professor_out(out: Any, text: str) -> None:
+    """Route a professor-explanation line through out.speak when present.
+
+    Classroom out= callables wrapped by _voice_out expose .speak(); plain
+    callables (voice off, tests) just print. Never raises.
+    """
+    try:
+        speaker = getattr(out, "speak", None)
+        if callable(speaker):
+            speaker(text)
+        else:
+            out(text)
+    except Exception:
+        pass
 
 
 def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
@@ -678,4 +679,29 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
         # v29.7.0: 'forget doc <name>' removes an ingested document
         # (handled here because bare 'forget <n>' claims the prefix).
         if arg.lower() == "doc" or arg.lower().startswith("doc "):
-         
+            name = arg[len("doc"):].strip()
+            if not name:
+                print("Usage: forget doc <name>")
+                engine._audit("CLI", "forget doc (no name)", "Failed")
+                return True
+            docs = engine.memory.setdefault("documents", [])
+            match = None
+            for doc in docs:
+                if (isinstance(doc, dict)
+                        and str(doc.get("name", "")).lower()
+                        == name.lower()):
+                    match = doc
+                    break
+            if match is None:
+                print("no document named %s" % name)
+                engine._audit("CLI", "forget doc %s" % name, "Failed")
+                return True
+            docs.remove(match)
+            save_memory(engine.memory_path, engine.memory)
+            print("forgot document: %s" % match.get("name", name))
+            engine._audit("CLI", "forget doc %s" % name, "Success")
+            return True
+        try:
+            index = int(arg)
+        except ValueError:
+            print("Usage: forget <number>  (see 'rec
