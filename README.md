@@ -77,5 +77,9 @@ python omega.py --selftest   # 172 checks: router smoke, memory round-trip + cor
                              # routing, offline degradation - exit 0 means all pass
 ```
 
+## The company
+
+LUQI AI is engineered, published and owned by **Limitless Telecommunication (Pty) Ltd** - a private company registered with the Companies and Intellectual Property Commission (CIPC) of South Africa (Reg. 2011/136660/07), in business since 25 November 2011, headquartered in Soshanguve, Tshwane. Enterprise status: In Business - independently verifiable at cipc.co.za.
+
 ---
-Luqi AI (c) 2026. Built to be verified, not trusted: every release ships with a selftest and a fresh-clone proof.
+Luqi AI (c) 2026 Limitless Telecommunication (Pty) Ltd. Built to be verified, not trusted: every release ships with a selftest and a fresh-clone proof.
