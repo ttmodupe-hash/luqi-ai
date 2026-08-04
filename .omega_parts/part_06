@@ -406,7 +406,6 @@ setdefault("documents", [])
             else:
                 lines.append("- (no findings)")
             lines.append("")
-
             lines.append("## Suggested Next Actions")
             for i, action in enumerate(actions, 1):
                 lines.append("%d. %s" % (i, action))
