@@ -1,4 +1,33 @@
-setdefault("documents", [])
+        "rows": rows,
+            }
+            self.memory.setdefault("datasets", {})["last_import"] = {
+                "path": os.path.abspath(path),
+                "name": os.path.basename(path),
+                "source": ext.lstrip("."),
+                "rows": len(rows),
+                "columns": len(headers),
+                "headers": headers,
+                "ts": utc_now_iso(),
+            }
+            if save:
+                save_memory(self.memory_path, self.memory)
+            return True, ("Imported %d row(s) x %d column(s) from %s "
+                          "(%s)." % (len(rows), len(headers),
+                                     os.path.basename(path), ext.lstrip(".")))
+        except Exception as exc:
+            return False, "Import failed safely: %s" % exc
+
+    def _store_document(self, name: str, origin: str, text: str,
+                        save: bool = True) -> Tuple[bool, str]:
+        """Chunk and store one document (dedup by name, evict to caps).
+
+        Shared by file and URL ingestion. Never raises.
+        """
+        try:
+            chunks = _chunk_text(text)
+            if not chunks:
+                return False, "no text content found"
+            docs = self.memory.setdefault("documents", [])
             if not isinstance(docs, list):
                 docs = []
                 self.memory["documents"] = docs
@@ -703,4 +732,16 @@ class EvolutionEngine:
     def pillars_lines(self) -> List[str]:
         lines = ["Immutable pillars (integrity: %s):" % self.pillars_status()]
         for key, value in CANONICAL_PILLARS.items():
-            
+            lines.append("  %s: %s" % (key, value))
+        lines.append("  sha256: %s" % self.canonical_pillars_sha256())
+        return lines
+
+    # ------------------------------------------------------------------
+    # Evolvable strategy module (omega_strategy_gen.py)
+    # ------------------------------------------------------------------
+
+    def _bootstrap_strategy(self) -> None:
+        try:
+            if not os.path.isfile(self.strategy_path):
+                with open(self.strategy_path, "w", encoding="utf-8") as handle:
+    
