@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="brand/limitless_logo_full.png" alt="Limitless Telecommunications" width="340">
+</p>
+
 # LUQI AI v29.12.0 "Prompt Forge" - Unified Master Engine
 
 ![version](https://img.shields.io/badge/version-29.12.0-brightgreen) ![python](https://img.shields.io/badge/python-3.11-blue) ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen) ![self-test](https://img.shields.io/badge/self--test-172%2F172-brightgreen) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
