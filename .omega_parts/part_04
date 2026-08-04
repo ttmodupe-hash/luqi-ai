@@ -749,4 +749,4 @@ class OmegaMasterEngine:
         # v29.6.0: OpenRouter fallback prompt (last user message, else last).
         fallback_prompt = clean[-1]["content"]
         for msg in reversed(clean):
- """
+ 
