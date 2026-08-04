@@ -1,170 +1,4 @@
-e" or low_args.startswith("done "):
-            num = args[len("done"):].strip()
-            try:
-                index = int(num)
-            except ValueError:
-                index = 0
-            if 1 <= index <= len(reminders):
-                reminders[index - 1]["done"] = True
-                save_memory(engine.memory_path, engine.memory)
-                print("Reminder #%d marked done: %s"
-                      % (index, reminders[index - 1].get("text", "")))
-                engine._audit("Memory", "remind done %d" % index,
-                              "Success")
-            else:
-                print("No reminder #%s. See 'reminders' for numbers."
-                      % (num or "?"))
-                engine._audit("Memory", "remind done %s" % (num or "?"),
-                              "Failed")
-            return True
-        when = re.search(r"\s+(in\s+\d+\s*[mhd]|at\s+\d{1,2}:\d{2})\s*$",
-                         low_args)
-        due = _parse_remind_when(when.group(1)) if when else None
-        text = args[:when.start()].strip() if when else ""
-        if not text or due is None:
-            print("Usage: remind <text> in <N>m|h|d   or   "
-                  "remind <text> at HH:MM")
-            print("       reminders | remind done <n> | remind clear")
-            engine._audit("Memory", "remind (usage)", "Failed")
-            return True
-        reminders.append({"text": text,
-                          "due": due.strftime("%Y-%m-%d %H:%M"),
-                          "done": False})
-        save_memory(engine.memory_path, engine.memory)
-        print("Reminder set for %s: %s"
-              % (due.strftime("%Y-%m-%d %H:%M"), text))
-        engine._audit("Memory", "remind", "Success")
-        return True
-
-    # --- v29.10.0 commands (rights & travel toolkit) ---
-    if lowered == "map" or lowered.startswith("map "):
-        arg = line[len("map"):].strip()
-        if not arg:
-            print("Usage: map <place>  |  map dir <a> to <b>")
-            print("map provider: %s (options: %s; set OMEGA_MAP_PROVIDER "
-                  "in .env)" % (engine.map_provider,
-                                ", ".join(sorted(MAP_PROVIDERS))))
-            engine._audit("CLI", "map (no place)", "Failed")
-            return True
-        if arg.lower() == "provider":
-            print("map provider: %s" % engine.map_provider)
-            print("options: %s (set OMEGA_MAP_PROVIDER in .env)"
-                  % ", ".join(sorted(MAP_PROVIDERS)))
-            engine._audit("CLI", "map provider", "Success")
-            return True
-        kind = "place"
-        place_a = arg
-        place_b = ""
-        if lowered.startswith("map dir "):
-            body = arg[4:].strip()
-            parts = re.split(r"\s+to\s+", body, 1)
-            if len(parts) == 2 and parts[0].strip() and parts[1].strip():
-                kind = "dir"
-                place_a = parts[0].strip().strip("'\"")
-                place_b = parts[1].strip().strip("'\"")
-            else:
-                print("Usage: map dir <from> to <to>")
-                engine._audit("CLI", "map dir (bad args)", "Failed")
-                return True
-        else:
-            place_a = place_a.strip("'\"")
-        url = _map_url(engine.map_provider, kind, place_a, place_b)
-        print(url)
-        try:
-            if webbrowser.open(url):
-                print("(opened in your browser)")
-            else:
-                print("(browser unavailable - copy the URL above)")
-        except Exception:
-            print("(browser unavailable - copy the URL above)")
-        engine._audit("CLI", "map %s" % arg[:60], "Success")
-        return True
-    if lowered == "roadblock" or lowered.startswith("roadblock "):
-        arg = line[len("roadblock"):].strip()
-        if not arg:
-            print("Usage: roadblock <where> <note>   "
-                  "('roadblocks' lists recent)")
-            engine._audit("CLI", "roadblock (no args)", "Failed")
-            return True
-        blocks = arg.split(None, 1)
-        where = blocks[0]
-        note = blocks[1] if len(blocks) > 1 else ""
-        entries = engine.memory.setdefault("roadblocks", [])
-        if not isinstance(entries, list):
-            entries = []
-            engine.memory["roadblocks"] = entries
-        entries.append({"where": where, "note": note,
-                        "ts": utc_now_iso()})
-        while len(entries) > MAX_ROADBLOCKS:
-            entries.pop(0)
-        save_memory(engine.memory_path, engine.memory)
-        print("roadblock logged: %s - %s (total %d)"
-              % (where, note or "(no note)", len(entries)))
-        engine._audit("CLI", "roadblock %s" % where[:40], "Success")
-        return True
-    if lowered == "roadblocks":
-        entries = [e for e in
-                   engine.memory.setdefault("roadblocks", [])
-                   if isinstance(e, dict)]
-        if not entries:
-            print("no roadblocks logged yet - "
-                  "roadblock <where> <note> to add one")
-        else:
-            print("recent roadblocks (newest first):")
-            for num, entry in enumerate(reversed(entries[-10:]), 1):
-                print("%-2d %-16s %-40s %s"
-                      % (num, str(entry.get("where", "?"))[:16],
-                         str(entry.get("note", ""))[:40],
-                         str(entry.get("ts", ""))[:10]))
-        engine._audit("CLI", "roadblocks", "Success")
-        return True
-    if lowered == "whereami":
-        env_city = str(engine.env.get("OMEGA_CITY")
-                       or os.environ.get("OMEGA_CITY", "")).strip()
-        if env_city:
-            print("locale: %s (from OMEGA_CITY)" % env_city)
-            engine._audit("CLI", "whereami", "Success")
-            return True
-        saved = engine.memory.get("locale")
-        if isinstance(saved, dict) and saved.get("city"):
-            print("locale: %s, %s (cached %s)"
-                  % (saved.get("city", "?"), saved.get("country", "?"),
-                     str(saved.get("ts", ""))[:10]))
-            engine._audit("CLI", "whereami (cached)", "Success")
-            return True
-        try:
-            with urllib.request.urlopen("http://ip-api.com/json",
-                                        timeout=HTTP_TIMEOUT) as resp:
-                data = json.loads(resp.read(4096).decode(
-                    "utf-8", errors="replace"))
-            city = str(data.get("city", "") or "").strip()
-            country = str(data.get("country", "") or "").strip()
-            if city:
-                engine.memory["locale"] = {"city": city,
-                                           "country": country,
-                                           "ts": utc_now_iso()}
-                save_memory(engine.memory_path, engine.memory)
-                print("locale: %s, %s (detected)" % (city, country))
-                engine._audit("CLI", "whereami (detected)", "Success")
-            else:
-                print("location unknown - set OMEGA_CITY in .env")
-                engine._audit("CLI", "whereami", "Failed")
-        except Exception:
-            print("location unknown offline - set OMEGA_CITY in .env")
-            engine._audit("CLI", "whereami (offline)", "Failed")
-        return True
-    # --- v29.9.0 commands (study hall + memory backup) ---
-    if lowered == "study" or lowered.startswith("study "):
-        study_session(engine, line[len("study"):].strip())
-        return True
-    if lowered == "backup":
-        try:
-            save_memory(engine.memory_path, engine.memory)
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            target = "omega_memory_backup_%s.json" % stamp
-            shutil.copy2(engine.memory_path, target)
-            print("backup saved: %s" % target)
-            engine._audit("CLI", "backup", "Success")
+ine._audit("CLI", "backup", "Success")
         except Exception as exc:
             print("backup failed safely: %s" % exc)
             engine._audit("CLI", "backup", "Failed")
@@ -217,7 +51,8 @@ e" or low_args.startswith("done "):
     if lowered == "ask" or lowered.startswith("ask "):
         question = line[len("ask"):].strip()
         if not question:
-            print("Usage: ask <question>   (or: ask save)")
+            print("Usage: ask <question>   (or: ask save; web fallback "
+                  "when SERPER_API_KEY set)")
             engine._audit("CLI", "ask (no question)", "Failed")
             return True
         if question.lower() == "save":
@@ -262,14 +97,40 @@ e" or low_args.startswith("done "):
         docs = [d for d in engine.memory.setdefault("documents", [])
                 if isinstance(d, dict)]
         if not docs:
+            web = _ask_web_fallback(engine, question)
+            if web:
+                print(web["text"])
+                if web["sources"]:
+                    print()
+                    print("sources: " + ", ".join(web["sources"]))
+                engine._last_answer = {"q": question, "text": web["text"],
+                                       "sources": web["sources"],
+                                       "ts": utc_now_iso()}
+                engine._audit("CLI", "ask %s (web)" % question[:60],
+                              "Success")
+                return True
             print("no documents yet - ingest <path> first")
+            print("set SERPER_API_KEY in .env for web-backed answers")
             engine._audit("CLI", "ask %s" % question[:60], "Failed")
             return True
         hits = search_documents(question, docs)
         if not hits:
+            web = _ask_web_fallback(engine, question)
+            if web:
+                print(web["text"])
+                if web["sources"]:
+                    print()
+                    print("sources: " + ", ".join(web["sources"]))
+                engine._last_answer = {"q": question, "text": web["text"],
+                                       "sources": web["sources"],
+                                       "ts": utc_now_iso()}
+                engine._audit("CLI", "ask %s (web)" % question[:60],
+                              "Success")
+                return True
             print("no relevant passages - try different words")
             print("documents: " + ", ".join(
                 str(d.get("name", "?")) for d in docs))
+            print("set SERPER_API_KEY in .env for web-backed answers")
             engine._audit("CLI", "ask %s" % question[:60], "Failed")
             return True
         passages = []
@@ -429,19 +290,13 @@ def run_selftest() -> int:
     engine = OmegaMasterEngine()
 
     # Router smoke test over all 16 subsystems (shared with 'launch').
-    for domain, expected in CORE_SMOKE:
-        try:
-            if expected == "cli":
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    ok = bool(handle_command(engine, domain))
-            else:
-                result = engine.execute_omega_subsystem(domain,
-                                                        {"query": domain})
-                ok = result.get("subsystem") == expected
+    # _run_core_smoke blanks serper_key for the loop: no network, keyed or not.
+    for domain, expected, ok, exc in _run_core_smoke(engine):
+        if exc is None:
             checks.append(("router: %-30s -> %s" % (domain, expected), ok))
-        except Exception as exc:
-            checks.append(("router: %s (exception: %s)" % (domain, exc), False))
+        else:
+            checks.append(("router: %s (exception: %s)" % (domain, exc),
+                           False))
 
     # Unknown domain -> generic core fallback.
     try:
@@ -685,4 +540,157 @@ def run_selftest() -> int:
 
     # v29.7.0: retrieval ranking over the ingested docs.
     try:
-        docs = engine
+        docs = engine.memory.get("documents") or []
+        hits = search_documents("solar panels", docs)
+        ok = (bool(hits) and hits[0][0] > 0
+              and hits[0][1] == "notes.txt"
+              and "solar" in hits[0][3].lower())
+        checks.append(("docs: search ranks solar chunk first", ok))
+        checks.append(("docs: zero-overlap query -> empty",
+                       search_documents("zzqzxv", docs) == []))
+    except Exception as exc:
+        checks.append(("docs: retrieval (exception: %s)" % exc, False))
+
+    # v29.7.0: eviction via temporarily reassigned module caps.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            extra_path = os.path.join(tmpdir, "extra.txt")
+            with open(extra_path, "w", encoding="ascii") as handle:
+                handle.write("Extra document about quantum computing.\n")
+            saved_docs = MAX_DOCUMENTS
+            saved_chunks = MAX_TOTAL_CHUNKS
+            try:
+                globals()["MAX_DOCUMENTS"] = 2
+                ok, _msg = engine.import_document(extra_path, save=False)
+                docs = engine.memory.get("documents") or []
+                names = [d.get("name") for d in docs if isinstance(d, dict)]
+                evict_ok = (ok and len(docs) == 2
+                            and "notes.md" not in names
+                            and names == ["notes.txt", "extra.txt"])
+                # Chunk budget: trim oldest docs until total fits.
+                globals()["MAX_TOTAL_CHUNKS"] = 1
+                more_path = os.path.join(tmpdir, "more.txt")
+                with open(more_path, "w", encoding="ascii") as handle:
+                    handle.write("Another small document about tides.\n")
+                ok2, _msg = engine.import_document(more_path, save=False)
+                docs = engine.memory.get("documents") or []
+                names = [d.get("name") for d in docs if isinstance(d, dict)]
+                total = sum(len(d.get("chunks") or [])
+                            for d in docs if isinstance(d, dict))
+                trim_ok = ok2 and total <= 1 and names == ["more.txt"]
+            finally:
+                globals()["MAX_DOCUMENTS"] = saved_docs
+                globals()["MAX_TOTAL_CHUNKS"] = saved_chunks
+            checks.append(("docs: eviction drops oldest beyond cap",
+                           evict_ok))
+            checks.append(("docs: chunk budget trims oldest first",
+                           trim_ok))
+    except Exception as exc:
+        checks.append(("docs: eviction (exception: %s)" % exc, False))
+
+    # v29.8.0: IDF ranking - rare beats repeated-common (log(1+tf) scoring).
+    try:
+        idf_docs = [
+            {"name": "common.txt", "chunks": ["panel panel panel panel",
+                                              "panel and panel again",
+                                              "still more panel here"]},
+            {"name": "rare.txt", "chunks": ["quantum entanglement panel"]},
+        ]
+        hits = search_documents("quantum panel", idf_docs)
+        idf = _idf_scores(idf_docs)
+        checks.append(("idf: rare term outranks repeated common term",
+                       bool(hits) and hits[0][1] == "rare.txt"))
+        checks.append(("idf: float scores, zero-overlap -> []",
+                       bool(hits) and isinstance(hits[0][0], float)
+                       and hits[0][0] > 0
+                       and search_documents("zzqzxv", idf_docs) == []))
+        checks.append(("idf: _idf_scores empty -> {}, df up => idf down",
+                       _idf_scores([]) == {}
+                       and idf.get("quantum", 0.0) > idf.get("panel", 1.0)))
+    except Exception as exc:
+        checks.append(("idf: (exception: %s)" % exc, False))
+
+    # v29.8.0: HTML-to-text extraction (pure, offline).
+    try:
+        sample = ("<html><head><style>body{color:red}</style></head>"
+                  "<body><h1>Title</h1><p>Tom &amp; Jerry</p>"
+                  "<script>var q = 1;</script><p>Second para</p>"
+                  "</body></html>")
+        text = _html_to_text(sample)
+        checks.append(("web: html_to_text strips script/style, unescapes",
+                       "Tom & Jerry" in text and "Second para" in text
+                       and "var q" not in text
+                       and "color:red" not in text
+                       and _html_to_text("") == ""))
+    except Exception as exc:
+        checks.append(("web: html_to_text (exception: %s)" % exc, False))
+
+    # v29.8.0: import_url failure paths (offline-safe, no external net).
+    try:
+        ok_s, msg_s = engine.import_url("ftp://example.com/x")
+        ok_r, msg_r = engine.import_url("http://127.0.0.1:1/x")
+        checks.append(("web: import_url refuses bad scheme",
+                       (not ok_s) and "unsupported scheme" in msg_s))
+        checks.append(("web: import_url fetch failure is graceful",
+                       (not ok_r) and "fetch failed" in msg_r))
+    except Exception as exc:
+        checks.append(("web: import_url (exception: %s)" % exc, False))
+
+    # v29.8.0: voice scope memory + routing helpers.
+    try:
+        checks.append(("voice scope: fresh_memory defaults to prof",
+                       fresh_memory().get("voice_scope") == "prof"))
+        engine.memory["voice_enabled"] = True
+        try:
+            scoped = _voice_out(engine, lambda _line: None)
+            seen: List[str] = []
+            _professor_out(seen.append, "prof line")
+            checks.append(("voice scope: .speak exposed; fallback prints",
+                           callable(getattr(scoped, "speak", None))
+                           and seen == ["prof line"]))
+        finally:
+            engine.memory["voice_enabled"] = False
+    except Exception as exc:
+        checks.append(("voice scope: (exception: %s)" % exc, False))
+
+    # v29.9.0: office ingestion (.docx/.xlsx via stdlib zip+xml).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docx_path = os.path.join(tmpdir, "lesson.docx")
+            with zipfile.ZipFile(docx_path, "w") as archive:
+                archive.writestr(
+                    "word/document.xml",
+                    "<w:document xmlns:w=\"http://schemas.openxmlformats."
+                    "org/wordprocessingml/2006/main\"><w:body>"
+                    "<w:p><w:r><w:t>Photosynthesis makes sugar."
+                    "</w:t></w:r></w:p>"
+                    "<w:p><w:r><w:t>Chlorophyll catches light."
+                    "</w:t></w:r></w:p>"
+                    "</w:body></w:document>")
+            ok_docx, _m1 = engine.import_document(docx_path, save=False)
+            docx_docs = engine.memory.get("documents") or []
+            docx_chunks = docx_docs[-1].get("chunks", []) if docx_docs else []
+            checks.append(("office: ingest .docx extracts paragraphs",
+                           ok_docx and any(
+                               "Photosynthesis makes sugar." in c
+                               and "Chlorophyll catches light." in c
+                               for c in docx_chunks)))
+            bad_path = os.path.join(tmpdir, "bad.docx")
+            with open(bad_path, "wb") as handle:
+                handle.write(b"not a zip")
+            ok_bad, _m2 = engine.import_document(bad_path, save=False)
+            checks.append(("office: corrupt .docx fails safely",
+                           not ok_bad))
+            xlsx_path = os.path.join(tmpdir, "table.xlsx")
+            with zipfile.ZipFile(xlsx_path, "w") as archive:
+                archive.writestr(
+                    "xl/sharedStrings.xml",
+                    "<sst><si><t>city</t></si><si><t>province</t></si>"
+                    "<si><t>joburg</t></si><si><t>gauteng</t></si></sst>")
+                archive.writestr(
+                    "xl/worksheets/sheet1.xml",
+                    "<worksheet><sheetData>"
+                    "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c>"
+                    "<c r=\"B1\" t=\"s\"><v>1</v></c></row>"
+                    "<row r=\"2\"><c r=\"A2\" t=\"s\"><v>2</v></c>"
+                    "<c r=\"
