@@ -1,16 +1,4 @@
-lines.append("  %s: %s" % (key, value))
-        lines.append("  sha256: %s" % self.canonical_pillars_sha256())
-        return lines
-
-    # ------------------------------------------------------------------
-    # Evolvable strategy module (omega_strategy_gen.py)
-    # ------------------------------------------------------------------
-
-    def _bootstrap_strategy(self) -> None:
-        try:
-            if not os.path.isfile(self.strategy_path):
-                with open(self.strategy_path, "w", encoding="utf-8") as handle:
-                    handle.write(EVO_GEN1_CODE)
+                handle.write(EVO_GEN1_CODE)
         except Exception:
             pass
 
@@ -689,4 +677,51 @@ def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
     if engine._git_path() and engine.github_repo:
         rows.append(("GitHub", "configured", "ready - run 'sync github'"))
     elif engine._git_path():
-       
+        rows.append(("GitHub", "available",
+                     "git found; set GITHUB_REPO in .env to enable"))
+    else:
+        rows.append(("GitHub", "missing",
+                     "install git and set GITHUB_REPO in .env"))
+    rows.append(("Excel/CSV", "available",
+                 "stdlib reader built in - use 'import <path>'"))
+    if engine.serper_key:
+        rows.append(("Serper", "configured",
+                     "live web search ready - use 'research <query>'"))
+    else:
+        rows.append(("Serper", "missing", "set SERPER_API_KEY in .env"))
+    if engine.openai_key:
+        rows.append(("OpenAI", "configured",
+                     "LLM-enhanced tax guidance ready"))
+    else:
+        rows.append(("OpenAI", "missing", "set OPENAI_API_KEY in .env"))
+    if engine.openrouter_key:
+        rows.append(("OpenRouter", "configured",
+                     "model %s - use 'evolve run online'"
+                     % engine.openrouter_model))
+    else:
+        rows.append(("OpenRouter", "missing",
+                     "set OPENROUTER_API_KEY (+ OPENROUTER_MODEL) in .env"))
+    # v29.3.0: 6th row - optional claude_engine bridge (never a hard dep).
+    if BRIDGE_AVAILABLE and engine.openai_key:
+        rows.append(("claude_engine", "available",
+                     "bridge active - LLM calls route through it ('bridge')"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("claude_engine", "no key",
+                     "installed; set OPENAI_API_KEY to activate the bridge"))
+    else:
+        rows.append(("claude_engine", "not installed",
+                     "optional; clone repo + pip install -e . ('bridge')"))
+    # v29.6.0: voice + image ride the existing OPENAI_API_KEY.
+    if engine.openai_key:
+        rows.append(("voice tts", "via openai",
+                     "speech ready - use 'say <text>'"))
+        rows.append(("image gen", "via openai",
+                     "images ready - use 'image <prompt>'"))
+    else:
+        rows.append(("voice tts", "via openai",
+                     "set OPENAI_API_KEY in .env"))
+        rows.append(("image gen", "via openai",
+                     "set OPENAI_API_KEY in .env"))
+    lines = ["Integrations manifest (8 connectors):"]
+    lines.append("  %-13s %-13s %s" % ("connector", "status",
+                         
