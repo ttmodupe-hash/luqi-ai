@@ -1,205 +1,4 @@
-d not (low >= high)
-                       and abs(high - 1.0) < 1e-9))
-    except Exception as exc:
-        checks.append(("evolve: fitness gate (exception: %s)" % exc, False))
-
-    # Telemetry scoring is clamped to [0.0, 1.0] (negative-score bug fix).
-    try:
-        s_mid = evo.score_result(True, "no tag here", 3.0)   # 1-.3-.2 = 0.5
-        s_floor = evo.score_result(False, "", 9.0)           # clamps to 0.0
-        checks.append(("evolve: telemetry score clamped to [0,1]",
-                       abs(s_mid - 0.5) < 1e-9 and s_floor == 0.0))
-    except Exception as exc:
-        checks.append(("evolve: score clamp (exception: %s)" % exc, False))
-
-    # (k) Offline 'evolve run' completes with no keys and no network.
-    try:
-        engine.openrouter_key = ""
-        gen_before = evo.generation()
-        ok, out_lines = evo.run_cycle(online=False)
-        adopted = ok and evo.generation() > gen_before
-        files_ok = (os.path.isfile(STRATEGY_FILE)
-                    and os.path.isfile(EVOLUTION_FILE)
-                    and os.path.isfile(PILLARS_FILE))
-        joined = "\n".join(out_lines)
-        checks.append(("evolve: offline run adopts (no keys/no network)",
-                       adopted and files_ok and "ADOPTED" in joined))
-    except Exception as exc:
-        checks.append(("evolve: offline run (exception: %s)" % exc, False))
-
-    # (i) Rollback restores an archived (prior) generation.
-    try:
-        gen_now = evo.generation()
-        ok, out_lines = evo.rollback()
-        checks.append(("evolve: rollback restores archived generation",
-                       ok and evo.generation() < gen_now
-                       and any("restored generation" in line
-                               for line in out_lines)))
-    except Exception as exc:
-        checks.append(("evolve: rollback (exception: %s)" % exc, False))
-
-    # (h) Pillar tamper: corrupt omega_pillars.json -> detected + restored.
-    try:
-        with open(PILLARS_FILE, "w", encoding="utf-8") as handle:
-            handle.write('{"pillars": {"p1_build_sync": "HACKED"}, '
-                         '"sha256": "deadbeef"}')
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            status = evo.verify_pillars(announce=True)
-        checks.append(("evolve: pillar tamper detected + restored",
-                       status == "RESTORED"
-                       and evo.pillars_status() == "OK"
-                       and "PILLAR TAMPER DETECTED" in buf.getvalue()))
-    except Exception as exc:
-        checks.append(("evolve: pillar tamper (exception: %s)" % exc, False))
-
-    # (j) 'why' + 'integrations' CLI output present.
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            keep1 = handle_command(engine, "why")
-            keep2 = handle_command(engine, "integrations")
-        out = buf.getvalue()
-        checks.append(("why: 6 differentiators printed",
-                       bool(keep1) and out.count("proof:") >= 6))
-        checks.append(("integrations: 8-connector manifest printed",
-                       bool(keep2) and all(name in out for name in (
-                           "GitHub", "Excel/CSV", "Serper", "OpenAI",
-                           "OpenRouter", "claude_engine",
-                           "voice tts", "image gen"))))
-    except Exception as exc:
-        checks.append(("why/integrations: (exception: %s)" % exc, False))
-
-    # 'evolve test <query>' executes the live strategy and scores telemetry.
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            keep = handle_command(engine, "evolve test check mining health")
-        out = buf.getvalue()
-        checks.append(("evolve test: strategy executes + telemetry scored",
-                       bool(keep) and "<omega_analysis>" in out
-                       and "health:" in out))
-    except Exception as exc:
-        checks.append(("evolve test: (exception: %s)" % exc, False))
-
-    # 'evolve' status + lineage + pillars commands render without crashing.
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            handle_command(engine, "evolve")
-            handle_command(engine, "evolve lineage")
-            handle_command(engine, "evolve pillars")
-        out = buf.getvalue()
-        checks.append(("evolve: status/lineage/pillars render",
-                       "current generation:" in out
-                       and "pillars integrity:" in out
-                       and "p5_security" in out))
-    except Exception as exc:
-        checks.append(("evolve: status render (exception: %s)" % exc, False))
-
-    # ------------------------------------------------------------------
-    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
-    # ------------------------------------------------------------------
-
-    # (a) Infinite-loop candidate -> rejected via timeout; the child process
-    # is terminated and NO live child processes remain afterwards.
-    infinite_loop = (
-        "def execute_logic(query, telemetry):\n"
-        "    while True:\n"
-        "        pass\n"
-    )
-    try:
-        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
-        checks.append(("evolve: process isolation rejects infinite loop",
-                       not ok and "timeout" in reason.lower()))
-    except Exception as exc:
-        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
-    try:
-        checks.append(("evolve: no live child processes after timeout kill",
-                       sandbox_live_children() == 0))
-    except Exception as exc:
-        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
-
-    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
-    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
-    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
-    memory_bomb = (
-        "def execute_logic(query, telemetry):\n"
-        "    data = list(range(10**8))\n"
-        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
-    )
-    try:
-        import resource as _resource_probe  # noqa: F401
-        _posix_ceiling = True
-    except Exception:
-        _posix_ceiling = False
-    if _posix_ceiling:
-        try:
-            ok, reason, _pr, _lat = evo.exec_contract_gate(memory_bomb)
-            checks.append(("evolve: POSIX memory bomb rejected (256MB cap)",
-                           not ok and ("memory" in reason.lower()
-                                       or "timeout" in reason.lower()
-                                       or "exit" in reason.lower())))
-            checks.append(("evolve: no live children after memory bomb",
-                           sandbox_live_children() == 0))
-        except Exception as exc:
-            checks.append(("evolve: memory bomb (exception: %s)" % exc,
-                           False))
-    else:
-        checks.append(("evolve: memory ceiling skip (non-POSIX, documented)",
-                       True))
-
-    # (c) Safe candidate still accepted end-to-end through the process-
-    # isolated gate (all 3 contract tests pass inside the child).
-    try:
-        ok, reason, pass_rate, lat = evo.exec_contract_gate(EVO_TEMPLATES[1])
-        checks.append(("evolve: safe candidate accepted end-to-end (child)",
-                       ok and pass_rate == 1.0 and lat >= 0.0
-                       and sandbox_live_children() == 0))
-    except Exception as exc:
-        checks.append(("evolve: safe end-to-end (exception: %s)" % exc,
-                       False))
-
-    # Bridge-absent safety: claude_engine is NOT installed in this sandbox;
-    # everything must work without it (the natural test condition).
-    try:
-        checks.append(("bridge: guarded import flag is a plain bool",
-                       isinstance(BRIDGE_AVAILABLE, bool)))
-    except Exception as exc:
-        checks.append(("bridge: flag (exception: %s)" % exc, False))
-    try:
-        if BRIDGE_AVAILABLE:
-            # Installed elsewhere: lazy singleton must still be safe.
-            bridge_ok = True
-        else:
-            bridge_ok = engine._get_bridge() is None
-        checks.append(("bridge: lazy singleton safe when module absent",
-                       bridge_ok))
-    except Exception as exc:
-        checks.append(("bridge: lazy singleton (exception: %s)" % exc, False))
-    try:
-        offline_engine._bridge_attempted = False
-        offline_engine._bridge_engine = None
-        checks.append(("bridge: _llm falls back cleanly (offline -> None)",
-                       offline_engine._llm("bridge safety probe") is None))
-    except Exception as exc:
-        checks.append(("bridge: _llm fallback (exception: %s)" % exc, False))
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            keep = handle_command(engine, "bridge")
-        out = buf.getvalue()
-        checks.append(("bridge: command reports status without keys/module",
-                       bool(keep) and "claude_engine bridge status" in out
-                       and "fallback provider" in out))
-    except Exception as exc:
-        checks.append(("bridge: command (exception: %s)" % exc, False))
-
-    # Language packs (v29.4.0): exactly 100 complete packs, every one
-    # with 6 non-empty ASCII UI strings + name + valid region tag.
-    try:
-        pack_keys = ("greeting", "goodbye", "help_header",
-                     "unknown_command", "remembered", "forgot")
+                   "unknown_command", "remembered", "forgot")
         complete = all(
             all(isinstance(pack.get(k), str) and pack.get(k)
                 for k in pack_keys)
@@ -656,6 +455,247 @@ d not (low >= high)
                        and "github info needs GITHUB_REPO" in out))
     except Exception as exc:
         checks.append(("v29.6 cli: graceful (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.11.0: web-search-backed ask fallback (monkeypatched, no network)
+    # ------------------------------------------------------------------
+    try:
+        orig_search = offline_engine._serper_search
+        orig_key = offline_engine.serper_key
+        try:
+            offline_engine._serper_search = lambda q: [
+                {"title": "T1", "link": "https://a.example",
+                 "snippet": "S1"}]
+            offline_engine.serper_key = "x"
+            web = _ask_web_fallback(offline_engine, "capital of france")
+            checks.append(("v29.11: ask web fallback uses serper when keyed",
+                           isinstance(web, dict)
+                           and "T1" in web.get("text", "")
+                           and web.get("sources") == ["https://a.example"]))
+        finally:
+            offline_engine._serper_search = orig_search
+            offline_engine.serper_key = orig_key
+    except Exception as exc:
+        checks.append(("v29.11: ask web fallback (exception: %s)" % exc,
+                       False))
+    try:
+        orig_key = offline_engine.serper_key
+        try:
+            offline_engine.serper_key = ""
+            checks.append(("v29.11: ask web fallback None without key",
+                           _ask_web_fallback(offline_engine, "q") is None))
+        finally:
+            offline_engine.serper_key = orig_key
+    except Exception as exc:
+        checks.append(("v29.11: fallback no key (exception: %s)" % exc,
+                       False))
+    try:
+        orig_search = offline_engine._serper_search
+        orig_key = offline_engine.serper_key
+        try:
+            def _boom(_q):
+                raise RuntimeError("boom")
+            offline_engine._serper_search = _boom
+            offline_engine.serper_key = "x"
+            checks.append(("v29.11: ask web fallback swallows errors",
+                           _ask_web_fallback(offline_engine, "q") is None))
+        finally:
+            offline_engine._serper_search = orig_search
+            offline_engine.serper_key = orig_key
+    except Exception as exc:
+        checks.append(("v29.11: fallback errors (exception: %s)" % exc,
+                       False))
+
+    # B1: a keyed CORE_SMOKE pass must fire zero outbound network calls.
+    # urlopen is spied (loopback ingest target exempt - it is refused
+    # locally, never WAN) and raises on any call; serper_key is forced
+    # to "x" so a keyed engine is exercised, then restored in finally.
+    try:
+        smoke_engine = OmegaMasterEngine()
+        orig_urlopen = urllib.request.urlopen
+        orig_key = smoke_engine.serper_key
+        spy_urls: List[str] = []
+
+        def _spy_urlopen(request, timeout=None, **kwargs):
+            url = str(getattr(request, "full_url", request))
+            host = url.split("://", 1)[-1].split("/", 1)[0]
+            if not host.startswith(("127.", "localhost", "[::1]")):
+                spy_urls.append(url)
+            raise RuntimeError("network blocked in selftest: %s" % url)
+
+        try:
+            urllib.request.urlopen = _spy_urlopen
+            smoke_engine.serper_key = "x"
+            smoke_results = _run_core_smoke(smoke_engine)
+            checks.append(("v29.11: keyed CORE_SMOKE fires zero network",
+                           not spy_urls
+                           and len(smoke_results) == len(CORE_SMOKE)
+                           and all(ok for _d, _e, ok, _x
+                                   in smoke_results)))
+        finally:
+            urllib.request.urlopen = orig_urlopen
+            smoke_engine.serper_key = orig_key
+    except Exception as exc:
+        checks.append(("v29.11: keyed CORE_SMOKE (exception: %s)" % exc,
+                       False))
+
+    # B2: voice_speed survives a save/load roundtrip; a legacy memory
+    # file without the key loads the 1.0 default. Tempfile only.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            vs_path = os.path.join(tmpdir, MEMORY_FILE)
+            vs_mem = fresh_memory()
+            vs_mem["voice_speed"] = 2.5
+            vs_saved = save_memory(vs_path, vs_mem)
+            vs_loaded = load_memory(vs_path)
+            legacy_path = os.path.join(tmpdir, "legacy_memory.json")
+            with open(legacy_path, "w", encoding="utf-8") as handle:
+                json.dump({"facts": [], "sessions": 3}, handle)
+            legacy_loaded = load_memory(legacy_path)
+            checks.append(
+                ("v29.11: voice_speed survives save/load roundtrip",
+                 vs_saved and vs_loaded.get("voice_speed") == 2.5
+                 and legacy_loaded.get("voice_speed") == 1.0))
+    except Exception as exc:
+        checks.append(("v29.11: voice_speed persist (exception: %s)" % exc,
+                       False))
+
+    # ------------------------------------------------------------------
+    # v29.11.0 Batch 2: voice speed, router keywords, docx hardening.
+    # ------------------------------------------------------------------
+    try:
+        checks.append(("v29.11: voice speed value clamps/parses",
+                       _voice_speed_value({}) == 1.0
+                       and _voice_speed_value({"voice_speed": 0.5}) == 0.5
+                       and _voice_speed_value({"voice_speed": 9}) == 4.0
+                       and _voice_speed_value({"voice_speed": 0}) == 0.25
+                       and _voice_speed_value(
+                           {"voice_speed": "fast"}) == 1.0))
+    except Exception as exc:
+        checks.append(("v29.11: voice speed value (exception: %s)" % exc,
+                       False))
+
+    # tts payload carries speed (urlopen monkeypatched, no network).
+    try:
+        captured = {}
+        orig_urlopen = urllib.request.urlopen
+        orig_key = offline_engine.openai_key
+        orig_speed = offline_engine.memory.get("voice_speed")
+        had_speed = "voice_speed" in offline_engine.memory
+
+        class _FakeSpeechResp(object):
+            def read(self):
+                return b"mp3"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def _fake_urlopen(request, timeout=None, **kwargs):
+            captured["json"] = json.loads(
+                request.data.decode("utf-8", errors="replace"))
+            return _FakeSpeechResp()
+
+        try:
+            urllib.request.urlopen = _fake_urlopen
+            offline_engine.openai_key = "x"
+            offline_engine.memory["voice_speed"] = 1.5
+            data = offline_engine._tts_speech("hi")
+            checks.append(("v29.11: tts payload carries speed",
+                           data == b"mp3"
+                           and captured.get("json", {}).get("speed") == 1.5))
+        finally:
+            urllib.request.urlopen = orig_urlopen
+            offline_engine.openai_key = orig_key
+            if had_speed:
+                offline_engine.memory["voice_speed"] = orig_speed
+            else:
+                offline_engine.memory.pop("voice_speed", None)
+    except Exception as exc:
+        checks.append(("v29.11: tts payload (exception: %s)" % exc, False))
+
+    # C3: explicit tts speed arg is clamped (urlopen monkeypatched).
+    try:
+        captured_clamp: Dict[str, Any] = {}
+        orig_urlopen = urllib.request.urlopen
+        orig_key = offline_engine.openai_key
+
+        class _FakeClampResp(object):
+            def read(self):
+                return b"mp3"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def _clamp_urlopen(request, timeout=None, **kwargs):
+            captured_clamp["json"] = json.loads(
+                request.data.decode("utf-8", errors="replace"))
+            return _FakeClampResp()
+
+        try:
+            urllib.request.urlopen = _clamp_urlopen
+            offline_engine.openai_key = "x"
+            data = offline_engine._tts_speech("hi", speed=99)
+            checks.append(("v29.11: explicit tts speed clamped",
+                           data == b"mp3"
+                           and captured_clamp.get("json", {}).get("speed")
+                           == 4.0))
+        finally:
+            urllib.request.urlopen = orig_urlopen
+            offline_engine.openai_key = orig_key
+    except Exception as exc:
+        checks.append(("v29.11: tts speed clamp (exception: %s)" % exc,
+                       False))
+
+    # Router: traffic/violation phrases -> rights driving guide only.
+    try:
+        result = engine.execute_omega_subsystem(
+            "what about a speeding fine",
+            {"query": "what about a speeding fine"})
+        checks.append(("v29.11: router sends speeding phrase to rights",
+                       result.get("subsystem") == "Omega Rights & Travel"
+                       and result.get("guide") == "driving_sa"
+                       and "not legal advice" in result.get(
+                           "disclaimer", "")))
+        result = engine.execute_omega_subsystem(
+            "speeding ticket costs", {"query": "speeding ticket costs"})
+        checks.append(("v29.11: speeding ticket -> driving_sa guide",
+                       result.get("subsystem") == "Omega Rights & Travel"
+                       and result.get("guide") == "driving_sa"))
+        result = engine.execute_omega_subsystem(
+            "define fine art", {"query": "define fine art"})
+        checks.append(("v29.11: router control phrase stays clear",
+                       result.get("subsystem") != "Omega Rights & Travel"
+                       and "guide" not in result))
+    except Exception as exc:
+        checks.append(("v29.11: router keywords (exception: %s)" % exc,
+                       False))
+
+    # docx/xlsx fixtures never raise (tempfile only, no network).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            empty_docx = os.path.join(tmpdir, "empty.docx")
+            with zipfile.ZipFile(empty_docx, "w") as archive:
+                archive.writestr("word/document.xml", b"")
+            nodoc_docx = os.path.join(tmpdir, "nodoc.docx")
+            with zipfile.ZipFile(nodoc_docx, "w") as archive:
+                archive.writestr("word/other.xml", b"<x/>")
+            random_docx = os.path.join(tmpdir, "random.docx")
+            with open(random_docx, "wb") as handle:
+                handle.write(os.urandom(100))
+            results = (_docx_to_text(empty_docx),
+                       _docx_to_text(nodoc_docx),
+                       _docx_to_text(random_docx))
+        checks.append(("v29.11: docx fixtures never raise, return ''",
+                       results == ("", "", "")))
+    except Exception as exc:
+        checks.append(("v29.11: docx fixtures (exception: %s)" % exc,
+                       False))
 
     # Report.
     failures = 0
