@@ -1,5 +1,4 @@
-ce, thing or idea"),
-        ("Which sentence usually states a paragraph's main idea?",
+graph's main idea?",
          "The topic sentence"),
         ("Give a synonym for 'happy'.", "Glad (also: joyful, content)"),
         ("What does the prefix 'un-' mean?", "Not / the opposite of"),
@@ -200,6 +199,25 @@ def _docx_to_text(path: str) -> str:
         return "\n\n".join(paragraphs)
     except Exception:
         return ""
+
+
+def _map_url(provider: str, kind: str, place_a: str,
+             place_b: str = "") -> str:
+    """Build a map or directions URL. Unknown provider -> osm.
+
+    kind "dir" needs place_b; without it the place URL is returned.
+    Never raises.
+    """
+    try:
+        templates = MAP_PROVIDERS.get(
+            str(provider or "").strip().lower(),
+            MAP_PROVIDERS[MAP_PROVIDER_DEFAULT])
+        if kind == "dir" and place_b:
+            return templates["dir"] % (urllib.parse.quote(place_a),
+                                       urllib.parse.quote(place_b))
+        return templates["place"] % urllib.parse.quote(place_a)
+    except Exception:
+        return MAP_PROVIDERS[MAP_PROVIDER_DEFAULT]["place"] % ""
 
 
 # ---------------------------------------------------------------------------
@@ -445,6 +463,13 @@ class OmegaMasterEngine:
         self.tts_voice = self.env.get("OMEGA_TTS_VOICE") or os.environ.get(
             "OMEGA_TTS_VOICE", TTS_VOICE_DEFAULT
         )
+        # v29.10.0: map provider config (no key needed).
+        self.map_provider = str(
+            self.env.get("OMEGA_MAP_PROVIDER")
+            or os.environ.get("OMEGA_MAP_PROVIDER", MAP_PROVIDER_DEFAULT)
+        ).strip().lower()
+        if self.map_provider not in MAP_PROVIDERS:
+            self.map_provider = MAP_PROVIDER_DEFAULT
         self.image_model = self.env.get("OMEGA_IMAGE_MODEL") or os.environ.get(
             "OMEGA_IMAGE_MODEL", IMAGE_MODEL
         )
@@ -510,11 +535,20 @@ class OmegaMasterEngine:
                 "Available",
                 "always (offline passages; LLM synthesis when keyed)",
             ),
+            (
+                "Rights & Travel",
+                "Available",
+                "offline curated guides (SA-deep, universal world layer)",
+            ),
         ]
         return [
             {"subsystem": name, "status": status, "detail": detail}
             for name, status, detail in rows
         ]
+
+    def subsystem_status(self) -> List[Dict[str, str]]:
+        """Alias for availability_matrix (v29.10.0 design name)."""
+        return self.availability_matrix()
 
     # ------------------------------------------------------------------
     # Audit logging (all file I/O guarded)
@@ -749,4 +783,14 @@ class OmegaMasterEngine:
         # v29.6.0: OpenRouter fallback prompt (last user message, else last).
         fallback_prompt = clean[-1]["content"]
         for msg in reversed(clean):
- 
+            if msg["role"] == "user":
+                fallback_prompt = msg["content"]
+                break
+        if not self.openai_key:
+            # v29.6.0: OpenRouter fallback also works without an OpenAI key.
+            return self._openrouter_chat(fallback_prompt)
+        if BRIDGE_AVAILABLE:
+            bridged = self._bridge_llm_messages(clean)
+            if bridged:
+                return bridged
+           
