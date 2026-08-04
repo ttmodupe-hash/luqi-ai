@@ -1,14 +1,4 @@
-           if msg["role"] == "user":
-                fallback_prompt = msg["content"]
-                break
-        if not self.openai_key:
-            # v29.6.0: OpenRouter fallback also works without an OpenAI key.
-            return self._openrouter_chat(fallback_prompt)
-        if BRIDGE_AVAILABLE:
-            bridged = self._bridge_llm_messages(clean)
-            if bridged:
-                return bridged
-            # Bridge failed -> fall through to the urllib path.
+ # Bridge failed -> fall through to the urllib path.
         try:
             body = json.dumps({
                 "model": OPENAI_MODEL,
@@ -214,6 +204,13 @@
             note = self.dataset_note()
             if note:
                 result["dataset_note"] = note
+        elif any(k in domain for k in ("right", "consumer", "refund",
+                                       "police", "cops", "arrest",
+                                       "license", "driving", "roadblock",
+                                       "tourism", "tourist", "travel",
+                                       "taxi", "flight", "visa", "safari",
+                                       "holiday", "hotel")):
+            result = self._rights_travel(payload)
         elif any(k in domain for k in ("tax", KW_TAX_ZH, "vat", "sars",
                                        "compliance")):
             result = self._tax_support(payload)
@@ -398,6 +395,65 @@
             ],
             "disclaimer": TAX_DISCLAIMER,
         }
+
+    def _rights_key(self, query: str) -> str:
+        """Pick the rights guide for a query. Never raises."""
+        try:
+            query = (query or "").lower()
+            if any(k in query for k in ("police", "stop", "cop", "arrest",
+                                        "officer", "saps")):
+                return "police_sa"
+            if any(k in query for k in ("refund", "consumer", "goods",
+                                        "warranty", "return", "defective",
+                                        "cooling")):
+                return "consumer_sa"
+            if any(k in query for k in ("license", "driving", "roadblock",
+                                        "fine", "aarto", "demerit")):
+                return "driving_sa"
+            return "universal"
+        except Exception:
+            return "universal"
+
+    def _tourism_key(self, query: str) -> str:
+        """Pick the tourism guide for a query. Never raises."""
+        try:
+            query = (query or "").lower()
+            if any(k in query for k in (
+                    "south africa", "cape town", "kruger", "durban",
+                    "joburg", "johannesburg", "soweto", "garden route",
+                    "drakensberg", "stellenbosch", "table mountain",
+                    "addo", "sun city", "mpumalanga", "limpopo",
+                    "kwazulu", "gauteng", "bloemfontein", "namaqualand",
+                    "wild coast", "pretoria")):
+                return "sa"
+            if any(k in query for k in (
+                    "victoria falls", "serengeti", "maasai mara", "kenya",
+                    "tanzania", "zanzibar", "egypt", "pyramid", "morocco",
+                    "marrakech", "rwanda", "uganda", "gorilla", "namibia",
+                    "sossusvlei", "zambia", "zimbabwe", "africa")):
+                return "africa"
+            return "universal"
+        except Exception:
+            return "universal"
+
+    def _rights_travel(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Rights/tourism guidance: SA-deep, universal world layer."""
+        query = str(payload.get("query", "")).lower()
+        if any(k in query for k in ("tourism", "tourist", "travel",
+                                    "safari", "holiday", "hotel",
+                                    "flight", "visa", "taxi", "visit")):
+            guide_key = self._tourism_key(query)
+            return {"status": "Ready",
+                    "subsystem": "Omega Rights & Travel",
+                    "topic": "tourism", "guide": guide_key,
+                    "guidance": TOURISM_GUIDES[guide_key],
+                    "disclaimer": RIGHTS_DISCLAIMER}
+        guide_key = self._rights_key(query)
+        return {"status": "Ready",
+                "subsystem": "Omega Rights & Travel",
+                "topic": "rights", "guide": guide_key,
+                "guidance": RIGHTS_GUIDES[guide_key],
+                "disclaimer": RIGHTS_DISCLAIMER}
 
     # ------------------------------------------------------------------
     # v29.5.0: learner profile helpers (memory["learning"])
@@ -657,33 +713,4 @@
                 "name": os.path.basename(path),
                 "source": ext.lstrip("."),
                 "headers": headers,
-                "rows": rows,
-            }
-            self.memory.setdefault("datasets", {})["last_import"] = {
-                "path": os.path.abspath(path),
-                "name": os.path.basename(path),
-                "source": ext.lstrip("."),
-                "rows": len(rows),
-                "columns": len(headers),
-                "headers": headers,
-                "ts": utc_now_iso(),
-            }
-            if save:
-                save_memory(self.memory_path, self.memory)
-            return True, ("Imported %d row(s) x %d column(s) from %s "
-                          "(%s)." % (len(rows), len(headers),
-                                     os.path.basename(path), ext.lstrip(".")))
-        except Exception as exc:
-            return False, "Import failed safely: %s" % exc
-
-    def _store_document(self, name: str, origin: str, text: str,
-                        save: bool = True) -> Tuple[bool, str]:
-        """Chunk and store one document (dedup by name, evict to caps).
-
-        Shared by file and URL ingestion. Never raises.
-        """
-        try:
-            chunks = _chunk_text(text)
-            if not chunks:
-                return False, "no text content found"
-            docs = self.memory.
+       
