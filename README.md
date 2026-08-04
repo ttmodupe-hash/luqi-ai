@@ -1,3 +1,4 @@
+- v29.11.0 "Smart Search": web-backed ask fallback (Serper), voice speed control (persisted), speeding/traffic rights routing, extraction hardening, keyed-smoke network guard.
 - v29.10.0 "Know Your Rights": rights & travel subsystem (SA-deep + universal world layer), tourism guides, map/directions opener, roadblock log, whereami.
 - v29.9.0 "Study Hall": study <topic> teaches from your own documents, .docx/.xlsx ingestion, backup command.
 - v29.8.0 "Deep Reader": IDF-ranked document Q&A, ingest <url> web page ingestion, professor-only classroom voice (voice all restores full speech).
