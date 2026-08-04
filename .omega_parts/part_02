@@ -1,38 +1,4 @@
-w ye. 'exit' ka bolo.",
-        "goodbye": "K'an ben.",
-        "help_header": "Kumafolow:",
-        "unknown_command": "Kumafolo min don na - o ci master core ka o ye.",
-        "remembered": "Tiiji #%d mara: %s",
-        "forgot": "Tiiji #%d na: %s",
-    },
-    "ln": {
-        "name": "Lingala",
-        "region": "african",
-        "greeting": "Mbote! Komisa 'help' mpo na komona makonzi. 'exit' mpo na kobima.",
-        "goodbye": "Kende malamu.",
-        "help_header": "Makonzi:",
-        "unknown_command": "Mokonzi oyo eyebani te - etindami epai ya master core.",
-        "remembered": "Solo #%d ebombami: %s",
-        "forgot": "Solo #%d ebosanwani: %s",
-    },
-    "kg": {
-        "name": "Kikongo",
-        "region": "african",
-        "greeting": "Mbote! Soneka 'help' vanga makonzi. 'exit' ku bima.",
-        "goodbye": "Sala mbote.",
-        "help_header": "Makonzi:",
-        "unknown_command": "Mokonzi yo ke zebi ve - etindiki na master core.",
-        "remembered": "Solo #%d ebombi: %s",
-        "forgot": "Solo #%d evidikidi: %s",
-    },
-    "ki": {
-        "name": "Kikuyu",
-        "region": "african",
-        "greeting": "Wi mwega? Andika 'help' kuona mawatho. 'exit' kuma.",
-        "goodbye": "Tigwo.",
-        "help_header": "Mawatho:",
-        "unknown_command": "Watho utamenyekaine - utumitwo master core kugatirwo.",
-        "remembered": "Uhoro #%d wigitwo: %s",
+wo: %s",
         "forgot": "Uhoro #%d wariganiirwo: %s",
     },
     "luo": {
@@ -795,4 +761,66 @@ RIGHTS_GUIDES: Dict[str, List[str]] = {
         "You may ask the officer's details and the reason for the stop.",
         "Never pay cash 'on the spot' - ask for a written fine notice.",
         "Arrest for unpaid fines needs a warrant - ask to see it.",
-        "Check f
+        "Check fines and demerit points on official AARTO channels,",
+        "not from roadside claims.",
+    ],
+    "universal": [
+        "Stay calm and polite; you may ask for official identification.",
+        "Ask: 'Am I free to go?' and 'Am I required to answer?'",
+        "Do not physically resist - note names, badge numbers, times.",
+        "Ask for a lawyer or interpreter before signing or answering.",
+        "Consumers: keep receipts, complain in writing, use card",
+        "chargebacks, and find the local consumer protection body.",
+        "Laws differ everywhere - check the local regulator or your",
+        "embassy when traveling.",
+    ],
+}
+
+TOURISM_GUIDES: Dict[str, List[str]] = {
+    "sa": [
+        "Western Cape: Table Mountain, the Winelands, Garden Route.",
+        "Kruger (Mpumalanga/Limpopo): Big Five - best in dry May-Sep.",
+        "KwaZulu-Natal: Drakensberg hikes, Durban beaches.",
+        "Gauteng: Soweto heritage, Cradle of Humankind.",
+        "Eastern Cape: Addo elephants, the Wild Coast.",
+        "Also: Golden Gate (Free State), Kgalagadi + Namaqualand",
+        "flowers (Northern Cape), Sun City/Madikwe (North West),",
+        "Mapungubwe (Limpopo).",
+        "Seasons: summer Nov-Mar; safari best May-Sep.",
+        "Safety: use registered taxis/ride-hailing, keep valuables",
+        "out of sight, ask your hotel or locals about areas.",
+    ],
+    "africa": [
+        "Victoria Falls (Zambia/Zimbabwe) - one of the great sights.",
+        "Serengeti + Ngorongoro (Tanzania), Maasai Mara (Kenya) -",
+        "migration season roughly Jul-Oct.",
+        "Pyramids of Giza (Egypt); Marrakech medina (Morocco).",
+        "Zanzibar beaches and Stone Town (Tanzania).",
+        "Gorilla trekking (Rwanda/Uganda) - book permits early.",
+        "Sossusvlei dunes (Namibia).",
+        "Check visas and vaccinations early - carry a yellow-fever",
+        "card where required.",
+    ],
+    "universal": [
+        "Passport valid 6+ months; check visa rules before booking.",
+        "Get travel insurance and register with your embassy if offered.",
+        "Keep copies of documents separate from originals.",
+        "Get a local SIM/eSIM; learn 5 local phrases.",
+        "Ask LUQI about a specific place for deeper guidance.",
+    ],
+}
+
+
+# ---------------------------------------------------------------------------
+# .env manual parser (no python-dotenv)
+# ---------------------------------------------------------------------------
+
+def parse_env_file(path: str = ENV_FILE) -> Dict[str, str]:
+    """Parse a .env file manually.
+
+    Reads KEY=VALUE lines, strips surrounding quotes, ignores blank lines
+    and '#' comments, and tolerates malformed lines. Never raises.
+    """
+    values: Dict[str, str] = {}
+    try:
+        if not o
