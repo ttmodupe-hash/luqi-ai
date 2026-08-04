@@ -1,3 +1,4 @@
+- v29.9.0 "Study Hall": study <topic> teaches from your own documents, .docx/.xlsx ingestion, backup command.
 - v29.8.0 "Deep Reader": IDF-ranked document Q&A, ingest <url> web page ingestion, professor-only classroom voice (voice all restores full speech).
 ![selftest](https://github.com/ttmodupe-hash/luqi-ai/actions/workflows/selftest.yml/badge.svg)
 
