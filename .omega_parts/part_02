@@ -1,52 +1,3 @@
-wo: %s",
-        "forgot": "Uhoro #%d wariganiirwo: %s",
-    },
-    "luo": {
-        "name": "Luo (Dholuo)",
-        "region": "african",
-        "greeting": "Amosi! Ndik 'help' mondo ine chike. 'exit' mondo owuok.",
-        "goodbye": "Oriti.",
-        "help_header": "Chike:",
-        "unknown_command": "Chik ma ok ong'eyo - oseor ne master core mondo onon.",
-        "remembered": "Adiera #%d opog' e paro: %s",
-        "forgot": "Adiera #%d owil: %s",
-    },
-    "ny": {
-        "name": "Chewa (Nyanja)",
-        "region": "african",
-        "greeting": "Moni! Lembani 'help' kuwona malamulo. 'exit' kutuluka.",
-        "goodbye": "Sala bwino.",
-        "help_header": "Malamulo:",
-        "unknown_command": "Lamulo losadziwika - latumizidwa kwa master core.",
-        "remembered": "Zowona #%d zasungidwa: %s",
-        "forgot": "Zowona #%d zayiwalidwa: %s",
-    },
-    "bem": {
-        "name": "Bemba",
-        "region": "african",
-        "greeting": "Shani! Lembela 'help' ukulole amalango. 'exit' ukufuma.",
-        "goodbye": "Sala bwino.",
-        "help_header": "Amalango:",
-        "unknown_command": "Ilango ilyeshetekwa - lyatumwa ku master core ukulinganya.",
-        "remembered": "Icine #%d cabikwa: %s",
-        "forgot": "Icine #%d caibukwa: %s",
-    },
-    "to": {
-        "name": "Tonga (Zambia)",
-        "region": "african",
-        "greeting": "Mwabuka! Nolemba 'help' kubona milao. 'exit' kuzwa.",
-        "goodbye": "Sala kabotu.",
-        "help_header": "Milao:",
-        "unknown_command": "Mulao ujisi kuyezya - utumwa ku master core kulangwa.",
-        "remembered": "Lubone #%d lwasigwa: %s",
-        "forgot": "Lubone #%d lwa abidwe: %s",
-    },
-    "loz": {
-        "name": "Lozi",
-        "region": "african",
-        "greeting": "Lumela! Nola 'help' ku bona mitaelo. 'exit' ku tswa.",
-        "goodbye": "Sala hande.",
-        "help_header": "Mitaelo:",
         "unknown_command": "Taelo ye si itseki - e romilwe ku master core ku shekwa.",
         "remembered": "Nnete #%d e bolokiwa: %s",
         "forgot": "Nnete #%d e sabilwe: %s",
@@ -823,4 +774,103 @@ def parse_env_file(path: str = ENV_FILE) -> Dict[str, str]:
     """
     values: Dict[str, str] = {}
     try:
-        if not o
+        if not os.path.isfile(path):
+            return values
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue  # tolerate malformed lines
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip()
+                if not key:
+                    continue
+                # Strip one layer of matching surrounding quotes.
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                    value = value[1:-1]
+                values[key] = value
+    except Exception:
+        # .env parsing must never crash the engine.
+        return values
+    return values
+
+
+def mask_secret(secret: Optional[str]) -> str:
+    """Mask a secret: first 4 chars + '...' + last 2. Never print in full."""
+    if not secret:
+        return "(not set)"
+    secret = str(secret)
+    if len(secret) <= 6:
+        return secret[:1] + "..." + secret[-1:]
+    return secret[:4] + "..." + secret[-2:]
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ---------------------------------------------------------------------------
+# Module A: persistent memory (omega_memory.json)
+# ---------------------------------------------------------------------------
+
+def fresh_memory() -> Dict[str, Any]:
+    """Return a new, empty memory structure.
+
+    SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile
+    + v29.6.0 reminders / voice flag + v29.7.0 document store
+    + v29.11.0 voice speed. (v29.12.0 prompt forge session is an
+    optional key, set only by the prompt command - not a default.)
+    """
+    return {
+        "facts": [],
+        "history": [],
+        "datasets": {"last_import": None},
+        "sessions": 0,
+        "lang": DEFAULT_LANG,
+        "learning": {},
+        "reminders": [],
+        "voice_enabled": False,
+        "voice_scope": "prof",
+        "voice_speed": 1.0,
+        "documents": [],
+        "roadblocks": [],
+        "locale": {},
+    }
+
+
+def _slugify(text: str) -> str:
+    """Turn a report topic into a filesystem-safe ASCII slug."""
+    slug = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")
+    return slug or "topic"
+
+
+# ---------------------------------------------------------------------------
+# v29.12.0 "Prompt Forge": pure helpers (offline, never raise)
+# ---------------------------------------------------------------------------
+
+def _prompt_gaps(text: str) -> List[str]:
+    """Coach a raw prompt idea: one tip per detected gap (empty if none).
+
+    Six independent lowercase-substring checks. Never raises.
+    """
+    tips: List[str] = []
+    try:
+        low = str(text or "").lower()
+        if len(low.split()) < 6:
+            tips.append("Be specific: what exactly, for whom, with what "
+                        "constraints?")
+        if not any(w in low for w in ("json", "table", "markdown", "list",
+                                      "code", "steps", "csv", "bullet")):
+            tips.append("Name the output format you want (e.g. table, "
+                        "steps, JSON).")
+        if not any(w in low for w in ("avoid", "don't", "dont", "without",
+                                      "no ", "never")):
+            tips.append("Add what to avoid (negative constraints sharpen "
+                        "answers).")
+        if not any(w in low for w in ("for beginners", "for kids",
+                                      "for experts", "for my team",
+                                      "for students", "for customers")):
+          
