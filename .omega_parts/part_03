@@ -1,66 +1,4 @@
-ines and demerit points on official AARTO channels,",
-        "not from roadside claims.",
-    ],
-    "universal": [
-        "Stay calm and polite; you may ask for official identification.",
-        "Ask: 'Am I free to go?' and 'Am I required to answer?'",
-        "Do not physically resist - note names, badge numbers, times.",
-        "Ask for a lawyer or interpreter before signing or answering.",
-        "Consumers: keep receipts, complain in writing, use card",
-        "chargebacks, and find the local consumer protection body.",
-        "Laws differ everywhere - check the local regulator or your",
-        "embassy when traveling.",
-    ],
-}
-
-TOURISM_GUIDES: Dict[str, List[str]] = {
-    "sa": [
-        "Western Cape: Table Mountain, the Winelands, Garden Route.",
-        "Kruger (Mpumalanga/Limpopo): Big Five - best in dry May-Sep.",
-        "KwaZulu-Natal: Drakensberg hikes, Durban beaches.",
-        "Gauteng: Soweto heritage, Cradle of Humankind.",
-        "Eastern Cape: Addo elephants, the Wild Coast.",
-        "Also: Golden Gate (Free State), Kgalagadi + Namaqualand",
-        "flowers (Northern Cape), Sun City/Madikwe (North West),",
-        "Mapungubwe (Limpopo).",
-        "Seasons: summer Nov-Mar; safari best May-Sep.",
-        "Safety: use registered taxis/ride-hailing, keep valuables",
-        "out of sight, ask your hotel or locals about areas.",
-    ],
-    "africa": [
-        "Victoria Falls (Zambia/Zimbabwe) - one of the great sights.",
-        "Serengeti + Ngorongoro (Tanzania), Maasai Mara (Kenya) -",
-        "migration season roughly Jul-Oct.",
-        "Pyramids of Giza (Egypt); Marrakech medina (Morocco).",
-        "Zanzibar beaches and Stone Town (Tanzania).",
-        "Gorilla trekking (Rwanda/Uganda) - book permits early.",
-        "Sossusvlei dunes (Namibia).",
-        "Check visas and vaccinations early - carry a yellow-fever",
-        "card where required.",
-    ],
-    "universal": [
-        "Passport valid 6+ months; check visa rules before booking.",
-        "Get travel insurance and register with your embassy if offered.",
-        "Keep copies of documents separate from originals.",
-        "Get a local SIM/eSIM; learn 5 local phrases.",
-        "Ask LUQI about a specific place for deeper guidance.",
-    ],
-}
-
-
-# ---------------------------------------------------------------------------
-# .env manual parser (no python-dotenv)
-# ---------------------------------------------------------------------------
-
-def parse_env_file(path: str = ENV_FILE) -> Dict[str, str]:
-    """Parse a .env file manually.
-
-    Reads KEY=VALUE lines, strips surrounding quotes, ignores blank lines
-    and '#' comments, and tolerates malformed lines. Never raises.
-    """
-    values: Dict[str, str] = {}
-    try:
-        if not os.path.isfile(path):
+s.path.isfile(path):
             return values
         with open(path, "r", encoding="utf-8", errors="replace") as handle:
             for raw_line in handle:
@@ -106,7 +44,8 @@ def fresh_memory() -> Dict[str, Any]:
     """Return a new, empty memory structure.
 
     SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile
-    + v29.6.0 reminders / voice flag + v29.7.0 document store.
+    + v29.6.0 reminders / voice flag + v29.7.0 document store
+    + v29.11.0 voice speed.
     """
     return {
         "facts": [],
@@ -118,6 +57,7 @@ def fresh_memory() -> Dict[str, Any]:
         "reminders": [],
         "voice_enabled": False,
         "voice_scope": "prof",
+        "voice_speed": 1.0,
         "documents": [],
         "roadblocks": [],
         "locale": {},
@@ -128,6 +68,19 @@ def _slugify(text: str) -> str:
     """Turn a report topic into a filesystem-safe ASCII slug."""
     slug = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")
     return slug or "topic"
+
+
+def _voice_speed_value(memory: Dict[str, Any]) -> float:
+    """Return the stored TTS speed, coerced to float and clamped to
+    [0.25, 4.0]. Any exception (missing key, junk value, NaN) -> 1.0.
+    Never raises."""
+    try:
+        value = float((memory or {}).get("voice_speed", 1.0))
+        if value != value:  # NaN guard
+            return 1.0
+        return min(4.0, max(0.25, value))
+    except Exception:
+        return 1.0
 
 
 def resolve_memory_path() -> str:
@@ -201,6 +154,8 @@ def load_memory(path: str) -> Dict[str, Any]:
         memory["voice_enabled"] = bool(data.get("voice_enabled", False))
         scope = str(data.get("voice_scope", "prof") or "prof").lower()
         memory["voice_scope"] = scope if scope in ("prof", "all") else "prof"
+        # v29.11.0: persisted TTS speed (clamped; legacy files -> 1.0).
+        memory["voice_speed"] = _voice_speed_value(data)
         blocks = data.get("roadblocks")
         if isinstance(blocks, list):
             memory["roadblocks"] = [b for b in blocks
@@ -772,4 +727,82 @@ OFFLINE_QUIZ_BANKS: Dict[str, List[Tuple[str, str]]] = {
     "english": [
         ("What is a noun?",
          "A word naming a person, place, thing or idea"),
-        ("Which sentence usually states a para
+        ("Which sentence usually states a paragraph's main idea?",
+         "The topic sentence"),
+        ("Give a synonym for 'happy'.", "Glad (also: joyful, content)"),
+        ("What does the prefix 'un-' mean?", "Not / the opposite of"),
+        ("What is the difference between 'their' and 'there'?",
+         "'Their' shows possession; 'there' refers to a place"),
+        ("What is a thesis statement?",
+         "The central claim of an essay, usually in the introduction"),
+    ],
+    "computer-science": [
+        ("Which keyword defines a function in Python?", "def"),
+        ("What does len([1, 2, 3]) return?", "3"),
+        ("What data type is the value True?", "A boolean (bool)"),
+        ("What does the 'in' operator test on a list?",
+         "Membership - whether a value is present"),
+        ("What error is raised by 1 / 0 in Python?", "ZeroDivisionError"),
+        ("What is the output of print(2 ** 3)?", "8"),
+    ],
+    "finance": [
+        ("What does the 50/30/20 rule allocate?",
+         "50% needs, 30% wants, 20% savings"),
+        ("What is compound interest?",
+         "Interest earned on both the principal and the interest "
+         "already earned"),
+        ("What is an emergency fund?",
+         "Savings covering about 3-6 months of essential expenses"),
+        ("What does a credit score summarize?",
+         "Your creditworthiness - how reliably you repay debt"),
+        ("What is diversification?",
+         "Spreading money across different investments to reduce risk"),
+        ("Name one classic red flag of a financial scam.",
+         "Guaranteed high returns, pressure to act fast, or secrecy"),
+    ],
+    "history": [
+        ("What is a primary source?",
+         "A firsthand record created at the time being studied"),
+        ("Which civilization built the pyramids at Giza?",
+         "Ancient Egypt"),
+        ("In which year did World War II end?", "1945"),
+        ("What was the Industrial Revolution?",
+         "The shift to machine manufacturing and factory production"),
+        ("What was the Mali Empire famous for?",
+         "West African gold wealth and trade (Mansa Musa, Timbuktu)"),
+        ("Which document begins with 'We the People'?",
+         "The United States Constitution"),
+    ],
+}
+
+
+def _cap_messages(messages: List[Dict[str, str]],
+                  limit: int = MAX_TEACH_MESSAGES) -> List[Dict[str, str]]:
+    """Cap a chat message list at `limit`, preserving the system message."""
+    if len(messages) <= limit:
+        return list(messages)
+    head: List[Dict[str, str]] = []
+    if messages and messages[0].get("role") == "system":
+        head = [messages[0]]
+    keep = max(1, limit - len(head))
+    return head + list(messages[-keep:])
+
+
+# ---------------------------------------------------------------------------
+# Module C: dataset readers (CSV + stdlib-only minimal XLSX)
+# ---------------------------------------------------------------------------
+
+def _read_csv_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
+    """Read a CSV file; first row = headers. Returns (headers, rows)."""
+    with open(path, "r", encoding="utf-8", errors="replace", newline="") as handle:
+        raw_rows = [row for row in csv.reader(handle)
+                    if any(str(cell).strip() for cell in row)]
+    if not raw_rows:
+        return [], []
+    headers = [str(h).strip() or "col_%d" % (i + 1)
+               for i, h in enumerate(raw_rows[0])]
+    width = len(headers)
+    data = []
+    for row in raw_rows[1:]:
+        padded = (list(row) + [""] * width)[:width]
+        data.appen
