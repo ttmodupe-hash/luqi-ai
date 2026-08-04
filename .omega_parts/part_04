@@ -1,82 +1,4 @@
-graph's main idea?",
-         "The topic sentence"),
-        ("Give a synonym for 'happy'.", "Glad (also: joyful, content)"),
-        ("What does the prefix 'un-' mean?", "Not / the opposite of"),
-        ("What is the difference between 'their' and 'there'?",
-         "'Their' shows possession; 'there' refers to a place"),
-        ("What is a thesis statement?",
-         "The central claim of an essay, usually in the introduction"),
-    ],
-    "computer-science": [
-        ("Which keyword defines a function in Python?", "def"),
-        ("What does len([1, 2, 3]) return?", "3"),
-        ("What data type is the value True?", "A boolean (bool)"),
-        ("What does the 'in' operator test on a list?",
-         "Membership - whether a value is present"),
-        ("What error is raised by 1 / 0 in Python?", "ZeroDivisionError"),
-        ("What is the output of print(2 ** 3)?", "8"),
-    ],
-    "finance": [
-        ("What does the 50/30/20 rule allocate?",
-         "50% needs, 30% wants, 20% savings"),
-        ("What is compound interest?",
-         "Interest earned on both the principal and the interest "
-         "already earned"),
-        ("What is an emergency fund?",
-         "Savings covering about 3-6 months of essential expenses"),
-        ("What does a credit score summarize?",
-         "Your creditworthiness - how reliably you repay debt"),
-        ("What is diversification?",
-         "Spreading money across different investments to reduce risk"),
-        ("Name one classic red flag of a financial scam.",
-         "Guaranteed high returns, pressure to act fast, or secrecy"),
-    ],
-    "history": [
-        ("What is a primary source?",
-         "A firsthand record created at the time being studied"),
-        ("Which civilization built the pyramids at Giza?",
-         "Ancient Egypt"),
-        ("In which year did World War II end?", "1945"),
-        ("What was the Industrial Revolution?",
-         "The shift to machine manufacturing and factory production"),
-        ("What was the Mali Empire famous for?",
-         "West African gold wealth and trade (Mansa Musa, Timbuktu)"),
-        ("Which document begins with 'We the People'?",
-         "The United States Constitution"),
-    ],
-}
-
-
-def _cap_messages(messages: List[Dict[str, str]],
-                  limit: int = MAX_TEACH_MESSAGES) -> List[Dict[str, str]]:
-    """Cap a chat message list at `limit`, preserving the system message."""
-    if len(messages) <= limit:
-        return list(messages)
-    head: List[Dict[str, str]] = []
-    if messages and messages[0].get("role") == "system":
-        head = [messages[0]]
-    keep = max(1, limit - len(head))
-    return head + list(messages[-keep:])
-
-
-# ---------------------------------------------------------------------------
-# Module C: dataset readers (CSV + stdlib-only minimal XLSX)
-# ---------------------------------------------------------------------------
-
-def _read_csv_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
-    """Read a CSV file; first row = headers. Returns (headers, rows)."""
-    with open(path, "r", encoding="utf-8", errors="replace", newline="") as handle:
-        raw_rows = [row for row in csv.reader(handle)
-                    if any(str(cell).strip() for cell in row)]
-    if not raw_rows:
-        return [], []
-    headers = [str(h).strip() or "col_%d" % (i + 1)
-               for i, h in enumerate(raw_rows[0])]
-    width = len(headers)
-    data = []
-    for row in raw_rows[1:]:
-        padded = (list(row) + [""] * width)[:width]
-        data.append([str(cell) for cell in padded])
+d([str(cell) for cell in padded])
     return headers, data
 
 
@@ -181,6 +103,7 @@ def _docx_to_text(path: str) -> str:
 
     Paragraphs join with blank lines; runs concatenate. Never raises;
     returns "" on unreadable input.
+    (StopIteration from dry XML iterators is caught here as well.)
     """
     try:
         with zipfile.ZipFile(path) as archive:
@@ -347,6 +270,41 @@ def search_documents(query: str, docs: List[Dict[str, Any]],
         return hits[:max(0, int(top_k))]
     except Exception:
         return []
+
+
+def _ask_web_fallback(engine: Any,
+                      question: str) -> Optional[Dict[str, Any]]:
+    """Try a Serper web answer for `ask` dead-ends. Never raises.
+
+    v29.11.0: returns {"text": str, "sources": [links...]} on success;
+    None when there is no SERPER_API_KEY, no web results, or any
+    failure, so callers fall back to their existing offline guidance.
+    """
+    try:
+        if not getattr(engine, "serper_key", ""):
+            return None
+        results = engine._serper_search(question)
+        if not results:
+            return None
+        bullets: List[str] = []
+        sources: List[str] = []
+        for item in results[:5]:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "").strip()
+            snippet = str(item.get("snippet") or "").strip()
+            link = str(item.get("link") or "").strip()
+            if not title and not snippet:
+                continue
+            bullets.append("- %s: %s" % (title, snippet[:300]))
+            if link:
+                sources.append(link)
+        if not bullets:
+            return None
+        return {"text": "web answer (via Serper):\n" + "\n".join(bullets),
+                "sources": sources}
+    except Exception:
+        return None
 
 
 class _TextExtractor(HTMLParser):
@@ -793,4 +751,86 @@ class OmegaMasterEngine:
             bridged = self._bridge_llm_messages(clean)
             if bridged:
                 return bridged
-           
+            # Bridge failed -> fall through to the urllib path.
+        try:
+            body = json.dumps({
+                "model": OPENAI_MODEL,
+                "messages": clean,
+                "max_tokens": max_tokens,
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return self._openrouter_chat(fallback_prompt)
+            message = choices[0].get("message") or {}
+            content = message.get("content")
+            if content:
+                return str(content)
+            # v29.6.0: empty OpenAI reply -> OpenRouter fallback.
+            return self._openrouter_chat(fallback_prompt)
+        except Exception:
+            # v29.6.0: OpenRouter is the final fallback before None.
+            return self._openrouter_chat(fallback_prompt)
+
+    # ------------------------------------------------------------------
+    # v29.6.0: voice (TTS) + image connectors (guarded, stdlib urllib)
+    # ------------------------------------------------------------------
+
+    def _tts_speech(self, text: str,
+                    voice: Optional[str] = None,
+                    speed: Optional[float] = None) -> Optional[bytes]:
+        """POST text to OpenAI speech; return mp3 bytes or None on failure.
+
+        v29.11.0: optional `speed` overrides the stored voice_speed
+        (clamped via _voice_speed_value) for this call only.
+        """
+        if not self.openai_key:
+            return None
+        try:
+            body = json.dumps({
+                "model": TTS_MODEL,
+                "voice": voice or self.tts_voice,
+                "input": (text or "")[:TTS_MAX_CHARS],
+                "speed": (_voice_speed_value({"voice_speed": speed})
+                          if speed is not None
+                          else _voice_speed_value(self.memory)),
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_SPEECH_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                return resp.read()
+        except Exception:
+            return None
+
+    def _save_speech(self, data: bytes, hint: str) -> Tuple[bool, str]:
+        """Write omega_speech_<slug>_<UTCts>.mp3 (guarded I/O)."""
+        if not data:
+            return False, "no audio data"
+        try:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_speech_%s_%s.mp3" % (_slugify(hint), stamp)
+            with open(filename, "wb") as handle:
+                handle.write(data)
+            return True, "Speech saved: %s" % filename
+        except Exception as exc:
+            return False, "Speech save failed safely: %s" % exc
+
+    def _image_generate(self, prompt: str) -> Optional[bytes]:
+        """POST prompt to OpenAI images; return png bytes or None on failure.""
