@@ -1,3 +1,4 @@
+- v29.12.0 "Prompt Forge": expert-prompt compiler + coaching (prompt/add/show/run/save/clear), 17th subsystem.
 - v29.11.0 "Smart Search": web-backed ask fallback (Serper), voice speed control (persisted), speeding/traffic rights routing, extraction hardening, keyed-smoke network guard.
 - v29.10.0 "Know Your Rights": rights & travel subsystem (SA-deep + universal world layer), tourism guides, map/directions opener, roadblock log, whereami.
 - v29.9.0 "Study Hall": study <topic> teaches from your own documents, .docx/.xlsx ingestion, backup command.
