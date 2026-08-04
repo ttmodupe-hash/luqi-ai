@@ -1,184 +1,4 @@
-("Answer: %s" % answer)
-                else:
-                    out("Type 'right' or 'wrong' (or 'reveal' to see the "
-                        "answer again).")
-    out("Self-check complete: %d/%d correct." % (score, asked))
-    return score, asked, None
-
-
-def run_online_quiz(engine: OmegaMasterEngine, subject: str,
-                    messages: List[Dict[str, str]], input_fn: Any,
-                    out: Any) -> Optional[Tuple[int, int]]:
-    """Online 3-question graded exchange with the professor.
-
-    Returns (score, total) or None when the LLM is unreachable before
-    the first question (caller falls back to the offline self-check).
-    """
-    convo = list(messages)
-    score = 0
-    asked = 0
-    for i in range(3):
-        convo.append({"role": "user", "content": (
-            "Quiz time: ask me question %d of 3 about %s. Ask ONLY the "
-            "question, do not give the answer." % (i + 1, subject))})
-        convo = _cap_messages(convo)
-        question = engine._llm_messages(convo)
-        if not question:
-            return (score, asked) if asked else None
-        question = question.strip()
-        out("Professor asks: %s" % question)
-        convo.append({"role": "assistant", "content": question})
-        try:
-            answer = input_fn("[QUIZ] > ")
-        except EOFError:
-            out("")
-            return (score, asked) if asked else None
-        except KeyboardInterrupt:
-            out("")
-            return (score, asked) if asked else None
-        convo.append({"role": "user", "content": answer.strip()})
-        convo.append({"role": "user", "content": (
-            "Grade my answer strictly. Start your reply with RIGHT or "
-            "WRONG, then one short line of feedback.")})
-        convo = _cap_messages(convo)
-        grading = engine._llm_messages(convo)
-        asked += 1
-        if not grading:
-            out("(Grading unavailable - LLM call failed; this question "
-                "was not scored.)")
-            continue
-        grading = grading.strip()
-        convo.append({"role": "assistant", "content": grading})
-        out("Professor: %s" % grading)
-        if grading.upper().startswith("RIGHT"):
-            score += 1
-        else:
-            engine.add_weak_point(subject, question[:80])
-    out("Professor's grade: %d/%d." % (score, asked))
-    if score < asked:
-        out("Review the questions marked wrong before the next class.")
-    return score, asked
-
-
-def teach_session(engine: OmegaMasterEngine, subject: str,
-                  input_fn: Any = input, out: Any = print) -> None:
-    """Run one tutor session (sub-REPL) for `subject`.
-
-    ONLINE: multi-turn professor conversation with the full rolling
-    context (capped at the last 40 messages) through _llm_messages.
-    OFFLINE: one honest 'needs key' line, then the offline classroom
-    (built-in syllabus lessons + self-check quiz). NEVER fakes a
-    conversation and NEVER crashes; EOF/KeyboardInterrupt safe.
-    """
-    subject = normalize_subject(subject)
-    if not subject:
-        out("Usage: teach <subject>")
-        return
-    online = bool(engine.openai_key)
-    syllabus, evicted, _source = engine.get_syllabus(subject)
-    if evicted:
-        out("Note: learner profile full (%d subjects) - oldest subject "
-            "'%s' was evicted." % (MAX_LEARNING_SUBJECTS, evicted))
-    entry, _ = engine.learning_entry(subject)
-    out("=" * 60)
-    out("CLASSROOM: %s with Professor LUQI" % subject)
-    out("=" * 60)
-    messages: List[Dict[str, str]] = []
-    if online:
-        messages.append({"role": "system",
-                         "content": PROFESSOR_PROMPT % subject})
-    else:
-        out("Live professor conversation needs OPENAI_API_KEY - running "
-            "offline classroom.")
-    out("In class: end class | syllabus | quiz me | hint | progress | next")
-    for line in lesson_intro_lines(entry, subject):
-        _professor_out(out, line)
-
-    turns = 0
-    quiz_results: List[Tuple[int, int]] = []
-    leftover: Optional[str] = None
-    while True:
-        try:
-            if leftover is not None:
-                raw = leftover
-                leftover = None
-            else:
-                raw = input_fn("[CLASS:%s] > " % subject)
-        except EOFError:
-            out("")
-            out("(End of input - closing the classroom safely.)")
-            break
-        except KeyboardInterrupt:
-            out("")  # newline, then reprompt
-            continue
-        cmd = raw.strip().lower()
-        if not cmd:
-            continue
-
-        if cmd == "end class":
-            break
-        if cmd == "syllabus":
-            for line in syllabus_lines(engine, subject):
-                out(line)
-            continue
-        if cmd == "progress":
-            for line in progress_lines(engine):
-                out(line)
-            continue
-        if cmd == "quiz me":
-            graded: Optional[Tuple[int, int]] = None
-            if online:
-                graded = run_online_quiz(engine, subject, messages,
-                                         input_fn, out)
-                if graded is None:
-                    out("Live quiz unavailable - switching to offline "
-                        "self-check cards.")
-            if graded is None:
-                score, asked, leftover = run_offline_quiz(
-                    engine, subject, input_fn, out)
-                if asked:
-                    graded = (score, asked)
-            if graded is not None:
-                engine.record_quiz_score(subject, graded[0], graded[1])
-                out("Quiz score recorded: %d/%d." % graded)
-                quiz_results.append(graded)
-            continue
-        if cmd == "hint":
-            if online:
-                messages.append({"role": "user", "content": (
-                    "I am stuck. Re-explain the current point more "
-                    "simply and give me a hint, not the full answer.")})
-                messages = _cap_messages(messages)
-                reply = engine._llm_messages(messages)
-                if reply:
-                    reply = reply.strip()
-                    _professor_out(out, reply)
-                    messages.append({"role": "assistant",
-                                     "content": reply})
-                else:
-                    out("The professor is unreachable right now (LLM "
-                        "call failed) - no hint was generated.")
-                    for line in lesson_intro_lines(entry, subject):
-                        out(line)
-            else:
-                lesson_lines = lesson_intro_lines(entry, subject)
-                if len(lesson_lines) > 1:
-                    out("Hint: focus on this key point first - "
-                        + lesson_lines[1].strip(" -"))
-                else:
-                    out("Hint: re-read the lesson title and look up one "
-                        "example.")
-            continue
-        if cmd == "next":
-            if entry.get("current_lesson", 0) < len(syllabus) - 1:
-                entry["current_lesson"] = int(
-                    entry.get("current_lesson", 0)) + 1
-                for line in lesson_intro_lines(entry, subject):
-                    _professor_out(out, line)
-                if online:
-                    messages.append({"role": "user", "content": (
-                        "Let's move to the next lesson: %s."
-                        % syllabus[entry["current_lesson"]].get(
+      % syllabus[entry["current_lesson"]].get(
                             "title", ""))})
                     messages = _cap_messages(messages)
                     reply = engine._llm_messages(messages)
@@ -266,6 +86,132 @@ def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
     if graded is not None:
         engine.record_quiz_score(subject, graded[0], graded[1])
         out("Quiz score recorded: %d/%d. See 'progress'." % graded)
+
+
+def study_session(engine: OmegaMasterEngine, topic: str,
+                  input_fn: Any = input, out: Any = print) -> None:
+    """Study your own documents with the professor. Never crashes.
+
+    IDF retrieval picks the top passages for the topic; ONLINE the
+    professor teaches and quizzes grounded in them, OFFLINE the passages
+    print as honest study cards. Sub-commands: end study | passages |
+    quiz me. EOF/KeyboardInterrupt safe.
+    """
+    topic = (topic or "").strip()
+    docs = [d for d in engine.memory.setdefault("documents", [])
+            if isinstance(d, dict)]
+    if not docs:
+        out("No documents yet - ingest <path-or-url> first, then study "
+            "them.")
+        return
+    if not topic:
+        out("Usage: study <topic>")
+        out("documents: " + ", ".join(
+            str(d.get("name", "?"))[:24] for d in docs[:6]))
+        return
+    hits = search_documents(topic, docs, top_k=5)
+    if not hits:
+        out("No passages match '%s' - try different words or ingest "
+            "more." % topic)
+        out("documents: " + ", ".join(str(d.get("name", "?")) for d in docs))
+        return
+    passages = []
+    for num, (_score, name, chunk_idx, chunk) in enumerate(hits, 1):
+        passages.append("[%d] (%s #%d) %s" % (num, name, chunk_idx, chunk))
+    block = "\n\n".join(passages)
+    online = bool(engine.openai_key)
+    out("=" * 60)
+    out("STUDY: %s (%d passages from your documents)"
+        % (topic, len(hits)))
+    out("=" * 60)
+    out("In study: end study | passages | quiz me")
+    messages: List[Dict[str, str]] = []
+    if online:
+        messages.append({"role": "system",
+                         "content": STUDY_PROMPT % (topic, block)})
+        messages.append({"role": "user", "content": (
+            "Start the study session: give me a short overview of what "
+            "my material says about %s, then one question to check me."
+            % topic)})
+        messages = _cap_messages(messages)
+        reply = engine._llm_messages(messages)
+        if reply:
+            reply = reply.strip()
+            _professor_out(out, reply)
+            messages.append({"role": "assistant", "content": reply})
+        else:
+            online = False
+            out("(Professor unreachable - showing offline study cards "
+                "instead.)")
+    if not online:
+        out("Offline study cards (set OPENAI_API_KEY for the live "
+            "professor):")
+        for line in passages:
+            _professor_out(out, line)
+
+    turns = 0
+    while True:
+        try:
+            try:
+                raw = input_fn("[STUDY:%s] > " % topic[:18])
+            except TypeError:
+                # Zero-arg input_fn (scripted iterators in tests).
+                raw = input_fn()
+        except EOFError:
+            out("")
+            out("(End of input - closing the study session safely.)")
+            break
+        except KeyboardInterrupt:
+            out("")  # newline, then reprompt
+            continue
+        cmd = raw.strip().lower()
+        if not cmd:
+            continue
+        if cmd == "end study":
+            break
+        if cmd == "passages":
+            for line in passages:
+                out(line)
+            continue
+        if cmd == "quiz me":
+            if online:
+                messages.append({"role": "user", "content": (
+                    "Quiz me with questions from the material, one at a "
+                    "time. Ask the first now.")})
+                messages = _cap_messages(messages)
+                reply = engine._llm_messages(messages)
+                if reply:
+                    reply = reply.strip()
+                    _professor_out(out, reply)
+                    messages.append({"role": "assistant",
+                                     "content": reply})
+                else:
+                    out("The professor is unreachable right now - no "
+                        "quiz was generated.")
+            else:
+                out("Self-check: pick any card above and explain it "
+                    "aloud in your own words.")
+            continue
+        # Free text -> student turn.
+        turns += 1
+        if online:
+            messages.append({"role": "user", "content": raw.strip()})
+            messages = _cap_messages(messages)
+            reply = engine._llm_messages(messages)
+            if reply:
+                reply = reply.strip()
+                _professor_out(out, reply)
+                messages.append({"role": "assistant", "content": reply})
+            else:
+                out("The professor is unreachable right now - try "
+                    "'passages' or 'end study'.")
+        else:
+            out("(Offline: the professor needs OPENAI_API_KEY. Try "
+                "'passages', 'quiz me', or 'end study'.)")
+
+    engine._audit("Study", "study %s" % topic, "Success")
+    engine.add_history("assistant",
+                       "Studied '%s' (%d turns)." % (topic, turns))
 
 
 # ---------------------------------------------------------------------------
@@ -704,4 +650,89 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
         try:
             index = int(arg)
         except ValueError:
-            print("Usage: forget <number>  (see 'rec
+            print("Usage: forget <number>  (see 'recall' for numbers)")
+            return True
+        removed = engine.forget_fact(index)
+        if removed is None:
+            print("No fact #%d. Use 'recall' to list numbered facts." % index)
+        else:
+            print(engine.ui_format("forgot", index, removed))
+        engine._audit("Memory", "forget %s" % arg, "Success")
+        return True
+    if lowered == "history" or lowered.startswith("history "):
+        arg = line[len("history"):].strip()
+        count = 10
+        if arg:
+            try:
+                count = max(1, int(arg))
+            except ValueError:
+                print("Usage: history [n]  (showing default 10)")
+        entries = engine.memory.get("history", [])[-count:]
+        if not entries:
+            print("No history yet.")
+        else:
+            print("Last %d history entries:" % len(entries))
+            for entry in entries:
+                print("  %s | %-5s | %s" % (
+                    entry.get("ts", "?"),
+                    str(entry.get("role", "?"))[:5],
+                    str(entry.get("text", ""))[:70],
+                ))
+        engine._audit("Memory", "history", "Success")
+        return True
+
+    # --- v29 Module B: GitHub auto-sync commands ---
+    if lowered == "sync github" or lowered.startswith("sync github "):
+        for out_line in engine.sync_github():
+            print(out_line)
+        engine._audit("Sync", "sync github", "Success")
+        return True
+    if lowered == "sync status":
+        print("GitHub sync status:")
+        for out_line in engine.sync_status_lines():
+            print("  " + out_line)
+        engine._audit("Sync", "sync status", "Success")
+        return True
+
+    # --- v29 Module C: dataset commands ---
+    if lowered == "import" or lowered.startswith("import "):
+        path = line[len("import"):].strip().strip("'\"")
+        # v29.7.0: 'import doc <path>' is an alias for 'ingest <path>'
+        # (handled here because bare 'import' claims the prefix).
+        if path.lower() == "doc" or path.lower().startswith("doc "):
+            doc_path = path[len("doc"):].strip().strip("'\"")
+            if not doc_path:
+                print("Usage: import doc <path>  (or: ingest <path>)")
+                engine._audit("CLI", "import doc (no path)", "Failed")
+                return True
+            ok, message = engine.import_document(doc_path)
+            print(message)
+            engine._audit("CLI", "import doc %s" % doc_path,
+                          "Success" if ok else "Failed")
+            return True
+        ok, message = engine.import_dataset(path)
+        print(message)
+        engine._audit("Dataset", "import %s" % path,
+                      "Success" if ok else "Failed")
+        return True
+    if lowered == "analyze":
+        for out_line in engine.analyze_dataset():
+            print(out_line)
+        engine._audit("Dataset", "analyze", "Success")
+        return True
+    if lowered == "query" or lowered.startswith("query "):
+        for out_line in engine.query_dataset(line[len("query"):].strip()):
+            print(out_line)
+        engine._audit("Dataset", "query", "Success")
+        return True
+
+    # --- v29.6.0 commands: voice, image, github info, reminders ---
+    # (Placed before the prefix-routing loop so no prefix can shadow them.)
+    if lowered == "say" or lowered.startswith("say "):
+        text = line[len("say"):].strip()
+        if not text:
+            print("Usage: say <text>")
+            engine._audit("CLI", "say (no text)", "Failed")
+            return True
+        if not engine.openai_key:
+            prin
