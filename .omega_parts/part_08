@@ -1,135 +1,8 @@
-ched REST probe; guarded, never blocks/raises.
-        if engine._github_probe_cache is None:
-            engine._github_probe_cache = engine._github_api(
-                "/repos/" + engine.github_repo) or {}
-        probe = engine._github_probe_cache
-        github_detail = ("api ok: %s" % probe.get("full_name",
-                                                  engine.github_repo)
-                         if probe else "configured (api unreachable)")
-    else:
-        github_detail = "set GITHUB_REPO (+ GITHUB_TOKEN) in .env"
-    rows.append(("github key", "OK" if github_ok else "WARN", github_detail))
-    rows.append(("serper key", "OK" if engine.serper_key else "WARN",
-                 "live search ready" if engine.serper_key
-                 else "set SERPER_API_KEY in .env"))
-    rows.append(("openai key", "OK" if engine.openai_key else "WARN",
-                 "LLM enhancement ready" if engine.openai_key
-                 else "set OPENAI_API_KEY in .env"))
-    rows.append(("openrouter key", "OK" if engine.openrouter_key else "WARN",
-                 "fallback LLM ready (%s)" % engine.openrouter_model
-                 if engine.openrouter_key
-                 else "set OPENROUTER_API_KEY in .env"))
-    rows.append(("voice tts", "OK" if engine.openai_key else "WARN",
-                 "speech ready (uses OPENAI_API_KEY)" if engine.openai_key
-                 else "set OPENAI_API_KEY in .env"))
-    rows.append(("image gen", "OK" if engine.openai_key else "WARN",
-                 "images ready (uses OPENAI_API_KEY)" if engine.openai_key
-                 else "set OPENAI_API_KEY in .env"))
-    bridge_ok = BRIDGE_AVAILABLE and bool(engine.openai_key)
-    if bridge_ok:
-        rows.append(("bridge", "OK", "claude_engine bridge active"))
-    elif BRIDGE_AVAILABLE:
-        rows.append(("bridge", "WARN", "installed; set OPENAI_API_KEY"))
-    else:
-        rows.append(("bridge", "WARN",
-                     "claude_engine not installed (optional)"))
-
-    # 7. Site version note (informational).
-    rows.append(("site version", "INFO",
-                 "badge v%s - publish via the platform publish button"
-                 % ENGINE_VERSION))
-
-    lines = ["Launch pre-flight checklist (%s):" % ENGINE_NAME]
-    lines.append("  %-18s %-6s %s" % ("check", "status", "detail"))
-    for name, status, detail in rows:
-        lines.append("  %-18s %-6s %s" % (name, status, detail))
-    if blockers:
-        lines.append("NOT READY: " + ", ".join(blockers))
-    else:
-        lines.append("LAUNCH READY")
-    return lines, blockers
-
-
-# ---------------------------------------------------------------------------
-# CLI presentation helpers
-# ---------------------------------------------------------------------------
-
-def print_banner(engine: OmegaMasterEngine) -> None:
-    line = "=" * 60
-    print(line)
-    print(ENGINE_NAME)
-    print(line)
-    print("Subsystem availability:")
-    for row in engine.availability_matrix():
-        print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
-    print(line)
-    facts = len(engine.memory.get("facts", []))
-    sessions = engine.memory.get("sessions", 1)
-    print("Memory: %d remembered fact(s) | session #%d | %s"
-          % (facts, sessions, engine.memory_path))
-    print("Evolution: generation %d | health %.2f | pillars %s"
-          % (engine.evolution.generation(), engine.evolution.health(),
-             engine.evolution.pillars_status()))
-    print(line)
-    print(engine.ui("greeting"))
-
-
-def print_help(engine: OmegaMasterEngine) -> None:
-    commands = [
-        ("help", "show this command list"),
-        ("status", "subsystem matrix + system_state"),
-        ("version", "version, subsystem count, session, facts"),
-        ("keys", "masked API key report"),
-        ("research <query>", "deep research (Serper live or offline plan)"),
-        ("mine", "mining/investment subsystem"),
-        ("tax <country or topic>", "tax support with disclaimer"),
-        ("companion <topic>", "study-companion scaffold ('teach' = full "
-         "classroom)"),
-        ("teach <subject>", "Professor classroom: conversational tutor "
-         "session"),
-        ("syllabus <subject> [new]", "show / regenerate a 10-lesson "
-         "outline"),
-        ("quiz <subject>", "graded quiz (inside a class: 'quiz me')"),
-        ("progress", "learner profile: lessons, quiz average, weak "
-         "points"),
-        ("opportunities <domain>", "opportunity scan framework"),
-        ("finance <topic>", "finance literacy / scam avoidance"),
-        ("languages", "African language support list"),
-        ("lang <code>", "switch UI language (100 packs: 70 African + "
-         "30 world, grouped list)"),
-        ("translate <code> <text>", "translate text into a language "
-         "(needs OPENAI_API_KEY or bridge)"),
-        ("cost", "pricing-disruption table (free engine, BYOK cents)"),
-        ("say <text>", "speak text via TTS (needs OPENAI_API_KEY)"),
-        ("voice [on|off|prof|all]", "voice output: off / professor / all"),
-        ("voice speed <0.25-4.0>", "set TTS speed (persisted; plain "
-         "'voice speed' shows it)"),
-        ("image <prompt>", "generate an image (needs OPENAI_API_KEY)"),
-        ("github info", "GitHub repo info via REST probe"),
-        ("remind <text> in Nm|h|d", "set a reminder (also: at HH:MM)"),
-        ("reminders", "list pending reminders"),
-        ("remind done <n>", "mark reminder #n done"),
-        ("remind clear", "clear all pending reminders"),
-        ("selfimprove <note>", "log a self-improvement entry"),
-        ("evolve [sub]", "evolution engine: run | run online | rollback | "
-         "lineage | pillars | test <query>"),
-        ("why", "the 6 LUQI AI differentiators"),
-        ("integrations", "8-connector live status manifest"),
-        ("bridge", "claude_engine bridge status (optional, never required)"),
-        ("launch", "GO/NO-GO launch pre-flight checklist"),
-        ("remember <fact>", "persist a fact to omega_memory.json"),
-        ("recall", "list all remembered facts (numbered)"),
-        ("forget <n>", "delete fact #n"),
-        ("history [n]", "show last n exchanges (default 10)"),
-        ("import <path>", "import a .csv or .xlsx dataset"),
-        ("analyze", "summarize the loaded dataset"),
-        ("query <text>", "filter dataset rows containing text"),
-        ("ingest <path|url>", "ingest a document (.docx/.xlsx too) or web page"),
-        ("docs", "list ingested documents (chunks/chars/date)"),
-        ("forget doc <name>", "remove an ingested document"),
-        ("ask <question> | ask save", "document Q&A; save exports last "
+, "document Q&A; save exports last "
          "answer"),
         ("study <topic>", "professor-grounded study of your documents"),
+        ("prompt <idea> [add|show|run|save|clear]", "prompt forge: compile "
+         "+ coach expert prompts"),
         ("backup", "timestamped copy of omega_memory.json"),
         ("rights <topic>", "know your rights (SA-deep + world)"),
         ("tourism <place>", "travel guide (SA/Africa-deep)"),
@@ -781,4 +654,210 @@ def _due_reminders(engine: OmegaMasterEngine) -> List[str]:
                 continue
         if changed:
             save_memory(engine.memory_path, engine.memory)
-    except Ex
+    except Exception:
+        pass
+    return fired
+
+
+def _voice_out(engine: OmegaMasterEngine, base_out: Any) -> Any:
+    """Wrap a classroom out= callable: always print; speak per voice scope.
+
+    v29.8.0: scope "prof" (default) speaks only lines routed through the
+    returned callable's .speak() attribute (professor explanations);
+    scope "all" speaks every line (the v29.6.0 behavior).
+    Windows: synthesize to omega_voice_last.mp3 (overwritten) and auto-play
+    it. Other platforms: one-time notice on the first spoken line, then
+    print-only. Every failure degrades to print-only (never raises).
+    """
+    if not engine.memory.setdefault("voice_enabled", False):
+        return base_out
+    scope = str(engine.memory.get("voice_scope", "prof") or "prof").lower()
+    if scope not in ("prof", "all"):
+        scope = "prof"
+    state = {"noticed": False}
+
+    def _speak_line(text: str) -> None:
+        try:
+            if sys.platform != "win32":
+                if not state["noticed"]:
+                    state["noticed"] = True
+                    base_out("(voice playback auto-plays on Windows; "
+                             "mp3 saved)")
+                return
+            data = engine._tts_speech(text)
+            if not data:
+                return
+            try:
+                with open("omega_voice_last.mp3", "wb") as handle:
+                    handle.write(data)
+                os.startfile("omega_voice_last.mp3")  # type: ignore
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def wrapped(line: Any = "") -> None:
+        text = str(line)
+        base_out(text)
+        if scope == "all":
+            _speak_line(text)
+
+    def speak(line: Any = "") -> None:
+        text = str(line)
+        base_out(text)
+        _speak_line(text)
+
+    wrapped.speak = speak  # type: ignore
+    return wrapped
+
+
+def _professor_out(out: Any, text: str) -> None:
+    """Route a professor-explanation line through out.speak when present.
+
+    Classroom out= callables wrapped by _voice_out expose .speak(); plain
+    callables (voice off, tests) just print. Never raises.
+    """
+    try:
+        speaker = getattr(out, "speak", None)
+        if callable(speaker):
+            speaker(text)
+        else:
+            out(text)
+    except Exception:
+        pass
+
+
+def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
+    """Process one line of input. Return False to exit the REPL."""
+    line = raw.strip()
+    if not line:
+        return True
+    lowered = line.lower()
+
+    # v29.6.0: due reminders fire before any routing (never raises).
+    for reminder_text in _due_reminders(engine):
+        print("REMINDER: %s" % reminder_text)
+
+    if lowered in ("exit", "quit"):
+        print(engine.ui("goodbye"))
+        return False
+    if lowered == "help":
+        print_help(engine)
+        return True
+    if lowered == "clear":
+        clear_screen()
+        return True
+    if lowered == "version":
+        print(ENGINE_NAME)
+        print("Subsystems: %d" % len(engine.availability_matrix()))
+        print("Session: #%d" % engine.memory.get("sessions", 1))
+        print("Facts: %d" % len(engine.memory.get("facts", [])))
+        engine._audit("CLI", "version", "Success")
+        return True
+    if lowered == "status":
+        print("Version: %s" % ENGINE_NAME)
+        print("Language: %s (%s)" % (LANG_PACKS[engine.lang]["name"],
+                                     engine.lang))
+        print("Evolution: generation %d | pillars integrity %s"
+              % (engine.evolution.generation(),
+                 engine.evolution.pillars_status()))
+        print("Learning: %d active subject(s) in learner profile"
+              % len(engine.memory.get("learning") or {}))
+        print("Subsystem matrix:")
+        for row in engine.availability_matrix():
+            print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
+        print("system_state:")
+        print(json.dumps(engine.system_state, indent=2))
+        engine._audit("CLI", "status", "Success")
+        return True
+    if lowered == "keys":
+        print("API key report (masked):")
+        print("  OPENAI_API_KEY: %s" % mask_secret(engine.openai_key))
+        print("  SERPER_API_KEY: %s" % mask_secret(engine.serper_key))
+        engine._audit("CLI", "keys", "Success")
+        return True
+    if lowered == "log":
+        entries = engine.read_log_tail(10)
+        if not entries:
+            print("No audit entries yet.")
+        else:
+            print("Last %d audit entries:" % len(entries))
+            for entry in entries:
+                print("  %s | %-28s | %-12s | %s" % (
+                    entry.get("ts", "?"),
+                    str(entry.get("subsystem", "?"))[:28],
+                    entry.get("status", "?"),
+                    str(entry.get("input_summary", ""))[:60],
+                ))
+        return True
+    if lowered == "languages":
+        print("African language support (%d languages):" % len(AFRICAN_LANGUAGES))
+        for name, region in AFRICAN_LANGUAGES:
+            print("  %-12s - %s" % (name, region))
+        engine._audit("CLI", "languages", "Success")
+        return True
+
+    # --- v29.1.0: language packs / export / report commands ---
+    if lowered == "lang" or lowered.startswith("lang "):
+        code = line[len("lang"):].strip().lower()
+        if code and engine.set_lang(code):
+            pack = LANG_PACKS[engine.lang]
+            print("Language set to %s (%s)." % (pack["name"], engine.lang))
+            print(engine.ui("greeting"))
+        else:
+            if code:
+                print("Unknown language code '%s'." % code)
+            # v29.4.0: grouped list - African languages, then world.
+            african = sorted(c for c in LANG_PACKS
+                             if LANG_PACKS[c].get("region") == "african")
+            world = sorted(c for c in LANG_PACKS
+                           if LANG_PACKS[c].get("region") == "world")
+            print("Available language packs (* = active):")
+            print("African languages (%d):" % len(african))
+            for pack_code in african:
+                mark = "*" if pack_code == engine.lang else " "
+                print("  %s %-4s %s" % (mark, pack_code,
+                                        LANG_PACKS[pack_code]["name"]))
+            print("World languages (%d):" % len(world))
+            for pack_code in world:
+                mark = "*" if pack_code == engine.lang else " "
+                print("  %s %-4s %s" % (mark, pack_code,
+                                        LANG_PACKS[pack_code]["name"]))
+            print("Usage: lang <code>")
+        engine._audit("CLI", "lang %s" % (code or "(list)"), "Success")
+        return True
+    # --- v29.4.0: translate + cost commands ---
+    if lowered == "translate" or lowered.startswith("translate "):
+        args = line[len("translate"):].strip()
+        parts = args.split(None, 1)
+        code = parts[0].lower() if parts else ""
+        text = parts[1].strip() if len(parts) > 1 else ""
+        if not code or code not in LANG_PACKS:
+            print("Unknown language code '%s'." % code)
+            print("Usage: translate <lang-code> <text>  (see 'lang' for "
+                  "the 100 codes)")
+            engine._audit("CLI", "translate %s" % (code or "(none)"),
+                          "Failed")
+            return True
+        if not text:
+            print("Usage: translate <lang-code> <text>")
+            engine._audit("CLI", "translate %s" % code, "Failed")
+            return True
+        pack = LANG_PACKS[code]
+        prompt = ("Translate the following text into %s (language code "
+                  "'%s'). Return the translation only, with no "
+                  "explanation, no notes and no quotes.\n\nText: %s"
+                  % (pack["name"], code, text))
+        reply = engine._llm(prompt)
+        if reply:
+            print(reply.strip())
+            engine._audit("CLI", "translate %s" % code, "Success")
+        else:
+            print("Translation unavailable offline.")
+            print("To enable: set OPENAI_API_KEY in .env (optionally "
+                  "install the claude_engine bridge - see 'bridge') and "
+                  "run again.")
+            engine._audit("CLI", "translate %s" % code, "Offline")
+        return True
+    if lowered == "cost":
+        for out_l
