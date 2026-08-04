@@ -1,59 +1,4 @@
-                    errors="replace") as handle:
-                    text = handle.read()
-            return self._store_document(
-                os.path.basename(path), os.path.abspath(path), text, save)
-        except Exception as exc:
-            return False, "ingest failed safely: %s" % exc
-
-    def import_url(self, url: str, save: bool = True) -> Tuple[bool, str]:
-        """Fetch a web page and ingest its visible text. Never raises.
-
-        HTML pages go through _html_to_text; plain text is taken raw;
-        other content types are refused. Body is capped at
-        MAX_DOCUMENT_BYTES (truncation noted in the message).
-        """
-        try:
-            url = str(url or "").strip()
-            if not url.lower().startswith(("http://", "https://")):
-                return False, ("unsupported scheme (use http:// or "
-                               "https://): %s" % (url or "(empty)"))
-            request = urllib.request.Request(
-                url, headers={"User-Agent": ("LUQI-AI/29.8 (personal "
-                                             "document ingest)")})
-            try:
-                with urllib.request.urlopen(
-                        request, timeout=HTTP_TIMEOUT) as response:
-                    raw = response.read(MAX_DOCUMENT_BYTES + 1)
-                    content_type = str(response.headers.get(
-                        "Content-Type", "")).lower()
-            except Exception as exc:
-                return False, "fetch failed safely: %s" % exc
-            truncated = len(raw) > MAX_DOCUMENT_BYTES
-            raw = raw[:MAX_DOCUMENT_BYTES]
-            text = raw.decode("utf-8", errors="replace")
-            if "html" in content_type:
-                text = _html_to_text(text)
-            elif content_type and "text" not in content_type:
-                return False, ("unsupported content type %s"
-                               % (content_type.split(";")[0] or "?"))
-            if not text.strip():
-                return False, "no text content found"
-            base = url.split("://", 1)[1]
-            base = base.split("?", 1)[0].split("#", 1)[0].strip("/")
-            name = _slugify(base.replace("/", " "))[:40] or "web-page"
-            ok, message = self._store_document(name, url, text, save)
-            if ok and truncated:
-                message = message + (" (truncated at %d bytes)"
-                                     % MAX_DOCUMENT_BYTES)
-            return ok, message
-        except Exception as exc:
-            return False, "ingest failed safely: %s" % exc
-
-    def analyze_dataset(self) -> List[str]:
-        """Summarize the loaded dataset: counts, numeric stats, top values."""
-        if not self.dataset:
-            return ["No dataset loaded. Use: import <path-to-csv-or-xlsx>"]
-        headers = self.dataset.get("headers", [])
+", [])
         rows = self.dataset.get("rows", [])
         lines = [
             "Dataset: %s" % self.dataset.get("name", "?"),
@@ -775,4 +720,121 @@ class EvolutionEngine:
 
         v29.3.0: the candidate runs in a spawned child process
         (multiprocessing.get_context("spawn")) instead of a daemon thread:
-          * results come back thro
+          * results come back through a multiprocessing.Queue,
+          * join(3.0s); if the child is still alive -> terminate() + join()
+            -> the candidate is rejected as a timeout,
+          * POSIX children get a 256 MB RLIMIT_AS memory ceiling before the
+            candidate execs (MemoryError -> rejection); on Windows the
+            ceiling is unavailable, documented as timeout-only (see the
+            REVIEW note in _sandbox_worker),
+          * after every gate run we assert that NO child process remains
+            alive - this kills the v29.2.0 zombie-thread limit for good.
+
+        The AST gate (gate 1, unchanged) runs BEFORE this gate, and the
+        same restricted-builtins namespace is used inside the child.
+
+        Returns (ok, reason, contract_pass_rate, latency_avg).
+        """
+        queue = None
+        proc = None
+        try:
+            ctx = multiprocessing.get_context("spawn")
+            queue = ctx.Queue()
+            proc = ctx.Process(
+                target=_sandbox_worker,
+                args=(code, list(cls.CONTRACT_TESTS), queue),
+                daemon=True,
+            )
+            proc.start()
+        except Exception as exc:
+            if queue is not None:
+                _close_sandbox_queue(queue)
+            return False, "sandbox process spawn failed: %s" % exc, 0.0, 0.0
+
+        try:
+            proc.join(EVO_TEST_TIMEOUT)
+            if proc.is_alive():
+                # Infinite loop / hang: hard-kill the child. Unlike the old
+                # daemon thread, a terminated process leaves NO zombie behind.
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                proc.join(EVO_TEST_TIMEOUT)
+                if proc.is_alive():
+                    try:
+                        proc.kill()  # SIGKILL fallback (py3.7+)
+                    except Exception:
+                        pass
+                    proc.join(1.0)
+                _close_sandbox_queue(queue)
+                cls._reap_stray_children()
+                return False, ("timeout after %.1fs (candidate process "
+                               "terminated, no child processes left)"
+                               % EVO_TEST_TIMEOUT), 0.0, 0.0
+
+            # Child exited: fetch its result dict (short wait for flush).
+            result: Optional[Dict[str, Any]] = None
+            try:
+                result = queue.get(timeout=2.0)
+            except Exception:
+                result = None
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            if not isinstance(result, dict):
+                exit_code = proc.exitcode
+                return False, ("sandbox worker exited without a result "
+                               "(exit code %s)" % exit_code), 0.0, 0.0
+            try:
+                pass_rate = float(result.get("pass_rate", 0.0))
+            except Exception:
+                pass_rate = 0.0
+            try:
+                latency_avg = float(result.get("latency_avg", 0.0))
+            except Exception:
+                latency_avg = 0.0
+            return (bool(result.get("ok")), str(result.get("reason", "?")),
+                    pass_rate, latency_avg)
+        except Exception as exc:
+            # Belt-and-braces: never leak a live child on any failure.
+            try:
+                if proc.is_alive():
+                    proc.terminate()
+                    proc.join(1.0)
+            except Exception:
+                pass
+            _close_sandbox_queue(queue)
+            cls._reap_stray_children()
+            return False, "sandbox gate failed safely: %s" % exc, 0.0, 0.0
+        finally:
+            try:
+                if proc is not None and not proc.is_alive():
+                    proc.close()
+            except Exception:
+                pass
+
+    @staticmethod
+    def _reap_stray_children() -> None:
+        """No-zombie assertion: after a gate run no child may stay alive.
+
+        Any stray child (should never happen) is terminated immediately.
+        """
+        try:
+            ctx = multiprocessing.get_context("spawn")
+            for stray in ctx.active_children():
+                try:
+                    if stray.is_alive():
+                        stray.terminate()
+                        stray.join(1.0)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Gate 3: fitness gate
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def fitness(pass_rate: float, latency_avg: float, health: float) -> float:
+        """fitness = 0.5*pass +
