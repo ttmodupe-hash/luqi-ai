@@ -1,175 +1,103 @@
-ine._audit("CLI", "backup", "Success")
-        except Exception as exc:
-            print("backup failed safely: %s" % exc)
-            engine._audit("CLI", "backup", "Failed")
-        return True
-
-    # --- v29.7.0 commands (document Q&A) ---
-    # (Same pre-router position as the v29.6.0 block above. The
-    # 'import doc <path>' and 'forget doc <name>' aliases are handled
-    # earlier, at the bare 'import'/'forget' handlers they shadow.)
-    if lowered == "ingest" or lowered.startswith("ingest "):
-        path = line[len("ingest"):].strip().strip("'\"")
-        if not path:
-            print("Usage: ingest <path-or-url>  "
-                  "(.txt .md .csv .log .json .docx .xlsx or http(s)://...)")
-            engine._audit("CLI", "ingest (no path)", "Failed")
+show":
+            if not forge:
+                print("no prompt draft - start with: prompt <your idea>")
+                engine._audit("CLI", "prompt show", "Failed")
+                return True
+            print(_compile_expert_prompt(str(forge.get("idea", "")),
+                                         forge.get("adds") or []))
+            engine._audit("CLI", "prompt show", "Success")
             return True
-        if path.lower().startswith(("http://", "https://")):
-            ok, message = engine.import_url(path)
-        else:
-            ok, message = engine.import_document(path)
-        print(message)
-        engine._audit("CLI", "ingest %s" % path,
-                      "Success" if ok else "Failed")
-        return True
-    if lowered == "docs":
-        docs = [d for d in engine.memory.setdefault("documents", [])
-                if isinstance(d, dict)]
-        if not docs:
-            print("no documents yet - ingest <path> to add one")
-            engine._audit("CLI", "docs", "Success")
-            return True
-        print("#  name                 chunks    chars  ingested")
-        for idx, doc in enumerate(docs, 1):
-            chunks = doc.get("chunks") or []
-            if not isinstance(chunks, list):
-                chunks = []
+        if first == "run":
+            if not forge:
+                print("no prompt draft - start with: prompt <your idea>")
+                engine._audit("CLI", "prompt run", "Failed")
+                return True
+            compiled = _compile_expert_prompt(str(forge.get("idea", "")),
+                                              forge.get("adds") or [])
             try:
-                chars = int(doc.get("chars") or 0)
+                reply = engine._llm_messages([
+                    {"role": "system", "content": compiled},
+                    {"role": "user", "content": "Execute the mandate now."},
+                ])
             except Exception:
-                chars = 0
-            print("%-2d %-20s %6d %8d  %s"
-                  % (idx, str(doc.get("name", "?"))[:20], len(chunks),
-                     chars, str(doc.get("ts", ""))[:10]))
-        total = sum(len(d.get("chunks") or []) for d in docs
-                    if isinstance(d.get("chunks") or [], list))
-        print("%d documents, %d chunks (max %d docs / %d chunks)"
-              % (len(docs), total, MAX_DOCUMENTS, MAX_TOTAL_CHUNKS))
-        engine._audit("CLI", "docs", "Success")
-        return True
-    if lowered == "ask" or lowered.startswith("ask "):
-        question = line[len("ask"):].strip()
-        if not question:
-            print("Usage: ask <question>   (or: ask save; web fallback "
-                  "when SERPER_API_KEY set)")
-            engine._audit("CLI", "ask (no question)", "Failed")
+                reply = None
+            if reply:
+                print(reply.strip())
+                engine._audit("CLI", "prompt run", "Success")
+            else:
+                print("prompt run needs OPENAI_API_KEY in .env - prompt "
+                      "is ready above (prompt show)")
+                engine._audit("CLI", "prompt run", "Failed")
             return True
-        if question.lower() == "save":
-            last = getattr(engine, "_last_answer", None)
-            if not last:
-                print("no answer to save yet")
-                engine._audit("CLI", "ask save", "Failed")
+        if first == "save":
+            if not forge:
+                print("no prompt draft - start with: prompt <your idea>")
+                engine._audit("CLI", "prompt save", "Failed")
                 return True
             try:
+                idea = str(forge.get("idea", ""))
+                adds = [str(a) for a in (forge.get("adds") or [])]
+                compiled = _compile_expert_prompt(idea, adds)
+                tips = _prompt_gaps(idea + " " + " ".join(adds))
                 stamp = datetime.now(timezone.utc).strftime(
                     "%Y%m%dT%H%M%SZ")
-                filename = "omega_answer_%s_%s.md" % (
-                    _slugify(str(last.get("q", "question"))), stamp)
-                answer_lines = [
-                    "# Answer: %s" % last.get("q", ""),
+                filename = "omega_prompt_%s_%s.md" % (
+                    _slugify(idea), stamp)
+                out_lines = [
+                    "# Prompt Forge: %s" % idea,
                     "",
                     "Generated: %s (UTC)" % utc_now_iso(),
                     "Engine: " + ENGINE_NAME,
                     "",
-                    "## Question",
-                    str(last.get("q", "")),
+                    "## Idea",
+                    idea,
                     "",
-                    "## Answer",
-                    str(last.get("text", "")),
-                    "",
-                    "## Sources",
+                    "## Injected requirements",
                 ]
-                sources = last.get("sources") or []
-                if sources:
-                    answer_lines.extend("- " + str(s) for s in sources)
+                if adds:
+                    out_lines.extend("- " + a for a in adds)
                 else:
-                    answer_lines.append("- (none)")
-                answer_lines.append("")
+                    out_lines.append("- (none)")
+                out_lines.extend(["", "## Compiled expert prompt", "",
+                                  compiled, "", "## Coaching tips"])
+                if tips:
+                    out_lines.extend("- " + t for t in tips)
+                else:
+                    out_lines.append("- (none - prompt is well formed)")
+                out_lines.append("")
                 with open(filename, "w", encoding="utf-8") as handle:
-                    handle.write("\n".join(answer_lines))
+                    handle.write("\n".join(out_lines))
                 print("saved: %s" % filename)
-                engine._audit("CLI", "ask save", "Success")
+                engine._audit("CLI", "prompt save", "Success")
             except Exception as exc:
-                print("answer save failed safely: %s" % exc)
-                engine._audit("CLI", "ask save", "Failed")
+                print("prompt save failed safely: %s" % exc)
+                engine._audit("CLI", "prompt save", "Failed")
             return True
-        docs = [d for d in engine.memory.setdefault("documents", [])
-                if isinstance(d, dict)]
-        if not docs:
-            web = _ask_web_fallback(engine, question)
-            if web:
-                print(web["text"])
-                if web["sources"]:
-                    print()
-                    print("sources: " + ", ".join(web["sources"]))
-                engine._last_answer = {"q": question, "text": web["text"],
-                                       "sources": web["sources"],
-                                       "ts": utc_now_iso()}
-                engine._audit("CLI", "ask %s (web)" % question[:60],
-                              "Success")
+        if first == "clear":
+            if not forge:
+                print("no prompt draft to clear")
+                engine._audit("CLI", "prompt clear", "Failed")
                 return True
-            print("no documents yet - ingest <path> first")
-            print("set SERPER_API_KEY in .env for web-backed answers")
-            engine._audit("CLI", "ask %s" % question[:60], "Failed")
+            engine.memory.pop("prompt_forge", None)
+            save_memory(engine.memory_path, engine.memory)
+            print("prompt draft cleared")
+            engine._audit("CLI", "prompt clear", "Success")
             return True
-        hits = search_documents(question, docs)
-        if not hits:
-            web = _ask_web_fallback(engine, question)
-            if web:
-                print(web["text"])
-                if web["sources"]:
-                    print()
-                    print("sources: " + ", ".join(web["sources"]))
-                engine._last_answer = {"q": question, "text": web["text"],
-                                       "sources": web["sources"],
-                                       "ts": utc_now_iso()}
-                engine._audit("CLI", "ask %s (web)" % question[:60],
-                              "Success")
-                return True
-            print("no relevant passages - try different words")
-            print("documents: " + ", ".join(
-                str(d.get("name", "?")) for d in docs))
-            print("set SERPER_API_KEY in .env for web-backed answers")
-            engine._audit("CLI", "ask %s" % question[:60], "Failed")
-            return True
-        passages = []
-        for num, (_score, name, chunk_idx, chunk) in enumerate(hits, 1):
-            passages.append("[%d] (%s #%d) %s"
-                            % (num, name, chunk_idx, chunk))
-        block = "\n".join(passages)
-        try:
-            reply = engine._llm_messages([
-                {"role": "system",
-                 "content": ("Answer ONLY from the provided passages. "
-                             "Cite sources like [name]. If the passages "
-                             "do not answer, say so briefly.")},
-                {"role": "user",
-                 "content": question + "\n\nPassages:\n" + block},
-            ])
-        except Exception:
-            reply = None
-        sources = ["%s #%d" % (name, chunk_idx)
-                   for _s, name, chunk_idx, _c in hits]
-        if reply:
-            answer_text = reply.strip()
-            print(answer_text)
-            print()
-            print("sources: " + ", ".join(sources))
+        # Start/replace a session with the idea text; compile + coach.
+        idea = arg
+        engine.memory["prompt_forge"] = {"idea": idea, "adds": [],
+                                         "ts": utc_now_iso()}
+        print(_compile_expert_prompt(idea, []))
+        tips = _prompt_gaps(idea)
+        print()
+        if tips:
+            print("Coaching tips (%d):" % len(tips))
+            for tip in tips:
+                print("- " + tip)
         else:
-            print("offline mode - top passages:")
-            offline_lines = []
-            for num, (_score, name, chunk_idx, chunk) in enumerate(
-                    hits, 1):
-                shown = chunk if len(chunk) <= 600 else chunk[:600] + "..."
-                offline_lines.append("[%d] (%s #%d) %s"
-                                     % (num, name, chunk_idx, shown))
-            answer_text = "\n".join(offline_lines)
-            print(answer_text)
-            print("set OPENAI_API_KEY in .env for synthesized answers")
-        engine._last_answer = {"q": question, "text": answer_text,
-                               "sources": sources, "ts": utc_now_iso()}
-        engine._audit("CLI", "ask %s" % question[:60], "Success")
+            print("Coaching tips: none - strong prompt.")
+        save_memory(engine.memory_path, engine.memory)
+        engine._audit("CLI", "prompt %s" % idea[:60], "Success")
         return True
 
     # Commands with arguments -> routed into the engine.
@@ -693,4 +621,109 @@ def run_selftest() -> int:
                     "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c>"
                     "<c r=\"B1\" t=\"s\"><v>1</v></c></row>"
                     "<row r=\"2\"><c r=\"A2\" t=\"s\"><v>2</v></c>"
-                    "<c r=\"
+                    "<c r=\"B2\" t=\"s\"><v>3</v></c></row>"
+                    "</sheetData></worksheet>")
+            ok_xlsx, _m3 = engine.import_document(xlsx_path, save=False)
+            xlsx_docs = engine.memory.get("documents") or []
+            xlsx_chunks = xlsx_docs[-1].get("chunks", []) if xlsx_docs else []
+            checks.append(("office: ingest .xlsx renders rows",
+                           ok_xlsx and any("joburg" in c
+                                           and "gauteng" in c
+                                           for c in xlsx_chunks)))
+    except Exception as exc:
+        checks.append(("office: (exception: %s)" % exc, False))
+
+    # v29.9.0: memory backup writes a valid timestamped copy.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            old_path = engine.memory_path
+            os.chdir(tmpdir)
+            try:
+                engine.memory_path = os.path.join(tmpdir, "mem.json")
+                save_memory(engine.memory_path, engine.memory)
+                handled = handle_command(engine, "backup")
+                made = [f for f in os.listdir(tmpdir)
+                        if f.startswith("omega_memory_backup_")]
+                valid = False
+                if made:
+                    with open(os.path.join(tmpdir, made[0])) as handle:
+                        json.load(handle)
+                    valid = True
+                checks.append(("backup: writes timestamped valid copy",
+                               handled is True and len(made) == 1
+                               and valid))
+            finally:
+                os.chdir(old_cwd)
+                engine.memory_path = old_path
+    except Exception as exc:
+        checks.append(("backup: (exception: %s)" % exc, False))
+
+    # v29.9.0: study mode (offline, deterministic, isolated cwd).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                fresh = OmegaMasterEngine()
+                seen: List[str] = []
+                study_session(fresh, "solar",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                checks.append(("study: no documents -> ingest hint",
+                               any("ingest" in line.lower()
+                                   for line in seen)))
+                learner = OmegaMasterEngine()
+                doc_path = os.path.join(tmpdir, "notes.txt")
+                with open(doc_path, "w", encoding="ascii") as handle:
+                    handle.write("mitochondria produce energy in cells")
+                learner.import_document(doc_path, save=False)
+                seen = []
+                study_session(learner, "",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                usage_ok = any("Usage: study" in line for line in seen)
+                seen = []
+                study_session(learner, "zzqzxv",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                nomatch_ok = any("No passages match" in line
+                                 for line in seen)
+                seen = []
+                study_session(learner, "mitochondria",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                banner_ok = any("STUDY: mitochondria" in line
+                                for line in seen)
+                cards_ok = any("Offline study cards" in line
+                               for line in seen)
+                checks.append(("study: usage/no-match/banner/cards",
+                               usage_ok and nomatch_ok and banner_ok
+                               and cards_ok))
+            finally:
+                os.chdir(old_cwd)
+    except Exception as exc:
+        checks.append(("study: (exception: %s)" % exc, False))
+
+    # v29.10.0: rights & travel routing (incl. the taxi/tax collision).
+    try:
+        result = engine.execute_omega_subsystem(
+            "what do i do when stopped by the cops",
+            {"query": "what do i do when stopped by the cops"})
+        checks.append(("rights: police query -> police_sa + disclaimer",
+                       result.get("subsystem") == "Omega Rights & Travel"
+                       and result.get("guide") == "police_sa"
+                       and "not legal advice" in result.get(
+                           "disclaimer", "")))
+        result = engine.execute_omega_subsystem(
+            "can i get a refund", {"query": "refund broken goods"})
+        consumer_ok = result.get("guide") == "consumer_sa"
+        result = engine.execute_omega_subsystem(
+            "what are my rights", {"query": "what are my rights"})
+        checks.append(("rights: consumer -> consumer_sa; bare -> universal",
+                       consumer_ok and result.get("guide") == "universal"))
+        result = engine.execute_omega_subsystem(
+            "taxi to the airport", {"query": "taxi to the airport"})
+        checks.append(("rights: taxi routes to travel, NOT tax",
+                       result.get("subsystem") == "Omega Rights & Travel"
+                       and result.get(
