@@ -1,83 +1,4 @@
-  "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
-                data = json.loads(resp.read().decode("utf-8", errors="replace"))
-            choices = data.get("choices") or []
-            if not choices:
-                return self._openrouter_chat(prompt)
-            message = choices[0].get("message") or {}
-            content = message.get("content")
-            if content:
-                return str(content)
-            # v29.6.0: empty OpenAI reply -> OpenRouter fallback.
-            return self._openrouter_chat(prompt)
-        except Exception:
-            # v29.6.0: OpenRouter is the final fallback before None.
-            return self._openrouter_chat(prompt)
-
-    # ------------------------------------------------------------------
-    # v29.5.0: multi-turn chat (messages lists) for the Professor classroom
-    # ------------------------------------------------------------------
-
-    def _bridge_llm_messages(self,
-                             messages: List[Dict[str, str]]) -> Optional[str]:
-        """Bridge path for a messages list.
-
-        The claude_engine bridge exposes a single-string chat(); the
-        rolling context is serialized into one transcript prompt so the
-        professor still sees the full conversation. None on ANY issue.
-        """
-        try:
-            bridge = self._get_bridge()
-            if bridge is None:
-                return None
-            parts = []
-            for msg in messages:
-                role = str(msg.get("role", "user"))
-                content = str(msg.get("content", ""))
-                if role == "system":
-                    parts.append("System: " + content)
-                elif role == "assistant":
-                    parts.append("Professor: " + content)
-                else:
-                    parts.append("Student: " + content)
-            parts.append("Professor:")
-            reply = bridge.chat("\n\n".join(parts))
-            if isinstance(reply, str):
-                return reply if reply.strip() else None
-            if isinstance(reply, dict):
-                content = reply.get("content") or reply.get("text")
-                if content:
-                    return str(content)
-            if reply:
-                return str(reply)
-            return None
-        except Exception:
-            return None
-
-    def _llm_messages(self, messages: List[Dict[str, str]],
-                      max_tokens: int = 700) -> Optional[str]:
-        """Chat-completions call with a full messages list.
-
-        Bridge-first (when installed), stdlib urllib fallback. Returns
-        None without a key or on ANY failure - callers must fall back
-        gracefully and never fake a reply.
-        """
-        clean = []
-        for msg in messages:
-            role = str(msg.get("role", "user"))
-            if role not in ("system", "user", "assistant"):
-                role = "user"
-            clean.append({"role": role,
-                          "content": str(msg.get("content", ""))})
-        if not clean:
-            return None
-        # v29.6.0: OpenRouter fallback prompt (last user message, else last).
-        fallback_prompt = clean[-1]["content"]
-        for msg in reversed(clean):
-            if msg["role"] == "user":
+           if msg["role"] == "user":
                 fallback_prompt = msg["content"]
                 break
         if not self.openai_key:
@@ -661,4 +582,108 @@
 
     def forget_fact(self, index: int) -> Optional[str]:
         """Delete fact #index (1-based). Returns the removed fact or None."""
-        facts = self.memory.setdefault
+        facts = self.memory.setdefault("facts", [])
+        if 1 <= index <= len(facts):
+            removed = str(facts.pop(index - 1))
+            save_memory(self.memory_path, self.memory)
+            return removed
+        return None
+
+    def add_history(self, role: str, text: str) -> None:
+        """Append one exchange to history (capped, oldest trimmed)."""
+        try:
+            history = self.memory.setdefault("history", [])
+            history.append({
+                "ts": utc_now_iso(),
+                "role": str(role),
+                "text": str(text)[:500],
+            })
+            if len(history) > MAX_HISTORY_ENTRIES:
+                del history[: len(history) - MAX_HISTORY_ENTRIES]
+        except Exception:
+            pass  # history must never crash the engine
+
+    # ------------------------------------------------------------------
+    # Module C: dataset import / analyze / query
+    # ------------------------------------------------------------------
+
+    def dataset_note(self) -> Optional[str]:
+        """One-line note for tax/mine subsystems when a dataset is loaded."""
+        if self.dataset:
+            return ("Dataset note: %d rows from '%s' are loaded and "
+                    "available for analysis." % (
+                        len(self.dataset.get("rows", [])),
+                        self.dataset.get("name", "dataset")))
+        return None
+
+    def _restore_last_import(self) -> None:
+        """Reload the dataset referenced by memory datasets.last_import."""
+        try:
+            datasets = self.memory.get("datasets") or {}
+            meta = datasets.get("last_import")
+            if not isinstance(meta, dict):
+                return
+            path = str(meta.get("path") or "")
+            if path and os.path.isfile(path):
+                ok, _msg = self.import_dataset(path, save=False)
+                if not ok:
+                    self.dataset = None
+        except Exception:
+            self.dataset = None
+
+    def import_dataset(self, path: str, save: bool = True) -> Tuple[bool, str]:
+        """Load a .csv or .xlsx dataset. Returns (ok, message). Never raises."""
+        try:
+            path = str(path or "").strip()
+            if not path:
+                return False, "Usage: import <path-to-csv-or-xlsx>"
+            if not os.path.isfile(path):
+                return False, "File not found: %s" % path
+            ext = os.path.splitext(path)[1].lower()
+            if ext == ".csv":
+                headers, rows = _read_csv_dataset(path)
+            elif ext == ".xlsx":
+                headers, rows = _read_xlsx_dataset(path)
+            else:
+                return False, ("Unsupported extension '%s'. Only .csv and "
+                               ".xlsx are supported." % (ext or "(none)"))
+            if not headers:
+                return False, "No header row found in %s." % path
+            if len(rows) > MAX_DATASET_ROWS:
+                return False, ("Dataset has %d rows; the limit is %d. "
+                               "Import refused." % (len(rows), MAX_DATASET_ROWS))
+            self.dataset = {
+                "path": os.path.abspath(path),
+                "name": os.path.basename(path),
+                "source": ext.lstrip("."),
+                "headers": headers,
+                "rows": rows,
+            }
+            self.memory.setdefault("datasets", {})["last_import"] = {
+                "path": os.path.abspath(path),
+                "name": os.path.basename(path),
+                "source": ext.lstrip("."),
+                "rows": len(rows),
+                "columns": len(headers),
+                "headers": headers,
+                "ts": utc_now_iso(),
+            }
+            if save:
+                save_memory(self.memory_path, self.memory)
+            return True, ("Imported %d row(s) x %d column(s) from %s "
+                          "(%s)." % (len(rows), len(headers),
+                                     os.path.basename(path), ext.lstrip(".")))
+        except Exception as exc:
+            return False, "Import failed safely: %s" % exc
+
+    def _store_document(self, name: str, origin: str, text: str,
+                        save: bool = True) -> Tuple[bool, str]:
+        """Chunk and store one document (dedup by name, evict to caps).
+
+        Shared by file and URL ingestion. Never raises.
+        """
+        try:
+            chunks = _chunk_text(text)
+            if not chunks:
+                return False, "no text content found"
+            docs = self.memory.
