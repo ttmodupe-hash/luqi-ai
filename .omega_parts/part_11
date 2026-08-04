@@ -1,38 +1,4 @@
-]
-            csv_docs = [d for d in docs
-                        if isinstance(d, dict)
-                        and d.get("name") == "data.csv"]
-            ok = (ok_md and ok_csv and len(docs) == 3
-                  and bool(csv_docs)
-                  and any(" | " in c for c in csv_docs[0].get("chunks", [])))
-            checks.append(("docs: ingest .md + .csv (csv renders ' | ')",
-                           ok))
-            ok, _msg = engine.import_document(txt_path, save=False)
-            docs = engine.memory.get("documents") or []
-            names = [d.get("name") for d in docs if isinstance(d, dict)]
-            checks.append(("docs: re-ingest same name replaces, no dupe",
-                           ok and len(docs) == 3
-                           and names.count("notes.txt") == 1))
-    except Exception as exc:
-        checks.append(("docs: ingest (exception: %s)" % exc, False))
-
-    # v29.7.0: pure retrieval helpers.
-    try:
-        toks = _tokenize("Hello, WORLD 42")
-        hard = _chunk_text("x" * 2500)
-        ok = (toks == ["hello", "world", "42"]
-              and len(hard) == 3
-              and all(len(c) <= DOC_CHUNK_CHARS for c in hard)
-              and _chunk_text("") == []
-              and _score_chunk(["solar"], "solar solar wind") == 2
-              and _score_chunk(["zzz"], "solar wind") == 0)
-        checks.append(("docs: _tokenize/_chunk_text/_score_chunk pure", ok))
-    except Exception as exc:
-        checks.append(("docs: helpers (exception: %s)" % exc, False))
-
-    # v29.7.0: retrieval ranking over the ingested docs.
-    try:
-        docs = engine.memory.get("documents") or []
+.memory.get("documents") or []
         hits = search_documents("solar panels", docs)
         ok = (bool(hits) and hits[0][0] > 0
               and hits[0][1] == "notes.txt"
@@ -269,6 +235,107 @@
     except Exception as exc:
         checks.append(("study: (exception: %s)" % exc, False))
 
+    # v29.10.0: rights & travel routing (incl. the taxi/tax collision).
+    try:
+        result = engine.execute_omega_subsystem(
+            "what do i do when stopped by the cops",
+            {"query": "what do i do when stopped by the cops"})
+        checks.append(("rights: police query -> police_sa + disclaimer",
+                       result.get("subsystem") == "Omega Rights & Travel"
+                       and result.get("guide") == "police_sa"
+                       and "not legal advice" in result.get(
+                           "disclaimer", "")))
+        result = engine.execute_omega_subsystem(
+            "can i get a refund", {"query": "refund broken goods"})
+        consumer_ok = result.get("guide") == "consumer_sa"
+        result = engine.execute_omega_subsystem(
+            "what are my rights", {"query": "what are my rights"})
+        checks.append(("rights: consumer -> consumer_sa; bare -> universal",
+                       consumer_ok and result.get("guide") == "universal"))
+        result = engine.execute_omega_subsystem(
+            "taxi to the airport", {"query": "taxi to the airport"})
+        checks.append(("rights: taxi routes to travel, NOT tax",
+                       result.get("subsystem") == "Omega Rights & Travel"
+                       and result.get("topic") == "tourism"))
+    except Exception as exc:
+        checks.append(("rights: (exception: %s)" % exc, False))
+
+    # v29.10.0: tourism guide selection.
+    try:
+        r1 = engine.execute_omega_subsystem(
+            "tourism in kruger", {"query": "tourism in kruger"})
+        r2 = engine.execute_omega_subsystem(
+            "travel to serengeti", {"query": "travel to serengeti"})
+        r3 = engine.execute_omega_subsystem(
+            "travel to paris", {"query": "travel to paris"})
+        checks.append(("tourism: kruger -> sa; serengeti -> africa; "
+                       "paris -> universal",
+                       r1.get("guide") == "sa" and r2.get("guide") == "africa"
+                       and r3.get("guide") == "universal"
+                       and bool(r1.get("guidance"))))
+    except Exception as exc:
+        checks.append(("tourism: (exception: %s)" % exc, False))
+
+    # v29.10.0: map URL builder (pure, offline).
+    try:
+        checks.append(("map: _map_url providers + dir + fallback",
+                       _map_url("osm", "place", "cape town").endswith(
+                           "query=cape%20town")
+                       and "directions?from=a&to=b" in _map_url(
+                           "osm", "dir", "a", "b")
+                       and _map_url("baidu", "place", "x").startswith(
+                           "https://map.baidu.com/search/")
+                       and _map_url("amap", "dir", "a", "b").startswith(
+                           "https://www.amap.com/dir")
+                       and _map_url("bogus", "place", "x").startswith(
+                           "https://www.openstreetmap.org/")))
+    except Exception as exc:
+        checks.append(("map: (exception: %s)" % exc, False))
+
+    # v29.10.0: roadblock log + whereami env path (isolated cwd, offline).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                traveler = OmegaMasterEngine()
+                ok1 = handle_command(traveler, "roadblock N1 oil spill")
+                ok2 = handle_command(traveler, "roadblocks")
+                entries = traveler.memory.get("roadblocks") or []
+                traveler.memory["roadblocks"] = [
+                    {"where": "W%d" % i, "note": "", "ts": "t"}
+                    for i in range(60)]
+                ok3 = handle_command(traveler, "roadblock NEW latest")
+                kept = traveler.memory["roadblocks"]
+                checks.append(("roadblock: log + list + cap 50",
+                               ok1 and ok2 and ok3
+                               and len(entries) == 1
+                               and entries[0]["where"] == "N1"
+                               and len(kept) == 50
+                               and kept[-1]["where"] == "NEW"))
+                os.environ["OMEGA_CITY"] = "Selftestville"
+                try:
+                    ok4 = handle_command(traveler, "whereami")
+                finally:
+                    del os.environ["OMEGA_CITY"]
+                checks.append(("whereami: OMEGA_CITY answers offline",
+                               ok4 is True))
+            finally:
+                os.chdir(old_cwd)
+    except Exception as exc:
+        checks.append(("travel toolkit: (exception: %s)" % exc, False))
+
+    # v29.10.0: registry completeness.
+    try:
+        rows = engine.subsystem_status()
+        checks.append(("registry: 16 rows + rights row + report actions",
+                       len(rows) == 16
+                       and any(r.get("subsystem") == "Rights & Travel"
+                               for r in rows)
+                       and "Omega Rights & Travel" in REPORT_NEXT_ACTIONS))
+    except Exception as exc:
+        checks.append(("registry: (exception: %s)" % exc, False))
+
     # v29.7.0: documents schema survives save/load; corrupt entries skipped.
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -404,12 +471,12 @@
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.9.0 + 15 subsystems + session/facts",
-                       bool(keep) and "29.9.0" in out
-                       and "Subsystems: 15" in out
+        checks.append(("version: shows 29.10.0 + 16 subsystems + session/facts",
+                       bool(keep) and "29.10.0" in out
+                       and "Subsystems: 16" in out
                        and "Session: #" in out and "Facts:" in out))
-        checks.append(("version: ENGINE_VERSION is 29.9.0",
-                       ENGINE_VERSION == "29.9.0"))
+        checks.append(("version: ENGINE_VERSION is 29.10.0",
+                       ENGINE_VERSION == "29.10.0"))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
 
@@ -588,41 +655,4 @@
         low = evo.fitness(1.0, 0.1, 0.0)    # 0.8
         high = evo.fitness(1.0, 0.1, 1.0)   # 1.0
         checks.append(("evolve: fitness gate rejects lower fitness",
-                       low < high and not (low >= high)
-                       and abs(high - 1.0) < 1e-9))
-    except Exception as exc:
-        checks.append(("evolve: fitness gate (exception: %s)" % exc, False))
-
-    # Telemetry scoring is clamped to [0.0, 1.0] (negative-score bug fix).
-    try:
-        s_mid = evo.score_result(True, "no tag here", 3.0)   # 1-.3-.2 = 0.5
-        s_floor = evo.score_result(False, "", 9.0)           # clamps to 0.0
-        checks.append(("evolve: telemetry score clamped to [0,1]",
-                       abs(s_mid - 0.5) < 1e-9 and s_floor == 0.0))
-    except Exception as exc:
-        checks.append(("evolve: score clamp (exception: %s)" % exc, False))
-
-    # (k) Offline 'evolve run' completes with no keys and no network.
-    try:
-        engine.openrouter_key = ""
-        gen_before = evo.generation()
-        ok, out_lines = evo.run_cycle(online=False)
-        adopted = ok and evo.generation() > gen_before
-        files_ok = (os.path.isfile(STRATEGY_FILE)
-                    and os.path.isfile(EVOLUTION_FILE)
-                    and os.path.isfile(PILLARS_FILE))
-        joined = "\n".join(out_lines)
-        checks.append(("evolve: offline run adopts (no keys/no network)",
-                       adopted and files_ok and "ADOPTED" in joined))
-    except Exception as exc:
-        checks.append(("evolve: offline run (exception: %s)" % exc, False))
-
-    # (i) Rollback restores an archived (prior) generation.
-    try:
-        gen_now = evo.generation()
-        ok, out_lines = evo.rollback()
-        checks.append(("evolve: rollback restores archived generation",
-                       ok and evo.generation() < gen_now
-                       and any("restored generation" in line
-                               for line in out_lines)))
-   
+                       low < high an
