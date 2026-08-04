@@ -1,4 +1,4 @@
-        "rows": rows,
+         "rows": rows,
             }
             self.memory.setdefault("datasets", {})["last_import"] = {
                 "path": os.path.abspath(path),
