@@ -1,22 +1,4 @@
-        "help_header": "Yamiroore:",
-        "unknown_command": "Yamiroore nde anndaa - neldaama to master core ngam fercitaade.",
-        "remembered": "Goonga #%d tettinaama: %s",
-        "forgot": "Goonga #%d yejjitinaama: %s",
-    },
-    "ig": {
-        "name": "Igbo",
-        "region": "african",
-        "greeting": "Ndewo! Dee 'help' ka i hu iwu. 'exit' ka i puo.",
-        "goodbye": "Ka o di.",
-        "help_header": "Iwu:",
-        "unknown_command": "Iwu a maghi - e zigara ya master core ka e lelee ya.",
-        "remembered": "Eziokwu #%d echekwara: %s",
-        "forgot": "Eziokwu #%d echefuru: %s",
-    },
-    "ak": {
-        "name": "Akan (Twi)",
-        "region": "african",
-        "greeting": "Akwaba! Kyerew 'help' na woahu nhyehyee. 'exit' na woafi.",
+ee. 'exit' na woafi.",
         "goodbye": "Nante yie.",
         "help_header": "Nhyehyee:",
         "unknown_command": "Nhyehyee a wonnim - wokoo master core hwehwee.",
@@ -735,4 +717,51 @@
         "forgot": "Fapt #%d uitat: %s",
     },
     "hu": {
-        "name": "Hu
+        "name": "Hungarian",
+        "region": "world",
+        "greeting": "Szia! Ird be: 'help' a parancsokhoz. 'exit' a kilepeshez.",
+        "goodbye": "Viszlat.",
+        "help_header": "Parancsok:",
+        "unknown_command": "Ismeretlen parancs - elkuldve a master core-nak ertekelesre.",
+        "remembered": "Teny #%d megjegyezve: %s",
+        "forgot": "Teny #%d elfelejtve: %s",
+    },
+    "sv": {
+        "name": "Swedish",
+        "region": "world",
+        "greeting": "Hej! Skriv 'help' for kommandon. 'exit' for att avsluta.",
+        "goodbye": "Hej da.",
+        "help_header": "Kommandon:",
+        "unknown_command": "Okant kommando - skickat till master core for utvardering.",
+        "remembered": "Fakta #%d sparat: %s",
+        "forgot": "Fakta #%d glomt: %s",
+    },
+}
+
+# v29.1.0: 'report' command - next-action tables (3 generic + 2 specific).
+REPORT_GENERIC_ACTIONS = [
+    "Review the findings above and confirm they match your priorities.",
+    "Run 'research <topic>' to add external sources to these findings.",
+    "Persist any decision you make with 'remember <fact>'.",
+]
+
+REPORT_DEFAULT_ACTIONS = [
+    "Re-run 'report <topic>' with a more specific topic.",
+    "Check 'status' to confirm subsystem availability.",
+]
+
+REPORT_NEXT_ACTIONS: Dict[str, List[str]] = {
+    "Omega Infrastructure Build & Sync": [
+        "Re-run 'sync status' to confirm git sync health.",
+        "Schedule the next integrity check after any deploy.",
+    ],
+    "Omega Mining & Investment Engine": [
+        "Review allocation drift against the +/- 5% rebalance trigger.",
+        "Run 'analyze' if a portfolio dataset has been imported.",
+    ],
+    "Omega Tax & Audit Support": [
+        "Export transactions and confirm cost-basis records are complete.",
+        "Confirm filing deadlines for your region with a practitioner.",
+    ],
+    "Omega Security Gatekeeper": [
+        "Rotate any API key that has
