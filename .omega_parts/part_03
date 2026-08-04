@@ -1,25 +1,49 @@
- been shared outside this machine.",
-        "Run 'keys' to verify the masked key status report.",
+ines and demerit points on official AARTO channels,",
+        "not from roadside claims.",
     ],
-    "Omega Deep Research": [
-        "Set SERPER_API_KEY in .env and re-run for live web sources.",
-        "Save key sources as facts with 'remember <fact>'.",
+    "universal": [
+        "Stay calm and polite; you may ask for official identification.",
+        "Ask: 'Am I free to go?' and 'Am I required to answer?'",
+        "Do not physically resist - note names, badge numbers, times.",
+        "Ask for a lawyer or interpreter before signing or answering.",
+        "Consumers: keep receipts, complain in writing, use card",
+        "chargebacks, and find the local consumer protection body.",
+        "Laws differ everywhere - check the local regulator or your",
+        "embassy when traveling.",
     ],
-    "Omega Companion/Tutor": [
-        "Do the one small practice task from the scaffold today.",
-        "Teach the topic back in your own words to test recall.",
+}
+
+TOURISM_GUIDES: Dict[str, List[str]] = {
+    "sa": [
+        "Western Cape: Table Mountain, the Winelands, Garden Route.",
+        "Kruger (Mpumalanga/Limpopo): Big Five - best in dry May-Sep.",
+        "KwaZulu-Natal: Drakensberg hikes, Durban beaches.",
+        "Gauteng: Soweto heritage, Cradle of Humankind.",
+        "Eastern Cape: Addo elephants, the Wild Coast.",
+        "Also: Golden Gate (Free State), Kgalagadi + Namaqualand",
+        "flowers (Northern Cape), Sun City/Madikwe (North West),",
+        "Mapungubwe (Limpopo).",
+        "Seasons: summer Nov-Mar; safari best May-Sep.",
+        "Safety: use registered taxis/ride-hailing, keep valuables",
+        "out of sight, ask your hotel or locals about areas.",
     ],
-    "Omega Opportunity Engine": [
-        "Pick one revenue model and design the 7-day validation test.",
-        "Interview 3 potential customers before spending money.",
+    "africa": [
+        "Victoria Falls (Zambia/Zimbabwe) - one of the great sights.",
+        "Serengeti + Ngorongoro (Tanzania), Maasai Mara (Kenya) -",
+        "migration season roughly Jul-Oct.",
+        "Pyramids of Giza (Egypt); Marrakech medina (Morocco).",
+        "Zanzibar beaches and Stone Town (Tanzania).",
+        "Gorilla trekking (Rwanda/Uganda) - book permits early.",
+        "Sossusvlei dunes (Namibia).",
+        "Check visas and vaccinations early - carry a yellow-fever",
+        "card where required.",
     ],
-    "Omega Finance Literacy": [
-        "Write a 50/30/20 budget for this month.",
-        "Check one advisor or platform against your regulator's register.",
-    ],
-    "Omega Self-Improvement": [
-        "Review the last 10 audit entries with 'log'.",
-        "Pick one recurring issue and define a concrete fix.",
+    "universal": [
+        "Passport valid 6+ months; check visa rules before booking.",
+        "Get travel insurance and register with your embassy if offered.",
+        "Keep copies of documents separate from originals.",
+        "Get a local SIM/eSIM; learn 5 local phrases.",
+        "Ask LUQI about a specific place for deeper guidance.",
     ],
 }
 
@@ -95,6 +119,8 @@ def fresh_memory() -> Dict[str, Any]:
         "voice_enabled": False,
         "voice_scope": "prof",
         "documents": [],
+        "roadblocks": [],
+        "locale": {},
     }
 
 
@@ -175,6 +201,13 @@ def load_memory(path: str) -> Dict[str, Any]:
         memory["voice_enabled"] = bool(data.get("voice_enabled", False))
         scope = str(data.get("voice_scope", "prof") or "prof").lower()
         memory["voice_scope"] = scope if scope in ("prof", "all") else "prof"
+        blocks = data.get("roadblocks")
+        if isinstance(blocks, list):
+            memory["roadblocks"] = [b for b in blocks
+                                    if isinstance(b, dict)]
+        saved_locale = data.get("locale")
+        if isinstance(saved_locale, dict):
+            memory["locale"] = saved_locale
         reminders = data.get("reminders")
         if isinstance(reminders, list):
             clean_reminders: List[Dict[str, Any]] = []
@@ -738,4 +771,5 @@ OFFLINE_QUIZ_BANKS: Dict[str, List[Tuple[str, str]]] = {
     ],
     "english": [
         ("What is a noun?",
-         "A word naming a person, pla
+         "A word naming a person, place, thing or idea"),
+        ("Which sentence usually states a para
