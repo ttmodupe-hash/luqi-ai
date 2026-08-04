@@ -1,118 +1,4 @@
-t("voice needs OPENAI_API_KEY in .env; text was: %s" % text)
-            engine._audit("CLI", "say", "Offline")
-            return True
-        data = engine._tts_speech(text)
-        if data:
-            ok, message = engine._save_speech(data, text)
-            if ok:
-                print("saved: %s (voice %s)"
-                      % (message.rsplit(" ", 1)[-1].strip(),
-                         engine.tts_voice))
-            else:
-                print(message)
-            engine._audit("CLI", "say", "Success" if ok else "Failed")
-        else:
-            print("speech failed safely (offline?)")
-            engine._audit("CLI", "say", "Failed")
-        return True
-    if lowered == "voice" or lowered.startswith("voice "):
-        arg = line[len("voice"):].strip().lower()
-        if arg in ("on", "off", "prof", "all"):
-            if arg == "off":
-                engine.memory["voice_enabled"] = False
-            else:
-                engine.memory["voice_enabled"] = True
-                engine.memory["voice_scope"] = ("all" if arg == "all"
-                                                else "prof")
-            save_memory(engine.memory_path, engine.memory)
-            enabled = bool(engine.memory.get("voice_enabled"))
-            print("voice output %s."
-                  % ("ENABLED" if enabled else "DISABLED"))
-            if enabled:
-                print("voice scope: %s"
-                      % engine.memory.get("voice_scope", "prof"))
-            engine._audit("CLI", "voice %s" % arg, "Success")
-            return True
-        enabled = bool(engine.memory.setdefault("voice_enabled", False))
-        print("voice status:")
-        print("  voice output: %s" % ("on" if enabled else "off"))
-        print("  voice scope: %s"
-              % engine.memory.get("voice_scope", "prof"))
-        print("  tts voice: %s" % engine.tts_voice)
-        print("  OPENAI_API_KEY present: %s"
-              % ("yes" if engine.openai_key else "no"))
-        print("Usage: voice [on|off|prof|all]")
-        engine._audit("CLI", "voice", "Success")
-        return True
-    if lowered == "image" or lowered.startswith("image "):
-        prompt = line[len("image"):].strip()
-        if not prompt:
-            print("Usage: image <prompt>")
-            engine._audit("CLI", "image (no prompt)", "Failed")
-            return True
-        if not engine.openai_key:
-            print("image generation needs OPENAI_API_KEY in .env; "
-                  "prompt was: %s" % prompt)
-            engine._audit("CLI", "image", "Offline")
-            return True
-        data = engine._image_generate(prompt)
-        if data:
-            ok, message = engine._save_image(data, prompt)
-            if ok:
-                print("saved: %s" % message.rsplit(" ", 1)[-1].strip())
-            else:
-                print(message)
-            engine._audit("CLI", "image", "Success" if ok else "Failed")
-        else:
-            print("image generation failed safely (offline?)")
-            engine._audit("CLI", "image", "Failed")
-        return True
-    if lowered == "github info":
-        if not (engine.github_repo and engine.github_token):
-            print("github info needs GITHUB_REPO (+ GITHUB_TOKEN) in .env")
-            engine._audit("CLI", "github info", "Offline")
-            return True
-        info = engine._github_api("/repos/" + engine.github_repo)
-        if info:
-            print("GitHub repo:")
-            print("  full_name: %s" % info.get("full_name", "?"))
-            print("  visibility: %s" % info.get("visibility", "?"))
-            print("  default_branch: %s" % info.get("default_branch", "?"))
-            print("  open_issues_count: %s"
-                  % info.get("open_issues_count", "?"))
-            engine._audit("CLI", "github info", "Success")
-        else:
-            print("github api unreachable (offline or token invalid)")
-            engine._audit("CLI", "github info", "Failed")
-        return True
-    if lowered == "reminders":
-        reminders = engine.memory.setdefault("reminders", [])
-        pending = [(idx, item) for idx, item in enumerate(reminders, 1)
-                   if not item.get("done")]
-        done_count = sum(1 for item in reminders if item.get("done"))
-        if not pending:
-            print("No pending reminders (%d done)." % done_count)
-        else:
-            print("Reminders (%d pending, %d done):"
-                  % (len(pending), done_count))
-            for idx, item in pending:
-                print("  %d. [%s] %s" % (idx, item.get("due", "?"),
-                                         item.get("text", "")))
-        engine._audit("Memory", "reminders", "Success")
-        return True
-    if lowered == "remind" or lowered.startswith("remind "):
-        args = line[len("remind"):].strip()
-        reminders = engine.memory.setdefault("reminders", [])
-        low_args = args.lower()
-        if low_args == "clear":
-            kept = [item for item in reminders if item.get("done")]
-            cleared = len(reminders) - len(kept)
-            engine.memory["reminders"] = kept
-            save_memory(engine.memory_path, engine.memory)
-            print("Cleared %d pending reminder(s)." % cleared)
-            engine._audit("Memory", "remind clear", "Success")
-            return True
-        if low_args == "done" or low_args.startswith("done "):
+e" or low_args.startswith("done "):
             num = args[len("done"):].strip()
             try:
                 index = int(num)
@@ -150,6 +36,123 @@ t("voice needs OPENAI_API_KEY in .env; text was: %s" % text)
         engine._audit("Memory", "remind", "Success")
         return True
 
+    # --- v29.10.0 commands (rights & travel toolkit) ---
+    if lowered == "map" or lowered.startswith("map "):
+        arg = line[len("map"):].strip()
+        if not arg:
+            print("Usage: map <place>  |  map dir <a> to <b>")
+            print("map provider: %s (options: %s; set OMEGA_MAP_PROVIDER "
+                  "in .env)" % (engine.map_provider,
+                                ", ".join(sorted(MAP_PROVIDERS))))
+            engine._audit("CLI", "map (no place)", "Failed")
+            return True
+        if arg.lower() == "provider":
+            print("map provider: %s" % engine.map_provider)
+            print("options: %s (set OMEGA_MAP_PROVIDER in .env)"
+                  % ", ".join(sorted(MAP_PROVIDERS)))
+            engine._audit("CLI", "map provider", "Success")
+            return True
+        kind = "place"
+        place_a = arg
+        place_b = ""
+        if lowered.startswith("map dir "):
+            body = arg[4:].strip()
+            parts = re.split(r"\s+to\s+", body, 1)
+            if len(parts) == 2 and parts[0].strip() and parts[1].strip():
+                kind = "dir"
+                place_a = parts[0].strip().strip("'\"")
+                place_b = parts[1].strip().strip("'\"")
+            else:
+                print("Usage: map dir <from> to <to>")
+                engine._audit("CLI", "map dir (bad args)", "Failed")
+                return True
+        else:
+            place_a = place_a.strip("'\"")
+        url = _map_url(engine.map_provider, kind, place_a, place_b)
+        print(url)
+        try:
+            if webbrowser.open(url):
+                print("(opened in your browser)")
+            else:
+                print("(browser unavailable - copy the URL above)")
+        except Exception:
+            print("(browser unavailable - copy the URL above)")
+        engine._audit("CLI", "map %s" % arg[:60], "Success")
+        return True
+    if lowered == "roadblock" or lowered.startswith("roadblock "):
+        arg = line[len("roadblock"):].strip()
+        if not arg:
+            print("Usage: roadblock <where> <note>   "
+                  "('roadblocks' lists recent)")
+            engine._audit("CLI", "roadblock (no args)", "Failed")
+            return True
+        blocks = arg.split(None, 1)
+        where = blocks[0]
+        note = blocks[1] if len(blocks) > 1 else ""
+        entries = engine.memory.setdefault("roadblocks", [])
+        if not isinstance(entries, list):
+            entries = []
+            engine.memory["roadblocks"] = entries
+        entries.append({"where": where, "note": note,
+                        "ts": utc_now_iso()})
+        while len(entries) > MAX_ROADBLOCKS:
+            entries.pop(0)
+        save_memory(engine.memory_path, engine.memory)
+        print("roadblock logged: %s - %s (total %d)"
+              % (where, note or "(no note)", len(entries)))
+        engine._audit("CLI", "roadblock %s" % where[:40], "Success")
+        return True
+    if lowered == "roadblocks":
+        entries = [e for e in
+                   engine.memory.setdefault("roadblocks", [])
+                   if isinstance(e, dict)]
+        if not entries:
+            print("no roadblocks logged yet - "
+                  "roadblock <where> <note> to add one")
+        else:
+            print("recent roadblocks (newest first):")
+            for num, entry in enumerate(reversed(entries[-10:]), 1):
+                print("%-2d %-16s %-40s %s"
+                      % (num, str(entry.get("where", "?"))[:16],
+                         str(entry.get("note", ""))[:40],
+                         str(entry.get("ts", ""))[:10]))
+        engine._audit("CLI", "roadblocks", "Success")
+        return True
+    if lowered == "whereami":
+        env_city = str(engine.env.get("OMEGA_CITY")
+                       or os.environ.get("OMEGA_CITY", "")).strip()
+        if env_city:
+            print("locale: %s (from OMEGA_CITY)" % env_city)
+            engine._audit("CLI", "whereami", "Success")
+            return True
+        saved = engine.memory.get("locale")
+        if isinstance(saved, dict) and saved.get("city"):
+            print("locale: %s, %s (cached %s)"
+                  % (saved.get("city", "?"), saved.get("country", "?"),
+                     str(saved.get("ts", ""))[:10]))
+            engine._audit("CLI", "whereami (cached)", "Success")
+            return True
+        try:
+            with urllib.request.urlopen("http://ip-api.com/json",
+                                        timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read(4096).decode(
+                    "utf-8", errors="replace"))
+            city = str(data.get("city", "") or "").strip()
+            country = str(data.get("country", "") or "").strip()
+            if city:
+                engine.memory["locale"] = {"city": city,
+                                           "country": country,
+                                           "ts": utc_now_iso()}
+                save_memory(engine.memory_path, engine.memory)
+                print("locale: %s, %s (detected)" % (city, country))
+                engine._audit("CLI", "whereami (detected)", "Success")
+            else:
+                print("location unknown - set OMEGA_CITY in .env")
+                engine._audit("CLI", "whereami", "Failed")
+        except Exception:
+            print("location unknown offline - set OMEGA_CITY in .env")
+            engine._audit("CLI", "whereami (offline)", "Failed")
+        return True
     # --- v29.9.0 commands (study hall + memory backup) ---
     if lowered == "study" or lowered.startswith("study "):
         study_session(engine, line[len("study"):].strip())
@@ -648,4 +651,38 @@ def run_selftest() -> int:
                 handle.write("city,population\nparis,2140000\nlyon,513000\n")
             ok_md, _m1 = engine.import_document(md_path, save=False)
             ok_csv, _m2 = engine.import_document(csv_path, save=False)
-            docs = engine.memory.get("documents") or [
+            docs = engine.memory.get("documents") or []
+            csv_docs = [d for d in docs
+                        if isinstance(d, dict)
+                        and d.get("name") == "data.csv"]
+            ok = (ok_md and ok_csv and len(docs) == 3
+                  and bool(csv_docs)
+                  and any(" | " in c for c in csv_docs[0].get("chunks", [])))
+            checks.append(("docs: ingest .md + .csv (csv renders ' | ')",
+                           ok))
+            ok, _msg = engine.import_document(txt_path, save=False)
+            docs = engine.memory.get("documents") or []
+            names = [d.get("name") for d in docs if isinstance(d, dict)]
+            checks.append(("docs: re-ingest same name replaces, no dupe",
+                           ok and len(docs) == 3
+                           and names.count("notes.txt") == 1))
+    except Exception as exc:
+        checks.append(("docs: ingest (exception: %s)" % exc, False))
+
+    # v29.7.0: pure retrieval helpers.
+    try:
+        toks = _tokenize("Hello, WORLD 42")
+        hard = _chunk_text("x" * 2500)
+        ok = (toks == ["hello", "world", "42"]
+              and len(hard) == 3
+              and all(len(c) <= DOC_CHUNK_CHARS for c in hard)
+              and _chunk_text("") == []
+              and _score_chunk(["solar"], "solar solar wind") == 2
+              and _score_chunk(["zzz"], "solar wind") == 0)
+        checks.append(("docs: _tokenize/_chunk_text/_score_chunk pure", ok))
+    except Exception as exc:
+        checks.append(("docs: helpers (exception: %s)" % exc, False))
+
+    # v29.7.0: retrieval ranking over the ingested docs.
+    try:
+        docs = engine
