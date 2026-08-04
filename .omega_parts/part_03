@@ -1,73 +1,61 @@
-s.path.isfile(path):
-            return values
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" not in line:
-                    continue  # tolerate malformed lines
-                key, _, value = line.partition("=")
-                key = key.strip()
-                value = value.strip()
-                if not key:
-                    continue
-                # Strip one layer of matching surrounding quotes.
-                if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
-                    value = value[1:-1]
-                values[key] = value
+  tips.append("Say who it is for (audience changes everything).")
+        if not any(w in low for w in ("because", "so that", "context",
+                                      "background", "my project")):
+            tips.append("Give one line of context or why.")
+        if not any(w in low for w in ("must", "at least", "exactly",
+                                      "include", "cover")):
+            tips.append("Define done: what must the answer include?")
     except Exception:
-        # .env parsing must never crash the engine.
-        return values
-    return values
+        return []
+    return tips
 
 
-def mask_secret(secret: Optional[str]) -> str:
-    """Mask a secret: first 4 chars + '...' + last 2. Never print in full."""
-    if not secret:
-        return "(not set)"
-    secret = str(secret)
-    if len(secret) <= 6:
-        return secret[:1] + "..." + secret[-1:]
-    return secret[:4] + "..." + secret[-2:]
+def _compile_expert_prompt(idea: str, adds: List[str]) -> str:
+    """Compile a raw idea (+ injected requirements) into an expert prompt.
 
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-# ---------------------------------------------------------------------------
-# Module A: persistent memory (omega_memory.json)
-# ---------------------------------------------------------------------------
-
-def fresh_memory() -> Dict[str, Any]:
-    """Return a new, empty memory structure.
-
-    SPEC_v29 schema + v29.1 lang + v29.5.0 learning profile
-    + v29.6.0 reminders / voice flag + v29.7.0 document store
-    + v29.11.0 voice speed.
+    ASCII template; the Injected requirements section is omitted when
+    there are no adds. Never raises.
     """
-    return {
-        "facts": [],
-        "history": [],
-        "datasets": {"last_import": None},
-        "sessions": 0,
-        "lang": DEFAULT_LANG,
-        "learning": {},
-        "reminders": [],
-        "voice_enabled": False,
-        "voice_scope": "prof",
-        "voice_speed": 1.0,
-        "documents": [],
-        "roadblocks": [],
-        "locale": {},
-    }
-
-
-def _slugify(text: str) -> str:
-    """Turn a report topic into a filesystem-safe ASCII slug."""
-    slug = re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-")
-    return slug or "topic"
+    try:
+        clean_idea = str(idea or "").strip() or "(no idea given)"
+        clean_adds: List[str] = []
+        for add in adds or []:
+            entry = str(add or "").strip()
+            if entry:
+                clean_adds.append(entry)
+        lines = [
+            "# EXPERT PROMPT",
+            "",
+            "## Role",
+            "You are an elite specialist in this domain with deep "
+            "practical experience.",
+            "",
+            "## Mandate",
+            clean_idea,
+        ]
+        if clean_adds:
+            lines.extend(["", "## Injected requirements"])
+            lines.extend("- " + entry for entry in clean_adds)
+        lines.extend([
+            "",
+            "## Output strategy",
+            "1. Give the direct answer first.",
+            "2. Break down the mechanism: how and why it works.",
+            "3. Provide the implementation: concrete steps or artifacts.",
+            "",
+            "## Guardrails",
+            "- Never fabricate facts, sources, or capabilities.",
+            "- Say clearly when information is missing instead of guessing.",
+            "- Honor every requirement above, exactly as written.",
+            "",
+            "## Quality bar",
+            "Precise, structured, and actionable - every line earns its "
+            "place.",
+            "",
+        ])
+        return "\n".join(lines)
+    except Exception:
+        return "# EXPERT PROMPT\n\n## Mandate\n(no idea given)\n"
 
 
 def _voice_speed_value(memory: Dict[str, Any]) -> float:
@@ -200,6 +188,18 @@ def load_memory(path: str) -> Dict[str, Any]:
                                    "chars": chars, "chunks": list(chunks),
                                    "ts": ts})
             memory["documents"] = clean_docs
+        # v29.12.0: prompt forge draft (optional key, corrupt-safe).
+        forge = data.get("prompt_forge")
+        if isinstance(forge, dict):
+            forge_idea = forge.get("idea")
+            if isinstance(forge_idea, str) and forge_idea.strip():
+                forge_adds = forge.get("adds")
+                memory["prompt_forge"] = {
+                    "idea": forge_idea,
+                    "adds": ([str(a) for a in forge_adds]
+                             if isinstance(forge_adds, list) else []),
+                    "ts": str(forge.get("ts", "")),
+                }
         return memory
     except Exception:
         # Corrupt memory: back up the broken file, start fresh.
@@ -805,4 +805,45 @@ def _read_csv_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
     data = []
     for row in raw_rows[1:]:
         padded = (list(row) + [""] * width)[:width]
-        data.appen
+        data.append([str(cell) for cell in padded])
+    return headers, data
+
+
+def _xlsx_localname(tag: str) -> str:
+    """Strip an XML namespace prefix from a tag name."""
+    return str(tag).rsplit("}", 1)[-1]
+
+
+def _xlsx_col_index(ref: str) -> Optional[int]:
+    """Convert a cell reference like 'B12' to a zero-based column index."""
+    letters = ""
+    for ch in str(ref):
+        if ch.isalpha():
+            letters += ch.upper()
+        else:
+            break
+    if not letters:
+        return None
+    index = 0
+    for ch in letters:
+        index = index * 26 + (ord(ch) - 64)
+    return index - 1
+
+
+def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
+    """Minimal stdlib-only .xlsx reader.
+
+    An .xlsx file is a ZIP of XML parts. We parse xl/sharedStrings.xml and
+    the first xl/worksheets/sheet*.xml with ElementTree. Handles shared
+    strings, inline strings, booleans, and numbers. First row = headers.
+    """
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        shared: List[str] = []
+        if "xl/sharedStrings.xml" in names:
+            root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+            for si in root:
+                if _xlsx_localname(si.tag) != "si":
+                    continue
+                parts = [node.text or "" for node in si.iter()
+                         if _xlsx_localname(node.tag) ==
