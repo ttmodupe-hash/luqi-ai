@@ -1,197 +1,4 @@
-                      input_fn, out)
-        if leftover:
-            out("(Ignored outside a class: '%s')" % leftover)
-        if asked:
-            graded = (score, asked)
-    if graded is not None:
-        engine.record_quiz_score(subject, graded[0], graded[1])
-        out("Quiz score recorded: %d/%d. See 'progress'." % graded)
-
-
-def study_session(engine: OmegaMasterEngine, topic: str,
-                  input_fn: Any = input, out: Any = print) -> None:
-    """Study your own documents with the professor. Never crashes.
-
-    IDF retrieval picks the top passages for the topic; ONLINE the
-    professor teaches and quizzes grounded in them, OFFLINE the passages
-    print as honest study cards. Sub-commands: end study | passages |
-    quiz me. EOF/KeyboardInterrupt safe.
-    """
-    topic = (topic or "").strip()
-    docs = [d for d in engine.memory.setdefault("documents", [])
-            if isinstance(d, dict)]
-    if not docs:
-        out("No documents yet - ingest <path-or-url> first, then study "
-            "them.")
-        return
-    if not topic:
-        out("Usage: study <topic>")
-        out("documents: " + ", ".join(
-            str(d.get("name", "?"))[:24] for d in docs[:6]))
-        return
-    hits = search_documents(topic, docs, top_k=5)
-    if not hits:
-        out("No passages match '%s' - try different words or ingest "
-            "more." % topic)
-        out("documents: " + ", ".join(str(d.get("name", "?")) for d in docs))
-        return
-    passages = []
-    for num, (_score, name, chunk_idx, chunk) in enumerate(hits, 1):
-        passages.append("[%d] (%s #%d) %s" % (num, name, chunk_idx, chunk))
-    block = "\n\n".join(passages)
-    online = bool(engine.openai_key)
-    out("=" * 60)
-    out("STUDY: %s (%d passages from your documents)"
-        % (topic, len(hits)))
-    out("=" * 60)
-    out("In study: end study | passages | quiz me")
-    messages: List[Dict[str, str]] = []
-    if online:
-        messages.append({"role": "system",
-                         "content": STUDY_PROMPT % (topic, block)})
-        messages.append({"role": "user", "content": (
-            "Start the study session: give me a short overview of what "
-            "my material says about %s, then one question to check me."
-            % topic)})
-        messages = _cap_messages(messages)
-        reply = engine._llm_messages(messages)
-        if reply:
-            reply = reply.strip()
-            _professor_out(out, reply)
-            messages.append({"role": "assistant", "content": reply})
-        else:
-            online = False
-            out("(Professor unreachable - showing offline study cards "
-                "instead.)")
-    if not online:
-        out("Offline study cards (set OPENAI_API_KEY for the live "
-            "professor):")
-        for line in passages:
-            _professor_out(out, line)
-
-    turns = 0
-    while True:
-        try:
-            try:
-                raw = input_fn("[STUDY:%s] > " % topic[:18])
-            except TypeError:
-                # Zero-arg input_fn (scripted iterators in tests).
-                raw = input_fn()
-        except EOFError:
-            out("")
-            out("(End of input - closing the study session safely.)")
-            break
-        except KeyboardInterrupt:
-            out("")  # newline, then reprompt
-            continue
-        cmd = raw.strip().lower()
-        if not cmd:
-            continue
-        if cmd == "end study":
-            break
-        if cmd == "passages":
-            for line in passages:
-                out(line)
-            continue
-        if cmd == "quiz me":
-            if online:
-                messages.append({"role": "user", "content": (
-                    "Quiz me with questions from the material, one at a "
-                    "time. Ask the first now.")})
-                messages = _cap_messages(messages)
-                reply = engine._llm_messages(messages)
-                if reply:
-                    reply = reply.strip()
-                    _professor_out(out, reply)
-                    messages.append({"role": "assistant",
-                                     "content": reply})
-                else:
-                    out("The professor is unreachable right now - no "
-                        "quiz was generated.")
-            else:
-                out("Self-check: pick any card above and explain it "
-                    "aloud in your own words.")
-            continue
-        # Free text -> student turn.
-        turns += 1
-        if online:
-            messages.append({"role": "user", "content": raw.strip()})
-            messages = _cap_messages(messages)
-            reply = engine._llm_messages(messages)
-            if reply:
-                reply = reply.strip()
-                _professor_out(out, reply)
-                messages.append({"role": "assistant", "content": reply})
-            else:
-                out("The professor is unreachable right now - try "
-                    "'passages' or 'end study'.")
-        else:
-            out("(Offline: the professor needs OPENAI_API_KEY. Try "
-                "'passages', 'quiz me', or 'end study'.)")
-
-    engine._audit("Study", "study %s" % topic, "Success")
-    engine.add_history("assistant",
-                       "Studied '%s' (%d turns)." % (topic, turns))
-
-
-# ---------------------------------------------------------------------------
-# REPL
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# v29.6.0: reminders (memory-based, zero keys, fully offline) + voice out
-# ---------------------------------------------------------------------------
-
-def _parse_remind_when(arg: str) -> Optional[datetime]:
-    """Parse 'in <N>m|h|d' or 'at HH:MM' into a due datetime (None if bad)."""
-    try:
-        text = (arg or "").strip().lower()
-        now = datetime.now()
-        match = re.fullmatch(r"in\s+(\d+)\s*([mhd])", text)
-        if match:
-            amount = int(match.group(1))
-            seconds = {"m": 60, "h": 3600, "d": 86400}[match.group(2)]
-            return now + timedelta(seconds=amount * seconds)
-        match = re.fullmatch(r"at\s+(\d{1,2}):(\d{2})", text)
-        if match:
-            hour, minute = int(match.group(1)), int(match.group(2))
-            if hour > 23 or minute > 59:
-                return None
-            due = now.replace(hour=hour, minute=minute,
-                              second=0, microsecond=0)
-            if due <= now:  # time already passed today -> tomorrow
-                due = due + timedelta(days=1)
-            return due
-        return None
-    except Exception:
-        return None
-
-
-def _due_reminders(engine: OmegaMasterEngine) -> List[str]:
-    """Texts of due-and-undone reminders; marks them done + saves memory.
-
-    Runs at REPL start and at the top of every command - never raises.
-    """
-    fired: List[str] = []
-    try:
-        reminders = engine.memory.setdefault("reminders", [])
-        now = datetime.now()
-        changed = False
-        for item in reminders:
-            try:
-                if item.get("done"):
-                    continue
-                due = datetime.strptime(str(item.get("due", "")),
-                                        "%Y-%m-%d %H:%M")
-                if due <= now:
-                    item["done"] = True
-                    changed = True
-                    fired.append(str(item.get("text", "")))
-            except Exception:
-                continue
-        if changed:
-            save_memory(engine.memory_path, engine.memory)
-    except Exception:
+ception:
         pass
     return fired
 
@@ -690,15 +497,42 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
                       % engine.memory.get("voice_scope", "prof"))
             engine._audit("CLI", "voice %s" % arg, "Success")
             return True
+        if arg == "speed":
+            # v29.11.0: show stored TTS speed (%.3g -> "1x"/"1.25x").
+            print("voice speed: %.3gx"
+                  % _voice_speed_value(engine.memory))
+            engine._audit("CLI", "voice speed", "Success")
+            return True
+        if arg.startswith("speed "):
+            raw = arg[len("speed "):].strip()
+            try:
+                requested = float(raw)
+            except ValueError:
+                print("Usage: voice speed <0.25-4.0>")
+                engine._audit("CLI", "voice speed %s" % raw[:40],
+                              "Failed")
+                return True
+            engine.memory["voice_speed"] = requested
+            clamped = _voice_speed_value(engine.memory)
+            engine.memory["voice_speed"] = clamped
+            save_memory(engine.memory_path, engine.memory)
+            message = "voice speed set to %.3gx" % clamped
+            if clamped != requested:
+                message += " (clamped)"
+            print(message)
+            engine._audit("CLI", "voice speed %s" % raw[:40],
+                          "Success")
+            return True
         enabled = bool(engine.memory.setdefault("voice_enabled", False))
         print("voice status:")
         print("  voice output: %s" % ("on" if enabled else "off"))
         print("  voice scope: %s"
               % engine.memory.get("voice_scope", "prof"))
+        print("  voice speed: %.3gx" % _voice_speed_value(engine.memory))
         print("  tts voice: %s" % engine.tts_voice)
         print("  OPENAI_API_KEY present: %s"
               % ("yes" if engine.openai_key else "no"))
-        print("Usage: voice [on|off|prof|all]")
+        print("Usage: voice [on|off|prof|all|speed <0.25-4.0>]")
         engine._audit("CLI", "voice", "Success")
         return True
     if lowered == "image" or lowered.startswith("image "):
@@ -769,4 +603,170 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             print("Cleared %d pending reminder(s)." % cleared)
             engine._audit("Memory", "remind clear", "Success")
             return True
-        if low_args == "don
+        if low_args == "done" or low_args.startswith("done "):
+            num = args[len("done"):].strip()
+            try:
+                index = int(num)
+            except ValueError:
+                index = 0
+            if 1 <= index <= len(reminders):
+                reminders[index - 1]["done"] = True
+                save_memory(engine.memory_path, engine.memory)
+                print("Reminder #%d marked done: %s"
+                      % (index, reminders[index - 1].get("text", "")))
+                engine._audit("Memory", "remind done %d" % index,
+                              "Success")
+            else:
+                print("No reminder #%s. See 'reminders' for numbers."
+                      % (num or "?"))
+                engine._audit("Memory", "remind done %s" % (num or "?"),
+                              "Failed")
+            return True
+        when = re.search(r"\s+(in\s+\d+\s*[mhd]|at\s+\d{1,2}:\d{2})\s*$",
+                         low_args)
+        due = _parse_remind_when(when.group(1)) if when else None
+        text = args[:when.start()].strip() if when else ""
+        if not text or due is None:
+            print("Usage: remind <text> in <N>m|h|d   or   "
+                  "remind <text> at HH:MM")
+            print("       reminders | remind done <n> | remind clear")
+            engine._audit("Memory", "remind (usage)", "Failed")
+            return True
+        reminders.append({"text": text,
+                          "due": due.strftime("%Y-%m-%d %H:%M"),
+                          "done": False})
+        save_memory(engine.memory_path, engine.memory)
+        print("Reminder set for %s: %s"
+              % (due.strftime("%Y-%m-%d %H:%M"), text))
+        engine._audit("Memory", "remind", "Success")
+        return True
+
+    # --- v29.10.0 commands (rights & travel toolkit) ---
+    if lowered == "map" or lowered.startswith("map "):
+        arg = line[len("map"):].strip()
+        if not arg:
+            print("Usage: map <place>  |  map dir <a> to <b>")
+            print("map provider: %s (options: %s; set OMEGA_MAP_PROVIDER "
+                  "in .env)" % (engine.map_provider,
+                                ", ".join(sorted(MAP_PROVIDERS))))
+            engine._audit("CLI", "map (no place)", "Failed")
+            return True
+        if arg.lower() == "provider":
+            print("map provider: %s" % engine.map_provider)
+            print("options: %s (set OMEGA_MAP_PROVIDER in .env)"
+                  % ", ".join(sorted(MAP_PROVIDERS)))
+            engine._audit("CLI", "map provider", "Success")
+            return True
+        kind = "place"
+        place_a = arg
+        place_b = ""
+        if lowered.startswith("map dir "):
+            body = arg[4:].strip()
+            parts = re.split(r"\s+to\s+", body, 1)
+            if len(parts) == 2 and parts[0].strip() and parts[1].strip():
+                kind = "dir"
+                place_a = parts[0].strip().strip("'\"")
+                place_b = parts[1].strip().strip("'\"")
+            else:
+                print("Usage: map dir <from> to <to>")
+                engine._audit("CLI", "map dir (bad args)", "Failed")
+                return True
+        else:
+            place_a = place_a.strip("'\"")
+        url = _map_url(engine.map_provider, kind, place_a, place_b)
+        print(url)
+        try:
+            if webbrowser.open(url):
+                print("(opened in your browser)")
+            else:
+                print("(browser unavailable - copy the URL above)")
+        except Exception:
+            print("(browser unavailable - copy the URL above)")
+        engine._audit("CLI", "map %s" % arg[:60], "Success")
+        return True
+    if lowered == "roadblock" or lowered.startswith("roadblock "):
+        arg = line[len("roadblock"):].strip()
+        if not arg:
+            print("Usage: roadblock <where> <note>   "
+                  "('roadblocks' lists recent)")
+            engine._audit("CLI", "roadblock (no args)", "Failed")
+            return True
+        blocks = arg.split(None, 1)
+        where = blocks[0]
+        note = blocks[1] if len(blocks) > 1 else ""
+        entries = engine.memory.setdefault("roadblocks", [])
+        if not isinstance(entries, list):
+            entries = []
+            engine.memory["roadblocks"] = entries
+        entries.append({"where": where, "note": note,
+                        "ts": utc_now_iso()})
+        while len(entries) > MAX_ROADBLOCKS:
+            entries.pop(0)
+        save_memory(engine.memory_path, engine.memory)
+        print("roadblock logged: %s - %s (total %d)"
+              % (where, note or "(no note)", len(entries)))
+        engine._audit("CLI", "roadblock %s" % where[:40], "Success")
+        return True
+    if lowered == "roadblocks":
+        entries = [e for e in
+                   engine.memory.setdefault("roadblocks", [])
+                   if isinstance(e, dict)]
+        if not entries:
+            print("no roadblocks logged yet - "
+                  "roadblock <where> <note> to add one")
+        else:
+            print("recent roadblocks (newest first):")
+            for num, entry in enumerate(reversed(entries[-10:]), 1):
+                print("%-2d %-16s %-40s %s"
+                      % (num, str(entry.get("where", "?"))[:16],
+                         str(entry.get("note", ""))[:40],
+                         str(entry.get("ts", ""))[:10]))
+        engine._audit("CLI", "roadblocks", "Success")
+        return True
+    if lowered == "whereami":
+        env_city = str(engine.env.get("OMEGA_CITY")
+                       or os.environ.get("OMEGA_CITY", "")).strip()
+        if env_city:
+            print("locale: %s (from OMEGA_CITY)" % env_city)
+            engine._audit("CLI", "whereami", "Success")
+            return True
+        saved = engine.memory.get("locale")
+        if isinstance(saved, dict) and saved.get("city"):
+            print("locale: %s, %s (cached %s)"
+                  % (saved.get("city", "?"), saved.get("country", "?"),
+                     str(saved.get("ts", ""))[:10]))
+            engine._audit("CLI", "whereami (cached)", "Success")
+            return True
+        try:
+            with urllib.request.urlopen("http://ip-api.com/json",
+                                        timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read(4096).decode(
+                    "utf-8", errors="replace"))
+            city = str(data.get("city", "") or "").strip()
+            country = str(data.get("country", "") or "").strip()
+            if city:
+                engine.memory["locale"] = {"city": city,
+                                           "country": country,
+                                           "ts": utc_now_iso()}
+                save_memory(engine.memory_path, engine.memory)
+                print("locale: %s, %s (detected)" % (city, country))
+                engine._audit("CLI", "whereami (detected)", "Success")
+            else:
+                print("location unknown - set OMEGA_CITY in .env")
+                engine._audit("CLI", "whereami", "Failed")
+        except Exception:
+            print("location unknown offline - set OMEGA_CITY in .env")
+            engine._audit("CLI", "whereami (offline)", "Failed")
+        return True
+    # --- v29.9.0 commands (study hall + memory backup) ---
+    if lowered == "study" or lowered.startswith("study "):
+        study_session(engine, line[len("study"):].strip())
+        return True
+    if lowered == "backup":
+        try:
+            save_memory(engine.memory_path, engine.memory)
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            target = "omega_memory_backup_%s.json" % stamp
+            shutil.copy2(engine.memory_path, target)
+            print("backup saved: %s" % target)
+            eng
