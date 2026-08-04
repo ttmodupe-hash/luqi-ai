@@ -149,7 +149,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.11.0"
+ENGINE_VERSION = "29.12.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
@@ -745,4 +745,52 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
         "goodbye": "Tigwo.",
         "help_header": "Mawatho:",
         "unknown_command": "Watho utamenyekaine - utumitwo master core kugatirwo.",
-        "remembered": "Uhoro #%d wigit
+        "remembered": "Uhoro #%d wigitwo: %s",
+        "forgot": "Uhoro #%d wariganiirwo: %s",
+    },
+    "luo": {
+        "name": "Luo (Dholuo)",
+        "region": "african",
+        "greeting": "Amosi! Ndik 'help' mondo ine chike. 'exit' mondo owuok.",
+        "goodbye": "Oriti.",
+        "help_header": "Chike:",
+        "unknown_command": "Chik ma ok ong'eyo - oseor ne master core mondo onon.",
+        "remembered": "Adiera #%d opog' e paro: %s",
+        "forgot": "Adiera #%d owil: %s",
+    },
+    "ny": {
+        "name": "Chewa (Nyanja)",
+        "region": "african",
+        "greeting": "Moni! Lembani 'help' kuwona malamulo. 'exit' kutuluka.",
+        "goodbye": "Sala bwino.",
+        "help_header": "Malamulo:",
+        "unknown_command": "Lamulo losadziwika - latumizidwa kwa master core.",
+        "remembered": "Zowona #%d zasungidwa: %s",
+        "forgot": "Zowona #%d zayiwalidwa: %s",
+    },
+    "bem": {
+        "name": "Bemba",
+        "region": "african",
+        "greeting": "Shani! Lembela 'help' ukulole amalango. 'exit' ukufuma.",
+        "goodbye": "Sala bwino.",
+        "help_header": "Amalango:",
+        "unknown_command": "Ilango ilyeshetekwa - lyatumwa ku master core ukulinganya.",
+        "remembered": "Icine #%d cabikwa: %s",
+        "forgot": "Icine #%d caibukwa: %s",
+    },
+    "to": {
+        "name": "Tonga (Zambia)",
+        "region": "african",
+        "greeting": "Mwabuka! Nolemba 'help' kubona milao. 'exit' kuzwa.",
+        "goodbye": "Sala kabotu.",
+        "help_header": "Milao:",
+        "unknown_command": "Mulao ujisi kuyezya - utumwa ku master core kulangwa.",
+        "remembered": "Lubone #%d lwasigwa: %s",
+        "forgot": "Lubone #%d lwa abidwe: %s",
+    },
+    "loz": {
+        "name": "Lozi",
+        "region": "african",
+        "greeting": "Lumela! Nola 'help' ku bona mitaelo. 'exit' ku tswa.",
+        "goodbye": "Sala hande.",
+        "help_header": "Mitaelo:",
