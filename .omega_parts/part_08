@@ -1,51 +1,4 @@
- rows.append(("GitHub", "available",
-                     "git found; set GITHUB_REPO in .env to enable"))
-    else:
-        rows.append(("GitHub", "missing",
-                     "install git and set GITHUB_REPO in .env"))
-    rows.append(("Excel/CSV", "available",
-                 "stdlib reader built in - use 'import <path>'"))
-    if engine.serper_key:
-        rows.append(("Serper", "configured",
-                     "live web search ready - use 'research <query>'"))
-    else:
-        rows.append(("Serper", "missing", "set SERPER_API_KEY in .env"))
-    if engine.openai_key:
-        rows.append(("OpenAI", "configured",
-                     "LLM-enhanced tax guidance ready"))
-    else:
-        rows.append(("OpenAI", "missing", "set OPENAI_API_KEY in .env"))
-    if engine.openrouter_key:
-        rows.append(("OpenRouter", "configured",
-                     "model %s - use 'evolve run online'"
-                     % engine.openrouter_model))
-    else:
-        rows.append(("OpenRouter", "missing",
-                     "set OPENROUTER_API_KEY (+ OPENROUTER_MODEL) in .env"))
-    # v29.3.0: 6th row - optional claude_engine bridge (never a hard dep).
-    if BRIDGE_AVAILABLE and engine.openai_key:
-        rows.append(("claude_engine", "available",
-                     "bridge active - LLM calls route through it ('bridge')"))
-    elif BRIDGE_AVAILABLE:
-        rows.append(("claude_engine", "no key",
-                     "installed; set OPENAI_API_KEY to activate the bridge"))
-    else:
-        rows.append(("claude_engine", "not installed",
-                     "optional; clone repo + pip install -e . ('bridge')"))
-    # v29.6.0: voice + image ride the existing OPENAI_API_KEY.
-    if engine.openai_key:
-        rows.append(("voice tts", "via openai",
-                     "speech ready - use 'say <text>'"))
-        rows.append(("image gen", "via openai",
-                     "images ready - use 'image <prompt>'"))
-    else:
-        rows.append(("voice tts", "via openai",
-                     "set OPENAI_API_KEY in .env"))
-        rows.append(("image gen", "via openai",
-                     "set OPENAI_API_KEY in .env"))
-    lines = ["Integrations manifest (8 connectors):"]
-    lines.append("  %-13s %-13s %s" % ("connector", "status",
-                                       "how to enable / use"))
+              "how to enable / use"))
     for name, status, hint in rows:
         lines.append("  %-13s %-13s %s" % (name, status, hint))
     return lines
@@ -116,6 +69,9 @@ CORE_SMOKE: List[Tuple[str, str]] = [
     ("ingest http://127.0.0.1:1/x", "cli"),
     # v29.9.0: study hall smoke - keyless-safe with zero documents.
     ("study selftest topic", "cli"),
+    # v29.10.0: rights & travel subsystem + read-only roadblocks list.
+    ("rights consumer police travel", "Omega Rights & Travel"),
+    ("roadblocks", "cli"),
 ]
 
 
@@ -313,6 +269,11 @@ def print_help(engine: OmegaMasterEngine) -> None:
          "answer"),
         ("study <topic>", "professor-grounded study of your documents"),
         ("backup", "timestamped copy of omega_memory.json"),
+        ("rights <topic>", "know your rights (SA-deep + world)"),
+        ("tourism <place>", "travel guide (SA/Africa-deep)"),
+        ("map <place> | map dir <a> to <b>", "open map/directions"),
+        ("roadblock <where> <note>", "log a roadblock; 'roadblocks' lists"),
+        ("whereami", "detect or show your locale"),
         ("export", "write omega_export_<UTCts>.md snapshot"),
         ("report <topic>", "write omega_report_<slug>_<UTCts>.md"),
         ("sync github", "git add/commit/push sync (needs GITHUB_REPO)"),
@@ -685,4 +646,84 @@ def teach_session(engine: OmegaMasterEngine, subject: str,
                 if online:
                     messages.append({"role": "user", "content": (
                         "Let's move to the next lesson: %s."
-                  
+                        % syllabus[entry["current_lesson"]].get(
+                            "title", ""))})
+                    messages = _cap_messages(messages)
+                    reply = engine._llm_messages(messages)
+                    if reply:
+                        reply = reply.strip()
+                        _professor_out(out, reply)
+                        messages.append({"role": "assistant",
+                                         "content": reply})
+                    else:
+                        out("(Professor unreachable - showing the "
+                            "offline key points above.)")
+            else:
+                out("You are on the final lesson - try 'quiz me' or "
+                    "'end class'.")
+            continue
+
+        # Free text -> student turn.
+        turns += 1
+        if online:
+            messages.append({"role": "user", "content": raw.strip()})
+            messages = _cap_messages(messages)
+            reply = engine._llm_messages(messages)
+            if reply:
+                reply = reply.strip()
+                _professor_out(out, reply)
+                messages.append({"role": "assistant", "content": reply})
+            else:
+                out("The professor is unreachable right now (LLM call "
+                    "failed) - no reply was generated.")
+                out("You can still use: syllabus | next | quiz me | "
+                    "hint | progress | end class.")
+        else:
+            out("(Offline classroom: there is no live conversation "
+                "without OPENAI_API_KEY.)")
+            out("Review the current lesson key points:")
+            for line in lesson_intro_lines(entry, subject):
+                _professor_out(out, line)
+            out("Type 'next' to advance, 'quiz me' to self-check, or "
+                "'end class' to finish.")
+
+    # Session close: summary + persist progress (always, even on EOF).
+    entry["last_session"] = utc_now_iso()
+    save_memory(engine.memory_path, engine.memory)
+    out("-" * 60)
+    out("Class summary - %s" % subject)
+    out("  Turns this session: %d" % turns)
+    total_lessons = len(syllabus) or 10
+    out("  Lesson position: %d/%d"
+        % (min(int(entry.get("current_lesson", 0)) + 1, total_lessons),
+           total_lessons))
+    if quiz_results:
+        out("  Quiz scores this session: "
+            + ", ".join("%d/%d" % q for q in quiz_results))
+    else:
+        out("  Quiz scores this session: none")
+    out("Progress saved to your learner profile ('progress' to view).")
+    engine._audit("Classroom", "teach %s" % subject, "Success")
+    engine.add_history("assistant",
+                       "Taught a %s class (%d turns)." % (subject, turns))
+
+
+def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
+                        input_fn: Any = input, out: Any = print) -> None:
+    """Top-level 'quiz <subject>' command (online grading or self-check)."""
+    subject = normalize_subject(subject)
+    if not subject:
+        out("Usage: quiz <subject>   (inside a class, just say 'quiz me')")
+        return
+    graded: Optional[Tuple[int, int]] = None
+    if engine.openai_key:
+        graded = run_online_quiz(
+            engine, subject,
+            [{"role": "system", "content": PROFESSOR_PROMPT % subject}],
+            input_fn, out)
+        if graded is None:
+            out("Live quiz unavailable - switching to offline "
+                "self-check cards.")
+    if graded is None:
+        score, asked, leftover = run_offline_quiz(engine, subject,
+                            
