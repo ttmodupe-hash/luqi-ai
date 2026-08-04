@@ -1,78 +1,4 @@
- # Bridge failed -> fall through to the urllib path.
-        try:
-            body = json.dumps({
-                "model": OPENAI_MODEL,
-                "messages": clean,
-                "max_tokens": max_tokens,
-            }).encode("utf-8")
-            request = urllib.request.Request(
-                OPENAI_URL,
-                data=body,
-                headers={
-                    "Authorization": "Bearer " + self.openai_key,
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
-                data = json.loads(resp.read().decode("utf-8", errors="replace"))
-            choices = data.get("choices") or []
-            if not choices:
-                return self._openrouter_chat(fallback_prompt)
-            message = choices[0].get("message") or {}
-            content = message.get("content")
-            if content:
-                return str(content)
-            # v29.6.0: empty OpenAI reply -> OpenRouter fallback.
-            return self._openrouter_chat(fallback_prompt)
-        except Exception:
-            # v29.6.0: OpenRouter is the final fallback before None.
-            return self._openrouter_chat(fallback_prompt)
-
-    # ------------------------------------------------------------------
-    # v29.6.0: voice (TTS) + image connectors (guarded, stdlib urllib)
-    # ------------------------------------------------------------------
-
-    def _tts_speech(self, text: str,
-                    voice: Optional[str] = None) -> Optional[bytes]:
-        """POST text to OpenAI speech; return mp3 bytes or None on failure."""
-        if not self.openai_key:
-            return None
-        try:
-            body = json.dumps({
-                "model": TTS_MODEL,
-                "voice": voice or self.tts_voice,
-                "input": (text or "")[:TTS_MAX_CHARS],
-            }).encode("utf-8")
-            request = urllib.request.Request(
-                OPENAI_SPEECH_URL,
-                data=body,
-                headers={
-                    "Authorization": "Bearer " + self.openai_key,
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
-                return resp.read()
-        except Exception:
-            return None
-
-    def _save_speech(self, data: bytes, hint: str) -> Tuple[bool, str]:
-        """Write omega_speech_<slug>_<UTCts>.mp3 (guarded I/O)."""
-        if not data:
-            return False, "no audio data"
-        try:
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            filename = "omega_speech_%s_%s.mp3" % (_slugify(hint), stamp)
-            with open(filename, "wb") as handle:
-                handle.write(data)
-            return True, "Speech saved: %s" % filename
-        except Exception as exc:
-            return False, "Speech save failed safely: %s" % exc
-
-    def _image_generate(self, prompt: str) -> Optional[bytes]:
-        """POST prompt to OpenAI images; return png bytes or None on failure."""
+"
         if not self.openai_key:
             return None
         try:
@@ -209,7 +135,9 @@
                                        "license", "driving", "roadblock",
                                        "tourism", "tourist", "travel",
                                        "taxi", "flight", "visa", "safari",
-                                       "holiday", "hotel")):
+                                       "holiday", "hotel", "speeding",
+                                       "traffic", "ticket", "aarto",
+                                       "demerit")):
             result = self._rights_travel(payload)
         elif any(k in domain for k in ("tax", KW_TAX_ZH, "vat", "sars",
                                        "compliance")):
@@ -408,7 +336,8 @@
                                         "cooling")):
                 return "consumer_sa"
             if any(k in query for k in ("license", "driving", "roadblock",
-                                        "fine", "aarto", "demerit")):
+                                        "fine", "aarto", "demerit",
+                                        "speeding", "ticket", "traffic")):
                 return "driving_sa"
             return "universal"
         except Exception:
@@ -713,4 +642,99 @@
                 "name": os.path.basename(path),
                 "source": ext.lstrip("."),
                 "headers": headers,
-       
+                "rows": rows,
+            }
+            self.memory.setdefault("datasets", {})["last_import"] = {
+                "path": os.path.abspath(path),
+                "name": os.path.basename(path),
+                "source": ext.lstrip("."),
+                "rows": len(rows),
+                "columns": len(headers),
+                "headers": headers,
+                "ts": utc_now_iso(),
+            }
+            if save:
+                save_memory(self.memory_path, self.memory)
+            return True, ("Imported %d row(s) x %d column(s) from %s "
+                          "(%s)." % (len(rows), len(headers),
+                                     os.path.basename(path), ext.lstrip(".")))
+        except Exception as exc:
+            return False, "Import failed safely: %s" % exc
+
+    def _store_document(self, name: str, origin: str, text: str,
+                        save: bool = True) -> Tuple[bool, str]:
+        """Chunk and store one document (dedup by name, evict to caps).
+
+        Shared by file and URL ingestion. Never raises.
+        """
+        try:
+            chunks = _chunk_text(text)
+            if not chunks:
+                return False, "no text content found"
+            docs = self.memory.setdefault("documents", [])
+            if not isinstance(docs, list):
+                docs = []
+                self.memory["documents"] = docs
+            # Re-ingest of the same name replaces the old entry.
+            docs[:] = [d for d in docs
+                       if not isinstance(d, dict)
+                       or str(d.get("name", "")).lower() != name.lower()]
+            docs.append({"name": name,
+                         "path": origin,
+                         "chars": len(text),
+                         "chunks": chunks,
+                         "ts": utc_now_iso()})
+            # Evict oldest docs beyond the cap, then trim the oldest doc
+            # chunk-by-chunk until the global chunk budget fits again.
+            while len(docs) > MAX_DOCUMENTS:
+                docs.pop(0)
+            while (docs and sum(len(d.get("chunks") or []) for d in docs
+                                if isinstance(d, dict)) > MAX_TOTAL_CHUNKS):
+                oldest = docs[0]
+                if (isinstance(oldest, dict)
+                        and len(oldest.get("chunks") or []) > 1):
+                    oldest["chunks"].pop()
+                else:
+                    docs.pop(0)
+            if save:
+                save_memory(self.memory_path, self.memory)
+            return True, ("ingested: %s (%d chunks, %d chars)"
+                          % (name, len(chunks), len(text)))
+        except Exception as exc:
+            return False, "ingest failed safely: %s" % exc
+
+    def import_document(self, path: str, save: bool = True) -> Tuple[bool, str]:
+        """Ingest a text document into the persistent store. Never raises."""
+        try:
+            path = str(path or "").strip()
+            if not path:
+                return False, "usage: ingest <path>"
+            if not os.path.isfile(path):
+                return False, "file not found: %s" % path
+            ext = os.path.splitext(path)[1].lower()
+            if ext not in (".txt", ".md", ".csv", ".log", ".json",
+                           ".docx", ".xlsx"):
+                return False, ("unsupported type %s (use .txt .md .csv "
+                               ".log .json .docx .xlsx)"
+                               % (ext or "(none)"))
+            size = os.path.getsize(path)
+            if size > MAX_DOCUMENT_BYTES:
+                return False, ("file too large (%d bytes > %d cap)"
+                               % (size, MAX_DOCUMENT_BYTES))
+            if ext in (".csv", ".xlsx"):
+                # CSV/XLSX ingest as rendered rows so Q&A can quote them.
+                if ext == ".csv":
+                    headers, rows = _read_csv_dataset(path)
+                else:
+                    headers, rows = _read_xlsx_dataset(path)
+                lines = []
+                if headers:
+                    lines.append(" | ".join(str(h) for h in headers))
+                for row in rows:
+                    lines.append(" | ".join(str(c) for c in row))
+                text = "\n".join(lines)
+            elif ext == ".docx":
+                text = _docx_to_text(path)
+            else:
+                with open(path, "r", encoding="utf-8",
+      
