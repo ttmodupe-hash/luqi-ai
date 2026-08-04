@@ -1,108 +1,4 @@
-("facts", [])
-        if 1 <= index <= len(facts):
-            removed = str(facts.pop(index - 1))
-            save_memory(self.memory_path, self.memory)
-            return removed
-        return None
-
-    def add_history(self, role: str, text: str) -> None:
-        """Append one exchange to history (capped, oldest trimmed)."""
-        try:
-            history = self.memory.setdefault("history", [])
-            history.append({
-                "ts": utc_now_iso(),
-                "role": str(role),
-                "text": str(text)[:500],
-            })
-            if len(history) > MAX_HISTORY_ENTRIES:
-                del history[: len(history) - MAX_HISTORY_ENTRIES]
-        except Exception:
-            pass  # history must never crash the engine
-
-    # ------------------------------------------------------------------
-    # Module C: dataset import / analyze / query
-    # ------------------------------------------------------------------
-
-    def dataset_note(self) -> Optional[str]:
-        """One-line note for tax/mine subsystems when a dataset is loaded."""
-        if self.dataset:
-            return ("Dataset note: %d rows from '%s' are loaded and "
-                    "available for analysis." % (
-                        len(self.dataset.get("rows", [])),
-                        self.dataset.get("name", "dataset")))
-        return None
-
-    def _restore_last_import(self) -> None:
-        """Reload the dataset referenced by memory datasets.last_import."""
-        try:
-            datasets = self.memory.get("datasets") or {}
-            meta = datasets.get("last_import")
-            if not isinstance(meta, dict):
-                return
-            path = str(meta.get("path") or "")
-            if path and os.path.isfile(path):
-                ok, _msg = self.import_dataset(path, save=False)
-                if not ok:
-                    self.dataset = None
-        except Exception:
-            self.dataset = None
-
-    def import_dataset(self, path: str, save: bool = True) -> Tuple[bool, str]:
-        """Load a .csv or .xlsx dataset. Returns (ok, message). Never raises."""
-        try:
-            path = str(path or "").strip()
-            if not path:
-                return False, "Usage: import <path-to-csv-or-xlsx>"
-            if not os.path.isfile(path):
-                return False, "File not found: %s" % path
-            ext = os.path.splitext(path)[1].lower()
-            if ext == ".csv":
-                headers, rows = _read_csv_dataset(path)
-            elif ext == ".xlsx":
-                headers, rows = _read_xlsx_dataset(path)
-            else:
-                return False, ("Unsupported extension '%s'. Only .csv and "
-                               ".xlsx are supported." % (ext or "(none)"))
-            if not headers:
-                return False, "No header row found in %s." % path
-            if len(rows) > MAX_DATASET_ROWS:
-                return False, ("Dataset has %d rows; the limit is %d. "
-                               "Import refused." % (len(rows), MAX_DATASET_ROWS))
-            self.dataset = {
-                "path": os.path.abspath(path),
-                "name": os.path.basename(path),
-                "source": ext.lstrip("."),
-                "headers": headers,
-                "rows": rows,
-            }
-            self.memory.setdefault("datasets", {})["last_import"] = {
-                "path": os.path.abspath(path),
-                "name": os.path.basename(path),
-                "source": ext.lstrip("."),
-                "rows": len(rows),
-                "columns": len(headers),
-                "headers": headers,
-                "ts": utc_now_iso(),
-            }
-            if save:
-                save_memory(self.memory_path, self.memory)
-            return True, ("Imported %d row(s) x %d column(s) from %s "
-                          "(%s)." % (len(rows), len(headers),
-                                     os.path.basename(path), ext.lstrip(".")))
-        except Exception as exc:
-            return False, "Import failed safely: %s" % exc
-
-    def _store_document(self, name: str, origin: str, text: str,
-                        save: bool = True) -> Tuple[bool, str]:
-        """Chunk and store one document (dedup by name, evict to caps).
-
-        Shared by file and URL ingestion. Never raises.
-        """
-        try:
-            chunks = _chunk_text(text)
-            if not chunks:
-                return False, "no text content found"
-            docs = self.memory.setdefault("documents", [])
+setdefault("documents", [])
             if not isinstance(docs, list):
                 docs = []
                 self.memory["documents"] = docs
@@ -143,22 +39,29 @@
             if not os.path.isfile(path):
                 return False, "file not found: %s" % path
             ext = os.path.splitext(path)[1].lower()
-            if ext not in (".txt", ".md", ".csv", ".log", ".json"):
+            if ext not in (".txt", ".md", ".csv", ".log", ".json",
+                           ".docx", ".xlsx"):
                 return False, ("unsupported type %s (use .txt .md .csv "
-                               ".log .json)" % (ext or "(none)"))
+                               ".log .json .docx .xlsx)"
+                               % (ext or "(none)"))
             size = os.path.getsize(path)
             if size > MAX_DOCUMENT_BYTES:
                 return False, ("file too large (%d bytes > %d cap)"
                                % (size, MAX_DOCUMENT_BYTES))
-            if ext == ".csv":
-                # CSV ingests as rendered rows so Q&A can quote them.
-                headers, rows = _read_csv_dataset(path)
+            if ext in (".csv", ".xlsx"):
+                # CSV/XLSX ingest as rendered rows so Q&A can quote them.
+                if ext == ".csv":
+                    headers, rows = _read_csv_dataset(path)
+                else:
+                    headers, rows = _read_xlsx_dataset(path)
                 lines = []
                 if headers:
                     lines.append(" | ".join(str(h) for h in headers))
                 for row in rows:
                     lines.append(" | ".join(str(c) for c in row))
                 text = "\n".join(lines)
+            elif ext == ".docx":
+                text = _docx_to_text(path)
             else:
                 with open(path, "r", encoding="utf-8",
                           errors="replace") as handle:
@@ -503,6 +406,7 @@
             else:
                 lines.append("- (no findings)")
             lines.append("")
+
             lines.append("## Suggested Next Actions")
             for i, action in enumerate(actions, 1):
                 lines.append("%d. %s" % (i, action))
@@ -660,4 +564,144 @@ class EvolutionEngine:
         # Boot: bootstrap the evolvable strategy module (Generation 01).
         self._bootstrap_strategy()
 
-  
+    # ------------------------------------------------------------------
+    # State (omega_evolution.json) - all I/O guarded
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _default_state() -> Dict[str, Any]:
+        return {
+            "generation": 1,
+            "current_fitness": None,
+            "health": 1.0,
+            "scores": [],
+            "lineage": [],
+            "archive_fitness": {},
+        }
+
+    def _load_state(self) -> Dict[str, Any]:
+        state = self._default_state()
+        try:
+            if not os.path.isfile(self.state_path):
+                return state
+            with open(self.state_path, "r", encoding="utf-8",
+                      errors="replace") as handle:
+                data = json.load(handle)
+            if not isinstance(data, dict):
+                return state
+            try:
+                state["generation"] = max(1, int(data.get("generation", 1)))
+            except Exception:
+                pass
+            fitness = data.get("current_fitness")
+            if isinstance(fitness, (int, float)):
+                state["current_fitness"] = float(fitness)
+            try:
+                state["health"] = max(0.0, min(1.0, float(
+                    data.get("health", 1.0))))
+            except Exception:
+                pass
+            if isinstance(data.get("scores"), list):
+                state["scores"] = [float(s) for s in data["scores"]
+                                   if isinstance(s, (int, float))][-10:]
+            if isinstance(data.get("lineage"), list):
+                state["lineage"] = [e for e in data["lineage"]
+                                    if isinstance(e, dict)]
+            if isinstance(data.get("archive_fitness"), dict):
+                state["archive_fitness"] = {
+                    str(k): v for k, v in data["archive_fitness"].items()
+                }
+        except Exception:
+            return self._default_state()
+        return state
+
+    def _save_state(self) -> bool:
+        try:
+            with open(self.state_path, "w", encoding="utf-8") as handle:
+                json.dump(self.state, handle, ensure_ascii=True, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def generation(self) -> int:
+        try:
+            return max(1, int(self.state.get("generation", 1)))
+        except Exception:
+            return 1
+
+    def health(self) -> float:
+        try:
+            return max(0.0, min(1.0, float(self.state.get("health", 1.0))))
+        except Exception:
+            return 1.0
+
+    # ------------------------------------------------------------------
+    # Immutable pillars - REAL enforcement (sha256 tamper detection)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def canonical_pillars_json() -> str:
+        return json.dumps(CANONICAL_PILLARS, ensure_ascii=True,
+                          sort_keys=True)
+
+    @classmethod
+    def canonical_pillars_sha256(cls) -> str:
+        blob = cls.canonical_pillars_json().encode("utf-8")
+        return hashlib.sha256(blob).hexdigest()
+
+    def _write_canonical_pillars(self) -> bool:
+        try:
+            payload = {
+                "pillars": dict(CANONICAL_PILLARS),
+                "sha256": self.canonical_pillars_sha256(),
+            }
+            with open(self.pillars_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=True, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def pillars_status(self) -> str:
+        """Silent integrity check: 'OK' or 'TAMPERED'. Never raises."""
+        try:
+            with open(self.pillars_path, "r", encoding="utf-8",
+                      errors="replace") as handle:
+                payload = json.load(handle)
+            if not isinstance(payload, dict):
+                return "TAMPERED"
+            if payload.get("sha256") != self.canonical_pillars_sha256():
+                return "TAMPERED"
+            if payload.get("pillars") != dict(CANONICAL_PILLARS):
+                return "TAMPERED"
+            return "OK"
+        except Exception:
+            return "TAMPERED"
+
+    def verify_pillars(self, announce: bool = True) -> str:
+        """Create the pillar file if missing; detect + restore tampering.
+
+        Returns 'CREATED' / 'OK' / 'RESTORED'. On tamper, prints the
+        spec-mandated message and logs to the audit trail.
+        """
+        try:
+            if not os.path.isfile(self.pillars_path):
+                self._write_canonical_pillars()
+                return "CREATED"
+            if self.pillars_status() == "OK":
+                return "OK"
+            self._write_canonical_pillars()
+            if announce:
+                print("PILLAR TAMPER DETECTED - restored canonical pillars")
+            try:
+                self.engine._audit("Evolution", "pillar tamper detected",
+                                   "Restored")
+            except Exception:
+                pass
+            return "RESTORED"
+        except Exception:
+            return "OK"
+
+    def pillars_lines(self) -> List[str]:
+        lines = ["Immutable pillars (integrity: %s):" % self.pillars_status()]
+        for key, value in CANONICAL_PILLARS.items():
+            
