@@ -1,84 +1,4 @@
-      % syllabus[entry["current_lesson"]].get(
-                            "title", ""))})
-                    messages = _cap_messages(messages)
-                    reply = engine._llm_messages(messages)
-                    if reply:
-                        reply = reply.strip()
-                        _professor_out(out, reply)
-                        messages.append({"role": "assistant",
-                                         "content": reply})
-                    else:
-                        out("(Professor unreachable - showing the "
-                            "offline key points above.)")
-            else:
-                out("You are on the final lesson - try 'quiz me' or "
-                    "'end class'.")
-            continue
-
-        # Free text -> student turn.
-        turns += 1
-        if online:
-            messages.append({"role": "user", "content": raw.strip()})
-            messages = _cap_messages(messages)
-            reply = engine._llm_messages(messages)
-            if reply:
-                reply = reply.strip()
-                _professor_out(out, reply)
-                messages.append({"role": "assistant", "content": reply})
-            else:
-                out("The professor is unreachable right now (LLM call "
-                    "failed) - no reply was generated.")
-                out("You can still use: syllabus | next | quiz me | "
-                    "hint | progress | end class.")
-        else:
-            out("(Offline classroom: there is no live conversation "
-                "without OPENAI_API_KEY.)")
-            out("Review the current lesson key points:")
-            for line in lesson_intro_lines(entry, subject):
-                _professor_out(out, line)
-            out("Type 'next' to advance, 'quiz me' to self-check, or "
-                "'end class' to finish.")
-
-    # Session close: summary + persist progress (always, even on EOF).
-    entry["last_session"] = utc_now_iso()
-    save_memory(engine.memory_path, engine.memory)
-    out("-" * 60)
-    out("Class summary - %s" % subject)
-    out("  Turns this session: %d" % turns)
-    total_lessons = len(syllabus) or 10
-    out("  Lesson position: %d/%d"
-        % (min(int(entry.get("current_lesson", 0)) + 1, total_lessons),
-           total_lessons))
-    if quiz_results:
-        out("  Quiz scores this session: "
-            + ", ".join("%d/%d" % q for q in quiz_results))
-    else:
-        out("  Quiz scores this session: none")
-    out("Progress saved to your learner profile ('progress' to view).")
-    engine._audit("Classroom", "teach %s" % subject, "Success")
-    engine.add_history("assistant",
-                       "Taught a %s class (%d turns)." % (subject, turns))
-
-
-def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
-                        input_fn: Any = input, out: Any = print) -> None:
-    """Top-level 'quiz <subject>' command (online grading or self-check)."""
-    subject = normalize_subject(subject)
-    if not subject:
-        out("Usage: quiz <subject>   (inside a class, just say 'quiz me')")
-        return
-    graded: Optional[Tuple[int, int]] = None
-    if engine.openai_key:
-        graded = run_online_quiz(
-            engine, subject,
-            [{"role": "system", "content": PROFESSOR_PROMPT % subject}],
-            input_fn, out)
-        if graded is None:
-            out("Live quiz unavailable - switching to offline "
-                "self-check cards.")
-    if graded is None:
-        score, asked, leftover = run_offline_quiz(engine, subject,
-                                                  input_fn, out)
+                      input_fn, out)
         if leftover:
             out("(Ignored outside a class: '%s')" % leftover)
         if asked:
@@ -735,4 +655,118 @@ def handle_command(engine: OmegaMasterEngine, raw: str) -> bool:
             engine._audit("CLI", "say (no text)", "Failed")
             return True
         if not engine.openai_key:
-            prin
+            print("voice needs OPENAI_API_KEY in .env; text was: %s" % text)
+            engine._audit("CLI", "say", "Offline")
+            return True
+        data = engine._tts_speech(text)
+        if data:
+            ok, message = engine._save_speech(data, text)
+            if ok:
+                print("saved: %s (voice %s)"
+                      % (message.rsplit(" ", 1)[-1].strip(),
+                         engine.tts_voice))
+            else:
+                print(message)
+            engine._audit("CLI", "say", "Success" if ok else "Failed")
+        else:
+            print("speech failed safely (offline?)")
+            engine._audit("CLI", "say", "Failed")
+        return True
+    if lowered == "voice" or lowered.startswith("voice "):
+        arg = line[len("voice"):].strip().lower()
+        if arg in ("on", "off", "prof", "all"):
+            if arg == "off":
+                engine.memory["voice_enabled"] = False
+            else:
+                engine.memory["voice_enabled"] = True
+                engine.memory["voice_scope"] = ("all" if arg == "all"
+                                                else "prof")
+            save_memory(engine.memory_path, engine.memory)
+            enabled = bool(engine.memory.get("voice_enabled"))
+            print("voice output %s."
+                  % ("ENABLED" if enabled else "DISABLED"))
+            if enabled:
+                print("voice scope: %s"
+                      % engine.memory.get("voice_scope", "prof"))
+            engine._audit("CLI", "voice %s" % arg, "Success")
+            return True
+        enabled = bool(engine.memory.setdefault("voice_enabled", False))
+        print("voice status:")
+        print("  voice output: %s" % ("on" if enabled else "off"))
+        print("  voice scope: %s"
+              % engine.memory.get("voice_scope", "prof"))
+        print("  tts voice: %s" % engine.tts_voice)
+        print("  OPENAI_API_KEY present: %s"
+              % ("yes" if engine.openai_key else "no"))
+        print("Usage: voice [on|off|prof|all]")
+        engine._audit("CLI", "voice", "Success")
+        return True
+    if lowered == "image" or lowered.startswith("image "):
+        prompt = line[len("image"):].strip()
+        if not prompt:
+            print("Usage: image <prompt>")
+            engine._audit("CLI", "image (no prompt)", "Failed")
+            return True
+        if not engine.openai_key:
+            print("image generation needs OPENAI_API_KEY in .env; "
+                  "prompt was: %s" % prompt)
+            engine._audit("CLI", "image", "Offline")
+            return True
+        data = engine._image_generate(prompt)
+        if data:
+            ok, message = engine._save_image(data, prompt)
+            if ok:
+                print("saved: %s" % message.rsplit(" ", 1)[-1].strip())
+            else:
+                print(message)
+            engine._audit("CLI", "image", "Success" if ok else "Failed")
+        else:
+            print("image generation failed safely (offline?)")
+            engine._audit("CLI", "image", "Failed")
+        return True
+    if lowered == "github info":
+        if not (engine.github_repo and engine.github_token):
+            print("github info needs GITHUB_REPO (+ GITHUB_TOKEN) in .env")
+            engine._audit("CLI", "github info", "Offline")
+            return True
+        info = engine._github_api("/repos/" + engine.github_repo)
+        if info:
+            print("GitHub repo:")
+            print("  full_name: %s" % info.get("full_name", "?"))
+            print("  visibility: %s" % info.get("visibility", "?"))
+            print("  default_branch: %s" % info.get("default_branch", "?"))
+            print("  open_issues_count: %s"
+                  % info.get("open_issues_count", "?"))
+            engine._audit("CLI", "github info", "Success")
+        else:
+            print("github api unreachable (offline or token invalid)")
+            engine._audit("CLI", "github info", "Failed")
+        return True
+    if lowered == "reminders":
+        reminders = engine.memory.setdefault("reminders", [])
+        pending = [(idx, item) for idx, item in enumerate(reminders, 1)
+                   if not item.get("done")]
+        done_count = sum(1 for item in reminders if item.get("done"))
+        if not pending:
+            print("No pending reminders (%d done)." % done_count)
+        else:
+            print("Reminders (%d pending, %d done):"
+                  % (len(pending), done_count))
+            for idx, item in pending:
+                print("  %d. [%s] %s" % (idx, item.get("due", "?"),
+                                         item.get("text", "")))
+        engine._audit("Memory", "reminders", "Success")
+        return True
+    if lowered == "remind" or lowered.startswith("remind "):
+        args = line[len("remind"):].strip()
+        reminders = engine.memory.setdefault("reminders", [])
+        low_args = args.lower()
+        if low_args == "clear":
+            kept = [item for item in reminders if item.get("done")]
+            cleared = len(reminders) - len(kept)
+            engine.memory["reminders"] = kept
+            save_memory(engine.memory_path, engine.memory)
+            print("Cleared %d pending reminder(s)." % cleared)
+            engine._audit("Memory", "remind clear", "Success")
+            return True
+        if low_args == "don
