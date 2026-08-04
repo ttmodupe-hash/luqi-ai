@@ -1,74 +1,81 @@
-- v29.12.0 "Prompt Forge": expert-prompt compiler + coaching (prompt/add/show/run/save/clear), 17th subsystem.
-- v29.11.0 "Smart Search": web-backed ask fallback (Serper), voice speed control (persisted), speeding/traffic rights routing, extraction hardening, keyed-smoke network guard.
-- v29.10.0 "Know Your Rights": rights & travel subsystem (SA-deep + universal world layer), tourism guides, map/directions opener, roadblock log, whereami.
-- v29.9.0 "Study Hall": study <topic> teaches from your own documents, .docx/.xlsx ingestion, backup command.
-- v29.8.0 "Deep Reader": IDF-ranked document Q&A, ingest <url> web page ingestion, professor-only classroom voice (voice all restores full speech).
-![selftest](https://github.com/ttmodupe-hash/luqi-ai/actions/workflows/selftest.yml/badge.svg)
+# LUQI AI v29.12.0 "Prompt Forge" - Unified Master Engine
 
-- **2026-08-03 -- v29.7.0 "Document Mind"**: persistent document store (`ingest`/`docs`/`forget doc`), stdlib retrieval, `ask`/`ask save` Q&A -- offline passages, LLM synthesis when keyed. 15 subsystems, 122 selftest checks.
-- **2026-08-03 -- v29.6.0 "The Sovereign Voice"**: voice output (TTS via OpenAI), image generation, GitHub REST probe, OpenRouter LLM fallback, reminders. 14 subsystems, 103 selftest checks. Keys stay in `.env`; guard_secrets.py blocks committing real keys.
-# LUQI AI v29.5.0 — Unified Master Engine
+![version](https://img.shields.io/badge/version-29.12.0-brightgreen) ![python](https://img.shields.io/badge/python-3.11-blue) ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen) ![self-test](https://img.shields.io/badge/self--test-172%2F172-brightgreen) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
-One engine. Every domain. A single-file, zero-dependency Python AI engine built in South Africa.
+**One 427 KB file. Zero dependencies. Seventeen subsystems. 172 self-test checks.**
+A personal AI Unified Master Engine written in pure Python standard library - built in South Africa, MIT licensed, free forever.
 
 ## What it is
 
-`omega.py` is the LUQI AI master engine: a modular CLI router that unifies 9 capability subsystems — with persistent memory, GitHub auto-sync, and Excel/CSV data import. Pure Python standard library: **no pip installs required**.
+`omega.py` is the entire product: a modular CLI engine with persistent memory that unifies 17 capability subsystems behind one graceful command line. No pip installs, no accounts, no servers. It runs **fully offline** out of the box; every connector degrades honestly when its API key is absent - hints, never tracebacks.
 
-### Subsystems
+| # | Subsystem | # | Subsystem |
+|---|---|---|---|
+| 1 | Build & Sync | 10 | Evolution Engine (sandboxed self-improvement) |
+| 2 | Mining & Investment | 11 | Voice (TTS) |
+| 3 | Tax Support | 12 | Image Generation |
+| 4 | API & Security Gatekeeper | 13 | GitHub REST |
+| 5 | Deep Research | 14 | Reminders |
+| 6 | Companion/Tutor | 15 | Document Q&A |
+| 7 | Opportunity Engine | 16 | Rights & Travel (SA-deep + world layer) |
+| 8 | Finance Literacy | 17 | Prompt Forge (expert-prompt compiler) |
+| 9 | Self-Improvement | | |
 
-| Subsystem | Trigger / Command |
-|---|---|
-| Infrastructure Build & Sync | `build`, `sync`, deploy keywords |
-| Mining & Investment | `mine`, investment keywords |
-| Global Tax Support | `tax <country or topic>` |
-| API Security Gatekeeper | `keys`, `status` |
-| Deep Research | `research <query>` (Serper when key present, offline plan otherwise) |
-| Learning Companion | `companion <topic>` |
-| Opportunity Engine | `opportunities <domain>` |
-| Finance Literacy | `finance <topic>` |
-| Self-Improvement | `selfimprove <note>` + `omega_log.jsonl` audit trail |
+Plus: 100 language packs (70 African), persistent memory with corruption recovery, audit logging, and a `--selftest` that proves every claim on a fresh clone.
 
-### Memory, sync, data
+## Quickstart
 
-- `remember <fact>` / `recall` / `forget <n>` / `history` — persistent memory in `omega_memory.json`, survives restarts, corrupt-file auto-recovery.
-- `sync status` / `sync github` — commits and pushes `omega.py` + memory + logs via local git (set `GITHUB_REPO` in `.env`).
-- `import <file.csv|.xlsx>` / `analyze` / `query <text>` — stdlib-only spreadsheet ingestion (xlsx read via zipfile + XML), 50k-row cap.
-- **v29.1.0:** `version`, `export` (memory + audit to markdown), `report <topic>` (subsystem-routed .md reports), `lang <code>` (UI packs: en / isiZulu / isiXhosa / Sesotho / Afrikaans, persisted).
-- **v29.2.0 — Enterprise Evolution:** subsystem #10 Evolution Engine — safe self-improvement with real enforcement: AST whitelist sandbox + restricted exec + fitness gate (adopt only if better), SHA-256-verified immutable pillars with tamper auto-restore, generation lineage + `evolve rollback`, offline evolution by default, optional `evolve run online` via OpenRouter. Plus `why` (6 differentiators) and `integrations` (live connector manifest). See `REVIEW_OMEGA_HYPER_ENGINE.md` for the hardening story.
-- **v29.3.0 — Launch-Grade:** process-isolated evolution sandbox (killable candidates, 256 MB memory ceiling on POSIX, zero zombie processes), optional `claude_engine` bridge (`bridge` command — engine runs fine without it), all **15 African language packs** completed, and `launch` — a GO/NO-GO pre-flight checklist (see `LAUNCH_CHECKLIST.md`).
-- **v29.4.0 — Global Citizen:** **100 language packs** (70 African — incl. Nigerian Pidgin and a SePitori tribute pack — plus 30 world majors, greetings independently verified), `translate <lang> <text>` (LLM-backed, graceful offline), and `cost` — the pricing-disruption story: world-best capabilities, African-friendly price.
-- **v29.5.0 — The Professor:** a true conversational mentor. `teach <subject>` opens a classroom — multi-turn dialogue with full context (online) or an honest offline classroom (built-in curricula, self-check quizzes), `syllabus <subject>` (8 built-in 10-lesson curricula + generated outlines), graded quizzes, and `progress` — a persistent learner profile that remembers your lessons, scores, and weak points across sessions.
-
-15 African languages on the roadmap strip: isiZulu, isiXhosa, Sesotho, Setswana, Sepedi, Xitsonga, Tshivenda, siSwati, isiNdebele, Afrikaans, English, Swahili, Amharic, Yoruba, Hausa.
-
-## Quickstart (Windows)
-
-```powershell
-py -3.11 omega.py --selftest   # 24/24 checks should PASS
-py -3.11 omega.py              # interactive [OMEGA] > terminal
-py -3.11 omega.py "tax south africa"   # one-shot mode
+```bash
+git clone https://github.com/ttmodupe-hash/luqi-ai.git
+cd luqi-ai
+python omega.py --selftest     # 172/172 checks pass (Windows: py -3.11)
+python omega.py                # interactive [OMEGA] > terminal
+python omega.py "prompt build me a budget app"   # one-shot mode
 ```
 
-## Integration watch-items
+A taste of the terminal:
 
-- **2026-07-30 — GitHub Models fully retired** (playground, catalog, inference API, BYOK). LUQI AI is unaffected: the engine routes through OpenAI / Serper / OpenRouter directly. OpenRouter (`evolve run online`) is a recommended migration path for anyone moving off GitHub Models.
-- **2026-08-26 — Copilot default model enablement** takes effect for Business/Enterprise orgs (GA models switch on by default unless the org policy opts out). Review org model settings before this date.
+```text
+[OMEGA] > prompt build me a budget app     # compiles an EXPERT PROMPT + 6 coaching tips
+[OMEGA] > prompt add must include savings goals
+[OMEGA] > what are my rights at a roadblock   # offline rights guide, with disclaimer
+[OMEGA] > map dir cape town to durban         # opens directions in your browser
+[OMEGA] > teach mathematics                   # classroom mode - online or honest offline
+[OMEGA] > ingest https://en.wikipedia.org/wiki/South_Africa
+[OMEGA] > ask what is south africa known for  # answers from your docs; web when keyed
+[OMEGA] > voice speed 1.3 | say hello world   # adjustable speech (keyed)
+[OMEGA] > launch                              # GO/NO-GO pre-flight checklist
+```
 
-## Configuration (.env — all optional)
+## How the distribution works (read this - it is the security model)
 
-Copy `.env.example` to `.env`. Without keys the engine runs fully offline with graceful degradation.
+The engine ships **split**: root `omega.py` is a 2 KB loader; the real engine lives as 12 verified byte-parts under `.omega_parts/`. On every run the loader concatenates the parts, verifies the exact byte count (`427,038`) **and** the pinned SHA-256 (`cbcd3689...`), and only then executes. Corrupt or tampered parts = clean refusal with a re-clone message. `.gitattributes` marks the parts as binary so Windows `core.autocrlf` can never corrupt them. Every release is proven this way on a fresh anonymous clone before it ships.
 
-## Built-in verification
+## Configuration (.env - all optional)
 
-`--selftest` runs 83 checks: router smoke tests over all 9 subsystems, .env parser tolerance, secret masking, memory roundtrip + corruption recovery, CSV and real-XLSX import, git-missing graceful paths. Exit code 0 = all pass.
+```bash
+cp .env.example .env   # then fill in only what you want
+```
+
+Without any keys the engine is 100% functional offline. Keys unlock: `OPENAI_API_KEY` (LLM answers, voice, images), `SERPER_API_KEY` (web-backed `ask` fallback), `OPENROUTER_API_KEY` (online evolution), `GITHUB_TOKEN` + `GITHUB_REPO` (sync). Secrets are masked everywhere, `.env` is gitignored, and `guard_secrets.py` blocks accidental key commits.
 
 ## Repo layout
 
-- `omega.py` — the engine (single file)
-- `site/index.html` — official landing page (self-contained, no dependencies)
-- `docs/` — SPEC.md (v1 base spec), SPEC_v29.md (v29 additions)
-- `.env.example` — configuration template
+- `omega.py` - the loader (2 KB) - **this is the only entry point**
+- `.omega_parts/` - the engine itself (12 sha-verified byte-parts, 427,038 bytes total)
+- `.env.example` - configuration template (all values empty)
+- `guard_secrets.py`, `.githooks/` - secret-scan guard + pre-commit hook
+- `LICENSE` - MIT
+
+Everything else in this repository (`app/`, `backend/`, `web_core/`, `omega_ai/`, `claude_engine/`, `main.py`, `site/`, `docs/`, and friends) is **earlier R&D scaffolding kept for history**. It is not the product, is not maintained, and should not be run. The product is exactly the five items above.
+
+## Verify it yourself
+
+```bash
+python omega.py --selftest   # 172 checks: router smoke, memory round-trip + corruption
+                             # recovery, xlsx ingestion, secret masking, rights/prompt/travel
+                             # routing, offline degradation - exit 0 means all pass
+```
 
 ---
-Luqi AI (c) 2026. Built to be verified, not trusted: every release ships with a selftest.
+Luqi AI (c) 2026. Built to be verified, not trusted: every release ships with a selftest and a fresh-clone proof.
