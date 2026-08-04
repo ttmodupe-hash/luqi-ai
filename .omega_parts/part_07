@@ -1,121 +1,4 @@
-ugh a multiprocessing.Queue,
-          * join(3.0s); if the child is still alive -> terminate() + join()
-            -> the candidate is rejected as a timeout,
-          * POSIX children get a 256 MB RLIMIT_AS memory ceiling before the
-            candidate execs (MemoryError -> rejection); on Windows the
-            ceiling is unavailable, documented as timeout-only (see the
-            REVIEW note in _sandbox_worker),
-          * after every gate run we assert that NO child process remains
-            alive - this kills the v29.2.0 zombie-thread limit for good.
-
-        The AST gate (gate 1, unchanged) runs BEFORE this gate, and the
-        same restricted-builtins namespace is used inside the child.
-
-        Returns (ok, reason, contract_pass_rate, latency_avg).
-        """
-        queue = None
-        proc = None
-        try:
-            ctx = multiprocessing.get_context("spawn")
-            queue = ctx.Queue()
-            proc = ctx.Process(
-                target=_sandbox_worker,
-                args=(code, list(cls.CONTRACT_TESTS), queue),
-                daemon=True,
-            )
-            proc.start()
-        except Exception as exc:
-            if queue is not None:
-                _close_sandbox_queue(queue)
-            return False, "sandbox process spawn failed: %s" % exc, 0.0, 0.0
-
-        try:
-            proc.join(EVO_TEST_TIMEOUT)
-            if proc.is_alive():
-                # Infinite loop / hang: hard-kill the child. Unlike the old
-                # daemon thread, a terminated process leaves NO zombie behind.
-                try:
-                    proc.terminate()
-                except Exception:
-                    pass
-                proc.join(EVO_TEST_TIMEOUT)
-                if proc.is_alive():
-                    try:
-                        proc.kill()  # SIGKILL fallback (py3.7+)
-                    except Exception:
-                        pass
-                    proc.join(1.0)
-                _close_sandbox_queue(queue)
-                cls._reap_stray_children()
-                return False, ("timeout after %.1fs (candidate process "
-                               "terminated, no child processes left)"
-                               % EVO_TEST_TIMEOUT), 0.0, 0.0
-
-            # Child exited: fetch its result dict (short wait for flush).
-            result: Optional[Dict[str, Any]] = None
-            try:
-                result = queue.get(timeout=2.0)
-            except Exception:
-                result = None
-            _close_sandbox_queue(queue)
-            cls._reap_stray_children()
-            if not isinstance(result, dict):
-                exit_code = proc.exitcode
-                return False, ("sandbox worker exited without a result "
-                               "(exit code %s)" % exit_code), 0.0, 0.0
-            try:
-                pass_rate = float(result.get("pass_rate", 0.0))
-            except Exception:
-                pass_rate = 0.0
-            try:
-                latency_avg = float(result.get("latency_avg", 0.0))
-            except Exception:
-                latency_avg = 0.0
-            return (bool(result.get("ok")), str(result.get("reason", "?")),
-                    pass_rate, latency_avg)
-        except Exception as exc:
-            # Belt-and-braces: never leak a live child on any failure.
-            try:
-                if proc.is_alive():
-                    proc.terminate()
-                    proc.join(1.0)
-            except Exception:
-                pass
-            _close_sandbox_queue(queue)
-            cls._reap_stray_children()
-            return False, "sandbox gate failed safely: %s" % exc, 0.0, 0.0
-        finally:
-            try:
-                if proc is not None and not proc.is_alive():
-                    proc.close()
-            except Exception:
-                pass
-
-    @staticmethod
-    def _reap_stray_children() -> None:
-        """No-zombie assertion: after a gate run no child may stay alive.
-
-        Any stray child (should never happen) is terminated immediately.
-        """
-        try:
-            ctx = multiprocessing.get_context("spawn")
-            for stray in ctx.active_children():
-                try:
-                    if stray.is_alive():
-                        stray.terminate()
-                        stray.join(1.0)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    # ------------------------------------------------------------------
-    # Gate 3: fitness gate
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def fitness(pass_rate: float, latency_avg: float, health: float) -> float:
-        """fitness = 0.5*pass + 0.3*latency_score + 0.2*health, clamped."""
+ 0.3*latency_score + 0.2*health, clamped."""
         try:
             lat_score = 1.0 if float(latency_avg) <= 2.0 else 0.0
             value = (0.5 * float(pass_rate) + 0.3 * lat_score
@@ -757,4 +640,133 @@ def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
     # 6. Per-integration key status (WARN, never blockers).
     github_ok = bool(engine.github_repo and engine.github_token)
     if github_ok:
-        # v29.6.0: one ca
+        # v29.6.0: one cached REST probe; guarded, never blocks/raises.
+        if engine._github_probe_cache is None:
+            engine._github_probe_cache = engine._github_api(
+                "/repos/" + engine.github_repo) or {}
+        probe = engine._github_probe_cache
+        github_detail = ("api ok: %s" % probe.get("full_name",
+                                                  engine.github_repo)
+                         if probe else "configured (api unreachable)")
+    else:
+        github_detail = "set GITHUB_REPO (+ GITHUB_TOKEN) in .env"
+    rows.append(("github key", "OK" if github_ok else "WARN", github_detail))
+    rows.append(("serper key", "OK" if engine.serper_key else "WARN",
+                 "live search ready" if engine.serper_key
+                 else "set SERPER_API_KEY in .env"))
+    rows.append(("openai key", "OK" if engine.openai_key else "WARN",
+                 "LLM enhancement ready" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    rows.append(("openrouter key", "OK" if engine.openrouter_key else "WARN",
+                 "fallback LLM ready (%s)" % engine.openrouter_model
+                 if engine.openrouter_key
+                 else "set OPENROUTER_API_KEY in .env"))
+    rows.append(("voice tts", "OK" if engine.openai_key else "WARN",
+                 "speech ready (uses OPENAI_API_KEY)" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    rows.append(("image gen", "OK" if engine.openai_key else "WARN",
+                 "images ready (uses OPENAI_API_KEY)" if engine.openai_key
+                 else "set OPENAI_API_KEY in .env"))
+    bridge_ok = BRIDGE_AVAILABLE and bool(engine.openai_key)
+    if bridge_ok:
+        rows.append(("bridge", "OK", "claude_engine bridge active"))
+    elif BRIDGE_AVAILABLE:
+        rows.append(("bridge", "WARN", "installed; set OPENAI_API_KEY"))
+    else:
+        rows.append(("bridge", "WARN",
+                     "claude_engine not installed (optional)"))
+
+    # 7. Site version note (informational).
+    rows.append(("site version", "INFO",
+                 "badge v%s - publish via the platform publish button"
+                 % ENGINE_VERSION))
+
+    lines = ["Launch pre-flight checklist (%s):" % ENGINE_NAME]
+    lines.append("  %-18s %-6s %s" % ("check", "status", "detail"))
+    for name, status, detail in rows:
+        lines.append("  %-18s %-6s %s" % (name, status, detail))
+    if blockers:
+        lines.append("NOT READY: " + ", ".join(blockers))
+    else:
+        lines.append("LAUNCH READY")
+    return lines, blockers
+
+
+# ---------------------------------------------------------------------------
+# CLI presentation helpers
+# ---------------------------------------------------------------------------
+
+def print_banner(engine: OmegaMasterEngine) -> None:
+    line = "=" * 60
+    print(line)
+    print(ENGINE_NAME)
+    print(line)
+    print("Subsystem availability:")
+    for row in engine.availability_matrix():
+        print("  [%-9s] %-22s - %s" % (row["status"], row["subsystem"], row["detail"]))
+    print(line)
+    facts = len(engine.memory.get("facts", []))
+    sessions = engine.memory.get("sessions", 1)
+    print("Memory: %d remembered fact(s) | session #%d | %s"
+          % (facts, sessions, engine.memory_path))
+    print("Evolution: generation %d | health %.2f | pillars %s"
+          % (engine.evolution.generation(), engine.evolution.health(),
+             engine.evolution.pillars_status()))
+    print(line)
+    print(engine.ui("greeting"))
+
+
+def print_help(engine: OmegaMasterEngine) -> None:
+    commands = [
+        ("help", "show this command list"),
+        ("status", "subsystem matrix + system_state"),
+        ("version", "version, subsystem count, session, facts"),
+        ("keys", "masked API key report"),
+        ("research <query>", "deep research (Serper live or offline plan)"),
+        ("mine", "mining/investment subsystem"),
+        ("tax <country or topic>", "tax support with disclaimer"),
+        ("companion <topic>", "study-companion scaffold ('teach' = full "
+         "classroom)"),
+        ("teach <subject>", "Professor classroom: conversational tutor "
+         "session"),
+        ("syllabus <subject> [new]", "show / regenerate a 10-lesson "
+         "outline"),
+        ("quiz <subject>", "graded quiz (inside a class: 'quiz me')"),
+        ("progress", "learner profile: lessons, quiz average, weak "
+         "points"),
+        ("opportunities <domain>", "opportunity scan framework"),
+        ("finance <topic>", "finance literacy / scam avoidance"),
+        ("languages", "African language support list"),
+        ("lang <code>", "switch UI language (100 packs: 70 African + "
+         "30 world, grouped list)"),
+        ("translate <code> <text>", "translate text into a language "
+         "(needs OPENAI_API_KEY or bridge)"),
+        ("cost", "pricing-disruption table (free engine, BYOK cents)"),
+        ("say <text>", "speak text via TTS (needs OPENAI_API_KEY)"),
+        ("voice [on|off|prof|all]", "voice output: off / professor / all"),
+        ("voice speed <0.25-4.0>", "set TTS speed (persisted; plain "
+         "'voice speed' shows it)"),
+        ("image <prompt>", "generate an image (needs OPENAI_API_KEY)"),
+        ("github info", "GitHub repo info via REST probe"),
+        ("remind <text> in Nm|h|d", "set a reminder (also: at HH:MM)"),
+        ("reminders", "list pending reminders"),
+        ("remind done <n>", "mark reminder #n done"),
+        ("remind clear", "clear all pending reminders"),
+        ("selfimprove <note>", "log a self-improvement entry"),
+        ("evolve [sub]", "evolution engine: run | run online | rollback | "
+         "lineage | pillars | test <query>"),
+        ("why", "the 6 LUQI AI differentiators"),
+        ("integrations", "8-connector live status manifest"),
+        ("bridge", "claude_engine bridge status (optional, never required)"),
+        ("launch", "GO/NO-GO launch pre-flight checklist"),
+        ("remember <fact>", "persist a fact to omega_memory.json"),
+        ("recall", "list all remembered facts (numbered)"),
+        ("forget <n>", "delete fact #n"),
+        ("history [n]", "show last n exchanges (default 10)"),
+        ("import <path>", "import a .csv or .xlsx dataset"),
+        ("analyze", "summarize the loaded dataset"),
+        ("query <text>", "filter dataset rows containing text"),
+        ("ingest <path|url>", "ingest a document (.docx/.xlsx too) or web page"),
+        ("docs", "list ingested documents (chunks/chars/date)"),
+        ("forget doc <name>", "remove an ingested document"),
+        ("ask <question> | ask save
