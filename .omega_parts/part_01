@@ -149,7 +149,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.10.0"
+ENGINE_VERSION = "29.11.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
@@ -711,4 +711,38 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
     "bm": {
         "name": "Bambara",
         "region": "african",
-        "greeting": "I ni ce! Sebena 'help' ka kumafolo
+        "greeting": "I ni ce! Sebena 'help' ka kumafolow ye. 'exit' ka bolo.",
+        "goodbye": "K'an ben.",
+        "help_header": "Kumafolow:",
+        "unknown_command": "Kumafolo min don na - o ci master core ka o ye.",
+        "remembered": "Tiiji #%d mara: %s",
+        "forgot": "Tiiji #%d na: %s",
+    },
+    "ln": {
+        "name": "Lingala",
+        "region": "african",
+        "greeting": "Mbote! Komisa 'help' mpo na komona makonzi. 'exit' mpo na kobima.",
+        "goodbye": "Kende malamu.",
+        "help_header": "Makonzi:",
+        "unknown_command": "Mokonzi oyo eyebani te - etindami epai ya master core.",
+        "remembered": "Solo #%d ebombami: %s",
+        "forgot": "Solo #%d ebosanwani: %s",
+    },
+    "kg": {
+        "name": "Kikongo",
+        "region": "african",
+        "greeting": "Mbote! Soneka 'help' vanga makonzi. 'exit' ku bima.",
+        "goodbye": "Sala mbote.",
+        "help_header": "Makonzi:",
+        "unknown_command": "Mokonzi yo ke zebi ve - etindiki na master core.",
+        "remembered": "Solo #%d ebombi: %s",
+        "forgot": "Solo #%d evidikidi: %s",
+    },
+    "ki": {
+        "name": "Kikuyu",
+        "region": "african",
+        "greeting": "Wi mwega? Andika 'help' kuona mawatho. 'exit' kuma.",
+        "goodbye": "Tigwo.",
+        "help_header": "Mawatho:",
+        "unknown_command": "Watho utamenyekaine - utumitwo master core kugatirwo.",
+        "remembered": "Uhoro #%d wigit
