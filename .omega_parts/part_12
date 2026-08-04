@@ -1,4 +1,29 @@
-ferentiators printed",
+ except Exception as exc:
+        checks.append(("evolve: rollback (exception: %s)" % exc, False))
+
+    # (h) Pillar tamper: corrupt omega_pillars.json -> detected + restored.
+    try:
+        with open(PILLARS_FILE, "w", encoding="utf-8") as handle:
+            handle.write('{"pillars": {"p1_build_sync": "HACKED"}, '
+                         '"sha256": "deadbeef"}')
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            status = evo.verify_pillars(announce=True)
+        checks.append(("evolve: pillar tamper detected + restored",
+                       status == "RESTORED"
+                       and evo.pillars_status() == "OK"
+                       and "PILLAR TAMPER DETECTED" in buf.getvalue()))
+    except Exception as exc:
+        checks.append(("evolve: pillar tamper (exception: %s)" % exc, False))
+
+    # (j) 'why' + 'integrations' CLI output present.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep1 = handle_command(engine, "why")
+            keep2 = handle_command(engine, "integrations")
+        out = buf.getvalue()
+        checks.append(("why: 6 differentiators printed",
                        bool(keep1) and out.count("proof:") >= 6))
         checks.append(("integrations: 8-connector manifest printed",
                        bool(keep2) and all(name in out for name in (
@@ -567,13 +592,13 @@ ferentiators printed",
     except Exception as exc:
         checks.append(("voice: flag roundtrip (exception: %s)" % exc, False))
 
-    # Launch pre-flight rows include the v29.6.0 connectors + 17/17 smoke.
+    # Launch pre-flight rows include the v29.6.0 connectors + 18/18 smoke.
     try:
         launch_out, _launch_blockers = launch_lines(offline_engine)
         text = "\n".join(launch_out)
-        checks.append(("launch: voice tts + image gen rows + 17/17 smoke",
+        checks.append(("launch: voice tts + image gen rows + 18/18 smoke",
                        "voice tts" in text and "image gen" in text
-                       and "router smoke: 17/17 subsystems" in text))
+                       and "router smoke: 18/18 subsystems" in text))
     except Exception as exc:
         checks.append(("launch: v29.6 rows (exception: %s)" % exc, False))
 
