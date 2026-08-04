@@ -1,0 +1,3 @@
+# Engine byte-parts must stay byte-exact on every platform: the loader
+# verifies exact size + SHA-256 before running. Never EOL-convert them.
+.omega_parts/* binary
