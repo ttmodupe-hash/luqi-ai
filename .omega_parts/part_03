@@ -1,51 +1,4 @@
-ngarian",
-        "region": "world",
-        "greeting": "Szia! Ird be: 'help' a parancsokhoz. 'exit' a kilepeshez.",
-        "goodbye": "Viszlat.",
-        "help_header": "Parancsok:",
-        "unknown_command": "Ismeretlen parancs - elkuldve a master core-nak ertekelesre.",
-        "remembered": "Teny #%d megjegyezve: %s",
-        "forgot": "Teny #%d elfelejtve: %s",
-    },
-    "sv": {
-        "name": "Swedish",
-        "region": "world",
-        "greeting": "Hej! Skriv 'help' for kommandon. 'exit' for att avsluta.",
-        "goodbye": "Hej da.",
-        "help_header": "Kommandon:",
-        "unknown_command": "Okant kommando - skickat till master core for utvardering.",
-        "remembered": "Fakta #%d sparat: %s",
-        "forgot": "Fakta #%d glomt: %s",
-    },
-}
-
-# v29.1.0: 'report' command - next-action tables (3 generic + 2 specific).
-REPORT_GENERIC_ACTIONS = [
-    "Review the findings above and confirm they match your priorities.",
-    "Run 'research <topic>' to add external sources to these findings.",
-    "Persist any decision you make with 'remember <fact>'.",
-]
-
-REPORT_DEFAULT_ACTIONS = [
-    "Re-run 'report <topic>' with a more specific topic.",
-    "Check 'status' to confirm subsystem availability.",
-]
-
-REPORT_NEXT_ACTIONS: Dict[str, List[str]] = {
-    "Omega Infrastructure Build & Sync": [
-        "Re-run 'sync status' to confirm git sync health.",
-        "Schedule the next integrity check after any deploy.",
-    ],
-    "Omega Mining & Investment Engine": [
-        "Review allocation drift against the +/- 5% rebalance trigger.",
-        "Run 'analyze' if a portfolio dataset has been imported.",
-    ],
-    "Omega Tax & Audit Support": [
-        "Export transactions and confirm cost-basis records are complete.",
-        "Confirm filing deadlines for your region with a practitioner.",
-    ],
-    "Omega Security Gatekeeper": [
-        "Rotate any API key that has been shared outside this machine.",
+ been shared outside this machine.",
         "Run 'keys' to verify the masked key status report.",
     ],
     "Omega Deep Research": [
@@ -717,4 +670,72 @@ def generic_scaffold(subject: str) -> List[Dict[str, Any]]:
             "Connecting ideas across topics.",
             "Worked examples at medium difficulty."]),
         ("Tools and Methods of %s" % name, [
-            "The st
+            "The standard tools practitioners use.",
+            "How experts approach a problem.",
+            "A hands-on mini-project."]),
+        ("Advanced Topics in %s" % name, [
+            "Current debates and open questions.",
+            "Advanced frameworks in plain language.",
+            "Stretch exercises beyond the basics."]),
+        ("Common Pitfalls in %s" % name, [
+            "Typical mistakes learners make.",
+            "How to spot and fix them.",
+            "Expert tips for avoiding rework."]),
+        ("Mastery Practice in %s" % name, [
+            "Mixed practice sets across all units.",
+            "Timed challenges.",
+            "Explaining ideas out loud to lock them in."]),
+        ("Capstone: Your %s Project" % name, [
+            "Plan a final project that shows your skills.",
+            "Demonstrate and review your work.",
+            "Map out your next learning steps."]),
+    ]
+    return [{"title": t, "points": list(p)} for t, p in titles_points]
+
+
+# Offline self-check quiz banks: accurate Q&A for the 8 core subjects.
+OFFLINE_QUIZ_BANKS: Dict[str, List[Tuple[str, str]]] = {
+    "mathematics": [
+        ("What is 7 x 8?", "56"),
+        ("Solve for x: x + 9 = 15", "x = 6"),
+        ("What is 25% of 80?", "20"),
+        ("What is the mean of 4, 8 and 12?", "8"),
+        ("What is the square root of 144?", "12"),
+        ("In y = 3x + 2, what is the slope?", "3"),
+    ],
+    "physics": [
+        ("State Newton's second law.", "F = ma (force = mass x acceleration)"),
+        ("What is the SI unit of force?", "The newton (N)"),
+        ("Speed equals distance divided by what?", "Time"),
+        ("What kind of energy does a moving object have?", "Kinetic energy"),
+        ("State Ohm's law.", "V = IR (voltage = current x resistance)"),
+        ("Roughly how fast is light in a vacuum?",
+         "About 300,000 km/s (3.0 x 10^8 m/s)"),
+    ],
+    "chemistry": [
+        ("Name the three subatomic particles.",
+         "Protons, neutrons and electrons"),
+        ("What is the chemical formula for water?", "H2O"),
+        ("What does the pH scale measure?",
+         "How acidic or basic a solution is (7 is neutral)"),
+        ("What is the atomic number of carbon?", "6"),
+        ("Ionic bonds form by transferring what?", "Electrons"),
+        ("Which gas do plants absorb for photosynthesis?",
+         "Carbon dioxide (CO2)"),
+    ],
+    "biology": [
+        ("Which organelle is called the powerhouse of the cell?",
+         "The mitochondrion"),
+        ("Which molecule carries genetic instructions?", "DNA"),
+        ("What process lets plants make food from sunlight?",
+         "Photosynthesis"),
+        ("What are the basic structural units of all living things?",
+         "Cells"),
+        ("Which blood cells fight infection?", "White blood cells"),
+        ("In one sentence, what is natural selection?",
+         "Traits that help survival and reproduction become more "
+         "common over generations"),
+    ],
+    "english": [
+        ("What is a noun?",
+         "A word naming a person, pla
