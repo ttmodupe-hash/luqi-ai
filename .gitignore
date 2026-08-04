@@ -20,3 +20,4 @@ omega_image_*.png
 omega_speech_*.mp3
 omega_voice_last.mp3
 omega_answer_*.md
+omega_memory_backup_*.json
