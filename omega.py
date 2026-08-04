@@ -2,12 +2,13 @@
 """
 LUQI AI v29.12.0 - Unified Master Engine (omega.py)
 
-Distribution note: the engine ships split across .omega_parts/ (the GitHub
-upload channel used for this release caps single messages, so the 282 KB
-engine is stored as 12 verified parts). Running `py -3.11 omega.py` assembles
-the exact single-file engine in memory and executes it - behavior is
-identical to the monolithic omega.py: same CLI, same one-shot mode, same
---selftest, same REPL, same multiprocessing sandbox.
+Distribution note: the engine ships split across .omega_parts/ (the 427 KB
+engine is stored as 12 verified byte-parts - no oversized file ever travels
+the upload channel, and tampering is detectable part-by-part). Running
+`py -3.11 omega.py` (or `python3 omega.py`) assembles the exact single-file
+engine in memory and executes it - behavior is identical to the monolithic
+omega.py: same CLI, same one-shot mode, same --selftest, same REPL, same
+multiprocessing sandbox.
 
 Python 3.11, standard library only.
 """
