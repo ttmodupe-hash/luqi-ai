@@ -1,81 +1,4 @@
-"
-        if not self.openai_key:
-            return None
-        try:
-            body = json.dumps({
-                "model": self.image_model,
-                "prompt": (prompt or "")[:1000],
-                "n": 1,
-                "size": IMAGE_SIZE,
-                "response_format": "b64_json",
-            }).encode("utf-8")
-            request = urllib.request.Request(
-                OPENAI_IMAGES_URL,
-                data=body,
-                headers={
-                    "Authorization": "Bearer " + self.openai_key,
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
-                data = json.loads(resp.read().decode("utf-8", errors="replace"))
-            items = data.get("data") or []
-            if not items:
-                return None
-            b64 = items[0].get("b64_json")
-            if not b64:
-                return None
-            return base64.b64decode(b64)
-        except Exception:
-            return None
-
-    def _save_image(self, data: bytes, hint: str) -> Tuple[bool, str]:
-        """Write omega_image_<slug>_<UTCts>.png (guarded I/O)."""
-        if not data:
-            return False, "no image data"
-        try:
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-            filename = "omega_image_%s_%s.png" % (_slugify(hint), stamp)
-            with open(filename, "wb") as handle:
-                handle.write(data)
-            return True, "Image saved: %s" % filename
-        except Exception as exc:
-            return False, "Image save failed safely: %s" % exc
-
-    # ------------------------------------------------------------------
-    # v29.6.0: GitHub REST probe + OpenRouter chat fallback (guarded)
-    # ------------------------------------------------------------------
-
-    def _github_api(self, path: str) -> Optional[Dict[str, Any]]:
-        """GET the GitHub REST API; return parsed JSON or None on failure."""
-        if not self.github_token:
-            return None
-        try:
-            request = urllib.request.Request(
-                GITHUB_API_BASE + str(path),
-                headers={
-                    "Authorization": "Bearer " + self.github_token,
-                    "Accept": "application/vnd.github+json",
-                    "User-Agent": "luqi-ai",
-                },
-                method="GET",
-            )
-            with urllib.request.urlopen(request,
-                                        timeout=GITHUB_API_TIMEOUT) as resp:
-                return json.loads(resp.read().decode("utf-8",
-                                                     errors="replace"))
-        except Exception:
-            return None
-
-    def _openrouter_chat(self, prompt: str) -> Optional[str]:
-        """Chat-completions POST to OpenRouter; return text or None."""
-        if not self.openrouter_key:
-            return None
-        try:
-            body = json.dumps({
-                "model": self.openrouter_model,
-                "messages": [{"role": "user", "content": prompt}],
+r", "content": prompt}],
                 "max_tokens": 512,
             }).encode("utf-8")
             request = urllib.request.Request(
@@ -139,6 +62,11 @@
                                        "traffic", "ticket", "aarto",
                                        "demerit")):
             result = self._rights_travel(payload)
+        elif any(k in domain for k in ("metaprompt", "prompt eng",
+                                       "optimize prompt", "improve prompt",
+                                       "write a prompt", "prompt forge",
+                                       "system prompt", "better prompt")):
+            result = self._prompt_forge(payload)
         elif any(k in domain for k in ("tax", KW_TAX_ZH, "vat", "sars",
                                        "compliance")):
             result = self._tax_support(payload)
@@ -383,6 +311,42 @@
                 "topic": "rights", "guide": guide_key,
                 "guidance": RIGHTS_GUIDES[guide_key],
                 "disclaimer": RIGHTS_DISCLAIMER}
+
+    def _prompt_forge(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Prompt Forge guidance: offline expert-prompt compiler + coaching.
+
+        Mirrors _rights_travel's return shape so CLI rendering works.
+        Never raises.
+        """
+        try:
+            topic = str(payload.get("query", "")).strip() or "prompt engineering"
+        except Exception:
+            topic = "prompt engineering"
+        return {"status": "Ready",
+                "subsystem": "Omega Prompt Forge",
+                "topic": topic,
+                "guidance": [
+                    "Prompt Forge compiles a raw idea into a structured "
+                    "expert prompt (role, mandate, strategy, guardrails).",
+                    "It coaches you with 6 gap checks: specificity, output "
+                    "format, negative constraints, audience, context, "
+                    "success markers.",
+                    "Inject requirements mid-draft with 'prompt add "
+                    "<requirement>' and recompile deterministically.",
+                    "Run the compiled prompt through the LLM with 'prompt "
+                    "run' (needs OPENAI_API_KEY in .env).",
+                    "Fully offline and ASCII-only; the draft persists in "
+                    "memory until 'prompt clear'.",
+                ],
+                "actions": [
+                    "prompt <idea> - start/replace a draft and compile",
+                    "prompt add <requirement> - inject a requirement",
+                    "prompt show - print the current compiled prompt",
+                    "prompt run - execute the compiled prompt via the LLM",
+                    "prompt save - export to omega_prompt_<slug>_<UTCts>.md",
+                    "prompt clear - discard the draft",
+                ],
+                "tip": "start: prompt <your idea>"}
 
     # ------------------------------------------------------------------
     # v29.5.0: learner profile helpers (memory["learning"])
@@ -737,4 +701,59 @@
                 text = _docx_to_text(path)
             else:
                 with open(path, "r", encoding="utf-8",
-      
+                          errors="replace") as handle:
+                    text = handle.read()
+            return self._store_document(
+                os.path.basename(path), os.path.abspath(path), text, save)
+        except Exception as exc:
+            return False, "ingest failed safely: %s" % exc
+
+    def import_url(self, url: str, save: bool = True) -> Tuple[bool, str]:
+        """Fetch a web page and ingest its visible text. Never raises.
+
+        HTML pages go through _html_to_text; plain text is taken raw;
+        other content types are refused. Body is capped at
+        MAX_DOCUMENT_BYTES (truncation noted in the message).
+        """
+        try:
+            url = str(url or "").strip()
+            if not url.lower().startswith(("http://", "https://")):
+                return False, ("unsupported scheme (use http:// or "
+                               "https://): %s" % (url or "(empty)"))
+            request = urllib.request.Request(
+                url, headers={"User-Agent": ("LUQI-AI/29.8 (personal "
+                                             "document ingest)")})
+            try:
+                with urllib.request.urlopen(
+                        request, timeout=HTTP_TIMEOUT) as response:
+                    raw = response.read(MAX_DOCUMENT_BYTES + 1)
+                    content_type = str(response.headers.get(
+                        "Content-Type", "")).lower()
+            except Exception as exc:
+                return False, "fetch failed safely: %s" % exc
+            truncated = len(raw) > MAX_DOCUMENT_BYTES
+            raw = raw[:MAX_DOCUMENT_BYTES]
+            text = raw.decode("utf-8", errors="replace")
+            if "html" in content_type:
+                text = _html_to_text(text)
+            elif content_type and "text" not in content_type:
+                return False, ("unsupported content type %s"
+                               % (content_type.split(";")[0] or "?"))
+            if not text.strip():
+                return False, "no text content found"
+            base = url.split("://", 1)[1]
+            base = base.split("?", 1)[0].split("#", 1)[0].strip("/")
+            name = _slugify(base.replace("/", " "))[:40] or "web-page"
+            ok, message = self._store_document(name, url, text, save)
+            if ok and truncated:
+                message = message + (" (truncated at %d bytes)"
+                                     % MAX_DOCUMENT_BYTES)
+            return ok, message
+        except Exception as exc:
+            return False, "ingest failed safely: %s" % exc
+
+    def analyze_dataset(self) -> List[str]:
+        """Summarize the loaded dataset: counts, numeric stats, top values."""
+        if not self.dataset:
+            return ["No dataset loaded. Use: import <path-to-csv-or-xlsx>"]
+        headers = self.dataset.get("headers
