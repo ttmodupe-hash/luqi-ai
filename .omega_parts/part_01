@@ -147,7 +147,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ENGINE_VERSION = "29.8.0"
+ENGINE_VERSION = "29.9.0"
 ENGINE_NAME = "LUQI AI v" + ENGINE_VERSION + " - Unified Master Engine"
 LOG_FILE = "omega_log.jsonl"
 ENV_FILE = ".env"
@@ -186,6 +186,15 @@ PROFESSOR_PROMPT = (
     "check understanding. Adapt depth to the student's answers. "
     "Encourage honestly, grade strictly. Keep answers under 200 words "
     "unless asked for more."
+)
+
+STUDY_PROMPT = (
+    "You are Professor LUQI running a study session on '%s'. "
+    "Ground every explanation and quiz in the STUDY MATERIAL below "
+    "(the student's own documents). Cite which passage you use like [1]. "
+    "If the material does not cover a question, say so briefly and "
+    "suggest what to ingest. Keep replies under 120 words, warm and "
+    "clear.\n\nSTUDY MATERIAL:\n%s"
 )
 
 # ---------------------------------------------------------------------------
@@ -640,3 +649,22 @@ LANG_PACKS: Dict[str, Dict[str, str]] = {
         "region": "african",
         "greeting": "Jam tan! Windu 'help' ngam yamiroore. 'exit' ngam yaltude.",
         "goodbye": "Jam waali.",
+        "help_header": "Yamiroore:",
+        "unknown_command": "Yamiroore nde anndaa - neldaama to master core ngam fercitaade.",
+        "remembered": "Goonga #%d tettinaama: %s",
+        "forgot": "Goonga #%d yejjitinaama: %s",
+    },
+    "ig": {
+        "name": "Igbo",
+        "region": "african",
+        "greeting": "Ndewo! Dee 'help' ka i hu iwu. 'exit' ka i puo.",
+        "goodbye": "Ka o di.",
+        "help_header": "Iwu:",
+        "unknown_command": "Iwu a maghi - e zigara ya master core ka e lelee ya.",
+        "remembered": "Eziokwu #%d echekwara: %s",
+        "forgot": "Eziokwu #%d echefuru: %s",
+    },
+    "ak": {
+        "name": "Akan (Twi)",
+        "region": "african",
+        "greeting": "Akwaba! Kyerew 'help' na woahu nhyehy
