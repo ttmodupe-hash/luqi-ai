@@ -1,144 +1,4 @@
-              "how to enable / use"))
-    for name, status, hint in rows:
-        lines.append("  %-13s %-13s %s" % (name, status, hint))
-    return lines
-
-
-def bridge_lines(engine: OmegaMasterEngine) -> List[str]:
-    """v29.3.0 'bridge' command: claude_engine bridge status report."""
-    lines = ["claude_engine bridge status:"]
-    if BRIDGE_AVAILABLE:
-        lines.append("  module: AVAILABLE (claude_engine importable)")
-    else:
-        lines.append("  module: NOT INSTALLED (engine works fully without it)")
-        lines.append("  how to enable: clone the claude_engine repo and run "
-                     "'pip install -e .' inside it, then restart omega.py")
-    if engine.openai_key:
-        lines.append("  primary provider: openai / %s (key %s)"
-                     % (engine.omega_llm_model,
-                        mask_secret(engine.openai_key)))
-    else:
-        lines.append("  primary provider: inactive (set OPENAI_API_KEY in "
-                     ".env to activate)")
-    if engine.anthropic_key:
-        lines.append("  fallback provider: anthropic / %s (key %s)"
-                     % (CLAUDE_FALLBACK_MODEL,
-                        mask_secret(engine.anthropic_key)))
-    else:
-        lines.append("  fallback provider: none (set ANTHROPIC_API_KEY for "
-                     "the anthropic fallback)")
-    if engine._bridge_engine is not None:
-        stats_fn = getattr(engine._bridge_engine, "stats", None)
-        if callable(stats_fn):
-            try:
-                lines.append("  circuit-breaker stats: %s" % (stats_fn(),))
-            except Exception:
-                lines.append("  circuit-breaker stats: unavailable")
-        else:
-            lines.append("  circuit-breaker stats: engine has no stats()")
-    else:
-        lines.append("  engine instance: not instantiated (lazy - created on "
-                     "the first bridged LLM call)")
-    lines.append("  routing: _llm() uses the bridge when available; ANY "
-                 "exception falls back to the stdlib urllib path")
-    return lines
-
-
-# Router smoke list used by the selftest AND the 'launch' pre-flight check.
-CORE_SMOKE: List[Tuple[str, str]] = [
-    ("build and deploy sync", "Omega Infrastructure Build & Sync"),
-    ("crypto mining portfolio", "Omega Mining & Investment Engine"),
-    ("tax vat sars compliance", "Omega Tax & Audit Support"),
-    ("api key security status", "Omega Security Gatekeeper"),
-    ("deep research search", "Omega Deep Research"),
-    ("teach me companion explain", "Omega Companion/Tutor"),
-    ("business hustle opportunities", "Omega Opportunity Engine"),
-    ("finance budget scam debt", "Omega Finance Literacy"),
-    ("selfimprove evolve", "Omega Self-Improvement"),
-    ("evolution mutation engine", "Omega Evolution Engine"),
-    # v29.6.0: CLI command smoke. "cli" entries run through handle_command
-    # and pass when the command degrades gracefully (keyless-safe).
-    ("voice", "cli"),
-    ("say selftest hello", "cli"),
-    ("image selftest dot", "cli"),
-    ("reminders", "cli"),
-    # v29.7.0: document Q&A smoke - keyless-safe with zero documents.
-    ("docs", "cli"),
-    ("ask selftest question", "cli"),
-    # v29.8.0: URL ingest smoke - refused cleanly with no network target.
-    ("ingest http://127.0.0.1:1/x", "cli"),
-    # v29.9.0: study hall smoke - keyless-safe with zero documents.
-    ("study selftest topic", "cli"),
-    # v29.10.0: rights & travel subsystem + read-only roadblocks list.
-    ("rights consumer police travel", "Omega Rights & Travel"),
-    ("roadblocks", "cli"),
-]
-
-
-def launch_lines(engine: OmegaMasterEngine) -> Tuple[List[str], List[str]]:
-    """v29.3.0 'launch' command: GO/NO-GO pre-flight checklist.
-
-    Blockers are missing pillars / unwritable memory / selftest-core failure
-    ONLY. Optional integration keys are WARN, never blockers.
-    Returns (lines, blockers).
-    """
-    rows: List[Tuple[str, str, str]] = []
-    blockers: List[str] = []
-
-    # 1. Version current (informational; always matches the running build).
-    rows.append(("version", "OK", "v%s Launch-Grade" % ENGINE_VERSION))
-
-    # 2. Selftest core pass: router smoke over all 16 subsystems.
-    core_failures = []
-    for domain, expected in CORE_SMOKE:
-        try:
-            if expected == "cli":
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    ok = bool(handle_command(engine, domain))
-            else:
-                result = engine.execute_omega_subsystem(domain,
-                                                        {"query": domain})
-                ok = result.get("subsystem") == expected
-            if not ok:
-                core_failures.append(domain)
-        except Exception:
-            core_failures.append(domain)
-    if core_failures:
-        rows.append(("selftest core", "FAIL",
-                     "router smoke failed for: " + ", ".join(core_failures)))
-        blockers.append("selftest core failure")
-    else:
-        rows.append(("selftest core", "OK",
-                     "router smoke: %d/%d subsystems" % (len(CORE_SMOKE),
-                                                         len(CORE_SMOKE))))
-
-    # 3. Pillars integrity.
-    pillars = engine.evolution.pillars_status()
-    rows.append(("pillars integrity", "OK" if pillars == "OK" else "FAIL",
-                 "sha256 verified" if pillars == "OK"
-                 else "tampered/missing - run 'evolve pillars'"))
-    if pillars != "OK":
-        blockers.append("pillars integrity")
-
-    # 4. Memory writable.
-    mem_ok = save_memory(engine.memory_path, engine.memory)
-    rows.append(("memory writable", "OK" if mem_ok else "FAIL",
-                 engine.memory_path if mem_ok
-                 else "cannot write " + engine.memory_path))
-    if not mem_ok:
-        blockers.append("memory not writable")
-
-    # 5. Strategy module present (auto-bootstraps; WARN if missing).
-    strategy_ok = os.path.isfile(STRATEGY_FILE)
-    rows.append(("strategy module", "OK" if strategy_ok else "WARN",
-                 STRATEGY_FILE if strategy_ok
-                 else "missing - auto-bootstraps on next evolution cycle"))
-
-    # 6. Per-integration key status (WARN, never blockers).
-    github_ok = bool(engine.github_repo and engine.github_token)
-    if github_ok:
-        # v29.6.0: one cached REST probe; guarded, never blocks/raises.
+ched REST probe; guarded, never blocks/raises.
         if engine._github_probe_cache is None:
             engine._github_probe_cache = engine._github_api(
                 "/repos/" + engine.github_repo) or {}
@@ -242,6 +102,8 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("cost", "pricing-disruption table (free engine, BYOK cents)"),
         ("say <text>", "speak text via TTS (needs OPENAI_API_KEY)"),
         ("voice [on|off|prof|all]", "voice output: off / professor / all"),
+        ("voice speed <0.25-4.0>", "set TTS speed (persisted; plain "
+         "'voice speed' shows it)"),
         ("image <prompt>", "generate an image (needs OPENAI_API_KEY)"),
         ("github info", "GitHub repo info via REST probe"),
         ("remind <text> in Nm|h|d", "set a reminder (also: at HH:MM)"),
@@ -726,4 +588,197 @@ def run_standalone_quiz(engine: OmegaMasterEngine, subject: str,
                 "self-check cards.")
     if graded is None:
         score, asked, leftover = run_offline_quiz(engine, subject,
-                            
+                                                  input_fn, out)
+        if leftover:
+            out("(Ignored outside a class: '%s')" % leftover)
+        if asked:
+            graded = (score, asked)
+    if graded is not None:
+        engine.record_quiz_score(subject, graded[0], graded[1])
+        out("Quiz score recorded: %d/%d. See 'progress'." % graded)
+
+
+def study_session(engine: OmegaMasterEngine, topic: str,
+                  input_fn: Any = input, out: Any = print) -> None:
+    """Study your own documents with the professor. Never crashes.
+
+    IDF retrieval picks the top passages for the topic; ONLINE the
+    professor teaches and quizzes grounded in them, OFFLINE the passages
+    print as honest study cards. Sub-commands: end study | passages |
+    quiz me. EOF/KeyboardInterrupt safe.
+    """
+    topic = (topic or "").strip()
+    docs = [d for d in engine.memory.setdefault("documents", [])
+            if isinstance(d, dict)]
+    if not docs:
+        out("No documents yet - ingest <path-or-url> first, then study "
+            "them.")
+        return
+    if not topic:
+        out("Usage: study <topic>")
+        out("documents: " + ", ".join(
+            str(d.get("name", "?"))[:24] for d in docs[:6]))
+        return
+    hits = search_documents(topic, docs, top_k=5)
+    if not hits:
+        out("No passages match '%s' - try different words or ingest "
+            "more." % topic)
+        out("documents: " + ", ".join(str(d.get("name", "?")) for d in docs))
+        return
+    passages = []
+    for num, (_score, name, chunk_idx, chunk) in enumerate(hits, 1):
+        passages.append("[%d] (%s #%d) %s" % (num, name, chunk_idx, chunk))
+    block = "\n\n".join(passages)
+    online = bool(engine.openai_key)
+    out("=" * 60)
+    out("STUDY: %s (%d passages from your documents)"
+        % (topic, len(hits)))
+    out("=" * 60)
+    out("In study: end study | passages | quiz me")
+    messages: List[Dict[str, str]] = []
+    if online:
+        messages.append({"role": "system",
+                         "content": STUDY_PROMPT % (topic, block)})
+        messages.append({"role": "user", "content": (
+            "Start the study session: give me a short overview of what "
+            "my material says about %s, then one question to check me."
+            % topic)})
+        messages = _cap_messages(messages)
+        reply = engine._llm_messages(messages)
+        if reply:
+            reply = reply.strip()
+            _professor_out(out, reply)
+            messages.append({"role": "assistant", "content": reply})
+        else:
+            online = False
+            out("(Professor unreachable - showing offline study cards "
+                "instead.)")
+    if not online:
+        out("Offline study cards (set OPENAI_API_KEY for the live "
+            "professor):")
+        for line in passages:
+            _professor_out(out, line)
+
+    turns = 0
+    while True:
+        try:
+            try:
+                raw = input_fn("[STUDY:%s] > " % topic[:18])
+            except TypeError:
+                # Zero-arg input_fn (scripted iterators in tests).
+                raw = input_fn()
+        except EOFError:
+            out("")
+            out("(End of input - closing the study session safely.)")
+            break
+        except KeyboardInterrupt:
+            out("")  # newline, then reprompt
+            continue
+        cmd = raw.strip().lower()
+        if not cmd:
+            continue
+        if cmd == "end study":
+            break
+        if cmd == "passages":
+            for line in passages:
+                out(line)
+            continue
+        if cmd == "quiz me":
+            if online:
+                messages.append({"role": "user", "content": (
+                    "Quiz me with questions from the material, one at a "
+                    "time. Ask the first now.")})
+                messages = _cap_messages(messages)
+                reply = engine._llm_messages(messages)
+                if reply:
+                    reply = reply.strip()
+                    _professor_out(out, reply)
+                    messages.append({"role": "assistant",
+                                     "content": reply})
+                else:
+                    out("The professor is unreachable right now - no "
+                        "quiz was generated.")
+            else:
+                out("Self-check: pick any card above and explain it "
+                    "aloud in your own words.")
+            continue
+        # Free text -> student turn.
+        turns += 1
+        if online:
+            messages.append({"role": "user", "content": raw.strip()})
+            messages = _cap_messages(messages)
+            reply = engine._llm_messages(messages)
+            if reply:
+                reply = reply.strip()
+                _professor_out(out, reply)
+                messages.append({"role": "assistant", "content": reply})
+            else:
+                out("The professor is unreachable right now - try "
+                    "'passages' or 'end study'.")
+        else:
+            out("(Offline: the professor needs OPENAI_API_KEY. Try "
+                "'passages', 'quiz me', or 'end study'.)")
+
+    engine._audit("Study", "study %s" % topic, "Success")
+    engine.add_history("assistant",
+                       "Studied '%s' (%d turns)." % (topic, turns))
+
+
+# ---------------------------------------------------------------------------
+# REPL
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# v29.6.0: reminders (memory-based, zero keys, fully offline) + voice out
+# ---------------------------------------------------------------------------
+
+def _parse_remind_when(arg: str) -> Optional[datetime]:
+    """Parse 'in <N>m|h|d' or 'at HH:MM' into a due datetime (None if bad)."""
+    try:
+        text = (arg or "").strip().lower()
+        now = datetime.now()
+        match = re.fullmatch(r"in\s+(\d+)\s*([mhd])", text)
+        if match:
+            amount = int(match.group(1))
+            seconds = {"m": 60, "h": 3600, "d": 86400}[match.group(2)]
+            return now + timedelta(seconds=amount * seconds)
+        match = re.fullmatch(r"at\s+(\d{1,2}):(\d{2})", text)
+        if match:
+            hour, minute = int(match.group(1)), int(match.group(2))
+            if hour > 23 or minute > 59:
+                return None
+            due = now.replace(hour=hour, minute=minute,
+                              second=0, microsecond=0)
+            if due <= now:  # time already passed today -> tomorrow
+                due = due + timedelta(days=1)
+            return due
+        return None
+    except Exception:
+        return None
+
+
+def _due_reminders(engine: OmegaMasterEngine) -> List[str]:
+    """Texts of due-and-undone reminders; marks them done + saves memory.
+
+    Runs at REPL start and at the top of every command - never raises.
+    """
+    fired: List[str] = []
+    try:
+        reminders = engine.memory.setdefault("reminders", [])
+        now = datetime.now()
+        changed = False
+        for item in reminders:
+            try:
+                if item.get("done"):
+                    continue
+                due = datetime.strptime(str(item.get("due", "")),
+                                        "%Y-%m-%d %H:%M")
+                if due <= now:
+                    item["done"] = True
+                    changed = True
+                    fired.append(str(item.get("text", "")))
+            except Exception:
+                continue
+        if changed:
+            save_memory(engine.memory_path, engine.memory)
+    except Ex
