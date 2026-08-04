@@ -1,45 +1,4 @@
-d([str(cell) for cell in padded])
-    return headers, data
-
-
-def _xlsx_localname(tag: str) -> str:
-    """Strip an XML namespace prefix from a tag name."""
-    return str(tag).rsplit("}", 1)[-1]
-
-
-def _xlsx_col_index(ref: str) -> Optional[int]:
-    """Convert a cell reference like 'B12' to a zero-based column index."""
-    letters = ""
-    for ch in str(ref):
-        if ch.isalpha():
-            letters += ch.upper()
-        else:
-            break
-    if not letters:
-        return None
-    index = 0
-    for ch in letters:
-        index = index * 26 + (ord(ch) - 64)
-    return index - 1
-
-
-def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
-    """Minimal stdlib-only .xlsx reader.
-
-    An .xlsx file is a ZIP of XML parts. We parse xl/sharedStrings.xml and
-    the first xl/worksheets/sheet*.xml with ElementTree. Handles shared
-    strings, inline strings, booleans, and numbers. First row = headers.
-    """
-    with zipfile.ZipFile(path) as archive:
-        names = archive.namelist()
-        shared: List[str] = []
-        if "xl/sharedStrings.xml" in names:
-            root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
-            for si in root:
-                if _xlsx_localname(si.tag) != "si":
-                    continue
-                parts = [node.text or "" for node in si.iter()
-                         if _xlsx_localname(node.tag) == "t"]
+ "t"]
                 shared.append("".join(parts))
         sheets = sorted(n for n in names
                         if n.startswith("xl/worksheets/") and n.endswith(".xml"))
@@ -498,6 +457,11 @@ class OmegaMasterEngine:
                 "Available",
                 "offline curated guides (SA-deep, universal world layer)",
             ),
+            (
+                "Prompt Forge",
+                "Available",
+                "offline prompt compiler + coaching; LLM run when keyed",
+            ),
         ]
         return [
             {"subsystem": name, "status": status, "detail": detail}
@@ -833,4 +797,81 @@ class OmegaMasterEngine:
             return False, "Speech save failed safely: %s" % exc
 
     def _image_generate(self, prompt: str) -> Optional[bytes]:
-        """POST prompt to OpenAI images; return png bytes or None on failure.""
+        """POST prompt to OpenAI images; return png bytes or None on failure."""
+        if not self.openai_key:
+            return None
+        try:
+            body = json.dumps({
+                "model": self.image_model,
+                "prompt": (prompt or "")[:1000],
+                "n": 1,
+                "size": IMAGE_SIZE,
+                "response_format": "b64_json",
+            }).encode("utf-8")
+            request = urllib.request.Request(
+                OPENAI_IMAGES_URL,
+                data=body,
+                headers={
+                    "Authorization": "Bearer " + self.openai_key,
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            items = data.get("data") or []
+            if not items:
+                return None
+            b64 = items[0].get("b64_json")
+            if not b64:
+                return None
+            return base64.b64decode(b64)
+        except Exception:
+            return None
+
+    def _save_image(self, data: bytes, hint: str) -> Tuple[bool, str]:
+        """Write omega_image_<slug>_<UTCts>.png (guarded I/O)."""
+        if not data:
+            return False, "no image data"
+        try:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            filename = "omega_image_%s_%s.png" % (_slugify(hint), stamp)
+            with open(filename, "wb") as handle:
+                handle.write(data)
+            return True, "Image saved: %s" % filename
+        except Exception as exc:
+            return False, "Image save failed safely: %s" % exc
+
+    # ------------------------------------------------------------------
+    # v29.6.0: GitHub REST probe + OpenRouter chat fallback (guarded)
+    # ------------------------------------------------------------------
+
+    def _github_api(self, path: str) -> Optional[Dict[str, Any]]:
+        """GET the GitHub REST API; return parsed JSON or None on failure."""
+        if not self.github_token:
+            return None
+        try:
+            request = urllib.request.Request(
+                GITHUB_API_BASE + str(path),
+                headers={
+                    "Authorization": "Bearer " + self.github_token,
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "luqi-ai",
+                },
+                method="GET",
+            )
+            with urllib.request.urlopen(request,
+                                        timeout=GITHUB_API_TIMEOUT) as resp:
+                return json.loads(resp.read().decode("utf-8",
+                                                     errors="replace"))
+        except Exception:
+            return None
+
+    def _openrouter_chat(self, prompt: str) -> Optional[str]:
+        """Chat-completions POST to OpenRouter; return text or None."""
+        if not self.openrouter_key:
+            return None
+        try:
+            body = json.dumps({
+                "model": self.openrouter_model,
+                "messages": [{"role": "use
