@@ -1,154 +1,4 @@
-._save_state()
-        except Exception:
-            pass
-
-    def test_query(self, query: str) -> List[str]:
-        """Run the live strategy against a query and score the exchange."""
-        query = str(query or "").strip() or "status"
-        lines = ["[Evolution Engine] strategy test: %s" % query]
-        try:
-            with open(self.strategy_path, "r", encoding="utf-8",
-                      errors="replace") as handle:
-                code = handle.read()
-        except Exception as exc:
-            lines.append("  could not load strategy module: %s" % exc)
-            return lines
-        telemetry = ["generation %d" % self.generation(),
-                     "health %.2f" % self.health()]
-        try:
-            for entry in list(self.engine.memory.get("history", []))[-3:]:
-                if isinstance(entry, dict):
-                    telemetry.append(str(entry.get("text", ""))[:60])
-        except Exception:
-            pass
-        output: Any = None
-        latency = 0.0
-        error: Optional[str] = None
-        try:
-            namespace = self._restricted_namespace()
-            exec(compile(code, "<omega_strategy>", "exec"), namespace)
-            fn = namespace.get("execute_logic")
-            if not callable(fn):
-                error = "execute_logic missing from strategy module"
-            else:
-                output, latency, error = self._run_call_with_timeout(
-                    fn, query, telemetry)
-        except Exception as exc:
-            error = str(exc)
-        success = error is None and isinstance(output, str)
-        text_out = output if isinstance(output, str) else ""
-        score = self.score_result(success, text_out, latency or 0.0)
-        self._record_score(score)
-        if success:
-            lines.append("  output:")
-            for out_line in (text_out.splitlines() or [""]):
-                lines.append("    " + out_line)
-        else:
-            lines.append("  execution failed safely: %s" % error)
-        lines.append("  latency: %.3fs | score: %.2f | health: %.2f"
-                     % (latency or 0.0, score, self.health()))
-        self.engine._audit("Evolution", "evolve test %s" % query[:60],
-                           "Success" if success else "Failed")
-        return lines
-
-    # ------------------------------------------------------------------
-    # Status / lineage presentation
-    # ------------------------------------------------------------------
-
-    def status_lines(self) -> List[str]:
-        fitness = self.current_fitness()
-        fitness_txt = ("%.3f" % fitness) if fitness is not None \
-            else "(none recorded)"
-        return [
-            "Evolution Engine status:",
-            "  current generation: %d" % self.generation(),
-            "  current fitness: %s" % fitness_txt,
-            "  telemetry health: %.2f" % self.health(),
-            "  pillars integrity: %s" % self.pillars_status(),
-            "  lineage length: %d" % len(self.state.get("lineage", [])),
-            "  strategy module: %s" % self.strategy_path,
-            "  lineage log: %s" % self.state_path,
-        ]
-
-    def lineage_lines(self) -> List[str]:
-        lines = ["Evolution lineage (current generation %d):"
-                 % self.generation()]
-        lineage = self.state.get("lineage", [])
-        if not lineage:
-            lines.append("  (no adoptions yet - generation 1 bootstrap "
-                         "active)")
-            return lines
-        lines.append("  %-4s %-8s %-21s %-7s %s"
-                     % ("gen", "fitness", "adopted_at", "parent", "source"))
-        for entry in lineage:
-            fitness = entry.get("fitness")
-            fitness_txt = ("%.3f" % fitness) \
-                if isinstance(fitness, (int, float)) else "?"
-            marker = " (rollback)" if entry.get("action") == "rollback" \
-                else ""
-            lines.append("  %-4s %-8s %-21s %-7s %s" % (
-                str(entry.get("generation", "?")),
-                fitness_txt,
-                str(entry.get("adopted_at", "?"))[:21],
-                str(entry.get("parent", "?")),
-                str(entry.get("source", "?")) + marker,
-            ))
-        return lines
-
-
-# ---------------------------------------------------------------------------
-# v29.2.0: differentiation layer ('why' + 'integrations')
-# ---------------------------------------------------------------------------
-
-def why_lines() -> List[str]:
-    """The 6 LUQI AI differentiators, each with a one-line proof."""
-    return [
-        "Why LUQI AI - 6 differentiators:",
-        "1. Integration-first, not siloed.",
-        "   proof: connects GitHub, Excel/CSV, Serper, OpenAI, OpenRouter "
-        "- run 'integrations'.",
-        "2. Built to last, not a trend.",
-        "   proof: versioned releases, append-only audit trail, selftest "
-        "suite ships with every build.",
-        "3. Teaches while it works.",
-        "   proof: companion + finance literacy subsystems build YOUR "
-        "skill, not dependency.",
-        "4. 100 languages, African-first, yours.",
-        "   proof: 100 UI language packs (70 African) ship offline in one "
-        "file - local memory, your language, your data on your machine.",
-        "5. Free to run, cheap to scale.",
-        "   proof: pure stdlib Python, offline-first, no subscription - "
-        "engine free forever; BYOK calls cost cents ('cost').",
-        "6. Makes you more capable, not obsolete.",
-        "   proof: opportunity engine + reports you own and can export "
-        "anytime.",
-    ]
-
-
-def cost_lines() -> List[str]:
-    """v29.4.0 'cost' command: the pricing-disruption table.
-
-    Honest ranges only - no fabricated precision.
-    """
-    return [
-        "LUQI AI cost model - the pricing disruption:",
-        "  LUQI AI engine        : free forever - pure Python stdlib, "
-        "runs offline, no subscription, no lock-in.",
-        "  BYOK model calls      : pay-per-use cents - fractions of a "
-        "cent to a few cents per call depending on model.",
-        "  Big-AI subscriptions  : typically around $20/month per seat.",
-        "",
-        "World-best capabilities, African-friendly price.",
-    ]
-
-
-def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
-    """Live status manifest for the 8 connectors."""
-    rows = []
-    if engine._git_path() and engine.github_repo:
-        rows.append(("GitHub", "configured", "ready - run 'sync github'"))
-    elif engine._git_path():
-        rows.append(("GitHub", "available",
+ rows.append(("GitHub", "available",
                      "git found; set GITHUB_REPO in .env to enable"))
     else:
         rows.append(("GitHub", "missing",
@@ -264,6 +114,8 @@ CORE_SMOKE: List[Tuple[str, str]] = [
     ("ask selftest question", "cli"),
     # v29.8.0: URL ingest smoke - refused cleanly with no network target.
     ("ingest http://127.0.0.1:1/x", "cli"),
+    # v29.9.0: study hall smoke - keyless-safe with zero documents.
+    ("study selftest topic", "cli"),
 ]
 
 
@@ -454,11 +306,13 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("import <path>", "import a .csv or .xlsx dataset"),
         ("analyze", "summarize the loaded dataset"),
         ("query <text>", "filter dataset rows containing text"),
-        ("ingest <path|url>", "ingest a document or web page"),
+        ("ingest <path|url>", "ingest a document (.docx/.xlsx too) or web page"),
         ("docs", "list ingested documents (chunks/chars/date)"),
         ("forget doc <name>", "remove an ingested document"),
         ("ask <question> | ask save", "document Q&A; save exports last "
          "answer"),
+        ("study <topic>", "professor-grounded study of your documents"),
+        ("backup", "timestamped copy of omega_memory.json"),
         ("export", "write omega_export_<UTCts>.md snapshot"),
         ("report <topic>", "write omega_report_<slug>_<UTCts>.md"),
         ("sync github", "git add/commit/push sync (needs GITHUB_REPO)"),
@@ -651,4 +505,184 @@ def run_offline_quiz(engine: OmegaMasterEngine, subject: str,
                     out("Marked wrong - noted as a weak point to review.")
                     break
                 if cmd == "reveal":
-                    out
+                    out("Answer: %s" % answer)
+                else:
+                    out("Type 'right' or 'wrong' (or 'reveal' to see the "
+                        "answer again).")
+    out("Self-check complete: %d/%d correct." % (score, asked))
+    return score, asked, None
+
+
+def run_online_quiz(engine: OmegaMasterEngine, subject: str,
+                    messages: List[Dict[str, str]], input_fn: Any,
+                    out: Any) -> Optional[Tuple[int, int]]:
+    """Online 3-question graded exchange with the professor.
+
+    Returns (score, total) or None when the LLM is unreachable before
+    the first question (caller falls back to the offline self-check).
+    """
+    convo = list(messages)
+    score = 0
+    asked = 0
+    for i in range(3):
+        convo.append({"role": "user", "content": (
+            "Quiz time: ask me question %d of 3 about %s. Ask ONLY the "
+            "question, do not give the answer." % (i + 1, subject))})
+        convo = _cap_messages(convo)
+        question = engine._llm_messages(convo)
+        if not question:
+            return (score, asked) if asked else None
+        question = question.strip()
+        out("Professor asks: %s" % question)
+        convo.append({"role": "assistant", "content": question})
+        try:
+            answer = input_fn("[QUIZ] > ")
+        except EOFError:
+            out("")
+            return (score, asked) if asked else None
+        except KeyboardInterrupt:
+            out("")
+            return (score, asked) if asked else None
+        convo.append({"role": "user", "content": answer.strip()})
+        convo.append({"role": "user", "content": (
+            "Grade my answer strictly. Start your reply with RIGHT or "
+            "WRONG, then one short line of feedback.")})
+        convo = _cap_messages(convo)
+        grading = engine._llm_messages(convo)
+        asked += 1
+        if not grading:
+            out("(Grading unavailable - LLM call failed; this question "
+                "was not scored.)")
+            continue
+        grading = grading.strip()
+        convo.append({"role": "assistant", "content": grading})
+        out("Professor: %s" % grading)
+        if grading.upper().startswith("RIGHT"):
+            score += 1
+        else:
+            engine.add_weak_point(subject, question[:80])
+    out("Professor's grade: %d/%d." % (score, asked))
+    if score < asked:
+        out("Review the questions marked wrong before the next class.")
+    return score, asked
+
+
+def teach_session(engine: OmegaMasterEngine, subject: str,
+                  input_fn: Any = input, out: Any = print) -> None:
+    """Run one tutor session (sub-REPL) for `subject`.
+
+    ONLINE: multi-turn professor conversation with the full rolling
+    context (capped at the last 40 messages) through _llm_messages.
+    OFFLINE: one honest 'needs key' line, then the offline classroom
+    (built-in syllabus lessons + self-check quiz). NEVER fakes a
+    conversation and NEVER crashes; EOF/KeyboardInterrupt safe.
+    """
+    subject = normalize_subject(subject)
+    if not subject:
+        out("Usage: teach <subject>")
+        return
+    online = bool(engine.openai_key)
+    syllabus, evicted, _source = engine.get_syllabus(subject)
+    if evicted:
+        out("Note: learner profile full (%d subjects) - oldest subject "
+            "'%s' was evicted." % (MAX_LEARNING_SUBJECTS, evicted))
+    entry, _ = engine.learning_entry(subject)
+    out("=" * 60)
+    out("CLASSROOM: %s with Professor LUQI" % subject)
+    out("=" * 60)
+    messages: List[Dict[str, str]] = []
+    if online:
+        messages.append({"role": "system",
+                         "content": PROFESSOR_PROMPT % subject})
+    else:
+        out("Live professor conversation needs OPENAI_API_KEY - running "
+            "offline classroom.")
+    out("In class: end class | syllabus | quiz me | hint | progress | next")
+    for line in lesson_intro_lines(entry, subject):
+        _professor_out(out, line)
+
+    turns = 0
+    quiz_results: List[Tuple[int, int]] = []
+    leftover: Optional[str] = None
+    while True:
+        try:
+            if leftover is not None:
+                raw = leftover
+                leftover = None
+            else:
+                raw = input_fn("[CLASS:%s] > " % subject)
+        except EOFError:
+            out("")
+            out("(End of input - closing the classroom safely.)")
+            break
+        except KeyboardInterrupt:
+            out("")  # newline, then reprompt
+            continue
+        cmd = raw.strip().lower()
+        if not cmd:
+            continue
+
+        if cmd == "end class":
+            break
+        if cmd == "syllabus":
+            for line in syllabus_lines(engine, subject):
+                out(line)
+            continue
+        if cmd == "progress":
+            for line in progress_lines(engine):
+                out(line)
+            continue
+        if cmd == "quiz me":
+            graded: Optional[Tuple[int, int]] = None
+            if online:
+                graded = run_online_quiz(engine, subject, messages,
+                                         input_fn, out)
+                if graded is None:
+                    out("Live quiz unavailable - switching to offline "
+                        "self-check cards.")
+            if graded is None:
+                score, asked, leftover = run_offline_quiz(
+                    engine, subject, input_fn, out)
+                if asked:
+                    graded = (score, asked)
+            if graded is not None:
+                engine.record_quiz_score(subject, graded[0], graded[1])
+                out("Quiz score recorded: %d/%d." % graded)
+                quiz_results.append(graded)
+            continue
+        if cmd == "hint":
+            if online:
+                messages.append({"role": "user", "content": (
+                    "I am stuck. Re-explain the current point more "
+                    "simply and give me a hint, not the full answer.")})
+                messages = _cap_messages(messages)
+                reply = engine._llm_messages(messages)
+                if reply:
+                    reply = reply.strip()
+                    _professor_out(out, reply)
+                    messages.append({"role": "assistant",
+                                     "content": reply})
+                else:
+                    out("The professor is unreachable right now (LLM "
+                        "call failed) - no hint was generated.")
+                    for line in lesson_intro_lines(entry, subject):
+                        out(line)
+            else:
+                lesson_lines = lesson_intro_lines(entry, subject)
+                if len(lesson_lines) > 1:
+                    out("Hint: focus on this key point first - "
+                        + lesson_lines[1].strip(" -"))
+                else:
+                    out("Hint: re-read the lesson title and look up one "
+                        "example.")
+            continue
+        if cmd == "next":
+            if entry.get("current_lesson", 0) < len(syllabus) - 1:
+                entry["current_lesson"] = int(
+                    entry.get("current_lesson", 0)) + 1
+                for line in lesson_intro_lines(entry, subject):
+                    _professor_out(out, line)
+                if online:
+                    messages.append({"role": "user", "content": (
+                        "Let's move to the next lesson: %s."
+                  
