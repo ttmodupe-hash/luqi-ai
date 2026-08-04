@@ -1,144 +1,4 @@
-  # ------------------------------------------------------------------
-    # State (omega_evolution.json) - all I/O guarded
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _default_state() -> Dict[str, Any]:
-        return {
-            "generation": 1,
-            "current_fitness": None,
-            "health": 1.0,
-            "scores": [],
-            "lineage": [],
-            "archive_fitness": {},
-        }
-
-    def _load_state(self) -> Dict[str, Any]:
-        state = self._default_state()
-        try:
-            if not os.path.isfile(self.state_path):
-                return state
-            with open(self.state_path, "r", encoding="utf-8",
-                      errors="replace") as handle:
-                data = json.load(handle)
-            if not isinstance(data, dict):
-                return state
-            try:
-                state["generation"] = max(1, int(data.get("generation", 1)))
-            except Exception:
-                pass
-            fitness = data.get("current_fitness")
-            if isinstance(fitness, (int, float)):
-                state["current_fitness"] = float(fitness)
-            try:
-                state["health"] = max(0.0, min(1.0, float(
-                    data.get("health", 1.0))))
-            except Exception:
-                pass
-            if isinstance(data.get("scores"), list):
-                state["scores"] = [float(s) for s in data["scores"]
-                                   if isinstance(s, (int, float))][-10:]
-            if isinstance(data.get("lineage"), list):
-                state["lineage"] = [e for e in data["lineage"]
-                                    if isinstance(e, dict)]
-            if isinstance(data.get("archive_fitness"), dict):
-                state["archive_fitness"] = {
-                    str(k): v for k, v in data["archive_fitness"].items()
-                }
-        except Exception:
-            return self._default_state()
-        return state
-
-    def _save_state(self) -> bool:
-        try:
-            with open(self.state_path, "w", encoding="utf-8") as handle:
-                json.dump(self.state, handle, ensure_ascii=True, indent=2)
-            return True
-        except Exception:
-            return False
-
-    def generation(self) -> int:
-        try:
-            return max(1, int(self.state.get("generation", 1)))
-        except Exception:
-            return 1
-
-    def health(self) -> float:
-        try:
-            return max(0.0, min(1.0, float(self.state.get("health", 1.0))))
-        except Exception:
-            return 1.0
-
-    # ------------------------------------------------------------------
-    # Immutable pillars - REAL enforcement (sha256 tamper detection)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def canonical_pillars_json() -> str:
-        return json.dumps(CANONICAL_PILLARS, ensure_ascii=True,
-                          sort_keys=True)
-
-    @classmethod
-    def canonical_pillars_sha256(cls) -> str:
-        blob = cls.canonical_pillars_json().encode("utf-8")
-        return hashlib.sha256(blob).hexdigest()
-
-    def _write_canonical_pillars(self) -> bool:
-        try:
-            payload = {
-                "pillars": dict(CANONICAL_PILLARS),
-                "sha256": self.canonical_pillars_sha256(),
-            }
-            with open(self.pillars_path, "w", encoding="utf-8") as handle:
-                json.dump(payload, handle, ensure_ascii=True, indent=2)
-            return True
-        except Exception:
-            return False
-
-    def pillars_status(self) -> str:
-        """Silent integrity check: 'OK' or 'TAMPERED'. Never raises."""
-        try:
-            with open(self.pillars_path, "r", encoding="utf-8",
-                      errors="replace") as handle:
-                payload = json.load(handle)
-            if not isinstance(payload, dict):
-                return "TAMPERED"
-            if payload.get("sha256") != self.canonical_pillars_sha256():
-                return "TAMPERED"
-            if payload.get("pillars") != dict(CANONICAL_PILLARS):
-                return "TAMPERED"
-            return "OK"
-        except Exception:
-            return "TAMPERED"
-
-    def verify_pillars(self, announce: bool = True) -> str:
-        """Create the pillar file if missing; detect + restore tampering.
-
-        Returns 'CREATED' / 'OK' / 'RESTORED'. On tamper, prints the
-        spec-mandated message and logs to the audit trail.
-        """
-        try:
-            if not os.path.isfile(self.pillars_path):
-                self._write_canonical_pillars()
-                return "CREATED"
-            if self.pillars_status() == "OK":
-                return "OK"
-            self._write_canonical_pillars()
-            if announce:
-                print("PILLAR TAMPER DETECTED - restored canonical pillars")
-            try:
-                self.engine._audit("Evolution", "pillar tamper detected",
-                                   "Restored")
-            except Exception:
-                pass
-            return "RESTORED"
-        except Exception:
-            return "OK"
-
-    def pillars_lines(self) -> List[str]:
-        lines = ["Immutable pillars (integrity: %s):" % self.pillars_status()]
-        for key, value in CANONICAL_PILLARS.items():
-            lines.append("  %s: %s" % (key, value))
+lines.append("  %s: %s" % (key, value))
         lines.append("  sha256: %s" % self.canonical_pillars_sha256())
         return lines
 
@@ -679,4 +539,154 @@
             tail = scores[-10:]
             health = (sum(tail) / len(tail)) if tail else 1.0
             self.state["health"] = round(max(0.0, min(1.0, health)), 4)
-            self
+            self._save_state()
+        except Exception:
+            pass
+
+    def test_query(self, query: str) -> List[str]:
+        """Run the live strategy against a query and score the exchange."""
+        query = str(query or "").strip() or "status"
+        lines = ["[Evolution Engine] strategy test: %s" % query]
+        try:
+            with open(self.strategy_path, "r", encoding="utf-8",
+                      errors="replace") as handle:
+                code = handle.read()
+        except Exception as exc:
+            lines.append("  could not load strategy module: %s" % exc)
+            return lines
+        telemetry = ["generation %d" % self.generation(),
+                     "health %.2f" % self.health()]
+        try:
+            for entry in list(self.engine.memory.get("history", []))[-3:]:
+                if isinstance(entry, dict):
+                    telemetry.append(str(entry.get("text", ""))[:60])
+        except Exception:
+            pass
+        output: Any = None
+        latency = 0.0
+        error: Optional[str] = None
+        try:
+            namespace = self._restricted_namespace()
+            exec(compile(code, "<omega_strategy>", "exec"), namespace)
+            fn = namespace.get("execute_logic")
+            if not callable(fn):
+                error = "execute_logic missing from strategy module"
+            else:
+                output, latency, error = self._run_call_with_timeout(
+                    fn, query, telemetry)
+        except Exception as exc:
+            error = str(exc)
+        success = error is None and isinstance(output, str)
+        text_out = output if isinstance(output, str) else ""
+        score = self.score_result(success, text_out, latency or 0.0)
+        self._record_score(score)
+        if success:
+            lines.append("  output:")
+            for out_line in (text_out.splitlines() or [""]):
+                lines.append("    " + out_line)
+        else:
+            lines.append("  execution failed safely: %s" % error)
+        lines.append("  latency: %.3fs | score: %.2f | health: %.2f"
+                     % (latency or 0.0, score, self.health()))
+        self.engine._audit("Evolution", "evolve test %s" % query[:60],
+                           "Success" if success else "Failed")
+        return lines
+
+    # ------------------------------------------------------------------
+    # Status / lineage presentation
+    # ------------------------------------------------------------------
+
+    def status_lines(self) -> List[str]:
+        fitness = self.current_fitness()
+        fitness_txt = ("%.3f" % fitness) if fitness is not None \
+            else "(none recorded)"
+        return [
+            "Evolution Engine status:",
+            "  current generation: %d" % self.generation(),
+            "  current fitness: %s" % fitness_txt,
+            "  telemetry health: %.2f" % self.health(),
+            "  pillars integrity: %s" % self.pillars_status(),
+            "  lineage length: %d" % len(self.state.get("lineage", [])),
+            "  strategy module: %s" % self.strategy_path,
+            "  lineage log: %s" % self.state_path,
+        ]
+
+    def lineage_lines(self) -> List[str]:
+        lines = ["Evolution lineage (current generation %d):"
+                 % self.generation()]
+        lineage = self.state.get("lineage", [])
+        if not lineage:
+            lines.append("  (no adoptions yet - generation 1 bootstrap "
+                         "active)")
+            return lines
+        lines.append("  %-4s %-8s %-21s %-7s %s"
+                     % ("gen", "fitness", "adopted_at", "parent", "source"))
+        for entry in lineage:
+            fitness = entry.get("fitness")
+            fitness_txt = ("%.3f" % fitness) \
+                if isinstance(fitness, (int, float)) else "?"
+            marker = " (rollback)" if entry.get("action") == "rollback" \
+                else ""
+            lines.append("  %-4s %-8s %-21s %-7s %s" % (
+                str(entry.get("generation", "?")),
+                fitness_txt,
+                str(entry.get("adopted_at", "?"))[:21],
+                str(entry.get("parent", "?")),
+                str(entry.get("source", "?")) + marker,
+            ))
+        return lines
+
+
+# ---------------------------------------------------------------------------
+# v29.2.0: differentiation layer ('why' + 'integrations')
+# ---------------------------------------------------------------------------
+
+def why_lines() -> List[str]:
+    """The 6 LUQI AI differentiators, each with a one-line proof."""
+    return [
+        "Why LUQI AI - 6 differentiators:",
+        "1. Integration-first, not siloed.",
+        "   proof: connects GitHub, Excel/CSV, Serper, OpenAI, OpenRouter "
+        "- run 'integrations'.",
+        "2. Built to last, not a trend.",
+        "   proof: versioned releases, append-only audit trail, selftest "
+        "suite ships with every build.",
+        "3. Teaches while it works.",
+        "   proof: companion + finance literacy subsystems build YOUR "
+        "skill, not dependency.",
+        "4. 100 languages, African-first, yours.",
+        "   proof: 100 UI language packs (70 African) ship offline in one "
+        "file - local memory, your language, your data on your machine.",
+        "5. Free to run, cheap to scale.",
+        "   proof: pure stdlib Python, offline-first, no subscription - "
+        "engine free forever; BYOK calls cost cents ('cost').",
+        "6. Makes you more capable, not obsolete.",
+        "   proof: opportunity engine + reports you own and can export "
+        "anytime.",
+    ]
+
+
+def cost_lines() -> List[str]:
+    """v29.4.0 'cost' command: the pricing-disruption table.
+
+    Honest ranges only - no fabricated precision.
+    """
+    return [
+        "LUQI AI cost model - the pricing disruption:",
+        "  LUQI AI engine        : free forever - pure Python stdlib, "
+        "runs offline, no subscription, no lock-in.",
+        "  BYOK model calls      : pay-per-use cents - fractions of a "
+        "cent to a few cents per call depending on model.",
+        "  Big-AI subscriptions  : typically around $20/month per seat.",
+        "",
+        "World-best capabilities, African-friendly price.",
+    ]
+
+
+def integrations_lines(engine: OmegaMasterEngine) -> List[str]:
+    """Live status manifest for the 8 connectors."""
+    rows = []
+    if engine._git_path() and engine.github_repo:
+        rows.append(("GitHub", "configured", "ready - run 'sync github'"))
+    elif engine._git_path():
+       
