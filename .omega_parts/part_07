@@ -769,4 +769,4 @@ def print_help(engine: OmegaMasterEngine) -> None:
         ("ingest <path|url>", "ingest a document (.docx/.xlsx too) or web page"),
         ("docs", "list ingested documents (chunks/chars/date)"),
         ("forget doc <name>", "remove an ingested document"),
-        ("ask <question> | ask save
+        ("ask <question> | ask save"
