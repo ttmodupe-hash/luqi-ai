@@ -1,75 +1,4 @@
-
-                  and len(engine.dataset["rows"]) == 5
-                  and len(engine.dataset["headers"]) == 3)
-            checks.append(("import: generated CSV (3 cols x 5 rows)", ok))
-            analysis = engine.analyze_dataset()
-            ok = (any("Rows: 5" in line for line in analysis)
-                  and any(line.startswith("  amount:") for line in analysis)
-                  and any("min=10" in line and "max=50" in line
-                          and "mean=30.00" in line for line in analysis))
-            checks.append(("analyze: row count + numeric min/max/mean", ok))
-            results = engine.query_dataset("north")
-            hits = sum(1 for line in results
-                       if line.strip().startswith("row "))
-            checks.append(("query: substring filter finds 3 'north' rows",
-                           hits == 3))
-            note = engine.dataset_note()
-            checks.append(("dataset note: tax/mine can reference dataset",
-                           bool(note) and "5 rows" in note))
-    except Exception as exc:
-        checks.append(("dataset: CSV import/analyze/query (exception: %s)"
-                       % exc, False))
-
-    # Module C: generated real .xlsx import (built via zipfile above).
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            xlsx_path = os.path.join(tmpdir, "people.xlsx")
-            _selftest_build_xlsx(xlsx_path)
-            ok, _msg = engine.import_dataset(xlsx_path)
-            headers = engine.dataset["headers"] if engine.dataset else []
-            rows = engine.dataset["rows"] if engine.dataset else []
-            ok = (ok and headers == ["name", "score"] and len(rows) == 3
-                  and rows[0] == ["alice", "42"]
-                  and rows[1] == ["bob", "7"]
-                  and rows[2] == ["carol", "5"])
-            checks.append(("import: generated XLSX (shared/inline/number)",
-                           ok))
-    except Exception as exc:
-        checks.append(("dataset: XLSX import (exception: %s)" % exc, False))
-
-    # v29.7.0: document ingest (.txt first; deterministic from a clean list).
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            engine.memory["documents"] = []
-            txt_path = os.path.join(tmpdir, "notes.txt")
-            content = ("Solar panels convert sunlight into electricity "
-                       "for homes and farms.\n\n"
-                       "Wind turbines harvest moving air on ridges "
-                       "and coastlines.\n\n"
-                       "Battery storage keeps surplus energy for "
-                       "calm nights.\n")
-            with open(txt_path, "w", encoding="ascii") as handle:
-                handle.write(content)
-            ok, msg = engine.import_document(txt_path, save=False)
-            docs = engine.memory.get("documents") or []
-            ok = (ok and len(docs) == 1
-                  and docs[0].get("name") == "notes.txt"
-                  and docs[0].get("path") == os.path.abspath(txt_path)
-                  and docs[0].get("chars") == len(content)
-                  and len(docs[0].get("chunks") or []) == 1
-                  and bool(docs[0].get("ts"))
-                  and "ingested: notes.txt (1 chunks, " in msg)
-            checks.append(("docs: ingest .txt -> stored entry + chunks", ok))
-            md_path = os.path.join(tmpdir, "notes.md")
-            with open(md_path, "w", encoding="ascii") as handle:
-                handle.write("# Meeting Notes\n\n"
-                             "Discuss roadmap and hiring plans.\n")
-            csv_path = os.path.join(tmpdir, "data.csv")
-            with open(csv_path, "w", encoding="ascii", newline="") as handle:
-                handle.write("city,population\nparis,2140000\nlyon,513000\n")
-            ok_md, _m1 = engine.import_document(md_path, save=False)
-            ok_csv, _m2 = engine.import_document(csv_path, save=False)
-            docs = engine.memory.get("documents") or []
+]
             csv_docs = [d for d in docs
                         if isinstance(d, dict)
                         and d.get("name") == "data.csv"]
@@ -216,6 +145,130 @@
     except Exception as exc:
         checks.append(("voice scope: (exception: %s)" % exc, False))
 
+    # v29.9.0: office ingestion (.docx/.xlsx via stdlib zip+xml).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docx_path = os.path.join(tmpdir, "lesson.docx")
+            with zipfile.ZipFile(docx_path, "w") as archive:
+                archive.writestr(
+                    "word/document.xml",
+                    "<w:document xmlns:w=\"http://schemas.openxmlformats."
+                    "org/wordprocessingml/2006/main\"><w:body>"
+                    "<w:p><w:r><w:t>Photosynthesis makes sugar."
+                    "</w:t></w:r></w:p>"
+                    "<w:p><w:r><w:t>Chlorophyll catches light."
+                    "</w:t></w:r></w:p>"
+                    "</w:body></w:document>")
+            ok_docx, _m1 = engine.import_document(docx_path, save=False)
+            docx_docs = engine.memory.get("documents") or []
+            docx_chunks = docx_docs[-1].get("chunks", []) if docx_docs else []
+            checks.append(("office: ingest .docx extracts paragraphs",
+                           ok_docx and any(
+                               "Photosynthesis makes sugar." in c
+                               and "Chlorophyll catches light." in c
+                               for c in docx_chunks)))
+            bad_path = os.path.join(tmpdir, "bad.docx")
+            with open(bad_path, "wb") as handle:
+                handle.write(b"not a zip")
+            ok_bad, _m2 = engine.import_document(bad_path, save=False)
+            checks.append(("office: corrupt .docx fails safely",
+                           not ok_bad))
+            xlsx_path = os.path.join(tmpdir, "table.xlsx")
+            with zipfile.ZipFile(xlsx_path, "w") as archive:
+                archive.writestr(
+                    "xl/sharedStrings.xml",
+                    "<sst><si><t>city</t></si><si><t>province</t></si>"
+                    "<si><t>joburg</t></si><si><t>gauteng</t></si></sst>")
+                archive.writestr(
+                    "xl/worksheets/sheet1.xml",
+                    "<worksheet><sheetData>"
+                    "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c>"
+                    "<c r=\"B1\" t=\"s\"><v>1</v></c></row>"
+                    "<row r=\"2\"><c r=\"A2\" t=\"s\"><v>2</v></c>"
+                    "<c r=\"B2\" t=\"s\"><v>3</v></c></row>"
+                    "</sheetData></worksheet>")
+            ok_xlsx, _m3 = engine.import_document(xlsx_path, save=False)
+            xlsx_docs = engine.memory.get("documents") or []
+            xlsx_chunks = xlsx_docs[-1].get("chunks", []) if xlsx_docs else []
+            checks.append(("office: ingest .xlsx renders rows",
+                           ok_xlsx and any("joburg" in c
+                                           and "gauteng" in c
+                                           for c in xlsx_chunks)))
+    except Exception as exc:
+        checks.append(("office: (exception: %s)" % exc, False))
+
+    # v29.9.0: memory backup writes a valid timestamped copy.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            old_path = engine.memory_path
+            os.chdir(tmpdir)
+            try:
+                engine.memory_path = os.path.join(tmpdir, "mem.json")
+                save_memory(engine.memory_path, engine.memory)
+                handled = handle_command(engine, "backup")
+                made = [f for f in os.listdir(tmpdir)
+                        if f.startswith("omega_memory_backup_")]
+                valid = False
+                if made:
+                    with open(os.path.join(tmpdir, made[0])) as handle:
+                        json.load(handle)
+                    valid = True
+                checks.append(("backup: writes timestamped valid copy",
+                               handled is True and len(made) == 1
+                               and valid))
+            finally:
+                os.chdir(old_cwd)
+                engine.memory_path = old_path
+    except Exception as exc:
+        checks.append(("backup: (exception: %s)" % exc, False))
+
+    # v29.9.0: study mode (offline, deterministic, isolated cwd).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                fresh = OmegaMasterEngine()
+                seen: List[str] = []
+                study_session(fresh, "solar",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                checks.append(("study: no documents -> ingest hint",
+                               any("ingest" in line.lower()
+                                   for line in seen)))
+                learner = OmegaMasterEngine()
+                doc_path = os.path.join(tmpdir, "notes.txt")
+                with open(doc_path, "w", encoding="ascii") as handle:
+                    handle.write("mitochondria produce energy in cells")
+                learner.import_document(doc_path, save=False)
+                seen = []
+                study_session(learner, "",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                usage_ok = any("Usage: study" in line for line in seen)
+                seen = []
+                study_session(learner, "zzqzxv",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                nomatch_ok = any("No passages match" in line
+                                 for line in seen)
+                seen = []
+                study_session(learner, "mitochondria",
+                              input_fn=iter(["end study"]).__next__,
+                              out=seen.append)
+                banner_ok = any("STUDY: mitochondria" in line
+                                for line in seen)
+                cards_ok = any("Offline study cards" in line
+                               for line in seen)
+                checks.append(("study: usage/no-match/banner/cards",
+                               usage_ok and nomatch_ok and banner_ok
+                               and cards_ok))
+            finally:
+                os.chdir(old_cwd)
+    except Exception as exc:
+        checks.append(("study: (exception: %s)" % exc, False))
+
     # v29.7.0: documents schema survives save/load; corrupt entries skipped.
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -351,12 +404,12 @@
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.8.0 + 15 subsystems + session/facts",
-                       bool(keep) and "29.8.0" in out
+        checks.append(("version: shows 29.9.0 + 15 subsystems + session/facts",
+                       bool(keep) and "29.9.0" in out
                        and "Subsystems: 15" in out
                        and "Session: #" in out and "Facts:" in out))
-        checks.append(("version: ENGINE_VERSION is 29.8.0",
-                       ENGINE_VERSION == "29.8.0"))
+        checks.append(("version: ENGINE_VERSION is 29.9.0",
+                       ENGINE_VERSION == "29.9.0"))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
 
@@ -572,29 +625,4 @@
                        ok and evo.generation() < gen_now
                        and any("restored generation" in line
                                for line in out_lines)))
-    except Exception as exc:
-        checks.append(("evolve: rollback (exception: %s)" % exc, False))
-
-    # (h) Pillar tamper: corrupt omega_pillars.json -> detected + restored.
-    try:
-        with open(PILLARS_FILE, "w", encoding="utf-8") as handle:
-            handle.write('{"pillars": {"p1_build_sync": "HACKED"}, '
-                         '"sha256": "deadbeef"}')
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            status = evo.verify_pillars(announce=True)
-        checks.append(("evolve: pillar tamper detected + restored",
-                       status == "RESTORED"
-                       and evo.pillars_status() == "OK"
-                       and "PILLAR TAMPER DETECTED" in buf.getvalue()))
-    except Exception as exc:
-        checks.append(("evolve: pillar tamper (exception: %s)" % exc, False))
-
-    # (j) 'why' + 'integrations' CLI output present.
-    try:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
-            keep1 = handle_command(engine, "why")
-            keep2 = handle_command(engine, "integrations")
-        out = buf.getvalue()
-        checks.append(("why: 6 dif
+   
