@@ -1,34 +1,4 @@
-ee. 'exit' na woafi.",
-        "goodbye": "Nante yie.",
-        "help_header": "Nhyehyee:",
-        "unknown_command": "Nhyehyee a wonnim - wokoo master core hwehwee.",
-        "remembered": "Nokware #%d wokae: %s",
-        "forgot": "Nokware #%d wo werew firi: %s",
-    },
-    "ee": {
-        "name": "Ewe",
-        "region": "african",
-        "greeting": "Woezo! Nlo 'help' be ye kpom sededeawo. 'exit' be ye do go.",
-        "goodbye": "Hede nyuie.",
-        "help_header": "Sededeawo:",
-        "unknown_command": "Sedede si wonyam - wodo de master core kpoo.",
-        "remembered": "Nyatefe #%d woda: %s",
-        "forgot": "Nyatefe #%d wo nlo: %s",
-    },
-    "kr": {
-        "name": "Kanuri",
-        "region": "african",
-        "greeting": "Woye! 'help' ro komand, 'exit' ro fero.",
-        "goodbye": "Fero yenaram.",
-        "help_header": "Komand:",
-        "unknown_command": "Komand ngawo-ba - master core ro cidin.",
-        "remembered": "Fact #%d sawa: %s",
-        "forgot": "Fact #%d sawa-ba: %s",
-    },
-    "bm": {
-        "name": "Bambara",
-        "region": "african",
-        "greeting": "I ni ce! Sebena 'help' ka kumafolow ye. 'exit' ka bolo.",
+w ye. 'exit' ka bolo.",
         "goodbye": "K'an ben.",
         "help_header": "Kumafolow:",
         "unknown_command": "Kumafolo min don na - o ci master core ka o ye.",
@@ -764,4 +734,65 @@ REPORT_NEXT_ACTIONS: Dict[str, List[str]] = {
         "Confirm filing deadlines for your region with a practitioner.",
     ],
     "Omega Security Gatekeeper": [
-        "Rotate any API key that has
+        "Rotate any API key that has been shared outside this machine.",
+        "Run 'keys' to verify the masked key status report.",
+    ],
+    "Omega Deep Research": [
+        "Set SERPER_API_KEY in .env and re-run for live web sources.",
+        "Save key sources as facts with 'remember <fact>'.",
+    ],
+    "Omega Companion/Tutor": [
+        "Do the one small practice task from the scaffold today.",
+        "Teach the topic back in your own words to test recall.",
+    ],
+    "Omega Opportunity Engine": [
+        "Pick one revenue model and design the 7-day validation test.",
+        "Interview 3 potential customers before spending money.",
+    ],
+    "Omega Finance Literacy": [
+        "Write a 50/30/20 budget for this month.",
+        "Check one advisor or platform against your regulator's register.",
+    ],
+    "Omega Self-Improvement": [
+        "Review the last 10 audit entries with 'log'.",
+        "Pick one recurring issue and define a concrete fix.",
+    ],
+    "Omega Rights & Travel": [
+        "Save officer or supplier details as a fact with 'remember <fact>'.",
+        "Ask with a country or city name for more tailored guidance.",
+    ],
+}
+
+RIGHTS_DISCLAIMER = ("General information only - not legal advice. Laws "
+                     "vary by place and change; confirm with a local "
+                     "professional or official source.")
+
+RIGHTS_GUIDES: Dict[str, List[str]] = {
+    "police_sa": [
+        "Stay calm, keep your hands visible, and be polite.",
+        "You may ask the officer for their name, rank, and station.",
+        "Ask clearly: 'Am I under arrest, or am I free to go?'",
+        "Beyond identifying yourself, you may choose to remain silent.",
+        "You have the right to a lawyer - ask for one before answering.",
+        "Never resist physically or run. Note names, numbers, and times,",
+        "and report misconduct to IPID afterwards.",
+        "If arrested: you must be told why, you may stay silent, and you",
+        "may apply for bail.",
+    ],
+    "consumer_sa": [
+        "Defective goods: within 6 months you may return for repair,",
+        "replacement, or refund (Consumer Protection Act).",
+        "Direct marketing: you have a 5-business-day cooling-off to cancel.",
+        "Online orders: a 7-day cooling-off generally applies (ECTA).",
+        "Displayed prices must be honored - no surprise charges at till.",
+        "Always keep your proof of purchase.",
+        "Complain to the supplier in writing first; then escalate to the",
+        "Consumer Goods and Services Ombud or the National Consumer",
+        "Commission.",
+    ],
+    "driving_sa": [
+        "Carry your driver license and show it on request at a stop.",
+        "You may ask the officer's details and the reason for the stop.",
+        "Never pay cash 'on the spot' - ask for a written fine notice.",
+        "Arrest for unpaid fines needs a warrant - ask to see it.",
+        "Check f
