@@ -1,157 +1,4 @@
-.memory.get("documents") or []
-        hits = search_documents("solar panels", docs)
-        ok = (bool(hits) and hits[0][0] > 0
-              and hits[0][1] == "notes.txt"
-              and "solar" in hits[0][3].lower())
-        checks.append(("docs: search ranks solar chunk first", ok))
-        checks.append(("docs: zero-overlap query -> empty",
-                       search_documents("zzqzxv", docs) == []))
-    except Exception as exc:
-        checks.append(("docs: retrieval (exception: %s)" % exc, False))
-
-    # v29.7.0: eviction via temporarily reassigned module caps.
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            extra_path = os.path.join(tmpdir, "extra.txt")
-            with open(extra_path, "w", encoding="ascii") as handle:
-                handle.write("Extra document about quantum computing.\n")
-            saved_docs = MAX_DOCUMENTS
-            saved_chunks = MAX_TOTAL_CHUNKS
-            try:
-                globals()["MAX_DOCUMENTS"] = 2
-                ok, _msg = engine.import_document(extra_path, save=False)
-                docs = engine.memory.get("documents") or []
-                names = [d.get("name") for d in docs if isinstance(d, dict)]
-                evict_ok = (ok and len(docs) == 2
-                            and "notes.md" not in names
-                            and names == ["notes.txt", "extra.txt"])
-                # Chunk budget: trim oldest docs until total fits.
-                globals()["MAX_TOTAL_CHUNKS"] = 1
-                more_path = os.path.join(tmpdir, "more.txt")
-                with open(more_path, "w", encoding="ascii") as handle:
-                    handle.write("Another small document about tides.\n")
-                ok2, _msg = engine.import_document(more_path, save=False)
-                docs = engine.memory.get("documents") or []
-                names = [d.get("name") for d in docs if isinstance(d, dict)]
-                total = sum(len(d.get("chunks") or [])
-                            for d in docs if isinstance(d, dict))
-                trim_ok = ok2 and total <= 1 and names == ["more.txt"]
-            finally:
-                globals()["MAX_DOCUMENTS"] = saved_docs
-                globals()["MAX_TOTAL_CHUNKS"] = saved_chunks
-            checks.append(("docs: eviction drops oldest beyond cap",
-                           evict_ok))
-            checks.append(("docs: chunk budget trims oldest first",
-                           trim_ok))
-    except Exception as exc:
-        checks.append(("docs: eviction (exception: %s)" % exc, False))
-
-    # v29.8.0: IDF ranking - rare beats repeated-common (log(1+tf) scoring).
-    try:
-        idf_docs = [
-            {"name": "common.txt", "chunks": ["panel panel panel panel",
-                                              "panel and panel again",
-                                              "still more panel here"]},
-            {"name": "rare.txt", "chunks": ["quantum entanglement panel"]},
-        ]
-        hits = search_documents("quantum panel", idf_docs)
-        idf = _idf_scores(idf_docs)
-        checks.append(("idf: rare term outranks repeated common term",
-                       bool(hits) and hits[0][1] == "rare.txt"))
-        checks.append(("idf: float scores, zero-overlap -> []",
-                       bool(hits) and isinstance(hits[0][0], float)
-                       and hits[0][0] > 0
-                       and search_documents("zzqzxv", idf_docs) == []))
-        checks.append(("idf: _idf_scores empty -> {}, df up => idf down",
-                       _idf_scores([]) == {}
-                       and idf.get("quantum", 0.0) > idf.get("panel", 1.0)))
-    except Exception as exc:
-        checks.append(("idf: (exception: %s)" % exc, False))
-
-    # v29.8.0: HTML-to-text extraction (pure, offline).
-    try:
-        sample = ("<html><head><style>body{color:red}</style></head>"
-                  "<body><h1>Title</h1><p>Tom &amp; Jerry</p>"
-                  "<script>var q = 1;</script><p>Second para</p>"
-                  "</body></html>")
-        text = _html_to_text(sample)
-        checks.append(("web: html_to_text strips script/style, unescapes",
-                       "Tom & Jerry" in text and "Second para" in text
-                       and "var q" not in text
-                       and "color:red" not in text
-                       and _html_to_text("") == ""))
-    except Exception as exc:
-        checks.append(("web: html_to_text (exception: %s)" % exc, False))
-
-    # v29.8.0: import_url failure paths (offline-safe, no external net).
-    try:
-        ok_s, msg_s = engine.import_url("ftp://example.com/x")
-        ok_r, msg_r = engine.import_url("http://127.0.0.1:1/x")
-        checks.append(("web: import_url refuses bad scheme",
-                       (not ok_s) and "unsupported scheme" in msg_s))
-        checks.append(("web: import_url fetch failure is graceful",
-                       (not ok_r) and "fetch failed" in msg_r))
-    except Exception as exc:
-        checks.append(("web: import_url (exception: %s)" % exc, False))
-
-    # v29.8.0: voice scope memory + routing helpers.
-    try:
-        checks.append(("voice scope: fresh_memory defaults to prof",
-                       fresh_memory().get("voice_scope") == "prof"))
-        engine.memory["voice_enabled"] = True
-        try:
-            scoped = _voice_out(engine, lambda _line: None)
-            seen: List[str] = []
-            _professor_out(seen.append, "prof line")
-            checks.append(("voice scope: .speak exposed; fallback prints",
-                           callable(getattr(scoped, "speak", None))
-                           and seen == ["prof line"]))
-        finally:
-            engine.memory["voice_enabled"] = False
-    except Exception as exc:
-        checks.append(("voice scope: (exception: %s)" % exc, False))
-
-    # v29.9.0: office ingestion (.docx/.xlsx via stdlib zip+xml).
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            docx_path = os.path.join(tmpdir, "lesson.docx")
-            with zipfile.ZipFile(docx_path, "w") as archive:
-                archive.writestr(
-                    "word/document.xml",
-                    "<w:document xmlns:w=\"http://schemas.openxmlformats."
-                    "org/wordprocessingml/2006/main\"><w:body>"
-                    "<w:p><w:r><w:t>Photosynthesis makes sugar."
-                    "</w:t></w:r></w:p>"
-                    "<w:p><w:r><w:t>Chlorophyll catches light."
-                    "</w:t></w:r></w:p>"
-                    "</w:body></w:document>")
-            ok_docx, _m1 = engine.import_document(docx_path, save=False)
-            docx_docs = engine.memory.get("documents") or []
-            docx_chunks = docx_docs[-1].get("chunks", []) if docx_docs else []
-            checks.append(("office: ingest .docx extracts paragraphs",
-                           ok_docx and any(
-                               "Photosynthesis makes sugar." in c
-                               and "Chlorophyll catches light." in c
-                               for c in docx_chunks)))
-            bad_path = os.path.join(tmpdir, "bad.docx")
-            with open(bad_path, "wb") as handle:
-                handle.write(b"not a zip")
-            ok_bad, _m2 = engine.import_document(bad_path, save=False)
-            checks.append(("office: corrupt .docx fails safely",
-                           not ok_bad))
-            xlsx_path = os.path.join(tmpdir, "table.xlsx")
-            with zipfile.ZipFile(xlsx_path, "w") as archive:
-                archive.writestr(
-                    "xl/sharedStrings.xml",
-                    "<sst><si><t>city</t></si><si><t>province</t></si>"
-                    "<si><t>joburg</t></si><si><t>gauteng</t></si></sst>")
-                archive.writestr(
-                    "xl/worksheets/sheet1.xml",
-                    "<worksheet><sheetData>"
-                    "<row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c>"
-                    "<c r=\"B1\" t=\"s\"><v>1</v></c></row>"
-                    "<row r=\"2\"><c r=\"A2\" t=\"s\"><v>2</v></c>"
-                    "<c r=\"B2\" t=\"s\"><v>3</v></c></row>"
+B2\" t=\"s\"><v>3</v></c></row>"
                     "</sheetData></worksheet>")
             ok_xlsx, _m3 = engine.import_document(xlsx_path, save=False)
             xlsx_docs = engine.memory.get("documents") or []
@@ -471,12 +318,12 @@
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.10.0 + 16 subsystems + session/facts",
-                       bool(keep) and "29.10.0" in out
+        checks.append(("version: shows 29.11.0 + 16 subsystems + session/facts",
+                       bool(keep) and "29.11.0" in out
                        and "Subsystems: 16" in out
                        and "Session: #" in out and "Facts:" in out))
-        checks.append(("version: ENGINE_VERSION is 29.10.0",
-                       ENGINE_VERSION == "29.10.0"))
+        checks.append(("version: ENGINE_VERSION is 29.11.0",
+                       ENGINE_VERSION == "29.11.0"))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
 
@@ -655,4 +502,205 @@
         low = evo.fitness(1.0, 0.1, 0.0)    # 0.8
         high = evo.fitness(1.0, 0.1, 1.0)   # 1.0
         checks.append(("evolve: fitness gate rejects lower fitness",
-                       low < high an
+                       low < high and not (low >= high)
+                       and abs(high - 1.0) < 1e-9))
+    except Exception as exc:
+        checks.append(("evolve: fitness gate (exception: %s)" % exc, False))
+
+    # Telemetry scoring is clamped to [0.0, 1.0] (negative-score bug fix).
+    try:
+        s_mid = evo.score_result(True, "no tag here", 3.0)   # 1-.3-.2 = 0.5
+        s_floor = evo.score_result(False, "", 9.0)           # clamps to 0.0
+        checks.append(("evolve: telemetry score clamped to [0,1]",
+                       abs(s_mid - 0.5) < 1e-9 and s_floor == 0.0))
+    except Exception as exc:
+        checks.append(("evolve: score clamp (exception: %s)" % exc, False))
+
+    # (k) Offline 'evolve run' completes with no keys and no network.
+    try:
+        engine.openrouter_key = ""
+        gen_before = evo.generation()
+        ok, out_lines = evo.run_cycle(online=False)
+        adopted = ok and evo.generation() > gen_before
+        files_ok = (os.path.isfile(STRATEGY_FILE)
+                    and os.path.isfile(EVOLUTION_FILE)
+                    and os.path.isfile(PILLARS_FILE))
+        joined = "\n".join(out_lines)
+        checks.append(("evolve: offline run adopts (no keys/no network)",
+                       adopted and files_ok and "ADOPTED" in joined))
+    except Exception as exc:
+        checks.append(("evolve: offline run (exception: %s)" % exc, False))
+
+    # (i) Rollback restores an archived (prior) generation.
+    try:
+        gen_now = evo.generation()
+        ok, out_lines = evo.rollback()
+        checks.append(("evolve: rollback restores archived generation",
+                       ok and evo.generation() < gen_now
+                       and any("restored generation" in line
+                               for line in out_lines)))
+    except Exception as exc:
+        checks.append(("evolve: rollback (exception: %s)" % exc, False))
+
+    # (h) Pillar tamper: corrupt omega_pillars.json -> detected + restored.
+    try:
+        with open(PILLARS_FILE, "w", encoding="utf-8") as handle:
+            handle.write('{"pillars": {"p1_build_sync": "HACKED"}, '
+                         '"sha256": "deadbeef"}')
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            status = evo.verify_pillars(announce=True)
+        checks.append(("evolve: pillar tamper detected + restored",
+                       status == "RESTORED"
+                       and evo.pillars_status() == "OK"
+                       and "PILLAR TAMPER DETECTED" in buf.getvalue()))
+    except Exception as exc:
+        checks.append(("evolve: pillar tamper (exception: %s)" % exc, False))
+
+    # (j) 'why' + 'integrations' CLI output present.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep1 = handle_command(engine, "why")
+            keep2 = handle_command(engine, "integrations")
+        out = buf.getvalue()
+        checks.append(("why: 6 differentiators printed",
+                       bool(keep1) and out.count("proof:") >= 6))
+        checks.append(("integrations: 8-connector manifest printed",
+                       bool(keep2) and all(name in out for name in (
+                           "GitHub", "Excel/CSV", "Serper", "OpenAI",
+                           "OpenRouter", "claude_engine",
+                           "voice tts", "image gen"))))
+    except Exception as exc:
+        checks.append(("why/integrations: (exception: %s)" % exc, False))
+
+    # 'evolve test <query>' executes the live strategy and scores telemetry.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "evolve test check mining health")
+        out = buf.getvalue()
+        checks.append(("evolve test: strategy executes + telemetry scored",
+                       bool(keep) and "<omega_analysis>" in out
+                       and "health:" in out))
+    except Exception as exc:
+        checks.append(("evolve test: (exception: %s)" % exc, False))
+
+    # 'evolve' status + lineage + pillars commands render without crashing.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            handle_command(engine, "evolve")
+            handle_command(engine, "evolve lineage")
+            handle_command(engine, "evolve pillars")
+        out = buf.getvalue()
+        checks.append(("evolve: status/lineage/pillars render",
+                       "current generation:" in out
+                       and "pillars integrity:" in out
+                       and "p5_security" in out))
+    except Exception as exc:
+        checks.append(("evolve: status render (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.3.0: process-isolated sandbox, bridge, 15 packs, launch
+    # ------------------------------------------------------------------
+
+    # (a) Infinite-loop candidate -> rejected via timeout; the child process
+    # is terminated and NO live child processes remain afterwards.
+    infinite_loop = (
+        "def execute_logic(query, telemetry):\n"
+        "    while True:\n"
+        "        pass\n"
+    )
+    try:
+        ok, reason, _pr, _lat = evo.exec_contract_gate(infinite_loop)
+        checks.append(("evolve: process isolation rejects infinite loop",
+                       not ok and "timeout" in reason.lower()))
+    except Exception as exc:
+        checks.append(("evolve: infinite loop (exception: %s)" % exc, False))
+    try:
+        checks.append(("evolve: no live child processes after timeout kill",
+                       sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: zombie check (exception: %s)" % exc, False))
+
+    # (b) Memory-bomb candidate -> rejected. POSIX: MemoryError via the
+    # 256 MB RLIMIT_AS ceiling inside the child. Non-POSIX: documented skip
+    # (gate 2 is timeout-only there - see the REVIEW note in _sandbox_worker).
+    memory_bomb = (
+        "def execute_logic(query, telemetry):\n"
+        "    data = list(range(10**8))\n"
+        "    return '<omega_analysis>' + str(len(data)) + '</omega_analysis>'\n"
+    )
+    try:
+        import resource as _resource_probe  # noqa: F401
+        _posix_ceiling = True
+    except Exception:
+        _posix_ceiling = False
+    if _posix_ceiling:
+        try:
+            ok, reason, _pr, _lat = evo.exec_contract_gate(memory_bomb)
+            checks.append(("evolve: POSIX memory bomb rejected (256MB cap)",
+                           not ok and ("memory" in reason.lower()
+                                       or "timeout" in reason.lower()
+                                       or "exit" in reason.lower())))
+            checks.append(("evolve: no live children after memory bomb",
+                           sandbox_live_children() == 0))
+        except Exception as exc:
+            checks.append(("evolve: memory bomb (exception: %s)" % exc,
+                           False))
+    else:
+        checks.append(("evolve: memory ceiling skip (non-POSIX, documented)",
+                       True))
+
+    # (c) Safe candidate still accepted end-to-end through the process-
+    # isolated gate (all 3 contract tests pass inside the child).
+    try:
+        ok, reason, pass_rate, lat = evo.exec_contract_gate(EVO_TEMPLATES[1])
+        checks.append(("evolve: safe candidate accepted end-to-end (child)",
+                       ok and pass_rate == 1.0 and lat >= 0.0
+                       and sandbox_live_children() == 0))
+    except Exception as exc:
+        checks.append(("evolve: safe end-to-end (exception: %s)" % exc,
+                       False))
+
+    # Bridge-absent safety: claude_engine is NOT installed in this sandbox;
+    # everything must work without it (the natural test condition).
+    try:
+        checks.append(("bridge: guarded import flag is a plain bool",
+                       isinstance(BRIDGE_AVAILABLE, bool)))
+    except Exception as exc:
+        checks.append(("bridge: flag (exception: %s)" % exc, False))
+    try:
+        if BRIDGE_AVAILABLE:
+            # Installed elsewhere: lazy singleton must still be safe.
+            bridge_ok = True
+        else:
+            bridge_ok = engine._get_bridge() is None
+        checks.append(("bridge: lazy singleton safe when module absent",
+                       bridge_ok))
+    except Exception as exc:
+        checks.append(("bridge: lazy singleton (exception: %s)" % exc, False))
+    try:
+        offline_engine._bridge_attempted = False
+        offline_engine._bridge_engine = None
+        checks.append(("bridge: _llm falls back cleanly (offline -> None)",
+                       offline_engine._llm("bridge safety probe") is None))
+    except Exception as exc:
+        checks.append(("bridge: _llm fallback (exception: %s)" % exc, False))
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "bridge")
+        out = buf.getvalue()
+        checks.append(("bridge: command reports status without keys/module",
+                       bool(keep) and "claude_engine bridge status" in out
+                       and "fallback provider" in out))
+    except Exception as exc:
+        checks.append(("bridge: command (exception: %s)" % exc, False))
+
+    # Language packs (v29.4.0): exactly 100 complete packs, every one
+    # with 6 non-empty ASCII UI strings + name + valid region tag.
+    try:
+        pack_keys = ("greeting", "goodbye", "help_header",
+  
