@@ -1,89 +1,4 @@
-all' for numbers)")
-            return True
-        removed = engine.forget_fact(index)
-        if removed is None:
-            print("No fact #%d. Use 'recall' to list numbered facts." % index)
-        else:
-            print(engine.ui_format("forgot", index, removed))
-        engine._audit("Memory", "forget %s" % arg, "Success")
-        return True
-    if lowered == "history" or lowered.startswith("history "):
-        arg = line[len("history"):].strip()
-        count = 10
-        if arg:
-            try:
-                count = max(1, int(arg))
-            except ValueError:
-                print("Usage: history [n]  (showing default 10)")
-        entries = engine.memory.get("history", [])[-count:]
-        if not entries:
-            print("No history yet.")
-        else:
-            print("Last %d history entries:" % len(entries))
-            for entry in entries:
-                print("  %s | %-5s | %s" % (
-                    entry.get("ts", "?"),
-                    str(entry.get("role", "?"))[:5],
-                    str(entry.get("text", ""))[:70],
-                ))
-        engine._audit("Memory", "history", "Success")
-        return True
-
-    # --- v29 Module B: GitHub auto-sync commands ---
-    if lowered == "sync github" or lowered.startswith("sync github "):
-        for out_line in engine.sync_github():
-            print(out_line)
-        engine._audit("Sync", "sync github", "Success")
-        return True
-    if lowered == "sync status":
-        print("GitHub sync status:")
-        for out_line in engine.sync_status_lines():
-            print("  " + out_line)
-        engine._audit("Sync", "sync status", "Success")
-        return True
-
-    # --- v29 Module C: dataset commands ---
-    if lowered == "import" or lowered.startswith("import "):
-        path = line[len("import"):].strip().strip("'\"")
-        # v29.7.0: 'import doc <path>' is an alias for 'ingest <path>'
-        # (handled here because bare 'import' claims the prefix).
-        if path.lower() == "doc" or path.lower().startswith("doc "):
-            doc_path = path[len("doc"):].strip().strip("'\"")
-            if not doc_path:
-                print("Usage: import doc <path>  (or: ingest <path>)")
-                engine._audit("CLI", "import doc (no path)", "Failed")
-                return True
-            ok, message = engine.import_document(doc_path)
-            print(message)
-            engine._audit("CLI", "import doc %s" % doc_path,
-                          "Success" if ok else "Failed")
-            return True
-        ok, message = engine.import_dataset(path)
-        print(message)
-        engine._audit("Dataset", "import %s" % path,
-                      "Success" if ok else "Failed")
-        return True
-    if lowered == "analyze":
-        for out_line in engine.analyze_dataset():
-            print(out_line)
-        engine._audit("Dataset", "analyze", "Success")
-        return True
-    if lowered == "query" or lowered.startswith("query "):
-        for out_line in engine.query_dataset(line[len("query"):].strip()):
-            print(out_line)
-        engine._audit("Dataset", "query", "Success")
-        return True
-
-    # --- v29.6.0 commands: voice, image, github info, reminders ---
-    # (Placed before the prefix-routing loop so no prefix can shadow them.)
-    if lowered == "say" or lowered.startswith("say "):
-        text = line[len("say"):].strip()
-        if not text:
-            print("Usage: say <text>")
-            engine._audit("CLI", "say (no text)", "Failed")
-            return True
-        if not engine.openai_key:
-            print("voice needs OPENAI_API_KEY in .env; text was: %s" % text)
+t("voice needs OPENAI_API_KEY in .env; text was: %s" % text)
             engine._audit("CLI", "say", "Offline")
             return True
         data = engine._tts_speech(text)
@@ -235,6 +150,23 @@ all' for numbers)")
         engine._audit("Memory", "remind", "Success")
         return True
 
+    # --- v29.9.0 commands (study hall + memory backup) ---
+    if lowered == "study" or lowered.startswith("study "):
+        study_session(engine, line[len("study"):].strip())
+        return True
+    if lowered == "backup":
+        try:
+            save_memory(engine.memory_path, engine.memory)
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            target = "omega_memory_backup_%s.json" % stamp
+            shutil.copy2(engine.memory_path, target)
+            print("backup saved: %s" % target)
+            engine._audit("CLI", "backup", "Success")
+        except Exception as exc:
+            print("backup failed safely: %s" % exc)
+            engine._audit("CLI", "backup", "Failed")
+        return True
+
     # --- v29.7.0 commands (document Q&A) ---
     # (Same pre-router position as the v29.6.0 block above. The
     # 'import doc <path>' and 'forget doc <name>' aliases are handled
@@ -243,7 +175,7 @@ all' for numbers)")
         path = line[len("ingest"):].strip().strip("'\"")
         if not path:
             print("Usage: ingest <path-or-url>  "
-                  "(.txt .md .csv .log .json or http(s)://...)")
+                  "(.txt .md .csv .log .json .docx .xlsx or http(s)://...)")
             engine._audit("CLI", "ingest (no path)", "Failed")
             return True
         if path.lower().startswith(("http://", "https://")):
@@ -646,3 +578,74 @@ def run_selftest() -> int:
                              "epsilon,north,50\n")
             ok, _msg = engine.import_dataset(csv_path)
             ok = (ok and engine.dataset is not None
+                  and len(engine.dataset["rows"]) == 5
+                  and len(engine.dataset["headers"]) == 3)
+            checks.append(("import: generated CSV (3 cols x 5 rows)", ok))
+            analysis = engine.analyze_dataset()
+            ok = (any("Rows: 5" in line for line in analysis)
+                  and any(line.startswith("  amount:") for line in analysis)
+                  and any("min=10" in line and "max=50" in line
+                          and "mean=30.00" in line for line in analysis))
+            checks.append(("analyze: row count + numeric min/max/mean", ok))
+            results = engine.query_dataset("north")
+            hits = sum(1 for line in results
+                       if line.strip().startswith("row "))
+            checks.append(("query: substring filter finds 3 'north' rows",
+                           hits == 3))
+            note = engine.dataset_note()
+            checks.append(("dataset note: tax/mine can reference dataset",
+                           bool(note) and "5 rows" in note))
+    except Exception as exc:
+        checks.append(("dataset: CSV import/analyze/query (exception: %s)"
+                       % exc, False))
+
+    # Module C: generated real .xlsx import (built via zipfile above).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xlsx_path = os.path.join(tmpdir, "people.xlsx")
+            _selftest_build_xlsx(xlsx_path)
+            ok, _msg = engine.import_dataset(xlsx_path)
+            headers = engine.dataset["headers"] if engine.dataset else []
+            rows = engine.dataset["rows"] if engine.dataset else []
+            ok = (ok and headers == ["name", "score"] and len(rows) == 3
+                  and rows[0] == ["alice", "42"]
+                  and rows[1] == ["bob", "7"]
+                  and rows[2] == ["carol", "5"])
+            checks.append(("import: generated XLSX (shared/inline/number)",
+                           ok))
+    except Exception as exc:
+        checks.append(("dataset: XLSX import (exception: %s)" % exc, False))
+
+    # v29.7.0: document ingest (.txt first; deterministic from a clean list).
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            engine.memory["documents"] = []
+            txt_path = os.path.join(tmpdir, "notes.txt")
+            content = ("Solar panels convert sunlight into electricity "
+                       "for homes and farms.\n\n"
+                       "Wind turbines harvest moving air on ridges "
+                       "and coastlines.\n\n"
+                       "Battery storage keeps surplus energy for "
+                       "calm nights.\n")
+            with open(txt_path, "w", encoding="ascii") as handle:
+                handle.write(content)
+            ok, msg = engine.import_document(txt_path, save=False)
+            docs = engine.memory.get("documents") or []
+            ok = (ok and len(docs) == 1
+                  and docs[0].get("name") == "notes.txt"
+                  and docs[0].get("path") == os.path.abspath(txt_path)
+                  and docs[0].get("chars") == len(content)
+                  and len(docs[0].get("chunks") or []) == 1
+                  and bool(docs[0].get("ts"))
+                  and "ingested: notes.txt (1 chunks, " in msg)
+            checks.append(("docs: ingest .txt -> stored entry + chunks", ok))
+            md_path = os.path.join(tmpdir, "notes.md")
+            with open(md_path, "w", encoding="ascii") as handle:
+                handle.write("# Meeting Notes\n\n"
+                             "Discuss roadmap and hiring plans.\n")
+            csv_path = os.path.join(tmpdir, "data.csv")
+            with open(csv_path, "w", encoding="ascii", newline="") as handle:
+                handle.write("city,population\nparis,2140000\nlyon,513000\n")
+            ok_md, _m1 = engine.import_document(md_path, save=False)
+            ok_csv, _m2 = engine.import_document(csv_path, save=False)
+            docs = engine.memory.get("documents") or [
