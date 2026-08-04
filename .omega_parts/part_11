@@ -1,109 +1,4 @@
-B2\" t=\"s\"><v>3</v></c></row>"
-                    "</sheetData></worksheet>")
-            ok_xlsx, _m3 = engine.import_document(xlsx_path, save=False)
-            xlsx_docs = engine.memory.get("documents") or []
-            xlsx_chunks = xlsx_docs[-1].get("chunks", []) if xlsx_docs else []
-            checks.append(("office: ingest .xlsx renders rows",
-                           ok_xlsx and any("joburg" in c
-                                           and "gauteng" in c
-                                           for c in xlsx_chunks)))
-    except Exception as exc:
-        checks.append(("office: (exception: %s)" % exc, False))
-
-    # v29.9.0: memory backup writes a valid timestamped copy.
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            old_path = engine.memory_path
-            os.chdir(tmpdir)
-            try:
-                engine.memory_path = os.path.join(tmpdir, "mem.json")
-                save_memory(engine.memory_path, engine.memory)
-                handled = handle_command(engine, "backup")
-                made = [f for f in os.listdir(tmpdir)
-                        if f.startswith("omega_memory_backup_")]
-                valid = False
-                if made:
-                    with open(os.path.join(tmpdir, made[0])) as handle:
-                        json.load(handle)
-                    valid = True
-                checks.append(("backup: writes timestamped valid copy",
-                               handled is True and len(made) == 1
-                               and valid))
-            finally:
-                os.chdir(old_cwd)
-                engine.memory_path = old_path
-    except Exception as exc:
-        checks.append(("backup: (exception: %s)" % exc, False))
-
-    # v29.9.0: study mode (offline, deterministic, isolated cwd).
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                fresh = OmegaMasterEngine()
-                seen: List[str] = []
-                study_session(fresh, "solar",
-                              input_fn=iter(["end study"]).__next__,
-                              out=seen.append)
-                checks.append(("study: no documents -> ingest hint",
-                               any("ingest" in line.lower()
-                                   for line in seen)))
-                learner = OmegaMasterEngine()
-                doc_path = os.path.join(tmpdir, "notes.txt")
-                with open(doc_path, "w", encoding="ascii") as handle:
-                    handle.write("mitochondria produce energy in cells")
-                learner.import_document(doc_path, save=False)
-                seen = []
-                study_session(learner, "",
-                              input_fn=iter(["end study"]).__next__,
-                              out=seen.append)
-                usage_ok = any("Usage: study" in line for line in seen)
-                seen = []
-                study_session(learner, "zzqzxv",
-                              input_fn=iter(["end study"]).__next__,
-                              out=seen.append)
-                nomatch_ok = any("No passages match" in line
-                                 for line in seen)
-                seen = []
-                study_session(learner, "mitochondria",
-                              input_fn=iter(["end study"]).__next__,
-                              out=seen.append)
-                banner_ok = any("STUDY: mitochondria" in line
-                                for line in seen)
-                cards_ok = any("Offline study cards" in line
-                               for line in seen)
-                checks.append(("study: usage/no-match/banner/cards",
-                               usage_ok and nomatch_ok and banner_ok
-                               and cards_ok))
-            finally:
-                os.chdir(old_cwd)
-    except Exception as exc:
-        checks.append(("study: (exception: %s)" % exc, False))
-
-    # v29.10.0: rights & travel routing (incl. the taxi/tax collision).
-    try:
-        result = engine.execute_omega_subsystem(
-            "what do i do when stopped by the cops",
-            {"query": "what do i do when stopped by the cops"})
-        checks.append(("rights: police query -> police_sa + disclaimer",
-                       result.get("subsystem") == "Omega Rights & Travel"
-                       and result.get("guide") == "police_sa"
-                       and "not legal advice" in result.get(
-                           "disclaimer", "")))
-        result = engine.execute_omega_subsystem(
-            "can i get a refund", {"query": "refund broken goods"})
-        consumer_ok = result.get("guide") == "consumer_sa"
-        result = engine.execute_omega_subsystem(
-            "what are my rights", {"query": "what are my rights"})
-        checks.append(("rights: consumer -> consumer_sa; bare -> universal",
-                       consumer_ok and result.get("guide") == "universal"))
-        result = engine.execute_omega_subsystem(
-            "taxi to the airport", {"query": "taxi to the airport"})
-        checks.append(("rights: taxi routes to travel, NOT tax",
-                       result.get("subsystem") == "Omega Rights & Travel"
-                       and result.get("topic") == "tourism"))
+"topic") == "tourism"))
     except Exception as exc:
         checks.append(("rights: (exception: %s)" % exc, False))
 
@@ -175,9 +70,11 @@ B2\" t=\"s\"><v>3</v></c></row>"
     # v29.10.0: registry completeness.
     try:
         rows = engine.subsystem_status()
-        checks.append(("registry: 16 rows + rights row + report actions",
-                       len(rows) == 16
+        checks.append(("registry: 17 rows + rights row + report actions",
+                       len(rows) == 17
                        and any(r.get("subsystem") == "Rights & Travel"
+                               for r in rows)
+                       and any(r.get("subsystem") == "Prompt Forge"
                                for r in rows)
                        and "Omega Rights & Travel" in REPORT_NEXT_ACTIONS))
     except Exception as exc:
@@ -318,12 +215,12 @@ B2\" t=\"s\"><v>3</v></c></row>"
         with contextlib.redirect_stdout(buf):
             keep = handle_command(engine, "version")
         out = buf.getvalue()
-        checks.append(("version: shows 29.11.0 + 16 subsystems + session/facts",
-                       bool(keep) and "29.11.0" in out
-                       and "Subsystems: 16" in out
+        checks.append(("version: shows 29.12.0 + 17 subsystems + session/facts",
+                       bool(keep) and "29.12.0" in out
+                       and "Subsystems: 17" in out
                        and "Session: #" in out and "Facts:" in out))
-        checks.append(("version: ENGINE_VERSION is 29.11.0",
-                       ENGINE_VERSION == "29.11.0"))
+        checks.append(("version: ENGINE_VERSION is 29.12.0",
+                       ENGINE_VERSION == "29.12.0"))
     except Exception as exc:
         checks.append(("version: (exception: %s)" % exc, False))
 
@@ -703,4 +600,159 @@ B2\" t=\"s\"><v>3</v></c></row>"
     # with 6 non-empty ASCII UI strings + name + valid region tag.
     try:
         pack_keys = ("greeting", "goodbye", "help_header",
-  
+                     "unknown_command", "remembered", "forgot")
+        complete = all(
+            all(isinstance(pack.get(k), str) and pack.get(k)
+                for k in pack_keys)
+            and isinstance(pack.get("name"), str) and bool(pack.get("name"))
+            for pack in LANG_PACKS.values())
+        checks.append(("lang: 100 complete language packs",
+                       len(LANG_PACKS) == 100 and complete))
+        ascii_safe = all(
+            all(ord(ch) < 128 for ch in str(value))
+            for pack in LANG_PACKS.values() for value in pack.values())
+        checks.append(("lang: all pack strings ASCII-safe", ascii_safe))
+        regions_ok = all(pack.get("region") in ("african", "world")
+                         for pack in LANG_PACKS.values())
+        african_n = sum(1 for pack in LANG_PACKS.values()
+                        if pack.get("region") == "african")
+        checks.append(("lang: region tags valid + >= 56 African packs",
+                       regions_ok and african_n >= 56))
+    except Exception as exc:
+        checks.append(("lang: pack audit (exception: %s)" % exc, False))
+
+    # v29.4.0: real-phrase spot strings across flagship packs.
+    try:
+        spots = {
+            "zu": "Sawubona", "sw": "Habari", "pcm": "How far!",
+            "spt": "Awe!", "ar": "As-salamu alaykum", "zh": "Ni hao",
+            "ja": "Konnichiwa", "hi": "Namaste",
+        }
+        spot_ok = all(spots[c] in LANG_PACKS[c]["greeting"] for c in spots)
+        checks.append(("lang: spot greetings (zu sw pcm spt ar zh ja hi)",
+                       spot_ok))
+    except Exception as exc:
+        checks.append(("lang: spot greetings (exception: %s)" % exc, False))
+
+    # v29.4.0: grouped 'lang' list shows both group headers.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "lang")
+        out = buf.getvalue()
+        checks.append(("lang: grouped list (African + World headers)",
+                       bool(keep) and "African languages (" in out
+                       and "World languages (" in out))
+    except Exception as exc:
+        checks.append(("lang: grouped list (exception: %s)" % exc, False))
+
+    # v29.4.0: translate unknown code -> graceful, no traceback.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "translate zz hello")
+        out = buf.getvalue()
+        checks.append(("translate: unknown code graceful",
+                       bool(keep) and "Unknown language code 'zz'" in out))
+    except Exception as exc:
+        checks.append(("translate: unknown code (exception: %s)" % exc,
+                       False))
+
+    # v29.4.0: translate offline -> graceful enable-hint, no traceback.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(offline_engine, "translate sw hello world")
+        out = buf.getvalue()
+        checks.append(("translate: offline graceful (enable-hint)",
+                       bool(keep) and "Translation unavailable offline."
+                       in out and "OPENAI_API_KEY" in out
+                       and "Traceback" not in out))
+    except Exception as exc:
+        checks.append(("translate: offline (exception: %s)" % exc, False))
+
+    # v29.4.0: cost command prints the pricing-disruption table.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "cost")
+        out = buf.getvalue()
+        checks.append(("cost: free engine + $20 subscription anchor",
+                       bool(keep) and "free forever" in out
+                       and "$20" in out
+                       and "African-friendly price" in out))
+    except Exception as exc:
+        checks.append(("cost: (exception: %s)" % exc, False))
+
+    # Roundtrips through 4 packs (sw + am from v29.3.0, spt + pcm from
+    # v29.4.0), then back to en.
+    for new_code in ("sw", "am", "spt", "pcm"):
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                handle_command(engine, "lang " + new_code)
+                out_new = buf.getvalue()
+                handle_command(engine, "lang en")
+            ok = (engine.lang == "en"
+                  and LANG_PACKS[new_code]["name"] in out_new
+                  and load_memory(engine.memory_path).get("lang") == "en")
+            checks.append(("lang: new pack '%s' roundtrip" % new_code, ok))
+        except Exception as exc:
+            checks.append(("lang: '%s' roundtrip (exception: %s)"
+                           % (new_code, exc), False))
+
+    # Launch pre-flight: GO/NO-GO table renders; clean room -> LAUNCH READY.
+    try:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            keep = handle_command(engine, "launch")
+        out = buf.getvalue()
+        checks.append(("launch: pre-flight table + LAUNCH READY",
+                       bool(keep) and "pillars integrity" in out
+                       and "memory writable" in out
+                       and "LAUNCH READY" in out
+                       and "NOT READY" not in out))
+    except Exception as exc:
+        checks.append(("launch: (exception: %s)" % exc, False))
+
+    # ------------------------------------------------------------------
+    # v29.5.0: Professor classroom checks
+    # ------------------------------------------------------------------
+
+    # Message-history cap: system message preserved, capped at 40.
+    try:
+        msgs = [{"role": "system", "content": "sys"}]
+        for i in range(50):
+            msgs.append({"role": "user", "content": "u%d" % i})
+            msgs.append({"role": "assistant", "content": "a%d" % i})
+        capped = _cap_messages(msgs)
+        ok = (len(capped) == MAX_TEACH_MESSAGES
+              and capped[0]["role"] == "system"
+              and capped[-1]["content"] == "a49")
+        short = _cap_messages(msgs[:5])
+        ok = ok and len(short) == 5
+        checks.append(("teach: message history capped at 40 (system kept)",
+                       ok))
+    except Exception as exc:
+        checks.append(("teach: cap (exception: %s)" % exc, False))
+
+    # Online path guarded without a key: messages call returns None.
+    try:
+        checks.append(("teach: _llm_messages without key -> None (no fake)",
+                       offline_engine._llm_messages(
+                           [{"role": "user", "content": "hi"}]) is None))
+    except Exception as exc:
+        checks.append(("teach: guarded messages (exception: %s)" % exc,
+                       False))
+
+    # Offline teach end-to-end: honesty line, 2 exchanges, summary, saved.
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            previous = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                prof_engine = OmegaMasterEngine()
+                prof_engine.openai_key = ""
+                scripted = iter(["hello professor", "what is algebra",
+                                 "end class"])
+          
