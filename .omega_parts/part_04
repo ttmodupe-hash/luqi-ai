@@ -1,72 +1,4 @@
-andard tools practitioners use.",
-            "How experts approach a problem.",
-            "A hands-on mini-project."]),
-        ("Advanced Topics in %s" % name, [
-            "Current debates and open questions.",
-            "Advanced frameworks in plain language.",
-            "Stretch exercises beyond the basics."]),
-        ("Common Pitfalls in %s" % name, [
-            "Typical mistakes learners make.",
-            "How to spot and fix them.",
-            "Expert tips for avoiding rework."]),
-        ("Mastery Practice in %s" % name, [
-            "Mixed practice sets across all units.",
-            "Timed challenges.",
-            "Explaining ideas out loud to lock them in."]),
-        ("Capstone: Your %s Project" % name, [
-            "Plan a final project that shows your skills.",
-            "Demonstrate and review your work.",
-            "Map out your next learning steps."]),
-    ]
-    return [{"title": t, "points": list(p)} for t, p in titles_points]
-
-
-# Offline self-check quiz banks: accurate Q&A for the 8 core subjects.
-OFFLINE_QUIZ_BANKS: Dict[str, List[Tuple[str, str]]] = {
-    "mathematics": [
-        ("What is 7 x 8?", "56"),
-        ("Solve for x: x + 9 = 15", "x = 6"),
-        ("What is 25% of 80?", "20"),
-        ("What is the mean of 4, 8 and 12?", "8"),
-        ("What is the square root of 144?", "12"),
-        ("In y = 3x + 2, what is the slope?", "3"),
-    ],
-    "physics": [
-        ("State Newton's second law.", "F = ma (force = mass x acceleration)"),
-        ("What is the SI unit of force?", "The newton (N)"),
-        ("Speed equals distance divided by what?", "Time"),
-        ("What kind of energy does a moving object have?", "Kinetic energy"),
-        ("State Ohm's law.", "V = IR (voltage = current x resistance)"),
-        ("Roughly how fast is light in a vacuum?",
-         "About 300,000 km/s (3.0 x 10^8 m/s)"),
-    ],
-    "chemistry": [
-        ("Name the three subatomic particles.",
-         "Protons, neutrons and electrons"),
-        ("What is the chemical formula for water?", "H2O"),
-        ("What does the pH scale measure?",
-         "How acidic or basic a solution is (7 is neutral)"),
-        ("What is the atomic number of carbon?", "6"),
-        ("Ionic bonds form by transferring what?", "Electrons"),
-        ("Which gas do plants absorb for photosynthesis?",
-         "Carbon dioxide (CO2)"),
-    ],
-    "biology": [
-        ("Which organelle is called the powerhouse of the cell?",
-         "The mitochondrion"),
-        ("Which molecule carries genetic instructions?", "DNA"),
-        ("What process lets plants make food from sunlight?",
-         "Photosynthesis"),
-        ("What are the basic structural units of all living things?",
-         "Cells"),
-        ("Which blood cells fight infection?", "White blood cells"),
-        ("In one sentence, what is natural selection?",
-         "Traits that help survival and reproduction become more "
-         "common over generations"),
-    ],
-    "english": [
-        ("What is a noun?",
-         "A word naming a person, place, thing or idea"),
+ce, thing or idea"),
         ("Which sentence usually states a paragraph's main idea?",
          "The topic sentence"),
         ("Give a synonym for 'happy'.", "Glad (also: joyful, content)"),
@@ -243,6 +175,31 @@ def _read_xlsx_dataset(path: str) -> Tuple[List[str], List[List[str]]]:
         if any(str(cell).strip() for cell in padded):
             data.append([str(cell) for cell in padded])
     return headers, data
+
+
+def _docx_to_text(path: str) -> str:
+    """Extract paragraph text from a .docx (ZIP of XML). Stdlib only.
+
+    Paragraphs join with blank lines; runs concatenate. Never raises;
+    returns "" on unreadable input.
+    """
+    try:
+        with zipfile.ZipFile(path) as archive:
+            if "word/document.xml" not in archive.namelist():
+                return ""
+            root = ET.fromstring(archive.read("word/document.xml"))
+        paragraphs: List[str] = []
+        for para in root.iter():
+            if _xlsx_localname(para.tag) != "p":
+                continue
+            texts = [node.text or "" for node in para.iter()
+                     if _xlsx_localname(node.tag) == "t"]
+            line = "".join(texts).strip()
+            if line:
+                paragraphs.append(line)
+        return "\n\n".join(paragraphs)
+    except Exception:
+        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -713,4 +670,82 @@ class OmegaMasterEngine:
                 data=body,
                 headers={
                     "Authorization": "Bearer " + self.openai_key,
-                  
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="replace"))
+            choices = data.get("choices") or []
+            if not choices:
+                return self._openrouter_chat(prompt)
+            message = choices[0].get("message") or {}
+            content = message.get("content")
+            if content:
+                return str(content)
+            # v29.6.0: empty OpenAI reply -> OpenRouter fallback.
+            return self._openrouter_chat(prompt)
+        except Exception:
+            # v29.6.0: OpenRouter is the final fallback before None.
+            return self._openrouter_chat(prompt)
+
+    # ------------------------------------------------------------------
+    # v29.5.0: multi-turn chat (messages lists) for the Professor classroom
+    # ------------------------------------------------------------------
+
+    def _bridge_llm_messages(self,
+                             messages: List[Dict[str, str]]) -> Optional[str]:
+        """Bridge path for a messages list.
+
+        The claude_engine bridge exposes a single-string chat(); the
+        rolling context is serialized into one transcript prompt so the
+        professor still sees the full conversation. None on ANY issue.
+        """
+        try:
+            bridge = self._get_bridge()
+            if bridge is None:
+                return None
+            parts = []
+            for msg in messages:
+                role = str(msg.get("role", "user"))
+                content = str(msg.get("content", ""))
+                if role == "system":
+                    parts.append("System: " + content)
+                elif role == "assistant":
+                    parts.append("Professor: " + content)
+                else:
+                    parts.append("Student: " + content)
+            parts.append("Professor:")
+            reply = bridge.chat("\n\n".join(parts))
+            if isinstance(reply, str):
+                return reply if reply.strip() else None
+            if isinstance(reply, dict):
+                content = reply.get("content") or reply.get("text")
+                if content:
+                    return str(content)
+            if reply:
+                return str(reply)
+            return None
+        except Exception:
+            return None
+
+    def _llm_messages(self, messages: List[Dict[str, str]],
+                      max_tokens: int = 700) -> Optional[str]:
+        """Chat-completions call with a full messages list.
+
+        Bridge-first (when installed), stdlib urllib fallback. Returns
+        None without a key or on ANY failure - callers must fall back
+        gracefully and never fake a reply.
+        """
+        clean = []
+        for msg in messages:
+            role = str(msg.get("role", "user"))
+            if role not in ("system", "user", "assistant"):
+                role = "user"
+            clean.append({"role": role,
+                          "content": str(msg.get("content", ""))})
+        if not clean:
+            return None
+        # v29.6.0: OpenRouter fallback prompt (last user message, else last).
+        fallback_prompt = clean[-1]["content"]
+        for msg in reversed(clean):
