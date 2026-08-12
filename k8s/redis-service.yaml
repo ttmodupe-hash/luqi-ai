@@ -1,0 +1,25 @@
+# =============================================================================
+# LUQI AI - Redis Service
+# =============================================================================
+# ClusterIP service exposes Redis internally to the application
+# and Celery workers within the namespace.
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: luqi-ai
+    component: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP

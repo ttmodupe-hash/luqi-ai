@@ -1,0 +1,125 @@
+# =============================================================================
+# LUQI AI - PostgreSQL StatefulSet
+# =============================================================================
+# PostgreSQL 15 primary database with persistent storage.
+# Uses a StatefulSet for stable network identity and PVC for data durability.
+# In production, consider a managed database (AWS RDS, Cloud SQL, etc.).
+# =============================================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: luqi-ai
+        version: v29
+        component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+
+          # Resource limits for database workload
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+
+          # Environment from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: luqi-ai-config
+
+          # Environment from Secret
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: POSTGRES_DB
+
+          # Persistent storage for database files
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+
+          # Health probes
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - luqi
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - luqi
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop:
+                - ALL
+
+  # Persistent Volume Claim template
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+        labels:
+          app: luqi-ai
+          component: postgres
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi
+        # Uncomment and adjust for your storage class
+        # storageClassName: gp3  # AWS
+        # storageClassName: premium-rwo  # GCP
+        # storageClassName: managed-csi  # Azure

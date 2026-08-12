@@ -1,0 +1,165 @@
+# =============================================================================
+# LUQI AI - Prometheus Alert Rules
+# =============================================================================
+# Alert rules for the LUQI AI platform. Monitors application health,
+# resource usage, and infrastructure components.
+# =============================================================================
+
+groups:
+  - name: luqi-ai-alerts
+    rules:
+      # -----------------------------------------------------------------------
+      # High Error Rate
+      # -----------------------------------------------------------------------
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: app
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      # -----------------------------------------------------------------------
+      # High Latency
+      # -----------------------------------------------------------------------
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: app
+        annotations:
+          summary: "High latency detected"
+          description: "95th percentile latency is {{ $value }}s over the last 5 minutes."
+
+      # -----------------------------------------------------------------------
+      # Pod Crash Looping
+      # -----------------------------------------------------------------------
+      - alert: PodCrashLooping
+        expr: |
+          rate(kube_pod_container_status_restarts_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last 10 minutes."
+
+      # -----------------------------------------------------------------------
+      # High CPU Usage
+      # -----------------------------------------------------------------------
+      - alert: HighCPUUsage
+        expr: |
+          (
+            sum(rate(container_cpu_usage_seconds_total{container!=""}[5m]))
+            /
+            sum(kube_pod_container_resource_limits{resource="cpu"})
+          ) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod }}."
+
+      # -----------------------------------------------------------------------
+      # High Memory Usage
+      # -----------------------------------------------------------------------
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            sum(container_memory_working_set_bytes{container!=""})
+            /
+            sum(kube_pod_container_resource_limits{resource="memory"})
+          ) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod }}."
+
+      # -----------------------------------------------------------------------
+      # Disk Space Low
+      # -----------------------------------------------------------------------
+      - alert: DiskSpaceLow
+        expr: |
+          (
+            kubelet_volume_stats_available_bytes
+            /
+            kubelet_volume_stats_capacity_bytes
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10% for volume {{ $labels.persistentvolumeclaim }}."
+
+      # -----------------------------------------------------------------------
+      # Pod Not Ready
+      # -----------------------------------------------------------------------
+      - alert: PodNotReady
+        expr: |
+          kube_pod_status_ready{condition="false"} == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pod not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for 10 minutes."
+
+      # -----------------------------------------------------------------------
+      # Database Connection Errors
+      # -----------------------------------------------------------------------
+      - alert: DatabaseConnectionErrors
+        expr: |
+          sum(rate(postgres_exporter_errors_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection errors"
+          description: "Database connection errors detected in the last 5 minutes."
+
+      # -----------------------------------------------------------------------
+      # Redis Down
+      # -----------------------------------------------------------------------
+      - alert: RedisDown
+        expr: |
+          redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is not responding."
+
+      # -----------------------------------------------------------------------
+      # SSL Certificate Expiry
+      # -----------------------------------------------------------------------
+      - alert: SSLCertificateExpiringSoon
+        expr: |
+          (
+            ssl_certificate_expiry_seconds
+            /
+            86400
+          ) < 7
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value }} days."

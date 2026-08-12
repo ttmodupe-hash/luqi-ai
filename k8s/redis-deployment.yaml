@@ -1,0 +1,92 @@
+# =============================================================================
+# LUQI AI - Redis Deployment
+# =============================================================================
+# Redis 7 cache, session store, and Celery task queue broker.
+# Single replica with ephemeral storage. For production persistence,
+# consider Redis Sentinel or a managed Redis service (ElastiCache, etc.).
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Recreate for single-instance stateful workload
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: luqi-ai
+        version: v29
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+
+          # Lightweight resource footprint
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+
+          # Optional: enable AUTH with password from secret
+          # command:
+          #   - redis-server
+          #   - --requirepass
+          #   - $(REDIS_PASSWORD)
+
+          # Environment from Secret (if using AUTH)
+          # env:
+          #   - name: REDIS_PASSWORD
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: luqi-ai-secrets
+          #         key: REDIS_PASSWORD
+
+          # Health probes
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - PING
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - PING
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop:
+                - ALL
