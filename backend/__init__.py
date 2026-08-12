@@ -1,20 +1,41 @@
-"""Luqi AI v29.0.0 — Backend Package"""
+# backend/__init__.py
 
-__version__ = "29.0.0"
-__title__ = "Luqi AI"
-__description__ = (
-    "World-class AI system with multi-agent orchestration, ASI cognitive engine, "
-    "SaaS platform, Law Studies, Africa-First capabilities, Jobs & Skills, "
-    "WhatsApp Bot, Government Services, Real-time Collaborative Workspaces, "
-    "Network & AI Engineering Training Academy, Global Knowledge Academy, "
-    "Project Management Training, Digital Workspace Training, "
-    "Digital Wellness, IT Security Training, Autonomous Multi-Agent System, "
-    "Animated Learning, Accessibility for Deaf Users, "
-    "Omega AI Prometheus Engines — Error Repair, Memory Manager, Pedagogical Engine, "
-    "Wisdom, Crypto, Rate Limiting, WebSocket, Vector DB, Multi-Tenant, "
-    "Plugin Marketplace, Realtime Prices, Metrics, Email, Telegram, PDF, "
-    "Backup, Local LLM, Agent Mesh, Blockchain Audit, Federated Learning, "
-    "AI Brain with LLM, Auth System, Notification Hub, Mobile-first Design, "
-    "Favorites & Bookmarks. "
-    "400+ endpoints. Built by Limitless Telecoms."
-)
+import os
+import sys
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+import logging
+
+logger = logging.getLogger(__name__)
+logger.info("Luqi backend package initialized.")
+
+__version__ = "29.1.0"
+__all__ = [
+    "db",
+    "models",
+    "crud",
+    "auth",
+    "schemas",
+    "cache",
+    "celery_app",
+    "luqi_agent",
+    "luqi_unified",
+    "digital_workspace",
+    "government_services",
+    "health_endpoints",
+    "favorites_api",
+    "feedback_api",
+    "jobs_skills",
+    "user_account_api",
+    "startup_events",
+    "middleware_api",
+    "security_headers",
+    "api_docs",
+    "config",
+    "wsgi",
+    "asgi",
+    "tests",
+]
