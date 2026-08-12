@@ -1,0 +1,5 @@
+[
+  {"module": "Phishing Awareness", "duration": "30 min", "audience": "all"},
+  {"module": "Password Security", "duration": "15 min", "audience": "all"},
+  {"module": "Incident Response", "duration": "45 min", "audience": "it"}
+]

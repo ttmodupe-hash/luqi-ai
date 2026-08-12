@@ -1,0 +1,1 @@
+{"assessment_id": "SA-BE4B27C9", "system_type": "web", "score": 85.7, "checks": {"https": true, "auth": true, "input_validation": true, "csrf_protection": true, "rate_limiting": true, "logging": true}, "recommendations": ["Enable WAF", "Implement CSP headers"], "date": "2025-01-15"}

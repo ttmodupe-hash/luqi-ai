@@ -1,0 +1,1 @@
+{"policy_id": "POL-C2BD7803", "type": "access_control", "mfa_required": true, "session_timeout": 30, "max_failed_logins": 5, "lockout_duration": 30, "created": "2025-01-15"}
