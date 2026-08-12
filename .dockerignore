@@ -1,11 +1,49 @@
-__pycache__/
-*.pyc
-*.pyo
-.env
-.venv/
-venv/
+# Node
 node_modules/
-.git/
-.github/
-data/
+web_ui/node_modules/
+web_ui/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data & DB
 *.db
+*.sqlite
+*.sqlite3
+data/backups/
+
+# Secrets
+.env
+.env.local
+
+# Coverage
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Build
+build/
+dist/
+*.egg-info/
