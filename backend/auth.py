@@ -219,8 +219,8 @@ class AuthManager:
             },
         }
 
-    def list_users(self) -> dict:
-        """List all registered users (admin only)."""
+    def list_users(self) -> list:
+        """List all users."""
         import sqlite3
 
         conn = sqlite3.connect(self.db_path)
@@ -230,76 +230,59 @@ class AuthManager:
         )
         rows = c.fetchall()
         conn.close()
-        return {
-            "success": True,
-            "users": [
-                {
-                    "id": r[0],
-                    "email": r[1],
-                    "full_name": r[2],
-                    "role": r[3],
-                    "is_active": bool(r[4]),
-                    "created_at": r[5],
-                }
-                for r in rows
-            ],
-            "count": len(rows),
-        }
+        return [
+            {
+                "id": r[0],
+                "email": r[1],
+                "full_name": r[2],
+                "role": r[3],
+                "is_active": bool(r[4]),
+                "created_at": r[5],
+            }
+            for r in rows
+        ]
 
-    def deactivate_user(self, user_id: int) -> dict:
-        """Deactivate a user account (soft delete)."""
+    def update_user(self, user_id: int, **kwargs) -> dict:
+        """Update user fields."""
         import sqlite3
+
+        allowed = {"email", "full_name", "role", "is_active"}
+        updates = {k: v for k, v in kwargs.items() if k in allowed}
+        if not updates:
+            return {"success": False, "error": "No valid fields to update"}
 
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
-        c.execute("UPDATE users SET is_active = 0 WHERE id = ?", (user_id,))
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [user_id]
+        c.execute(f"UPDATE users SET {set_clause} WHERE id = ?", values)
         conn.commit()
+        updated = c.rowcount
         conn.close()
-        return {"success": True, "message": f"User {user_id} deactivated"}
+        return {"success": updated > 0, "updated": updated}
 
     def delete_user(self, user_id: int) -> dict:
-        """Permanently delete a user."""
-        import sqlite3
-
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        conn.commit()
-        conn.close()
-        return {"success": True, "message": f"User {user_id} deleted"}
+        """Soft-delete a user."""
+        return self.update_user(user_id, is_active=0)
 
 
-# ---------------------------------------------------------------------------
-# FastAPI dependencies
-# ---------------------------------------------------------------------------
-
-
-async def get_current_user(x_token: str = Header(None)):
-    """FastAPI dependency: verify JWT token from X-Token header."""
-    if not x_token:
-        raise HTTPException(status_code=401, detail="Missing authentication token")
-    auth = AuthManager()
-    result = auth.verify_token(x_token)
+# FastAPI dependency
+async def get_current_user(request: Request) -> dict:
+    """Extract and verify JWT from Authorization header."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth[7:]
+    auth_manager = AuthManager()
+    result = auth_manager.verify_token(token)
     if not result["valid"]:
         raise HTTPException(status_code=401, detail=result["error"])
     return result
 
 
-async def require_admin(x_token: str = Header(None)):
-    """FastAPI dependency: require admin role."""
-    if not x_token:
-        raise HTTPException(status_code=401, detail="Missing authentication token")
-    auth = AuthManager()
-    result = auth.verify_token(x_token)
-    if not result["valid"]:
-        raise HTTPException(status_code=401, detail=result["error"])
-    if result["role"] != "admin":
+async def require_admin(request: Request) -> dict:
+    """Require admin role."""
+    user = await get_current_user(request)
+    if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-    return result
-
-
-# Standalone (non-async) token checker for synchronous code paths
-def verify_token_sync(token: str) -> dict:
-    """Verify a JWT token synchronously."""
-    auth = AuthManager()
-    return auth.verify_token(token)
+    return user
