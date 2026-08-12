@@ -1,0 +1,12 @@
+[
+  "tests/test_cache_manager.py::test_cache_set_get",
+  "tests/test_conversation_state.py::test_state_persistence",
+  "tests/test_db_engine.py::test_connection_pool",
+  "tests/test_error_repair.py::test_self_heal",
+  "tests/test_integration.py::test_full_pipeline",
+  "tests/test_knowledge_base.py::test_kb_query",
+  "tests/test_memory_manager.py::test_memory_store",
+  "tests/test_pedagogical_engine.py::test_lesson_plan",
+  "tests/test_scheduler.py::test_cron_parsing",
+  "tests/test_wisdom_engine.py::test_wisdom_search"
+]

@@ -1,0 +1,12 @@
+{
+  "tests/test_cache_manager.py::test_cache_set_get": true,
+  "tests/test_conversation_state.py::test_state_persistence": true,
+  "tests/test_db_engine.py::test_connection_pool": true,
+  "tests/test_error_repair.py::test_self_heal": true,
+  "tests/test_integration.py::test_full_pipeline": true,
+  "tests/test_knowledge_base.py::test_kb_query": true,
+  "tests/test_memory_manager.py::test_memory_store": true,
+  "tests/test_pedagogical_engine.py::test_lesson_plan": true,
+  "tests/test_scheduler.py::test_cron_parsing": true,
+  "tests/test_wisdom_engine.py::test_wisdom_search": true
+}
