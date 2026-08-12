@@ -1,7 +1,110 @@
-openai>=1.30.0
-anthropic>=0.28.0
-pydantic>=2.0
-pydantic-settings>=2.0
-redis>=5.0
-tenacity>=8.0
-structlog>=24.0
+# =============================================================================
+# LUQI AI — Production Dependencies
+# =============================================================================
+# All versions pinned for reproducible production builds.
+# Last updated: 2025-07-29
+# Python: >=3.11
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Core Framework
+# ---------------------------------------------------------------------------
+fastapi==0.111.0                    # ASGI web framework — API routing, dependency injection, OpenAPI
+uvicorn[standard]==0.30.0           # ASGI server with uvloop + websockets support
+gunicorn==22.0.0                    # WSGI process manager for production deployment
+python-multipart==0.0.9             # Form data / file upload parsing
+
+# ---------------------------------------------------------------------------
+# Data Validation & Settings
+# ---------------------------------------------------------------------------
+pydantic==2.7.4                     # Data validation, serialization, settings management
+pydantic-settings==2.3.0            # Pydantic-based environment variable configuration
+python-dotenv==1.0.1                # .env file loading for local development
+
+# ---------------------------------------------------------------------------
+# Database (PostgreSQL + Async)
+# ---------------------------------------------------------------------------
+sqlalchemy[asyncio]==2.0.31         # ORM with async query support
+asyncpg==0.29.0                     # Async PostgreSQL driver
+alembic==1.13.2                     # Database migration tool (SQLAlchemy-backed)
+psycopg2-binary==2.9.9              # Sync PostgreSQL driver for Alembic migrations / admin scripts
+
+# ---------------------------------------------------------------------------
+# Cache & Queue (Redis + Celery)
+# ---------------------------------------------------------------------------
+redis==5.0.6                        # Redis client for caching and pub/sub
+celery[redis]==5.4.0                # Distributed task queue with Redis broker support
+
+# ---------------------------------------------------------------------------
+# Monitoring & Observability
+# ---------------------------------------------------------------------------
+prometheus-client==0.20.0           # Prometheus metrics exporter (REQUEST_DURATION, etc.)
+structlog==24.2.0                   # Structured JSON logging for production
+
+# ---------------------------------------------------------------------------
+# Security & Authentication
+# ---------------------------------------------------------------------------
+python-jose[cryptography]==3.3.0    # JWT token creation and verification
+passlib[bcrypt]==1.7.4              # Password hashing (bcrypt)
+pyotp==2.9.0                        # TOTP (Time-based One-Time Password) for MFA
+
+# ---------------------------------------------------------------------------
+# AI / LLM Integration
+# ---------------------------------------------------------------------------
+openai==1.35.0                      # OpenAI API client for GPT-4/4o/embedding models
+anthropic==0.28.0                   # Anthropic Claude API client
+# Nemotron (NVIDIA) support via OpenAI-compatible API
+# Uses openai client with custom base_url for local/self-hosted Nemotron
+
+# ---------------------------------------------------------------------------
+# HTTP & Async Utilities
+# ---------------------------------------------------------------------------
+httpx==0.27.0                       # Async HTTP client for external API calls
+aiofiles==23.2.1                    # Async file system operations
+tenacity==8.4.0                     # Retry logic with exponential backoff
+orjson==3.10.0                      # High-performance JSON serialization (used by cache + responses)
+
+# ---------------------------------------------------------------------------
+# Retained from previous requirements (pinned to current stable)
+# ---------------------------------------------------------------------------
+requests==2.32.3                    # Sync HTTP client (legacy integrations)
+numpy==1.26.4                       # Numerical computing (AI/ML pipelines)
+pandas==2.1.4                       # Data manipulation and analysis
+PyJWT==2.8.0                        # Additional JWT handling (legacy compat)
+email-validator==2.2.0              # Email address validation
+
+# ---------------------------------------------------------------------------
+# WebSocket Support
+# ---------------------------------------------------------------------------
+websockets==12.0                    # WebSocket server/client for real-time features
+
+# ---------------------------------------------------------------------------
+# Voice (TTS/STT)
+# ---------------------------------------------------------------------------
+gTTS==2.5.0                         # Google Text-to-Speech
+SpeechRecognition==3.10.0           # Speech-to-text engine
+
+# ---------------------------------------------------------------------------
+# Web Scraping & Data
+# ---------------------------------------------------------------------------
+aiohttp==3.9.5                      # Async HTTP client for web scraping
+beautifulsoup4==4.12.3              # HTML/XML parsing for data extraction
+
+# ---------------------------------------------------------------------------
+# Templating & CLI
+# ---------------------------------------------------------------------------
+jinja2==3.1.4                       # Template engine (email templates, reports)
+click==8.1.7                        # CLI framework for management commands
+rich==13.7.1                        # Rich terminal output (logging, tables)
+
+# ---------------------------------------------------------------------------
+# Development & Testing (optional — install with: pip install -r requirements-dev.txt)
+# ---------------------------------------------------------------------------
+# pytest>=8.0.0
+# pytest-cov>=4.1.0
+# pytest-asyncio>=0.23.0
+# pytest-xdist>=3.5.0
+# ruff>=0.3.0
+# mypy>=1.8.0
+# mkdocs>=1.5.0
+# mkdocs-material>=9.5.0

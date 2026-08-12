@@ -37,9 +37,12 @@ CORS_ORIGINS = [s.strip() for s in _raw_cors.split(",") if s.strip()]
 # ---------------------------------------------------------------------------
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
+NEMOTRON_API_KEY = os.environ.get("NEMOTRON_API_KEY", "")
+NEMOTRON_BASE_URL = os.environ.get("NEMOTRON_BASE_URL", "http://localhost:8000/v1")
 ADMIN_KEY = os.environ.get("LUQI_ADMIN_KEY", "")
 
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "gpt-4o-mini")
+NEMOTRON_MODEL = os.environ.get("NEMOTRON_MODEL", "nvidia/nemotron-3.5-lightning")
 MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "50"))
 
 # ---------------------------------------------------------------------------
@@ -56,6 +59,7 @@ DB_PATH = DATA_DIR / "luqi.db"
 ENABLE_SANDBOX = os.environ.get("ENABLE_SANDBOX", "true").lower() in ("1", "true", "yes")
 ENABLE_VOICE = os.environ.get("ENABLE_VOICE", "true").lower() in ("1", "true", "yes")
 ENABLE_WEBSOCKET = os.environ.get("ENABLE_WEBSOCKET", "true").lower() in ("1", "true", "yes")
+ENABLE_NEMOTRON = os.environ.get("ENABLE_NEMOTRON", "false").lower() in ("1", "true", "yes")
 
 # ---------------------------------------------------------------------------
 # Settings singleton (for main.py compatibility)
@@ -65,7 +69,7 @@ class _Settings:
     """Unified settings object — mirrors all module-level constants."""
 
     # Version
-    version = "29.0.0"
+    version = "29.1.0"
     codename = "Prometheus"
     environment = "development" if DEBUG else "production"
 
@@ -93,6 +97,10 @@ class _Settings:
     # AI
     openai_api_key = OPENAI_API_KEY
     openai_model = DEFAULT_MODEL
+    nemotron_api_key = NEMOTRON_API_KEY
+    nemotron_base_url = NEMOTRON_BASE_URL
+    nemotron_model = NEMOTRON_MODEL
+    nemotron_enabled = ENABLE_NEMOTRON
 
     # CORS
     cors_origins = CORS_ORIGINS
@@ -134,6 +142,10 @@ CONFIG = {
     "db_path": str(DB_PATH),
     "openai_api_key": OPENAI_API_KEY,
     "openai_model": DEFAULT_MODEL,
+    "nemotron_api_key": NEMOTRON_API_KEY,
+    "nemotron_base_url": NEMOTRON_BASE_URL,
+    "nemotron_model": NEMOTRON_MODEL,
+    "nemotron_enabled": ENABLE_NEMOTRON,
     "cors_origins": CORS_ORIGINS,
     "enable_sandbox": ENABLE_SANDBOX,
     "enable_voice": ENABLE_VOICE,
