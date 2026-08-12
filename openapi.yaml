@@ -1,0 +1,112 @@
+openapi: 3.0.0
+info:
+  title: Omega AI API
+  description: API for Omega AI v29.1.0 - The Most Advanced African AI System
+  version: 29.1.0
+  contact:
+    name: Omega AI Team
+    email: support@omegaai.africa
+servers:
+  - url: https://api.omegaai.africa/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        200:
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  version:
+                    type: string
+                    example: 29.1.0
+
+  /chat:
+    post:
+      summary: Process a chat message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                session_id:
+                  type: string
+                context:
+                  type: object
+      responses:
+        200:
+          description: Chat response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  session_id:
+                    type: string
+                  timestamp:
+                    type: string
+
+  /plugins:
+    get:
+      summary: List available plugins
+      responses:
+        200:
+          description: List of plugins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    version:
+                      type: string
+                    enabled:
+                      type: boolean
+
+  /plugins/{name}/execute:
+    post:
+      summary: Execute a plugin
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: Plugin execution result
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
