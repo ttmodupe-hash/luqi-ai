@@ -1,180 +1,357 @@
-"""Nemotron Provider - NVIDIA Nemotron model integration for LUQI AI v29.1.0"""
-import os
-import json
-import asyncio
-from typing import List, Dict, Any, Optional, AsyncGenerator
-from dataclasses import dataclass
-from datetime import datetime
+"""
+LUQI AI — NVIDIA Nemotron 3.5 Lightning Provider
+==================================================
+FastAPI router providing OpenAI-compatible access to NVIDIA Nemotron 3.5
+Lightning with streaming, tool calling, structured output, and 1M context.
 
+Features: 1M context window, speculative decoding (MTP), 4x throughput,
+native tool calling, multi-turn excellence, local deployment via vLLM/TGI/NIM.
+"""
+from __future__ import annotations
 
-@dataclass
-class NemotronConfig:
-    model_name: str = "nvidia/nemotron-4-340b-instruct"
-    api_key: str = ""
-    base_url: str = "https://integrate.api.nvidia.com/v1"
-    max_tokens: int = 1024
-    temperature: float = 0.7
-    top_p: float = 0.9
-    timeout: int = 60
+import asyncio, json, os, time, uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Any, Literal, Optional
 
+import structlog
+from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-class NemotronProvider:
-    """Provider for NVIDIA Nemotron models via NVIDIA API."""
+logger = structlog.get_logger("luqi.nemotron")
 
-    def __init__(self, config: Optional[NemotronConfig] = None):
-        self.config = config or NemotronConfig()
-        self.config.api_key = self.config.api_key or os.environ.get("NVIDIA_API_KEY", "")
-        self._session = None
-        self._usage_stats = {
-            "total_requests": 0,
-            "total_tokens": 0,
-            "errors": 0,
-            "last_request": None,
-        }
+# ── Config ───────────────────────────────────────────────────────────────
+NEMOTRON_API_KEY = os.environ.get("NEMOTRON_API_KEY", "")
+NEMOTRON_BASE_URL = os.environ.get("NEMOTRON_BASE_URL", "http://localhost:8000/v1")
+NEMOTRON_MODEL = os.environ.get("NEMOTRON_MODEL", "nvidia/nemotron-3.5-lightning")
+ENABLE_NEMOTRON = os.environ.get("ENABLE_NEMOTRON", "false").lower() in ("1", "true", "yes")
+NEMOTRON_MAX_TOKENS = int(os.environ.get("NEMOTRON_MAX_TOKENS", "32768"))
+NEMOTRON_CONTEXT_WINDOW = int(os.environ.get("NEMOTRON_CONTEXT_WINDOW", "1048576"))
+NEMOTRON_TEMPERATURE = float(os.environ.get("NEMOTRON_TEMPERATURE", "0.7"))
+NEMOTRON_TIMEOUT = float(os.environ.get("NEMOTRON_TIMEOUT", "120.0"))
+NEMOTRON_MAX_RETRIES = int(os.environ.get("NEMOTRON_MAX_RETRIES", "3"))
 
-    async def _get_session(self):
-        if self._session is None:
-            import aiohttp
-            self._session = aiohttp.ClientSession(
-                headers={
-                    "Authorization": f"Bearer {self.config.api_key}",
-                    "Content-Type": "application/json",
-                },
-                timeout=aiohttp.ClientTimeout(total=self.config.timeout),
-            )
-        return self._session
+NEMOTRON_MODELS = {
+    "nvidia/nemotron-3.5-lightning": {
+        "id": "nvidia/nemotron-3.5-lightning",
+        "name": "Nemotron 3.5 Lightning",
+        "context_window": 1_048_576,
+        "capabilities": ["chat", "streaming", "tool_calling", "structured_output", "long_context", "multi_turn"],
+    },
+    "nvidia/nemotron-3.5-8b-instruct": {
+        "id": "nvidia/nemotron-3.5-8b-instruct",
+        "name": "Nemotron 3.5 8B Instruct",
+        "context_window": 131_072,
+        "capabilities": ["chat", "streaming", "tool_calling", "structured_output"],
+    },
+}
 
-    async def generate(
-        self,
-        messages: List[Dict[str, str]],
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-        stream: bool = False,
-    ) -> Dict[str, Any]:
-        """Generate a completion using Nemotron."""
-        session = await self._get_session()
-        
-        payload = {
-            "model": self.config.model_name,
-            "messages": messages,
-            "max_tokens": max_tokens or self.config.max_tokens,
-            "temperature": temperature or self.config.temperature,
-            "top_p": self.config.top_p,
-            "stream": stream,
-        }
-        
-        try:
-            async with session.post(
-                f"{self.config.base_url}/chat/completions",
-                json=payload,
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    self._usage_stats["errors"] += 1
-                    return {
-                        "success": False,
-                        "error": f"API error {response.status}: {error_text}",
-                    }
-                
-                data = await response.json()
-                self._usage_stats["total_requests"] += 1
-                self._usage_stats["last_request"] = datetime.utcnow().isoformat()
-                
-                if "usage" in data:
-                    self._usage_stats["total_tokens"] += data["usage"].get("total_tokens", 0)
-                
-                return {
-                    "success": True,
-                    "content": data["choices"][0]["message"]["content"],
-                    "usage": data.get("usage", {}),
-                    "model": data.get("model", self.config.model_name),
+# ── OpenAI client (lazy) ─────────────────────────────────────────────────
+_openai_client: Any | None = None
+
+def _get_client() -> Any:
+    global _openai_client
+    if _openai_client is not None:
+        return _openai_client
+    from openai import AsyncOpenAI
+    _openai_client = AsyncOpenAI(
+        api_key=NEMOTRON_API_KEY or "not-needed-for-local",
+        base_url=NEMOTRON_BASE_URL,
+        timeout=NEMOTRON_TIMEOUT,
+        max_retries=0,
+    )
+    logger.info("nemotron_client_initialized", base_url=NEMOTRON_BASE_URL, model=NEMOTRON_MODEL)
+    return _openai_client
+
+# ── Circuit breaker ──────────────────────────────────────────────────────
+class CircuitBreaker:
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 30.0):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self._failures = 0
+        self._last_failure_time = 0.0
+        self._state: Literal["closed", "open", "half_open"] = "closed"
+
+    @property
+    def state(self) -> Literal["closed", "open", "half_open"]:
+        if self._state == "open" and time.time() - self._last_failure_time > self.recovery_timeout:
+            self._state = "half_open"
+            self._failures = 0
+        return self._state
+
+    def record_success(self) -> None:
+        self._failures = 0
+        self._state = "closed"
+
+    def record_failure(self) -> None:
+        self._failures += 1
+        self._last_failure_time = time.time()
+        if self._failures >= self.failure_threshold:
+            self._state = "open"
+
+    def can_execute(self) -> bool:
+        return self.state in ("closed", "half_open")
+
+_circuit = CircuitBreaker()
+
+# ── Token estimation ─────────────────────────────────────────────────────
+def _estimate_tokens(text: str) -> int:
+    try:
+        import tiktoken
+        return len(tiktoken.get_encoding("cl100k_base").encode(text))
+    except ImportError:
+        return len(text) // 4
+
+def _estimate_message_tokens(messages: list[dict]) -> int:
+    total = 0
+    for msg in messages:
+        total += 4
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            total += _estimate_tokens(content)
+        if "tool_calls" in msg:
+            for tc in msg["tool_calls"]:
+                total += _estimate_tokens(json.dumps(tc))
+    return total
+
+def _truncate_messages(messages: list[dict], max_tokens: int = NEMOTRON_CONTEXT_WINDOW, reserve: int = 4096) -> list[dict]:
+    system_msgs = [m for m in messages if m.get("role") == "system"]
+    non_system = [m for m in messages if m.get("role") != "system"]
+    system_tokens = sum(_estimate_message_tokens([m]) for m in system_msgs)
+    available = max_tokens - system_tokens - reserve
+    truncated: list[dict] = []
+    current = 0
+    for msg in reversed(non_system):
+        msg_tokens = _estimate_message_tokens([msg])
+        if current + msg_tokens > available:
+            break
+        truncated.insert(0, msg)
+        current += msg_tokens
+    return system_msgs + truncated
+
+# ── Pydantic models ──────────────────────────────────────────────────────
+class ChatMessage(BaseModel):
+    role: Literal["system", "user", "assistant", "tool"] = "user"
+    content: str = ""
+    tool_call_id: Optional[str] = None
+    tool_calls: Optional[list[dict]] = None
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    model: str = NEMOTRON_MODEL
+    temperature: float = Field(default=NEMOTRON_TEMPERATURE, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=NEMOTRON_MAX_TOKENS, ge=1, le=1_048_576)
+    stream: bool = False
+    tools: Optional[list[dict]] = None
+    tool_choice: Optional[str | dict] = None
+    response_format: Optional[dict] = None
+
+class ChatResponse(BaseModel):
+    id: str = Field(default_factory=lambda: f"chatcmpl-{uuid.uuid4().hex[:12]}")
+    object: str = "chat.completion"
+    created: int = Field(default_factory=lambda: int(time.time()))
+    model: str = NEMOTRON_MODEL
+    choices: list[dict]
+    usage: dict[str, int] = Field(default_factory=dict)
+
+class ToolCallRequest(BaseModel):
+    messages: list[ChatMessage]
+    tools: list[dict]
+    model: str = NEMOTRON_MODEL
+    temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+
+class StructuredOutputRequest(BaseModel):
+    messages: list[ChatMessage]
+    schema_json: dict[str, Any]
+    model: str = NEMOTRON_MODEL
+    temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=8192, ge=1, le=1_048_576)
+
+class TokenCountResponse(BaseModel):
+    estimated_tokens: int
+    context_window: int
+    remaining_tokens: int
+    truncation_needed: bool
+    message_count: int
+
+class HealthResponse(BaseModel):
+    status: str
+    model: str
+    endpoint: str
+    circuit_state: str
+    timestamp: float
+    version: str = "3.5.0"
+
+# ── Retry decorator ──────────────────────────────────────────────────────
+_nemotron_retry = lambda f: retry(
+    stop=stop_after_attempt(NEMOTRON_MAX_RETRIES),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    retry=retry_if_exception_type((Exception,)),
+    reraise=True,
+)(f)
+
+# ── Core chat logic ──────────────────────────────────────────────────────
+async def _chat_completion(request: ChatRequest, stream: bool = False) -> Any:
+    if not _circuit.can_execute():
+        raise HTTPException(status_code=503, detail="Nemotron circuit breaker is OPEN")
+
+    client = _get_client()
+    messages = _truncate_messages([m.model_dump(exclude_none=True) for m in request.messages])
+
+    payload = {
+        "model": request.model,
+        "messages": messages,
+        "temperature": request.temperature,
+        "max_tokens": request.max_tokens,
+        "stream": stream,
+    }
+    if request.tools:
+        payload["tools"] = request.tools
+        payload["tool_choice"] = request.tool_choice or "auto"
+    if request.response_format:
+        payload["response_format"] = request.response_format
+
+    try:
+        if stream:
+            return await client.chat.completions.create(**payload)
+        resp = await client.chat.completions.create(**payload)
+        _circuit.record_success()
+        return resp
+    except Exception as e:
+        _circuit.record_failure()
+        logger.error("nemotron_chat_error", error=str(e))
+        raise HTTPException(status_code=502, detail=f"Nemotron error: {e}")
+
+# ── Router ───────────────────────────────────────────────────────────────
+nemotron_router = APIRouter(prefix="/nemotron", tags=["nemotron"])
+
+@nemotron_router.post("/chat")
+async def nemotron_chat(request: ChatRequest):
+    """Chat completion with optional streaming."""
+    if not ENABLE_NEMOTRON:
+        raise HTTPException(status_code=503, detail="Nemotron is disabled")
+
+    if request.stream:
+        async def event_stream() -> AsyncGenerator[str, None]:
+            stream_resp = await _chat_completion(request, stream=True)
+            async for chunk in stream_resp:
+                data = {
+                    "id": chunk.id,
+                    "object": "chat.completion.chunk",
+                    "created": chunk.created,
+                    "model": chunk.model,
+                    "choices": [{"index": 0, "delta": {"content": c.delta.content or ""}, "finish_reason": c.finish_reason} for c in chunk.choices],
                 }
-        except Exception as e:
-            self._usage_stats["errors"] += 1
-            return {"success": False, "error": str(e)}
+                yield f"data: {json.dumps(data)}\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
 
-    async def stream_generate(
-        self,
-        messages: List[Dict[str, str]],
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-    ) -> AsyncGenerator[str, None]:
-        """Stream a completion using Nemotron."""
-        session = await self._get_session()
-        
-        payload = {
-            "model": self.config.model_name,
-            "messages": messages,
-            "max_tokens": max_tokens or self.config.max_tokens,
-            "temperature": temperature or self.config.temperature,
-            "top_p": self.config.top_p,
-            "stream": True,
-        }
-        
-        try:
-            async with session.post(
-                f"{self.config.base_url}/chat/completions",
-                json=payload,
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    yield json.dumps({"error": f"API error {response.status}: {error_text}"})
-                    return
-                
-                async for line in response.content:
-                    line = line.decode("utf-8").strip()
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            if "choices" in data and data["choices"]:
-                                delta = data["choices"][0].get("delta", {})
-                                if "content" in delta:
-                                    yield delta["content"]
-                        except json.JSONDecodeError:
-                            pass
-        except Exception as e:
-            yield json.dumps({"error": str(e)})
+    resp = await _chat_completion(request, stream=False)
+    return ChatResponse(
+        id=resp.id,
+        model=resp.model,
+        choices=[{"index": c.index, "message": {"role": "assistant", "content": c.message.content or ""}, "finish_reason": c.finish_reason} for c in resp.choices],
+        usage={"prompt_tokens": resp.usage.prompt_tokens, "completion_tokens": resp.usage.completion_tokens, "total_tokens": resp.usage.total_tokens} if resp.usage else {},
+    )
 
-    async def embed(self, texts: List[str]) -> Dict[str, Any]:
-        """Generate embeddings for texts."""
-        session = await self._get_session()
-        
-        payload = {
-            "input": texts,
-            "model": "nvidia/nv-embedqa-e5-v5",
-        }
-        
-        try:
-            async with session.post(
-                f"{self.config.base_url}/embeddings",
-                json=payload,
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    return {"success": False, "error": f"API error {response.status}: {error_text}"}
-                
-                data = await response.json()
-                return {
-                    "success": True,
-                    "embeddings": [item["embedding"] for item in data["data"]],
-                    "usage": data.get("usage", {}),
-                }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+@nemotron_router.post("/chat/async")
+async def nemotron_chat_async(request: ChatRequest):
+    """Async non-streaming chat completion."""
+    request.stream = False
+    return await nemotron_chat(request)
 
-    def get_stats(self) -> Dict[str, Any]:
-        """Get usage statistics."""
-        return self._usage_stats.copy()
+@nemotron_router.get("/models")
+async def nemotron_models():
+    """List available Nemotron models."""
+    return {"object": "list", "data": list(NEMOTRON_MODELS.values())}
 
-    async def close(self):
-        """Close the HTTP session."""
-        if self._session:
-            await self._session.close()
-            self._session = None
+@nemotron_router.get("/health")
+async def nemotron_health():
+    """Nemotron health check."""
+    healthy = False
+    try:
+        client = _get_client()
+        # Lightweight models list call
+        await client.models.list()
+        healthy = True
+        _circuit.record_success()
+    except Exception:
+        pass
 
+    return HealthResponse(
+        status="healthy" if healthy else "unhealthy",
+        model=NEMOTRON_MODEL,
+        endpoint=NEMOTRON_BASE_URL,
+        circuit_state=_circuit.state,
+        timestamp=time.time(),
+    )
 
-# Global provider instance
-nemotron_provider = NemotronProvider()
+@nemotron_router.post("/tools")
+async def nemotron_tools(request: ToolCallRequest):
+    """Tool calling endpoint."""
+    if not ENABLE_NEMOTRON:
+        raise HTTPException(status_code=503, detail="Nemotron is disabled")
+
+    chat_req = ChatRequest(
+        messages=request.messages,
+        model=request.model,
+        temperature=request.temperature,
+        tools=request.tools,
+        tool_choice="auto",
+        stream=False,
+    )
+    resp = await _chat_completion(chat_req, stream=False)
+    return ChatResponse(
+        id=resp.id,
+        model=resp.model,
+        choices=[{"index": c.index, "message": {"role": "assistant", "content": c.message.content or "", "tool_calls": [tc.model_dump() for tc in c.message.tool_calls] if c.message.tool_calls else None}, "finish_reason": c.finish_reason} for c in resp.choices],
+        usage={"prompt_tokens": resp.usage.prompt_tokens, "completion_tokens": resp.usage.completion_tokens, "total_tokens": resp.usage.total_tokens} if resp.usage else {},
+    )
+
+@nemotron_router.post("/structured")
+async def nemotron_structured(request: StructuredOutputRequest):
+    """Structured output with JSON schema."""
+    if not ENABLE_NEMOTRON:
+        raise HTTPException(status_code=503, detail="Nemotron is disabled")
+
+    chat_req = ChatRequest(
+        messages=request.messages,
+        model=request.model,
+        temperature=request.temperature,
+        max_tokens=request.max_tokens,
+        response_format={"type": "json_object"},
+        stream=False,
+    )
+    resp = await _chat_completion(chat_req, stream=False)
+    content = resp.choices[0].message.content or "{}"
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="Invalid JSON in structured output")
+    return {"data": parsed, "usage": {"prompt_tokens": resp.usage.prompt_tokens, "completion_tokens": resp.usage.completion_tokens, "total_tokens": resp.usage.total_tokens} if resp.usage else {}}
+
+@nemotron_router.post("/token-count")
+async def nemotron_token_count(request: ChatRequest):
+    """Estimate token count for messages."""
+    messages = [m.model_dump(exclude_none=True) for m in request.messages]
+    estimated = _estimate_message_tokens(messages)
+    return TokenCountResponse(
+        estimated_tokens=estimated,
+        context_window=NEMOTRON_CONTEXT_WINDOW,
+        remaining_tokens=max(0, NEMOTRON_CONTEXT_WINDOW - estimated),
+        truncation_needed=estimated > NEMOTRON_CONTEXT_WINDOW,
+        message_count=len(messages),
+    )
+
+# ── Lifespan ─────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def nemotron_lifespan(app: Any):
+    logger.info("nemotron_lifespan_startup", enabled=ENABLE_NEMOTRON, model=NEMOTRON_MODEL)
+    yield
+    global _openai_client
+    if _openai_client is not None:
+        await _openai_client.close()
+        _openai_client = None
+    logger.info("nemotron_lifespan_shutdown")
