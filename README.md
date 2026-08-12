@@ -1,89 +1,89 @@
-<p align="center">
-  <img src="brand/limitless_logo_full.png" alt="Limitless Telecommunications" width="340">
-</p>
+# Omega AI v29.1.0
 
-# LUQI AI v29.12.0 "Prompt Forge" - Unified Master Engine
+> **Unified AI Platform for Africa** — A multi-agent, multi-modal intelligence system with 150+ capabilities, local LLM support, federated learning, blockchain audit trails, and comprehensive South African service integrations.
 
-![version](https://img.shields.io/badge/version-29.12.0-brightgreen) ![python](https://img.shields.io/badge/python-3.11-blue) ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen) ![self-test](https://img.shields.io/badge/self--test-172%2F172-brightgreen) ![license](https://img.shields.io/badge/license-MIT-lightgrey)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/ttmodupe-hash/luqi-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/ttmodupe-hash/luqi-ai/actions)
 
-**One 427 KB file. Zero dependencies. Seventeen subsystems. 172 self-test checks.**
-A personal AI Unified Master Engine written in pure Python standard library - built in South Africa, MIT licensed, free forever.
-
-## What it is
-
-`omega.py` is the entire product: a modular CLI engine with persistent memory that unifies 17 capability subsystems behind one graceful command line. No pip installs, no accounts, no servers. It runs **fully offline** out of the box; every connector degrades honestly when its API key is absent - hints, never tracebacks.
-
-| # | Subsystem | # | Subsystem |
-|---|---|---|---|
-| 1 | Build & Sync | 10 | Evolution Engine (sandboxed self-improvement) |
-| 2 | Mining & Investment | 11 | Voice (TTS) |
-| 3 | Tax Support | 12 | Image Generation |
-| 4 | API & Security Gatekeeper | 13 | GitHub REST |
-| 5 | Deep Research | 14 | Reminders |
-| 6 | Companion/Tutor | 15 | Document Q&A |
-| 7 | Opportunity Engine | 16 | Rights & Travel (SA-deep + world layer) |
-| 8 | Finance Literacy | 17 | Prompt Forge (expert-prompt compiler) |
-| 9 | Self-Improvement | | |
-
-Plus: 100 language packs (70 African), persistent memory with corruption recovery, audit logging, and a `--selftest` that proves every claim on a fresh clone.
-
-## Quickstart
+## Quick Start
 
 ```bash
+# Clone and setup
 git clone https://github.com/ttmodupe-hash/luqi-ai.git
 cd luqi-ai
-python omega.py --selftest     # 172/172 checks pass (Windows: py -3.11)
-python omega.py                # interactive [OMEGA] > terminal
-python omega.py "prompt build me a budget app"   # one-shot mode
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run the API server
+python api_server.py
 ```
 
-A taste of the terminal:
+## Architecture
 
-```text
-[OMEGA] > prompt build me a budget app     # compiles an EXPERT PROMPT + 6 coaching tips
-[OMEGA] > prompt add must include savings goals
-[OMEGA] > what are my rights at a roadblock   # offline rights guide, with disclaimer
-[OMEGA] > map dir cape town to durban         # opens directions in your browser
-[OMEGA] > teach mathematics                   # classroom mode - online or honest offline
-[OMEGA] > ingest https://en.wikipedia.org/wiki/South_Africa
-[OMEGA] > ask what is south africa known for  # answers from your docs; web when keyed
-[OMEGA] > voice speed 1.3 | say hello world   # adjustable speech (keyed)
-[OMEGA] > launch                              # GO/NO-GO pre-flight checklist
+```
+Omega AI
+├── Core Brain (omega_ai.py, core_brain.py, ai_brain.py)
+├── Agent Mesh (agent_mesh.py) — Multi-agent orchestration
+├── Memory System (memory_manager.py, memory_store.py)
+├── Knowledge Base (knowledge_base.py, vector_db.py)
+├── Plugin System (plugin_registry.py, plugin_marketplace.py, omega_plugins.py)
+├── API Layer (api_server.py, ws_server.py)
+├── Web UI (web_ui/) — Progressive Web App
+├── Services (150+ specialized modules)
+│   ├── Agriculture, Mining, Construction
+│   ├── Finance, Tax, Insurance, Loans
+│   ├── Health, Education, Sports
+│   ├── Transport, Housing, Government
+│   └── Entertainment, Travel, Weather
+└── Infrastructure
+    ├── Auth (auth_middleware.py)
+    ├── Cache (cache_manager.py)
+    ├── DB (db_engine.py, db_layer.py)
+    ├── Scheduler (scheduler.py)
+    └── Export (export_formats.py, pdf_generator.py)
 ```
 
-## How the distribution works (read this - it is the security model)
+## Key Features
 
-The engine ships **split**: root `omega.py` is a 2 KB loader; the real engine lives as 12 verified byte-parts under `.omega_parts/`. On every run the loader concatenates the parts, verifies the exact byte count (`427,038`) **and** the pinned SHA-256 (`cbcd3689...`), and only then executes. Corrupt or tampered parts = clean refusal with a re-clone message. `.gitattributes` marks the parts as binary so Windows `core.autocrlf` can never corrupt them. Every release is proven this way on a fresh anonymous clone before it ships.
+| Category | Modules |
+|----------|---------|
+| **Core AI** | Brain, Memory, Knowledge, Conversation, Skills |
+| **Agriculture** | Crop advisor, Livestock, Farming guide, Solar, Water |
+| **Business** | Registration, CRM, Project, Inventory, Invoice, HR |
+| **Finance** | Tax, Insurance, Loans, Investment, Price ticker |
+| **Health** | Advisor, Directory, Mental health, Nutrition |
+| **Education** | OmniLab, Pedagogical, Vocational, University guide |
+| **Government** | Services, Housing, Tender, Legal, CA assistant |
+| **Infrastructure** | Load shedding, Transport, Vehicle, Mobile data |
+| **Security** | Cybersecurity, Blockchain audit, Key rotation |
+| **Communication** | Email, Telegram, WhatsApp, Notification |
+| **Research** | Web search, Deep research, News, Citation |
+| **Integration** | Local LLM, Federated learning, Multi-tenant |
 
-## Configuration (.env - all optional)
+## API Documentation
+
+OpenAPI spec available at `/openapi.yaml`. Start the server and visit:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+## Testing
 
 ```bash
-cp .env.example .env   # then fill in only what you want
+pytest -xvs tests/
 ```
 
-Without any keys the engine is 100% functional offline. Keys unlock: `OPENAI_API_KEY` (LLM answers, voice, images), `SERPER_API_KEY` (web-backed `ask` fallback), `OPENROUTER_API_KEY` (online evolution), `GITHUB_TOKEN` + `GITHUB_REPO` (sync). Secrets are masked everywhere, `.env` is gitignored, and `guard_secrets.py` blocks accidental key commits.
-
-## Repo layout
-
-- `omega.py` - the loader (2 KB) - **this is the only entry point**
-- `.omega_parts/` - the engine itself (12 sha-verified byte-parts, 427,038 bytes total)
-- `.env.example` - configuration template (all values empty)
-- `guard_secrets.py`, `.githooks/` - secret-scan guard + pre-commit hook
-- `LICENSE` - MIT
-
-Everything else in this repository (`app/`, `backend/`, `web_core/`, `omega_ai/`, `claude_engine/`, `main.py`, `site/`, `docs/`, and friends) is **earlier R&D scaffolding kept for history**. It is not the product, is not maintained, and should not be run. The product is exactly the five items above.
-
-## Verify it yourself
+## Docker
 
 ```bash
-python omega.py --selftest   # 172 checks: router smoke, memory round-trip + corruption
-                             # recovery, xlsx ingestion, secret masking, rights/prompt/travel
-                             # routing, offline degradation - exit 0 means all pass
+docker-compose up --build
 ```
 
-## The company
+## Contributing
 
-LUQI AI is engineered, published and owned by **Limitless Telecommunication (Pty) Ltd** - a private company registered with the Companies and Intellectual Property Commission (CIPC) of South Africa (Reg. 2011/136660/07), in business since 25 November 2011, headquartered in Soshanguve, Tshwane. Enterprise status: In Business - independently verifiable at cipc.co.za.
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [Code of Conduct](.github/CODE_OF_CONDUCT.md).
 
----
-Luqi AI (c) 2026 Limitless Telecommunication (Pty) Ltd. Built to be verified, not trusted: every release ships with a selftest and a fresh-clone proof.
+## License
+
+[MIT](LICENSE) — Copyright (c) 2024-2025 Omega AI / Luqi AI
