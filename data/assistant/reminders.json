@@ -1,0 +1,8 @@
+[
+  {
+    "id": 1,
+    "message": "Meeting in 30 minutes",
+    "time": "2025-01-15T09:30:00",
+    "channel": "push"
+  }
+]
