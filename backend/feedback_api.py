@@ -1,136 +1,102 @@
-"""
-LUQI AI — Feedback & Activity API
-==================================
-Collects user feedback and tracks feature usage for product improvement.
-v29.0.0 Pre-launch
-"""
-from __future__ import annotations
-import json
-import time
-import uuid
-from typing import Dict, List, Any
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+"""Feedback API for LUQI AI"""
+from typing import List, Optional
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
-router = APIRouter(tags=["feedback"])
-
-_feedback_store: List[Dict[str, Any]] = []
-_activity_log: List[Dict[str, Any]] = []
+router = APIRouter(prefix="/feedback", tags=["Feedback"])
 
 
-def _init_db():
-    """Initialize SQLite tables for feedback and activity."""
-    try:
-        import sqlite3
-        from pathlib import Path
-        db_path = Path(__file__).resolve().parent.parent / "data" / "luqi.db"
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(db_path))
-        c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS feedback (
-                id TEXT PRIMARY KEY,
-                user_id TEXT,
-                name TEXT,
-                email TEXT,
-                subject TEXT,
-                message TEXT,
-                rating INTEGER,
-                created_at REAL,
-                resolved INTEGER DEFAULT 0
-            )
-        """)
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS activity_log (
-                id TEXT PRIMARY KEY,
-                user_id TEXT,
-                event_type TEXT,
-                feature TEXT,
-                action TEXT,
-                details TEXT,
-                created_at REAL
-            )
-        """)
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"[feedback_api] DB init warning: {e}")
+class FeedbackCreate(BaseModel):
+    feedback_type: str  # 'bug', 'feature', 'praise', 'other'
+    title: str
+    description: str
+    rating: Optional[int] = None  # 1-5
+    screenshot_url: Optional[str] = None
 
 
-_init_db()
+class FeedbackResponse(BaseModel):
+    id: int
+    user_id: int
+    feedback_type: str
+    title: str
+    description: str
+    rating: Optional[int]
+    screenshot_url: Optional[str]
+    status: str  # 'open', 'in_progress', 'resolved', 'closed'
+    created_at: str
+    updated_at: str
 
 
-@router.post("/api/v25/feedback/submit")
-async def api_v25_feedback_submit(request: Request):
-    """Submit user feedback. Body: {name, email, subject, message, rating?}"""
-    try:
-        data = json.loads(await request.body())
-        feedback_id = str(uuid.uuid4())
-        entry = {
-            "id": feedback_id,
-            "name": data.get("name", ""),
-            "email": data.get("email", ""),
-            "subject": data.get("subject", "general"),
-            "message": data.get("message", ""),
-            "rating": data.get("rating"),
-            "created_at": time.time(),
-        }
-        _feedback_store.append(entry)
-        try:
-            import sqlite3
-            from pathlib import Path
-            db_path = Path(__file__).resolve().parent.parent / "data" / "luqi.db"
-            conn = sqlite3.connect(str(db_path))
-            c = conn.cursor()
-            c.execute(
-                "INSERT INTO feedback VALUES (?,?,?,?,?,?,?,?)",
-                (entry["id"], "anonymous", entry["name"], entry["email"],
-                 entry["subject"], entry["message"], entry["rating"], entry["created_at"])
-            )
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-        return JSONResponse({"success": True, "feedback_id": feedback_id})
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=400)
+# In-memory store
+_feedback_store = {}
+_next_feedback_id = 1
 
 
-@router.post("/api/v25/activity/track")
-async def api_v25_activity_track(request: Request):
-    """Track a user activity event. Body: {user_id?, event_type, feature, action, details?}"""
-    try:
-        data = json.loads(await request.body())
-        entry = {
-            "id": str(uuid.uuid4()),
-            "user_id": data.get("user_id", "anonymous"),
-            "event_type": data.get("event_type", "feature_usage"),
-            "feature": data.get("feature", ""),
-            "action": data.get("action", ""),
-            "details": json.dumps(data.get("details", {})),
-            "created_at": time.time(),
-        }
-        _activity_log.append(entry)
-        return JSONResponse({"success": True})
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=400)
+@router.post("/", response_model=FeedbackResponse)
+async def submit_feedback(request: FeedbackCreate, req: Request):
+    """Submit new feedback."""
+    global _next_feedback_id
+    fb_id = _next_feedback_id
+    _next_feedback_id += 1
+    now = datetime.utcnow().isoformat()
+    fb = {
+        "id": fb_id,
+        "user_id": 1,  # TODO: from auth
+        "feedback_type": request.feedback_type,
+        "title": request.title,
+        "description": request.description,
+        "rating": request.rating,
+        "screenshot_url": request.screenshot_url,
+        "status": "open",
+        "created_at": now,
+        "updated_at": now,
+    }
+    _feedback_store[fb_id] = fb
+    return fb
 
 
-@router.get("/api/v25/feedback/list")
-async def api_v25_feedback_list(limit: int = 50):
-    """List recent feedback (admin only in production)."""
-    return JSONResponse({"success": True, "feedback": _feedback_store[-limit:]})
+@router.get("/", response_model=List[FeedbackResponse])
+async def list_feedback(
+    feedback_type: str = None,
+    status: str = None,
+    skip: int = 0,
+    limit: int = 100,
+):
+    """List feedback with optional filtering."""
+    items = list(_feedback_store.values())
+    if feedback_type:
+        items = [i for i in items if i["feedback_type"] == feedback_type]
+    if status:
+        items = [i for i in items if i["status"] == status]
+    items.sort(key=lambda x: x["created_at"], reverse=True)
+    return items[skip : skip + limit]
 
 
-@router.get("/api/v25/activity/summary")
-async def api_v25_activity_summary():
-    """Get activity summary (admin only in production)."""
-    from collections import Counter
-    feature_counts = Counter(a["feature"] for a in _activity_log if a["feature"])
-    action_counts = Counter(a["action"] for a in _activity_log if a["action"])
-    return JSONResponse({
-        "success": True,
-        "total_events": len(_activity_log),
-        "top_features": dict(feature_counts.most_common(10)),
-        "top_actions": dict(action_counts.most_common(10)),
-    })
+@router.get("/{fb_id}", response_model=FeedbackResponse)
+async def get_feedback(fb_id: int):
+    """Get a specific feedback item."""
+    if fb_id not in _feedback_store:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return _feedback_store[fb_id]
+
+
+@router.put("/{fb_id}/status")
+async def update_feedback_status(fb_id: int, status: str):
+    """Update feedback status (admin only)."""
+    if fb_id not in _feedback_store:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    if status not in ("open", "in_progress", "resolved", "closed"):
+        raise HTTPException(status_code=400, detail="Invalid status")
+    _feedback_store[fb_id]["status"] = status
+    _feedback_store[fb_id]["updated_at"] = datetime.utcnow().isoformat()
+    return {"success": True, "status": status}
+
+
+@router.delete("/{fb_id}")
+async def delete_feedback(fb_id: int):
+    """Delete feedback (admin only)."""
+    if fb_id not in _feedback_store:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    del _feedback_store[fb_id]
+    return {"success": True}
