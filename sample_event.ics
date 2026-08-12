@@ -1,0 +1,13 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Omega AI//Event Sample//EN
+BEGIN:VEVENT
+UID:sample-event-001@omegaai.africa
+DTSTART:20241225T080000Z
+DTEND:20241225T100000Z
+SUMMARY:Christmas Celebration
+DESCRIPTION:Annual Christmas celebration with the Omega AI team.
+LOCATION:Cape Town, South Africa
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR
