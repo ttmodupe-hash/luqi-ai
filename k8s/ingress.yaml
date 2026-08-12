@@ -1,0 +1,90 @@
+# =============================================================================
+# LUQI AI - Ingress Resource
+# =============================================================================
+# Routes external traffic to internal services based on URL path.
+# TLS is automatically managed by cert-manager with Let's Encrypt.
+#
+# Prerequisites:
+#   1. cert-manager installed in the cluster
+#   2. ClusterIssuer named "letsencrypt-prod" configured
+#   3. DNS A record: api.luqi.ai -> Ingress Controller IP
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: luqi-ai-ingress
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: ingress
+  annotations:
+    # cert-manager: automatically provision TLS certificate
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+
+    # Nginx Ingress Controller settings
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
+
+    # Enable CORS at ingress level
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Request-ID, X-API-Key"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+
+    # Additional annotations
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /healthz {
+        return 200 "ok";
+        add_header Content-Type text/plain;
+      }
+
+spec:
+  # TLS certificate (managed by cert-manager)
+  tls:
+    - hosts:
+        - api.luqi.ai
+      secretName: luqi-ai-tls-secret
+
+  # Ingress class — requires nginx ingress controller
+  ingressClassName: nginx
+
+  rules:
+    - host: api.luqi.ai
+      http:
+        paths:
+          # Route API calls to FastAPI backend
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 8080
+
+          # Route metrics to FastAPI metrics endpoint
+          - path: /metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 9090
+
+          # Route everything else to Nginx (React frontend)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  number: 80

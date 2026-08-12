@@ -1,0 +1,74 @@
+# =============================================================================
+# LUQI AI - Application ConfigMap
+# =============================================================================
+# Non-sensitive application configuration shared across all components.
+# Contains logging, CORS, API versioning, and Celery settings.
+# Sensitive values (passwords, API keys) belong in the Secret resource.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: luqi-ai-config
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: config
+data:
+  # ---------------------------------------------------------------------------
+  # Application Settings
+  # ---------------------------------------------------------------------------
+  APP_NAME: "LUQI AI"
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+  API_VERSION: "v25"
+
+  # ---------------------------------------------------------------------------
+  # CORS Configuration
+  # ---------------------------------------------------------------------------
+  CORS_ORIGINS: "https://luqi.ai,https://app.luqi.ai,https://api.luqi.ai"
+  CORS_ALLOW_CREDENTIALS: "true"
+  CORS_ALLOW_METHODS: "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+  CORS_ALLOW_HEADERS: "Authorization,Content-Type,X-Request-ID,X-API-Key"
+
+  # ---------------------------------------------------------------------------
+  # Server Configuration
+  # ---------------------------------------------------------------------------
+  HOST: "0.0.0.0"
+  PORT: "8080"
+  WORKERS: "4"
+  TIMEOUT_KEEP_ALIVE: "120"
+
+  # ---------------------------------------------------------------------------
+  # Celery Configuration
+  # ---------------------------------------------------------------------------
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+  CELERY_WORKER_CONCURRENCY: "4"
+  CELERY_WORKER_PREFETCH_MULTIPLIER: "1"
+  CELERY_TASK_ACKS_LATE: "true"
+  CELERY_TASK_TRACK_STARTED: "true"
+  CELERY_TASK_TIME_LIMIT: "3600"
+  CELERY_WORKER_MAX_TASKS_PER_CHILD: "1000"
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache Configuration
+  # ---------------------------------------------------------------------------
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # ---------------------------------------------------------------------------
+  # Database Pool Settings
+  # ---------------------------------------------------------------------------
+  DB_POOL_SIZE: "20"
+  DB_MAX_OVERFLOW: "10"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "1800"
+
+  # ---------------------------------------------------------------------------
+  # Observability
+  # ---------------------------------------------------------------------------
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"
+  ENABLE_TRACING: "true"

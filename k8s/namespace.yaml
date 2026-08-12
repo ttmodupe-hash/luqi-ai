@@ -1,0 +1,15 @@
+# =============================================================================
+# LUQI AI - Namespace
+# =============================================================================
+# Production namespace for the LUQI AI platform.
+# All resources for the application are deployed within this namespace.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    environment: production
+    managed-by: kubectl

@@ -1,0 +1,84 @@
+# =============================================================================
+# LUQI AI - Pod Disruption Budgets
+# =============================================================================
+# Ensures minimum availability during voluntary disruptions
+# (node drains, cluster upgrades, etc.). Prevents all pods of a
+# given component from being evicted simultaneously.
+# =============================================================================
+
+---
+# PDB for FastAPI Application
+# Ensures at least 2 app pods are always available.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app-pdb
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: app
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: app
+
+---
+# PDB for Nginx Frontend
+# Ensures at least 1 nginx pod is always available.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nginx-pdb
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: nginx
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: nginx
+
+---
+# PDB for Celery Workers
+# Ensures at least 1 worker pod is always available.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: celery-worker-pdb
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: celery-worker
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: celery-worker
+
+---
+# PDB for PostgreSQL
+# Ensures the database pod is never voluntarily disrupted.
+# Uses maxUnavailable: 0 for critical stateful workloads.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: postgres
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: postgres

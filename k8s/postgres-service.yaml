@@ -1,0 +1,26 @@
+# =============================================================================
+# LUQI AI - PostgreSQL Headless Service
+# =============================================================================
+# Headless service for PostgreSQL StatefulSet. Enables stable network
+# identity for the database pod and allows direct pod-to-pod communication.
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: postgres
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service for StatefulSet
+  selector:
+    app: luqi-ai
+    component: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP

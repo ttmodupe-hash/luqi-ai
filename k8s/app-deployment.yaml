@@ -1,0 +1,175 @@
+# =============================================================================
+# LUQI AI - FastAPI Application Deployment
+# =============================================================================
+# Main backend service running FastAPI on Python 3.11.
+# Handles API requests, AI integrations, and business logic.
+# Horizontally scalable via HPA (3-20 replicas).
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: app
+spec:
+  replicas: 3
+
+  # Rolling update strategy ensures zero-downtime deployments
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1           # Launch at most 1 extra pod during update
+      maxUnavailable: 0     # Never drop below desired replicas
+
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: app
+  template:
+    metadata:
+      labels:
+        app: luqi-ai
+        version: v29
+        component: app
+      annotations:
+        # Force redeployment when config changes
+        checksum/config: "${CONFIG_CHECKSUM}"
+        checksum/secrets: "${SECRETS_CHECKSUM}"
+    spec:
+      # Spread pods across nodes for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: component
+                      operator: In
+                      values:
+                        - app
+                topologyKey: kubernetes.io/hostname
+
+      # Ensure app starts after database is available
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis 6379; do
+                echo "Waiting for Redis..."
+                sleep 2
+              done
+              echo "Redis is ready!"
+
+      containers:
+        - name: app
+          image: ghcr.io/ttmodupe-hash/luqi-ai:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+
+          # Resource specification with limits and requests
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+
+          # Environment from ConfigMap (non-sensitive)
+          envFrom:
+            - configMapRef:
+                name: luqi-ai-config
+
+          # Environment from Secret (sensitive)
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: JWT_SECRET
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: REDIS_URL
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: OPENAI_API_KEY
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: ADMIN_PASSWORD
+
+          # Liveness probe — restart container if the app is stuck/deadlocked
+          livenessProbe:
+            httpGet:
+              path: /api/v25/status
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Readiness probe — only route traffic when fully initialized
+          readinessProbe:
+            httpGet:
+              path: /api/v25/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Graceful shutdown handling
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep 10
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL

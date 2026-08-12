@@ -1,0 +1,42 @@
+# =============================================================================
+# LUQI AI - Nginx LoadBalancer Service
+# =============================================================================
+# Exposes the Nginx frontend to the internet via a cloud load balancer.
+# This is the main entry point for all user traffic.
+# HTTP (80) and HTTPS (443) ports are exposed.
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: nginx
+  # Cloud-provider annotations for load balancer configuration
+  # (uncomment and adjust for your cloud provider)
+  # annotations:
+  #   # AWS
+  #   service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+  #   service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:..."
+  #   # GCP
+  #   cloud.google.com/l4-rbs: "enabled"
+  #   # Azure
+  #   service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /nginx-health
+spec:
+  type: LoadBalancer
+  selector:
+    app: luqi-ai
+    component: nginx
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 80
+      protocol: TCP
+  # Session affinity for WebSocket support (if needed)
+  sessionAffinity: None

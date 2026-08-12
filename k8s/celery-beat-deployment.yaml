@@ -1,0 +1,112 @@
+# =============================================================================
+# LUQI AI - Celery Beat Deployment
+# =============================================================================
+# Celery Beat is the periodic task scheduler — a singleton that dispatches
+# scheduled tasks (cron-like) to the Redis broker for workers to pick up.
+# Only 1 replica is required; running multiple would duplicate tasks.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: celery-beat
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate    # Recreate ensures only one beat scheduler runs
+  selector:
+    matchLabels:
+      app: luqi-ai
+      component: celery-beat
+  template:
+    metadata:
+      labels:
+        app: luqi-ai
+        version: v29
+        component: celery-beat
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis 6379; do
+                echo "Waiting for Redis..."
+                sleep 2
+              done
+              echo "Redis is ready!"
+
+      containers:
+        - name: celery-beat
+          image: ghcr.io/ttmodupe-hash/luqi-ai:latest
+          imagePullPolicy: Always
+
+          # Celery beat command — the task scheduler
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - beat
+            - --loglevel=INFO
+            - --scheduler=redbeat.RedBeatScheduler
+            - --max-interval=300
+
+          # Minimal resources — beat is a lightweight scheduler
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "100m"
+
+          # Environment from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: luqi-ai-config
+
+          # Environment from Secret
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: REDIS_URL
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: luqi-ai-secrets
+                  key: OPENAI_API_KEY
+
+          # Liveness probe
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.celery_app
+                - inspect
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL

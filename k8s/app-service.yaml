@@ -1,0 +1,29 @@
+# =============================================================================
+# LUQI AI - FastAPI Application Service
+# =============================================================================
+# ClusterIP service exposes the FastAPI app internally.
+# The Ingress routes /api traffic to this service.
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: luqi-ai-prod
+  labels:
+    app: luqi-ai
+    version: v29
+    component: app
+spec:
+  type: ClusterIP
+  selector:
+    app: luqi-ai
+    component: app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
