@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from omega_ai.crypto_engine import (
     CryptoAdvisor,
+    SA_PRIMARY_REBATE_2026,
     classify_transaction,
     get_crypto_price,
     get_crypto_market_data,
@@ -421,8 +422,18 @@ async def tax_airdrop(request: AirdropTaxRequest):
             tax_result = calculate_income_tax(total_income, 0)
             tax_result["note"] = f"Airdrop: R{request.value_zar:,.2f} taxed as income (earned)."
             return IncomeTaxResponse(**tax_result)
-        result["note"] = f"Airdrop: R{request.value_zar:,.2f} treated as capital. CGT applies when sold."
-        return IncomeTaxResponse(**result)
+        # Passive airdrop: no immediate tax, CGT deferred until sale
+        return IncomeTaxResponse(
+            total_taxable_income=0.0,
+            tax_before_rebate=0.0,
+            primary_rebate=SA_PRIMARY_REBATE_2026,
+            tax_payable=0.0,
+            marginal_rate=0.0,
+            bracket="N/A — capital asset",
+            effective_rate=0.0,
+            monthly_withholding=0.0,
+            note=f"Airdrop: R{request.value_zar:,.2f} treated as capital. CGT applies when sold. Base cost = R{request.value_zar:,.2f}.",
+        )
     except Exception as e:
         logger.error("airdrop_tax_error", error=str(e))
         raise HTTPException(status_code=500, detail=f"Airdrop tax calculation failed: {e}")
