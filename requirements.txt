@@ -50,7 +50,7 @@ gTTS==2.5.0
 SpeechRecognition==3.10.0
 
 # Web Scraping
-aiohttp==3.9.5
+aiohttp==3.14.3
 beautifulsoup4==4.12.3
 
 # Templating & CLI
