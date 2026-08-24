@@ -63,6 +63,32 @@ CRYPTO_CACHE_TTL = int(os.environ.get("CRYPTO_CACHE_TTL", "60"))
 DEFAULT_FIAT_CURRENCY = os.environ.get("DEFAULT_FIAT_CURRENCY", "zar")
 
 # ---------------------------------------------------------------------------
+# Advanced Companion
+# ---------------------------------------------------------------------------
+ENABLE_COMPANION = os.environ.get("ENABLE_COMPANION", "true").lower() in ("1", "true", "yes")
+COMPANION_DATA_DIR = os.environ.get("COMPANION_DATA_DIR", str(DATA_DIR / "companion"))
+COMPANION_DEFAULT_VOICE = os.environ.get("COMPANION_DEFAULT_VOICE", "warm_female")
+COMPANION_MAX_MEMORY = int(os.environ.get("COMPANION_MAX_MEMORY", "500"))
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ELEVENLABS_BASE_URL = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io/v1")
+ELEVENLABS_DEFAULT_MODEL = os.environ.get("ELEVENLABS_DEFAULT_MODEL", "eleven_multilingual_v2")
+COMPANION_VOICE_CLONE_ENABLED = os.environ.get("COMPANION_VOICE_CLONE_ENABLED", "false").lower() in ("1", "true", "yes")
+COMPANION_RAG_ENABLED = os.environ.get("COMPANION_RAG_ENABLED", "true").lower() in ("1", "true", "yes")
+COMPANION_RAG_GROUNDING_DOCS = os.environ.get("COMPANION_RAG_GROUNDING_DOCS", "")
+COMPANION_CONFIDENCE_THRESHOLD = float(os.environ.get("COMPANION_CONFIDENCE_THRESHOLD", "0.75"))
+COMPANION_AVATAR_ENABLED = os.environ.get("COMPANION_AVATAR_ENABLED", "true").lower() in ("1", "true", "yes")
+
+# ---------------------------------------------------------------------------
+# Self-Correcting Error Monitor (LUQI Sentry)
+# ---------------------------------------------------------------------------
+SENTRY_ENABLED = os.environ.get("SENTRY_ENABLED", "true").lower() in ("1", "true", "yes")
+SENTRY_AUTO_HEAL = os.environ.get("SENTRY_AUTO_HEAL", "true").lower() in ("1", "true", "yes")
+SENTRY_ERROR_LOG_DIR = os.environ.get("SENTRY_ERROR_LOG_DIR", str(DATA_DIR / "errors"))
+SENTRY_SPIKE_THRESHOLD = int(os.environ.get("SENTRY_SPIKE_THRESHOLD", "10"))
+SENTRY_ALERT_WEBHOOK = os.environ.get("SENTRY_ALERT_WEBHOOK", "")
+Path(SENTRY_ERROR_LOG_DIR).mkdir(parents=True, exist_ok=True)
+
+# ---------------------------------------------------------------------------
 # Cache / DB
 # ---------------------------------------------------------------------------
 CACHE_DIR = DATA_DIR / "cache"
@@ -183,6 +209,17 @@ CONFIG = {
     "binance_base_url": BINANCE_BASE_URL,
     "crypto_cache_ttl": CRYPTO_CACHE_TTL,
     "default_fiat_currency": DEFAULT_FIAT_CURRENCY,
+    # Companion
+    "enable_companion": ENABLE_COMPANION,
+    "companion_data_dir": COMPANION_DATA_DIR,
+    "companion_max_memory": COMPANION_MAX_MEMORY,
+    "elevenlabs_api_key": ELEVENLABS_API_KEY,
+    "companion_rag_enabled": COMPANION_RAG_ENABLED,
+    "companion_confidence_threshold": COMPANION_CONFIDENCE_THRESHOLD,
+    "companion_avatar_enabled": COMPANION_AVATAR_ENABLED,
+    # Sentry
+    "sentry_enabled": SENTRY_ENABLED,
+    "sentry_auto_heal": SENTRY_AUTO_HEAL,
 }
 
 
