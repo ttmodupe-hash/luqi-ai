@@ -271,6 +271,24 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount error_monitor: {e}")
 
+    # Proactive Notification Engine (Companion Pulse)
+    try:
+        from backend.notification_engine import router as notification_router
+        app.include_router(notification_router, prefix="/api/v25")
+        mounted.append("notification_engine")
+        logger.info("Mounted: notification_engine at /api/v25")
+    except Exception as e:
+        logger.warning(f"Failed to mount notification_engine: {e}")
+
+    # Education Tutor Bridge (Companion + OmniLab)
+    try:
+        from backend.tutor_bridge import router as tutor_router
+        app.include_router(tutor_router, prefix="/api/v25")
+        mounted.append("tutor_bridge")
+        logger.info("Mounted: tutor_bridge at /api/v25")
+    except Exception as e:
+        logger.warning(f"Failed to mount tutor_bridge: {e}")
+
     # Legacy router
     try:
         from backend import router as legacy_router
