@@ -13,8 +13,6 @@ Usage:
 
 Environment:
     OPENAI_API_KEY=sk-...     (required for AI features)
-    NEMOTRON_API_KEY=sk-...   (optional, for NVIDIA Nemotron)
-    NEMOTRON_BASE_URL=...   (optional, default: http://localhost:8000/v1)
     LUQI_PORT=8000
     LUQI_HOST=0.0.0.0
     LUQI_ENV=production
@@ -67,8 +65,6 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Database: {settings.db_path}")
     logger.info(f"OpenAI model: {settings.openai_model}")
-    if settings.nemotron_enabled:
-        logger.info(f"Nemotron model: {settings.nemotron_model} @ {settings.nemotron_base_url}")
 
     # Pre-flight checks
     _health_status["checks"]["startup_time"] = datetime.utcnow().isoformat()
@@ -78,6 +74,7 @@ async def lifespan(app: FastAPI):
         try:
             from openai import OpenAI
             client = OpenAI(api_key=settings.openai_api_key)
+            # Light validation — list models
             client.models.list()
             _health_status["checks"]["openai"] = "ok"
             logger.info("OpenAI connection: OK")
@@ -87,25 +84,6 @@ async def lifespan(app: FastAPI):
     else:
         _health_status["checks"]["openai"] = "no_api_key"
         logger.warning("OPENAI_API_KEY not set — AI features disabled")
-
-    # Check Nemotron
-    if settings.nemotron_enabled:
-        try:
-            import httpx
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(f"{settings.nemotron_base_url}/models")
-                if resp.status_code == 200:
-                    _health_status["checks"]["nemotron"] = "ok"
-                    logger.info("Nemotron connection: OK")
-                else:
-                    _health_status["checks"]["nemotron"] = f"status_{resp.status_code}"
-                    logger.warning(f"Nemotron returned status {resp.status_code}")
-        except Exception as e:
-            _health_status["checks"]["nemotron"] = f"error: {e}"
-            logger.warning(f"Nemotron connection failed: {e}")
-    else:
-        _health_status["checks"]["nemotron"] = "disabled"
-        logger.info("Nemotron: disabled")
 
     # Check database & run migrations
     try:
@@ -119,6 +97,7 @@ async def lifespan(app: FastAPI):
         _health_status["checks"]["database"] = "ok"
         logger.info("Database: OK")
 
+        # Run pending migrations
         pool = ConnectionPool(settings.db_path)
         mgr = MigrationManager(pool, settings.DATA_DIR / "migrations")
         applied = mgr.migrate()
@@ -154,7 +133,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Luqi AI",
-    description="LUQI AI — 90+ AI-powered capabilities for South Africa. Finance, tenders, load shedding, health, education, and more. Now with Nemotron 3.5 Lightning support for local inference.",
+    description="LUQI AI — 90+ AI-powered capabilities for South Africa. Finance, tenders, load shedding, health, education, crypto, and more.",
     version=f"{settings.version}-{settings.codename}",
     lifespan=lifespan,
     docs_url="/api/docs" if settings.environment != "production" else None,
@@ -247,15 +226,14 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount omega_ai: {e}")
 
-    # Nemotron provider endpoints
-    if settings.nemotron_enabled:
-        try:
-            from backend.nemotron_provider import router as nemotron_router
-            app.include_router(nemotron_router, prefix="/api/v25/nemotron")
-            mounted.append("nemotron_provider")
-            logger.info("Mounted: nemotron_provider at /api/v25/nemotron")
-        except Exception as e:
-            logger.warning(f"Failed to mount nemotron_provider: {e}")
+    # Crypto endpoints (market data, SARS tax, portfolio, AI analysis)
+    try:
+        from backend.crypto_endpoints import router as crypto_router
+        app.include_router(crypto_router, prefix="/api/v25")
+        mounted.append("crypto_endpoints")
+        logger.info("Mounted: crypto_endpoints at /api/v25")
+    except Exception as e:
+        logger.warning(f"Failed to mount crypto_endpoints: {e}")
 
     # Legacy router
     try:
@@ -305,7 +283,6 @@ async def root():
         "dashboard": "/v25/index.html",
         "docs": "/api/docs",
         "health": "/health",
-        "nemotron_enabled": settings.nemotron_enabled,
     }
 
 
