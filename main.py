@@ -253,6 +253,15 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount companion_endpoints: {e}")
 
+    # WebSocket Manager (real-time connection management)
+    try:
+        from backend.websocket_manager import router as ws_router
+        app.include_router(ws_router, prefix="/api/v25")
+        mounted.append("websocket_manager")
+        logger.info("Mounted: websocket_manager at /api/v25")
+    except Exception as e:
+        logger.warning(f"Failed to mount websocket_manager: {e}")
+
     # Self-Correcting Error Monitor (LUQI Sentry)
     try:
         from backend.error_monitor import error_monitor_router, LuqiSentry
