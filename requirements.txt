@@ -11,7 +11,7 @@ python-multipart==0.0.9
 # Data Validation
 pydantic==2.7.4
 pydantic-settings==2.3.0
-python-dotenv==1.0.1
+python-dotenv==1.2.3
 
 # Database
 sqlalchemy[asyncio]==2.0.31
