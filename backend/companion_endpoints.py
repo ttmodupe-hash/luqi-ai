@@ -92,6 +92,22 @@ class ClearHistoryRequest(BaseModel):
     user_id: str
     clear_memories: bool = Field(default=False)
 
+class GroundingIngestRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=500)
+    content: str = Field(..., min_length=1)
+    source: str = Field(default="manual")
+    domain: str = Field(default="general")
+    metadata: Optional[dict] = None
+
+class GroundingQueryRequest(BaseModel):
+    query: str = Field(..., min_length=1)
+    top_k: int = Field(default=5, ge=1, le=20)
+    domain_filter: Optional[str] = None
+    min_confidence: float = Field(default=0.75, ge=0.0, le=1.0)
+
+class GroundingDeleteRequest(BaseModel):
+    doc_id: str
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  Companion Registry (in-memory per process)
@@ -439,6 +455,81 @@ async def avatar_styles():
             {"id": "cyberpunk", "name": "Cyberpunk", "description": "Neon-accented futuristic aesthetic"},
         ]
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Grounding Document Store (RAG)
+# ═══════════════════════════════════════════════════════════════════════════
+
+@companion_router.post("/grounding/ingest")
+async def grounding_ingest(request: GroundingIngestRequest):
+    """Ingest a grounding document for RAG."""
+    try:
+        from omega_ai.grounding_store import GroundingStore
+        store = GroundingStore()
+        result = store.ingest_document(
+            title=request.title,
+            content=request.content,
+            source=request.source,
+            domain=request.domain,
+            metadata=request.metadata,
+        )
+        return result
+    except Exception as e:
+        logger.error("grounding_ingest_error", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+@companion_router.post("/grounding/query")
+async def grounding_query(request: GroundingQueryRequest):
+    """Query grounding documents semantically."""
+    try:
+        from omega_ai.grounding_store import GroundingStore
+        store = GroundingStore()
+        result = store.query(
+            query_text=request.query,
+            top_k=request.top_k,
+            domain_filter=request.domain_filter,
+            min_confidence=request.min_confidence,
+        )
+        return result
+    except Exception as e:
+        logger.error("grounding_query_error", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Query failed: {e}")
+
+@companion_router.get("/grounding/documents")
+async def grounding_documents(domain: Optional[str] = None):
+    """List all ingested grounding documents."""
+    try:
+        from omega_ai.grounding_store import GroundingStore
+        store = GroundingStore()
+        docs = store.list_documents(domain=domain)
+        return {"documents": docs, "count": len(docs)}
+    except Exception as e:
+        logger.error("grounding_documents_error", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to list documents: {e}")
+
+@companion_router.get("/grounding/stats")
+async def grounding_stats():
+    """Get grounding store statistics."""
+    try:
+        from omega_ai.grounding_store import GroundingStore
+        store = GroundingStore()
+        return store.get_stats()
+    except Exception as e:
+        logger.error("grounding_stats_error", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {e}")
+
+@companion_router.delete("/grounding/document/{doc_id}")
+async def grounding_delete(doc_id: str):
+    """Delete a grounding document and all its chunks."""
+    try:
+        from omega_ai.grounding_store import GroundingStore
+        store = GroundingStore()
+        success = store.delete_document(doc_id)
+        return {"success": success, "doc_id": doc_id}
+    except Exception as e:
+        logger.error("grounding_delete_error", doc_id=doc_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Delete failed: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
