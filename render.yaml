@@ -2,7 +2,7 @@ services:
   - type: web
     name: luqi-ai
     runtime: docker
-    repo: https://github.com/your-org/luqi-ai
+    repo: https://github.com/ttmodupe-hash/luqi-ai
     branch: main
     dockerfilePath: ./Dockerfile
     envVars:
