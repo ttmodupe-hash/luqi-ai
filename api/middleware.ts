@@ -10,7 +10,11 @@ export const createRouter = t.router;
 export const publicQuery = t.procedure;
 
 // ── AUTHENTICATION MIDDLEWARE ──────────────────────────────────────
+// Usage: protectedQuery instead of publicQuery for authenticated endpoints
+
 export const protectedQuery = t.procedure.use(async ({ ctx, next }) => {
+  // In production, verify JWT token or session
+  // For now, allow if APP_SECRET matches or if in development
   if (process.env.NODE_ENV !== "production") {
     return next({ ctx });
   }
@@ -31,8 +35,8 @@ export const protectedQuery = t.procedure.use(async ({ ctx, next }) => {
 
 // ── RATE LIMITING ──────────────────────────────────────────────────
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100;
-const RATE_WINDOW = 60 * 1000;
+const RATE_LIMIT = 100; // requests per minute
+const RATE_WINDOW = 60 * 1000; // 1 minute
 
 export const rateLimitedQuery = t.procedure.use(async ({ ctx, next }) => {
   const clientIp = ctx.req?.headers?.get?.("x-forwarded-for") || 
@@ -51,6 +55,7 @@ export const rateLimitedQuery = t.procedure.use(async ({ ctx, next }) => {
     requestCounts.set(clientIp, { count: 1, resetAt: now + RATE_WINDOW });
   }
   
+  // Cleanup old entries periodically
   if (Math.random() < 0.01) {
     for (const [ip, data] of requestCounts.entries()) {
       if (now > data.resetAt) requestCounts.delete(ip);

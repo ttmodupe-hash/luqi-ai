@@ -11,6 +11,7 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────────
 
+// CORS — allow frontend origin
 app.use("/*", cors({
   origin: process.env.FRONTEND_URL || "*",
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -20,6 +21,7 @@ app.use("/*", cors({
   credentials: true,
 }));
 
+// Security headers
 app.use("/*", async (c, next) => {
   await next();
   c.header("X-Content-Type-Options", "nosniff");
@@ -32,8 +34,9 @@ app.use("/*", async (c, next) => {
   }
 });
 
+// Rate limiting (simple in-memory)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100;
+const RATE_LIMIT = 100; // requests per minute
 const RATE_WINDOW = 60 * 1000;
 
 app.use("/api/*", async (c, next) => {
@@ -53,8 +56,10 @@ app.use("/api/*", async (c, next) => {
   return next();
 });
 
+// ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
+// ── tRPC ───────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",
@@ -78,6 +83,7 @@ if (env.isProduction) {
     console.log(`Server running on http://localhost:${port}/`);
   });
 
+  // Seed traditional medicine data asynchronously
   (async () => {
     try {
       const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
