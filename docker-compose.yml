@@ -1,37 +1,94 @@
+# =====================================================================
+# LUQI AI — Docker Compose (Production Stack)
+# Node.js + MySQL + Redis
+# =====================================================================
+
 version: '3.8'
 
 services:
-  omega-ai:
-    build: .
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: luqi-ai-app
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - '${PORT:-3000}:3000'
     environment:
-      - DATABASE_URL=sqlite:///omega_ai.db
-      - REDIS_URL=redis://redis:6379/0
-      - LOG_LEVEL=INFO
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://luqi:${MYSQL_PASSWORD}@db:3306/luqi
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SERPER_API_KEY: ${SERPER_API_KEY}
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backups:/app/backups
+    networks:
+      - luqi-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/trpc/ping']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: mysql:8.0
+    container_name: luqi-ai-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: luqi
+      MYSQL_USER: luqi
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - '${MYSQL_PORT:-3306}:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'luqi', '-p${MYSQL_PASSWORD}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - luqi-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
 
   redis:
     image: redis:7-alpine
+    container_name: luqi-ai-redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
-
-  web-ui:
-    build:
-      context: ./web_ui
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - API_URL=http://omega-ai:8000
-    depends_on:
-      - omega-ai
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - luqi-network
+    command: redis-server --appendonly yes
 
 volumes:
+  mysql_data:
+    driver: local
   redis_data:
+    driver: local
+
+networks:
+  luqi-network:
+    driver: bridge

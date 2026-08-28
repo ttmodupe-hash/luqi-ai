@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: luqi-ai
+    runtime: docker
+    repo: https://github.com/your-org/luqi-ai
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: luqi-mysql
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+    healthCheckPath: /api/trpc/ping
+    numInstances: 1
+    plan: standard
+
+databases:
+  - name: luqi-mysql
+    databaseName: luqi
+    user: luqi
+    plan: standard
+    ipAllowList: []
