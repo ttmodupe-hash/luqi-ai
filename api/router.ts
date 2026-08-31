@@ -23,6 +23,20 @@ import { governmentRouter } from "./government";
 import { peerTutoringRouter } from "./peer-tutoring";
 import { wellnessRouter } from "./wellness";
 import { arVrRouter } from "./ar-vr";
+import { ussdRouter } from "./ussd";
+import { whatsappRouter } from "./whatsapp";
+import { paymentsRouter } from "./payments";
+import { loadSheddingRouter } from "./load-shedding";
+import { villagesRouter } from "./villages";
+import { oralTraditionRouter } from "./oral-tradition";
+import { localUnitsRouter } from "./local-units";
+import { elderKnowledgeRouter } from "./elder-knowledge";
+import { heroAvatarsRouter } from "./hero-avatars";
+import { textLabsRouter } from "./text-labs";
+import { cattleBlockchainRouter } from "./cattle-blockchain";
+import { farmingCalendarRouter } from "./farming-calendar";
+import { communityVerificationRouter } from "./community-verification";
+import { motherTongueRouter } from "./mother-tongue";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -50,6 +64,20 @@ export const appRouter = createRouter({
   peerTutoring: peerTutoringRouter,
   wellness: wellnessRouter,
   arVr: arVrRouter,
+  ussd: ussdRouter,
+  whatsapp: whatsappRouter,
+  payments: paymentsRouter,
+  loadShedding: loadSheddingRouter,
+  villages: villagesRouter,
+  oralTradition: oralTraditionRouter,
+  localUnits: localUnitsRouter,
+  elderKnowledge: elderKnowledgeRouter,
+  heroAvatars: heroAvatarsRouter,
+  textLabs: textLabsRouter,
+  cattleBlockchain: cattleBlockchainRouter,
+  farmingCalendar: farmingCalendarRouter,
+  communityVerification: communityVerificationRouter,
+  motherTongue: motherTongueRouter,
 });
 
 export type AppRouter = typeof appRouter;
