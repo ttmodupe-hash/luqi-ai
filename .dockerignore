@@ -7,6 +7,7 @@ yarn-error.log*
 # Build outputs (we build in Docker)
 dist
 dist-ssr
+dist_test
 *.local
 
 # Environment files
