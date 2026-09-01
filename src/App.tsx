@@ -69,4 +69,4 @@ export default function App() {
   );
 }
 
-// Build timestamp: 2026-09-01T11:53:00Z
+// Build timestamp: 2026-09-01T12:05:00Z - FORCE FRESH BUILD
