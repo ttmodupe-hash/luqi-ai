@@ -1,69 +1,63 @@
 import { Toaster } from "@/components/ui/toaster";
-import { useState } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router";
+import { Routes, Route } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
-import { useIsMobile } from "@/hooks/use-mobile";
 
-// Pages
-import Home from "./pages/Home";
+// Only import pages that exist in the repo
 import LabSimulatorPage from "./pages/LabSimulatorPage";
 import SelfHealingPage from "./pages/SelfHealingPage";
 import VideoStudioPage from "./pages/VideoStudioPage";
-import PricingPage from "./pages/PricingPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import ContactPage from "./pages/ContactPage";
 
-// Components
-import WelcomeModal from "@/components/WelcomeModal";
-import ReportBugButton from "@/components/ReportBugButton";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-
-// Icons
-import {
-  Home as HomeIcon,
-  FlaskConical,
-  HeartPulse,
-  Film,
-  CreditCard,
-  Search,
-  Menu,
-  X,
-} from "lucide-react";
-
-// App Layout Component
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
-  const isMobile = useIsMobile();
-
+// Simple Home component inline (no external file needed)
+function Home() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <Toaster />
-      <WelcomeModal />
-      <ReportBugButton />
-      {children}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+      <div className="text-center space-y-6">
+        <h1 className="text-4xl font-bold">LUQI AI</h1>
+        <p className="text-slate-400">African-first AI Education Platform</p>
+        <div className="flex gap-4 justify-center">
+          <a href="/lab-simulator" className="px-6 py-3 bg-sky-600 hover:bg-sky-500 rounded-lg font-medium">
+            Lab Simulator
+          </a>
+          <a href="/self-healing" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium">
+            Self-Healing
+          </a>
+          <a href="/video-studio" className="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-lg font-medium">
+            Video Studio
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Simple NotFound component inline
+function NotFound() {
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">404</h1>
+        <p className="text-slate-400 mb-6">Page not found</p>
+        <a href="/" className="px-6 py-3 bg-sky-600 hover:bg-sky-500 rounded-lg font-medium">
+          Go Home
+        </a>
+      </div>
     </div>
   );
 }
 
 export default function App() {
+  const { theme } = useTheme();
+
   return (
-    <AppLayout>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <Toaster />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/lab-simulator" element={<LabSimulatorPage />} />
         <Route path="/self-healing" element={<SelfHealingPage />} />
         <Route path="/video-studio" element={<VideoStudioPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
-    </AppLayout>
+    </div>
   );
 }
