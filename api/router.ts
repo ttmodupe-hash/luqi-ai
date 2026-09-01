@@ -37,6 +37,19 @@ import { cattleBlockchainRouter } from "./cattle-blockchain";
 import { farmingCalendarRouter } from "./farming-calendar";
 import { communityVerificationRouter } from "./community-verification";
 import { motherTongueRouter } from "./mother-tongue";
+import { pricingRouter } from "./pricing";
+import { accessibilityRouter } from "./accessibility";
+import { inclusiveRouter } from "./inclusive";
+import { authRouter } from "./auth";
+import { smsRouter } from "./sms";
+import { emailRouter } from "./email";
+import { storageRouter } from "./storage";
+import { websocketRouter } from "./websocket";
+import { gamificationRouter } from "./gamification";
+import { socialRouter } from "./social";
+import { searchIndexRouter } from "./searchIndex";
+import { cacheRouter } from "./cache";
+import { queueRouter } from "./queue";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -78,6 +91,19 @@ export const appRouter = createRouter({
   farmingCalendar: farmingCalendarRouter,
   communityVerification: communityVerificationRouter,
   motherTongue: motherTongueRouter,
+  pricing: pricingRouter,
+  accessibility: accessibilityRouter,
+  inclusive: inclusiveRouter,
+  auth: authRouter,
+  sms: smsRouter,
+  email: emailRouter,
+  storage: storageRouter,
+  websocket: websocketRouter,
+  gamification: gamificationRouter,
+  social: socialRouter,
+  searchIndex: searchIndexRouter,
+  cache: cacheRouter,
+  queue: queueRouter,
 });
 
 export type AppRouter = typeof appRouter;
