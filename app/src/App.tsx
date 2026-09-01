@@ -126,7 +126,6 @@ import {
   Brain,
   TrendingUp,
   Zap,
-  // Route removed to avoid conflict with react-router
   Languages,
   Monitor,
   Wand2,
