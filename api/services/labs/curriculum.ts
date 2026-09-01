@@ -4,10 +4,10 @@
 // =====================================================================
 
 export interface CurriculumFramework {
-  key: string; // e.g. SOUTH_AFRICA_CAPS
+  key: string;
   countryCode: string;
   countryName: string;
-  region: string; // "west_africa", "east_africa", "southern_africa", "global"
+  region: string;
   primaryHigh: string;
   tvetUniversity: string;
   accreditationBody: string;
@@ -16,7 +16,6 @@ export interface CurriculumFramework {
 }
 
 export const CURRICULUM_REGISTRY: Record<string, Omit<CurriculumFramework, "key">> = {
-  // ── AFRICA ──────────────────────────────────────────────────────────
   SOUTH_AFRICA_CAPS: {
     countryCode: "ZA",
     countryName: "South Africa",
@@ -77,8 +76,6 @@ export const CURRICULUM_REGISTRY: Record<string, Omit<CurriculumFramework, "key"
     languages: ["English", "Shona", "Ndebele"],
     currencySymbol: "Z$",
   },
-
-  // ── GLOBAL HEXAGONAL MATRIX ─────────────────────────────────────────
   GERMANY_ABITUR: {
     countryCode: "DE",
     countryName: "Germany",
