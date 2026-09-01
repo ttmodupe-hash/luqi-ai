@@ -4,8 +4,8 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
-# Copy package files
-COPY package.json ./
+# Copy package files from nested app/ directory
+COPY app/package.json ./
 
 # Install ALL dependencies including devDependencies
 RUN npm install --legacy-peer-deps --include=dev
@@ -13,8 +13,8 @@ RUN npm install --legacy-peer-deps --include=dev
 # Add node_modules/.bin to PATH so vite/esbuild are found
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
-# Copy source code
-COPY . .
+# Copy source code from the nested app/ directory
+COPY app/ ./
 
 # Build the application (npx ensures binaries are found)
 RUN npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" && node scripts/postbuild.js
