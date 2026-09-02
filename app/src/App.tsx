@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/* OPERATIONAL PAGE IMPORTS ONLY (39 Pages) */
+/* OPERATIONAL PAGE IMPORTS (41 Pages) */
 import Home from "./pages/Home";
 import StatusPage from "./pages/StatusPage";
 import KBPage from "./pages/KBPage";
@@ -29,6 +29,8 @@ import CompanionDashboardPage from "@/pages/CompanionDashboardPage";
 import VoiceInterfacePage from "@/pages/VoiceInterfacePage";
 import AdminPage from "@/pages/AdminPage";
 import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
+import LoadSheddingPage from "@/pages/LoadSheddingPage";
+import AfricanLanguagesPage from "@/pages/AfricanLanguagesPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import AIBrainPage from "@/pages/AIBrainPage";
 import MoreMenuPage from "@/pages/MoreMenuPage";
@@ -104,7 +106,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-/* NAVIGATION - OPERATIONAL PAGES ONLY */
+/* NAVIGATION CONFIGURATION */
 const navGroups: NavGroup[] = [
   {
     id: "core",
@@ -131,12 +133,22 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: "daily",
+    label: "Daily Life",
+    icon: Zap,
+    items: [
+      { id: "load-shedding", label: "Load Shedding", icon: Zap, path: "/load-shedding" },
+      { id: "agriculture-advisor", label: "Agri Advisor", icon: Sprout, path: "/agriculture-advisor" },
+    ],
+  },
+  {
     id: "ai",
     label: "AI Capabilities",
     icon: Brain,
     items: [
       { id: "education", label: "Education", icon: GraduationCap, path: "/education" },
       { id: "languages", label: "Languages", icon: Languages, path: "/languages" },
+      { id: "african-languages", label: "African Languages", icon: Languages, path: "/african-languages" },
       { id: "wisdom", label: "Wisdom", icon: Sparkles, path: "/wisdom" },
       { id: "skills", label: "Skills", icon: Wrench, path: "/skills" },
       { id: "kb", label: "Knowledge", icon: BookOpen, path: "/knowledge-base" },
@@ -144,7 +156,6 @@ const navGroups: NavGroup[] = [
       { id: "educational-companion", label: "Ed Companion", icon: BookOpen, path: "/educational-companion" },
       { id: "job-market", label: "Job Market", icon: TrendingUp, path: "/job-market" },
       { id: "omni-lab", label: "OmniLab", icon: FlaskConical, path: "/omni-lab" },
-      { id: "agriculture-advisor", label: "Agri Advisor", icon: Sprout, path: "/agriculture-advisor" },
     ],
   },
   {
@@ -389,12 +400,15 @@ function App() {
             <Route path="/education" element={<EducationPage />} />
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/workspace" element={<WorkspacePage />} />
-            
+
             {/* Business Pages */}
             <Route path="/accountant" element={<AccountantPage />} />
             <Route path="/tender" element={<TenderPage />} />
             <Route path="/opportunity" element={<OpportunityPage />} />
-            
+
+            {/* Daily Life Pages */}
+            <Route path="/load-shedding" element={<LoadSheddingPage />} />
+
             {/* AI Pages */}
             <Route path="/training" element={<TrainingPage />} />
             <Route path="/support" element={<SupportPage />} />
@@ -406,29 +420,30 @@ function App() {
             <Route path="/omni-lab" element={<OmniLabPage />} />
             <Route path="/omni-lab-evolver" element={<OmniLabEvolverPage />} />
             <Route path="/agriculture-advisor" element={<AgricultureAdvisorPage />} />
+            <Route path="/african-languages" element={<AfricanLanguagesPage />} />
             <Route path="/ai-brain" element={<AIBrainPage />} />
-            
+
             {/* System Pages */}
             <Route path="/companion" element={<CompanionDashboardPage />} />
             <Route path="/voice" element={<VoiceInterfacePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/more" element={<MoreMenuPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
-            
+
             {/* Auth Pages */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            
+
             {/* User Pages */}
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
-            
+
             {/* Static Pages */}
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            
+
             {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
