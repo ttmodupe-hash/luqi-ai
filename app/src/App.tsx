@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/* OPERATIONAL PAGE IMPORTS (41 Pages) */
+/* OPERATIONAL PAGE IMPORTS (46 Pages) */
 import Home from "./pages/Home";
 import StatusPage from "./pages/StatusPage";
 import KBPage from "./pages/KBPage";
@@ -31,6 +31,11 @@ import AdminPage from "@/pages/AdminPage";
 import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
 import LoadSheddingPage from "@/pages/LoadSheddingPage";
 import AfricanLanguagesPage from "@/pages/AfricanLanguagesPage";
+import WaterPage from "@/pages/WaterPage";
+import FinancialLiteracyPage from "@/pages/FinancialLiteracyPage";
+import HealthPage from "@/pages/HealthPage";
+import BilingualPage from "@/pages/BilingualPage";
+import BusinessRegPage from "@/pages/BusinessRegPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import AIBrainPage from "@/pages/AIBrainPage";
 import MoreMenuPage from "@/pages/MoreMenuPage";
@@ -89,6 +94,11 @@ import {
   MoreHorizontal,
   Bell,
   User,
+  Droplets,
+  PiggyBank,
+  HeartPulse,
+  Scale,
+  Building2,
 } from "lucide-react";
 
 /* TYPES */
@@ -128,6 +138,8 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "finance", label: "Finance", icon: DollarSign, path: "/finance" },
       { id: "accountant", label: "Accountant", icon: Calculator, path: "/accountant" },
+      { id: "financial-literacy", label: "Financial Freedom", icon: PiggyBank, path: "/financial-literacy" },
+      { id: "business-reg", label: "Business Registration", icon: Building2, path: "/business-reg" },
       { id: "tender", label: "Tenders", icon: Briefcase, path: "/tender" },
       { id: "opportunity", label: "Opportunities", icon: TrendingUp, path: "/opportunity" },
     ],
@@ -138,6 +150,8 @@ const navGroups: NavGroup[] = [
     icon: Zap,
     items: [
       { id: "load-shedding", label: "Load Shedding", icon: Zap, path: "/load-shedding" },
+      { id: "water", label: "Water Services", icon: Droplets, path: "/water" },
+      { id: "health", label: "Health Shield", icon: HeartPulse, path: "/health" },
       { id: "agriculture-advisor", label: "Agri Advisor", icon: Sprout, path: "/agriculture-advisor" },
     ],
   },
@@ -149,6 +163,7 @@ const navGroups: NavGroup[] = [
       { id: "education", label: "Education", icon: GraduationCap, path: "/education" },
       { id: "languages", label: "Languages", icon: Languages, path: "/languages" },
       { id: "african-languages", label: "African Languages", icon: Languages, path: "/african-languages" },
+      { id: "bilingual", label: "Contract Assistant", icon: Scale, path: "/bilingual" },
       { id: "wisdom", label: "Wisdom", icon: Sparkles, path: "/wisdom" },
       { id: "skills", label: "Skills", icon: Wrench, path: "/skills" },
       { id: "kb", label: "Knowledge", icon: BookOpen, path: "/knowledge-base" },
@@ -236,7 +251,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Top Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between h-full px-4">
           <div className="flex items-center gap-3">
@@ -289,7 +303,6 @@ function App() {
         </div>
       </header>
 
-      {/* Search Modal */}
       {isSearchOpen && (
         <div className="fixed inset-0 z-[60] bg-black/50 flex items-start justify-center pt-20">
           <div className="w-full max-w-lg bg-card rounded-xl shadow-2xl border border-border overflow-hidden">
@@ -333,7 +346,6 @@ function App() {
         </div>
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed left-0 top-14 bottom-0 z-40 bg-card border-r border-border transition-all duration-300 ${
           isSidebarOpen ? "w-64" : "w-0 overflow-hidden"
@@ -380,7 +392,6 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main
         className={`pt-14 transition-all duration-300 ${
           isSidebarOpen ? "ml-64" : "ml-0"
@@ -388,7 +399,6 @@ function App() {
       >
         <ErrorBoundary>
           <Routes>
-            {/* Core Pages */}
             <Route path="/" element={<Home />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/knowledge-base" element={<KBPage />} />
@@ -400,16 +410,15 @@ function App() {
             <Route path="/education" element={<EducationPage />} />
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/workspace" element={<WorkspacePage />} />
-
-            {/* Business Pages */}
             <Route path="/accountant" element={<AccountantPage />} />
             <Route path="/tender" element={<TenderPage />} />
             <Route path="/opportunity" element={<OpportunityPage />} />
-
-            {/* Daily Life Pages */}
+            <Route path="/financial-literacy" element={<FinancialLiteracyPage />} />
+            <Route path="/business-reg" element={<BusinessRegPage />} />
             <Route path="/load-shedding" element={<LoadSheddingPage />} />
-
-            {/* AI Pages */}
+            <Route path="/water" element={<WaterPage />} />
+            <Route path="/health" element={<HealthPage />} />
+            <Route path="/bilingual" element={<BilingualPage />} />
             <Route path="/training" element={<TrainingPage />} />
             <Route path="/support" element={<SupportPage />} />
             <Route path="/assistant" element={<AssistantPage />} />
@@ -422,35 +431,24 @@ function App() {
             <Route path="/agriculture-advisor" element={<AgricultureAdvisorPage />} />
             <Route path="/african-languages" element={<AfricanLanguagesPage />} />
             <Route path="/ai-brain" element={<AIBrainPage />} />
-
-            {/* System Pages */}
             <Route path="/companion" element={<CompanionDashboardPage />} />
             <Route path="/voice" element={<VoiceInterfacePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/more" element={<MoreMenuPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
-
-            {/* Auth Pages */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
-            {/* User Pages */}
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
-
-            {/* Static Pages */}
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/contact" element={<ContactPage />} />
-
-            {/* 404 */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </ErrorBoundary>
       </main>
 
-      {/* Modals & Overlays */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} />}
       <CookieConsent />
       <ReportBugButton />
