@@ -423,7 +423,6 @@ export default function HealthPage() {
   const [filterClinicType, setFilterClinicType] = useState("all");
   const [filterProvince, setFilterProvince] = useState("all");
 
-  /* Triage Engine */
   const toggleSymptom = useCallback((symptomName: string) => {
     setSelectedSymptoms((prev) =>
       prev.includes(symptomName)
@@ -463,7 +462,6 @@ export default function HealthPage() {
     setSelectedCondition(null);
   }, []);
 
-  /* Medication Handlers */
   const takeDose = useCallback((medId: string) => {
     setMedicationList((prev) =>
       prev.map((m) =>
@@ -474,7 +472,6 @@ export default function HealthPage() {
     );
   }, []);
 
-  /* Clinic Filter */
   const filteredClinics = useMemo(() => {
     let result = MOCK_CLINICS;
     if (filterClinicType !== "all") result = result.filter((c) => c.type === filterClinicType);
@@ -590,7 +587,6 @@ export default function HealthPage() {
           {/* SYMPTOM TRIAGE TAB */}
           <TabsContent value="triage" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Symptom Selector */}
               <Card className="bg-neutral-900 border-neutral-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -653,7 +649,6 @@ export default function HealthPage() {
                 </CardContent>
               </Card>
 
-              {/* Triage Results */}
               <Card className="bg-neutral-900 border-neutral-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -664,7 +659,6 @@ export default function HealthPage() {
                 <CardContent>
                   {showResults && triageResults.length > 0 ? (
                     <div className="space-y-4">
-                      {/* Top Match */}
                       {topResult && (
                         <div className={`p-4 rounded-lg border-2 ${
                           topResult.condition.urgency === "emergency"
@@ -723,7 +717,6 @@ export default function HealthPage() {
                         </div>
                       )}
 
-                      {/* Other Matches */}
                       {triageResults.slice(1, 4).map((result) => (
                         <div
                           key={result.condition.condition_id}
@@ -755,7 +748,6 @@ export default function HealthPage() {
               </Card>
             </div>
 
-            {/* Emergency Notice */}
             <Card className="bg-red-500/10 border-red-500/20">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -1129,7 +1121,6 @@ export default function HealthPage() {
               ))}
             </div>
 
-            {/* Emergency Contacts */}
             <Card className="bg-neutral-900 border-neutral-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
