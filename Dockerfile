@@ -16,6 +16,10 @@ ENV PATH="/app/node_modules/.bin:${PATH}"
 # Copy source code from the nested app/ directory
 COPY app/ ./
 
+# Copy API and scripts from repo root (they are NOT inside app/)
+COPY api/ ./api/
+COPY scripts/ ./scripts/
+
 # Build the application (npx ensures binaries are found)
 RUN npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" && node scripts/postbuild.js
 
