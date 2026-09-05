@@ -1,598 +1,525 @@
-/**
- * LUQI AI — Notifications Page
- * ==============================
- * Full notification center with filter tabs, real-time WebSocket updates,
- * mark-as-read, settings panel, and empty state.
- */
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   Bell,
-  BellRing,
-  Settings,
+  BellOff,
+  Check,
   CheckCheck,
-  Filter,
-  Clock,
-  AlertTriangle,
-  X,
   ChevronRight,
-  FileText,
+  Clock,
+  Filter,
+  Info,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  RefreshCw,
+  Search,
+  Settings,
   Zap,
-  Droplets,
-  Banknote,
-  CloudRain,
-  GraduationCap,
-  Calculator,
-  Wallet,
-  Circle,
+  Shield,
+  DollarSign,
+  Calendar,
+  FileText,
+  MessageSquare,
+  Star,
+  TrendingUp,
+  Users,
+  X,
 } from "lucide-react";
-import useWebSocket from "../hooks/useWebSocket";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useApi } from "@/hooks/useApi";
+import { useAuth } from "@/hooks/useAuth";
 
-interface NotificationItem {
+/* ───────── Types ───────── */
+
+type NotificationType =
+  | "system"
+  | "alert"
+  | "info"
+  | "success"
+  | "warning"
+  | "error"
+  | "task"
+  | "message"
+  | "update";
+
+type NotificationPriority = "low" | "medium" | "high" | "critical";
+
+interface Notification {
   id: string;
-  type: string;
+  type: NotificationType;
+  priority: NotificationPriority;
   title: string;
-  description: string;
-  priority: string;
-  icon: string;
-  color: string;
+  message: string;
+  timestamp: Date;
   read: boolean;
-  created_at: number;
-  created_at_iso: string;
-  time_ago: string;
-  action_url?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  icon: React.ElementType;
   metadata?: Record<string, unknown>;
 }
 
-interface NotificationsResponse {
-  notifications: NotificationItem[];
-  total: number;
-  unread_count: number;
+interface NotificationGroup {
+  date: string;
+  label: string;
+  notifications: Notification[];
 }
 
-// ---------------------------------------------------------------------------
-// Icon map
-// ---------------------------------------------------------------------------
+/* ───────── Icon Mapping ───────── */
 
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  FileText,
-  Zap,
-  Droplets,
-  Banknote,
-  CloudRain,
-  GraduationCap,
-  Calculator,
-  Wallet,
-  Bell,
+const TYPE_ICONS: Record<NotificationType, React.ElementType> = {
+  system: Settings,
+  alert: AlertTriangle,
+  info: Info,
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  error: XCircle,
+  task: Calendar,
+  message: MessageSquare,
+  update: Zap,
 };
 
-const COLOR_CLASSES: Record<string, { bg: string; text: string; dot: string }> = {
-  orange: { bg: "bg-orange-100", text: "text-orange-600", dot: "bg-orange-500" },
-  red: { bg: "bg-red-100", text: "text-red-600", dot: "bg-red-500" },
-  blue: { bg: "bg-blue-100", text: "text-blue-600", dot: "bg-blue-500" },
-  green: { bg: "bg-green-100", text: "text-green-600", dot: "bg-green-500" },
-  yellow: { bg: "bg-yellow-100", text: "text-yellow-600", dot: "bg-yellow-500" },
-  purple: { bg: "bg-purple-100", text: "text-purple-600", dot: "bg-purple-500" },
-  gray: { bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-500" },
+const TYPE_COLORS: Record<NotificationType, string> = {
+  system: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  alert: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  info: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+  success: "bg-green-500/20 text-green-400 border-green-500/30",
+  warning: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  error: "bg-red-500/20 text-red-400 border-red-500/30",
+  task: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  message: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+  update: "bg-teal-500/20 text-teal-400 border-teal-500/30",
 };
 
-// ---------------------------------------------------------------------------
-// Filter tabs
-// ---------------------------------------------------------------------------
+const PRIORITY_COLORS: Record<NotificationPriority, string> = {
+  low: "bg-neutral-700 text-neutral-400",
+  medium: "bg-blue-500/20 text-blue-400",
+  high: "bg-orange-500/20 text-orange-400",
+  critical: "bg-red-500/20 text-red-400",
+};
 
-type FilterTab = "all" | "unread" | "tenders" | "finance" | "weather" | "urgent";
+/* ───────── Mock Data ───────── */
 
-const FILTER_TABS: { key: FilterTab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "unread", label: "Unread" },
-  { key: "tenders", label: "Tenders" },
-  { key: "finance", label: "Finance" },
-  { key: "weather", label: "Weather" },
-  { key: "urgent", label: "Urgent" },
+const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: "1",
+    type: "alert",
+    priority: "critical",
+    title: "System Maintenance Scheduled",
+    message: "LUQI AI will undergo scheduled maintenance on Sunday 2:00 AM SAST. Expected downtime: 15 minutes.",
+    timestamp: new Date(Date.now() - 5 * 60 * 1000),
+    read: false,
+    icon: Settings,
+  },
+  {
+    id: "2",
+    type: "task",
+    priority: "high",
+    title: "New Task Assigned",
+    message: "You have been assigned to review the Q4 financial report by Friday.",
+    timestamp: new Date(Date.now() - 30 * 60 * 1000),
+    read: false,
+    actionUrl: "/workspace",
+    actionLabel: "View Task",
+    icon: Calendar,
+  },
+  {
+    id: "3",
+    type: "message",
+    priority: "medium",
+    title: "New Message from Support",
+    message: "Your support ticket #4521 has been updated with a response from our team.",
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    read: false,
+    actionUrl: "/support",
+    actionLabel: "View Ticket",
+    icon: MessageSquare,
+  },
+  {
+    id: "4",
+    type: "success",
+    priority: "low",
+    title: "Backup Completed",
+    message: "Your data backup completed successfully. 2.4 GB synced to cloud storage.",
+    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
+    read: true,
+    icon: CheckCircle2,
+  },
+  {
+    id: "5",
+    type: "warning",
+    priority: "medium",
+    title: "Storage Almost Full",
+    message: "You are using 85% of your storage quota. Consider upgrading your plan.",
+    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/settings",
+    actionLabel: "Manage Storage",
+    icon: AlertTriangle,
+  },
+  {
+    id: "6",
+    type: "update",
+    priority: "low",
+    title: "New Feature Available",
+    message: "The new AI Brain module is now available in your dashboard. Check it out!",
+    timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/ai-brain",
+    actionLabel: "Try AI Brain",
+    icon: Zap,
+  },
+  {
+    id: "7",
+    type: "info",
+    priority: "low",
+    title: "Weekly Report Ready",
+    message: "Your weekly productivity report for Dec 8-14 is ready to view.",
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/reports",
+    actionLabel: "View Report",
+    icon: FileText,
+  },
+  {
+    id: "8",
+    type: "error",
+    priority: "high",
+    title: "Payment Failed",
+    message: "Your subscription payment was declined. Please update your payment method.",
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    read: false,
+    actionUrl: "/billing",
+    actionLabel: "Update Payment",
+    icon: DollarSign,
+  },
+  {
+    id: "9",
+    type: "system",
+    priority: "medium",
+    title: "Security Alert",
+    message: "A new device signed in to your account from Johannesburg, South Africa.",
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/settings",
+    actionLabel: "Review Devices",
+    icon: Shield,
+  },
+  {
+    id: "10",
+    type: "task",
+    priority: "medium",
+    title: "Meeting Reminder",
+    message: "Team standup meeting in 30 minutes. Join via the link in your calendar.",
+    timestamp: new Date(Date.now() - 30 * 60 * 1000),
+    read: true,
+    actionUrl: "/calendar",
+    actionLabel: "Join Meeting",
+    icon: Users,
+  },
 ];
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+/* ───────── Helper Functions ───────── */
 
-const NotificationsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { lastMessage, sendMessage, connected } = useWebSocket();
+const formatTimeAgo = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-  // --- State -------------------------------------------------------------
-
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
-  const [showSettings, setShowSettings] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [markingRead, setMarkingRead] = useState<string | null>(null);
-
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // --- Fetch notifications -----------------------------------------------
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const params = new URLSearchParams();
-      params.append("user_id", "current-user");
-      if (activeFilter === "unread") {
-        params.append("unread_only", "true");
-      }
-
-      const res = await fetch(`/api/v25/notifications?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-      });
-
-      if (!res.ok) {
-        console.warn("Failed to fetch notifications:", res.status);
-        return;
-      }
-
-      const data: { success: boolean } & NotificationsResponse = await res.json();
-      if (data.success) {
-        setNotifications(data.notifications);
-        setUnreadCount(data.unread_count);
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeFilter]);
-
-  // --- Fetch unread count (lightweight) ----------------------------------
-
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/v25/notifications/unread-count?user_id=current-user`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) setUnreadCount(data.unread_count);
-      }
-    } catch (err) {
-      console.error("Error fetching unread count:", err);
-    }
-  }, []);
-
-  // --- Mark read ---------------------------------------------------------
-
-  const markRead = useCallback(
-    async (id: string) => {
-      setMarkingRead(id);
-      try {
-        const res = await fetch("/api/v25/notifications/mark-read", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          },
-          body: JSON.stringify({ notification_id: id }),
-        });
-
-        if (res.ok) {
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-          );
-          setUnreadCount((c) => Math.max(0, c - 1));
-        }
-      } catch (err) {
-        console.error("Error marking read:", err);
-      } finally {
-        setMarkingRead(null);
-      }
-    },
-    []
-  );
-
-  const markAllRead = useCallback(async () => {
-    try {
-      const res = await fetch("/api/v25/notifications/mark-all-read", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
-        body: JSON.stringify({ user_id: "current-user" }),
-      });
-
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-        setUnreadCount(0);
-      }
-    } catch (err) {
-      console.error("Error marking all read:", err);
-    }
-  }, []);
-
-  // --- Handle notification click -----------------------------------------
-
-  const handleNotificationClick = useCallback(
-    (n: NotificationItem) => {
-      if (!n.read) markRead(n.id);
-      if (n.action_url) navigate(n.action_url);
-    },
-    [markRead, navigate]
-  );
-
-  // --- WebSocket real-time updates ---------------------------------------
-
-  useEffect(() => {
-    if (!lastMessage) return;
-
-    try {
-      const msg = JSON.parse(lastMessage.data);
-      if (msg.event === "notification" && msg.data) {
-        const incoming: NotificationItem = msg.data;
-        setNotifications((prev) => [incoming, ...prev]);
-        setUnreadCount((c) => c + 1);
-      } else if (msg.event === "unread_count" && msg.data) {
-        setUnreadCount(msg.data.unread_count ?? 0);
-      }
-    } catch {
-      // ignore non-JSON messages
-    }
-  }, [lastMessage]);
-
-  // --- Initial load + polling --------------------------------------------
-
-  useEffect(() => {
-    fetchNotifications();
-
-    // Poll every 60s as fallback
-    pollRef.current = setInterval(fetchUnreadCount, 60000);
-
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchNotifications, fetchUnreadCount]);
-
-  // --- Filtered list -----------------------------------------------------
-
-  const filteredNotifications = useMemo(() => {
-    switch (activeFilter) {
-      case "unread":
-        return notifications.filter((n) => !n.read);
-      case "tenders":
-        return notifications.filter((n) => n.type === "tender_deadline");
-      case "finance":
-        return notifications.filter((n) =>
-          ["grant_deadline", "tax_deadline", "sassa_payment"].includes(n.type)
-        );
-      case "weather":
-        return notifications.filter((n) =>
-          ["weather_alert", "load_shedding", "water_restriction"].includes(n.type)
-        );
-      case "urgent":
-        return notifications.filter((n) =>
-          ["urgent", "high"].includes(n.priority)
-        );
-      default:
-        return notifications;
-    }
-  }, [notifications, activeFilter]);
-
-  // --- Render helpers ----------------------------------------------------
-
-  const renderIcon = (n: NotificationItem) => {
-    const IconComp = ICON_MAP[n.icon] || Bell;
-    const colors = COLOR_CLASSES[n.color] || COLOR_CLASSES.gray;
-    return (
-      <div className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center flex-shrink-0`}>
-        <IconComp size={18} className={colors.text} />
-      </div>
-    );
-  };
-
-  // --- JSX ---------------------------------------------------------------
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <BellRing size={22} className="text-gray-700" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
-            {connected && (
-              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
-                LIVE
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllRead}
-                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <CheckCheck size={16} />
-                Mark all read
-              </button>
-            )}
-            <button
-              onClick={() => setShowSettings(true)}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Notification settings"
-            >
-              <Settings size={18} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Filter Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-[65px] z-10">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
-            <Filter size={14} className="text-gray-400 mr-1 flex-shrink-0" />
-            {FILTER_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveFilter(tab.key)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeFilter === tab.key
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {tab.label}
-                {tab.key === "unread" && unreadCount > 0 && (
-                  <span className="ml-1.5 bg-white/20 text-white text-[10px] px-1.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Notification List */}
-      <main className="max-w-3xl mx-auto px-4 py-4">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-3 text-sm text-gray-500">Loading notifications...</p>
-          </div>
-        ) : filteredNotifications.length === 0 ? (
-          /* Empty State */
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Bell size={28} className="text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-1">No notifications</h3>
-            <p className="text-sm text-gray-500 max-w-xs">
-              {activeFilter === "all"
-                ? "You're all caught up! New notifications will appear here."
-                : "No notifications match the current filter."}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredNotifications.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => handleNotificationClick(n)}
-                className={`group relative flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
-                  n.read
-                    ? "bg-white border-gray-100 hover:border-gray-200"
-                    : "bg-blue-50/40 border-blue-100 hover:border-blue-200"
-                }`}
-              >
-                {/* Icon */}
-                {renderIcon(n)}
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4
-                      className={`text-sm leading-tight ${
-                        n.read ? "font-medium text-gray-700" : "font-semibold text-gray-900"
-                      }`}
-                    >
-                      {n.title}
-                    </h4>
-                    {!n.read && (
-                      <Circle
-                        size={8}
-                        className="flex-shrink-0 mt-1.5 fill-blue-500 text-blue-500"
-                      />
-                    )}
-                  </div>
-
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-                    {n.description}
-                  </p>
-
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                      <Clock size={11} />
-                      {n.time_ago}
-                    </span>
-
-                    {n.priority === "urgent" && (
-                      <span className="flex items-center gap-1 text-[11px] text-red-500 font-medium">
-                        <AlertTriangle size={11} />
-                        Urgent
-                      </span>
-                    )}
-
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                        n.read
-                          ? "bg-gray-100 text-gray-500"
-                          : "bg-blue-100 text-blue-600"
-                      }`}
-                    >
-                      {n.type.replace("_", " ")}
-                    </span>
-
-                    {markingRead === n.id && (
-                      <span className="text-[10px] text-gray-400">Marking...</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Chevron */}
-                <ChevronRight
-                  size={16}
-                  className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 mt-3 transition-colors"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* Settings Modal */}
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-    </div>
-  );
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-ZA", { month: "short", day: "numeric" });
 };
 
-// ---------------------------------------------------------------------------
-// Settings Modal Sub-Component
-// ---------------------------------------------------------------------------
+const groupByDate = (notifications: Notification[]): NotificationGroup[] => {
+  const groups: Record<string, Notification[]> = {};
 
-const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [settings, setSettings] = useState({
-    push: true,
-    email: false,
-    sms: false,
-    tenders: true,
-    finance: true,
-    weather: true,
-    urgent: true,
+  notifications.forEach((n) => {
+    const dateKey = n.timestamp.toDateString();
+    if (!groups[dateKey]) groups[dateKey] = [];
+    groups[dateKey].push(n);
   });
 
-  const toggle = (key: string) =>
-    setSettings((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-        {/* Modal header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Settings size={18} className="text-gray-500" />
-            Notification Settings
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Modal body */}
-        <div className="px-5 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
-          {/* Channels */}
-          <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Channels
-            </h3>
-            <div className="space-y-3">
-              {[
-                { key: "push", label: "Push notifications", desc: "In-app and browser alerts" },
-                { key: "email", label: "Email notifications", desc: "Daily digest to your inbox" },
-                { key: "sms", label: "SMS alerts", desc: "Critical alerts via text message" },
-              ].map((item) => (
-                <div key={item.key} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">{item.label}</p>
-                    <p className="text-xs text-gray-400">{item.desc}</p>
-                  </div>
-                  <button
-                    onClick={() => toggle(item.key)}
-                    className={`relative w-10 h-6 rounded-full transition-colors ${
-                      settings[item.key as keyof typeof settings] ? "bg-blue-600" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                        settings[item.key as keyof typeof settings]
-                          ? "translate-x-4"
-                          : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Categories
-            </h3>
-            <div className="space-y-3">
-              {[
-                { key: "tenders", label: "Tenders & procurement", icon: FileText, color: "text-orange-500" },
-                { key: "finance", label: "Finance & grants", icon: Banknote, color: "text-green-500" },
-                { key: "weather", label: "Weather & utilities", icon: CloudRain, color: "text-blue-500" },
-                { key: "urgent", label: "Urgent alerts only", icon: AlertTriangle, color: "text-red-500" },
-              ].map((item) => (
-                <div key={item.key} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <item.icon size={16} className={item.color} />
-                    <p className="text-sm font-medium text-gray-700">{item.label}</p>
-                  </div>
-                  <button
-                    onClick={() => toggle(item.key)}
-                    className={`relative w-10 h-6 rounded-full transition-colors ${
-                      settings[item.key as keyof typeof settings] ? "bg-blue-600" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                        settings[item.key as keyof typeof settings]
-                          ? "translate-x-4"
-                          : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Modal footer */}
-        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return Object.entries(groups)
+    .map(([date, notifs]) => ({
+      date,
+      label: getDateLabel(new Date(date)),
+      notifications: notifs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
-export default NotificationsPage;
+const getDateLabel = (date: Date): string => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString("en-ZA", { weekday: "long", month: "long", day: "numeric" });
+};
+
+/* ───────── Component ───────── */
+
+export default function NotificationsPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { fetchApi, loading } = useApi();
+
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
+  const [typeFilter, setTypeFilter] = useState<NotificationType | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+
+  const filteredNotifications = useMemo(() => {
+    let filtered = notifications;
+
+    if (filter === "unread") filtered = filtered.filter((n) => !n.read);
+    if (filter === "read") filtered = filtered.filter((n) => n.read);
+    if (typeFilter !== "all") filtered = filtered.filter((n) => n.type === typeFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (n) => n.title.toLowerCase().includes(q) || n.message.toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  }, [notifications, filter, typeFilter, searchQuery]);
+
+  const groupedNotifications = useMemo(() => groupByDate(filteredNotifications), [filteredNotifications]);
+
+  const markAsRead = useCallback((id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  }, []);
+
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const deleteNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const handleAction = useCallback(
+    (notification: Notification) => {
+      markAsRead(notification.id);
+      if (notification.actionUrl) {
+        navigate(notification.actionUrl);
+      }
+    },
+    [markAsRead, navigate]
+  );
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 p-4 md:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <Bell className="h-6 w-6 text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">Notifications</h1>
+              <p className="text-neutral-400 text-sm">
+                {unreadCount} unread of {notifications.length} total
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="border-neutral-700" onClick={markAllAsRead}>
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Mark All Read
+            </Button>
+            <Button variant="outline" size="sm" className="border-neutral-700 text-red-400 hover:text-red-300" onClick={clearAll}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search notifications..."
+              className="pl-10 bg-neutral-900 border-neutral-700"
+            />
+          </div>
+        </div>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as NotificationType | "all")}>
+          <SelectTrigger className="w-full md:w-[180px] bg-neutral-900 border-neutral-700">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent className="bg-neutral-900 border-neutral-700">
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="system">System</SelectItem>
+            <SelectItem value="alert">Alerts</SelectItem>
+            <SelectItem value="info">Info</SelectItem>
+            <SelectItem value="success">Success</SelectItem>
+            <SelectItem value="warning">Warning</SelectItem>
+            <SelectItem value="error">Error</SelectItem>
+            <SelectItem value="task">Tasks</SelectItem>
+            <SelectItem value="message">Messages</SelectItem>
+            <SelectItem value="update">Updates</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="bg-neutral-900 border border-neutral-800 p-1">
+          <TabsTrigger value="all" className="data-[state=active]:bg-neutral-800">
+            All ({notifications.length})
+          </TabsTrigger>
+          <TabsTrigger value="unread" className="data-[state=active]:bg-neutral-800">
+            Unread ({unreadCount})
+          </TabsTrigger>
+          <TabsTrigger value="read" className="data-[state=active]:bg-neutral-800">
+            Read ({notifications.length - unreadCount})
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Notifications List */}
+      <ScrollArea className="h-[calc(100vh-280px)]">
+        <div className="space-y-4">
+          {groupedNotifications.length === 0 ? (
+            <Card className="bg-neutral-900 border-neutral-800">
+              <CardContent className="p-12 text-center">
+                <BellOff className="h-12 w-12 text-neutral-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">No notifications</h3>
+                <p className="text-neutral-400">
+                  {searchQuery || typeFilter !== "all"
+                    ? "No notifications match your filters."
+                    : "You're all caught up!"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            groupedNotifications.map((group) => (
+              <div key={group.date}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="h-4 w-4 text-neutral-500" />
+                  <span className="text-sm font-medium text-neutral-400">{group.label}</span>
+                  <div className="flex-1 h-px bg-neutral-800" />
+                </div>
+
+                <div className="space-y-2">
+                  {group.notifications.map((notification) => {
+                    const Icon = notification.icon;
+                    const typeColor = TYPE_COLORS[notification.type];
+                    const priorityColor = PRIORITY_COLORS[notification.priority];
+
+                    return (
+                      <Card
+                        key={notification.id}
+                        className={`bg-neutral-900 border-neutral-800 transition-all ${
+                          !notification.read ? "border-l-4 border-l-blue-500" : "opacity-75"
+                        }`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${typeColor}`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className={`font-medium ${!notification.read ? "text-white" : "text-neutral-400"}`}>
+                                  {notification.title}
+                                </h3>
+                                {!notification.read && (
+                                  <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                                )}
+                                <Badge variant="outline" className={`text-xs ${priorityColor}`}>
+                                  {notification.priority}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-neutral-400 mb-2">{notification.message}</p>
+                              <div className="flex items-center gap-4">
+                                <span className="text-xs text-neutral-500">
+                                  {formatTimeAgo(notification.timestamp)}
+                                </span>
+                                {notification.actionUrl && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-blue-400 hover:text-blue-300 text-xs"
+                                    onClick={() => handleAction(notification)}
+                                  >
+                                    {notification.actionLabel || "View"}
+                                    <ChevronRight className="h-3 w-3 ml-1" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {!notification.read && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-neutral-400 hover:text-white"
+                                  onClick={() => markAsRead(notification.id)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-neutral-400 hover:text-red-400"
+                                onClick={() => deleteNotification(notification.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
