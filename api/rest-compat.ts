@@ -12,7 +12,9 @@ import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { getDb } from "./queries/connection";
 import { users, knowledgeArticles } from "../db/schema";
-import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrator";
+import { orchestrateRequest, orchestrateStream, getOrchestratorStatus } from "./services/orchestrator";
+import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
+import { streamSSE } from "hono/streaming";
 
 export const restCompat = new Hono();
 
@@ -50,6 +52,12 @@ async function handleChat(message: string, sessionId?: string) {
     return aiUnavailableResponse();
   }
 
+  const cacheKey = hashPrompt(message);
+  const cached = await getCachedAIResponse(cacheKey);
+  if (cached) {
+    return { response: cached, module: "cache", response_time_ms: 0, session_id: sessionId ?? null };
+  }
+
   const start = Date.now();
   try {
     const result = await orchestrateRequest({
@@ -57,6 +65,7 @@ async function handleChat(message: string, sessionId?: string) {
       systemPrompt: LUQI_SYSTEM_PROMPT,
       useSearch: false,
     });
+    await setCachedAIResponse(cacheKey, result.content, 3600);
     return {
       response: result.content,
       module: result.provider + "/" + result.model,
@@ -93,6 +102,58 @@ restCompat.post("/api/v25/chat", async (c) => {
     return c.json({ error: "query is required" }, 400);
   }
   return c.json(await handleChat(message, body.session_id));
+});
+
+// ─── SSE STREAMING CHAT ───────────────────────────────────────────────
+// Tokens stream to the browser as the provider generates them.
+// Frame shapes: {"provider","model"} | {"text": "..."} | {"error": "..."}
+// terminated by data: [DONE]. Falls back to honest JSON when no provider
+// is configured (content-type stays application/json in that case).
+restCompat.post("/api/v25/ai-brain/stream", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const message = (body.message || body.query || "").toString().slice(0, 4000);
+  if (!message.trim()) {
+    return c.json({ error: "message is required" }, 400);
+  }
+
+  const status = getOrchestratorStatus();
+  if (status.demo) {
+    return c.json(aiUnavailableResponse());
+  }
+
+  const cacheKey = hashPrompt(message);
+  const cached = await getCachedAIResponse(cacheKey);
+
+  return streamSSE(c, async (stream) => {
+    if (cached) {
+      await stream.writeSSE({ data: JSON.stringify({ provider: "cache", model: "redis", cached: true }) });
+      for (const piece of cached.match(/.{1,80}/gs) || []) {
+        await stream.writeSSE({ data: JSON.stringify({ text: piece }) });
+      }
+      await stream.writeSSE({ data: "[DONE]" });
+      return;
+    }
+
+    let full = "";
+    try {
+      for await (const ev of orchestrateStream({ query: message, systemPrompt: LUQI_SYSTEM_PROMPT })) {
+        if (ev.provider) {
+          await stream.writeSSE({ data: JSON.stringify({ provider: ev.provider, model: ev.model }) });
+        }
+        if (ev.delta) {
+          full += ev.delta;
+          await stream.writeSSE({ data: JSON.stringify({ text: ev.delta }) });
+        }
+        if (ev.error) {
+          await stream.writeSSE({ data: JSON.stringify({ error: ev.error }) });
+        }
+      }
+      if (full) await setCachedAIResponse(cacheKey, full, 3600);
+    } catch (e: any) {
+      await stream.writeSSE({ data: JSON.stringify({ error: e?.message || "stream failed" }) });
+    }
+    await stream.writeSSE({ data: "[DONE]" });
+  });
 });
 
 // ─── STATUS ───────────────────────────────────────────────────────────
