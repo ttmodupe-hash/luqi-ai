@@ -1,7 +1,8 @@
 /**
  * LUQI AI — AI Brain Chat Page
  * ==============================
- * Full-screen chat interface with the LUQI AI Brain.
+ * Full-screen chat interface with the LUQI AI Brain, streaming responses
+ * token-by-token over SSE when an AI provider is configured.
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -37,6 +38,18 @@ export default function AIBrainPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const HONEST_FALLBACK =
+    "I couldn't reach the LUQI server just now, so I can't give you a verified answer. Please try again in a moment — I'd rather tell you that than guess.";
+
+  const appendDelta = (delta: string) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      copy[copy.length - 1] = { ...last, content: last.content + delta };
+      return copy;
+    });
+  };
+
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     const userMsg: Message = { role: "user", content: text };
@@ -46,7 +59,7 @@ export default function AIBrainPage() {
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL || ""}/api/v25/ai-brain/chat`,
+        `${import.meta.env.VITE_API_URL || ""}/api/v25/ai-brain/stream`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,32 +69,62 @@ export default function AIBrainPage() {
           }),
         }
       );
-      if (res.ok) {
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (res.ok && contentType.includes("text/event-stream") && res.body) {
+        // Streaming response — append tokens as they arrive
+        setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let receivedAny = false;
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split("\n\n");
+          buffer = frames.pop() || "";
+          for (const frame of frames) {
+            const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+            if (!dataLine) continue;
+            const payload = dataLine.slice(5).trim();
+            if (payload === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(payload);
+              if (parsed.text) {
+                receivedAny = true;
+                appendDelta(parsed.text);
+              } else if (parsed.error) {
+                receivedAny = true;
+                appendDelta(`I hit a problem reaching my AI providers (${parsed.error}). Please try again in a moment.`);
+              }
+            } catch {
+              // Partial JSON frame — the next chunk completes it
+            }
+          }
+        }
+
+        if (!receivedAny) {
+          setMessages((prev) => {
+            const copy = [...prev];
+            copy[copy.length - 1] = { role: "assistant", content: HONEST_FALLBACK };
+            return copy;
+          });
+        }
+      } else if (res.ok) {
+        // JSON response (provider not configured, or non-stream reply)
         const data = await res.json();
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: data.response || "I'm not sure about that. Try rephrasing your question." },
         ]);
       } else {
-        // Honest fallback — never fake knowledge
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content:
-              "I couldn't reach the LUQI server just now, so I can't give you a verified answer. Please try again in a moment — I'd rather tell you that than guess.",
-          },
-        ]);
+        setMessages((prev) => [...prev, { role: "assistant", content: HONEST_FALLBACK }]);
       }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "I couldn't reach the LUQI server just now, so I can't give you a verified answer. Please try again in a moment — I'd rather tell you that than guess.",
-        },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: HONEST_FALLBACK }]);
     }
     setLoading(false);
   };
