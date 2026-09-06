@@ -9,13 +9,14 @@
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "./queries/connection";
-import { users, knowledgeArticles } from "../db/schema";
+import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
 import { appendTurn, getHistory, historyToContext } from "./services/session";
 import { generateImage, imageProviderAvailable } from "./services/media";
+import { paymentsConfigured, initializeTopup, verifyWebhookSignature, verifyTransaction } from "./services/payments";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 
@@ -256,6 +257,8 @@ restCompat.get("/api/v25/status", async (c) => {
       database: !!process.env.DATABASE_URL || !!process.env.DB_HOST,
       ai_providers: status.providers,
       search: !!process.env.SERPER_API_KEY,
+      payments: paymentsConfigured(),
+      image_generation: imageProviderAvailable(),
     },
     uptime_seconds: Math.floor(process.uptime()),
   });
@@ -332,6 +335,128 @@ restCompat.post("/api/v25/media/image", async (c) => {
     return c.json({ error: "Image generation failed at all configured providers — check provider quotas/keys." }, 502);
   }
   return c.json(result);
+});
+
+// ─── PAYMENTS — Paystack micro-credit top-ups ─────────────────────────
+// Card, EFT and mobile money via Paystack hosted checkout. Wallets are
+// credited only after HMAC-verified webhook + server-side re-verification.
+
+restCompat.post("/api/v25/payments/topup", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const email = (body.email || "").toString().trim().toLowerCase();
+  const amountZar = Number(body.amountZar ?? body.amount ?? 0);
+
+  if (!email || !email.includes("@")) return c.json({ detail: "Valid email is required" }, 400);
+  if (!Number.isFinite(amountZar) || amountZar < 5 || amountZar > 50000) {
+    return c.json({ detail: "Amount must be between R5 and R50,000" }, 400);
+  }
+
+  if (!paymentsConfigured()) {
+    return c.json(
+      { detail: "Payments are not configured yet — the server needs PAYSTACK_SECRET_KEY. Top-ups go live the moment it is set." },
+      503
+    );
+  }
+
+  const amountCents = Math.round(amountZar * 100);
+
+  try {
+    const db = await getDb();
+    const init = await initializeTopup(email, amountCents, "ZAR");
+    if (!init) return c.json({ detail: "Payment provider rejected the request — check amount and try again." }, 502);
+
+    await db.insert(paymentEvents).values({
+      reference: init.reference,
+      userKey: email,
+      eventType: "topup_initialized",
+      amountCents,
+      currency: "ZAR",
+      status: "pending",
+    });
+
+    return c.json({ authorizationUrl: init.authorizationUrl, reference: init.reference });
+  } catch (e: any) {
+    return c.json({ detail: "Payments unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+  }
+});
+
+restCompat.post("/api/v25/payments/webhook", async (c) => {
+  // Raw body is required for HMAC verification — do NOT parse first
+  const rawBody = await c.req.text();
+  const signature = c.req.header("x-paystack-signature");
+
+  if (!paymentsConfigured()) return c.json({ detail: "payments not configured" }, 503);
+  if (!verifyWebhookSignature(rawBody, signature)) {
+    return c.json({ detail: "Invalid signature" }, 401);
+  }
+
+  const event = JSON.parse(rawBody || "{}");
+  if (event?.event !== "charge.success") {
+    return c.json({ received: true }); // acknowledge non-charge events
+  }
+
+  const reference = event?.data?.reference;
+  if (!reference) return c.json({ received: true });
+
+  // Double-check with Paystack before crediting
+  const verified = await verifyTransaction(reference);
+  if (!verified) return c.json({ detail: "Transaction verification failed" }, 400);
+
+  const userKey = (verified.email || "").toLowerCase() || "unknown";
+
+  try {
+    const db = await getDb();
+
+    // Idempotency: duplicate webhook deliveries hit the unique reference key
+    const [existing] = await db.select().from(paymentEvents).where(eq(paymentEvents.reference, reference)).limit(1);
+    if (existing && existing.status === "credited") {
+      return c.json({ received: true, status: "already_processed" });
+    }
+
+    if (existing) {
+      await db.update(paymentEvents)
+        .set({ status: "credited", eventType: "charge.success", channel: verified.channel, payloadJson: JSON.stringify(event.data).slice(0, 60000) })
+        .where(eq(paymentEvents.reference, reference));
+    } else {
+      await db.insert(paymentEvents).values({
+        reference,
+        userKey,
+        eventType: "charge.success",
+        amountCents: verified.amountCents,
+        currency: verified.currency,
+        channel: verified.channel,
+        status: "credited",
+        payloadJson: JSON.stringify(event.data).slice(0, 60000),
+      });
+    }
+
+    // Credit the wallet (upsert on user_key)
+    await db.execute(
+      sql`INSERT INTO credit_wallets (user_key, balance_cents, currency)
+          VALUES (${userKey}, ${verified.amountCents}, ${verified.currency})
+          ON DUPLICATE KEY UPDATE balance_cents = balance_cents + ${verified.amountCents}`
+    );
+
+    return c.json({ received: true, status: "credited" });
+  } catch (e: any) {
+    return c.json({ detail: "Database error during credit (" + (e?.code || "error") + ")" }, 503);
+  }
+});
+
+restCompat.get("/api/v25/payments/balance", async (c) => {
+  const key = (c.req.query("key") || "").toString().trim().toLowerCase();
+  if (!key) return c.json({ detail: "key (email) is required" }, 400);
+
+  try {
+    const db = await getDb();
+    const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, key)).limit(1);
+    return c.json({
+      balanceCents: wallet?.balanceCents ?? 0,
+      currency: wallet?.currency ?? "ZAR",
+    });
+  } catch (e: any) {
+    return c.json({ detail: "Balance unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+  }
 });
 
 // ─── AUTH ─────────────────────────────────────────────────────────────
