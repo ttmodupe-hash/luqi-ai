@@ -10,6 +10,10 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  build: {
+    outDir: "dist/public",
+    emptyOutDir: true,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
