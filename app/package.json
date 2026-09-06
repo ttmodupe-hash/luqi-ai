@@ -106,7 +106,10 @@
     "form-data": "^4.0.1",
     "mime-types": "^2.1.35",
     "file-type": "^19.4.1",
-    "image-size": "^1.1.1"
+    "image-size": "^1.1.1",
+    "posthog-js": "^1.190.0",
+    "@tanstack/react-query": "^5.62.0",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
