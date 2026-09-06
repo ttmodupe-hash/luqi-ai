@@ -1,3 +1,17 @@
+// =====================================================================
+// STRICT PRE-BUILD VERIFICATION GATE
+// Runs before vite/esbuild in the Docker pipeline. Fails the build
+// (exit 1) on ANY broken reference. Never modifies source files.
+// Checks:
+//   1. All required Drizzle schema tables are exported
+//   2. All required serper service functions are exported
+//   3. Every import in api/, db/, scripts/, src/ resolves to a real file
+//   4. Every named import exists in the target module's exports
+//   5. Every package import exists in package.json
+//   6. No undefined identifiers (tsc crash-class: TS2304/TS2552/TS2551)
+//   7. esbuild dry-run bundle of api/boot.ts compiles clean
+// =====================================================================
+
 import fs from "node:fs";
 import path from "node:path";
 import { build } from "esbuild";
@@ -108,7 +122,7 @@ function scanFile(file, srcRoot) {
   for (const { spec, named, dynamic } of checks) {
     if (!spec.startsWith(".") && !spec.startsWith("@/")) {
       const pkgName = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
-      if (!allDeps.has(pkgName) && !NODE_BUILTINS.has(pkgName)) {
+      if (!allDeps.has(pkgName) && !NODE_BUILTINS.has(pkgName) && !spec.startsWith("node:")) {
         errors.push(`PACKAGE ERROR: '${spec}' imported in ${rel} but '${pkgName}' is not in package.json`);
       }
       continue;
@@ -138,7 +152,32 @@ for (const f of walk(path.join(rootDir, "db"))) scanFile(f, srcRoot);
 for (const f of walk(path.join(rootDir, "scripts"))) scanFile(f, srcRoot);
 for (const f of walk(srcRoot)) scanFile(f, srcRoot);
 
-// ── 6. ESBUILD DRY-RUN (write: false — no artifacts) ─────────────────
+// ── 6. UNDEFINED-NAME CRASH CHECK (tsc, filtered) ────────────────────
+// esbuild/vite cannot detect undefined identifiers (e.g. a JSX icon used
+// without import) — they compile fine and crash the app at mount.
+// tsc CAN: TS2304/TS2552/TS2551. We fail only on that crash class;
+// other type errors are warnings, not build blockers.
+{
+  const { execFileSync } = await import("node:child_process");
+  const tscBin = path.join(rootDir, "node_modules", ".bin", "tsc");
+  const tsconfig = path.join(rootDir, "tsconfig.app.json");
+  if (fs.existsSync(tscBin) && fs.existsSync(tsconfig)) {
+    try {
+      execFileSync(tscBin, ["--noEmit", "-p", "tsconfig.app.json"], { cwd: rootDir, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] });
+    } catch (e) {
+      const out = String(e.stdout || "") + String(e.stderr || "");
+      const crashErrors = out.split("\n").filter((l) => /error TS2304|error TS2552|error TS2551/.test(l));
+      for (const line of crashErrors) errors.push(`UNDEFINED NAME: ${line.trim()}`);
+      if (crashErrors.length === 0) {
+        console.log(`ℹ️  tsc type-check: ${(e.status ?? 0) !== 0 ? "non-fatal type warnings present (not crash-class)" : "clean"}`);
+      }
+    }
+  } else {
+    console.log("ℹ️  tsc or tsconfig.app.json not found — skipping undefined-name check");
+  }
+}
+
+// ── 7. ESBUILD DRY-RUN (write: false — no artifacts) ─────────────────
 try {
   await build({
     entryPoints: [path.join(rootDir, "api", "boot.ts")],
