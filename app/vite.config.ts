@@ -1,21 +1,41 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
+import compression from "vite-plugin-compression"
 import { defineConfig } from "vite"
 import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [inspectAttr(), react()],
+  plugins: [
+    inspectAttr(),
+    react(),
+    // Precompress static assets — api/lib/vite.ts serves .br/.gz when the
+    // client's Accept-Encoding allows it.
+    compression({ algorithm: 'brotliCompress', ext: '.br' }),
+    compression({ algorithm: 'gzip', ext: '.gz' }),
+  ],
   server: {
     port: 3000,
   },
   build: {
+    target: "es2020",
     outDir: "dist/public",
     emptyOutDir: true,
+    sourcemap: false,
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
+        chunkFileNames: "assets/js/[name]-[hash].js",
+        entryFileNames: "assets/js/[name]-[hash].js",
+        assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return undefined;
           if (/node_modules[\/]react-dom/.test(id)) return "vendor-react";
