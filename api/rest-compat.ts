@@ -12,7 +12,7 @@ import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { getDb } from "./queries/connection";
 import { users, knowledgeArticles } from "../db/schema";
-import { orchestrateRequest, orchestrateStream, getOrchestratorStatus } from "./services/orchestrator";
+import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, type SearchSource } from "./services/orchestrator";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 
@@ -55,20 +55,31 @@ async function handleChat(message: string, sessionId?: string) {
   const cacheKey = hashPrompt(message);
   const cached = await getCachedAIResponse(cacheKey);
   if (cached) {
-    return { response: cached, module: "cache", response_time_ms: 0, session_id: sessionId ?? null };
+    try {
+      const parsed = JSON.parse(cached);
+      return { response: parsed.content, module: "cache", sources: parsed.sources ?? [], response_time_ms: 0, session_id: sessionId ?? null };
+    } catch {
+      return { response: cached, module: "cache", response_time_ms: 0, session_id: sessionId ?? null };
+    }
   }
+
+  const route = routeCapability(message);
+  const systemPrompt = route.systemHint ? `${LUQI_SYSTEM_PROMPT}\n\n${route.systemHint}` : LUQI_SYSTEM_PROMPT;
 
   const start = Date.now();
   try {
     const result = await orchestrateRequest({
       query: message,
-      systemPrompt: LUQI_SYSTEM_PROMPT,
-      useSearch: false,
+      systemPrompt,
+      useSearch: route.useSearch,
     });
-    await setCachedAIResponse(cacheKey, result.content, 3600);
+    await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
     return {
       response: result.content,
       module: result.provider + "/" + result.model,
+      capability: route.capability,
+      sources: result.sources,
+      search_augmented: result.searchAugmented,
       response_time_ms: Date.now() - start,
       session_id: sessionId ?? null,
     };
@@ -106,9 +117,9 @@ restCompat.post("/api/v25/chat", async (c) => {
 
 // ─── SSE STREAMING CHAT ───────────────────────────────────────────────
 // Tokens stream to the browser as the provider generates them.
-// Frame shapes: {"provider","model"} | {"text": "..."} | {"error": "..."}
-// terminated by data: [DONE]. Falls back to honest JSON when no provider
-// is configured (content-type stays application/json in that case).
+// Frame shapes: {"provider","model"} | {"sources":[...]} | {"text": "..."}
+// | {"error": "..."}, terminated by data: [DONE]. Falls back to honest
+// JSON when no provider is configured (content-type application/json).
 restCompat.post("/api/v25/ai-brain/stream", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const message = (body.message || body.query || "").toString().slice(0, 4000);
@@ -121,22 +132,50 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
     return c.json(aiUnavailableResponse());
   }
 
+  const route = routeCapability(message);
+  const streamPrompt = route.systemHint ? `${LUQI_SYSTEM_PROMPT}\n\n${route.systemHint}` : LUQI_SYSTEM_PROMPT;
+
   const cacheKey = hashPrompt(message);
   const cached = await getCachedAIResponse(cacheKey);
 
   return streamSSE(c, async (stream) => {
     if (cached) {
+      let cachedText = cached;
+      try {
+        const parsed = JSON.parse(cached);
+        cachedText = parsed.content ?? cached;
+        if (parsed.sources?.length) {
+          await stream.writeSSE({ data: JSON.stringify({ sources: parsed.sources }) });
+        }
+      } catch { /* legacy plain-text cache entry */ }
       await stream.writeSSE({ data: JSON.stringify({ provider: "cache", model: "redis", cached: true }) });
-      for (const piece of cached.match(/.{1,80}/gs) || []) {
+      for (const piece of cachedText.match(/.{1,80}/gs) || []) {
         await stream.writeSSE({ data: JSON.stringify({ text: piece }) });
       }
       await stream.writeSSE({ data: "[DONE]" });
       return;
     }
 
+    // Web-researcher capability: fetch real sources before streaming
+    let searchContext: string | undefined;
+    let sources: SearchSource[] = [];
+    if (route.useSearch && process.env.SERPER_API_KEY) {
+      try {
+        const { searchWeb, formatSearchContext } = await import("./services/serper");
+        const results = await searchWeb(message, { numResults: 5 });
+        if (results?.organic?.length) {
+          searchContext = formatSearchContext(results);
+          sources = results.organic.slice(0, 5).map((s) => ({ title: s.title, link: s.link, snippet: s.snippet }));
+          await stream.writeSSE({ data: JSON.stringify({ sources }) });
+        }
+      } catch (e) {
+        console.warn("[Chat] Search augmentation failed:", e);
+      }
+    }
+
     let full = "";
     try {
-      for await (const ev of orchestrateStream({ query: message, systemPrompt: LUQI_SYSTEM_PROMPT })) {
+      for await (const ev of orchestrateStream({ query: message, context: searchContext, systemPrompt: streamPrompt })) {
         if (ev.provider) {
           await stream.writeSSE({ data: JSON.stringify({ provider: ev.provider, model: ev.model }) });
         }
@@ -148,7 +187,7 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
           await stream.writeSSE({ data: JSON.stringify({ error: ev.error }) });
         }
       }
-      if (full) await setCachedAIResponse(cacheKey, full, 3600);
+      if (full) await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
     } catch (e: any) {
       await stream.writeSSE({ data: JSON.stringify({ error: e?.message || "stream failed" }) });
     }
