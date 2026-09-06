@@ -22,7 +22,7 @@ const REQUIRED_TABLES = [
   "progressAlerts", "offlineSyncQueue", "voiceCommands",
   "users", "sessions", "analyticsEvents", "pageViews", "notifications",
   "labs", "experiments", "predictions", "abTests", "abTestResults",
-  "chatSessions",
+  "chatSessions", "creditWallets", "paymentEvents",
 ];
 
 const schemaPath = path.join(rootDir, "db", "schema.ts");
@@ -146,10 +146,6 @@ for (const f of walk(path.join(rootDir, "scripts"))) scanFile(f, srcRoot);
 for (const f of walk(srcRoot)) scanFile(f, srcRoot);
 
 // ── 6. UNDEFINED-NAME CRASH CHECK (tsc, filtered) ────────────────────
-// esbuild/vite cannot detect undefined identifiers (e.g. a JSX icon used
-// without import) — they compile fine and crash the app at mount.
-// tsc CAN: TS2304/TS2552/TS2551. We fail only on that crash class;
-// other type errors are warnings, not build blockers.
 {
   const { execFileSync } = await import("node:child_process");
   const tscBin = path.join(rootDir, "node_modules", ".bin", "tsc");
