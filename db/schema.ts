@@ -193,6 +193,98 @@ export const healingEvents = mysqlTable("healing_events", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+export const errorLogs = mysqlTable("error_logs", {
+  id: serial("id").primaryKey(),
+  errorType: varchar("error_type", { length: 100 }).notNull(),
+  severity: varchar("severity", { length: 50 }).notNull(),
+  message: text("message").notNull(),
+  sourceModule: varchar("source_module", { length: 255 }),
+  sourceFile: varchar("source_file", { length: 500 }),
+  stackTrace: text("stack_trace"),
+  metadataJson: text("metadata_json"),
+  resolved: boolean("resolved").default(false),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const healingPatches = mysqlTable("healing_patches", {
+  id: serial("id").primaryKey(),
+  errorLogId: int("error_log_id"),
+  patchType: varchar("patch_type", { length: 100 }),
+  description: text("description"),
+  codeDiff: text("code_diff"),
+  appliedAt: timestamp("applied_at"),
+  status: varchar("status", { length: 50 }).default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const systemMetrics = mysqlTable("system_metrics", {
+  id: serial("id").primaryKey(),
+  metricName: varchar("metric_name", { length: 255 }).notNull(),
+  metricValue: decimal("metric_value", { precision: 15, scale: 4 }),
+  metricUnit: varchar("metric_unit", { length: 50 }),
+  tags: json("tags"),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+export const agentActivityLog = mysqlTable("agent_activity_log", {
+  id: serial("id").primaryKey(),
+  agentId: varchar("agent_id", { length: 255 }).notNull(),
+  agentName: varchar("agent_name", { length: 255 }),
+  action: varchar("action", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).default("success"),
+  inputData: json("input_data"),
+  outputData: json("output_data"),
+  errorMessage: text("error_message"),
+  durationMs: int("duration_ms"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const benchmarkFeeds = mysqlTable("benchmark_feeds", {
+  id: serial("id").primaryKey(),
+  feedName: varchar("feed_name", { length: 255 }).notNull(),
+  feedType: varchar("feed_type", { length: 100 }),
+  status: varchar("status", { length: 50 }).default("active"),
+  lastSyncAt: timestamp("last_sync_at"),
+  recordCount: int("record_count").default(0),
+  config: json("config"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+/* ───────── Knowledge Base Tables ───────── */
+
+export const knowledgeArticles = mysqlTable("knowledge_articles", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 500 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 100 }),
+  tags: json("tags"),
+  sourceUrl: varchar("source_url", { length: 1000 }),
+  author: varchar("author", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("published"),
+  viewCount: int("view_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+/* ───────── Content Tables ───────── */
+
+export const contentItems = mysqlTable("content_items", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 500 }).notNull(),
+  content: text("content"),
+  category: varchar("category", { length: 100 }),
+  contentType: varchar("content_type", { length: 100 }),
+  imageUrl: varchar("image_url", { length: 1000 }),
+  sourceUrl: varchar("source_url", { length: 1000 }),
+  author: varchar("author", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("published"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
 /* ───────── Prediction Tables ───────── */
 
 export const predictions = mysqlTable("predictions", {
