@@ -2,15 +2,22 @@
  * LUQI AI — AI Brain Chat Page
  * ==============================
  * Full-screen chat interface with the LUQI AI Brain, streaming responses
- * token-by-token over SSE when an AI provider is configured.
+ * token-by-token over SSE when an AI provider is configured, with real
+ * source chips when the web-researcher capability augments an answer.
  */
 
 import { useState, useRef, useEffect } from "react";
 import { Brain, Send, User, Loader2, Sparkles } from "lucide-react";
 
+interface SourceLink {
+  title: string;
+  link: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
+  sources?: SourceLink[];
 }
 
 const QUICK_PROMPTS = [
@@ -96,6 +103,12 @@ export default function AIBrainPage() {
               if (parsed.text) {
                 receivedAny = true;
                 appendDelta(parsed.text);
+              } else if (parsed.sources) {
+                setMessages((prev) => {
+                  const copy = [...prev];
+                  copy[copy.length - 1] = { ...copy[copy.length - 1], sources: parsed.sources };
+                  return copy;
+                });
               } else if (parsed.error) {
                 receivedAny = true;
                 appendDelta(`I hit a problem reaching my AI providers (${parsed.error}). Please try again in a moment.`);
@@ -118,7 +131,11 @@ export default function AIBrainPage() {
         const data = await res.json();
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: data.response || "I'm not sure about that. Try rephrasing your question." },
+          {
+            role: "assistant",
+            content: data.response || "I'm not sure about that. Try rephrasing your question.",
+            sources: data.sources || [],
+          },
         ]);
       } else {
         setMessages((prev) => [...prev, { role: "assistant", content: HONEST_FALLBACK }]);
@@ -163,6 +180,22 @@ export default function AIBrainPage() {
               }`}
             >
               {msg.content}
+              {msg.sources && msg.sources.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-neutral-700/50 flex flex-wrap gap-1.5">
+                  {msg.sources.map((s, si) => (
+                    <a
+                      key={si}
+                      href={s.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs px-2 py-1 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors truncate max-w-[220px]"
+                      title={s.title}
+                    >
+                      {s.title}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
             {msg.role === "user" && (
               <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0">
