@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
+import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 
@@ -68,6 +69,9 @@ app.use("/api/trpc/*", async (c) => {
     createContext,
   });
 });
+
+// ── REST COMPAT (legacy frontend endpoints → real services) ──────────
+app.route("/", restCompat);
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 

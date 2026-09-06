@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-change-in-prod';
 
 export interface ChatMessage {

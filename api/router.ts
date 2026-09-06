@@ -8,6 +8,11 @@ import { orchestratorRouter } from "./orchestrator";
 import { labsRouter } from "./labs";
 import { selfHealingRouter } from "./self-healing";
 import { videoRouter } from "./video";
+import { adaptiveRouter } from "./adaptive";
+import { gradingRouter } from "./grading";
+import { guardianRouter } from "./guardian";
+import { offlineRouter } from "./offline";
+import { voiceRouter } from "./voice";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -20,6 +25,11 @@ export const appRouter = createRouter({
   labs: labsRouter,
   selfHealing: selfHealingRouter,
   video: videoRouter,
+  adaptive: adaptiveRouter,
+  grading: gradingRouter,
+  guardian: guardianRouter,
+  offline: offlineRouter,
+  voice: voiceRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -63,30 +63,27 @@ export default function AIBrainPage() {
           { role: "assistant", content: data.response || "I'm not sure about that. Try rephrasing your question." },
         ]);
       } else {
-        // Mock fallback
+        // Honest fallback — never fake knowledge
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: mockResponse(text) },
+          {
+            role: "assistant",
+            content:
+              "I couldn't reach the LUQI server just now, so I can't give you a verified answer. Please try again in a moment — I'd rather tell you that than guess.",
+          },
         ]);
       }
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: mockResponse(text) },
+        {
+          role: "assistant",
+          content:
+            "I couldn't reach the LUQI server just now, so I can't give you a verified answer. Please try again in a moment — I'd rather tell you that than guess.",
+        },
       ]);
     }
     setLoading(false);
-  };
-
-  const mockResponse = (query: string): string => {
-    const q = query.toLowerCase();
-    if (q.includes("tender")) return "You can find government tenders on the National Treasury's eTenderPortal (etenders.treasury.gov.za) or on the SA Government website. I can help you understand the application process and required documents.";
-    if (q.includes("nsfas")) return "NSFAS applications open around September each year. You'll need your ID, matric certificate, parent/guardian income proof, and proof of acceptance at a registered institution. Apply at nsfas.org.za.";
-    if (q.includes("tax")) return "South Africa uses a progressive PAYE tax system. For 2026, the brackets are: R0-R95,750 (18%), R95,751-R365,000 (26%), R365,001-R550,000 (31%), and higher brackets up to 45%. Would you like me to calculate your specific tax?";
-    if (q.includes("load shedding")) return "Check your load shedding schedule on EskomSePush (eskomsepush.co.za) or the City Power website for your municipality. The schedule rotates based on your area's load shedding group.";
-    if (q.includes("business")) return "To register a business in SA: 1) Reserve a company name with CIPC, 2) Register your company type (PTY, sole prop, etc.), 3) Get a tax number from SARS, 4) Register for UIF if you have employees, 5) Open a business bank account.";
-    if (q.includes("sassa")) return "SASSA offers several grants: Older Person's Grant (R2,090/month), Disability Grant (R2,090/month), Child Support Grant (R510/month), and SRD R370 grant. Eligibility depends on age, income, and circumstances.";
-    return "That's a great question! LUQI AI can help with that. I'm connected to 90+ capability modules covering finance, education, health, tenders, and daily life in South Africa. Could you provide a bit more detail so I can give you the most accurate guidance?";
   };
 
   const handleSubmit = (e: React.FormEvent) => {
