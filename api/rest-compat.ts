@@ -12,7 +12,8 @@ import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { getDb } from "./queries/connection";
 import { users, knowledgeArticles } from "../db/schema";
-import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, type SearchSource } from "./services/orchestrator";
+import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, type SearchSource } from "./services/orchestrator";
+import { orchestrateAgent } from "./services/agent";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 
@@ -68,6 +69,30 @@ async function handleChat(message: string, sessionId?: string) {
 
   const start = Date.now();
   try {
+    // Agent path: Kimi/OpenAI providers support real tool calling — the
+    // model itself decides when to search the web or compute.
+    const agentClient = getAgentCapableClient();
+    if (agentClient) {
+      const result = await orchestrateAgent({
+        query: message,
+        systemPrompt,
+        client: agentClient.client,
+        provider: agentClient.provider,
+        model: agentClient.model,
+      });
+      await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
+      return {
+        response: result.content,
+        module: result.provider + "/" + result.model,
+        capability: route.capability,
+        sources: result.sources,
+        tools_used: result.toolsUsed,
+        agent_iterations: result.iterations,
+        response_time_ms: result.latencyMs,
+        session_id: sessionId ?? null,
+      };
+    }
+
     const result = await orchestrateRequest({
       query: message,
       systemPrompt,
