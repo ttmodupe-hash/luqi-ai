@@ -109,7 +109,7 @@ export function classifyIntent(query: string, contextLength = 0): { intent: Task
     return { intent: "creative_writing", reason: "Contains creative writing keywords" };
   }
 
-  if (/\b(search|find|look up|what is|who is|when did|where is)\b/.test(q)) {
+  if (/\b(search|find|look up|what is|who is|when did|where is|latest)\b/.test(q)) {
     return { intent: "search_required", reason: "Contains search keywords" };
   }
 
@@ -182,6 +182,7 @@ export interface OrchestratorResult {
   tokensUsed: number;
   costEstimate: string;
   searchAugmented: boolean;
+  sources: SearchSource[];
   allProvidersAvailable: {
     openai: boolean;
     anthropic: boolean;
@@ -201,7 +202,7 @@ export async function orchestrateRequest(options: {
 }): Promise<OrchestratorResult> {
   const startTime = Date.now();
   const context = options.context || "";
-  const fullPrompt = context ? `${context}\n\n${options.query}` : options.query;
+  let fullPrompt = context ? `${context}\n\n${options.query}` : options.query;
 
   // Step 1: Classify intent
   const intentResult = classifyIntent(options.query, context.length);
@@ -210,13 +211,20 @@ export async function orchestrateRequest(options: {
   // Step 2: Optional web search augmentation
   let searchContext: string | undefined;
   let searchAugmented = false;
+  let sources: SearchSource[] = [];
   if (options.useSearch) {
     try {
       const { searchWeb, formatSearchContext } = await import("./serper");
-      const searchResults = await searchWeb(options.query, { num: 5 });
-      if (searchResults) {
+      const searchResults = await searchWeb(options.query, { numResults: 5 });
+      if (searchResults && searchResults.organic?.length) {
         searchContext = formatSearchContext(searchResults);
+        fullPrompt = `${searchContext}\n\nBased on the trusted sources above, answer: ${options.query}`;
         searchAugmented = true;
+        sources = searchResults.organic.slice(0, 5).map((r) => ({
+          title: r.title,
+          link: r.link,
+          snippet: r.snippet,
+        }));
       }
     } catch (e) {
       console.warn("[Orchestrator] Search augmentation failed:", e);
@@ -355,6 +363,7 @@ export async function orchestrateRequest(options: {
     tokensUsed: result.tokensUsed,
     costEstimate,
     searchAugmented,
+    sources,
     allProvidersAvailable: {
       openai: hasOpenAI,
       anthropic: hasAnthropic,
@@ -364,11 +373,55 @@ export async function orchestrateRequest(options: {
   };
 }
 
+// ─── Capability Routing ───
+export interface SearchSource {
+  title: string;
+  link: string;
+  snippet: string;
+}
+
+export interface CapabilityRoute {
+  capability: "web_researcher" | "data_analyst" | "medical_advisor" | "code_assistant" | "default_chat";
+  useSearch: boolean;
+  systemHint?: string;
+}
+
+// Maps the local intent classifier to a specialized capability — no extra
+// LLM round-trip: classification is local, instant, and free.
+export function routeCapability(query: string): CapabilityRoute {
+  const { intent } = classifyIntent(query);
+  switch (intent) {
+    case "search_required":
+      return { capability: "web_researcher", useSearch: true };
+    case "reasoning_math":
+      return {
+        capability: "data_analyst",
+        useSearch: false,
+        systemHint: "Solve step by step. Show the calculation path and double-check arithmetic before answering.",
+      };
+    case "medical_safety":
+      return {
+        capability: "medical_advisor",
+        useSearch: false,
+        systemHint: "This is a health-related question. Be conservative, include safety warnings, and state clearly that this is not medical advice.",
+      };
+    case "code_generation":
+      return {
+        capability: "code_assistant",
+        useSearch: false,
+        systemHint: "Provide working, well-commented code with error handling. State assumptions explicitly.",
+      };
+    default:
+      return { capability: "default_chat", useSearch: false };
+  }
+}
+
 // ─── Streaming Orchestration ───
 // Async generator yielding token deltas from the first provider in the
 // chain that answers. Falls through kimi → anthropic → openai → google.
 export async function* orchestrateStream(options: {
   query: string;
+  context?: string;
   systemPrompt?: string;
 }): AsyncGenerator<{ delta?: string; provider?: string; model?: string; done?: boolean; error?: string }> {
   const systemPrompt = options.systemPrompt || ANTI_HALLUCINATION_PROMPT;
@@ -392,7 +445,7 @@ export async function* orchestrateStream(options: {
           stream: true,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: options.query },
+            { role: "user", content: options.context ? `${options.context}\n\n${options.query}` : options.query },
           ],
         });
         yield { provider: "kimi", model: config.model };
@@ -411,7 +464,7 @@ export async function* orchestrateStream(options: {
           stream: true,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: options.query },
+            { role: "user", content: options.context ? `${options.context}\n\n${options.query}` : options.query },
           ],
         });
         yield { provider: "openai", model: config.model };
@@ -429,7 +482,7 @@ export async function* orchestrateStream(options: {
           max_tokens: config.maxTokens,
           temperature: config.temperature,
           system: systemPrompt,
-          messages: [{ role: "user", content: options.query }],
+          messages: [{ role: "user", content: options.context ? `${options.context}\n\n${options.query}` : options.query }],
         });
         yield { provider: "anthropic", model: config.model };
         for await (const event of stream) {
@@ -444,7 +497,7 @@ export async function* orchestrateStream(options: {
         if (!client) throw new Error("Gemini client not available");
         const response = await client.models.generateContentStream({
           model: config.model,
-          contents: [{ role: "user", parts: [{ text: options.query }] }],
+          contents: [{ role: "user", parts: [{ text: options.context ? `${options.context}\n\n${options.query}` : options.query }] }],
           generationConfig: {
             maxOutputTokens: config.maxTokens,
             temperature: config.temperature,
