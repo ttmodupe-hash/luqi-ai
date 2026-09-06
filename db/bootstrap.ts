@@ -5,6 +5,7 @@
 // definitions can never drift from the Drizzle schema.
 // Idempotent (IF NOT EXISTS) and never throws — a database that is
 // unreachable or already provisioned must not block server startup.
+// Also ensures the demo login account (demo@luqi.ai) exists.
 // =====================================================================
 
 import mysql from "mysql2/promise";
@@ -468,6 +469,22 @@ export async function bootstrapDatabase(): Promise<void> {
     }
 
     console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
+
+    // Ensure the demo account exists (it is advertised on the login page)
+    try {
+      const bcrypt = (await import("bcryptjs")).default;
+      const [rows] = await connection.query("SELECT id FROM users WHERE email = ? LIMIT 1", ["demo@luqi.ai"]);
+      if ((rows as Array<unknown>).length === 0) {
+        const hash = await bcrypt.hash("demo123", 10);
+        await connection.execute(
+          "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)",
+          ["demo@luqi.ai", hash, "Demo User", "user"]
+        );
+        console.log("[Bootstrap] Demo account created: demo@luqi.ai");
+      }
+    } catch (seedError) {
+      console.error("[Bootstrap] Demo account seed failed (non-fatal):", seedError);
+    }
   } catch (error) {
     console.error("[Bootstrap] Table creation failed (non-fatal):", error);
   } finally {
