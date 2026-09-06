@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type ElementType } from "react";
 import {
   Card,
   CardHeader,
@@ -72,7 +72,7 @@ interface RegStep {
   online_available: boolean;
   status: "not_started" | "in_progress" | "completed" | "blocked";
   tips: string[];
-  icon: React.ElementType;
+  icon: ElementType;
 }
 
 interface BusinessType {
@@ -87,7 +87,7 @@ interface BusinessType {
   tax_rate: string;
   best_for: string;
   registration_body: string;
-  icon: React.ElementType;
+  icon: ElementType;
 }
 
 interface DocumentItem {
@@ -528,7 +528,7 @@ const getStepStatusColor = (status: string) => {
   }
 };
 
-const getStepStatusIcon = (status: string): React.ElementType => {
+const getStepStatusIcon = (status: string): ElementType => {
   switch (status) {
     case "completed": return CheckCircle2;
     case "in_progress": return Clock;
@@ -547,7 +547,7 @@ const getDocStatusColor = (status: string) => {
   }
 };
 
-const getDocStatusIcon = (status: string): React.ElementType => {
+const getDocStatusIcon = (status: string): ElementType => {
   switch (status) {
     case "verified": return FileCheck;
     case "uploaded": return FileClock;
