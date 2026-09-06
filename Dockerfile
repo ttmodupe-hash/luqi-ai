@@ -4,8 +4,8 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
-# Copy package files from nested app/ directory
-COPY app/package.json ./
+# Copy package files from nested app/ directory (package-lock.json included when present)
+COPY app/package*.json ./
 
 # Install ALL dependencies including devDependencies
 RUN npm install --legacy-peer-deps --include=dev

@@ -13,7 +13,7 @@ export const botanicalRouter = createRouter({
       const results = await db
         .select()
         .from(botanicalEntries)
-        .where(sql`name LIKE ${'%' + input.query + '%'} OR description LIKE ${'%' + input.query + '%'} OR traditionalUse LIKE ${'%' + input.query + '%'}`)
+        .where(sql`name LIKE ${'%' + input.query + '%'} OR description LIKE ${'%' + input.query + '%'} OR traditional_use LIKE ${'%' + input.query + '%'}`)
         .orderBy(desc(botanicalEntries.createdAt))
         .limit(input.limit);
       return { results, count: results.length };

@@ -83,8 +83,14 @@ if (env.isProduction) {
     console.log(`Server running on http://localhost:${port}/`);
   });
 
-  // Seed traditional medicine data asynchronously
+  // Provision database tables, then seed reference data (both non-fatal)
   (async () => {
+    try {
+      const { bootstrapDatabase } = await import("../db/bootstrap");
+      await bootstrapDatabase();
+    } catch (e) {
+      console.error("[Bootstrap] Database bootstrap failed:", e);
+    }
     try {
       const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
       await seedTraditionalMedicine();
