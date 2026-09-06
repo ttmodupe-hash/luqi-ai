@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type ElementType } from "react";
 import {
   Card,
   CardHeader,
@@ -52,7 +52,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-/* Types */
+/* ───────── Types ───────── */
 
 interface Symptom {
   symptom_id: string;
@@ -73,7 +73,7 @@ interface Condition {
   first_steps: string[];
   warning_signs: string[];
   common_in: string[];
-  icon: React.ElementType;
+  icon: ElementType;
 }
 
 interface Medication {
@@ -123,7 +123,7 @@ interface TriageResult {
   matched_symptoms: string[];
 }
 
-/* Symptom Database */
+/* ───────── Symptom Database ───────── */
 
 const SYMPTOMS: Symptom[] = [
   { symptom_id: "SYM-001", name: "Fever", body_area: "General", severity_options: ["Mild", "Moderate", "High", "Very High"], duration_options: ["< 24h", "1-3 days", "3-7 days", "> 7 days"] },
@@ -143,7 +143,7 @@ const SYMPTOMS: Symptom[] = [
   { symptom_id: "SYM-015", name: "Loss of Appetite", body_area: "General", severity_options: ["Mild", "Moderate", "Severe"], duration_options: ["< 24h", "1-3 days", "3-7 days", "> 7 days"] },
 ];
 
-/* Condition Database */
+/* ───────── Condition Database ───────── */
 
 const CONDITIONS: Condition[] = [
   {
@@ -278,7 +278,7 @@ const CONDITIONS: Condition[] = [
   },
 ];
 
-/* Medication Tracker */
+/* ───────── Medication Tracker ───────── */
 
 const MOCK_MEDICATIONS: Medication[] = [
   { med_id: "MED-001", name: "Paracetamol 500mg", dosage: "500mg", frequency: "Every 6 hours", times_per_day: 4, remaining_doses: 18, total_doses: 24, next_dose_time: "14:00", condition: "Fever/Pain", prescribed_by: "Dr. Nkosi", refill_date: "2025-01-20" },
@@ -287,7 +287,7 @@ const MOCK_MEDICATIONS: Medication[] = [
   { med_id: "MED-004", name: "Amlodipine 5mg", dosage: "5mg", frequency: "Once daily", times_per_day: 1, remaining_doses: 25, total_doses: 30, next_dose_time: "08:00", condition: "Hypertension", prescribed_by: "Dr. Botha", refill_date: "2025-02-10" },
 ];
 
-/* Clinic Directory */
+/* ───────── Clinic Directory ───────── */
 
 const MOCK_CLINICS: Clinic[] = [
   { clinic_id: "CLN-001", name: "Johannesburg Community Health Centre", type: "public", address: "45 Jorissen Street, Braamfontein", city: "Johannesburg", province: "Gauteng", phone: "011 677 6000", services: ["General Practice", "TB Treatment", "HIV Testing", "Vaccinations", "Maternal Health"], wait_time: "45-90 min", open_hours: "07:00-16:00 Mon-Fri", accepts_uninsured: true, distance_km: 2.5 },
@@ -297,7 +297,7 @@ const MOCK_CLINICS: Clinic[] = [
   { clinic_id: "CLN-005", name: "Soweto Mobile Health Unit", type: "mobile", address: "Rotates — check schedule", city: "Johannesburg", province: "Gauteng", phone: "0800 123 456", services: ["HIV Testing", "TB Screening", "Blood Pressure Checks", "Vaccinations", "Health Education"], wait_time: "No wait", open_hours: "08:00-14:00 Mon/Thu", accepts_uninsured: true, distance_km: 0 },
 ];
 
-/* Health Alerts */
+/* ───────── Health Alerts ───────── */
 
 const MOCK_ALERTS: HealthAlert[] = [
   {
@@ -346,7 +346,7 @@ const MOCK_ALERTS: HealthAlert[] = [
   },
 ];
 
-/* Helper Functions */
+/* ───────── Helper Functions ───────── */
 
 const getUrgencyColor = (urgency: string) => {
   switch (urgency) {
@@ -410,7 +410,7 @@ const getClinicTypeColor = (type: string) => {
   }
 };
 
-/* Main Component */
+/* ───────── Main Component ───────── */
 
 export default function HealthPage() {
   const [activeTab, setActiveTab] = useState("triage");
@@ -423,6 +423,7 @@ export default function HealthPage() {
   const [filterClinicType, setFilterClinicType] = useState("all");
   const [filterProvince, setFilterProvince] = useState("all");
 
+  /* ───────── Triage Engine ───────── */
   const toggleSymptom = useCallback((symptomName: string) => {
     setSelectedSymptoms((prev) =>
       prev.includes(symptomName)
@@ -462,6 +463,7 @@ export default function HealthPage() {
     setSelectedCondition(null);
   }, []);
 
+  /* ───────── Medication Handlers ───────── */
   const takeDose = useCallback((medId: string) => {
     setMedicationList((prev) =>
       prev.map((m) =>
@@ -472,6 +474,7 @@ export default function HealthPage() {
     );
   }, []);
 
+  /* ───────── Clinic Filter ───────── */
   const filteredClinics = useMemo(() => {
     let result = MOCK_CLINICS;
     if (filterClinicType !== "all") result = result.filter((c) => c.type === filterClinicType);
@@ -584,9 +587,10 @@ export default function HealthPage() {
             <TabsTrigger value="alerts" className="data-[state=active]:bg-neutral-800">Health Alerts</TabsTrigger>
           </TabsList>
 
-          {/* SYMPTOM TRIAGE TAB */}
+          {/* ══════ SYMPTOM TRIAGE TAB ══════ */}
           <TabsContent value="triage" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
+              {/* Symptom Selector */}
               <Card className="bg-neutral-900 border-neutral-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -649,6 +653,7 @@ export default function HealthPage() {
                 </CardContent>
               </Card>
 
+              {/* Triage Results */}
               <Card className="bg-neutral-900 border-neutral-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -659,6 +664,7 @@ export default function HealthPage() {
                 <CardContent>
                   {showResults && triageResults.length > 0 ? (
                     <div className="space-y-4">
+                      {/* Top Match */}
                       {topResult && (
                         <div className={`p-4 rounded-lg border-2 ${
                           topResult.condition.urgency === "emergency"
@@ -717,6 +723,7 @@ export default function HealthPage() {
                         </div>
                       )}
 
+                      {/* Other Matches */}
                       {triageResults.slice(1, 4).map((result) => (
                         <div
                           key={result.condition.condition_id}
@@ -748,6 +755,7 @@ export default function HealthPage() {
               </Card>
             </div>
 
+            {/* Emergency Notice */}
             <Card className="bg-red-500/10 border-red-500/20">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -763,7 +771,7 @@ export default function HealthPage() {
             </Card>
           </TabsContent>
 
-          {/* CONDITION GUIDE TAB */}
+          {/* ══════ CONDITION GUIDE TAB ══════ */}
           <TabsContent value="conditions" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
               {CONDITIONS.map((condition) => {
@@ -862,7 +870,7 @@ export default function HealthPage() {
             </div>
           </TabsContent>
 
-          {/* MEDICATIONS TAB */}
+          {/* ══════ MEDICATIONS TAB ══════ */}
           <TabsContent value="medications" className="space-y-6">
             <Card className="bg-neutral-900 border-neutral-800">
               <CardHeader>
@@ -960,7 +968,7 @@ export default function HealthPage() {
             </Card>
           </TabsContent>
 
-          {/* CLINIC FINDER TAB */}
+          {/* ══════ CLINIC FINDER TAB ══════ */}
           <TabsContent value="clinics" className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1">
@@ -1068,7 +1076,7 @@ export default function HealthPage() {
             </div>
           </TabsContent>
 
-          {/* HEALTH ALERTS TAB */}
+          {/* ══════ HEALTH ALERTS TAB ══════ */}
           <TabsContent value="alerts" className="space-y-6">
             <div className="space-y-4">
               {MOCK_ALERTS.map((alert) => (
@@ -1121,6 +1129,7 @@ export default function HealthPage() {
               ))}
             </div>
 
+            {/* Emergency Contacts */}
             <Card className="bg-neutral-900 border-neutral-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
