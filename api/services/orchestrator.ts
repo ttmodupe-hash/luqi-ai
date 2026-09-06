@@ -84,7 +84,8 @@ export type TaskIntent =
   | "massive_context"
   | "general_chat"
   | "medical_safety"
-  | "search_required";
+  | "search_required"
+  | "education_tutor";
 
 export function classifyIntent(query: string, contextLength = 0): { intent: TaskIntent; reason: string } {
   const q = query.toLowerCase();
@@ -111,6 +112,10 @@ export function classifyIntent(query: string, contextLength = 0): { intent: Task
 
   if (/\b(search|find|look up|what is|who is|when did|where is|latest)\b/.test(q)) {
     return { intent: "search_required", reason: "Contains search keywords" };
+  }
+
+  if (/\b(learn|teach|tutor|study|exam|homework|course|lesson|understand|explain)\b/.test(q)) {
+    return { intent: "education_tutor", reason: "Contains education keywords" };
   }
 
   if (/\b(health|medical|medicine|doctor|symptom|treatment|diagnosis)\b/.test(q)) {
@@ -390,7 +395,7 @@ export interface SearchSource {
 }
 
 export interface CapabilityRoute {
-  capability: "web_researcher" | "data_analyst" | "medical_advisor" | "code_assistant" | "default_chat";
+  capability: "web_researcher" | "data_analyst" | "medical_advisor" | "code_assistant" | "tutor" | "default_chat";
   useSearch: boolean;
   systemHint?: string;
 }
@@ -413,6 +418,12 @@ export function routeCapability(query: string): CapabilityRoute {
         capability: "medical_advisor",
         useSearch: false,
         systemHint: "This is a health-related question. Be conservative, include safety warnings, and state clearly that this is not medical advice.",
+      };
+    case "education_tutor":
+      return {
+        capability: "tutor",
+        useSearch: false,
+        systemHint: "You are in Tutor mode: teach step by step, check understanding with a short question at the end, use simple language, and adapt to African school curricula (CAPS, CBC, WAEC) when relevant. The interactive labs at /omnilab can simulate science experiments.",
       };
     case "code_generation":
       return {
