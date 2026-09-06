@@ -21,8 +21,8 @@ COPY api/ ./api/
 COPY scripts/ ./scripts/
 COPY db/ ./db/
 
-# Build the application (npx ensures binaries are found)
-RUN npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" && node scripts/postbuild.js
+# Build the application (verify gate → frontend → backend bundle → postbuild)
+RUN node scripts/verify-build.mjs && npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" && node scripts/postbuild.js
 
 # Verify build output exists
 RUN test -f dist/boot.js || (echo "ERROR: dist/boot.js not created" && exit 1)
