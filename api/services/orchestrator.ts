@@ -364,6 +364,110 @@ export async function orchestrateRequest(options: {
   };
 }
 
+// ─── Streaming Orchestration ───
+// Async generator yielding token deltas from the first provider in the
+// chain that answers. Falls through kimi → anthropic → openai → google.
+export async function* orchestrateStream(options: {
+  query: string;
+  systemPrompt?: string;
+}): AsyncGenerator<{ delta?: string; provider?: string; model?: string; done?: boolean; error?: string }> {
+  const systemPrompt = options.systemPrompt || ANTI_HALLUCINATION_PROMPT;
+  const intent = classifyIntent(options.query).intent;
+  const candidates = selectProvider(intent);
+
+  if (candidates.length === 0) {
+    yield { error: "no_providers" };
+    return;
+  }
+
+  let lastError: Error | null = null;
+
+  for (const config of candidates) {
+    try {
+      if (config.provider === "kimi") {
+        if (!kimiClient) throw new Error("Kimi client not available");
+        const stream = await kimiClient.chat.completions.create({
+          model: config.model,
+          max_tokens: config.maxTokens,
+          stream: true,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: options.query },
+          ],
+        });
+        yield { provider: "kimi", model: config.model };
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || "";
+          if (delta) yield { delta };
+        }
+        yield { done: true };
+        return;
+      } else if (config.provider === "openai") {
+        if (!openaiClient) throw new Error("OpenAI client not available");
+        const stream = await openaiClient.chat.completions.create({
+          model: config.model,
+          max_tokens: config.maxTokens,
+          temperature: config.temperature,
+          stream: true,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: options.query },
+          ],
+        });
+        yield { provider: "openai", model: config.model };
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || "";
+          if (delta) yield { delta };
+        }
+        yield { done: true };
+        return;
+      } else if (config.provider === "anthropic") {
+        const client = await getAnthropicClient();
+        if (!client) throw new Error("Anthropic client not available");
+        const stream = client.messages.stream({
+          model: config.model,
+          max_tokens: config.maxTokens,
+          temperature: config.temperature,
+          system: systemPrompt,
+          messages: [{ role: "user", content: options.query }],
+        });
+        yield { provider: "anthropic", model: config.model };
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+            yield { delta: event.delta.text };
+          }
+        }
+        yield { done: true };
+        return;
+      } else if (config.provider === "google") {
+        const client = await getGeminiClient();
+        if (!client) throw new Error("Gemini client not available");
+        const response = await client.models.generateContentStream({
+          model: config.model,
+          contents: [{ role: "user", parts: [{ text: options.query }] }],
+          generationConfig: {
+            maxOutputTokens: config.maxTokens,
+            temperature: config.temperature,
+          },
+        });
+        yield { provider: "google", model: config.model };
+        for await (const chunk of response.stream) {
+          const delta = chunk.text || "";
+          if (delta) yield { delta };
+        }
+        yield { done: true };
+        return;
+      }
+    } catch (e) {
+      lastError = e as Error;
+      console.warn(`[Orchestrator] stream ${config.provider} failed:`, e);
+      continue;
+    }
+  }
+
+  yield { error: `All providers failed. Last error: ${lastError?.message}` };
+}
+
 // ─── Status & Logs ───
 export function getOrchestratorStatus(): {
   providers: { openai: boolean; anthropic: boolean; google: boolean; kimi: boolean };
