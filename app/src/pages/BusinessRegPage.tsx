@@ -54,6 +54,7 @@ import {
   TrendingUp,
   Timer,
   CircleDollarSign,
+  Percent,
 } from "lucide-react";
 
 /* Types */
