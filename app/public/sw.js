@@ -1,76 +1,92 @@
 /**
- * Luqi-AI v3.6.0 — Service Worker
- * Provides offline caching for PWA support.
+ * Luqi-AI — Service Worker
+ * Offline-capable PWA caching with stale-proof update behavior.
+ *
+ * Strategy:
+ *  - Page navigations: NETWORK-FIRST (users always get the newest deploy;
+ *    falls back to cache only when offline)
+ *  - /api/*: network-only (never serve stale API responses)
+ *  - Hashed /assets/* files: cache-first (content-hashed = immutable = safe)
+ *  - Everything else: network-first
+ *
+ * CACHE_NAME is versioned — bump it on every structural change so the
+ * activate handler purges stale caches from older deploys.
  */
-const CACHE_NAME = 'luqi-ai-v3.6.0';
-const OFFLINE_URL = '/index.html';
+const CACHE_NAME = "luqi-ai-2026-09-06-fix1";
 
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/assets/index.css',
-  '/assets/index.js',
-];
+// Only precache paths that actually exist in the deploy
+const PRECACHE_ASSETS = ["/manifest.json"];
 
-// Install: Pre-cache core assets
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch(() => {});
-    }).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_ASSETS).catch(() => {}))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate: Clean up old caches
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((name) => name !== CACHE_NAME)
+            .map((name) => caches.delete(name))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch: Cache-first strategy for assets, network-first for API
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
+  if (request.method !== "GET") return;
+  if (url.origin !== self.location.origin) return;
 
-  // API requests: network first, fallback to cache
-  if (url.pathname.startsWith('/api/')) {
+  // API: network only
+  if (url.pathname.startsWith("/api/")) return;
+
+  // Hashed assets: cache-first (immutable by design)
+  if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request))
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request).then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+      )
     );
     return;
   }
 
-  // Static assets: cache first
+  // Navigations + everything else: network-first, cache as offline fallback
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        return response;
-      }).catch(() => {
-        // If it's a navigation request, serve index.html
-        if (request.mode === 'navigate') {
-          return caches.match(OFFLINE_URL);
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
-        return new Response('Offline', { status: 503 });
-      });
-    })
+        return response;
+      })
+      .catch(() =>
+        caches.match(request).then(
+          (cached) =>
+            cached ||
+            (request.mode === "navigate"
+              ? caches.match("/")
+              : Promise.resolve(new Response("Offline", { status: 503 })))
+        )
+      )
   );
 });
