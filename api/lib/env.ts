@@ -1,16 +1,20 @@
 import "dotenv/config";
 
-function required(name: string): string {
+// Boot must never depend on external configuration being present.
+// Missing variables disable their related features gracefully instead
+// of crashing the process before it can bind the port — Railway's
+// healthcheck (/api/trpc/ping) must always be answerable.
+function optional(name: string): string {
   const value = process.env[name];
-  if (!value && process.env.NODE_ENV === "production") {
-    throw new Error(`Missing required environment variable: ${name}`);
+  if (!value) {
+    console.warn(`[env] ${name} is not set — related features stay disabled until it is configured`);
   }
   return value ?? "";
 }
 
 export const env = {
-  appId: required("APP_ID"),
-  appSecret: required("APP_SECRET"),
+  appId: optional("APP_ID"),
+  appSecret: optional("APP_SECRET"),
   isProduction: process.env.NODE_ENV === "production",
-  databaseUrl: required("DATABASE_URL"),
+  databaseUrl: optional("DATABASE_URL"),
 };
