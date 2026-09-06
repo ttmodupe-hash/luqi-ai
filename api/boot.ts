@@ -3,10 +3,14 @@ import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { env } from "./lib/env";
+import { logger } from "./lib/logger";
+import { closeDb } from "./queries/connection";
+import { closeCache } from "./services/cache";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -57,6 +61,21 @@ app.use("/api/*", async (c, next) => {
   return next();
 });
 
+// ── REQUEST CORRELATION + STRUCTURED LOGGING ───────────────────────
+app.use("/*", async (c, next) => {
+  const requestId = crypto.randomUUID();
+  const start = Date.now();
+  c.header("X-Request-Id", requestId);
+  await next();
+  logger.info({
+    requestId,
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    durationMs: Date.now() - start,
+  }, "request");
+});
+
 // ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
@@ -75,6 +94,24 @@ app.route("/", restCompat);
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
+// ── GLOBAL ERROR HANDLER ───────────────────────────────────────────
+// Uncaught exceptions format cleanly instead of crashing the process.
+app.onError((err, c) => {
+  const requestId = c.res.headers.get("X-Request-Id") ?? crypto.randomUUID();
+
+  if (err instanceof ZodError) {
+    return c.json({ success: false, error: "Validation Error", details: err.issues, requestId }, 400);
+  }
+
+  if (err?.name === "AbortError") {
+    return c.json({ success: false, error: "Client closed request", requestId }, 499);
+  }
+
+  logger.error({ err: err?.message, stack: err?.stack?.slice(0, 500), requestId }, "unhandled error");
+  const status = typeof (err as any)?.status === "number" ? (err as any).status : 500;
+  return c.json({ success: false, error: err?.message || "Internal Server Error", requestId }, status as 500);
+});
+
 export default app;
 
 if (env.isProduction) {
@@ -83,9 +120,29 @@ if (env.isProduction) {
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");
-  serve({ fetch: app.fetch, port }, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  const server = serve({ fetch: app.fetch, port }, () => {
+    logger.info({ port }, "Server running");
   });
+
+  // Graceful shutdown — Railway sends SIGTERM on every redeploy.
+  // Stop accepting, drain in-flight requests, close DB pool + Redis, exit.
+  const shutdown = (signal: string) => {
+    logger.info({ signal }, "Shutdown signal received — draining");
+    server.close(() => {
+      void (async () => {
+        try { await closeDb(); } catch { /* non-fatal */ }
+        try { await closeCache(); } catch { /* non-fatal */ }
+        logger.info("Cleanup complete — exiting");
+        process.exit(0);
+      })();
+    });
+    setTimeout(() => {
+      logger.error("Forced shutdown after 10s drain timeout");
+      process.exit(1);
+    }, 10000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 
   // Provision database tables, then seed reference data (both non-fatal)
   (async () => {

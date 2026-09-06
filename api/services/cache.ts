@@ -58,6 +58,18 @@ export async function setCachedAIResponse(promptHash: string, data: string, ttlS
   }
 }
 
+export async function closeCache(): Promise<void> {
+  const client = redis;
+  redis = null;
+  if (client) {
+    try {
+      await client.quit();
+    } catch {
+      client.disconnect();
+    }
+  }
+}
+
 export function hashPrompt(input: string): string {
   return createHash("sha256").update(input.trim().toLowerCase()).digest("hex").slice(0, 32);
 }
