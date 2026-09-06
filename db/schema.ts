@@ -459,3 +459,27 @@ export const chatSessions = mysqlTable("chat_sessions", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+/* ───────── Payments & Credit Tables ───────── */
+
+export const creditWallets = mysqlTable("credit_wallets", {
+  id: serial("id").primaryKey(),
+  userKey: varchar("user_key", { length: 255 }).notNull().unique(),
+  balanceCents: int("balance_cents").default(0),
+  currency: varchar("currency", { length: 3 }).default("ZAR"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export const paymentEvents = mysqlTable("payment_events", {
+  id: serial("id").primaryKey(),
+  reference: varchar("reference", { length: 255 }).notNull().unique(),
+  userKey: varchar("user_key", { length: 255 }),
+  eventType: varchar("event_type", { length: 100 }),
+  amountCents: int("amount_cents"),
+  currency: varchar("currency", { length: 10 }),
+  channel: varchar("channel", { length: 50 }),
+  status: varchar("status", { length: 50 }).default("pending"),
+  payloadJson: text("payload_json"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
