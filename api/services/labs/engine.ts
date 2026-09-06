@@ -54,82 +54,61 @@ function evaluateExpression(expression: string, variables: Record<string, number
     expr = expr.replace(regex, String(value));
   }
 
-  // Replace mathematical constants and functions
-  expr = expr.replace(/\bPI\b/g, 'Math.PI');
-  expr = expr.replace(/\bE\b/g, 'Math.E');
-  expr = expr.replace(/\bsqrt\b/g, 'Math.sqrt');
-  expr = expr.replace(/\bsin\b/g, 'Math.sin');
-  expr = expr.replace(/\bcos\b/g, 'Math.cos');
-  expr = expr.replace(/\btan\b/g, 'Math.tan');
-  expr = expr.replace(/\blog\b/g, 'Math.log');
-  expr = expr.replace(/\bln\b/g, 'Math.log');
-  expr = expr.replace(/\bexp\b/g, 'Math.exp');
-  expr = expr.replace(/\babs\b/g, 'Math.abs');
-  expr = expr.replace(/\bpow\b/g, 'Math.pow');
-  expr = expr.replace(/\bmin\b/g, 'Math.min');
-  expr = expr.replace(/\bmax\b/g, 'Math.max');
+  // Blueprints use ^ for exponent — normalize to JS ** (was bitwise XOR bug)
+  expr = expr.replace(/\^/g, "**");
 
-  // Security: only allow math-safe characters
-  const safePattern = /^[0-9+\-*/().\sMath{}[\]**,_]+$/;
-  if (!safePattern.test(expr)) {
-    throw new Error("Expression contains unsafe characters");
-  }
-
-  // Additional security: block dangerous patterns
-  const dangerousPatterns = [
-    /process/i, /require/i, /import/i, /export/i, /eval/i,
-    /Function/i, /constructor/i, /prototype/i, /__proto__/i,
-    /window/i, /document/i, /global/i, /this/i, /fetch/i,
-    /XMLHttpRequest/i, /WebSocket/i, /localStorage/i, /sessionStorage/i,
+  // Whitelisted math names → Math.* equivalents (longest names first so
+  // asin/acos/atan are not partially matched by sin/cos/tan)
+  const MATH_NAMES = [
+    "asin", "acos", "atan", "sqrt", "floor", "ceil", "round",
+    "sin", "cos", "tan", "exp", "abs", "pow", "min", "max", "log",
   ];
-  for (const pattern of dangerousPatterns) {
-    if (pattern.test(expr)) {
-      throw new Error("Expression contains blocked pattern");
-    }
+  let normalized = expr;
+  for (const fn of MATH_NAMES) {
+    normalized = normalized.replace(new RegExp(`\\b${fn}\\b`, 'g'), `Math.${fn}`);
+  }
+  normalized = normalized.replace(/\bln\b/g, "Math.log");
+  normalized = normalized.replace(/\bPI\b/g, "Math.PI");
+  normalized = normalized.replace(/\bE\b/g, "Math.E");
+
+  // Strip every Math.<whitelisted> token; the remainder must be pure
+  // arithmetic characters only. Anything else → reject.
+  const stripped = normalized.replace(
+    /Math\.(sqrt|sin|cos|tan|asin|acos|atan|log|exp|abs|pow|min|max|floor|ceil|round|PI|E)\b/g,
+    ""
+  );
+  if (!/^[0-9+\-*\/().,\s]*$/.test(stripped)) {
+    throw new Error("Expression contains unsafe or unknown tokens");
   }
 
   try {
-    // Use a safe math parser instead of new Function()
-    // Whitelist approach: only allow specific math functions
-    const safeExpr = expr
-      .replace(/\bsqrt\b/g, "Math.sqrt")
-      .replace(/\bsin\b/g, "Math.sin")
-      .replace(/\bcos\b/g, "Math.cos")
-      .replace(/\btan\b/g, "Math.tan")
-      .replace(/\bPI\b/g, "Math.PI")
-      .replace(/\bE\b/g, "Math.E")
-      .replace(/\blog\b/g, "Math.log")
-      .replace(/\bexp\b/g, "Math.exp")
-      .replace(/\babs\b/g, "Math.abs")
-      .replace(/\bpow\b/g, "Math.pow")
-      .replace(/\bmin\b/g, "Math.min")
-      .replace(/\bmax\b/g, "Math.max");
-
-    // Final validation: ensure only allowed characters remain
-    const finalCheck = /^[0-9+\-*/().\sMath{},_]+$/;
-    if (!finalCheck.test(safeExpr)) {
-      throw new Error("Expression failed final safety check");
-    }
-
-    // eslint-disable-next-line no-new-func
-    const result = new Function(`"use strict"; return (${safeExpr})`)();
+    const result = new Function(`"use strict"; return (${normalized})`)();
     if (typeof result !== "number" || !isFinite(result)) {
       throw new Error("Invalid result");
     }
     return result;
-  } catch (e) {
-    throw new Error(`Failed to evaluate "${expression}": ${e}`);
+  } catch (err) {
+    throw new Error(`Failed to evaluate "${expression}": ${err}`);
   }
 }
 
 // ── PUBLIC API ──────────────────────────────────────────────────────
 
+// Public wrapper for the agent "calculate" tool — evaluates a pure math
+// expression through the same whitelist/hardened evaluator used by labs.
+export function evaluateMathExpression(expression: string): number {
+  return evaluateExpression(expression, {});
+}
+
 export function runCalculations(
   formulas: LabFormula[],
   variables: Record<string, number>
 ): CalculationResult[] {
+  // Chain: each formula's result becomes available to later formulas
+  const scope: Record<string, number> = { ...variables };
   return formulas.map((formula) => {
-    const value = evaluateExpression(formula.expression, variables);
+    const value = evaluateExpression(formula.expression, scope);
+    scope[formula.name] = value;
     return {
       name: formula.name,
       value,
