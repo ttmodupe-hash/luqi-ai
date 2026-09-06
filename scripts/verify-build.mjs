@@ -2,14 +2,6 @@
 // STRICT PRE-BUILD VERIFICATION GATE
 // Runs before vite/esbuild in the Docker pipeline. Fails the build
 // (exit 1) on ANY broken reference. Never modifies source files.
-// Checks:
-//   1. All required Drizzle schema tables are exported
-//   2. All required serper service functions are exported
-//   3. Every import in api/, db/, scripts/, src/ resolves to a real file
-//   4. Every named import exists in the target module's exports
-//   5. Every package import exists in package.json
-//   6. No undefined identifiers (tsc crash-class: TS2304/TS2552/TS2551)
-//   7. esbuild dry-run bundle of api/boot.ts compiles clean
 // =====================================================================
 
 import fs from "node:fs";
@@ -30,6 +22,7 @@ const REQUIRED_TABLES = [
   "progressAlerts", "offlineSyncQueue", "voiceCommands",
   "users", "sessions", "analyticsEvents", "pageViews", "notifications",
   "labs", "experiments", "predictions", "abTests", "abTestResults",
+  "chatSessions",
 ];
 
 const schemaPath = path.join(rootDir, "db", "schema.ts");
