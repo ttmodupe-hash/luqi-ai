@@ -373,6 +373,15 @@ export async function orchestrateRequest(options: {
   };
 }
 
+// ─── Agent-capable client (OpenAI-compatible tool calling) ───
+// The agent loop needs function-calling support: kimi and openai provide it.
+// Anthropic/Gemini continue through orchestrateRequest / orchestrateStream.
+export function getAgentCapableClient(): { client: OpenAI; provider: "kimi" | "openai"; model: string } | null {
+  if (kimiClient) return { client: kimiClient, provider: "kimi", model: "kimi-k3" };
+  if (openaiClient) return { client: openaiClient, provider: "openai", model: "gpt-4o" };
+  return null;
+}
+
 // ─── Capability Routing ───
 export interface SearchSource {
   title: string;
