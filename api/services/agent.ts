@@ -9,6 +9,7 @@
 //
 // Supported providers: OpenAI-compatible tool calling (kimi, openai).
 // Anthropic/Gemini continue via the standard orchestrateRequest path.
+// Supports multi-turn memory via the optional history parameter.
 // =====================================================================
 
 import type OpenAI from "openai";
@@ -110,6 +111,7 @@ export async function orchestrateAgent(options: {
   provider: string;
   model: string;
   maxIterations?: number;
+  history?: { role: "user" | "assistant"; content: string }[];
 }): Promise<AgentResult> {
   const start = Date.now();
   const maxIterations = options.maxIterations ?? 3;
@@ -123,6 +125,7 @@ export async function orchestrateAgent(options: {
         options.systemPrompt +
         "\n\nYou have tools available. Call execute_web_research for any current/factual/time-sensitive claim instead of relying on memory, and calculate for any arithmetic. Never invent figures.",
     },
+    ...(options.history ?? []).map((t) => ({ role: t.role, content: t.content }) as ChatCompletionMessageParam),
     { role: "user", content: options.query },
   ];
 
