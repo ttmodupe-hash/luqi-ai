@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type ElementType } from "react";
 import {
   Card,
   CardHeader,
@@ -81,7 +81,7 @@ interface ContractTemplate {
   name: string;
   type: "loan" | "employment" | "rental" | "insurance" | "service";
   description: string;
-  icon: React.ElementType;
+  icon: ElementType;
   clauses: ContractClause[];
 }
 
@@ -490,8 +490,8 @@ const getRiskColor = (risk: string) => {
   }
 };
 
-const getCategoryIcon = (category: string): React.ElementType => {
-  const icons: Record<string, React.ElementType> = {
+const getCategoryIcon = (category: string): ElementType => {
+  const icons: Record<string, ElementType> = {
     banking: Landmark,
     insurance: Shield,
     employment: Briefcase,
