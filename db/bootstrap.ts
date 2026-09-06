@@ -1,11 +1,9 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
-// Creates all 32 tables on startup when they do not exist yet.
-// DDL is generated from db/schema.ts (drizzle-kit) so the table
-// definitions can never drift from the Drizzle schema.
-// Idempotent (IF NOT EXISTS) and never throws — a database that is
-// unreachable or already provisioned must not block server startup.
-// Also ensures the demo login account (demo@luqi.ai) exists.
+// Creates all 33 tables on startup when they do not exist yet.
+// DDL matches db/schema.ts exactly. Idempotent (IF NOT EXISTS) and never
+// throws — a database that is unreachable or already provisioned must
+// not block server startup. Also ensures the demo login account exists.
 // =====================================================================
 
 import mysql from "mysql2/promise";
@@ -112,6 +110,14 @@ const CREATE_STATEMENTS: string[] = [
 	\`created_at\` timestamp DEFAULT (now()),
 	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT \`botanical_entries_id\` PRIMARY KEY(\`id\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`chat_sessions\` (
+	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+	\`session_id\` varchar(255) NOT NULL,
+	\`role\` varchar(20) NOT NULL,
+	\`content\` text NOT NULL,
+	\`created_at\` timestamp DEFAULT (now()),
+	CONSTRAINT \`chat_sessions_id\` PRIMARY KEY(\`id\`)
 );`,
   `CREATE TABLE IF NOT EXISTS \`companion_conversations\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
