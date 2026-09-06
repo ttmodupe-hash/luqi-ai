@@ -119,7 +119,7 @@ export const companionRouter = createRouter({
       const db = await getDb();
       await db
         .update(companionMessages)
-        .set({ metadataJson: JSON.stringify({ feedback: input.feedback }) })
+        .set({ metadata: { feedback: input.feedback } })
         .where(eq(companionMessages.id, input.messageId));
       return { updated: true };
     }),
