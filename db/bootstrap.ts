@@ -1,6 +1,6 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
-// Creates all 33 tables on startup when they do not exist yet.
+// Creates all 35 tables on startup when they do not exist yet.
 // DDL matches db/schema.ts exactly. Idempotent (IF NOT EXISTS) and never
 // throws — a database that is unreachable or already provisioned must
 // not block server startup. Also ensures the demo login account exists.
@@ -110,6 +110,30 @@ const CREATE_STATEMENTS: string[] = [
 	\`created_at\` timestamp DEFAULT (now()),
 	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT \`botanical_entries_id\` PRIMARY KEY(\`id\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`credit_wallets\` (
+	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+	\`user_key\` varchar(255) NOT NULL,
+	\`balance_cents\` int DEFAULT 0,
+	\`currency\` varchar(3) DEFAULT 'ZAR',
+	\`created_at\` timestamp DEFAULT (now()),
+	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT \`credit_wallets_id\` PRIMARY KEY(\`id\`),
+	CONSTRAINT \`credit_wallets_user_key_unique\` UNIQUE(\`user_key\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`payment_events\` (
+	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+	\`reference\` varchar(255) NOT NULL,
+	\`user_key\` varchar(255),
+	\`event_type\` varchar(100),
+	\`amount_cents\` int,
+	\`currency\` varchar(10),
+	\`channel\` varchar(50),
+	\`status\` varchar(50) DEFAULT 'pending',
+	\`payload_json\` text,
+	\`created_at\` timestamp DEFAULT (now()),
+	CONSTRAINT \`payment_events_id\` PRIMARY KEY(\`id\`),
+	CONSTRAINT \`payment_events_reference_unique\` UNIQUE(\`reference\`)
 );`,
   `CREATE TABLE IF NOT EXISTS \`chat_sessions\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
