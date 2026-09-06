@@ -6,7 +6,8 @@ import OpenAI from "openai";
 // Dynamically routes requests to the optimal AI provider based on task intent,
 // with automatic fallback chains, cost tracking, and web search augmentation.
 //
-// Providers:
+// Providers (fallback chain order: kimi → anthropic → openai → google):
+//   - Kimi:      K3 via api.moonshot.ai (1M context, OpenAI-compatible)
 //   - OpenAI:    GPT-4o (general), GPT-4o-mini (fast/cheap), o3-mini (reasoning)
 //   - Anthropic: Claude 3.5 Sonnet (code, creative, long-context)
 //   - Google:    Gemini 2.5 Pro (massive context up to 2M tokens)
@@ -28,13 +29,21 @@ STRICT GROUNDING RULES:
 const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const KIMI_KEY = process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || "";
 
 const hasOpenAI = OPENAI_KEY.length > 10 && !OPENAI_KEY.includes("mock");
 const hasAnthropic = ANTHROPIC_KEY.length > 10 && !ANTHROPIC_KEY.includes("mock");
 const hasGemini = GEMINI_KEY.length > 10 && !GEMINI_KEY.includes("mock");
+const hasKimi = KIMI_KEY.length > 10 && !KIMI_KEY.includes("mock");
 
 // ─── Client Initialization ───
 const openaiClient = hasOpenAI ? new OpenAI({ apiKey: OPENAI_KEY }) : null;
+
+// Kimi (Moonshot AI) — fully OpenAI-compatible API, official endpoint.
+// K3 is the current flagship (1M context); K2-series IDs were retired 2026-05.
+const kimiClient = hasKimi
+  ? new OpenAI({ apiKey: KIMI_KEY, baseURL: "https://api.moonshot.ai/v1" })
+  : null;
 
 // Lazy-load optional providers to avoid import errors if packages missing
 let anthropicClient: any = null;
@@ -113,7 +122,7 @@ export function classifyIntent(query: string, contextLength = 0): { intent: Task
 
 // ─── Provider Selection ───
 interface ProviderConfig {
-  provider: "openai" | "anthropic" | "google";
+  provider: "openai" | "anthropic" | "google" | "kimi";
   model: string;
   maxTokens: number;
   temperature: number;
@@ -121,6 +130,15 @@ interface ProviderConfig {
 
 function selectProvider(intent: TaskIntent): ProviderConfig[] {
   const configs: ProviderConfig[] = [];
+
+  if (hasKimi) {
+    configs.push({
+      provider: "kimi",
+      model: "kimi-k3",
+      maxTokens: 8192,
+      temperature: 0.7,
+    });
+  }
 
   if (hasAnthropic) {
     configs.push({
@@ -168,6 +186,7 @@ export interface OrchestratorResult {
     openai: boolean;
     anthropic: boolean;
     google: boolean;
+    kimi: boolean;
   };
 }
 
@@ -177,7 +196,7 @@ export async function orchestrateRequest(options: {
   context?: string;
   systemPrompt?: string;
   useSearch?: boolean;
-  forceProvider?: "openai" | "anthropic" | "google";
+  forceProvider?: "openai" | "anthropic" | "google" | "kimi";
   forceModel?: string;
 }): Promise<OrchestratorResult> {
   const startTime = Date.now();
@@ -232,7 +251,28 @@ export async function orchestrateRequest(options: {
     try {
       console.log(`[Orchestrator] Trying ${config.provider}/${config.model} for intent: ${intent}`);
 
-      if (config.provider === "openai") {
+      if (config.provider === "kimi") {
+        const client = kimiClient;
+        if (!client) throw new Error("Kimi client not available");
+
+        // NOTE: Kimi K3 rejects custom sampling params (temperature/top_p) —
+        // send only model, messages, and max_tokens.
+        const response = await client.chat.completions.create({
+          model: config.model,
+          max_tokens: config.maxTokens,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: fullPrompt },
+          ],
+        });
+
+        result = {
+          content: response.choices[0]?.message?.content || "",
+          tokensUsed: response.usage?.total_tokens || 0,
+        };
+        usedConfig = config;
+        break;
+      } else if (config.provider === "openai") {
         const client = openaiClient;
         if (!client) throw new Error("OpenAI client not available");
 
@@ -319,13 +359,14 @@ export async function orchestrateRequest(options: {
       openai: hasOpenAI,
       anthropic: hasAnthropic,
       google: hasGemini,
+      kimi: hasKimi,
     },
   };
 }
 
 // ─── Status & Logs ───
 export function getOrchestratorStatus(): {
-  providers: { openai: boolean; anthropic: boolean; google: boolean };
+  providers: { openai: boolean; anthropic: boolean; google: boolean; kimi: boolean };
   demo: boolean;
 } {
   return {
@@ -333,8 +374,9 @@ export function getOrchestratorStatus(): {
       openai: hasOpenAI,
       anthropic: hasAnthropic,
       google: hasGemini,
+      kimi: hasKimi,
     },
-    demo: !hasOpenAI && !hasAnthropic && !hasGemini,
+    demo: !hasOpenAI && !hasAnthropic && !hasGemini && !hasKimi,
   };
 }
 

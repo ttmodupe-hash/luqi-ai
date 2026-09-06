@@ -9,7 +9,7 @@ export const orchestratorRouter = createRouter({
       context: z.string().max(50000).optional(),
       systemPrompt: z.string().max(10000).optional(),
       useSearch: z.boolean().default(false),
-      forceProvider: z.enum(["openai", "anthropic", "google"]).optional(),
+      forceProvider: z.enum(["openai", "anthropic", "google", "kimi"]).optional(),
       forceModel: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
