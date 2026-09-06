@@ -14,6 +14,8 @@ import { getDb } from "./queries/connection";
 import { users, knowledgeArticles } from "../db/schema";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
+import { appendTurn, getHistory, historyToContext } from "./services/session";
+import { generateImage, imageProviderAvailable } from "./services/media";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 
@@ -53,6 +55,11 @@ async function handleChat(message: string, sessionId?: string) {
     return aiUnavailableResponse();
   }
 
+  // Multi-turn memory: load prior conversation turns for this session
+  const session = sessionId || "guest";
+  const history = sessionId ? await getHistory(session) : [];
+  const historyContext = historyToContext(history);
+
   const cacheKey = hashPrompt(message);
   const cached = await getCachedAIResponse(cacheKey);
   if (cached) {
@@ -79,7 +86,12 @@ async function handleChat(message: string, sessionId?: string) {
         client: agentClient.client,
         provider: agentClient.provider,
         model: agentClient.model,
+        history,
       });
+      if (sessionId) {
+        await appendTurn(session, "user", message);
+        await appendTurn(session, "assistant", result.content);
+      }
       await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
       return {
         response: result.content,
@@ -95,9 +107,14 @@ async function handleChat(message: string, sessionId?: string) {
 
     const result = await orchestrateRequest({
       query: message,
+      context: historyContext,
       systemPrompt,
       useSearch: route.useSearch,
     });
+    if (sessionId) {
+      await appendTurn(session, "user", message);
+      await appendTurn(session, "assistant", result.content);
+    }
     await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
     return {
       response: result.content,
@@ -198,9 +215,12 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
       }
     }
 
+    const historyContext = sessionId ? historyToContext(await getHistory(sessionId)) : undefined;
+    const streamContext = [searchContext, historyContext].filter(Boolean).join("\n\n") || undefined;
+
     let full = "";
     try {
-      for await (const ev of orchestrateStream({ query: message, context: searchContext, systemPrompt: streamPrompt })) {
+      for await (const ev of orchestrateStream({ query: message, context: streamContext, systemPrompt: streamPrompt })) {
         if (ev.provider) {
           await stream.writeSSE({ data: JSON.stringify({ provider: ev.provider, model: ev.model }) });
         }
@@ -213,6 +233,10 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
         }
       }
       if (full) await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
+      if (full && sessionId) {
+        await appendTurn(sessionId, "user", message);
+        await appendTurn(sessionId, "assistant", full);
+      }
     } catch (e: any) {
       await stream.writeSSE({ data: JSON.stringify({ error: e?.message || "stream failed" }) });
     }
@@ -286,6 +310,28 @@ restCompat.get("/api/v25/kb/categories", async (c) => {
   } catch {
     return c.json({ categories: [] });
   }
+});
+
+// ─── MEDIA ────────────────────────────────────────────────────────────
+// Real image generation → real file on disk → real URL. Honest 503 when
+// no image provider key is configured.
+restCompat.post("/api/v25/media/image", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const prompt = (body.prompt || "").toString().trim().slice(0, 1000);
+  if (!prompt) return c.json({ error: "prompt is required" }, 400);
+
+  if (!imageProviderAvailable()) {
+    return c.json(
+      { error: "Image generation is not configured yet — it needs OPENAI_API_KEY (gpt-image-1) or GEMINI_API_KEY (imagen) in the server environment." },
+      503
+    );
+  }
+
+  const result = await generateImage(prompt);
+  if (!result) {
+    return c.json({ error: "Image generation failed at all configured providers — check provider quotas/keys." }, 502);
+  }
+  return c.json(result);
 });
 
 // ─── AUTH ─────────────────────────────────────────────────────────────
