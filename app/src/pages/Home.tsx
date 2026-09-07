@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
+import WalletCard from "@/components/WalletCard";
 import {
   Brain, Search, Wallet, FileText, TrendingUp, Clock, Star,
   Sparkles, Zap, Sun, CloudRain, GraduationCap, HeartPulse,
@@ -180,6 +181,9 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        {/* Wallet */}
+        <WalletCard />
 
         {/* Recommended / Personalized */}
         <div>
