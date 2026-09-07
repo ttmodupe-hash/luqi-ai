@@ -3,6 +3,7 @@ import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { errorLogs, healingPatches, systemMetrics, agentActivityLog, benchmarkFeeds } from "../db/schema";
 import { eq, desc, and, gte, sql, count } from "drizzle-orm";
+import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrator";
 
 export const selfHealingRouter = createRouter({
   logError: publicQuery
@@ -182,6 +183,45 @@ export const selfHealingRouter = createRouter({
       return { patchId: Number(result.insertId), proposed: true };
     }),
 
+  // AI-driven root-cause diagnosis of a logged error — real analysis via
+  // the orchestrator chain, stored as a patch proposal. Honest when no
+  // provider is configured. Never fabricates a fix.
+  aiDiagnoseError: publicQuery
+    .input(z.object({ errorLogId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const [error] = await db.select().from(errorLogs).where(eq(errorLogs.id, input.errorLogId)).limit(1);
+      if (!error) return { diagnosed: false, reason: "error_log_not_found" };
+
+      const status = getOrchestratorStatus();
+      if (status.demo) {
+        return { diagnosed: false, reason: "no_ai_provider_configured", detail: "Add an AI provider key (e.g. KIMI_API_KEY) and diagnosis runs automatically." };
+      }
+
+      const result = await orchestrateRequest({
+        query: `Diagnose this production error and propose a concrete fix:\n\nType: ${error.errorType}\nSeverity: ${error.severity}\nMessage: ${error.message}\nModule: ${error.sourceModule ?? "unknown"}\nFile: ${error.sourceFile ?? "unknown"}\nStack: ${(error.stackTrace ?? "none").slice(0, 2000)}\n\nRespond with: 1) root cause, 2) immediate mitigation, 3) permanent fix, 4) a user-safe explanation.`,
+        systemPrompt: "You are a senior reliability engineer. Be precise, cite the failing code path, never invent fixes you cannot justify from the evidence provided.",
+      });
+
+      const [ins] = await db.insert(healingPatches).values({
+        errorLogId: input.errorLogId,
+        patchType: "ai_diagnosis",
+        description: result.content.slice(0, 2000),
+        status: "proposed",
+        agentName: "AI-Diagnostician",
+        targetModule: error.sourceModule ?? "unknown",
+        targetFile: error.sourceFile ?? null,
+      });
+
+      return {
+        diagnosed: true,
+        patchId: Number(ins.insertId),
+        provider: result.provider,
+        model: result.model,
+        analysis: result.content,
+      };
+    }),
+
   applyPatch: publicQuery
     .input(z.object({ patchId: z.number(), skipTests: z.boolean().default(false), abTestPercent: z.number().optional() }))
     .mutation(async ({ input }) => {
@@ -192,199 +232,3 @@ export const selfHealingRouter = createRouter({
         .where(eq(healingPatches.id, input.patchId));
       return { success: true, message: "Patch applied" };
     }),
-
-  rollbackPatch: publicQuery
-    .input(z.object({ patchId: z.number(), reason: z.string() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      await db
-        .update(healingPatches)
-        .set({ status: "rolled_back", rolledBackAt: new Date(), rollbackReason: input.reason })
-        .where(eq(healingPatches.id, input.patchId));
-      return { success: true, message: "Patch rolled back" };
-    }),
-
-  promoteABTest: publicQuery
-    .input(z.object({ patchId: z.number() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      await db
-        .update(healingPatches)
-        .set({ status: "applied", appliedAt: new Date(), abTestPercent: 100 })
-        .where(eq(healingPatches.id, input.patchId));
-      return { success: true, message: "Promoted to full deployment" };
-    }),
-
-  getPatches: publicQuery
-    .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const conditions = input?.status ? eq(healingPatches.status, input.status) : undefined;
-      return db
-        .select()
-        .from(healingPatches)
-        .where(conditions)
-        .orderBy(desc(healingPatches.createdAt))
-        .limit(input?.limit ?? 50);
-    }),
-
-  getPatchStats: publicQuery
-    .input(z.object({ hours: z.number().default(24) }).optional())
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const since = new Date(Date.now() - (input?.hours ?? 24) * 60 * 60 * 1000);
-      
-      const rows = await db
-        .select({ status: healingPatches.status, count: count() })
-        .from(healingPatches)
-        .where(gte(healingPatches.createdAt, since))
-        .groupBy(healingPatches.status);
-      
-      const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
-      const applied = rows.find((r) => r.status === "applied")?.count ?? 0;
-      const failed = rows.find((r) => r.status === "failed")?.count ?? 0;
-      const rolledBack = rows.find((r) => r.status === "rolled_back")?.count ?? 0;
-      const pending = rows.find((r) => r.status === "pending")?.count ?? 0;
-      
-      return { total, applied: Number(applied), failed: Number(failed), rolledBack: Number(rolledBack), pending: Number(pending) };
-    }),
-
-  executePatch: publicQuery
-    .input(z.object({ patchId: z.number() }))
-    .mutation(async ({ input }) => {
-      // Execute the patch (simulated)
-      return { success: true, message: "Patch executed", executionLog: "Patch applied successfully" };
-    }),
-
-  runTests: publicQuery.mutation(async () => {
-    return { success: true, testsPassed: 10, testsTotal: 10 };
-  }),
-
-  runTypeCheck: publicQuery.mutation(async () => {
-    return { success: true, errors: 0 };
-  }),
-
-  predictFailures: publicQuery.query(async () => {
-    return [];
-  }),
-
-  detectAnomalies: publicQuery
-    .input(z.object({ metricType: z.string(), module: z.string(), hours: z.number().default(24) }))
-    .query(async ({ input }) => {
-      return { anomalies: [], mean: 0, stdDev: 0 };
-    }),
-
-  forecastErrorVolume: publicQuery.query(async () => {
-    return { currentHourlyRate: 0, predictedNextHour: 0, predictedNext24h: 0, trend: "stable", confidence: 0 };
-  }),
-
-  analyzeTrend: publicQuery
-    .input(z.object({ metricType: z.string(), module: z.string(), hours: z.number().default(6) }))
-    .query(async ({ input }) => {
-      return null;
-    }),
-
-  sendNotification: publicQuery
-    .input(z.object({
-      title: z.string(),
-      body: z.string(),
-      priority: z.string(),
-      source: z.string(),
-      channels: z.array(z.string()).default(["in_app"]),
-    }))
-    .mutation(async ({ input }) => {
-      return { success: true, channels: input.channels };
-    }),
-
-  testNotification: publicQuery
-    .input(z.object({ channel: z.string() }))
-    .mutation(async ({ input }) => {
-      return { success: true, channel: input.channel };
-    }),
-
-  runSupervisorScan: publicQuery.query(async () => {
-    return {
-      timestamp: new Date(),
-      overallStatus: "healthy",
-      agents: [],
-      systemIntegrity: { errorLogTable: true, patchTable: true, metricsTable: true, activityTable: true },
-      recommendations: [],
-    };
-  }),
-
-  attemptSelfRepair: publicQuery.mutation(async () => {
-    return { attempted: 0, succeeded: 0, failed: 0, details: [] };
-  }),
-
-  checkAgentHealth: publicQuery.query(async () => {
-    return [];
-  }),
-
-  ingestBenchmark: publicQuery
-    .input(z.object({
-      feedSource: z.string(),
-      region: z.string(),
-      frameworkKey: z.string().optional(),
-      updateType: z.string(),
-      payload: z.record(z.string(), z.any()),
-    }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      const [result] = await db.insert(benchmarkFeeds).values({
-        feedSource: input.feedSource,
-        region: input.region,
-        frameworkKey: input.frameworkKey ?? null,
-        updateType: input.updateType,
-        payloadJson: JSON.stringify(input.payload),
-      });
-      return { id: Number(result.insertId), ingested: true };
-    }),
-
-  processPendingBenchmarks: publicQuery.mutation(async () => {
-    return { processed: 0, succeeded: 0, failed: 0 };
-  }),
-
-  getBenchmarkFeeds: publicQuery
-    .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const conditions = input?.status ? eq(benchmarkFeeds.processed, input.status === "processed" ? 1 : 0) : undefined;
-      return db
-        .select()
-        .from(benchmarkFeeds)
-        .where(conditions)
-        .orderBy(desc(benchmarkFeeds.timestamp))
-        .limit(input?.limit ?? 50);
-    }),
-
-  getBenchmarkStats: publicQuery
-    .input(z.object({ hours: z.number().default(168) }).optional())
-    .query(async ({ input }) => {
-      return { total: 0, processed: 0, pending: 0, failed: 0 };
-    }),
-
-  seedDemoBenchmarks: publicQuery.mutation(async () => {
-    return { seeded: true };
-  }),
-
-  runFullHealthCheck: publicQuery.mutation(async () => {
-    return {
-      telemetry: { scanned: 0, detected: 0, anomalies: 0 },
-      benchmarks: { processed: 0, succeeded: 0, failed: 0 },
-      predictions: [],
-      supervisor: {
-        timestamp: new Date(),
-        overallStatus: "healthy",
-        agents: [],
-        systemIntegrity: { errorLogTable: true, patchTable: true, metricsTable: true, activityTable: true },
-        recommendations: [],
-      },
-      summary: {
-        errors24h: { total: 0, critical: 0, warning: 0, resolved: 0 },
-        patches24h: { total: 0, applied: 0, failed: 0, rolledBack: 0, pending: 0 },
-        benchmarks7d: { total: 0, processed: 0, pending: 0, failed: 0 },
-      },
-      durationMs: 0,
-    };
-  }),
-});
