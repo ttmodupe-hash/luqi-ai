@@ -17,6 +17,7 @@ import { orchestrateAgent } from "./services/agent";
 import { appendTurn, getHistory, historyToContext } from "./services/session";
 import { generateImage, imageProviderAvailable } from "./services/media";
 import { paymentsConfigured, initializeTopup, verifyWebhookSignature, verifyTransaction } from "./services/payments";
+import { analyzeContractText } from "./services/legal";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 
@@ -34,7 +35,12 @@ GROUNDING RULES:
 UBUNTU ETHOS ("Umuntu ngumuntu ngabantu" — I am because we are):
 - Hyper-accessibility: translate dense corporate, legal, or technical jargon into simple, actionable steps anyone can follow.
 - Community-first: frame solutions around local realities — unstable power, township economies, mobile money, stokvels, off-grid constraints.
-- Dignity: never condescend; uplift the user's capability with every answer.`;
+- Dignity: never condescend; uplift the user's capability with every answer.
+
+LISTENING DISCIPLINE (a companion that listens before it speaks):
+- Reflect first: begin by acknowledging the user's actual situation in one short sentence before advising.
+- When a request is ambiguous, ask ONE precise clarifying question instead of assuming.
+- Never lecture. Answer the question that was asked, then offer one natural next step.`;
 
 function aiUnavailableResponse() {
   return {
@@ -51,6 +57,33 @@ function jwtSecret(): string {
 
 function signToken(userId: number): string {
   return jwt.sign({ userId }, jwtSecret(), { expiresIn: "30d" });
+}
+
+// Knowledge archive: valuable answers accumulate into knowledge_articles.
+// The companion remembers what it has answered. Fire-and-forget; never
+// blocks or fails the chat response.
+function archiveAnswer(question: string, answer: string, capability: string, sources: SearchSource[]) {
+  if (!process.env.DATABASE_URL && !process.env.DB_HOST) return;
+  if (answer.trim().length < 150) return; // trivia isn't archived
+  const title = question.trim().slice(0, 120);
+  void (async () => {
+    try {
+      const db = await getDb();
+      const [existing] = await db
+        .select({ id: knowledgeArticles.id })
+        .from(knowledgeArticles)
+        .where(eq(knowledgeArticles.title, title))
+        .limit(1);
+      if (existing) return; // already archived
+      await db.insert(knowledgeArticles).values({
+        title,
+        content: answer.slice(0, 8000),
+        category: capability,
+        author: "LUQI Companion",
+        tags: sources.length ? JSON.stringify(sources.map((s) => s.link)) : null,
+      });
+    } catch { /* archival is non-fatal */ }
+  })();
 }
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
@@ -112,6 +145,7 @@ async function handleChat(message: string, sessionId?: string, userKey?: string)
         await appendTurn(session, "assistant", result.content);
       }
       await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
+      archiveAnswer(message, result.content, route.capability, result.sources);
       return {
         response: result.content,
         module: result.provider + "/" + result.model,
@@ -135,6 +169,7 @@ async function handleChat(message: string, sessionId?: string, userKey?: string)
       await appendTurn(session, "assistant", result.content);
     }
     await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
+    archiveAnswer(message, result.content, route.capability, result.sources);
     return {
       response: result.content,
       module: result.provider + "/" + result.model,
@@ -251,7 +286,10 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
           await stream.writeSSE({ data: JSON.stringify({ error: ev.error }) });
         }
       }
-      if (full) await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
+      if (full) {
+        await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
+        archiveAnswer(message, full, route.capability, sources);
+      }
       if (full && sessionId) {
         await appendTurn(sessionId, "user", message);
         await appendTurn(sessionId, "assistant", full);
@@ -331,6 +369,36 @@ restCompat.get("/api/v25/kb/categories", async (c) => {
   } catch {
     return c.json({ categories: [] });
   }
+});
+
+// ─── LEGAL ANALYZER ───────────────────────────────────────────────────
+// Real predatory/unfair clause detection: deterministic curated lexicon
+// (no AI key needed) + optional AI deep review when a provider exists.
+restCompat.post("/api/v25/legal/analyze", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const text = (body.text || "").toString().slice(0, 50000);
+  if (text.trim().length < 40) {
+    return c.json({ detail: "Paste at least a few sentences of the contract for analysis." }, 400);
+  }
+
+  const analysis = analyzeContractText(text);
+  let aiReview: string | undefined;
+
+  const status = getOrchestratorStatus();
+  if (!status.demo && analysis.findings.length > 0) {
+    try {
+      const findingsText = analysis.findings
+        .map((f) => `- [${f.severity.toUpperCase()}] ${f.title}: "${f.excerpt}"`)
+        .join("\n");
+      const result = await orchestrateRequest({
+        query: `A contract analysis flagged these clauses:\n${findingsText}\n\nGive the signer a short, plain-language action plan (max 150 words): what to challenge, what to ask in writing, and when to walk away.`,
+        systemPrompt: "You are a plain-language legal educator for South Africans. Not legal advice — recommend a registered legal professional or Legal Aid SA (legal-aid.co.za, 0800 110 110) for binding decisions.",
+      });
+      aiReview = result.content;
+    } catch { /* AI review is optional */ }
+  }
+
+  return c.json({ ...analysis, aiEnhanced: !!aiReview, aiReview });
 });
 
 // ─── MEDIA ────────────────────────────────────────────────────────────
