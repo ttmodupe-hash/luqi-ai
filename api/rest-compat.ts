@@ -29,7 +29,12 @@ GROUNDING RULES:
 2. For tax, legal, medical, or financial questions: give practical guidance, cite the official channel (e.g. SARS eFiling, sars.gov.za, gov.za), and note that rules change and the user should confirm with the official source or a registered practitioner.
 3. Be concrete and structured: numbered steps for processes, requirements lists, costs and timelines where known.
 4. Keep answers focused on what the user asked. South African context by default (SARS, CIPC, Eskom, NSFAS, SASSA, eTenderPortal).
-5. This is not professional advice — for filings and legal acts, recommend the official portal or a registered professional.`;
+5. This is not professional advice — for filings and legal acts, recommend the official portal or a registered professional.
+
+UBUNTU ETHOS ("Umuntu ngumuntu ngabantu" — I am because we are):
+- Hyper-accessibility: translate dense corporate, legal, or technical jargon into simple, actionable steps anyone can follow.
+- Community-first: frame solutions around local realities — unstable power, township economies, mobile money, stokvels, off-grid constraints.
+- Dignity: never condescend; uplift the user's capability with every answer.`;
 
 function aiUnavailableResponse() {
   return {
@@ -50,7 +55,7 @@ function signToken(userId: number): string {
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
 
-async function handleChat(message: string, sessionId?: string) {
+async function handleChat(message: string, sessionId?: string, userKey?: string) {
   const status = getOrchestratorStatus();
   if (status.demo) {
     return aiUnavailableResponse();
@@ -60,6 +65,19 @@ async function handleChat(message: string, sessionId?: string) {
   const session = sessionId || "guest";
   const history = sessionId ? await getHistory(session) : [];
   const historyContext = historyToContext(history);
+
+  // User context: region/language/wallet — injected so answers fit the
+  // user's real situation (Ubuntu context layer)
+  let userContext: string | undefined;
+  if (userKey && (process.env.DATABASE_URL || process.env.DB_HOST)) {
+    try {
+      const db = await getDb();
+      const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, userKey.toLowerCase())).limit(1);
+      if (wallet) {
+        userContext = `User context: region=South Africa, currency=${wallet.currency ?? "ZAR"}, wallet balance R${((wallet.balanceCents ?? 0) / 100).toFixed(2)}. If the request involves paid features, be mindful of their balance.`;
+      }
+    } catch { /* context lookup is non-fatal */ }
+  }
 
   const cacheKey = hashPrompt(message);
   const cached = await getCachedAIResponse(cacheKey);
@@ -82,7 +100,7 @@ async function handleChat(message: string, sessionId?: string) {
     const agentClient = getAgentCapableClient();
     if (agentClient) {
       const result = await orchestrateAgent({
-        query: message,
+        query: userContext ? `${userContext}\n\n${message}` : message,
         systemPrompt,
         client: agentClient.client,
         provider: agentClient.provider,
@@ -108,7 +126,7 @@ async function handleChat(message: string, sessionId?: string) {
 
     const result = await orchestrateRequest({
       query: message,
-      context: historyContext,
+      context: [userContext, historyContext].filter(Boolean).join("\n\n") || undefined,
       systemPrompt,
       useSearch: route.useSearch,
     });
@@ -145,7 +163,7 @@ restCompat.post("/api/v25/ai-brain/chat", async (c) => {
   if (!message.trim()) {
     return c.json({ error: "message is required" }, 400);
   }
-  return c.json(await handleChat(message, body.session_id));
+  return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
 });
 
 // Legacy chat endpoint used by useApi.chat
@@ -155,7 +173,7 @@ restCompat.post("/api/v25/chat", async (c) => {
   if (!message.trim()) {
     return c.json({ error: "query is required" }, 400);
   }
-  return c.json(await handleChat(message, body.session_id));
+  return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
 });
 
 // ─── SSE STREAMING CHAT ───────────────────────────────────────────────
