@@ -4,6 +4,7 @@
  * Full-screen chat interface with the LUQI AI Brain, streaming responses
  * token-by-token over SSE when an AI provider is configured, with real
  * source chips when the web-researcher capability augments an answer.
+ * Multi-turn memory is kept per browser via a persistent session UUID.
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -41,6 +42,25 @@ export default function AIBrainPage() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Persistent per-browser session ID — never share history between visitors
+  const sessionIdRef = useRef<string>("");
+  if (!sessionIdRef.current) {
+    let id = localStorage.getItem("luqi_session_id");
+    if (!id) {
+      id = "web-" + crypto.randomUUID();
+      localStorage.setItem("luqi_session_id", id);
+    }
+    sessionIdRef.current = id;
+  }
+
+  const userEmail = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}").email || undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -72,7 +92,8 @@ export default function AIBrainPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: text,
-            session_id: "web-" + (localStorage.getItem("user_id") || "guest"),
+            session_id: sessionIdRef.current,
+            email: userEmail,
           }),
         }
       );
