@@ -513,6 +513,37 @@ export default function BilingualPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(true);
 
+  // Real contract analyzer state (server-side lexicon, not canned samples)
+  const [contractText, setContractText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [liveAnalysis, setLiveAnalysis] = useState<any>(null);
+  const [analysisNote, setAnalysisNote] = useState("");
+
+  const analyzeMyContract = useCallback(async () => {
+    if (contractText.trim().length < 40) {
+      setAnalysisNote("Paste at least a few sentences of the contract.");
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysisNote("");
+    try {
+      const res = await fetch("/api/v25/legal/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: contractText }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLiveAnalysis(data);
+      } else {
+        setAnalysisNote(data.detail || "Analysis unavailable right now — try again in a moment.");
+      }
+    } catch {
+      setAnalysisNote("Couldn't reach the server. Your text was NOT uploaded anywhere — try again shortly.");
+    }
+    setAnalyzing(false);
+  }, [contractText]);
+
   const currentTemplate = useMemo(
     () => CONTRACT_TEMPLATES.find((t) => t.template_id === selectedTemplate) || CONTRACT_TEMPLATES[0],
     [selectedTemplate]
@@ -657,6 +688,80 @@ export default function BilingualPage() {
                 </Button>
               </div>
             </div>
+
+            {/* REAL CONTRACT ANALYZER — user-pasted text, server lexicon */}
+            <Card className="bg-gradient-to-br from-purple-500/10 to-neutral-900 border-purple-500/30 mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Shield className="h-5 w-5 text-purple-400" />
+                  <h3 className="font-bold text-white">Analyze YOUR Contract</h3>
+                  <span className="text-xs text-neutral-500">— paste real text, get real findings</span>
+                </div>
+                <Textarea
+                  value={contractText}
+                  onChange={(e) => setContractText(e.target.value)}
+                  placeholder="Paste the exact contract clauses here (loan agreement, employment contract, rental lease...). We check for predatory and unfair terms against South African law."
+                  className="min-h-[100px] bg-neutral-900 border-neutral-700 text-sm mb-3"
+                />
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={analyzeMyContract}
+                    disabled={analyzing}
+                    className="bg-purple-600 hover:bg-purple-500 text-white"
+                  >
+                    {analyzing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                    Analyze Contract
+                  </Button>
+                  {analysisNote && <p className="text-xs text-amber-400">{analysisNote}</p>}
+                </div>
+
+                {liveAnalysis && (
+                  <div className="mt-4 pt-4 border-t border-neutral-800 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-neutral-400">Risk verdict:</span>
+                      <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                        liveAnalysis.overallRisk === "predatory" ? "bg-red-500/20 text-red-400" :
+                        liveAnalysis.overallRisk === "caution" ? "bg-amber-500/20 text-amber-400" :
+                        "bg-emerald-500/20 text-emerald-400"
+                      }`}>
+                        {liveAnalysis.overallRisk.toUpperCase()} (score {liveAnalysis.riskScore}/100)
+                      </span>
+                      <span className="text-xs text-neutral-500">{liveAnalysis.findings.length} findings</span>
+                    </div>
+
+                    {liveAnalysis.findings.map((f: any) => (
+                      <div key={f.id} className={`rounded-lg p-3 border ${
+                        f.severity === "predatory" ? "bg-red-500/5 border-red-500/30" :
+                        f.severity === "caution" ? "bg-amber-500/5 border-amber-500/30" :
+                        "bg-neutral-800 border-neutral-700"
+                      }`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {f.severity === "predatory" ? <AlertTriangle className="h-4 w-4 text-red-400" /> : <Info className="h-4 w-4 text-amber-400" />}
+                          <p className="text-sm font-semibold text-white">{f.title}</p>
+                        </div>
+                        <p className="text-xs text-neutral-500 italic mb-1">Found: "{f.excerpt}"</p>
+                        <p className="text-sm text-neutral-300">{f.explanation}</p>
+                        <p className="text-xs text-purple-400 mt-1">Ref: {f.reference}</p>
+                      </div>
+                    ))}
+
+                    {liveAnalysis.findings.length === 0 && (
+                      <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        <p className="text-sm text-emerald-300">No known predatory patterns detected in this text. Still have a professional review anything you sign.</p>
+                      </div>
+                    )}
+
+                    {liveAnalysis.aiReview && (
+                      <div className="bg-blue-500/5 border border-blue-500/30 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-blue-400 mb-1">AI Action Plan</p>
+                        <p className="text-sm text-neutral-300 whitespace-pre-wrap">{liveAnalysis.aiReview}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Card className="bg-neutral-900 border-neutral-800 mb-4">
               <CardContent className="p-4">
