@@ -36,12 +36,7 @@ GROUNDING RULES:
 UBUNTU ETHOS ("Umuntu ngumuntu ngabantu" — I am because we are):
 - Hyper-accessibility: translate dense corporate, legal, or technical jargon into simple, actionable steps anyone can follow.
 - Community-first: frame solutions around local realities — unstable power, township economies, mobile money, stokvels, off-grid constraints.
-- Dignity: never condescend; uplift the user's capability with every answer.
-
-LISTENING DISCIPLINE (a companion that listens before it speaks):
-- Reflect first: begin by acknowledging the user's actual situation in one short sentence before advising.
-- When a request is ambiguous, ask ONE precise clarifying question instead of assuming.
-- Never lecture. Answer the question that was asked, then offer one natural next step.`;
+- Dignity: never condescend; uplift the user's capability with every answer.`;
 
 function aiUnavailableResponse() {
   return {
@@ -58,33 +53,6 @@ function jwtSecret(): string {
 
 function signToken(userId: number): string {
   return jwt.sign({ userId }, jwtSecret(), { expiresIn: "30d" });
-}
-
-// Knowledge archive: valuable answers accumulate into knowledge_articles.
-// The companion remembers what it has answered. Fire-and-forget; never
-// blocks or fails the chat response.
-function archiveAnswer(question: string, answer: string, capability: string, sources: SearchSource[]) {
-  if (!process.env.DATABASE_URL && !process.env.DB_HOST) return;
-  if (answer.trim().length < 150) return; // trivia isn't archived
-  const title = question.trim().slice(0, 120);
-  void (async () => {
-    try {
-      const db = await getDb();
-      const [existing] = await db
-        .select({ id: knowledgeArticles.id })
-        .from(knowledgeArticles)
-        .where(eq(knowledgeArticles.title, title))
-        .limit(1);
-      if (existing) return; // already archived
-      await db.insert(knowledgeArticles).values({
-        title,
-        content: answer.slice(0, 8000),
-        category: capability,
-        author: "LUQI Companion",
-        tags: sources.length ? JSON.stringify(sources.map((s) => s.link)) : null,
-      });
-    } catch { /* archival is non-fatal */ }
-  })();
 }
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
@@ -146,7 +114,6 @@ async function handleChat(message: string, sessionId?: string, userKey?: string)
         await appendTurn(session, "assistant", result.content);
       }
       await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
-      archiveAnswer(message, result.content, route.capability, result.sources);
       return {
         response: result.content,
         module: result.provider + "/" + result.model,
@@ -170,7 +137,6 @@ async function handleChat(message: string, sessionId?: string, userKey?: string)
       await appendTurn(session, "assistant", result.content);
     }
     await setCachedAIResponse(cacheKey, JSON.stringify({ content: result.content, sources: result.sources }), 3600);
-    archiveAnswer(message, result.content, route.capability, result.sources);
     return {
       response: result.content,
       module: result.provider + "/" + result.model,
@@ -287,10 +253,7 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
           await stream.writeSSE({ data: JSON.stringify({ error: ev.error }) });
         }
       }
-      if (full) {
-        await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
-        archiveAnswer(message, full, route.capability, sources);
-      }
+      if (full) await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
       if (full && sessionId) {
         await appendTurn(sessionId, "user", message);
         await appendTurn(sessionId, "assistant", full);
@@ -369,6 +332,41 @@ restCompat.get("/api/v25/kb/categories", async (c) => {
     return c.json({ categories });
   } catch {
     return c.json({ categories: [] });
+  }
+});
+
+// ─── UTILITY LIVE FEEDS ───────────────────────────────────────────────
+// Backs the LiveUpdates component on /water and /load-shedding.
+// Real municipal/utility headlines via Serper when configured; an honest
+// offline note otherwise. Page tools never depend on it.
+const UTILITY_QUERIES: Record<string, string> = {
+  water: "water supply maintenance outage municipality South Africa Johannesburg Cape Town Durban",
+  "load-shedding": "Eskom load shedding stage schedule South Africa",
+};
+
+restCompat.get("/api/v25/insights/utility-feed", async (c) => {
+  const topic = (c.req.query("topic") || "").toString();
+  const query = UTILITY_QUERIES[topic];
+  if (!query) return c.json({ detail: "unknown topic" }, 400);
+
+  if (!process.env.SERPER_API_KEY) {
+    return c.json({
+      live: false,
+      headlines: [],
+      note: "Live municipal feeds activate when SERPER_API_KEY is configured — all schedules and calculators on this page work without it.",
+    });
+  }
+
+  try {
+    const { searchNews } = await import("./services/serper");
+    const news = await searchNews(query, { numResults: 5 });
+    const items = news.news || [];
+    return c.json({
+      live: items.length > 0,
+      headlines: items.map((n) => ({ title: n.title, link: n.link, source: n.source, date: n.date })),
+    });
+  } catch {
+    return c.json({ live: false, headlines: [], note: "Live feed temporarily unreachable — offline data below remains current." });
   }
 });
 
