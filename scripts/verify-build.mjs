@@ -57,7 +57,7 @@ if (!fs.existsSync(serperPath)) {
 }
 
 // ── 3-5. FULL IMPORT-GRAPH RECONCILIATION ────────────────────────────
-const IMPORT_RE = /import\s+(?:type\s+)?(?:[\w$]+\s*,?\s*(?:\{([^}]*)\})?\s*(?:\*\s*as\s+[\w$]+)?\s*)?from\s*["']([^"']+)["']/g;
+const IMPORT_RE = /import\s+(?:type\s+)?(?:([\w$]+)\s*,?\s*(?:\{([^}]*)\})?\s*(?:\*\s*as\s+[\w$]+)?\s*)?from\s*["']([^"']+)["']/g;
 const DYN_RE = /import\(\s*["']([^"']+)["']\s*\)/g;
 const EXPORT_RE = /export\s+(?:async\s+)?(?:function|const|let|class|interface|type|enum)\s+([\w$]+)/g;
 const NODE_BUILTINS = new Set(["fs", "path", "url", "module", "crypto", "os", "http", "https",
@@ -109,10 +109,10 @@ function scanFile(file, srcRoot) {
   const rel = path.relative(rootDir, file);
   const src = fs.readFileSync(file, "utf8");
   const checks = [];
-  for (const m of src.matchAll(IMPORT_RE)) checks.push({ spec: m[2], named: m[1] });
+  for (const m of src.matchAll(IMPORT_RE)) checks.push({ spec: m[3], named: m[2], def: m[1] === "type" ? undefined : m[1] });
   for (const m of src.matchAll(DYN_RE)) checks.push({ spec: m[1], named: null, dynamic: true });
 
-  for (const { spec, named, dynamic } of checks) {
+  for (const { spec, named, dynamic, def } of checks) {
     if (!spec.startsWith(".") && !spec.startsWith("@/")) {
       const pkgName = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
       if (!allDeps.has(pkgName) && !NODE_BUILTINS.has(pkgName) && !spec.startsWith("node:")) {
@@ -124,6 +124,12 @@ function scanFile(file, srcRoot) {
     if (!target) {
       errors.push(`RESOLUTION ERROR: cannot resolve '${spec}'${dynamic ? " (dynamic import)" : ""} in ${rel}`);
       continue;
+    }
+    if (def) {
+      const targetExports = getExports(target);
+      if (!targetExports.has("default")) {
+        errors.push(`DEFAULT EXPORT MISSING: '${def}' default-imported from '${spec}' in ${rel} — ${path.relative(rootDir, target)} has no default export`);
+      }
     }
     if (named) {
       const targetExports = getExports(target);
@@ -146,6 +152,10 @@ for (const f of walk(path.join(rootDir, "scripts"))) scanFile(f, srcRoot);
 for (const f of walk(srcRoot)) scanFile(f, srcRoot);
 
 // ── 6. UNDEFINED-NAME CRASH CHECK (tsc, filtered) ────────────────────
+// esbuild/vite cannot detect undefined identifiers (e.g. a JSX icon used
+// without import) — they compile fine and crash the app at mount.
+// tsc CAN: TS2304/TS2552/TS2551. We fail only on that crash class;
+// other type errors are warnings, not build blockers.
 {
   const { execFileSync } = await import("node:child_process");
   const tscBin = path.join(rootDir, "node_modules", ".bin", "tsc");
