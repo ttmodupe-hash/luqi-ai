@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/* OPERATIONAL PAGE IMPORTS (47 Pages) */
+/* OPERATIONAL PAGE IMPORTS (48 Pages) */
 import Home from "./pages/Home";
 import StatusPage from "./pages/StatusPage";
 import KBPage from "./pages/KBPage";
@@ -28,6 +28,7 @@ import OpportunityPage from "@/pages/OpportunityPage";
 import EmergencyPage from "@/pages/EmergencyPage";
 import CompanionDashboardPage from "@/pages/CompanionDashboardPage";
 import VoiceInterfacePage from "@/pages/VoiceInterfacePage";
+import VocationalPage from "@/pages/VocationalPage";
 import AdminPage from "@/pages/AdminPage";
 import AgricultureAdvisorPage from "@/pages/AgricultureAdvisorPage";
 import LoadSheddingPage from "@/pages/LoadSheddingPage";
@@ -167,6 +168,7 @@ const navGroups: NavGroup[] = [
       { id: "languages", label: "Languages", icon: Languages, path: "/languages" },
       { id: "african-languages", label: "African Languages", icon: Languages, path: "/african-languages" },
       { id: "bilingual", label: "Contract Assistant", icon: Scale, path: "/bilingual" },
+      { id: "vocational", label: "Vocational Academy", icon: Wrench, path: "/vocational" },
       { id: "wisdom", label: "Wisdom", icon: Sparkles, path: "/wisdom" },
       { id: "skills", label: "Skills", icon: Wrench, path: "/skills" },
       { id: "kb", label: "Knowledge", icon: BookOpen, path: "/knowledge-base" },
@@ -417,6 +419,7 @@ function App() {
             <Route path="/tender" element={<TenderPage />} />
             <Route path="/opportunity" element={<OpportunityPage />} />
             <Route path="/emergency" element={<EmergencyPage />} />
+            <Route path="/vocational" element={<VocationalPage />} />
             <Route path="/financial-literacy" element={<FinancialLiteracyPage />} />
             <Route path="/business-reg" element={<BusinessRegPage />} />
             <Route path="/load-shedding" element={<LoadSheddingPage />} />
