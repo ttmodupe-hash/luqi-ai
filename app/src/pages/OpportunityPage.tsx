@@ -1,12 +1,13 @@
 /**
  * LUQI AI — Opportunities
  * ========================
- * Grants, funding, tenders, and business opportunities in SA.
+ * Grants, funding, tenders, and business opportunities in SA,
+ * plus the Predictive History Radar (curated historical parallels).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Star, Filter, TrendingUp, Calendar, MapPin } from "lucide-react";
+import { Star, Filter, TrendingUp, Calendar, MapPin, History } from "lucide-react";
 
 const OPPORTUNITIES = [
   { id: 1, title: "DTIC Black Industrialists Scheme", type: "Grant", amount: "R10M – R50M", deadline: "Rolling", province: "National", category: "Business" },
@@ -25,6 +26,20 @@ export default function OpportunityPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("All");
   const [search, setSearch] = useState("");
+
+  // Predictive Macro-Historical Radar — real curated parallels from the server
+  const [radar, setRadar] = useState<any[]>([]);
+  const [radarNote, setRadarNote] = useState("");
+
+  useEffect(() => {
+    fetch("/api/v25/insights/radar")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.parallels) setRadar(d.parallels);
+        if (d?.disclaimer) setRadarNote(d.disclaimer);
+      })
+      .catch(() => setRadarNote("Radar unavailable — the curated parallels will load when the server is reachable."));
+  }, []);
 
   const filtered = OPPORTUNITIES.filter((o) => {
     const matchFilter = activeFilter === "All" || o.type === activeFilter;
@@ -74,6 +89,35 @@ export default function OpportunityPage() {
             </button>
           ))}
         </div>
+
+        {/* Predictive Macro-Historical Radar */}
+        {radar.length > 0 && (
+          <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-neutral-900 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <History size={18} className="text-indigo-400" />
+              <h2 className="font-semibold text-white">Predictive History Radar</h2>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                historical analogy — education, not prediction
+              </span>
+            </div>
+            {radar.map((p) => (
+              <details key={p.id} className="rounded-lg bg-neutral-900/60 border border-neutral-800 p-3 group">
+                <summary className="cursor-pointer text-sm font-medium text-white list-none flex items-center justify-between">
+                  <span>{p.title}</span>
+                  <span className="text-[10px] text-neutral-500 group-open:hidden">tap to expand</span>
+                </summary>
+                <div className="mt-3 space-y-2 text-xs leading-relaxed">
+                  <p><span className="text-indigo-400 font-medium">History ({p.historical.era}, {p.historical.region}):</span> <span className="text-neutral-400">{p.historical.pattern}</span></p>
+                  <p><span className="text-indigo-400 font-medium">Outcome:</span> <span className="text-neutral-400">{p.historical.outcome}</span></p>
+                  <p><span className="text-cyan-400 font-medium">Today ({p.modern.domain}):</span> <span className="text-neutral-300">{p.modern.signal}</span></p>
+                  <p><span className="text-cyan-400 font-medium">Why now:</span> <span className="text-neutral-400">{p.modern.whyNow}</span></p>
+                  <p className="pt-1 border-t border-neutral-800"><span className="text-emerald-400 font-medium">Your move:</span> <span className="text-neutral-200">{p.actionForUser}</span></p>
+                </div>
+              </details>
+            ))}
+            {radarNote && <p className="text-[10px] text-neutral-500">{radarNote}</p>}
+          </div>
+        )}
 
         {/* Opportunities */}
         <div className="space-y-3">
