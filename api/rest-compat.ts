@@ -18,6 +18,7 @@ import { appendTurn, getHistory, historyToContext } from "./services/session";
 import { generateImage, imageProviderAvailable } from "./services/media";
 import { paymentsConfigured, initializeTopup, verifyWebhookSignature, verifyTransaction } from "./services/payments";
 import { analyzeContractText } from "./services/legal";
+import { getRadar, RADAR_DISCLAIMER } from "./services/insights";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 
@@ -369,6 +370,47 @@ restCompat.get("/api/v25/kb/categories", async (c) => {
   } catch {
     return c.json({ categories: [] });
   }
+});
+
+// ─── PREDICTIVE MACRO-HISTORICAL RADAR ────────────────────────────────
+// Curated, documented historical patterns mapped to real current trends.
+// Educational analogies — never financial prediction.
+restCompat.get("/api/v25/insights/radar", (c) => {
+  const category = c.req.query("category") || "All";
+  const parallels = getRadar(category);
+  return c.json({ parallels, disclaimer: RADAR_DISCLAIMER, count: parallels.length });
+});
+
+restCompat.post("/api/v25/insights/scan", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const topic = (body.topic || "").toString().slice(0, 200);
+  if (!topic.trim()) return c.json({ detail: "topic is required" }, 400);
+
+  // Live market headlines when Serper is configured — real news, not vibes
+  if (process.env.SERPER_API_KEY) {
+    try {
+      const { searchNews } = await import("./services/serper");
+      const news = await searchNews(`${topic} Africa investment opportunity`, { numResults: 5 });
+      const items = news.news || [];
+      if (items.length) {
+        return c.json({
+          topic,
+          live: true,
+          headlines: items.map((n) => ({ title: n.title, link: n.link, source: n.source, date: n.date })),
+          parallels: getRadar(topic),
+          disclaimer: RADAR_DISCLAIMER,
+        });
+      }
+    } catch { /* fall through to curated */ }
+  }
+
+  return c.json({
+    topic,
+    live: false,
+    note: "Live market scan needs SERPER_API_KEY — showing curated historical parallels.",
+    parallels: getRadar(topic),
+    disclaimer: RADAR_DISCLAIMER,
+  });
 });
 
 // ─── LEGAL ANALYZER ───────────────────────────────────────────────────
