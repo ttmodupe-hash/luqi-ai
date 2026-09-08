@@ -151,6 +151,34 @@ for (const f of walk(path.join(rootDir, "db"))) scanFile(f, srcRoot);
 for (const f of walk(path.join(rootDir, "scripts"))) scanFile(f, srcRoot);
 for (const f of walk(srcRoot)) scanFile(f, srcRoot);
 
+// ── 5.5 HOLLOW-CODE SCAN ─────────────────────────────────────────────
+// Catches placeholder content and hollow markers in routed/build files —
+// the exact damage class a stray "placeholder" commit can introduce.
+// Fails the build on any hit; never rewrites anything.
+const HOLLOW_MARKERS = [
+  "PLACEHOLDER_WILL_READ_FROM_DISK",
+  "PLACEHOLDER_",
+  "PASTE_HERE",
+  "TODO: implement",
+  "FIXME: implement",
+  "// Add logic here",
+  "# Add logic here",
+];
+for (const f of [...walk(path.join(rootDir, "src")), ...walk(path.join(rootDir, "api")), ...walk(path.join(rootDir, "db"))]) {
+  const content = fs.readFileSync(f, "utf8");
+  const rel = path.relative(rootDir, f);
+  if ((f.endsWith(".tsx") || f.endsWith(".ts")) && content.trim().length > 0 && content.trim().length < 40) {
+    errors.push(`HOLLOW FILE: ${rel} is ${content.trim().length} bytes — routed/module files must be complete`);
+    continue;
+  }
+  for (const marker of HOLLOW_MARKERS) {
+    if (content.includes(marker)) {
+      errors.push(`HOLLOW MARKER: ${rel} contains '${marker}' — placeholder content must never ship`);
+      break;
+    }
+  }
+}
+
 // ── 6. UNDEFINED-NAME CRASH CHECK (tsc, filtered) ────────────────────
 // esbuild/vite cannot detect undefined identifiers (e.g. a JSX icon used
 // without import) — they compile fine and crash the app at mount.
