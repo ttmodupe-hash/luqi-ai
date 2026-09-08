@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/* OPERATIONAL PAGE IMPORTS (46 Pages) */
+/* OPERATIONAL PAGE IMPORTS (47 Pages) */
 import Home from "./pages/Home";
 import StatusPage from "./pages/StatusPage";
 import KBPage from "./pages/KBPage";
@@ -25,6 +25,7 @@ import LocalLLMPage from "@/pages/LocalLLMPage";
 import JobMarketPage from "@/pages/JobMarketPage";
 import TenderPage from "@/pages/TenderPage";
 import OpportunityPage from "@/pages/OpportunityPage";
+import EmergencyPage from "@/pages/EmergencyPage";
 import CompanionDashboardPage from "@/pages/CompanionDashboardPage";
 import VoiceInterfacePage from "@/pages/VoiceInterfacePage";
 import AdminPage from "@/pages/AdminPage";
@@ -99,6 +100,7 @@ import {
   HeartPulse,
   Scale,
   Building2,
+  AlertTriangle,
 } from "lucide-react";
 
 /* TYPES */
@@ -149,6 +151,7 @@ const navGroups: NavGroup[] = [
     label: "Daily Life",
     icon: Zap,
     items: [
+      { id: "emergency", label: "Emergency", icon: AlertTriangle, path: "/emergency" },
       { id: "load-shedding", label: "Load Shedding", icon: Zap, path: "/load-shedding" },
       { id: "water", label: "Water Services", icon: Droplets, path: "/water" },
       { id: "health", label: "Health Shield", icon: HeartPulse, path: "/health" },
@@ -413,6 +416,7 @@ function App() {
             <Route path="/accountant" element={<AccountantPage />} />
             <Route path="/tender" element={<TenderPage />} />
             <Route path="/opportunity" element={<OpportunityPage />} />
+            <Route path="/emergency" element={<EmergencyPage />} />
             <Route path="/financial-literacy" element={<FinancialLiteracyPage />} />
             <Route path="/business-reg" element={<BusinessRegPage />} />
             <Route path="/load-shedding" element={<LoadSheddingPage />} />
