@@ -1,5 +1,9 @@
 # LUQI AI Lab Simulator
 
+> ## UNIFICATION STATUS (2026-09-15)
+> Becoming LUQI 1.0.0: engine/ (FastAPI/Postgres) + web/ (React) + cli/ (omega.py). Full plan: docs/UNIFICATION.md.
+> No tree moves until Phase 0 runs its deploy + loader shims. New capabilities queue into the plan, not main.
+
 **Pan-African + Global AI Education Platform** — Interactive STEM labs, multi-language i18n, self-healing architecture, and AI video generation.
 
 ---
