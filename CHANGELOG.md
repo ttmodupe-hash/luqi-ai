@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [29.1.0] - 2025-01-15
+> **2026-09-18 correction:** the `[29.1.0]` entry below was dated `2025-01-15`,
+> which predates by ~19 months the documents that describe v29.1.0 as current
+> (MASTER_PROJECT_PROFILE dated 2026-08-12; commit history Jul–Sep 2026).
+> The entry content is retained as recorded, but several listed modules have
+> no corresponding files in the tree (e.g. vector DB, workflow engine,
+> CV builder, weather). Treat this entry as aspirational until the tree is
+> verified per the unification plan (`docs/UNIFICATION.md`).
+
+## [29.1.0] - DATE UNRELIABLE (was recorded as 2025-01-15; actual work is 2026-07..2026-09 per commit log)
 
 ### Added
 - Enhanced multi-agent orchestration with agent mesh topology
