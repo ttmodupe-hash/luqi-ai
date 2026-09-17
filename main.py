@@ -235,14 +235,11 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount crypto_endpoints: {e}")
 
-    # Education, Labs & Simulators endpoints
-    try:
-        from backend.education_endpoints import router as edu_router
-        app.include_router(edu_router, prefix="/api/v25")
-        mounted.append("education_endpoints")
-        logger.info("Mounted: education_endpoints at /api/v25")
-    except Exception as e:
-        logger.warning(f"Failed to mount education_endpoints: {e}")
+    # NOTE (2026-09-18): the education_endpoints mount was removed. The file
+    # backend/education_endpoints.py never contained real code on GitHub —
+    # it was a 13-byte PASTE_CONTENT placeholder at every commit (the 50+
+    # endpoint module described in commit c5ba4070 exists only on the author's
+    # local machine; lost delta). Rebuild tracked in the unification queue.
 
     # Advanced Companion endpoints (voice, avatar, personality, memory)
     try:
@@ -298,7 +295,7 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount tutor_bridge: {e}")
 
-    # Legacy router
+    # Legacy router (intent classifier — restored 2026-09-18 from commit 4628fb19)
     try:
         from backend import router as legacy_router
         app.include_router(legacy_router.router, prefix="/api")
