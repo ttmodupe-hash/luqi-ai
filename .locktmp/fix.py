@@ -3,7 +3,7 @@ chunks=[]
 for i in range(6):
     s=open('.locktmp/c%d'%i).read()
     chunks.append(''.join(s.split()))
-FIX={0: [['delete', 14943, 14944, ''], ['insert', 15877, 15877, 'a'], ['delete', 15878, 15879, ''], ['insert', 21155, 21155, 'Y'], ['insert', 21440, 21440, 'q']], 1: [['insert', 15415, 15415, 'q'], ['replace', 21043, 21044, '2']], 2: [['insert', 14709, 14709, 'a']]}
+FIX={0: [['replace', 2186, 2187, 'N'], ['insert', 6367, 6367, 'd'], ['insert', 15875, 15875, 'a'], ['delete', 15876, 15877, '']], 1: [['insert', 15415, 15415, 'q'], ['replace', 21043, 21044, '2']], 2: [['insert', 14709, 14709, 'a']]}
 for idx,ops in FIX.items():
     s=chunks[idx]
     for tag,i1,i2,text in sorted(ops,key=lambda o:-o[1]):
