@@ -143,6 +143,7 @@
     <button class="mode-btn" data-mode="research">Deep Research</button>
     <button class="mode-btn" data-mode="professor">The Professor</button>
     <button class="mode-btn" data-mode="scam">Scam Shield</button>
+    <button class="mode-btn" data-mode="history">African History</button>
   </nav>
   <select class="langsel" id="langsel" title="Answer generation in African languages activates when the engine's language models are enabled at launch.">
     <option value="en" selected>English (ZA)</option>
@@ -166,6 +167,7 @@
     <div class="chips">
       <button class="chip" data-mode="scam" data-fill="Join my WhatsApp crypto investment group! Invest R500 and get R5000 back in 7 days. Guaranteed returns, risk-free. Limited spots today — our automated trading bot never loses.">🛡️ Check an investment offer</button>
       <button class="chip" data-mode="research" data-fill="What does research say about the health effects of moringa?">🔎 Research a topic</button>
+      <button class="chip" data-mode="history" data-fill="Great Zimbabwe">🏺 Explore African history</button>
       <button class="chip" data-mode="standard" data-fill="Explain compound interest simply">💡 Ask anything</button>
     </div>
 
@@ -228,7 +230,7 @@
 </main>
 
 <div class="foot">
-  LUQI AI chat prototype v1.0.0 · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  LUQI AI chat prototype v1.1.0 · now wired to the African History Archive (GET /v1/history) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -319,9 +321,11 @@ const MODE_NOTES = {
   standard: "Mode: Standard — zero-cost front door (POST /v1/hybrid/process)",
   research: "Mode: Deep Research — scholarly retrieval, citations or UNVERIFIED (POST /v1/deep-research)",
   professor: "Mode: The Professor — adaptive teaching; requires a LUQI account at launch",
-  scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)"
+  scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)",
+  history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)"
 };
 let mode = "standard";
+let ARCHIVE_META = null;  /* filled from GET /v1/history when the engine is reachable */
 
 /* ── mode switching ────────────────────────────────────── */
 function setMode(m){
@@ -352,6 +356,11 @@ $("#engine-url").textContent = ENGINE_BASE;
         + esc(cat.version) + " · " + esc(cat.patterns.length) + " fraud families</strong> (updated "
         + esc(cat.updated) + "), plus deterministic promise-anatomy signals. Source: <span class='kv'>GET /v1/finlit/scam-patterns</span>.";
     } catch (_) { /* catalogue card keeps its honest fallback text */ }
+    try {
+      const meta = await (await fetch(ENGINE_BASE + "/v1/history")).json();
+      ARCHIVE_META = meta;
+      $("#engine-detail").innerHTML += " African History Archive: <strong>v" + esc(meta.version) + " · " + esc(meta.entry_count) + " curated entries</strong>, every one carrying its sources.";
+    } catch (_) { /* archive note appears only when the engine really serves it */ }
   } catch (e) {
     $("#engine-pill").textContent = "engine: offline"; $("#engine-pill").classList.add("offline");
     $("#engine-detail").innerHTML = "No engine reachable at <span class='kv'>" + esc(ENGINE_BASE) + "</span> (" + esc(e.message || e) + "). "
@@ -473,6 +482,56 @@ function renderResearch(d, tag){
   }).join("");
 }
 
+/* ── African History renderer (contract: core/african_history.py) ── */
+function sourceItem(s){  /* archive sources are citation strings — shown as-is, never linkified unless real */
+  return "<div class='cite nolink'><div class='t'>" + esc(s) + "</div></div>";
+}
+function renderHistory(d, query, tag){
+  contract(d);
+  const hits = d.entries || [];
+  if (!hits.length){
+    addAI("<p><strong>No archive entry matches “" + esc(query) + "” — and I will not invent one.</strong></p>"
+        + "<p style='margin-top:8px'>The archive holds " + (ARCHIVE_META ? "<strong>" + esc(ARCHIVE_META.entry_count) + "</strong>" : "a curated set of")
+        + " sourced entries" + (ARCHIVE_META ? " (v" + esc(ARCHIVE_META.version) + ")" : "")
+        + ". Try a kingdom, a leader, a city — or browse the whole sweep at <span class='kv'>GET /v1/history/timeline</span>.</p>",
+        "<span class='tag honest'>No match — nothing fabricated</span>");
+    return;
+  }
+  let h = "<div class='meta-row' style='margin:0 0 8px'><span class='pill'>" + hits.length + " archive " + (hits.length === 1 ? "entry" : "entries") + "</span>"
+        + (ARCHIVE_META ? "<span class='pill'>archive v" + esc(ARCHIVE_META.version) + "</span>" : "")
+        + "<span class='pill online'>every entry sourced</span></div>";
+  hits.forEach(e => {
+    h += "<details class='pattern' data-entry='" + esc(e.id) + "'><summary>" + esc(e.title)
+       + " · <span class='kv'>" + esc(e.period) + " · " + esc(e.region) + "</span></summary>"
+       + "<div class='body'><p>" + esc(e.summary) + "</p>"
+       + "<p class='kv' style='margin-top:6px'>Category: " + esc(e.category) + " — expand once to load significance &amp; sources</p>"
+       + "<div class='hist-detail'></div></div></details>";
+  });
+  h += "<p class='kv' style='margin-top:8px'>Curated educational content — check the sources yourself. History that is still debated is labelled as debate, not presented as settled fact.</p>";
+  const el = addAI(h, tag);
+  el.querySelectorAll("details[data-entry]").forEach(det => {
+    det.addEventListener("toggle", async () => {
+      if (!det.open || det.dataset.loaded) return;
+      det.dataset.loaded = "1";
+      const box = det.querySelector(".hist-detail");
+      const id = det.getAttribute("data-entry");
+      try {
+        const full = await (await fetch(ENGINE_BASE + "/v1/history/entries/" + encodeURIComponent(id))).json();
+        box.innerHTML = "<p style='margin-top:6px'><strong>Why it matters:</strong> " + esc(full.significance) + "</p>"
+          + "<div class='panel-h'>Sources (" + full.sources.length + ")</div>"
+          + full.sources.map(sourceItem).join("");
+        $("#sources-empty").style.display = "none"; $("#sources-body").style.display = "block";
+        const vb = $("#sources-verif"); vb.textContent = "ARCHIVE ENTRY — SOURCES PROVIDED"; vb.className = "verif-banner verified";
+        $("#sources-meta").textContent = full.title + " · " + full.period + " · " + full.sources.length + " sources"
+          + (ARCHIVE_META ? " · archive v" + ARCHIVE_META.version : "");
+        $("#sources-list").innerHTML = full.sources.map(sourceItem).join("");
+      } catch (err) {
+        box.innerHTML = "<p class='kv'>Could not load the full entry (" + esc(String(err && err.message || err)) + ") — the summary above is still real archive content.</p>";
+      }
+    });
+  });
+}
+
 /* ── Standard (hybrid front door) renderer (contract: core/hybrid_ai.py) ── */
 function renderHybrid(d, query, tag){
   contract(d);
@@ -495,7 +554,7 @@ function renderHybrid(d, query, tag){
 /* ── honest states ─────────────────────────────────────── */
 function professorCard(){
   addAI("<p><strong>The Professor</strong> adapts explanations to your level, quizzes you, and tracks your progress over time. It runs on the engine's teaching engine and requires a LUQI account — sign-in activates at launch.</p>"
-      + "<p style='margin-top:8px'>Until then, <strong>Standard</strong>, <strong>Deep Research</strong> and <strong>Scam Shield</strong> work without an account.</p>",
+      + "<p style='margin-top:8px'>Until then, <strong>Standard</strong>, <strong>Deep Research</strong>, <strong>Scam Shield</strong> and <strong>African History</strong> work without an account.</p>",
       "<span class='tag honest'>Honest status</span>");
 }
 function offlineCard(endpoint, payload, err){
@@ -507,6 +566,9 @@ function offlineCard(endpoint, payload, err){
 }
 
 /* ── send ──────────────────────────────────────────────── */
+$("#input").addEventListener("keydown", ev => {  /* Enter sends, Shift+Enter newline */
+  if (ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#composer").requestSubmit(); }
+});
 $("#composer").addEventListener("submit", async ev => {
   ev.preventDefault();
   const text = $("#input").value.trim(); if (!text) return;
@@ -515,6 +577,7 @@ $("#composer").addEventListener("submit", async ev => {
   const spin = thinking();
   let endpoint, payload;
   if (mode === "scam"){ endpoint = "/v1/finlit/scam-check"; payload = {text}; }
+  else if (mode === "history"){ endpoint = "/v1/history/entries?q=" + encodeURIComponent(text); payload = null; }
   else if (mode === "research"){
     endpoint = "/v1/deep-research"; payload = {query: text, mode: "auto"};
     const hint = $("#hint").value.trim(); if (hint) payload.context_hint = hint;
@@ -522,19 +585,23 @@ $("#composer").addEventListener("submit", async ev => {
   else { endpoint = "/v1/hybrid/process"; payload = {text}; }
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 90000);
-    const res = await fetch(ENGINE_BASE + endpoint, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload), signal: ctl.signal
-    }); clearTimeout(t);
+    const res = payload === null
+      ? await fetch(ENGINE_BASE + endpoint, {signal: ctl.signal})
+      : await fetch(ENGINE_BASE + endpoint, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload), signal: ctl.signal
+        });
+    clearTimeout(t);
     spin.remove();
     if (!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0, 300));
     const data = await res.json();
     const tag = "<span class='tag live'>Live engine response</span>";
     if (mode === "scam") renderScam(data, tag);
     else if (mode === "research") renderResearch(data, tag);
+    else if (mode === "history") renderHistory(data, text, tag);
     else renderHybrid(data, text, tag);
   } catch (e) {
-    spin.remove(); offlineCard(ENGINE_BASE + endpoint, payload, e);
+    spin.remove(); offlineCard(ENGINE_BASE + endpoint, payload || {method: "GET"}, e);
   }
 });
 
