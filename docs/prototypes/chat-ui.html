@@ -144,6 +144,7 @@
     <button class="mode-btn" data-mode="professor">The Professor</button>
     <button class="mode-btn" data-mode="scam">Scam Shield</button>
     <button class="mode-btn" data-mode="history">African History</button>
+    <button class="mode-btn" data-mode="services">Everyday Services</button>
   </nav>
   <select class="langsel" id="langsel" title="Answer generation in African languages activates when the engine's language models are enabled at launch.">
     <option value="en" selected>English (ZA)</option>
@@ -168,6 +169,7 @@
       <button class="chip" data-mode="scam" data-fill="Join my WhatsApp crypto investment group! Invest R500 and get R5000 back in 7 days. Guaranteed returns, risk-free. Limited spots today — our automated trading bot never loses.">🛡️ Check an investment offer</button>
       <button class="chip" data-mode="research" data-fill="What does research say about the health effects of moringa?">🔎 Research a topic</button>
       <button class="chip" data-mode="history" data-fill="Great Zimbabwe">🏺 Explore African history</button>
+      <button class="chip" data-mode="services" data-fill="SRD grant">🏛️ SASSA / SARS / UIF help</button>
       <button class="chip" data-mode="standard" data-fill="Explain compound interest simply">💡 Ask anything</button>
     </div>
 
@@ -230,7 +232,7 @@
 </main>
 
 <div class="foot">
-  LUQI AI chat prototype v1.1.0 · now wired to the African History Archive (GET /v1/history) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  LUQI AI chat prototype v1.2.0 · wired to the African History Archive (GET /v1/history) and the Everyday Services Pack (GET /v1/services) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -322,10 +324,12 @@ const MODE_NOTES = {
   research: "Mode: Deep Research — scholarly retrieval, citations or UNVERIFIED (POST /v1/deep-research)",
   professor: "Mode: The Professor — adaptive teaching; requires a LUQI account at launch",
   scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)",
-  history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)"
+  history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)",
+  services: "Mode: Everyday Services — SASSA/SRD/SARS/UIF/NSFAS guides, official sources only (GET /v1/services/entries)"
 };
 let mode = "standard";
 let ARCHIVE_META = null;  /* filled from GET /v1/history when the engine is reachable */
+let SERVICES_META = null; /* filled from GET /v1/services when the engine is reachable */
 
 /* ── mode switching ────────────────────────────────────── */
 function setMode(m){
@@ -361,6 +365,11 @@ $("#engine-url").textContent = ENGINE_BASE;
       ARCHIVE_META = meta;
       $("#engine-detail").innerHTML += " African History Archive: <strong>v" + esc(meta.version) + " · " + esc(meta.entry_count) + " curated entries</strong>, every one carrying its sources.";
     } catch (_) { /* archive note appears only when the engine really serves it */ }
+    try {
+      const smeta = await (await fetch(ENGINE_BASE + "/v1/services")).json();
+      SERVICES_META = smeta;
+      $("#engine-detail").innerHTML += " Everyday Services Pack: <strong>v" + esc(smeta.version) + " · " + esc(smeta.entry_count) + " sourced guides</strong> (SASSA · SARS · UIF · NSFAS).";
+    } catch (_) { /* services note appears only when the engine really serves it */ }
   } catch (e) {
     $("#engine-pill").textContent = "engine: offline"; $("#engine-pill").classList.add("offline");
     $("#engine-detail").innerHTML = "No engine reachable at <span class='kv'>" + esc(ENGINE_BASE) + "</span> (" + esc(e.message || e) + "). "
@@ -532,6 +541,58 @@ function renderHistory(d, query, tag){
   });
 }
 
+/* ── Everyday Services renderer (contract: core/everyday_services.py) ── */
+function renderServices(d, query, tag){
+  contract(d);
+  const hits = d.entries || [];
+  if (!hits.length){
+    addAI("<p><strong>No services guide matches “" + esc(query) + "” — and I will not improvise one.</strong></p>"
+        + "<p style='margin-top:8px'>The pack holds " + (SERVICES_META ? "<strong>" + esc(SERVICES_META.entry_count) + "</strong>" : "a curated set of")
+        + " sourced guides" + (SERVICES_META ? " (v" + esc(SERVICES_META.version) + ")" : "")
+        + " covering SASSA grants, SRD, SARS, UIF and NSFAS. Try “SRD”, “pension”, “child grant”, “tax”, “UIF” or “NSFAS”.</p>",
+        "<span class='tag honest'>No match — nothing fabricated</span>");
+    return;
+  }
+  let h = "<div class='meta-row' style='margin:0 0 8px'><span class='pill'>" + hits.length + " services " + (hits.length === 1 ? "guide" : "guides") + "</span>"
+        + (SERVICES_META ? "<span class='pill'>pack v" + esc(SERVICES_META.version) + "</span>" : "")
+        + "<span class='pill online'>official sources only</span></div>";
+  hits.forEach(e => {
+    h += "<details class='pattern' data-svc='" + esc(e.id) + "'><summary>" + esc(e.title)
+       + " · <span class='kv'>" + esc(e.agency) + "</span></summary>"
+       + "<div class='body'><p>" + esc(e.summary) + "</p>"
+       + "<p class='kv' style='margin-top:6px'>Category: " + esc(e.category) + " — expand once to load steps, official channels & scam warning</p>"
+       + "<div class='svc-detail'></div></div></details>";
+  });
+  h += "<p class='kv' style='margin-top:8px'>Guidance built from official sources with a verified-on date — amounts and dates change; confirm on the official channel named in each guide. Educational information only, not legal or financial advice.</p>";
+  const el = addAI(h, tag);
+  el.querySelectorAll("details[data-svc]").forEach(det => {
+    det.addEventListener("toggle", async () => {
+      if (!det.open || det.dataset.loaded) return;
+      det.dataset.loaded = "1";
+      const box = det.querySelector(".svc-detail");
+      const id = det.getAttribute("data-svc");
+      try {
+        const full = await (await fetch(ENGINE_BASE + "/v1/services/entries/" + encodeURIComponent(id))).json();
+        let ih = "<div class='panel-h'>Steps</div><ol class='tight' style='padding-left:18px'>"
+          + full.steps.map(s => "<li>" + esc(s) + "</li>").join("") + "</ol>"
+          + "<div class='panel-h'>Official channels</div><ul class='tight'>"
+          + full.official_channels.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul>"
+          + "<div class='escalate' style='margin-top:8px'><strong>⚠️ Scam warning:</strong> " + esc(full.warning) + "</div>"
+          + "<div class='panel-h'>Sources (" + full.sources.length + ")</div>"
+          + full.sources.map(sourceItem).join("");
+        box.innerHTML = ih;
+        $("#sources-empty").style.display = "none"; $("#sources-body").style.display = "block";
+        const vb = $("#sources-verif"); vb.textContent = "SERVICES GUIDE — OFFICIAL SOURCES"; vb.className = "verif-banner verified";
+        $("#sources-meta").textContent = full.title + " · " + full.agency + " · " + full.sources.length + " sources"
+          + (SERVICES_META ? " · pack v" + SERVICES_META.version : "");
+        $("#sources-list").innerHTML = full.sources.map(sourceItem).join("");
+      } catch (err) {
+        box.innerHTML = "<p class='kv'>Could not load the full guide (" + esc(String(err && err.message || err)) + ") — the summary above is still real pack content.</p>";
+      }
+    });
+  });
+}
+
 /* ── Standard (hybrid front door) renderer (contract: core/hybrid_ai.py) ── */
 function renderHybrid(d, query, tag){
   contract(d);
@@ -554,7 +615,7 @@ function renderHybrid(d, query, tag){
 /* ── honest states ─────────────────────────────────────── */
 function professorCard(){
   addAI("<p><strong>The Professor</strong> adapts explanations to your level, quizzes you, and tracks your progress over time. It runs on the engine's teaching engine and requires a LUQI account — sign-in activates at launch.</p>"
-      + "<p style='margin-top:8px'>Until then, <strong>Standard</strong>, <strong>Deep Research</strong>, <strong>Scam Shield</strong> and <strong>African History</strong> work without an account.</p>",
+      + "<p style='margin-top:8px'>Until then, <strong>Standard</strong>, <strong>Deep Research</strong>, <strong>Scam Shield</strong>, <strong>African History</strong> and <strong>Everyday Services</strong> work without an account.</p>",
       "<span class='tag honest'>Honest status</span>");
 }
 function offlineCard(endpoint, payload, err){
@@ -578,6 +639,7 @@ $("#composer").addEventListener("submit", async ev => {
   let endpoint, payload;
   if (mode === "scam"){ endpoint = "/v1/finlit/scam-check"; payload = {text}; }
   else if (mode === "history"){ endpoint = "/v1/history/entries?q=" + encodeURIComponent(text); payload = null; }
+  else if (mode === "services"){ endpoint = "/v1/services/entries?q=" + encodeURIComponent(text); payload = null; }
   else if (mode === "research"){
     endpoint = "/v1/deep-research"; payload = {query: text, mode: "auto"};
     const hint = $("#hint").value.trim(); if (hint) payload.context_hint = hint;
@@ -599,6 +661,7 @@ $("#composer").addEventListener("submit", async ev => {
     if (mode === "scam") renderScam(data, tag);
     else if (mode === "research") renderResearch(data, tag);
     else if (mode === "history") renderHistory(data, text, tag);
+    else if (mode === "services") renderServices(data, text, tag);
     else renderHybrid(data, text, tag);
   } catch (e) {
     spin.remove(); offlineCard(ENGINE_BASE + endpoint, payload || {method: "GET"}, e);
