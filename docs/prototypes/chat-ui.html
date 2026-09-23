@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LUQI AI — Chat Prototype (wired to the real engine)</title>
 <!--
-  LUQI AI chat prototype v1.3.1 — 2026-09-23 (adds "listen" companion-mode pill)
+  LUQI AI chat prototype v1.3.2 — 2026-09-23 (adds "listen" companion-mode pill + AV Consult panel)
   Enhanced from the founder's "Ubuntu-Powered Intelligence" mock.
 
   HOUSE LAW COMPLIANCE
@@ -180,6 +180,7 @@
     <button class="mode-btn" data-mode="history">African History</button>
     <button class="mode-btn" data-mode="services">Everyday Services</button>
     <button class="mode-btn" data-mode="companion"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Companion</button>
+    <button class="mode-btn" data-mode="av">AV Consult</button>
   </nav>
   <select class="langsel" id="langsel" title="Answer generation in African languages activates when the engine's language models are enabled at launch.">
     <option value="en" selected>English (ZA)</option>
@@ -261,6 +262,35 @@
         </form>
       </div>
     </div>
+
+    <!-- ── AV Consult mode (structured form; shown only when the AV chip is active) ── -->
+    <div id="av-wrap" style="display:none">
+      <div class="card">
+        <h3>AV Consult — room acoustics &amp; honest cost estimate</h3>
+        <p>Sabine RT60 acoustics, cabling blueprint and a ZAR landing-cost <strong>estimate</strong> — with every assumption disclosed and the exchange rate labelled by source. Never a fake "live quote".</p>
+        <form id="av-form">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+            <label class="kv">L (m) <input id="av-l" type="number" step="0.1" min="0.6" max="100" value="7.5" required style="width:70px"></label>
+            <label class="kv">W (m) <input id="av-w" type="number" step="0.1" min="0.6" max="100" value="5.0" required style="width:70px"></label>
+            <label class="kv">H (m) <input id="av-h" type="number" step="0.1" min="2.0" max="20" value="3.0" required style="width:70px"></label>
+            <label class="kv">Walls
+              <select id="av-wall">
+                <option value="glass" selected>glass</option>
+                <option value="concrete">concrete</option>
+                <option value="drywall">drywall</option>
+                <option value="acoustic_paneling">acoustic paneling</option>
+              </select>
+            </label>
+            <label class="kv">USD→ZAR (optional) <input id="av-fx" type="number" step="0.01" min="1" max="100" placeholder="live/auto" style="width:90px"></label>
+          </div>
+          <div class="composer-row" style="margin-top:10px">
+            <span class="kv" id="av-note">POST /v1/av/consult · deterministic, no account needed</span>
+            <button type="submit" class="action send">Consult</button>
+          </div>
+        </form>
+        <div id="av-result" style="margin-top:12px"></div>
+      </div>
+    </div>
   </section>
 
   <aside class="rail">
@@ -309,7 +339,7 @@
 </main>
 
 <div class="foot">
-  LUQI AI chat prototype v1.3.1 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services) and the Companion engine (POST /v1/companion/chat, Bearer auth) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  LUQI AI chat prototype v1.3.2 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -403,7 +433,8 @@ const MODE_NOTES = {
   scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)",
   history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)",
   services: "Mode: Everyday Services — SASSA/SRD/SARS/UIF/NSFAS guides, official sources only (GET /v1/services/entries)",
-  companion: "Mode: Companion — relational chat with memory, streaks and trust (POST /v1/companion/chat · Bearer auth)"
+  companion: "Mode: Companion — relational chat with memory, streaks and trust (POST /v1/companion/chat · Bearer auth)",
+  av: "Mode: AV Consult — Sabine acoustics + honest ZAR estimate, assumptions disclosed (POST /v1/av/consult)"
 };
 let mode = "standard";
 let ARCHIVE_META = null;  /* filled from GET /v1/history when the engine is reachable */
@@ -416,10 +447,12 @@ function setMode(m){
   $("#mode-note").textContent = MODE_NOTES[m];
   $("#hint-field").classList.toggle("show", m === "research");
   const cp = m === "companion";
-  $("#stream").style.display = cp ? "none" : "";
-  document.querySelector(".chips").style.display = cp ? "none" : "";
-  $("#composer").style.display = cp ? "none" : "";
+  const av = m === "av";
+  $("#stream").style.display = (cp || av) ? "none" : "";
+  document.querySelector(".chips").style.display = (cp || av) ? "none" : "";
+  $("#composer").style.display = (cp || av) ? "none" : "";
   $("#companion-wrap").style.display = cp ? "" : "none";
+  $("#av-wrap").style.display = av ? "" : "none";
   if (cp) cpEnter();
   if (m === "professor") professorCard();
 }
@@ -716,7 +749,7 @@ $("#input").addEventListener("keydown", ev => {  /* Enter sends, Shift+Enter new
 });
 $("#composer").addEventListener("submit", async ev => {
   ev.preventDefault();
-  if (mode === "companion") return;  /* companion uses its own composer below */
+  if (mode === "companion" || mode === "av") return;  /* companion + AV use their own forms */
   const text = $("#input").value.trim(); if (!text) return;
   if (mode === "professor"){ professorCard(); return; }
   addUser(text); $("#input").value = "";
@@ -750,6 +783,65 @@ $("#composer").addEventListener("submit", async ev => {
     else renderHybrid(data, text, tag);
   } catch (e) {
     spin.remove(); offlineCard(ENGINE_BASE + endpoint, payload || {method: "GET"}, e);
+  }
+});
+
+/* ── AV Consult mode (contract: core/av_consult.py) ───────
+   POST /v1/av/consult {length_m,width_m,height_m,wall_material,fx_rate_zar?}
+   → {system_meta, spatial_metrics.acoustics_payload, cabling_infrastructure,
+      procurement_projection{estimated_landing_cost_zar, fx_source, ...},
+      sources:[], is_estimate:true, estimate_disclaimer}
+   HONESTY: fx_source rendered verbatim — request_override | live:open.er-api.com
+   | fallback_assumption. Offline → honest offlineCard, never a fake number. */
+const FX_SOURCE_LABELS = {
+  "request_override": "rate you typed in",
+  "live:open.er-api.com": "LIVE rate fetched now from open.er-api.com",
+  "fallback_assumption": "assumed fallback rate (live fetch unavailable) — treat with caution"
+};
+function renderAv(d){
+  contract(d);
+  const ac = d.spatial_metrics.acoustics_payload;
+  const p = d.procurement_projection;
+  const fxLabel = FX_SOURCE_LABELS[p.fx_source] || p.fx_source;
+  let h = "<div class='panel-h'>Profile — " + esc(d.system_meta.architectural_profile) + " (" + d.spatial_metrics.floor_area_sqm + " m²)</div>"
+    + "<ul class='tight'>"
+    + "<li><strong>RT60:</strong> " + ac.estimated_rt60_seconds + "s · " + esc(ac.aec_dsp_profile) + "</li>"
+    + "<li>" + esc(ac.acoustic_remediation_notes) + "</li>"
+    + "<li><strong>Cable:</strong> " + esc(d.cabling_infrastructure.recommended_cable) + " — " + esc(d.cabling_infrastructure.engineering_justification) + "</li>"
+    + "</ul>"
+    + "<div class='panel-h'>Cost estimate (assumptions disclosed)</div>"
+    + "<ul class='tight'>"
+    + "<li><strong>R " + Number(p.estimated_landing_cost_zar).toLocaleString("en-ZA", {minimumFractionDigits: 2}) + "</strong> estimated landing cost (" + esc(p.recommended_hardware_ecosystem) + " ecosystem)</li>"
+    + "<li>USD base $" + p.base_hardware_usd_assumption + " × brand mult " + p.brand_multiplier_assumption + " × buffer " + p.volatility_buffer_assumption + " × R" + p.fx_rate_zar_used + "/$ <em>(" + esc(fxLabel) + ")</em></li>"
+    + "<li>" + esc(p.distributor_note) + "</li>"
+    + "</ul>"
+    + "<p class='kv' style='margin-top:6px'>⚠️ " + esc(d.estimate_disclaimer) + "</p>";
+  $("#av-result").innerHTML = "<div class='msg ai'><div class='bubble'><span class='tag live'>Live engine response</span>" + h + "</div></div>";
+}
+$("#av-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const payload = {
+    length_m: parseFloat($("#av-l").value),
+    width_m: parseFloat($("#av-w").value),
+    height_m: parseFloat($("#av-h").value),
+    wall_material: $("#av-wall").value
+  };
+  const fx = $("#av-fx").value.trim();
+  if (fx) payload.fx_rate_zar = parseFloat(fx);
+  $("#av-result").innerHTML = "<div class='msg ai'><div class='bubble'><div class='thinking'>Contacting the engine…</div></div></div>";
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30000);
+    const res = await fetch(ENGINE_BASE + "/v1/av/consult", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload), signal: ctl.signal
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0, 300));
+    renderAv(await res.json());
+  } catch (e) {
+    $("#av-result").innerHTML = "";
+    offlineCard(ENGINE_BASE + "/v1/av/consult", payload, e);
+    setMode("standard");
   }
 });
 
