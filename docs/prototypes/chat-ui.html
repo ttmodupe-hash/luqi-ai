@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LUQI AI — Chat Prototype (wired to the real engine)</title>
+<title>luqi-ai — Chat Prototype (wired to the real engine)</title>
 <!--
-  LUQI AI chat prototype v1.3.3 — 2026-09-23 (listen pill + AV Consult panel with network/scheduling/PDF)
+  luqi-ai chat prototype v1.3.4 — 2026-09-23 (branding lowercase + tester feedback panel)
   Enhanced from the founder's "Ubuntu-Powered Intelligence" mock.
 
   HOUSE LAW COMPLIANCE
@@ -169,7 +169,7 @@
 <header>
   <div class="brand">
     <div class="brand-mark">L</div>
-    <div class="brand-name">LUQI AI<small>Prototype — wired to the real engine</small></div>
+    <div class="brand-name">luqi-ai<small>Prototype — wired to the real engine</small></div>
   </div>
   <span class="pill" id="engine-pill">engine: checking…</span>
   <nav class="modes" id="modes">
@@ -210,7 +210,7 @@
     </div>
 
     <form class="composer" id="composer">
-      <textarea id="input" placeholder="Ask LUQI anything — or paste a suspicious message to check it…"></textarea>
+      <textarea id="input" placeholder="Ask luqi-ai anything — or paste a suspicious message to check it…"></textarea>
       <div class="hint-field" id="hint-field">
         <label for="hint">context_hint (optional) — synonyms, the local or technical name, a document title, a spelling variant. Routed straight back into retrieval (Knowledge-Gap Policy v1.0.0).</label>
         <input id="hint" type="text" maxlength="1000" placeholder="e.g. the Setswana name, the clinic code, the form number…">
@@ -224,7 +224,7 @@
     <!-- ── Companion mode (auth-gated; shown only when the Companion chip is active) ── -->
     <div id="companion-wrap" style="display:none">
       <div class="card gate-card" id="cp-gate" style="display:none">
-        <h3>Companion — your LUQI account</h3>
+        <h3>Companion — your luqi-ai account</h3>
         <p>Your Companion remembers your conversations, builds a streak when you show up, and grows trust over time. Sign in to continue — or create an account in one step.</p>
         <input id="cp-email" type="email" autocomplete="email" placeholder="you@example.com">
         <input id="cp-pass" type="password" autocomplete="current-password" placeholder="Password">
@@ -338,6 +338,24 @@
       <p style="margin-top:8px">Community reporting — live “reported near you” counts — is on the roadmap. <strong>No number is shown until real data exists.</strong></p>
     </div>
 
+    <div class="card" id="feedback-card">
+      <h3>🧪 Tester feedback</h3>
+      <p class="empty" id="fb-note">Testing luqi-ai? Tell us what happened — praise, confusion, bugs, ideas. Your report goes straight to the engine's feedback loop (<span class="kv">POST /v1/feedback/submit</span>, PII-scrubbed) and shapes what gets built next. Sign in via <strong>Companion</strong> mode first.</p>
+      <div id="fb-form" style="display:none">
+        <label class="kv" for="fb-rating">Overall experience</label>
+        <select id="fb-rating" style="width:100%;margin:4px 0 8px">
+          <option value="5">5 — excellent</option>
+          <option value="4">4 — good</option>
+          <option value="3" selected>3 — mixed</option>
+          <option value="2">2 — poor</option>
+          <option value="1">1 — broken</option>
+        </select>
+        <textarea id="fb-comment" maxlength="480" placeholder="What were you trying to do? What happened? What did you expect?" style="width:100%;min-height:70px"></textarea>
+        <button class="action" id="fb-send" type="button" style="margin-top:8px">Send feedback</button>
+        <p class="kv" id="fb-status" style="margin-top:6px"></p>
+      </div>
+    </div>
+
     <div class="card">
       <h3>Response contract</h3>
       <p class="empty" id="contract-empty">The raw JSON of the last engine response appears here — nothing hidden.</p>
@@ -347,7 +365,7 @@
 </main>
 
 <div class="foot">
-  LUQI AI chat prototype v1.3.3 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult + real PDF via POST /v1/av/proposal) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  luqi-ai chat prototype v1.3.4 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult + real PDF via POST /v1/av/proposal) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -437,7 +455,7 @@ const EXAMPLE_SCAM = {
 const MODE_NOTES = {
   standard: "Mode: Standard — zero-cost front door (POST /v1/hybrid/process)",
   research: "Mode: Deep Research — scholarly retrieval, citations or UNVERIFIED (POST /v1/deep-research)",
-  professor: "Mode: The Professor — adaptive teaching; requires a LUQI account at launch",
+  professor: "Mode: The Professor — adaptive teaching; requires a luqi-ai account at launch",
   scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)",
   history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)",
   services: "Mode: Everyday Services — SASSA/SRD/SARS/UIF/NSFAS guides, official sources only (GET /v1/services/entries)",
@@ -739,7 +757,7 @@ function renderHybrid(d, query, tag){
 
 /* ── honest states ─────────────────────────────────────── */
 function professorCard(){
-  addAI("<p><strong>The Professor</strong> adapts explanations to your level, quizzes you, and tracks your progress over time. It runs on the engine's teaching engine and requires a LUQI account — sign-in activates at launch.</p>"
+  addAI("<p><strong>The Professor</strong> adapts explanations to your level, quizzes you, and tracks your progress over time. It runs on the engine's teaching engine and requires a luqi-ai account — sign-in activates at launch.</p>"
       + "<p style='margin-top:8px'>Until then, <strong>Standard</strong>, <strong>Deep Research</strong>, <strong>Scam Shield</strong>, <strong>African History</strong> and <strong>Everyday Services</strong> work without an account.</p>",
       "<span class='tag honest'>Honest status</span>");
 }
@@ -1088,6 +1106,38 @@ $("#cp-composer").addEventListener("submit", async ev => {
     contract({attempted: ENGINE_BASE + "/v1/companion/chat", payload: payload, error: String(e && e.message || e)});
   }
 });
+
+/* ── Tester feedback (contract: core/feedback.py) ─────────
+   POST /v1/feedback/submit Bearer {target,rating,comment} → {recorded:true}
+   Reuses the Companion session token. Engine errors verbatim; no fake success. */
+function fbRefresh(){
+  const authed = !!sessionStorage.getItem("luqi_token");
+  $("#fb-form").style.display = authed ? "" : "none";
+  $("#fb-note").style.display = authed ? "none" : "";
+}
+$("#fb-send").addEventListener("click", async () => {
+  const comment = $("#fb-comment").value.trim();
+  const payload = {target: "tester", rating: parseInt($("#fb-rating").value, 10), comment};
+  $("#fb-status").textContent = "Sending…";
+  try {
+    const res = await fetch(ENGINE_BASE + "/v1/feedback/submit", {
+      method: "POST",
+      headers: {"Content-Type": "application/json",
+                "Authorization": "Bearer " + sessionStorage.getItem("luqi_token")},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0, 200));
+    const d = await res.json();
+    $("#fb-status").textContent = d.recorded === true
+      ? "Recorded by the engine — thank you. This shapes what gets built next."
+      : "Engine answered but did not confirm recording: " + JSON.stringify(d);
+    if (d.recorded === true) $("#fb-comment").value = "";
+    contract({endpoint: "/v1/feedback/submit", response: d});
+  } catch (e) {
+    $("#fb-status").textContent = "Not sent — engine said: " + String(e && e.message || e);
+  }
+});
+setInterval(fbRefresh, 2000); fbRefresh();
 
 /* ── recorded example (renders on load, same code path) ── */
 addUser("Join my WhatsApp crypto investment group! Invest R500 and get R5000 back in 7 days. Guaranteed returns, risk-free. Limited spots today — our automated trading bot never loses.");
