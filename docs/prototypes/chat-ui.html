@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>luqi-ai — Chat Prototype (wired to the real engine)</title>
+<title>Luqi-ai — Chat Prototype (wired to the real engine)</title>
 <!--
-  luqi-ai chat prototype v1.3.4 — 2026-09-23 (branding lowercase + tester feedback panel)
+  Luqi-ai chat prototype v1.3.5 — 2026-09-23 (brand form: capital L, lowercase rest + tester feedback panel)
   Enhanced from the founder's "Ubuntu-Powered Intelligence" mock.
 
   HOUSE LAW COMPLIANCE
@@ -169,7 +169,7 @@
 <header>
   <div class="brand">
     <div class="brand-mark">L</div>
-    <div class="brand-name">luqi-ai<small>Prototype — wired to the real engine</small></div>
+    <div class="brand-name">Luqi-ai<small>Prototype — wired to the real engine</small></div>
   </div>
   <span class="pill" id="engine-pill">engine: checking…</span>
   <nav class="modes" id="modes">
@@ -210,7 +210,7 @@
     </div>
 
     <form class="composer" id="composer">
-      <textarea id="input" placeholder="Ask luqi-ai anything — or paste a suspicious message to check it…"></textarea>
+      <textarea id="input" placeholder="Ask Luqi-ai anything — or paste a suspicious message to check it…"></textarea>
       <div class="hint-field" id="hint-field">
         <label for="hint">context_hint (optional) — synonyms, the local or technical name, a document title, a spelling variant. Routed straight back into retrieval (Knowledge-Gap Policy v1.0.0).</label>
         <input id="hint" type="text" maxlength="1000" placeholder="e.g. the Setswana name, the clinic code, the form number…">
@@ -224,7 +224,7 @@
     <!-- ── Companion mode (auth-gated; shown only when the Companion chip is active) ── -->
     <div id="companion-wrap" style="display:none">
       <div class="card gate-card" id="cp-gate" style="display:none">
-        <h3>Companion — your luqi-ai account</h3>
+        <h3>Companion — your Luqi-ai account</h3>
         <p>Your Companion remembers your conversations, builds a streak when you show up, and grows trust over time. Sign in to continue — or create an account in one step.</p>
         <input id="cp-email" type="email" autocomplete="email" placeholder="you@example.com">
         <input id="cp-pass" type="password" autocomplete="current-password" placeholder="Password">
@@ -340,7 +340,7 @@
 
     <div class="card" id="feedback-card">
       <h3>🧪 Tester feedback</h3>
-      <p class="empty" id="fb-note">Testing luqi-ai? Tell us what happened — praise, confusion, bugs, ideas. Your report goes straight to the engine's feedback loop (<span class="kv">POST /v1/feedback/submit</span>, PII-scrubbed) and shapes what gets built next. Sign in via <strong>Companion</strong> mode first.</p>
+      <p class="empty" id="fb-note">Testing Luqi-ai? Tell us what happened — praise, confusion, bugs, ideas. Your report goes straight to the engine's feedback loop (<span class="kv">POST /v1/feedback/submit</span>, PII-scrubbed) and shapes what gets built next. Sign in via <strong>Companion</strong> mode first.</p>
       <div id="fb-form" style="display:none">
         <label class="kv" for="fb-rating">Overall experience</label>
         <select id="fb-rating" style="width:100%;margin:4px 0 8px">
@@ -365,7 +365,7 @@
 </main>
 
 <div class="foot">
-  luqi-ai chat prototype v1.3.4 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult + real PDF via POST /v1/av/proposal) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  Luqi-ai chat prototype v1.3.5 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult + real PDF via POST /v1/av/proposal) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -455,7 +455,7 @@ const EXAMPLE_SCAM = {
 const MODE_NOTES = {
   standard: "Mode: Standard — zero-cost front door (POST /v1/hybrid/process)",
   research: "Mode: Deep Research — scholarly retrieval, citations or UNVERIFIED (POST /v1/deep-research)",
-  professor: "Mode: The Professor — adaptive teaching; requires a luqi-ai account at launch",
+  professor: "Mode: The Professor — adaptive teaching; requires a Luqi-ai account at launch",
   scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)",
   history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)",
   services: "Mode: Everyday Services — SASSA/SRD/SARS/UIF/NSFAS guides, official sources only (GET /v1/services/entries)",
@@ -757,7 +757,7 @@ function renderHybrid(d, query, tag){
 
 /* ── honest states ─────────────────────────────────────── */
 function professorCard(){
-  addAI("<p><strong>The Professor</strong> adapts explanations to your level, quizzes you, and tracks your progress over time. It runs on the engine's teaching engine and requires a luqi-ai account — sign-in activates at launch.</p>"
+  addAI("<p><strong>The Professor</strong> adapts explanations to your level, quizzes you, and tracks your progress over time. It runs on the engine's teaching engine and requires a Luqi-ai account — sign-in activates at launch.</p>"
       + "<p style='margin-top:8px'>Until then, <strong>Standard</strong>, <strong>Deep Research</strong>, <strong>Scam Shield</strong>, <strong>African History</strong> and <strong>Everyday Services</strong> work without an account.</p>",
       "<span class='tag honest'>Honest status</span>");
 }
