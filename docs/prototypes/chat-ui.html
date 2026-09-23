@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LUQI AI — Chat Prototype (wired to the real engine)</title>
 <!--
-  LUQI AI chat prototype v1.3.0 — 2026-09-23
+  LUQI AI chat prototype v1.3.1 — 2026-09-23 (adds "listen" companion-mode pill)
   Enhanced from the founder's "Ubuntu-Powered Intelligence" mock.
 
   HOUSE LAW COMPLIANCE
@@ -245,6 +245,7 @@
           <button class="cp-pill" data-cpmode="coach" type="button">coach</button>
           <button class="cp-pill" data-cpmode="quiz" type="button">quiz</button>
           <button class="cp-pill" data-cpmode="explain" type="button">explain</button>
+          <button class="cp-pill" data-cpmode="listen" type="button">listen</button>
         </div>
         <div class="cp-topic" id="cp-topic-row">
           <label for="cp-topic">topic (optional, ≤120 chars) — what this session is about</label>
@@ -308,7 +309,7 @@
 </main>
 
 <div class="foot">
-  LUQI AI chat prototype v1.3.0 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services) and the Companion engine (POST /v1/companion/chat, Bearer auth) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  LUQI AI chat prototype v1.3.1 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services) and the Companion engine (POST /v1/companion/chat, Bearer auth) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -757,7 +758,7 @@ $("#composer").addEventListener("submit", async ev => {
    POST /v1/auth/login    {email,password} → {access_token}
    POST /v1/auth/logout   Bearer
    POST /v1/companion/chat Bearer {mode,message,topic?}
-     mode ∈ chat|mentor|coach|quiz|explain →
+     mode ∈ chat|mentor|coach|quiz|explain|listen →
      {mode, companion_name, response, directives_applied[],
       memories_used, relationship:{interaction_count, streak_days, trust_score}}
    Engine error detail text is surfaced verbatim — never softened. */
