@@ -293,6 +293,21 @@
   .pride-band .pillar p { color: #e8d5b8; }
   .pride-band .pillar .num { background: rgba(246,189,133,0.14); color: #f6bd85; }
   @media (prefers-reduced-motion: reduce) { .pulse-dot { animation: none; } }
+
+  /* Persona cards (PERSONA-1) */
+  .personas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  @media (max-width: 720px) { .personas { grid-template-columns: 1fr; } }
+  .persona { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow); transition: transform .18s ease, box-shadow .18s ease; }
+  .persona:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .persona .pimg { aspect-ratio: 4 / 3; background: linear-gradient(150deg, #291a30 0%, #753a1f 60%, #b4562f 100%); }
+  .persona .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .persona .pbody { padding: 24px 26px 26px; }
+  .persona .role { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .persona h3 { font-size: 1.22rem; margin-bottom: 8px; }
+  .persona p { color: var(--ink-soft); font-size: 0.95rem; }
+  .persona .ex { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); font-size: 0.84rem; color: var(--muted); }
+  .persona .ex b { color: var(--ink-soft); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -301,6 +316,7 @@
   <div class="wrap nav">
     <a href="#top" class="brand"><span class="mark">L</span>Luqi-ai</a>
     <nav class="nav-links" aria-label="Primary">
+      <a href="#who" class="hide-sm">Who it&rsquo;s for</a>
       <a href="#mission" class="hide-sm">Mission</a>
       <a href="#ubuntu" class="hide-sm">Ubuntu</a>
       <a href="#capabilities">Capabilities</a>
@@ -400,6 +416,67 @@
       </div>
       <p class="src">Built, not promised — every number is verifiable in the public engine repository:
         <a href="https://github.com/ttmodupe-hash/omega-super-ai" target="_blank" rel="noopener">github.com/ttmodupe-hash/omega-super-ai</a></p>
+    </div>
+  </section>
+
+  <!-- Who Luqi-ai serves (PERSONA-1) -->
+  <section class="section" id="who">
+    <div class="wrap reveal">
+      <span class="eyebrow">Who Luqi-ai serves</span>
+      <h2>Built for the people building Africa</h2>
+      <p class="lead">Not a generic chatbot — a working companion for the student in the library,
+         the advocate in chambers, the learner the system under-served, and the team telling
+         Africa&rsquo;s stories. Every example below maps to a capability that exists in the engine today.</p>
+      <div class="personas">
+        <div class="persona">
+          <div class="pimg"><img src="assets/personas/persona-medical-student.jpg" alt="A South African medical student studying with the Luqi-ai tutor on her tablet in a golden-hour library" loading="lazy" onerror="this.remove()"></div>
+          <div class="pbody">
+            <div class="role">The medical student</div>
+            <h3>Anatomy at 2am, explained at your level</h3>
+            <p>The Professor adapts to where you actually are — it explains, quizzes you, and spaces
+               your revision so it sticks. Deep Research pulls cited papers from scholarly indexes when
+               you need the evidence. A study aid that always shows its sources — you verify against
+               your textbooks and lecturers, never the other way round.</p>
+            <div class="ex"><b>Try:</b> &ldquo;Explain the renin-angiotensin system like I&rsquo;m in second year — then quiz me.&rdquo;</div>
+          </div>
+        </div>
+        <div class="persona">
+          <div class="pimg"><img src="assets/personas/persona-lawyer.jpg" alt="A South African advocate in chambers reviewing research with Luqi-ai citations on his laptop" loading="lazy" onerror="this.remove()"></div>
+          <div class="pbody">
+            <div class="role">The lawyer</div>
+            <h3>Research with receipts, not guesses</h3>
+            <p>Deep Research investigates across sources and returns citations you can resolve yourself —
+               so your work starts from verifiable ground, and anything unproven is labelled UNVERIFIED
+               instead of dressed up as fact. Plain-language summaries help you explain complex material
+               to clients. Research support — never legal advice; the professional judgment stays with you.</p>
+            <div class="ex"><b>Try:</b> &ldquo;Summarise the elements of delictual liability — with sources I can check.&rdquo;</div>
+          </div>
+        </div>
+        <div class="persona">
+          <div class="pimg"><img src="assets/personas/persona-technical-learner.jpg" alt="A young South African vocational student assembling electronics while the Luqi-ai tutor explains the circuit step by step" loading="lazy" onerror="this.remove()"></div>
+          <div class="pbody">
+            <div class="role">The technical learner</div>
+            <h3>The tutor that meets you where the system left you</h3>
+            <p>Under-resourced schooling is not a character flaw — it is a starting point. The Professor
+               begins from your real level, no shame and no skipped steps, in isiZulu, isiXhosa, Sesotho
+               and the rest of the 22-language registry (generation activates at launch). Pages are
+               data-light by design, built for the connections people here actually have.</p>
+            <div class="ex"><b>Try:</b> &ldquo;Teach me basic electricity step by step — I missed a lot of school.&rdquo;</div>
+          </div>
+        </div>
+        <div class="persona">
+          <div class="pimg"><img src="assets/personas/persona-comms-team.jpg" alt="An African communications team collaborating around laptops with Luqi-ai research on screen" loading="lazy" onerror="this.remove()"></div>
+          <div class="pbody">
+            <div class="role">The communications team</div>
+            <h3>Campaigns grounded in verifiable research</h3>
+            <p>Turn a brief into a sourced landscape: Deep Research brings citations you can resolve,
+               and labels what it cannot prove — so your clients never ship a hallucination. Draft and
+               adapt messages across the 22-language African registry, with every claim traceable back
+               to its source.</p>
+            <div class="ex"><b>Try:</b> &ldquo;Research stokvel saving trends for a financial-inclusion campaign — with sources.&rdquo;</div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
