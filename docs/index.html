@@ -49,6 +49,8 @@
   .section h2 { font-size: clamp(1.75rem, 3.6vw, 2.4rem); margin-bottom: 14px; }
   .lead { color: var(--ink-soft); max-width: 660px; margin-bottom: 46px; font-size: 1.06rem; }
   .band { background: linear-gradient(180deg, #f5f0e8 0%, var(--bg) 100%); }
+  .ubuntu-band { background: linear-gradient(180deg, #f8efe4 0%, #f3e6d5 100%); border-top: 1px solid #e8d9c4; border-bottom: 1px solid #e8d9c4; }
+  .accent-i { font-style: italic; color: var(--accent-deep); }
 
   /* Reveal on scroll */
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s ease; }
@@ -249,6 +251,7 @@
     <a href="#top" class="brand"><span class="mark">L</span>LUQI AI</a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#mission" class="hide-sm">Mission</a>
+      <a href="#ubuntu" class="hide-sm">Ubuntu</a>
       <a href="#capabilities">Capabilities</a>
       <a href="#how" class="hide-sm">How it works</a>
       <a href="#roadmap" class="hide-sm">Roadmap</a>
@@ -288,7 +291,7 @@
     <div class="wrap">
       <div class="row reveal">
         <div><div class="num">12</div><div class="lbl">fraud families in the live<br>scam-detection catalogue</div></div>
-        <div><div class="num">26</div><div class="lbl">sourced entries in the African<br>History Archive — Kush to 1994</div></div>
+        <div><div class="num">29</div><div class="lbl">sourced entries in the African<br>History Archive — Kush to ubuntu</div></div>
         <div><div class="num">15</div><div class="lbl">everyday-services guides built<br>from official sources only</div></div>
         <div><div class="num">22</div><div class="lbl">African languages in the<br>platform registry</div></div>
       </div>
@@ -329,6 +332,39 @@
           <h3>Money skills and learning</h3>
           <p>Budgeting, saving, debt, tax-free accounts, investing basics — plus an adaptive
              tutor for any subject, at your level, in your language.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ubuntu — the philosophy the platform is built on -->
+  <section class="section ubuntu-band" id="ubuntu">
+    <div class="wrap reveal">
+      <span class="eyebrow">Our foundation</span>
+      <h2>Built on <span class="accent-i">ubuntu</span> — &ldquo;I am because we are.&rdquo;</h2>
+      <p class="lead">Ubuntu is the Nguni philosophy that a person is a person through other people —
+         <em>umuntu ngumuntu ngabantu</em>. It is the reason a scam check protects your neighbour&rsquo;s
+         pension too, why every guide is written for the whole community and nobody is priced out of the
+         truth, and why our history archive treats African knowledge as inheritance, not content.
+         It is not a slogan we borrowed; it is the design brief.</p>
+      <div class="pillars">
+        <div class="pillar">
+          <h3>We protect each other</h3>
+          <p>Every scam pattern we verify shields the whole community — my safety is bound up in yours.</p>
+        </div>
+        <div class="pillar">
+          <h3>Knowledge is shared, not sold back</h3>
+          <p>Sources are shown, guides are plain-language, and the archive belongs to everyone it describes.</p>
+        </div>
+        <div class="pillar">
+          <h3>Dignity by default</h3>
+          <p>No fake testimonials, no invented statistics, no shame — honest answers, even when the answer is
+             &ldquo;unverified.&rdquo;</p>
+        </div>
+        <div class="pillar">
+          <h3>It shaped a nation</h3>
+          <p>Ubuntu carried South Africa from the TRC to the Constitutional Court&rsquo;s 1995 Makwanyane
+             judgment — now it carries a platform. Read it in the archive.</p>
         </div>
       </div>
     </div>
@@ -472,7 +508,7 @@
       <div class="r-item">
         <div>
           <h3>Capabilities built and tested</h3>
-          <p>Scam Shield (12 fraud families), African History Archive (26 sourced entries) and the
+          <p>Scam Shield (12 fraud families), African History Archive (29 sourced entries, ubuntu included) and the
              Everyday Services Pack (15 official-source guides) are complete, tested and in the public repo.</p>
         </div>
         <span class="tag done">Built</span>
