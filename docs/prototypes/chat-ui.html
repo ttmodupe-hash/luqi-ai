@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LUQI AI — Chat Prototype (wired to the real engine)</title>
 <!--
-  LUQI AI chat prototype v1.0.0 — 2026-09-21
+  LUQI AI chat prototype v1.3.0 — 2026-09-23
   Enhanced from the founder's "Ubuntu-Powered Intelligence" mock.
 
   HOUSE LAW COMPLIANCE
@@ -16,6 +16,10 @@
       POST /v1/finlit/scam-check   (scam_shield)
       POST /v1/deep-research       (deep_research, KNOWLEDGE_GAP_POLICY v1.0.0)
       POST /v1/hybrid/process      (standard front door, guided escalation)
+      POST /v1/auth/register       (Companion: create account, then login)
+      POST /v1/auth/login          (Companion: JWT access_token, sessionStorage)
+      POST /v1/auth/logout         (Companion: Bearer, best-effort)
+      POST /v1/companion/chat      (Companion: Bearer, {mode, message, topic?})
   - No stubs: every control on this page does what it claims, or is absent.
   - Design tokens identical to luqi-ai.com (no Tailwind CDN — pure CSS,
     light and fast for low-bandwidth African realities).
@@ -129,6 +133,36 @@
                padding:10px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
   .foot{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color:var(--muted);text-align:center}
   .thinking{font-size:13px;color:var(--muted);font-style:italic;padding:8px 0}
+  /* ── companion mode ─────────────────────────────────── */
+  .mode-btn svg{vertical-align:-1.5px;margin-right:4px}
+  .gate-card{max-width:480px;margin:30px auto}
+  .gate-card input{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;
+                   font:inherit;font-size:13.5px;background:var(--bg);color:var(--ink);outline:none;margin-top:8px}
+  .gate-card input:focus{border-color:var(--accent)}
+  .gate-toggle{background:none;border:none;color:var(--accent);font-size:12.5px;cursor:pointer;
+               text-decoration:underline;padding:0}
+  .pii-note{margin-top:12px;font-size:11.5px;color:var(--muted);border:1px dashed var(--line);
+            border-radius:8px;padding:7px 10px;background:var(--bg)}
+  .auth-err{margin-top:9px;font-size:12.5px;color:var(--r-critical)}
+  .cp-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .logout-btn{background:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px;
+              font-size:11.5px;color:var(--soft);cursor:pointer}
+  .logout-btn:hover{border-color:var(--r-critical);color:var(--r-critical)}
+  .cp-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .cp-pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px;
+           font-size:12px;color:var(--soft);cursor:pointer;text-transform:capitalize}
+  .cp-pill:hover{border-color:var(--accent);color:var(--accent)}
+  .cp-pill.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .cp-topic{display:none;margin-bottom:10px}
+  .cp-topic.show{display:block}
+  .cp-topic label{font-size:11px;color:var(--olive-deep);font-weight:600}
+  .cp-topic input{width:100%;border:1px dashed var(--olive);border-radius:8px;padding:7px 10px;
+                  font-size:12.5px;background:var(--olive-soft);color:var(--ink);outline:none}
+  .cp-speaker{font-family:Georgia,serif;font-size:12.5px;font-weight:700;color:var(--accent);margin-bottom:4px}
+  .relbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:11px;padding-top:9px;
+          border-top:1px dashed var(--line);font-size:11.5px;color:var(--muted)}
+  .relbar strong{color:var(--soft);font-weight:600}
+  .relchip{border:1px solid var(--line);border-radius:999px;padding:1px 8px;background:var(--bg);font-size:10.5px}
 </style>
 </head>
 <body>
@@ -145,6 +179,7 @@
     <button class="mode-btn" data-mode="scam">Scam Shield</button>
     <button class="mode-btn" data-mode="history">African History</button>
     <button class="mode-btn" data-mode="services">Everyday Services</button>
+    <button class="mode-btn" data-mode="companion"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Companion</button>
   </nav>
   <select class="langsel" id="langsel" title="Answer generation in African languages activates when the engine's language models are enabled at launch.">
     <option value="en" selected>English (ZA)</option>
@@ -184,6 +219,47 @@
         <button type="submit" class="action send">Send</button>
       </div>
     </form>
+
+    <!-- ── Companion mode (auth-gated; shown only when the Companion chip is active) ── -->
+    <div id="companion-wrap" style="display:none">
+      <div class="card gate-card" id="cp-gate" style="display:none">
+        <h3>Companion — your LUQI account</h3>
+        <p>Your Companion remembers your conversations, builds a streak when you show up, and grows trust over time. Sign in to continue — or create an account in one step.</p>
+        <input id="cp-email" type="email" autocomplete="email" placeholder="you@example.com">
+        <input id="cp-pass" type="password" autocomplete="current-password" placeholder="Password">
+        <div style="display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap">
+          <button class="action" id="cp-auth-btn" type="button">Sign in</button>
+          <button class="gate-toggle" id="cp-auth-toggle" type="button">Create an account instead</button>
+        </div>
+        <p class="pii-note">🔒 Never paste ID numbers, banking PINs or passwords here. The engine scrubs personal information server-side — but don't type it in the first place.</p>
+        <p class="auth-err" id="cp-auth-err" role="alert"></p>
+      </div>
+      <div id="cp-chat" style="display:none">
+        <div class="cp-top">
+          <span class="kv">Signed in as <strong id="cp-email-shown"></strong></span>
+          <button class="logout-btn" id="cp-logout" type="button">Log out</button>
+        </div>
+        <div class="cp-pills" id="cp-pills">
+          <button class="cp-pill active" data-cpmode="chat" type="button">chat</button>
+          <button class="cp-pill" data-cpmode="mentor" type="button">mentor</button>
+          <button class="cp-pill" data-cpmode="coach" type="button">coach</button>
+          <button class="cp-pill" data-cpmode="quiz" type="button">quiz</button>
+          <button class="cp-pill" data-cpmode="explain" type="button">explain</button>
+        </div>
+        <div class="cp-topic" id="cp-topic-row">
+          <label for="cp-topic">topic (optional, ≤120 chars) — what this session is about</label>
+          <input id="cp-topic" type="text" maxlength="120" placeholder="e.g. fractions, writing a CV, the 1995 final…">
+        </div>
+        <div id="cp-thread"></div>
+        <form class="composer" id="cp-composer">
+          <textarea id="cp-input" maxlength="4000" placeholder="Talk to your Companion… (Enter sends, Shift+Enter newline)"></textarea>
+          <div class="composer-row">
+            <span class="kv" id="cp-note">companion mode: chat · POST /v1/companion/chat</span>
+            <button type="submit" class="action send">Send</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </section>
 
   <aside class="rail">
@@ -232,7 +308,7 @@
 </main>
 
 <div class="foot">
-  LUQI AI chat prototype v1.2.0 · wired to the African History Archive (GET /v1/history) and the Everyday Services Pack (GET /v1/services) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  LUQI AI chat prototype v1.3.0 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services) and the Companion engine (POST /v1/companion/chat, Bearer auth) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -325,7 +401,8 @@ const MODE_NOTES = {
   professor: "Mode: The Professor — adaptive teaching; requires a LUQI account at launch",
   scam: "Mode: Scam Shield — pattern catalogue + promise-anatomy signals (POST /v1/finlit/scam-check)",
   history: "Mode: African History — curated archive; every entry carries verifiable sources (GET /v1/history/entries)",
-  services: "Mode: Everyday Services — SASSA/SRD/SARS/UIF/NSFAS guides, official sources only (GET /v1/services/entries)"
+  services: "Mode: Everyday Services — SASSA/SRD/SARS/UIF/NSFAS guides, official sources only (GET /v1/services/entries)",
+  companion: "Mode: Companion — relational chat with memory, streaks and trust (POST /v1/companion/chat · Bearer auth)"
 };
 let mode = "standard";
 let ARCHIVE_META = null;  /* filled from GET /v1/history when the engine is reachable */
@@ -337,6 +414,12 @@ function setMode(m){
   document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === m));
   $("#mode-note").textContent = MODE_NOTES[m];
   $("#hint-field").classList.toggle("show", m === "research");
+  const cp = m === "companion";
+  $("#stream").style.display = cp ? "none" : "";
+  document.querySelector(".chips").style.display = cp ? "none" : "";
+  $("#composer").style.display = cp ? "none" : "";
+  $("#companion-wrap").style.display = cp ? "" : "none";
+  if (cp) cpEnter();
   if (m === "professor") professorCard();
 }
 document.querySelectorAll(".mode-btn").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
@@ -632,6 +715,7 @@ $("#input").addEventListener("keydown", ev => {  /* Enter sends, Shift+Enter new
 });
 $("#composer").addEventListener("submit", async ev => {
   ev.preventDefault();
+  if (mode === "companion") return;  /* companion uses its own composer below */
   const text = $("#input").value.trim(); if (!text) return;
   if (mode === "professor"){ professorCard(); return; }
   addUser(text); $("#input").value = "";
@@ -665,6 +749,200 @@ $("#composer").addEventListener("submit", async ev => {
     else renderHybrid(data, text, tag);
   } catch (e) {
     spin.remove(); offlineCard(ENGINE_BASE + endpoint, payload || {method: "GET"}, e);
+  }
+});
+
+/* ── Companion mode (contract: omega-super-ai) ────────────
+   POST /v1/auth/register {email,password} → 201, then login
+   POST /v1/auth/login    {email,password} → {access_token}
+   POST /v1/auth/logout   Bearer
+   POST /v1/companion/chat Bearer {mode,message,topic?}
+     mode ∈ chat|mentor|coach|quiz|explain →
+     {mode, companion_name, response, directives_applied[],
+      memories_used, relationship:{interaction_count, streak_days, trust_score}}
+   Engine error detail text is surfaced verbatim — never softened. */
+const CP_TOPIC_MODES = {mentor: 1, quiz: 1, explain: 1};  /* topic field only where the engine uses it */
+let cpMode = "chat";
+let cpCreate = false;  /* gate toggle: false = sign in, true = create account */
+
+function cpDetailText(r){  /* honest error text straight from the engine body */
+  return r.text().then(t => {
+    try {
+      const j = JSON.parse(t);
+      if (typeof j.detail === "string") return j.detail;
+      if (Array.isArray(j.detail)) return j.detail.map(x => x.msg || JSON.stringify(x)).join("; ");
+      return t.slice(0, 300);
+    } catch (_) { return t.slice(0, 300) || ("HTTP " + r.status); }
+  });
+}
+function cpOfflineErr(e){
+  return "ENGINE OFFLINE — start the engine or check the URL (tried " + ENGINE_BASE + "). " + String(e && e.message || e);
+}
+function cpEnter(){  /* called every time the Companion chip becomes active */
+  if (sessionStorage.getItem("luqi_token")) cpShowChat(); else cpShowGate();
+}
+function cpShowGate(msg){
+  $("#cp-chat").style.display = "none";
+  $("#cp-gate").style.display = "";
+  $("#cp-auth-err").textContent = msg || "";
+}
+function cpShowChat(){
+  $("#cp-gate").style.display = "none";
+  $("#cp-chat").style.display = "";
+  $("#cp-email-shown").textContent = sessionStorage.getItem("luqi_email") || "your account";
+  if (!$("#cp-thread").children.length)
+    cpAddAI("<p><strong>This is your Companion.</strong> It remembers your conversations, builds a streak when you show up, and grows trust over time. Pick a mode above and say hello — the first reply comes from the real engine.</p>",
+            "<span class='tag honest'>Honest intro — nothing simulated</span>", null);
+}
+
+/* ── companion auth ─────────────────────────────────── */
+$("#cp-auth-toggle").addEventListener("click", () => {
+  cpCreate = !cpCreate;
+  $("#cp-auth-btn").textContent = cpCreate ? "Create account" : "Sign in";
+  $("#cp-auth-toggle").textContent = cpCreate ? "Sign in instead" : "Create an account instead";
+  $("#cp-pass").setAttribute("autocomplete", cpCreate ? "new-password" : "current-password");
+  $("#cp-auth-err").textContent = "";
+});
+$("#cp-auth-btn").addEventListener("click", cpAuth);
+$("#cp-gate").addEventListener("keydown", ev => { if (ev.key === "Enter"){ ev.preventDefault(); cpAuth(); } });
+async function cpAuth(){
+  const email = $("#cp-email").value.trim(), password = $("#cp-pass").value;
+  const errEl = $("#cp-auth-err"); errEl.textContent = "";
+  if (!email || !password){ errEl.textContent = "Enter both an email address and a password."; return; }
+  const btn = $("#cp-auth-btn"); btn.disabled = true;
+  const label = btn.textContent; btn.textContent = "Contacting the engine…";
+  try {
+    if (cpCreate){
+      const rr = await fetch(ENGINE_BASE + "/v1/auth/register", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email, password})
+      });
+      if (!rr.ok){ errEl.textContent = await cpDetailText(rr); return; }  /* e.g. 409 already registered */
+    }
+    const lr = await fetch(ENGINE_BASE + "/v1/auth/login", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email, password})
+    });
+    if (!lr.ok){ errEl.textContent = await cpDetailText(lr); return; }
+    const d = await lr.json();
+    if (!d.access_token){ errEl.textContent = "The engine answered login but sent no access_token — nothing was invented to fill the gap."; return; }
+    sessionStorage.setItem("luqi_token", d.access_token);
+    sessionStorage.setItem("luqi_email", email);
+    $("#cp-pass").value = "";
+    cpShowChat();
+  } catch (e) {
+    errEl.textContent = cpOfflineErr(e);
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+$("#cp-logout").addEventListener("click", async () => {
+  const tok = sessionStorage.getItem("luqi_token");
+  try {
+    if (tok) await fetch(ENGINE_BASE + "/v1/auth/logout", {method: "POST", headers: {"Authorization": "Bearer " + tok}});
+  } catch (_) { /* logout is best-effort; the local session is cleared regardless */ }
+  sessionStorage.removeItem("luqi_token");
+  sessionStorage.removeItem("luqi_email");
+  $("#cp-pass").value = "";
+  cpShowGate();
+});
+
+/* ── companion chat ─────────────────────────────────── */
+document.querySelectorAll(".cp-pill").forEach(p => p.addEventListener("click", () => {
+  cpMode = p.dataset.cpmode;
+  document.querySelectorAll(".cp-pill").forEach(x => x.classList.toggle("active", x === p));
+  $("#cp-topic-row").classList.toggle("show", !!CP_TOPIC_MODES[cpMode]);
+  $("#cp-note").textContent = "companion mode: " + cpMode + " · POST /v1/companion/chat";
+}));
+function cpAddUser(text){
+  const d = document.createElement("div"); d.className = "msg user";
+  d.innerHTML = "<div class='bubble'>" + esc(text) + "</div>";
+  $("#cp-thread").appendChild(d); d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+function cpAddAI(html, tag, speaker){
+  const d = document.createElement("div"); d.className = "msg ai";
+  d.innerHTML = "<div class='bubble'>" + (speaker ? "<div class='cp-speaker'>" + esc(speaker) + "</div>" : "") + (tag || "") + html + "</div>";
+  $("#cp-thread").appendChild(d); d.scrollIntoView({behavior:"smooth", block:"end"});
+  return d;
+}
+function cpThinking(){
+  const d = document.createElement("div"); d.className = "msg ai";
+  d.innerHTML = "<div class='bubble'><div class='thinking'>Your Companion is thinking…</div></div>";
+  $("#cp-thread").appendChild(d); d.scrollIntoView({behavior:"smooth", block:"end"});
+  return d;
+}
+function renderCompanion(d){
+  contract(d);
+  /* response is a parsed JSON object — usually {"reply": "..."} but may be arbitrary */
+  let reply = null, raw = null;
+  const resp = d.response;
+  if (typeof resp === "string"){
+    try {
+      const p = JSON.parse(resp);
+      if (p && typeof p === "object" && typeof p.reply === "string") reply = p.reply;
+      else raw = JSON.stringify(p, null, 2);
+    } catch (_) { reply = resp; }
+  } else if (resp && typeof resp === "object"){
+    if (typeof resp.reply === "string") reply = resp.reply;
+    else raw = JSON.stringify(resp, null, 2);
+  }
+  let h = reply != null
+    ? "<div>" + esc(reply).replace(/\n{2,}/g, "<br><br>").replace(/\n/g, "<br>") + "</div>"
+    : "<pre class='contract'>" + esc(raw != null ? raw : "(the engine sent an empty response object)") + "</pre>";
+  /* relationship bar — the companionship proof, visible but understated */
+  const r = d.relationship || {};
+  h += "<div class='relbar'>"
+     + "<span>streak <strong>" + esc(r.streak_days != null ? r.streak_days : "—") + "</strong> day" + (r.streak_days === 1 ? "" : "s") + "</span>"
+     + "<span>·</span><span>trust <strong>" + esc(r.trust_score != null ? r.trust_score : "—") + "</strong></span>"
+     + "<span>·</span><span>interactions <strong>" + esc(r.interaction_count != null ? r.interaction_count : "—") + "</strong></span>";
+  if (d.memories_used != null) h += "<span class='relchip'>memories used: " + esc(d.memories_used) + "</span>";
+  (d.directives_applied || []).forEach(x => { h += "<span class='relchip'>" + esc(x) + "</span>"; });
+  h += "</div>";
+  cpAddAI(h, "<span class='tag live'>Live engine response</span>", d.companion_name || "Companion");
+}
+$("#cp-input").addEventListener("keydown", ev => {  /* Enter sends, Shift+Enter newline — same as other modes */
+  if (ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); $("#cp-composer").requestSubmit(); }
+});
+$("#cp-composer").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const text = $("#cp-input").value.trim(); if (!text) return;
+  const tok = sessionStorage.getItem("luqi_token");
+  if (!tok){ cpShowGate("Your session ended — please sign in again."); return; }
+  cpAddUser(text); $("#cp-input").value = "";
+  const spin = cpThinking();
+  const payload = {mode: cpMode, message: text};
+  const topic = $("#cp-topic").value.trim();
+  if (CP_TOPIC_MODES[cpMode] && topic) payload.topic = topic.slice(0, 120);
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 90000);
+    const res = await fetch(ENGINE_BASE + "/v1/companion/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "Authorization": "Bearer " + tok},
+      body: JSON.stringify(payload), signal: ctl.signal
+    });
+    clearTimeout(t);
+    spin.remove();
+    if (res.status === 401 || res.status === 403){
+      const detail = await cpDetailText(res);  /* e.g. "Not authenticated" / session expired */
+      sessionStorage.removeItem("luqi_token");
+      cpShowGate(detail + " — please sign in again.");  /* thread is kept; it reappears on next sign-in */
+      return;
+    }
+    if (!res.ok){
+      const detail = await cpDetailText(res);  /* e.g. 400 invalid mode, 503 persistence unavailable — verbatim */
+      cpAddAI("<p><strong>The engine could not answer (HTTP " + res.status + ").</strong></p>"
+            + "<p style='margin-top:6px'>" + esc(detail) + "</p>",
+              "<span class='tag honest'>Engine error — detail shown verbatim</span>", "Companion");
+      contract({attempted: ENGINE_BASE + "/v1/companion/chat", status: res.status, detail: detail});
+      return;
+    }
+    renderCompanion(await res.json());
+  } catch (e) {
+    spin.remove();
+    cpAddAI("<p><strong>ENGINE OFFLINE — start the engine or check the URL.</strong></p>"
+          + "<p style='margin-top:8px'>I tried <span class='kv'>" + esc(ENGINE_BASE + "/v1/companion/chat") + "</span> with your message. The error was: <span class='kv'>" + esc(String(e && e.message || e)) + "</span>.</p>",
+            "<span class='tag honest'>Engine offline — nothing simulated</span>", "Companion");
+    contract({attempted: ENGINE_BASE + "/v1/companion/chat", payload: payload, error: String(e && e.message || e)});
   }
 });
 
