@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Luqi-ai — Chat Prototype (wired to the real engine)</title>
+<title>Luqi-ai — Chat</title>
 <!--
-  Luqi-ai chat prototype v1.3.5 — 2026-09-23 (brand form: capital L, lowercase rest + tester feedback panel)
+  Luqi-ai chat console v1.4.0 — 2026-09-24 (brand form: capital L, lowercase rest; UI-3 dynamic engine badge)
   Enhanced from the founder's "Ubuntu-Powered Intelligence" mock.
 
   HOUSE LAW COMPLIANCE
@@ -50,6 +50,7 @@
   .pill{font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
   .pill.online{border-color:var(--olive);color:var(--olive-deep);background:var(--olive-soft)}
   .pill.offline{border-color:var(--r-critical);color:var(--r-critical);background:#faf0ee}
+  .pill.warn{border-color:var(--r-medium);color:var(--r-medium);background:#faf5e8}
   .modes{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
   .mode-btn{border:1px solid var(--line);background:var(--surface);color:var(--soft);border-radius:999px;
             padding:6px 14px;font-size:12.5px;cursor:pointer;transition:all .15s}
@@ -169,7 +170,7 @@
 <header>
   <div class="brand">
     <div class="brand-mark">L</div>
-    <div class="brand-name">Luqi-ai<small>Prototype — wired to the real engine</small></div>
+    <div class="brand-name">Luqi-ai<small id="engine-mode">engine: checking…</small></div>
   </div>
   <span class="pill" id="engine-pill">engine: checking…</span>
   <nav class="modes" id="modes">
@@ -365,7 +366,7 @@
 </main>
 
 <div class="foot">
-  Luqi-ai chat prototype v1.3.5 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult + real PDF via POST /v1/av/proposal) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
+  Luqi-ai chat console v1.4.0 · wired to the African History Archive (GET /v1/history), the Everyday Services Pack (GET /v1/services), the Companion engine (POST /v1/companion/chat, Bearer auth) and AV Consult (POST /v1/av/consult + real PDF via POST /v1/av/proposal) · renders real engine responses, labelled recorded examples, or honest offline states — never simulated data ·
   design tokens shared with luqi-ai.com · educational information only, not financial advice
 </div>
 <script>
@@ -489,13 +490,55 @@ document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () =
 
 /* ── engine health (honest status, never assumed) ─────── */
 $("#engine-url").textContent = ENGINE_BASE;
-(async () => {
+
+/* UI-3 (2026-09-24): dynamic production badge, bound to GET /v1/hybrid/health
+   and re-polled every 60s. Honest states only — nothing is assumed:
+     unreachable     -> pill "engine: offline"
+     kill switch on  -> pill "engine: paused"  (answers held for human review)
+     sklearn present -> pill "engine: live",   mode "ML classifier active"
+     sklearn missing -> pill "engine: live",   mode "deterministic router"
+     old build       -> pill "engine: live",   mode "redeploy pending"         */
+async function updateEngineBadge(){
+  const pill = $("#engine-pill");
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
-    const r = await fetch(ENGINE_BASE + "/v1/health", {signal: ctl.signal}); clearTimeout(t);
+    const r = await fetch(ENGINE_BASE + "/v1/hybrid/health", {signal: ctl.signal}); clearTimeout(t);
     if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
-    $("#engine-pill").textContent = "engine: online"; $("#engine-pill").classList.add("online");
+    pill.classList.remove("online","offline","warn");
+    if (d.kill_switch) {
+      pill.textContent = "engine: paused"; pill.classList.add("warn");
+      $("#engine-mode").textContent = "kill switch engaged — answers held for human review";
+    } else if (d.sklearn_available) {
+      pill.textContent = "engine: live"; pill.classList.add("online");
+      $("#engine-mode").textContent = "ML classifier active (scikit-learn)";
+    } else if (d.ml_offline_fallback) {
+      pill.textContent = "engine: live"; pill.classList.add("warn");
+      $("#engine-mode").textContent = "deterministic knowledge router (ML offline)";
+    } else {
+      pill.textContent = "engine: live"; pill.classList.add("warn");
+      $("#engine-mode").textContent = "older engine build (pre-router) — redeploy pending on Railway";
+    }
+    return true;
+  } catch (e) {
+    pill.classList.remove("online","warn");
+    pill.textContent = "engine: offline"; pill.classList.add("offline");
+    $("#engine-mode").textContent = "cannot reach the engine — check connection";
+    return false;
+  }
+}
+
+(async () => {
+  const reachable = await updateEngineBadge();
+  setInterval(updateEngineBadge, 60000);
+  if (!reachable) {
+    $("#engine-detail").innerHTML = "No engine reachable at <span class='kv'>" + esc(ENGINE_BASE) + "</span>. "
+      + "The engine deploys at launch — this console is fully wired and will answer live the moment it is up. "
+      + "The example below is a real response recorded from the engine on 2026-09-21.";
+    return;
+  }
+  try {
+    const d = await (await fetch(ENGINE_BASE + "/v1/health")).json();
     $("#engine-detail").innerHTML = "Live at <span class='kv'>" + esc(ENGINE_BASE) + "</span> — status: <strong>" + esc(d.status || "ok") + "</strong>. Answers below are real engine responses.";
     try {
       const cat = await (await fetch(ENGINE_BASE + "/v1/finlit/scam-patterns")).json();
@@ -513,12 +556,7 @@ $("#engine-url").textContent = ENGINE_BASE;
       SERVICES_META = smeta;
       $("#engine-detail").innerHTML += " Everyday Services Pack: <strong>v" + esc(smeta.version) + " · " + esc(smeta.entry_count) + " sourced guides</strong> (SASSA · SARS · UIF · NSFAS).";
     } catch (_) { /* services note appears only when the engine really serves it */ }
-  } catch (e) {
-    $("#engine-pill").textContent = "engine: offline"; $("#engine-pill").classList.add("offline");
-    $("#engine-detail").innerHTML = "No engine reachable at <span class='kv'>" + esc(ENGINE_BASE) + "</span> (" + esc(e.message || e) + "). "
-      + "The engine deploys at launch — this prototype is fully wired and will answer live the moment it is up. "
-      + "The example below is a real response recorded from the engine on 2026-09-21.";
-  }
+  } catch (e) { /* badge poller already shows the honest state; detail card keeps its fallback text */ }
 })();
 
 /* ── stream helpers ────────────────────────────────────── */
