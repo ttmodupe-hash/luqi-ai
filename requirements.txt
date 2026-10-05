@@ -10,7 +10,7 @@ python-multipart==0.0.9
 
 # Data Validation
 pydantic==2.7.4
-pydantic-settings==2.3.0
+pydantic-settings==2.15.0
 python-dotenv==1.0.1
 
 # Database
