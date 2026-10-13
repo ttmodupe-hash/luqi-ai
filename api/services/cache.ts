@@ -1,73 +1,31 @@
 // =====================================================================
-// OPTIONAL REDIS CACHE
-// No-ops cleanly when REDIS_URL is not set (today). The moment a Redis
-// instance is attached (Railway plugin → REDIS_URL variable), caching
-// activates with zero code changes. Used to cache AI chat responses so
-// repeated identical questions don't burn provider tokens.
+// IN-MEMORY / MOCKED CACHE
+// In-memory cache for AI responses conforming to AI Studio constraints.
 // =====================================================================
 
 import { createHash } from "node:crypto";
-import Redis from "ioredis";
 
-let redis: Redis | null = null;
-let disabled = false;
-
-function getRedis(): Redis | null {
-  if (disabled) return null;
-  if (redis) return redis;
-
-  const url = process.env.REDIS_URL;
-  if (!url) return null;
-
-  try {
-    redis = new Redis(url, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      retryStrategy: (times) => (times > 2 ? null : 500),
-    });
-    redis.on("error", (err) => {
-      console.warn("[Cache] Redis error — caching disabled:", err.message);
-      disabled = true;
-      try { redis?.disconnect(); } catch { /* ignore */ }
-      redis = null;
-    });
-    return redis;
-  } catch {
-    return null;
-  }
-}
+const memoryCache = new Map<string, { data: string; expiresAt: number }>();
 
 export async function getCachedAIResponse(promptHash: string): Promise<string | null> {
-  const client = getRedis();
-  if (!client) return null;
-  try {
-    const cached = await client.get(`ai:cache:${promptHash}`);
-    return cached ?? null;
-  } catch {
+  const item = memoryCache.get(promptHash);
+  if (!item) return null;
+  if (Date.now() > item.expiresAt) {
+    memoryCache.delete(promptHash);
     return null;
   }
+  return item.data;
 }
 
 export async function setCachedAIResponse(promptHash: string, data: string, ttlSeconds = 3600): Promise<void> {
-  const client = getRedis();
-  if (!client) return;
-  try {
-    await client.set(`ai:cache:${promptHash}`, data, "EX", ttlSeconds);
-  } catch {
-    // Cache write failure is non-fatal
-  }
+  memoryCache.set(promptHash, {
+    data,
+    expiresAt: Date.now() + ttlSeconds * 1000,
+  });
 }
 
 export async function closeCache(): Promise<void> {
-  const client = redis;
-  redis = null;
-  if (client) {
-    try {
-      await client.quit();
-    } catch {
-      client.disconnect();
-    }
-  }
+  memoryCache.clear();
 }
 
 export function hashPrompt(input: string): string {

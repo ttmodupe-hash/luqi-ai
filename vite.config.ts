@@ -11,10 +11,14 @@ const __dirname = path.dirname(__filename)
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    devServer({ entry: "api/boot.ts", exclude: [/^\/(?!api\/).*$/] }),
-    inspectAttr(), react()],
+    devServer({ entry: "api/boot.ts", exclude: [/^\/(?!(api|auth)\/).*$/] }),
+    inspectAttr(),
+    react(),
+  ],
   server: {
+    host: "0.0.0.0",
     port: 3000,
+    allowedHosts: true,
   },
   resolve: {
     alias: {

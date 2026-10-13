@@ -111,3 +111,32 @@ class SearchQuery(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     results_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PaymentTransaction(Base):
+    __tablename__ = "payment_transactions"
+
+    id = Column(String(100), primary_key=True, index=True)  # m_payment_id or stripe session_id
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_email = Column(String(255), nullable=True, index=True)
+    provider = Column(String(50), default="payfast")  # "payfast" | "stripe"
+    amount_gross = Column(Float, default=0.0)
+    currency = Column(String(10), default="ZAR")
+    tokens_credited = Column(Integer, default=0)
+    status = Column(String(50), default="PENDING")  # "PENDING", "COMPLETE", "FAILED"
+    payload = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class TokenWallet(Base):
+    __tablename__ = "token_wallets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=True)
+    user_email = Column(String(255), unique=True, index=True, nullable=False)
+    token_balance = Column(Integer, default=100)  # Free starting tokens
+    tier = Column(String(50), default="standard")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

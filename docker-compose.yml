@@ -1,6 +1,6 @@
 # =====================================================================
-# LUQI AI — Docker Compose (Production Stack)
-# Node.js + MySQL + Redis
+# LUQI AI — Docker Compose (Production Micro-Services Stack)
+# Node.js + FastAPI + Celery Worker + MySQL + Redis
 # =====================================================================
 
 version: '3.8'
@@ -19,6 +19,7 @@ services:
       PORT: 3000
       DATABASE_URL: mysql://luqi:${MYSQL_PASSWORD}@db:3306/luqi
       REDIS_URL: redis://redis:6379
+      API_BACKEND_URL: http://api:8000
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -38,6 +39,62 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: luqi-ai-api
+    restart: unless-stopped
+    ports:
+      - '${API_PORT:-8000}:8000'
+    environment:
+      PORT: 8000
+      LUQI_PORT: 8000
+      LUQI_ENV: production
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    networks:
+      - luqi-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/api/health']
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: luqi-ai-celery-worker
+    restart: unless-stopped
+    command: celery -A worker.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    networks:
+      - luqi-network
 
   db:
     image: mysql:8.0

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useNavigate, useLocation } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
@@ -8,11 +9,13 @@ import Home from "./pages/Home";
 import LabSimulatorPage from "./pages/LabSimulatorPage";
 import SelfHealingPage from "./pages/SelfHealingPage";
 import VideoStudioPage from "./pages/VideoStudioPage";
+import ArchiveVaultPage from "./pages/ArchiveVaultPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
+import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
 
 // Components
 import WelcomeModal from "@/components/WelcomeModal";
@@ -59,7 +62,12 @@ export default function App() {
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
         <RouterRoute path="/self-healing" element={<SelfHealingPage />} />
         <RouterRoute path="/video-studio" element={<VideoStudioPage />} />
+        <RouterRoute path="/archive" element={<ArchiveVaultPage />} />
+        <RouterRoute path="/vault" element={<ArchiveVaultPage />} />
         <RouterRoute path="/pricing" element={<PricingPage />} />
+        <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
+        <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
+        <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/terms" element={<TermsPage />} />
         <RouterRoute path="/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/contact" element={<ContactPage />} />

@@ -3,7 +3,15 @@ import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { videoProjects } from "../db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
-import { orchestrateRequest } from "./services/orchestrator";
+import {
+  calculateJobCost,
+  getCreditBalance,
+  addCredits,
+  getApiRequirementsStatus,
+  SUBSCRIPTION_TIERS,
+  CREDIT_PACKS,
+} from "./services/credits";
+import { executeAnimationPipeline } from "./services/animation";
 
 const VALID_LANGUAGES = [
   "en", "zu", "xh", "af", "ns", "tn", "st", "ts", "ss", "ve", "nr",
@@ -13,6 +21,52 @@ const VALID_LANGUAGES = [
 const VALID_STATUSES = ["PENDING", "PROCESSING", "SUCCESS", "FAILED"] as const;
 
 export const videoRouter = createRouter({
+  // ── Virtual Credit & Pricing Endpoints ────────────────────────────
+  calculateCost: publicQuery
+    .input(z.object({
+      durationSeconds: z.number().min(1).max(300),
+      dialogue: z.string().optional(),
+    }))
+    .query(({ input }) => {
+      const breakdown = calculateJobCost(input.durationSeconds, input.dialogue || "");
+      return breakdown;
+    }),
+
+  getBalance: publicQuery
+    .input(z.object({ userKey: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const key = input?.userKey || "guest@luqi.ai";
+      return getCreditBalance(key);
+    }),
+
+  getApiStatus: publicQuery.query(() => {
+    return getApiRequirementsStatus();
+  }),
+
+  getSubscriptionTiers: publicQuery.query(() => {
+    return {
+      tiers: SUBSCRIPTION_TIERS,
+      packs: CREDIT_PACKS,
+    };
+  }),
+
+  topupCredits: publicQuery
+    .input(z.object({
+      userKey: z.string().optional(),
+      credits: z.number().min(10),
+      packId: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const key = input.userKey || "guest@luqi.ai";
+      const result = await addCredits(
+        key,
+        input.credits,
+        `Credit Pack Top-Up (${input.credits} Luqi Credits)`
+      );
+      return result;
+    }),
+
+  // ── Project Management Endpoints ──────────────────────────────────
   create: publicQuery
     .input(z.object({
       title: z.string().min(1).max(255),
@@ -141,8 +195,8 @@ export const videoRouter = createRouter({
   markSuccess: publicQuery
     .input(z.object({
       id: z.number(),
-      videoUrl: z.string().url(),
-      thumbnailUrl: z.string().url().optional(),
+      videoUrl: z.string(),
+      thumbnailUrl: z.string().optional(),
       durationSeconds: z.number().optional(),
       modelUsed: z.string().optional(),
     }))
@@ -208,49 +262,55 @@ export const videoRouter = createRouter({
     return { total, byStatus, byLanguage };
   }),
 
+  // ── Native Animation Pipeline Generation (Chained API Execution) ──
   generate: publicQuery
     .input(z.object({
       prompt: z.string().min(1).max(5000),
       title: z.string().min(1).max(255),
       language: z.enum(VALID_LANGUAGES).default("en"),
       description: z.string().max(5000).optional(),
+      dialogue: z.string().max(2000).optional(),
+      durationSeconds: z.number().min(2).max(60).default(5),
+      userKey: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      // 1. Create project entry
+      const userKey = input.userKey || "guest@luqi.ai";
+      const duration = input.durationSeconds || 5;
+
+      // 1. Create project entry in PENDING state
       const [insertResult] = await db.insert(videoProjects).values({
         title: input.title,
         description: input.description ?? null,
         prompt: input.prompt,
         language: input.language,
-        status: "PENDING",
-        progress: 0,
+        status: "PROCESSING",
+        progress: 15,
+        durationSeconds: duration,
       });
       const projectId = Number(insertResult.insertId);
 
-      // 2. Move to PROCESSING
-      await db
-        .update(videoProjects)
-        .set({ status: "PROCESSING", updatedAt: new Date() })
-        .where(eq(videoProjects.id, projectId));
-
-      // 3. Call AI orchestrator for video script/content generation
       try {
-        const aiResult = await orchestrateRequest({
-          query: `Create a detailed video script and scene breakdown for: ${input.prompt}. Respond in ${input.language} if possible.`,
-          systemPrompt:
-            "You are a professional video script writer. Create a detailed scene-by-scene breakdown with visual descriptions, narration text, and timing. Format as JSON with scenes array.",
-          useSearch: false,
-          forceProvider: "openai",
-          forceModel: "gpt-4o",
+        // 2. Execute Animation Pipeline (ElevenLabs + Replicate WAN 2.1 + Storyboard)
+        const pipelineResult = await executeAnimationPipeline({
+          title: input.title,
+          scenePrompt: input.prompt,
+          dialogue: input.dialogue || input.description || `Welcome to Luqi AI. Visualizing ${input.title}.`,
+          durationSeconds: duration,
+          userKey,
+          language: input.language,
         });
 
-        // 4. Mark as SUCCESS with generated content
+        // 3. Mark as SUCCESS with generated assets & model info
         await db
           .update(videoProjects)
           .set({
             status: "SUCCESS",
             progress: 100,
+            videoUrl: pipelineResult.videoUrl,
+            thumbnailUrl: pipelineResult.videoUrl,
+            durationSeconds: duration,
+            modelUsed: `${pipelineResult.videoProvider} + ${pipelineResult.voiceProvider}`,
             processedAt: new Date(),
             updatedAt: new Date(),
           })
@@ -259,25 +319,25 @@ export const videoRouter = createRouter({
         return {
           projectId,
           status: "SUCCESS",
-          aiContent: aiResult.content,
-          model: aiResult.model,
+          videoUrl: pipelineResult.videoUrl,
+          audioUrl: pipelineResult.audioUrl,
+          model: `${pipelineResult.videoProvider} + ${pipelineResult.voiceProvider}`,
+          creditsDeducted: pipelineResult.creditsDeducted,
+          costBreakdown: pipelineResult.costBreakdown,
+          scriptContent: pipelineResult.scriptContent,
         };
       } catch (err: any) {
         await db
           .update(videoProjects)
           .set({
             status: "FAILED",
-            errorMessage: err.message ?? "AI generation failed",
+            errorMessage: err.message ?? "Animation generation failed",
             processedAt: new Date(),
             updatedAt: new Date(),
           })
           .where(eq(videoProjects.id, projectId));
 
-        return {
-          projectId,
-          status: "FAILED",
-          error: err.message ?? "AI generation failed",
-        };
+        throw new Error(err.message || "Animation generation failed");
       }
     }),
 });

@@ -310,6 +310,16 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount legacy_router: {e}")
 
+    # Asynchronous Job Queue (Celery + Redis) & Token Billing Gateway
+    try:
+        from backend.async_job_routes import router as async_jobs_router
+        app.include_router(async_jobs_router, prefix="/api/v1")
+        app.include_router(async_jobs_router, prefix="/v1")
+        mounted.append("async_jobs_router")
+        logger.info("Mounted: async_jobs_router at /api/v1 and /v1")
+    except Exception as e:
+        logger.warning(f"Failed to mount async_jobs_router: {e}")
+
     _health_status["checks"]["mounted_routers"] = mounted
     return mounted
 
