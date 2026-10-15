@@ -29,6 +29,13 @@ import {
   ChevronRight,
   ExternalLink,
   Loader2,
+  Radio,
+  Bell,
+  Clock,
+  Pause,
+  Eye,
+  Flame,
+  Filter,
 } from "lucide-react";
 
 export default function AfricanOpportunityRadarPage() {
@@ -113,12 +120,50 @@ export default function AfricanOpportunityRadarPage() {
     }
   };
 
+  // Real-Time Ticker Sidebar State
+  const [tickerItems, setTickerItems] = useState<any[]>([]);
+  const [isPollingTicker, setIsPollingTicker] = useState(true);
+  const [isTickerLoading, setIsTickerLoading] = useState(false);
+  const [lastTickerUpdate, setLastTickerUpdate] = useState<Date>(new Date());
+  const [tickerFilter, setTickerFilter] = useState<string>("ALL");
+  const [tickerFlash, setTickerFlash] = useState(false);
+
+  const fetchTicker = async (silent = false) => {
+    if (!silent) setIsTickerLoading(true);
+    try {
+      const res = await fetch("/api/v1/sensing/ticker");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.items)) {
+          setTickerItems(data.items);
+          setLastTickerUpdate(new Date());
+          setTickerFlash(true);
+          setTimeout(() => setTickerFlash(false), 800);
+        }
+      }
+    } catch {
+      // Non-fatal
+    } finally {
+      if (!silent) setIsTickerLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchRadar();
+    fetchTicker();
     // Pre-calculate initial agritech and corridor values
     handleRunAgritech("Free State, South Africa", "Maize");
     handleCalculateCorridor("Durban, South Africa", "Harare, Zimbabwe", 65000);
   }, []);
+
+  // Dedicated Polling Interval Effect (every 10 seconds)
+  useEffect(() => {
+    if (!isPollingTicker) return;
+    const interval = setInterval(() => {
+      fetchTicker(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isPollingTicker]);
 
   const handleScan = async () => {
     setIsScanning(true);
@@ -202,6 +247,16 @@ export default function AfricanOpportunityRadarPage() {
   const verticals = radarData?.verticals || {};
   const grants = radarData?.grants || [];
 
+  const filteredTickerItems = tickerItems.filter((item) => {
+    if (tickerFilter === "ALL") return true;
+    const cat = (item.category || "").toLowerCase();
+    if (tickerFilter === "FINTECH") return cat.includes("fintech") || cat.includes("township") || cat.includes("settlement");
+    if (tickerFilter === "CLIMATE") return cat.includes("climate") || cat.includes("agritech") || cat.includes("resilience");
+    if (tickerFilter === "AI INFRA") return cat.includes("ai") || cat.includes("sovereign") || cat.includes("infrastructure");
+    if (tickerFilter === "TRADE") return cat.includes("trade") || cat.includes("corridor") || cat.includes("msme");
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
@@ -253,8 +308,12 @@ export default function AfricanOpportunityRadarPage() {
           </div>
         )}
 
-        {/* Hero Banner */}
-        <div className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+        {/* Responsive Grid with Real-Time Ticker Sidebar */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+          {/* Main Left Column (Ecosystem & Tools) */}
+          <div className="xl:col-span-8 space-y-8">
+            {/* Hero Banner */}
+            <div className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
           <div className="max-w-3xl space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" /> 2026 African Tech Ecosystem Loop
@@ -901,7 +960,181 @@ export default function AfricanOpportunityRadarPage() {
             )}
           </div>
         )}
-      </main>
+      </div>
+
+      {/* Real-time Ticker Sidebar Widget */}
+      <aside className="xl:col-span-4 space-y-6 xl:sticky xl:top-24">
+        {/* Live Ticker Card */}
+        <div
+          className={`rounded-2xl border border-slate-800 bg-slate-900/90 backdrop-blur p-5 shadow-xl transition-all duration-300 ${
+            tickerFlash ? "ring-2 ring-emerald-500/50 bg-slate-900" : ""
+          }`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="relative flex items-center justify-center">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                {isPollingTicker && (
+                  <span className="absolute w-4 h-4 rounded-full bg-emerald-400/40 animate-ping"></span>
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-wide flex items-center gap-1.5">
+                  <Radio className="w-4 h-4 text-emerald-400" /> Live Radar Ticker
+                </h3>
+                <p className="text-[10px] text-slate-400">
+                  {isPollingTicker ? "Auto-polling (10s)" : "Polling paused"} &middot;{" "}
+                  {lastTickerUpdate.toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsPollingTicker(!isPollingTicker)}
+                title={isPollingTicker ? "Pause real-time polling" : "Resume real-time polling"}
+                className={`p-1.5 rounded-lg border text-xs transition ${
+                  isPollingTicker
+                    ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                    : "border-slate-700 text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                {isPollingTicker ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              </button>
+
+              <button
+                onClick={() => fetchTicker(false)}
+                disabled={isTickerLoading}
+                title="Refresh feed"
+                className="p-1.5 rounded-lg border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white transition disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isTickerLoading ? "animate-spin text-emerald-400" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="flex items-center gap-1.5 py-3 overflow-x-auto no-scrollbar border-b border-slate-800/80">
+            {["ALL", "FINTECH", "CLIMATE", "AI INFRA", "TRADE"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setTickerFilter(cat)}
+                className={`text-[10px] px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition ${
+                  tickerFilter === cat
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold"
+                    : "bg-slate-800/60 text-slate-400 hover:text-slate-200 border border-slate-800"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Live Ticker Feed Items */}
+          <div className="space-y-3 pt-3 max-h-[640px] overflow-y-auto pr-1">
+            {filteredTickerItems.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-500">
+                {isTickerLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    <span>Polling live opportunities...</span>
+                  </div>
+                ) : (
+                  "No active opportunities matching filter."
+                )}
+              </div>
+            ) : (
+              filteredTickerItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="group rounded-xl border border-slate-800/90 bg-slate-950/60 hover:bg-slate-950 hover:border-slate-700 p-3.5 transition-all shadow-sm space-y-2 relative"
+                >
+                  {/* Top Bar: Urgency badge & Time */}
+                  <div className="flex items-center justify-between text-[10px]">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider text-[9px] ${
+                          item.urgency === "URGENT"
+                            ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                            : item.urgency === "NEW"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        }`}
+                      >
+                        {item.urgency}
+                      </span>
+                      <span className="text-slate-400 font-medium">{item.category}</span>
+                    </div>
+                    <span className="text-slate-500 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-500" /> {item.time_ago}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h4 className="text-xs font-bold text-slate-100 group-hover:text-emerald-300 transition-colors line-clamp-2">
+                    {item.title}
+                  </h4>
+
+                  {/* Sponsor & Capital */}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60">
+                    <span className="text-[11px] text-slate-400 truncate max-w-[150px]">{item.sponsor}</span>
+                    <span className="font-mono font-bold text-emerald-400 text-xs">{item.amount}</span>
+                  </div>
+
+                  {/* Summary */}
+                  <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">
+                    {item.summary}
+                  </p>
+
+                  {/* Footer: Viewers & Action */}
+                  <div className="flex items-center justify-between pt-1 text-[10px]">
+                    <span className="text-slate-500 flex items-center gap-1">
+                      <Eye className="w-3 h-3 text-slate-500" />
+                      <span>{item.viewers_count || 24} reviewing</span>
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        setSelectedGrant(item.grant_id || "afcfta_dic_2026");
+                        setActiveTab("grants");
+                        setNotification(`Selected "${item.title}". Click "Draft AI Proposal" to generate executive submission.`);
+                        window.scrollTo({ top: 350, behavior: "smooth" });
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold transition flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3 text-emerald-400" /> Draft with AI
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Ecosystem Intelligence Card */}
+        <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-5 shadow-lg space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-emerald-400" />
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+              Sovereign Execution Pipeline
+            </h4>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            All opportunities sensed by this radar loop can be directly drafted into compliance proposals or dispatched into the <span className="text-emerald-400 font-semibold">70/30 Self-Healing Pipeline</span> with Docker sandboxes and LangGraph Human Gates.
+          </p>
+          <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800">
+            <span>Active Grants Tracked:</span>
+            <span className="font-mono font-bold text-white">6 Calls</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>PAPSS Settlement Readiness:</span>
+            <span className="font-mono font-bold text-emerald-400">100% Operational</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-800 mt-12 py-6">

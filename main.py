@@ -22,6 +22,7 @@ Environment:
 import argparse
 import asyncio
 import logging
+import json
 import os
 import sys
 import time
@@ -32,6 +33,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from config import settings
 
@@ -438,6 +440,124 @@ async def websocket_chat(websocket: WebSocket):
         pass
     except Exception:
         pass
+
+
+# ── Core Intelligence & Jarvis Live Streaming ───────────────────────────
+
+class PromptPayload(BaseModel):
+    user_input: str
+    user_location: str = "Soshanguve, South Africa"
+
+
+@app.post("/api/v1/luqi-core")
+async def process_luqi_intelligence(payload: PromptPayload):
+    """
+    Core intelligence text endpoint with Sepitori and local dialect awareness,
+    enforcing zero-speculative accuracy and high-precision understanding.
+    """
+    system_instruction = (
+        "You are Luqi-AI, powered by Jarvis, a hyper-intelligent, empathetic digital companion "
+        "built specifically to help Africans operate without hustle. "
+        "1. Language Agility: Fully fluent in English, Sepitori, Zulu, and Sesotho. "
+        "If the user communicates in Sepitori slang or local mix, respond fluidly in that exact same dialect with natural warmth. "
+        "2. Precision: Focus strictly on factual accuracy, zero hallucination, and deep regional context."
+    )
+
+    try:
+        from google import genai
+        from google.genai import types
+        api_key = os.environ.get("GEMINI_API_KEY")
+        client = genai.Client(api_key=api_key) if api_key else genai.Client()
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=payload.user_input,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.3,
+            )
+        )
+        return {"response": response.text, "status": "success"}
+    except Exception as e:
+        return {
+            "response": f"Dumela! Jarvis is active here in South Africa. Received: '{payload.user_input}'. Core engines ready.",
+            "status": "degraded_fallback",
+            "detail": str(e)
+        }
+
+
+@app.websocket("/ws/jarvis-live")
+async def jarvis_live_websocket(websocket: WebSocket):
+    """
+    Bidirectional WebSocket endpoint connecting users directly to Jarvis 
+    via the Gemini Live API for real-time voice and audio streaming.
+    """
+    await websocket.accept()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        await websocket.send_json({"error": "GEMINI_API_KEY not set"})
+        await websocket.close()
+        return
+
+    gemini_ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={api_key}"
+
+    try:
+        import websockets
+        async with websockets.connect(gemini_ws_url) as gemini_ws:
+            setup_message = {
+                "setup": {
+                    "model": "models/gemini-2.0-flash-exp",
+                    "responseModalities": ["AUDIO"],
+                    "systemInstruction": {
+                        "parts": [{
+                            "text": (
+                                "You are Jarvis, the core voice module of Luqi-AI. "
+                                "Speak naturally, respond instantly, and handle code-switching between "
+                                "English and Sepitori effortlessly."
+                            )
+                        }]
+                    },
+                    "speechConfig": {
+                        "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Aoede"}}
+                    }
+                }
+            }
+            await gemini_ws.send(json.dumps(setup_message))
+            await gemini_ws.recv()
+
+            async def push_to_gemini():
+                try:
+                    while True:
+                        data = await websocket.receive_bytes()
+                        audio_packet = {
+                            "realtimeInput": {
+                                "mediaChunks": [{
+                                    "mimeType": "audio/pcm;rate=16000",
+                                    "data": data
+                                }]
+                            }
+                        }
+                        await gemini_ws.send(json.dumps(audio_packet))
+                except WebSocketDisconnect:
+                    pass
+
+            async def pull_from_gemini():
+                try:
+                    async for raw_msg in gemini_ws:
+                        res = json.loads(raw_msg)
+                        content = res.get("serverContent", {})
+                        turn = content.get("modelTurn", {})
+                        for part in turn.get("parts", []):
+                            if "inlineData" in part:
+                                await websocket.send_text(json.dumps({
+                                    "audio_delta": part["inlineData"]["data"]
+                                }))
+                except Exception:
+                    pass
+
+            await asyncio.gather(push_to_gemini(), pull_from_gemini())
+
+    except Exception as e:
+        await websocket.send_json({"error": str(e)})
 
 
 # ── Error Handlers ───────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
+import CertMasterPage from "./pages/CertMasterPage";
 
 // Components
 import WelcomeModal from "@/components/WelcomeModal";
@@ -68,6 +69,12 @@ export default function App() {
         <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
+        <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
+        <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
+        <RouterRoute path="/ccna" element={<CertMasterPage />} />
+        <RouterRoute path="/ccnp" element={<CertMasterPage />} />
+        <RouterRoute path="/itil-ai" element={<CertMasterPage />} />
+        <RouterRoute path="/networking-lab" element={<CertMasterPage />} />
         <RouterRoute path="/terms" element={<TermsPage />} />
         <RouterRoute path="/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/contact" element={<ContactPage />} />

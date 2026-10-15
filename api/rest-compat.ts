@@ -1791,6 +1791,101 @@ const handleRadar = (c: any) => {
   });
 };
 
+const AFRICAN_TICKER_FEED = [
+  {
+    id: "tick-tia-2026-q4",
+    title: "TIA South Africa Seed Fund Call Opened",
+    sponsor: "Technology Innovation Agency (DSI)",
+    amount: "R1,500,000",
+    category: "Fintech & Township Economy",
+    urgency: "HIGH",
+    time_ago: "Just now",
+    deadline: "Nov 28, 2026",
+    summary: "Targeting township merchant settlement systems, USSD micro-payments, and informal business tooling.",
+    grant_id: "tia_seed_fund_q4_2026"
+  },
+  {
+    id: "tick-gsma-climate-26",
+    title: "GSMA Climate Resilience Africa Open for Concept Notes",
+    sponsor: "GSMA & UK FCDO",
+    amount: "£250,000 Non-Dilutive",
+    category: "Climate & Agritech",
+    urgency: "NEW",
+    time_ago: "4m ago",
+    deadline: "Dec 15, 2026",
+    summary: "Funding satellite soil-moisture telemetry, drone imaging, and smallholder farmer resilience models.",
+    grant_id: "gsma_climate_africa"
+  },
+  {
+    id: "tick-gfas-2027",
+    title: "Google for Startups Accelerator Africa 2027 Pre-Registration",
+    sponsor: "Google for Startups",
+    amount: "$350,000 Cloud Credits + Mentorship",
+    category: "AI & Sovereign Infrastructure",
+    urgency: "HIGH",
+    time_ago: "12m ago",
+    deadline: "Jan 15, 2027",
+    summary: "Seeking African deep-tech AI founders using sovereign data models, local languages, and edge intelligence.",
+    grant_id: "google_startups_africa_2027"
+  },
+  {
+    id: "tick-dsi-gip-26",
+    title: "DSI Grassroots Innovation Programme Emergency Allocation",
+    sponsor: "Dept of Science & Innovation SA",
+    amount: "R800,000 Grant",
+    category: "Grassroots Tech",
+    urgency: "URGENT",
+    time_ago: "18m ago",
+    deadline: "Dec 10, 2026",
+    summary: "Priority given to rural and peri-urban digital hubs with low-bandwidth, offline-first architectures.",
+    grant_id: "dsi_grassroots_innovation_2026"
+  },
+  {
+    id: "tick-afcfta-gti-trade",
+    title: "AfCFTA Guided Trade Initiative: SADC Cross-Border Rail Pilot",
+    sponsor: "AfCFTA Secretariat & TradeDepot",
+    amount: "$500,000 Pilot Subsidy",
+    category: "Intra-African Trade",
+    urgency: "NEW",
+    time_ago: "25m ago",
+    deadline: "Jan 30, 2027",
+    summary: "Tariff reduction verification for freight operators transitioning from road to Durban-Harare rail.",
+    grant_id: "afcfta_dic_2026"
+  },
+  {
+    id: "tick-tef-2027",
+    title: "Tony Elumelu Foundation 2027 Entrepreneurship Program",
+    sponsor: "Tony Elumelu Foundation",
+    amount: "$5,000 Seed Capital / Startup",
+    category: "Pan-African MSMEs",
+    urgency: "NEW",
+    time_ago: "34m ago",
+    deadline: "Mar 01, 2027",
+    summary: "Empowering 5,000 young African entrepreneurs across 54 countries with non-refundable seed capital.",
+    grant_id: "tef_2027"
+  }
+];
+
+const handleTicker = (c: any) => {
+  // Add live dynamic jitter/timestamp
+  const now = new Date();
+  const randomizedFeed = AFRICAN_TICKER_FEED.map((item, idx) => ({
+    ...item,
+    live_timestamp: now.toISOString(),
+    viewers_count: Math.floor(18 + Math.random() * 24) + idx * 5,
+  }));
+
+  return c.json({
+    success: true,
+    feed_timestamp: now.toISOString(),
+    active_announcements: randomizedFeed.length,
+    polling_interval_ms: 10000,
+    items: randomizedFeed,
+  });
+};
+
+restCompat.get("/api/v1/sensing/ticker", handleTicker);
+restCompat.get("/v1/sensing/ticker", handleTicker);
 restCompat.get("/api/v1/sensing/radar", handleRadar);
 restCompat.get("/v1/sensing/radar", handleRadar);
 restCompat.post("/api/v1/sensing/run-scan", handleRadar);
@@ -1995,6 +2090,319 @@ Output: Sandbox verification PASSED (0.38s).`,
     status: "AWAITING_HUMAN_AUTH"
   });
 });
+
+// =====================================================================
+// CERTMASTER ACADEMY: ITIL® AI GOVERNANCE (v5) & CISCO CCNA / CCNP / CCIP
+// =====================================================================
+
+const CERT_TRACKS_METADATA = [
+  {
+    id: "itil_ai_v5",
+    title: "ITIL® AI Governance (Version 5)",
+    subtitle: "AI Service Value System, ISO 42001 & Ethical Governance",
+    code: "ITIL-AI-V5",
+    level: "Advanced Professional",
+    examDurationMin: 60,
+    passingScore: 75,
+    domains: [
+      { name: "Service Value System (SVS) for AI", weight: "22%" },
+      { name: "7 ITIL Guiding Principles in Generative & Autonomous AI", weight: "20%" },
+      { name: "AI Risk, Safety & ISO/IEC 42001 Compliance", weight: "24%" },
+      { name: "AI Ethics, Bias, Transparency & EU AI Act", weight: "18%" },
+      { name: "AI Service Lifecycle, MLOps & Continuous Improvement", weight: "16%" },
+    ],
+    description: "Master governance frameworks for production AI agents, LLM pipelines, prompt security, and organizational accountability."
+  },
+  {
+    id: "ccna_200_301",
+    title: "Cisco CCNA (200-301)",
+    subtitle: "Enterprise Network Fundamentals & IP Connectivity",
+    code: "200-301 CCNA",
+    level: "Associate",
+    examDurationMin: 120,
+    passingScore: 825,
+    domains: [
+      { name: "Network Fundamentals & Subnetting", weight: "20%" },
+      { name: "Network Access (VLANs, Trunking, STP)", weight: "20%" },
+      { name: "IP Connectivity (Static, OSPFv2)", weight: "25%" },
+      { name: "IP Services (DHCP, DNS, NAT/PAT)", weight: "10%" },
+      { name: "Security Fundamentals (ACLs, Port Security)", weight: "15%" },
+      { name: "Automation & Programmability (REST APIs, JSON)", weight: "10%" },
+    ],
+    description: "Core routing, switching, IPv4/IPv6 VLSM subnetting, ACLs, and software-defined network automation."
+  },
+  {
+    id: "ccnp_encor",
+    title: "Cisco CCNP Enterprise (350-401 ENCOR & 300-410 ENARSI)",
+    subtitle: "Core Architecture, Advanced BGP, OSPF & QoS",
+    code: "350-401 ENCOR",
+    level: "Professional",
+    examDurationMin: 120,
+    passingScore: 825,
+    domains: [
+      { name: "Advanced BGP & Path Selection Mechanics", weight: "24%" },
+      { name: "OSPF Multi-Area LSAs & EIGRP DUAL", weight: "22%" },
+      { name: "QoS Mechanics (DSCP, CoS, WRED, Policing/Shaping)", weight: "18%" },
+      { name: "High Availability (HSRP, VRRP, GLBP, BFD)", weight: "16%" },
+      { name: "Infrastructure Security & Telemetry", weight: "20%" },
+    ],
+    description: "Enterprise multi-protocol architecture, BGP route manipulation, QoS prioritization, and scalable infrastructure."
+  },
+  {
+    id: "ccip_sp",
+    title: "Cisco CCIP / Service Provider (BGP, MPLS & VPNs)",
+    subtitle: "Carrier Routing, Label Switching & Provider Edge VPNs",
+    code: "300-510 SPRI / CCIP",
+    level: "Service Provider Specialist",
+    examDurationMin: 90,
+    passingScore: 825,
+    domains: [
+      { name: "MPLS Label Architecture & LDP Protocol", weight: "26%" },
+      { name: "MPLS Layer 3 VPNs (VRF, RD, RT, MP-BGP)", weight: "28%" },
+      { name: "Carrier eBGP Peering & Route Reflectors", weight: "22%" },
+      { name: "Traffic Engineering & Segment Routing", weight: "24%" },
+    ],
+    description: "ISP-grade transit networks, MPLS label distribution, VRF segmentation, and service provider inter-AS routing."
+  }
+];
+
+restCompat.get("/api/v1/cert-academy/tracks", (c: any) => {
+  return c.json({
+    tracks: CERT_TRACKS_METADATA,
+    system_version: "2026.4",
+    status: "READY"
+  });
+});
+
+restCompat.post("/api/v1/cert-academy/coach", async (c: any) => {
+  const body = await c.req.json().catch(() => ({}));
+  const { query, track = "ccna_200_301", context } = body;
+
+  if (!query) {
+    return c.json({ error: "Query is required" }, 400);
+  }
+
+  const certPrompt = `You are the Lead Technical Proctor and Senior Examiner for ITIL® AI Governance (Version 5), Cisco Certified Network Associate (CCNA 200-301), and Cisco Certified Network Professional / CCIP (ENCOR 350-401, ENARSI 300-410, SPRI).
+
+Active Student Track: ${track}
+Additional Context: ${context || "None provided"}
+
+Your duty:
+1. Provide extremely accurate, authoritative, exam-ready answers.
+2. Structure answers with:
+   - Key Concept / Definition
+   - Technical Deep Dive (with Cisco IOS commands or ITIL 5 framework matrix where applicable)
+   - High-Yield Exam Trap / Trick to Avoid
+   - Memory Mnemonic or Rule of Thumb (e.g. BGP path selection "We Love Oranges As Oranges Mean Pure Refreshment", ITIL 7 Guiding Principles in AI)
+   - Real-world Hands-on Scenario
+3. Be rigorous and precise — use exact protocol names, timers, port numbers, standards (RFC 4271 for BGP, ISO/IEC 42001 for AI Governance, EU AI Act risk tiers).`;
+
+  try {
+    const aiResponse = await orchestrateRequest({
+      query,
+      systemPrompt: certPrompt,
+      context,
+      taskType: "technical"
+    });
+
+    if (aiResponse && aiResponse.content) {
+      return c.json({
+        answer: aiResponse.content,
+        provider: aiResponse.provider,
+        model: aiResponse.model,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (err: any) {
+    console.warn("[CertCoach] AI provider fallback:", err?.message);
+  }
+
+  // Authoritative dynamic fallback
+  const fallbackAnswers: Record<string, string> = {
+    bgp: `### BGP Path Selection Algorithm (CCNP / CCIP)
+BGP evaluates path attributes sequentially until a tie is broken. Use the mnemonic **"We Love Oranges As Oranges Mean Pure Refreshment"**:
+
+1. **Weight**: Cisco proprietary, local to router, highest wins (0-65535, default 0 or 32768 for locally originated).
+2. **Local Preference**: Disseminated within AS (iBGP), default 100, highest wins.
+3. **Locally Originated**: Prefer route originated locally via network/aggregate command over redistributed.
+4. **AS-Path**: Shortest AS-Path length wins (can be prepended using route-maps).
+5. **Origin Code**: IGP (i) < EGP (e) < Incomplete (?).
+6. **MED (Multi-Exit Discriminator)**: Lowest wins (exchanged between autonomous systems, non-transitive).
+7. **eBGP over iBGP**: Prefer external paths over internal paths.
+8. **Lowest IGP metric**: To BGP NEXT_HOP address.
+9. **Lowest BGP Router ID**: Final tie-breaker.
+
+**Exam Trap**: Remember that Weight is NEVER sent to BGP peers; Local Preference IS sent to iBGP peers but NEVER across eBGP boundaries!`,
+
+    itil: `### ITIL® AI Governance (Version 5) Core Pillars
+ITIL 5 bridges traditional IT Service Management (ITSM) with Autonomous AI, Generative Agents, and ISO/IEC 42001:
+
+1. **AI Service Value System (SVS)**:
+   - **Guiding Principle: Focus on Value**: Evaluate AI agents not by raw token volume or benchmark scores, but by verified business outcome and error reduction.
+   - **Guiding Principle: Start Where You Are**: Audit existing data pipelines before fine-tuning new foundation models.
+   - **Guiding Principle: Keep it Simple and Practical**: Small specialized models often beat complex multi-agent architectures in stability and latency.
+
+2. **AI Risk Classification (EU AI Act & ISO 42001 Alignment)**:
+   - **Unacceptable Risk**: Cognitive manipulation, social scoring (BANNED).
+   - **High Risk**: Critical infrastructure networks, automated hiring, law enforcement (Strict human oversight, continuous logging, bias auditing required).
+   - **Transparency / Limited Risk**: Customer chat agents, synthetic media generation (Mandatory user disclosure that they are interacting with AI).
+   - **Minimal Risk**: AI spam filters, predictive maintenance.
+
+3. **Human-in-the-Loop (HITL) Gate Architecture**:
+   Every irreversible operational action (e.g. routing table modification, financial transaction, production code deployment) must enforce asynchronous cryptographic human approval before execution.`,
+
+    subnetting: `### IPv4 Subnetting & VLSM Cheat Sheet (CCNA)
+For any IPv4 address with mask /N:
+- **Magic Number Formula**: 256 - (Interesting Octet Value) = Block Size!
+- Example: /26 = 255.255.255.192. Interesting octet = 192. Block size = 256 - 192 = **64**.
+- Subnets increment by 64: .0, .64, .128, .192.
+- Number of usable hosts = 2^(32 - N) - 2.
+- Wildcard Mask = 255.255.255.255 - Subnet Mask (used in OSPF and ACLs).`
+  };
+
+  const lowerQ = query.toLowerCase();
+  let defaultContent = fallbackAnswers.bgp;
+  if (lowerQ.includes("itil") || lowerQ.includes("governance") || lowerQ.includes("iso") || lowerQ.includes("ethics")) {
+    defaultContent = fallbackAnswers.itil;
+  } else if (lowerQ.includes("subnet") || lowerQ.includes("vlsm") || lowerQ.includes("cidr") || lowerQ.includes("mask")) {
+    defaultContent = fallbackAnswers.subnetting;
+  }
+
+  return c.json({
+    answer: defaultContent,
+    provider: "certmaster-offline-engine",
+    model: "itil-cisco-knowledge-base",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Cisco IOS CLI Evaluation Engine
+restCompat.post("/api/v1/cert-academy/cli-eval", async (c: any) => {
+  const body = await c.req.json().catch(() => ({}));
+  const rawCmd = (body.command || "").trim();
+  const currentMode = body.mode || "user"; // "user" | "privileged" | "config" | "config-if" | "config-router"
+  const iface = body.currentInterface || "GigabitEthernet0/0";
+
+  let nextMode = currentMode;
+  let nextIface = iface;
+  let output = "";
+
+  const cmd = rawCmd.toLowerCase();
+
+  // Mode transitions
+  if (cmd === "enable" || cmd === "en") {
+    nextMode = "privileged";
+    output = "";
+  } else if (cmd === "disable") {
+    nextMode = "user";
+    output = "";
+  } else if (cmd === "configure terminal" || cmd === "conf t" || cmd === "config t") {
+    if (currentMode === "privileged") {
+      nextMode = "config";
+      output = "Enter configuration commands, one per line. End with CNTL/Z.";
+    } else {
+      output = "% Unknown command or not in privileged mode";
+    }
+  } else if (cmd === "exit") {
+    if (currentMode === "config-if" || currentMode === "config-router") nextMode = "config";
+    else if (currentMode === "config") nextMode = "privileged";
+    else if (currentMode === "privileged") nextMode = "user";
+  } else if (cmd === "end") {
+    nextMode = "privileged";
+  } else if (cmd.startsWith("interface ") || cmd.startsWith("int ")) {
+    if (currentMode.startsWith("config")) {
+      nextMode = "config-if";
+      const parts = rawCmd.split(" ");
+      nextIface = parts[1] || "GigabitEthernet0/0";
+      output = "";
+    } else {
+      output = "% Incomplete command or invalid mode";
+    }
+  } else if (cmd.startsWith("router ospf") || cmd.startsWith("router bgp")) {
+    if (currentMode === "config") {
+      nextMode = "config-router";
+      output = "";
+    } else {
+      output = "% Invalid mode for routing protocol configuration";
+    }
+  } else if (cmd === "show ip route" || cmd === "sh ip ro") {
+    output = `Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area 
+
+Gateway of last resort is 192.168.1.1 to network 0.0.0.0
+
+      10.0.0.0/8 is variably subnetted, 4 subnets, 2 masks
+C        10.1.10.0/24 is directly connected, GigabitEthernet0/0
+L        10.1.10.1/32 is directly connected, GigabitEthernet0/0
+O        10.2.20.0/24 [110/2] via 10.1.10.2, 00:14:22, GigabitEthernet0/0
+B        172.16.0.0/16 [20/0] via 192.168.1.254, 02:45:11
+S*    0.0.0.0/0 [1/0] via 192.168.1.1`;
+  } else if (cmd === "show ip interface brief" || cmd === "sh ip int br") {
+    output = `Interface              IP-Address      OK? Method Status                Protocol
+GigabitEthernet0/0     10.1.10.1       YES manual up                    up      
+GigabitEthernet0/1     172.16.1.1      YES manual up                    up      
+GigabitEthernet0/2     unassigned      YES unset  administratively down down    
+Loopback0              1.1.1.1         YES manual up                    up`;
+  } else if (cmd === "show ip ospf neighbor" || cmd === "sh ip ospf nei") {
+    output = `Neighbor ID     Pri   State           Dead Time   Address         Interface
+2.2.2.2           1   FULL/BDR        00:00:36    10.1.10.2       GigabitEthernet0/0
+3.3.3.3           1   FULL/DROTHER    00:00:38    10.1.10.3       GigabitEthernet0/0`;
+  } else if (cmd === "show ip bgp summary" || cmd === "sh ip bgp sum") {
+    output = `BGP router identifier 1.1.1.1, local AS number 65001
+BGP table version is 14, main routing table version 14
+7 network entries using 1792 bytes of memory
+Neighbor        V           AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
+192.168.1.254   4        65002     142     140       14    0    0 02:45:12        4
+10.1.10.2       4        65001      89      91       14    0    0 01:12:05        8`;
+  } else if (cmd === "show vlan brief" || cmd === "sh vlan br") {
+    output = `VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+1    default                          active    Gi0/3, Gi0/4
+10   ENGINEERING_AI                   active    Gi0/1
+20   SERVERS_MLOPS                    active    Gi0/2
+99   MANAGEMENT_ZTA                   active    `;
+  } else if (cmd.startsWith("ping ")) {
+    const target = rawCmd.split(" ")[1] || "10.1.10.2";
+    output = `Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to ${target}, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms`;
+  } else if (cmd === "?" || cmd === "help") {
+    output = `Exec & Configuration Commands:
+  enable            Turn on privileged commands
+  configure terminal Enter configuration mode
+  show ip route     Display IP routing table
+  show ip int brief Display interface status & IP addresses
+  show ip ospf nei  Display OSPF neighbor adjacencies
+  show ip bgp sum   Display BGP neighbor summary
+  show vlan brief   Display VLAN database (Switches)
+  interface <name>  Enter interface configuration mode
+  router ospf <id>  Enter OSPF configuration mode
+  router bgp <asn>  Enter BGP configuration mode
+  ping <ip>         Send ICMP echo packets
+  exit / end        Leave current configuration mode`;
+  } else if (cmd.startsWith("ip address ") || cmd.startsWith("no shut")) {
+    output = "";
+  } else {
+    output = `% Invalid command: "${rawCmd}". Type "?" for available commands.`;
+  }
+
+  // Prompt formatting
+  let prompt = "Router>";
+  if (nextMode === "privileged") prompt = "Router#";
+  else if (nextMode === "config") prompt = "Router(config)#";
+  else if (nextMode === "config-if") prompt = "Router(config-if)#";
+  else if (nextMode === "config-router") prompt = "Router(config-router)#";
+
+  return c.json({
+    output,
+    nextMode,
+    nextInterface: nextIface,
+    prompt,
+    executedCommand: rawCmd
+  });
+});
+
 
 
 

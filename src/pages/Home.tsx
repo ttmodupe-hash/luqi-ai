@@ -16,6 +16,7 @@ import {
   Brain,
   Wand2,
   FileSpreadsheet,
+  GraduationCap,
 } from "lucide-react";
 
 export default function Home() {
@@ -35,6 +36,12 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              to="/cert-academy"
+              className="text-xs px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-amber-400" /> CertMaster Academy
+            </Link>
             <Link
               to="/african-radar"
               className="text-xs px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 font-medium"
@@ -73,6 +80,33 @@ export default function Home() {
 
         {/* Core Subsystem Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card 0: CertMaster Academy (ITIL AI Governance & Cisco CCNA/CCNP/CCIP) */}
+          <Link
+            to="/cert-academy"
+            className="group rounded-3xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-amber-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-amber-500/5 md:col-span-2 lg:col-span-1"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors">
+                  CertMaster Academy
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30">
+                  ITIL® 5 + CISCO
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Exam preparation suite for ITIL® AI Governance (v5), CCNA 200-301, CCNP ENCOR/ENARSI & CCIP Service Provider. Includes live Cisco IOS CLI emulator, VLSM bit calculator, and Leitner spaced flashcards.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-amber-400">
+              <span>Launch Exam & CLI Labs</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
           {/* Card 1: Video Studio */}
           <Link
             to="/video-studio"
