@@ -20,7 +20,7 @@ alembic==1.13.2
 psycopg2-binary==2.9.9
 
 # Cache & Queue
-redis==5.0.6
+redis==5.3.1
 celery[redis]==5.4.0
 
 # Monitoring
