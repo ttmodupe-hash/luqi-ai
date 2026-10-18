@@ -7,9 +7,9 @@
 //   3. Custom Data Storage Layer: Date-Structured File Vault & JSON Metadata
 // =====================================================================
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/providers/trpc";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   Archive,
   Database,
@@ -32,7 +32,27 @@ import {
 } from "lucide-react";
 
 export default function ArchiveVaultPage() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<"flight_recorder" | "cognitive_memory" | "artifact_vault">("flight_recorder");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && ["flight_recorder", "cognitive_memory", "artifact_vault"].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const handleCustomNav = (e: any) => {
+      const detail = e.detail;
+      if (detail?.tabKey === "tab" && detail?.tabValue && ["flight_recorder", "cognitive_memory", "artifact_vault"].includes(detail.tabValue)) {
+        setActiveTab(detail.tabValue);
+      }
+    };
+    window.addEventListener("luqi:navigate-tab", handleCustomNav);
+    return () => window.removeEventListener("luqi:navigate-tab", handleCustomNav);
+  }, []);
   const [selectedThread, setSelectedThread] = useState<string>("luqi_session_genesis");
   const [memoryFilter, setMemoryFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");

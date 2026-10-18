@@ -4,7 +4,7 @@
 // =====================================================================
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   Globe,
   TrendingUp,
@@ -39,7 +39,28 @@ import {
 } from "lucide-react";
 
 export default function AfricanOpportunityRadarPage() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<"verticals" | "grants" | "apis" | "agritech" | "logistics">("verticals");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && ["verticals", "grants", "apis", "agritech", "logistics"].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const handleCustomNav = (e: any) => {
+      const detail = e.detail;
+      if (detail?.tabKey === "tab" && detail?.tabValue && ["verticals", "grants", "apis", "agritech", "logistics"].includes(detail.tabValue)) {
+        setActiveTab(detail.tabValue);
+      }
+    };
+    window.addEventListener("luqi:navigate-tab", handleCustomNav);
+    return () => window.removeEventListener("luqi:navigate-tab", handleCustomNav);
+  }, []);
+
   const [radarData, setRadarData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);

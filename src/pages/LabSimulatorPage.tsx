@@ -25,7 +25,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 // ── TYPES ───────────────────────────────────────────────────────────
 
@@ -80,6 +80,7 @@ interface SimulationResult {
 // ── MAIN PAGE ───────────────────────────────────────────────────────
 
 export default function LabSimulatorPage() {
+  const location = useLocation();
   const [selectedFramework, setSelectedFramework] = useState("SOUTH_AFRICA_CAPS");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState("");
@@ -116,6 +117,31 @@ export default function LabSimulatorPage() {
     { slug: activeLab?.slug || "" },
     { enabled: !!activeLab }
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const labSlug = params.get("lab");
+    if (labSlug && labs.data && labs.data.length > 0) {
+      const match = labs.data.find(
+        (l: any) => l.slug === labSlug || l.slug.includes(labSlug) || labSlug.includes(l.slug)
+      );
+      if (match) setActiveLab(match);
+    }
+  }, [location.search, labs.data]);
+
+  useEffect(() => {
+    const handleCustomNav = (e: any) => {
+      const detail = e.detail;
+      if (detail?.tabKey === "lab" && detail?.tabValue && labs.data) {
+        const match = labs.data.find(
+          (l: any) => l.slug === detail.tabValue || l.slug.includes(detail.tabValue) || detail.tabValue.includes(l.slug)
+        );
+        if (match) setActiveLab(match);
+      }
+    };
+    window.addEventListener("luqi:navigate-tab", handleCustomNav);
+    return () => window.removeEventListener("luqi:navigate-tab", handleCustomNav);
+  }, [labs.data]);
 
   // ── TRANSLATION ───────────────────────────────────────────────────
 

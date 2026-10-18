@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/providers/trpc";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   Activity,
   AlertTriangle,
@@ -242,7 +242,27 @@ const Badge = ({ children, tone = "slate" }: { children: React.ReactNode; tone?:
 // ── MAIN PAGE ───────────────────────────────────────────────────────
 
 export default function SelfHealingPage() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<"overview" | "errors" | "patches" | "benchmarks" | "activity" | "predictions" | "supervisor" | "pipeline">("pipeline");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && ["overview", "errors", "patches", "benchmarks", "activity", "predictions", "supervisor", "pipeline"].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const handleCustomNav = (e: any) => {
+      const detail = e.detail;
+      if (detail?.tabKey === "tab" && detail?.tabValue && ["overview", "errors", "patches", "benchmarks", "activity", "predictions", "supervisor", "pipeline"].includes(detail.tabValue)) {
+        setActiveTab(detail.tabValue);
+      }
+    };
+    window.addEventListener("luqi:navigate-tab", handleCustomNav);
+    return () => window.removeEventListener("luqi:navigate-tab", handleCustomNav);
+  }, []);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [useAI, setUseAI] = useState(true);
   const [expandedPatch, setExpandedPatch] = useState<number | null>(null);

@@ -17,6 +17,7 @@ dependencies = [
     "redis>=5.0",
     "tenacity>=8.0",
     "structlog>=24.0",
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]

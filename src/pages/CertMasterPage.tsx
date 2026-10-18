@@ -4,7 +4,7 @@
 // =====================================================================
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   Shield,
   Network,
@@ -397,8 +397,51 @@ const LAB_SCENARIOS: LabScenario[] = [
 ];
 
 export default function CertMasterPage() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<"exam" | "terminal" | "subnet" | "flashcards" | "coach" | "topology">("exam");
   const [selectedTrack, setSelectedTrack] = useState<TrackId>("ccna_200_301");
+
+  // Sync tabs and tracks with URL parameters and paths
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    const trackParam = params.get("track");
+
+    if (tabParam && ["exam", "terminal", "subnet", "flashcards", "coach", "topology"].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+    if (trackParam && ["itil_ai_v5", "ccna_200_301", "ccnp_encor", "ccip_sp"].includes(trackParam)) {
+      setSelectedTrack(trackParam as any);
+    }
+
+    if (location.pathname === "/itil-ai") {
+      setSelectedTrack("itil_ai_v5");
+      setActiveTab("exam");
+    } else if (location.pathname === "/ccna") {
+      setSelectedTrack("ccna_200_301");
+      setActiveTab("exam");
+    } else if (location.pathname === "/ccnp") {
+      setSelectedTrack("ccnp_encor");
+      setActiveTab("exam");
+    } else if (location.pathname === "/networking-lab") {
+      setActiveTab("terminal");
+    }
+  }, [location.pathname, location.search]);
+
+  // Listen for direct tab navigation from Global Command Palette
+  useEffect(() => {
+    const handleCustomNav = (e: any) => {
+      const detail = e.detail;
+      if (detail?.tabKey === "tab" && detail?.tabValue) {
+        setActiveTab(detail.tabValue);
+      }
+      if (detail?.tabKey === "track" && detail?.tabValue) {
+        setSelectedTrack(detail.tabValue);
+      }
+    };
+    window.addEventListener("luqi:navigate-tab", handleCustomNav);
+    return () => window.removeEventListener("luqi:navigate-tab", handleCustomNav);
+  }, []);
 
   // ── EXAM STATE ──
   const [examMode, setExamMode] = useState<"practice" | "timed">("practice");

@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "Luqi AI — Pan-African and Global AI Education Platform",
+  "short_name": "Luqi AI",
+  "description": "Pan-African and Global AI Education Platform with interactive STEM labs, ITIL AI Governance & Cisco CertMaster Academy, and autonomous market intelligence.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -17,6 +17,7 @@ import {
   Wand2,
   FileSpreadsheet,
   GraduationCap,
+  Search,
 } from "lucide-react";
 
 export default function Home() {
@@ -36,6 +37,17 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
+              className="text-xs px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 hover:border-amber-500/50 transition-all flex items-center gap-2 font-medium"
+              title="Global Command Palette (Cmd+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Search 48 Pages</span>
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
+                ⌘K
+              </kbd>
+            </button>
             <Link
               to="/cert-academy"
               className="text-xs px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 font-medium"
@@ -76,6 +88,29 @@ export default function Home() {
           <p className="text-sm text-slate-400 leading-relaxed">
             From interactive STEM lab calculations and margin-guarded generative animation, to LangGraph flight recorders and CrewAI persistent memory.
           </p>
+
+          {/* Interactive Global Command Palette Trigger Bar */}
+          <div
+            onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
+            className="max-w-xl mx-auto flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-900 transition-all cursor-pointer shadow-lg shadow-black/40 group text-left mt-4 ring-1 ring-white/5 hover:ring-amber-500/20"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400 group-hover:scale-105 transition-transform">
+                <Search className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-sm text-slate-200 font-semibold group-hover:text-amber-300 transition-colors block truncate">
+                  Jump quickly across all 48 operational pages...
+                </span>
+                <span className="text-[11px] text-slate-400 block truncate">
+                  ITIL® 5 AI, Cisco CLI, Subnet Bit Calc, 7 STEM Labs, AfCFTA, Video Studio, Flight Recorder
+                </span>
+              </div>
+            </div>
+            <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg shrink-0 ml-2">
+              ⌘K
+            </kbd>
+          </div>
         </div>
 
         {/* Core Subsystem Cards Grid */}

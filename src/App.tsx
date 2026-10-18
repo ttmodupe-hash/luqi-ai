@@ -21,6 +21,7 @@ import CertMasterPage from "./pages/CertMasterPage";
 // Components
 import WelcomeModal from "@/components/WelcomeModal";
 import ReportBugButton from "@/components/ReportBugButton";
+import { GlobalSearchTrigger } from "@/components/GlobalCommandPalette";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 // Icons
@@ -48,6 +49,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <Toaster />
       <WelcomeModal />
       <ReportBugButton />
+      <GlobalSearchTrigger />
       {children}
     </div>
   );
