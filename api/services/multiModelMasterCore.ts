@@ -1,6 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 
 // Initialize Client SDKs safely from environment variables
 const getGemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
