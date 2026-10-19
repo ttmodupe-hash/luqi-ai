@@ -6,6 +6,12 @@ type ActiveTab = 'CHAT_CONSOLE' | 'EXPERIENTIAL_LABS' | 'FINOPS_SECURITY';
 type GradeLevel = 'PRE_SCHOOL' | 'PRIMARY' | 'HIGH_SCHOOL' | 'HIGHER_LEARNING';
 type NetworkMode = '5G_6G_WEBGL' | '3G_4G_SVG' | '2G_USSD_TEXT';
 
+let hitlCounter = 100000;
+const generateHitlTxRef = () => {
+  hitlCounter += 1;
+  return `LUQI_HITL_${hitlCounter}`;
+};
+
 export const HeroAiChatConsole: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('CHAT_CONSOLE');
 
@@ -232,7 +238,7 @@ export const HeroAiChatConsole: React.FC = () => {
     // Check if query requires 30% Human-in-the-Loop Payment / SARS Pin Gate
     if (query.toLowerCase().includes('pay') || query.toLowerCase().includes('submit tax') || query.toLowerCase().includes('top up')) {
       setPendingAuthModal({
-        txRef: `LUQI_HITL_${Date.now().toString().slice(-6)}`,
+        txRef: generateHitlTxRef(),
         amountZar: 150,
         purpose: query,
         rail: 'PayFast / MTN MoMo Collections'
@@ -418,10 +424,16 @@ export const HeroAiChatConsole: React.FC = () => {
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   {m.sender === 'ai' && (
-                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-3 text-[10px] font-mono text-slate-400">
-                      <span>Route: {m.role}</span>
-                      <span>Model: {m.model}</span>
-                      <span className="text-emerald-400">Cost: R{m.costZar?.toFixed(4)}</span>
+                    <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/60">
+                        ⚡ Route: {m.role}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-semibold">
+                        🤖 Model: {m.model}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                        💰 Cost: R{m.costZar?.toFixed(4)}
+                      </span>
                     </div>
                   )}
                 </div>

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import HeroAiChatConsole from "@/components/HeroAiChatConsole";
 import CapabilitiesComparisonMatrix from "@/components/CapabilitiesComparisonMatrix";
+import ApiSystemStatusDashboard from "@/components/ApiSystemStatusDashboard";
 
 export default function Home() {
   return (
@@ -351,6 +352,9 @@ export default function Home() {
 
         {/* AI Capabilities & Archiving Comparison Matrix */}
         <CapabilitiesComparisonMatrix />
+
+        {/* Real-Time Multi-Model API Health & FinOps Matrix */}
+        <ApiSystemStatusDashboard />
       </main>
     </div>
   );

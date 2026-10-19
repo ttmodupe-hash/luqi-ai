@@ -284,7 +284,26 @@ export default function LabSimulatorPage() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+          {blueprint.data.slug.includes("pendulum") && (
+            <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md shadow-sky-500/5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
+                  ⚡
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">Full Real-Time Interactive Physics Rig Available</div>
+                  <div className="text-xs text-slate-400">Interactive drag-and-drop bob, live kinetic vs. potential energy waveforms, and Grade 10 mastery challenges.</div>
+                </div>
+              </div>
+              <Link
+                to="/pendulum-lab"
+                className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5" /> Launch Live Rig
+              </Link>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Controls Panel */}
             <div className="lg:col-span-1 space-y-4">
@@ -559,6 +578,42 @@ export default function LabSimulatorPage() {
               <SelectItem value="advanced">Advanced</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Featured Grade 10 Simulation Banner */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-500/15 via-indigo-500/10 to-slate-900 border border-sky-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-sky-500/5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                LIVE INTERACTIVE SIMULATION
+              </span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                GRADE 10 PHYSICS
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-white">
+              Simple Pendulum Motion & Real-Time Energy Conservation Lab
+            </h3>
+            <p className="text-xs text-slate-300 max-w-2xl">
+              Zero-dependency digital lab simulation with interactive bob dragging, sliders for gravity, length, and mass, plus real-time kinetic vs. potential energy waveform plotting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/pendulum-lab"
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs shadow-md shadow-sky-600/30 transition-all flex items-center gap-1.5"
+            >
+              <Play className="w-3.5 h-3.5" /> Launch Lab
+            </Link>
+            <a
+              href="/pendulum-lab.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium transition-all"
+            >
+              Standalone HTML
+            </a>
+          </div>
         </div>
 
         {/* Labs Grid */}

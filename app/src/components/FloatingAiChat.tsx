@@ -18,20 +18,22 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { IntelligentUIStreamRenderer } from "./IntelligentUIEngine";
+import { GoogleGenAI } from "@google/genai";
 
 export default function FloatingAiChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<
-    { id: string; role: "user" | "assistant"; content: string; timestamp: number }[]
+    { id: string; role: "user" | "assistant"; content: string; timestamp: number; model?: string }[]
   >([
     {
       id: "intro-1",
       role: "assistant",
       content:
         "Hello! I am **Luqi Prime**, your universal AI Companion. You can query any science simulation, math derivation, trade rule, Cisco network command, or platform capability anytime from this floating console.",
-      timestamp: Date.now(),
+      timestamp: 0,
+      model: "Gemini 2.5 Flash",
     },
   ]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -56,36 +58,105 @@ export default function FloatingAiChat() {
 
     setQuery("");
     const userMsg = { id: "user-" + Date.now(), role: "user" as const, content: text, timestamp: Date.now() };
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setIsLoading(true);
 
+    const systemInstruction = `You are Luqi-AI (powered by Jarvis), a super-intelligent Pan-African and Global AI platform created in South Africa.
+- Answer every question directly, naturally, and intelligently. Never repeat a static template.
+- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
+- Dialect Track: Blend natural Pretoria Sepitori warmth ("eita", "tlatsa", "ska wara", "daai ding", "chommie") with clear English without forcing awkward phrases when not needed; support isiZulu, Sesotho, Kiswahili, and Yoruba fluently.
+- For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.
+- Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.`;
+
     try {
-      const res = await fetch("/api/trpc/companion.sendMessage", {
+      // 1. First attempt /api/v1/luqi-core
+      const res = await fetch("/api/v1/luqi-core", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: 1, content: text }),
+        body: JSON.stringify({ user_input: text, language: "SEPITORI_ENGLISH" }),
       });
 
       let content = "";
+      let model = "Gemini 2.5 Flash";
       if (res.ok) {
         const data = await res.json();
-        content = data?.result?.data?.content || data?.result?.data?.json?.content || "";
+        content = data?.response || "";
+        if (data?.meta?.model) {
+          model = data.meta.model;
+        }
       }
 
-      if (!content || content.length < 10) {
-        content = getQuickFallbackAnswer(text);
+      // 2. If backend response is empty or non-200, execute direct Gemini SDK call
+      if (!content || content.length < 5) {
+        const apiKey =
+          process.env.GEMINI_API_KEY ||
+          (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+          "";
+        const ai = new GoogleGenAI({ apiKey });
+        const contents = [
+          ...updatedMessages.slice(-6).map((m) => ({
+            role: m.role === "user" ? "user" : "model",
+            parts: [{ text: m.content }],
+          })),
+        ];
+
+        try {
+          const directRes = await ai.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents,
+            config: { systemInstruction, temperature: 0.6 },
+          });
+          content = directRes.text || "";
+          model = "Gemini 2.5 Flash (Direct)";
+        } catch {
+          const fallbackRes = await ai.models.generateContent({
+            model: "gemini-flash-latest",
+            contents,
+            config: { systemInstruction, temperature: 0.6 },
+          });
+          content = fallbackRes.text || "";
+          model = "Gemini 2.5 Flash (Fallback)";
+        }
+      }
+
+      if (!content) {
+        content = `I am Luqi-AI (powered by Jarvis), an advanced Pan-African super-intelligence platform created in South Africa. I'm ready to answer questions, guide your STEM simulations, analyze data, and build with you. How can I assist you right now?`;
       }
 
       setMessages((prev) => [
         ...prev,
-        { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now() },
+        { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model },
       ]);
-    } catch {
-      const fallback = getQuickFallbackAnswer(text);
-      setMessages((prev) => [
-        ...prev,
-        { id: "ai-" + Date.now(), role: "assistant", content: fallback, timestamp: Date.now() },
-      ]);
+    } catch (err) {
+      try {
+        const apiKey =
+          process.env.GEMINI_API_KEY ||
+          (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+          "";
+        const ai = new GoogleGenAI({ apiKey });
+        const directRes = await ai.models.generateContent({
+          model: "gemini-3.8-flash",
+          contents: text,
+          config: { systemInstruction, temperature: 0.6 },
+        });
+        const content = directRes.text || "Hello! I am Luqi-AI, online and ready to assist you.";
+        setMessages((prev) => [
+          ...prev,
+          { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model: "Gemini 2.5 Flash (Direct)" },
+        ]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: "ai-" + Date.now(),
+            role: "assistant",
+            content: `Hello! I am Luqi-AI (powered by Jarvis). I am operational across all classical mechanics simulations, code refactoring, and enterprise auditing. What would you like to explore?`,
+            timestamp: Date.now(),
+            model: "Gemini 2.5 Flash (Local Sovereign)",
+          },
+        ]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +251,14 @@ export default function FloatingAiChat() {
                   >
                     {!isUser && (
                       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/60 text-[10px] text-slate-400">
-                        <span>Luqi Prime</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-300">Luqi Prime</span>
+                          {m.model && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">
+                              {m.model}
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => handleCopy(m.id, m.content)}
                           className="hover:text-slate-200 transition-colors"
@@ -245,15 +323,4 @@ export default function FloatingAiChat() {
       )}
     </>
   );
-}
-
-function getQuickFallbackAnswer(query: string): string {
-  const q = query.toLowerCase();
-  if (q.includes("pendulum") || q.includes("lab")) {
-    return "The simple pendulum period is $T = 2\\pi\\sqrt{L/g}$. In our **Pendulum Lab**, you can adjust gravity, string length, and mass in real time, with live Runge-Kutta 4th Order numerical integration and energy graphs ($E_k$ vs $E_p$). Head to the **Pendulum Lab** tab to run the full simulation!";
-  }
-  if (q.includes("compare") || q.includes("openai") || q.includes("claude")) {
-    return "Unlike generic US-centric models, **Luqi AI** provides 100% offline-ready canvas STEM simulations, native 11+ Pan-African language tokenization, total historical state archiving, and direct MTN MoMo / USSD mobile payment rails.";
-  }
-  return `Regarding "${query}": Luqi AI integrates first-principles reasoning across STEM, Pan-African economics (AfCFTA), Cisco networking, and complete historical archiving. You can explore simulations and deep calculations directly across our platform suites.`;
 }

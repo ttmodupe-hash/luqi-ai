@@ -4,8 +4,8 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
-# Copy package files from nested app/ directory (package-lock.json included when present)
-COPY app/package*.json ./
+# Copy package files from root (package-lock.json included when present)
+COPY package*.json ./
 
 # Install ALL dependencies including devDependencies
 RUN npm install --legacy-peer-deps --include=dev
@@ -13,14 +13,9 @@ RUN npm install --legacy-peer-deps --include=dev
 # Add node_modules/.bin to PATH so vite/esbuild are found
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
-# Copy source code from the nested app/ directory
-COPY app/ ./
+# Copy all application source, api, scripts, and configs from repo root
+COPY . .
 
-# Copy API, scripts, and db from repo root (they are NOT inside app/)
-COPY api/ ./api/
-COPY scripts/ ./scripts/
-COPY db/ ./db/
-COPY start.sh ./
 RUN chmod +x ./start.sh
 
 # Build the application (verify gate → frontend → backend bundle → postbuild)

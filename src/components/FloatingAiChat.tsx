@@ -25,14 +25,15 @@ export default function FloatingAiChat() {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<
-    { id: string; role: "user" | "assistant"; content: string; timestamp: number }[]
+    { id: string; role: "user" | "assistant"; content: string; timestamp: number; model?: string }[]
   >([
     {
       id: "intro-1",
       role: "assistant",
       content:
         "Hello! I am **Luqi Prime**, your universal AI Companion. You can query any science simulation, math derivation, trade rule, Cisco network command, or platform capability anytime from this floating console.",
-      timestamp: Date.now(),
+      timestamp: 0,
+      model: "Gemini 2.5 Flash",
     },
   ]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -77,9 +78,13 @@ export default function FloatingAiChat() {
       });
 
       let content = "";
+      let model = "Gemini 2.5 Flash";
       if (res.ok) {
         const data = await res.json();
         content = data?.response || "";
+        if (data?.meta?.model) {
+          model = data.meta.model;
+        }
       }
 
       // 2. If backend response is empty or non-200, execute direct Gemini SDK call
@@ -103,6 +108,7 @@ export default function FloatingAiChat() {
             config: { systemInstruction, temperature: 0.6 },
           });
           content = directRes.text || "";
+          model = "Gemini 2.5 Flash (Direct)";
         } catch {
           const fallbackRes = await ai.models.generateContent({
             model: "gemini-flash-latest",
@@ -110,6 +116,7 @@ export default function FloatingAiChat() {
             config: { systemInstruction, temperature: 0.6 },
           });
           content = fallbackRes.text || "";
+          model = "Gemini 2.5 Flash (Fallback)";
         }
       }
 
@@ -119,7 +126,7 @@ export default function FloatingAiChat() {
 
       setMessages((prev) => [
         ...prev,
-        { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now() },
+        { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model },
       ]);
     } catch (err) {
       try {
@@ -136,7 +143,7 @@ export default function FloatingAiChat() {
         const content = directRes.text || "Hello! I am Luqi-AI, online and ready to assist you.";
         setMessages((prev) => [
           ...prev,
-          { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now() },
+          { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model: "Gemini 2.5 Flash (Direct)" },
         ]);
       } catch {
         setMessages((prev) => [
@@ -146,6 +153,7 @@ export default function FloatingAiChat() {
             role: "assistant",
             content: `Hello! I am Luqi-AI (powered by Jarvis). I am operational across all classical mechanics simulations, code refactoring, and enterprise auditing. What would you like to explore?`,
             timestamp: Date.now(),
+            model: "Gemini 2.5 Flash (Local Sovereign)",
           },
         ]);
       }
@@ -243,7 +251,14 @@ export default function FloatingAiChat() {
                   >
                     {!isUser && (
                       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/60 text-[10px] text-slate-400">
-                        <span>Luqi Prime</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-300">Luqi Prime</span>
+                          {m.model && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">
+                              {m.model}
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={() => handleCopy(m.id, m.content)}
                           className="hover:text-slate-200 transition-colors"

@@ -51,6 +51,48 @@ interface DataLogPoint {
   tensionNewtons: number;
 }
 
+function drawArrow(
+  c: CanvasRenderingContext2D,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  color: string,
+  label: string
+) {
+  const headlen = 8;
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  if (Math.hypot(dx, dy) < 4) return;
+  const angle = Math.atan2(dy, dx);
+
+  c.beginPath();
+  c.moveTo(fromX, fromY);
+  c.lineTo(toX, toY);
+  c.strokeStyle = color;
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  c.beginPath();
+  c.moveTo(toX, toY);
+  c.lineTo(
+    toX - headlen * Math.cos(angle - Math.PI / 6),
+    toY - headlen * Math.sin(angle - Math.PI / 6)
+  );
+  c.lineTo(
+    toX - headlen * Math.cos(angle + Math.PI / 6),
+    toY - headlen * Math.sin(angle + Math.PI / 6)
+  );
+  c.closePath();
+  c.fillStyle = color;
+  c.fill();
+
+  c.font = "bold 10px monospace";
+  c.fillStyle = color;
+  c.textAlign = "left";
+  c.fillText(label, toX + 6, toY - 6);
+}
+
 export default function PendulumLabPage() {
   // Mode selection
   const [simMode, setSimMode] = useState<SimulationMode>("simple");
@@ -144,7 +186,7 @@ export default function PendulumLabPage() {
     historyWaveform: [] as { t: number; theta: number; omega: number }[],
     pathTrail: [] as { x: number; y: number }[],
     doubleTrail: [] as { x: number; y: number; color?: string }[],
-    lastTime: performance.now(),
+    lastTime: 0,
     elapsedSimTime: 0,
     lastZeroCrossTime: 0,
     halfPeriodPasses: 0,
@@ -222,7 +264,9 @@ export default function PendulumLabPage() {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + duration);
-    } catch {}
+    } catch {
+      /* ignore audio error */
+    }
   };
 
   // Planetary presets
@@ -900,48 +944,6 @@ export default function PendulumLabPage() {
     };
   }, [graphMode]);
 
-  function drawArrow(
-    c: CanvasRenderingContext2D,
-    fromX: number,
-    fromY: number,
-    toX: number,
-    toY: number,
-    color: string,
-    label: string
-  ) {
-    const headlen = 8;
-    const dx = toX - fromX;
-    const dy = toY - fromY;
-    if (Math.hypot(dx, dy) < 4) return;
-    const angle = Math.atan2(dy, dx);
-
-    c.beginPath();
-    c.moveTo(fromX, fromY);
-    c.lineTo(toX, toY);
-    c.strokeStyle = color;
-    c.lineWidth = 2.5;
-    c.stroke();
-
-    c.beginPath();
-    c.moveTo(toX, toY);
-    c.lineTo(
-      toX - headlen * Math.cos(angle - Math.PI / 6),
-      toY - headlen * Math.sin(angle - Math.PI / 6)
-    );
-    c.lineTo(
-      toX - headlen * Math.cos(angle + Math.PI / 6),
-      toY - headlen * Math.sin(angle + Math.PI / 6)
-    );
-    c.closePath();
-    c.fillStyle = color;
-    c.fill();
-
-    c.font = "bold 10px monospace";
-    c.fillStyle = color;
-    c.textAlign = "left";
-    c.fillText(label, toX + 6, toY - 6);
-  }
-
   // Pointer Handlers for Direct Interactive Drag & Release
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = simCanvasRef.current;
@@ -1011,7 +1013,7 @@ export default function PendulumLabPage() {
       const bob1Y = pivotY + Math.cos(p.theta) * paramsRef.current.lengthMeters * ppm;
       const dx = px - bob1X;
       const dy = py - bob1Y;
-      let newTh2 = Math.atan2(dx, dy);
+      const newTh2 = Math.atan2(dx, dy);
       p.theta2 = newTh2;
       p.omega2 = 0.0;
     }
@@ -1026,7 +1028,9 @@ export default function PendulumLabPage() {
       p.lastTime = performance.now();
       try {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {}
+      } catch {
+        /* ignore pointer capture error */
+      }
     }
   };
 
