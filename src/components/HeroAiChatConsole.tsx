@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
+import ApiSystemStatusDashboard from './ApiSystemStatusDashboard';
 
 type ActiveTab = 'CHAT_CONSOLE' | 'EXPERIENTIAL_LABS' | 'FINOPS_SECURITY';
 type GradeLevel = 'PRE_SCHOOL' | 'PRIMARY' | 'HIGH_SCHOOL' | 'HIGHER_LEARNING';
@@ -699,6 +700,9 @@ export const HeroAiChatConsole: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Real-time Multi-Model API & FinOps Matrix Scanner */}
+          <ApiSystemStatusDashboard />
         </div>
       )}
     </section>
