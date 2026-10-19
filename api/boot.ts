@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
@@ -11,6 +12,7 @@ import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
 import { closeCache } from "./services/cache";
+import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -91,10 +93,73 @@ app.use("/api/trpc/*", async (c) => {
 
 // ── HEALTH CHECK ENDPOINTS (Railway, Docker & Uptime monitors) ─────
 app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine" }));
+app.get("/v1/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine" }));
 app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine" }));
 
 // ── REST COMPAT (legacy frontend endpoints → real services) ──────────
 app.route("/", restCompat);
+
+// 1. Unified Chat & Jarvis Companion Endpoint
+app.post('/api/v1/luqi-core', async (c) => {
+  try {
+    const body = await c.req.json();
+    const result = await SuperIntelligenceOrchestrator.executeWithSelfReflection(
+      body.user_input || body.prompt || '',
+      body.roleHint,
+      body.language || 'AUTO'
+    );
+    return c.json({
+      status: 'success',
+      response: result.output,
+      meta: {
+        role: result.role,
+        model: result.modelUsed,
+        costZar: result.finOps.costZar,
+        governance: result.governanceMode
+      }
+    });
+  } catch (err: any) {
+    return c.json({ status: 'error', error: err.message }, 500);
+  }
+});
+
+// 2. Experiential Digital Lab Compiler (Preschool to University | 2G to 6G)
+app.post('/api/v1/experiential-lab', async (c) => {
+  try {
+    const { topic, gradeTier, bandwidthTier, language } = await c.req.json();
+    const lab = await SuperIntelligenceOrchestrator.generateExperientialLab(
+      topic || 'Pendulum & Energy Conservation',
+      gradeTier || 'HIGH_SCHOOL',
+      bandwidthTier || '5G_6G_WEBGL',
+      language || 'SEPITORI'
+    );
+    return c.json({ status: 'success', lab });
+  } catch (err: any) {
+    return c.json({ status: 'error', error: err.message }, 500);
+  }
+});
+
+// 3. FinOps Cost & Self-Healing Health Dashboard Endpoint
+app.get('/api/v1/finops-dashboard', (c) => {
+  return c.json({
+    status: 'success',
+    data: UnifiedFinOpsController.getDashboardSummary()
+  });
+});
+
+// 4. 70/30 Human-in-the-Loop Payment & Authorization Gate (PayFast / MTN MoMo)
+app.post('/api/v1/billing/initiate-30-auth', async (c) => {
+  const { amountZar, rail, purpose } = await c.req.json();
+  const txRef = `LUQI_AUTH_${Date.now()}`;
+  return c.json({
+    status: 'AWAITING_HUMAN_30_PERCENT_PIN',
+    transactionReference: txRef,
+    rail: rail || 'PAYFAST_MOMO',
+    amountZar: amountZar || 50,
+    purpose: purpose || 'Token Top-Up / SARS Tax Submission Auth',
+    securityNotice: 'AI execution halted at the 70% boundary. Human PIN / OTP required on secure out-of-band handset.'
+  });
+});
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 

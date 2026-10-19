@@ -40,6 +40,8 @@ import {
   X,
 } from "lucide-react";
 
+import FloatingAiChat from "@/components/FloatingAiChat";
+
 // App Layout Component
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,6 +56,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <WelcomeModal />
       <ReportBugButton />
       <GlobalSearchTrigger />
+      <FloatingAiChat />
       {children}
     </div>
   );

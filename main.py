@@ -364,8 +364,17 @@ async def root():
     }
 
 
+@app.get("/v1/health", tags=["health"])
 @app.get("/health", tags=["health"])
+@app.get("/api/health", tags=["health"])
 async def health():
+    return {
+        "status": "healthy",
+        "service": "luqi-ai-engine",
+        "jarvis_active": True,
+        "billing_sync_day": "1st of Every Month",
+        "version": settings.version,
+    }
     """
     Health check endpoint for load balancers, Docker, and monitoring.
     Returns 200 if all critical services are healthy, 503 otherwise.

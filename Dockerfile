@@ -20,6 +20,8 @@ COPY app/ ./
 COPY api/ ./api/
 COPY scripts/ ./scripts/
 COPY db/ ./db/
+COPY start.sh ./
+RUN chmod +x ./start.sh
 
 # Build the application (verify gate → frontend → backend bundle → postbuild)
 RUN node scripts/verify-build.mjs && npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" && node scripts/postbuild.js
@@ -33,4 +35,4 @@ ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["node", "dist/boot.js"]
+CMD ["bash", "start.sh"]

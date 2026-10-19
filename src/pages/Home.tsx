@@ -20,6 +20,8 @@ import {
   Search,
   Activity,
 } from "lucide-react";
+import HeroAiChatConsole from "@/components/HeroAiChatConsole";
+import CapabilitiesComparisonMatrix from "@/components/CapabilitiesComparisonMatrix";
 
 export default function Home() {
   return (
@@ -38,13 +40,19 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              to="/companion"
+              className="text-xs px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:brightness-110 text-white font-bold transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+            >
+              <Brain className="w-3.5 h-3.5" /> AI Chat & Reasoning
+            </Link>
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
               className="text-xs px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 hover:border-amber-500/50 transition-all flex items-center gap-2 font-medium"
-              title="Global Command Palette (Cmd+K)"
+              title="Global Omni-Query & Capabilities Palette (Cmd+K)"
             >
               <Search className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Search 48 Pages</span>
+              <span className="hidden sm:inline">Omni-Query</span>
               <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
                 ⌘K
               </kbd>
@@ -54,12 +62,6 @@ export default function Home() {
               className="text-xs px-3.5 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 transition-all flex items-center gap-1.5 font-medium"
             >
               <Activity className="w-3.5 h-3.5 text-sky-400" /> Pendulum Lab
-            </Link>
-            <Link
-              to="/companion"
-              className="text-xs px-3.5 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all flex items-center gap-1.5 font-medium"
-            >
-              <Brain className="w-3.5 h-3.5 text-purple-400" /> AI Companion
             </Link>
             <Link
               to="/cert-academy"
@@ -89,23 +91,28 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
-        {/* Hero Banner */}
-        <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Sparkles className="w-3.5 h-3.5" /> One Engine &middot; Every Domain &middot; Total Archiving
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-100">
-            Active Intelligence & Complete Mechanical/Cognitive Archiving
-          </h2>
-          <p className="text-sm text-slate-400 leading-relaxed">
-            From interactive STEM lab calculations and margin-guarded generative animation, to LangGraph flight recorders and CrewAI persistent memory.
-          </p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+        {/* Hero Banner with Interactive AI Query Console */}
+        <div className="space-y-6 max-w-4xl mx-auto">
+          <div className="text-center space-y-3">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Sparkles className="w-3.5 h-3.5" /> Sovereign Pan-African AI &middot; Universal Execution &middot; Total Archiving
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-100">
+              Active Intelligence & STEM Simulation Engine
+            </h2>
+            <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Query any scientific formula, run offline physics simulations, generate dynamic calculators, or compare sovereign capabilities in real time.
+            </p>
+          </div>
 
-          {/* Interactive Global Command Palette Trigger Bar */}
+          {/* FRONT-AND-CENTER INTERACTIVE AI CHAT CONSOLE */}
+          <HeroAiChatConsole />
+
+          {/* Quick Omni-Query Trigger Bar */}
           <div
             onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
-            className="max-w-xl mx-auto flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-900 transition-all cursor-pointer shadow-lg shadow-black/40 group text-left mt-4 ring-1 ring-white/5 hover:ring-amber-500/20"
+            className="max-w-xl mx-auto flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-900 transition-all cursor-pointer shadow-lg shadow-black/40 group text-left ring-1 ring-white/5 hover:ring-amber-500/20"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400 group-hover:scale-105 transition-transform">
@@ -113,10 +120,10 @@ export default function Home() {
               </div>
               <div className="min-w-0">
                 <span className="text-sm text-slate-200 font-semibold group-hover:text-amber-300 transition-colors block truncate">
-                  Jump quickly across all 48 operational pages...
+                  Explore boundless capabilities, labs & sovereign engines...
                 </span>
                 <span className="text-[11px] text-slate-400 block truncate">
-                  ITIL® 5 AI, Cisco CLI, Subnet Bit Calc, 7 STEM Labs, AfCFTA, Video Studio, Flight Recorder
+                  ITIL® 5 AI, Cisco CLI, Simple & Double Pendulum, AfCFTA, Video Studio, Flight Recorder
                 </span>
               </div>
             </div>
@@ -341,6 +348,9 @@ export default function Home() {
             </div>
           </Link>
         </div>
+
+        {/* AI Capabilities & Archiving Comparison Matrix */}
+        <CapabilitiesComparisonMatrix />
       </main>
     </div>
   );

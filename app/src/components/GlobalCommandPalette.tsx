@@ -9,7 +9,7 @@ import { Search, X, CornerDownLeft, ChevronRight, HelpCircle } from "lucide-reac
 import { ALL_48_OPERATIONAL_PAGES, type OperationalPage } from "./commandPaletteData";
 
 const CATEGORIES = [
-  "All (48)",
+  "All Capabilities",
   "CertMaster",
   "STEM Labs",
   "African Radar",
@@ -27,7 +27,7 @@ interface GlobalCommandPaletteProps {
 
 export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPaletteProps) {
   const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All (48)");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All Capabilities");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +64,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
 
     return ALL_48_OPERATIONAL_PAGES.filter((page) => {
       // Category filter
-      if (selectedCategory !== "All (48)" && page.category !== selectedCategory) {
+      if (selectedCategory !== "All Capabilities" && page.category !== selectedCategory) {
         return false;
       }
 
@@ -162,7 +162,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search across all 48 operational pages, CLI labs, engines, or exams..."
+            placeholder="Ask Luqi AI anything, or search all capabilities, labs, simulations, and tools..."
             className="w-full bg-transparent text-sm sm:text-base text-slate-100 placeholder-slate-400 focus:outline-none"
           />
           {query ? (
@@ -213,7 +213,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
             <div className="py-12 text-center space-y-3">
               <HelpCircle className="w-10 h-10 text-slate-500 mx-auto opacity-60" />
               <div className="text-sm font-semibold text-slate-300">
-                No operational pages match &ldquo;{query}&rdquo;
+                No capabilities match &ldquo;{query}&rdquo;
               </div>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
                 Try searching by topic like &ldquo;Cisco CLI&rdquo;, &ldquo;Pendulum&rdquo;, &ldquo;AfCFTA&rdquo;, &ldquo;Voiceover&rdquo;, or reset the category filter.
@@ -221,7 +221,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
               <button
                 onClick={() => {
                   setQuery("");
-                  setSelectedCategory("All (48)");
+                  setSelectedCategory("All Capabilities");
                 }}
                 className="text-xs text-amber-400 hover:underline pt-1 inline-block"
               >
@@ -300,7 +300,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
         <div className="flex items-center justify-between px-4 py-2.5 bg-slate-950/80 border-t border-slate-800 text-xs text-slate-400">
           <div className="flex items-center gap-3">
             <span className="font-mono text-amber-400/90 font-medium">
-              {filteredPages.length} of 48 operational pages
+              {filteredPages.length} specialized capabilities & unlimited AI queries
             </span>
             <span className="hidden sm:inline text-slate-600">&bull;</span>
             <span className="hidden sm:inline text-[11px] text-slate-400">
@@ -363,12 +363,12 @@ export function GlobalSearchTrigger() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-20 z-40 flex items-center gap-2.5 px-3.5 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/40 hover:border-amber-400 shadow-xl shadow-amber-500/10 backdrop-blur-md transition-all group scale-100 hover:scale-105"
-        title="Open Command Palette (Cmd+K)"
+        className="fixed bottom-6 right-36 z-40 flex items-center gap-2.5 px-3.5 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/40 hover:border-amber-400 shadow-xl shadow-amber-500/10 backdrop-blur-md transition-all group scale-100 hover:scale-105"
+        title="Open Omni Command Palette (Cmd+K)"
         aria-label="Global Search Command Palette"
       >
         <Search className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-        <span className="text-xs font-semibold tracking-wide pr-1">Search 48 Pages</span>
+        <span className="text-xs font-semibold tracking-wide pr-1">Omni-Query (⌘K)</span>
         <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
           ⌘K
         </kbd>
