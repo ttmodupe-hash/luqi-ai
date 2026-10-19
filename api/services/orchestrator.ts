@@ -105,7 +105,7 @@ async function getAnthropicClient() {
   }
 }
 
-async function getGeminiClient() {
+export async function getGeminiClient() {
   if (!hasGemini) return null;
   if (geminiClient) return geminiClient;
   try {

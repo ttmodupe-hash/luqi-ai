@@ -22,10 +22,7 @@ import { getRadar, RADAR_DISCLAIMER } from "./services/insights";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
 import { streamSSE } from "hono/streaming";
 import { ussdAndBillingService } from "./services/ussdAndBillingService";
-import { SelfImprovingLocalizationEngine } from "../lib/lang/LocalizationEngine";
-
 export const restCompat = new Hono();
-const localizationEngineInstance = new SelfImprovingLocalizationEngine();
 
 const LUQI_SYSTEM_PROMPT = `You are LUQI AI, an intelligent assistant for South Africa and the broader African continent.
 

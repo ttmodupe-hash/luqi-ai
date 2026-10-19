@@ -89,6 +89,10 @@ app.use("/api/trpc/*", async (c) => {
   });
 });
 
+// ── HEALTH CHECK ENDPOINTS (Railway, Docker & Uptime monitors) ─────
+app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine" }));
+app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine" }));
+
 // ── REST COMPAT (legacy frontend endpoints → real services) ──────────
 app.route("/", restCompat);
 

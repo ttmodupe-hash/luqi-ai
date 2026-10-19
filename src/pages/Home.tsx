@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   GraduationCap,
   Search,
+  Activity,
 } from "lucide-react";
 
 export default function Home() {
@@ -48,6 +49,12 @@ export default function Home() {
                 ⌘K
               </kbd>
             </button>
+            <Link
+              to="/pendulum-lab"
+              className="text-xs px-3.5 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <Activity className="w-3.5 h-3.5 text-sky-400" /> Pendulum Lab
+            </Link>
             <Link
               to="/companion"
               className="text-xs px-3.5 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all flex items-center gap-1.5 font-medium"
@@ -121,6 +128,33 @@ export default function Home() {
 
         {/* Core Subsystem Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card: Grade 10 Simple Pendulum & Energy Conservation Lab */}
+          <Link
+            to="/pendulum-lab"
+            className="group rounded-3xl border border-sky-500/50 bg-gradient-to-br from-sky-500/15 via-slate-900/70 to-slate-900/95 p-6 hover:border-sky-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-xl shadow-sky-500/10 md:col-span-2 lg:col-span-1 ring-1 ring-sky-500/20"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-4 group-hover:scale-105 transition-transform">
+                <Activity className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-sky-400 transition-colors">
+                  Simple Pendulum Lab
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-mono font-bold border border-sky-500/30">
+                  GRADE 10 PHYSICS
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Zero-dependency digital lab simulation. Includes real-time sliders for gravity (g), string length (L), and mass (m), with live waveform graph of kinetic vs. potential energy (Ek vs Ep).
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-sky-400">
+              <span>Launch Interactive Lab</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
           {/* Card: Luqi AI Self-Improving Companion */}
           <Link
             to="/companion"

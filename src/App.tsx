@@ -20,6 +20,7 @@ import CertMasterPage from "./pages/CertMasterPage";
 import CompanionPage from "./pages/CompanionPage";
 import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
 import ExperientialEducationPage from "./pages/ExperientialEducationPage";
+import PendulumLabPage from "./pages/PendulumLabPage";
 
 // Components
 import WelcomeModal from "@/components/WelcomeModal";
@@ -73,6 +74,9 @@ export default function App() {
         <RouterRoute path="/experiential-edu" element={<ExperientialEducationPage />} />
         <RouterRoute path="/simulation-core" element={<ExperientialEducationPage />} />
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
+        <RouterRoute path="/pendulum-lab" element={<PendulumLabPage />} />
+        <RouterRoute path="/pendulum" element={<PendulumLabPage />} />
+        <RouterRoute path="/simple-pendulum" element={<PendulumLabPage />} />
         <RouterRoute path="/self-healing" element={<SelfHealingPage />} />
         <RouterRoute path="/video-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/archive" element={<ArchiveVaultPage />} />
