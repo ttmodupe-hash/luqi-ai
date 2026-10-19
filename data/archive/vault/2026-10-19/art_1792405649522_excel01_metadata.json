@@ -1,0 +1,22 @@
+{
+  "artifactId": "art_1792405649522_excel01",
+  "fileName": "Consolidated_Equipment_Serials.xlsx",
+  "fileType": "excel",
+  "fileSizeBytes": 72,
+  "sha256": "bf8cc0fdec48e7ad180f543a7382caeda9b8a52eccda73a45daed268e4f468da",
+  "dateFolder": "2026-10-19",
+  "filePath": "/app/applet/data/archive/vault/2026-10-19/art_1792405649522_excel01_Consolidated_Equipment_Serials.xlsx",
+  "metadataPath": "/app/applet/data/archive/vault/2026-10-19/art_1792405649522_excel01_metadata.json",
+  "taskOutput": {
+    "agentRole": "Data Architect",
+    "taskName": "Multi-tab Excel Serial Number Reconciliation",
+    "crewId": "crew_finance_reconciliation",
+    "threadId": "sess_reconciliation_2026",
+    "modelUsed": "Gemini 3.1 Pro / GPT-4o",
+    "promptSummary": "Reconcile serial numbers across sheets A, B, and C with primary key standardization",
+    "executionDurationMs": 1420,
+    "primaryKeysReconciled": 418,
+    "status": "verified"
+  },
+  "createdAt": "2026-10-19T10:27:29.523Z"
+}

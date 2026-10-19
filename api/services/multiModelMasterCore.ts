@@ -142,7 +142,7 @@ export class MultiModelMasterOrchestrator {
       }
 
       if (role === 'ENTERPRISE_CYBER') {
-        if (process.env.OPENAI_API_KEY) {
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
           try {
             const openai = getOpenAI();
             const res = await openai.chat.completions.create({
@@ -154,10 +154,10 @@ export class MultiModelMasterOrchestrator {
             });
             const output = res.choices[0]?.message?.content || '';
             if (output.trim()) {
-              return { model: 'GPT-4o (Enterprise & Cybersecurity)', output, role, costZar: 0.0075 };
+              return { model: 'OpenAI GPT-6 Astra / GPT-4o (Enterprise & Cybersecurity)', output, role, costZar: 0.0075 };
             }
-          } catch (openAiErr) {
-            console.warn('[Multi-Model Router] OpenAI invocation failed, cascading to Gemini...', openAiErr);
+          } catch (openAiErr: any) {
+            console.warn('[Multi-Model Router] OpenAI invocation failed, cascading to Gemini...', openAiErr?.message);
           }
         }
       }
