@@ -25,7 +25,7 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 app.use("/*", cors({
   origin: process.env.FRONTEND_URL || "*",
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization"],
+  allowHeaders: ["Content-Type", "Authorization", "X-API-KEY", "X-API-Key", "x-api-key"],
   exposeHeaders: ["Content-Length", "X-Request-Id"],
   maxAge: 86400,
   credentials: true,

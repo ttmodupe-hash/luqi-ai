@@ -1893,38 +1893,140 @@ restCompat.post("/v1/sensing/run-scan", handleRadar);
 
 restCompat.post("/api/v1/sensing/draft-grant", async (c: any) => {
   const body = await c.req.json().catch(() => ({}));
-  const grantId = body.grant_id || "afcfta_dic_2026";
+  const grantId = body.grant_id || "tia_seed_fund_q4_2026";
   const grant = AFRICAN_GRANTS_DATA.find(g => g.id === grantId) || AFRICAN_GRANTS_DATA[0];
 
+  let execSummary = `Limitless Telecoms proposes integrating the LUQI AI sovereign engine into the ${grant.title}. LUQI AI is purpose-built for African operating realities, combining zero-dependency client runtimes, local edge caching for intermittent power/connectivity, and automated compliance pipelines to eliminate friction in intra-African trade and digital service delivery.`;
+  let techAlign = [
+    {
+      criterion: "Cross-Border Trade & Settlement Acceleration",
+      luqi_implementation: "Integrated PAPSS net settlement router & Flutterwave v3 multi-currency mobile money adapter.",
+      readiness: "Production-Ready / Sandbox Verified"
+    },
+    {
+      criterion: "Zero Trust Security & Sovereign Compliance",
+      luqi_implementation: "OWASP AST10 2026 defense framework, continuous mTLS, and 70/30 Human-in-the-Loop governance.",
+      readiness: "Enforced at all API boundaries"
+    },
+    {
+      criterion: "Hyper-Accessibility & Low Data Overhead",
+      luqi_implementation: "Offline-capable HTML5/Canvas STEM labs and lightweight async job queue.",
+      readiness: "Verified across mobile & desktop"
+    }
+  ];
+  let milestones = [
+    { milestone: "Month 1-2", deliverable: "Deploy PAPSS multi-currency liquidity gateway with automated currency conversion between ZAR, NGN, KES, and GHS." },
+    { milestone: "Month 3-4", deliverable: "Roll out AfCFTA Rules of Origin tariff classification assistant for 5,000+ HS tariff lines." },
+    { milestone: "Month 5-6", deliverable: "Pilot with 50 cross-border SADC freight operators; measure border latency reduction." }
+  ];
+
+  if (grant.id === "tia_seed_fund_q4_2026") {
+    execSummary = `Limitless Telecoms submits this proposal under the TIA Seed Fund Q4 2026 window for the deployment of the 'Township Spaza Mobile Settlement & Micro-credit Ledger Adapter'. The solution bridges informal cash-based merchants in Gauteng and Western Cape townships into formal banking channels using zero-rated USSD *120# menus, QR-based stokvel micro-credit ledgers, and automated SARS Turnover Tax compliance.`;
+    techAlign = [
+      {
+        criterion: "Township Merchant Usability",
+        luqi_implementation: "2G USSD (*120#) fallback engine powered by Africa's Talking with instant MTN MoMo and PayFast settlement.",
+        readiness: "100% Operational & Telkom/Vodacom Gateway Tested"
+      },
+      {
+        criterion: "Financial Integrity & SARS Governance",
+        luqi_implementation: "70% automated book-keeping with 30% human-in-the-loop authorization gate before touching banking PINs or SARS OTPs.",
+        readiness: "Zero-Trust Sandboxed"
+      },
+      {
+        criterion: "Low-Bandwidth Mobile Accessibility",
+        luqi_implementation: "Zero-dependency offline-first PWA caching transactions locally during loadshedding and syncs when connectivity returns.",
+        readiness: "Engineered for 5G, 4G, 3G, and 2G"
+      }
+    ];
+    milestones = [
+      { milestone: "Month 1-2", deliverable: "Rollout of USSD *120*787# settlement rail across 250 pilot spaza shops in Mamelodi and Khayelitsha." },
+      { milestone: "Month 3-4", deliverable: "Integration of Stokvel savings and automated micro-loan assessment algorithms with FICA-compliant logging." },
+      { milestone: "Month 5-6", deliverable: "Automated SARS Turnover Tax filing assistant pilot achieving >99.4% audit accuracy without accountant overhead." }
+    ];
+  } else if (grant.id === "dsi_grassroots_innovation_2026") {
+    execSummary = `Proposal for the DSI Grassroots Innovation Programme (GIP): Equipping peri-urban community hubs, youth trade schools, and informal manufacturers with the LUQI AI Offline-First Experiential Learning & Trade Sandbox. Incorporating zero-dependency HTML5 Canvas physics simulations, multi-lingual vernacular voice guidance in Sepitori, isiZulu, and Sesotho, and zero-data educational distribution.`;
+    techAlign = [
+      {
+        criterion: "Marginalized Community & Rural Inclusion",
+        luqi_implementation: "Localized voice synthesis with 11 African language dialect tracks and culturally relevant curriculum mappings (CAPS Grades 10-12).",
+        readiness: "Fully Integrated in Core UI"
+      },
+      {
+        criterion: "Offline School Server Deployment",
+        luqi_implementation: "Standalone single-file HTML5 Canvas labs operating with zero internet, zero external CDN scripts, and sub-10ms response times.",
+        readiness: "Offline-Verified"
+      },
+      {
+        criterion: "Skill Certification & Micro-Credentials",
+        luqi_implementation: "Cryptographically signed competency certificates for solar installation, Python basics, and financial literacy.",
+        readiness: "Tamper-Evident SHA-256 Ledger"
+      }
+    ];
+    milestones = [
+      { milestone: "Month 1-2", deliverable: "Deployment of offline Raspberry Pi/local school servers to 15 rural high schools in Limpopo and Eastern Cape." },
+      { milestone: "Month 3-4", deliverable: "Testing of vernacular STEM voice assistant with 1,200 students in Sepitori, isiZulu, and Sesotho." },
+      { milestone: "Month 5-6", deliverable: "Publishing empirical impact study on STEM comprehension improvements under intermittent power conditions." }
+    ];
+  } else if (grant.id === "gsma_climate_africa") {
+    execSummary = `Limitless Telecoms proposes the 'Satellite NDVI Vegetation Index & Climate Resilience Advisory Engine' to the GSMA Innovation Fund. Combining Sentinel-2 Earth observation imagery, IoT soil-moisture sensor feeds, and hyper-localized weather forecasts, LUQI AI delivers actionable crop planting and drought alerts directly to smallholder farmers via SMS and WhatsApp.`;
+    techAlign = [
+      {
+        criterion: "Satellite Earth Observation & Remote Sensing",
+        luqi_implementation: "Automated NDVI vegetation index calculation from multi-spectral bands with sub-10m spatial resolution across sub-Saharan Africa.",
+        readiness: "GIS Pipeline Sandbox Vetted"
+      },
+      {
+        criterion: "Mobile Telecom Integration",
+        luqi_implementation: "Direct SMPP & WhatsApp Cloud API push messaging delivering drought alerts in vernacular languages without requiring internet access.",
+        readiness: "Integrated via Africa's Talking API"
+      },
+      {
+        criterion: "Climate Adaptation & Parametric Payouts",
+        luqi_implementation: "Smart contract trigger mechanism executing automated micro-insurance payouts when drought index drops below threshold.",
+        readiness: "Audited Ledger Compatible"
+      }
+    ];
+    milestones = [
+      { milestone: "Month 1-2", deliverable: "Ingestion and calibration of Sentinel-2 multi-spectral NDVI feeds for maize and sorghum farming clusters in SADC." },
+      { milestone: "Month 3-4", deliverable: "Pilot broadcast of predictive frost and drought advisory SMS to 10,000 smallholder farmers in Free State and Mpumalanga." },
+      { milestone: "Month 5-6", deliverable: "Verification of crop yield protection metrics with local agricultural cooperatives and extension officers." }
+    ];
+  } else if (grant.id === "google_startups_2027_prereg") {
+    execSummary = `Pre-Registration Submission for Google for Startups Accelerator Africa (2027 Cohort): Limitless Telecoms presents LUQI AI, a sovereign multi-model AI infrastructure platform engineered on Gemini 2.5/3.0 Foundation models. Featuring native zero-trust sandboxing, multi-lingual tokenization for Bantu and Afroasiatic languages, and an autonomous self-healing pre-flight daemon for mission-critical enterprise resilience.`;
+    techAlign = [
+      {
+        criterion: "Frontier Foundation Model Alignment",
+        luqi_implementation: "Deep integration with Google GenAI SDK (gemini-3.8-flash) utilizing multimodal reasoning, function calling, and structured JSON output.",
+        readiness: "Live in Production Environment"
+      },
+      {
+        criterion: "Scalable Cloud & Multi-Region Topology",
+        luqi_implementation: "Kubernetes/Docker microservices running on Google Cloud Run with sub-second failover, Redis caching, and automated health telemetry.",
+        readiness: "Production Tested & High-Availability"
+      },
+      {
+        criterion: "Continental Impact & Ethical Governance",
+        luqi_implementation: "Strict 70% autonomous execution boundary with 30% human authorization requirement on financial and regulatory actions.",
+        readiness: "Enforced at Middleware Level"
+      }
+    ];
+    milestones = [
+      { milestone: "Month 1-3", deliverable: "Scale active monthly users from 15,000 to 100,000 across South Africa, Kenya, Nigeria, and Ghana." },
+      { milestone: "Month 4-6", deliverable: "Implement Gemini Live API low-latency voice streaming for conversational rural education interfaces." },
+      { milestone: "Month 7-9", deliverable: "Deploy enterprise telecom serial auditing tool to 5 major African telecommunications providers." }
+    ];
+  }
+
   const proposal = {
-    proposal_id: "grant_prop_" + Math.random().toString(36).substring(2, 10),
+    proposal_id: "grant_prop_" + Math.random().toString(36).substring(2, 10).toUpperCase(),
     grant_id: grant.id,
     grant_title: grant.title,
     sponsor: grant.sponsor,
     requested_funding: grant.funding_amount,
-    executive_summary: `Limitless Telecoms proposes integrating the LUQI AI autonomous reasoning engine into the ${grant.title}. LUQI AI is purpose-built for African operating realities, combining zero-dependency client runtimes, local edge caching for intermittent power/connectivity, and automated compliance pipelines to eliminate friction in intra-African trade and digital service delivery.`,
-    technical_architecture_alignment: [
-      {
-        criterion: "Cross-Border Trade & Settlement Acceleration",
-        luqi_implementation: "Integrated PAPSS net settlement router & Flutterwave v3 multi-currency mobile money adapter.",
-        readiness: "Production-Ready / Sandbox Verified"
-      },
-      {
-        criterion: "Zero Trust Security & Sovereign Compliance",
-        luqi_implementation: "OWASP AST10 2026 defense framework, continuous mTLS, and 70/30 Human-in-the-Loop governance.",
-        readiness: "Enforced at all API boundaries"
-      },
-      {
-        criterion: "Hyper-Accessibility & Low Data Overhead",
-        luqi_implementation: "Offline-capable HTML5/Canvas STEM labs and lightweight async job queue.",
-        readiness: "Verified across mobile & desktop"
-      }
-    ],
-    proposed_milestones: [
-      { milestone: "Month 1-2", deliverable: "Deploy PAPSS multi-currency liquidity gateway with automated currency conversion between ZAR, NGN, KES, and GHS." },
-      { milestone: "Month 3-4", deliverable: "Roll out AfCFTA Rules of Origin tariff classification assistant for 5,000+ HS tariff lines." },
-      { milestone: "Month 5-6", deliverable: "Pilot with 50 cross-border SADC freight operators; measure border latency reduction." }
-    ],
+    executive_summary: execSummary,
+    technical_architecture_alignment: techAlign,
+    proposed_milestones: milestones,
     created_at: new Date().toISOString(),
     status: "READY_FOR_SUBMISSION"
   };

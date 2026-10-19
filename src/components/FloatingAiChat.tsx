@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { IntelligentUIStreamRenderer } from "./IntelligentUIEngine";
 import { GoogleGenAI } from "@google/genai";
+import { getAuthHeaders } from "../lib/api";
 
 export default function FloatingAiChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -73,7 +74,7 @@ export default function FloatingAiChat() {
       // 1. First attempt /api/v1/luqi-core
       const res = await fetch("/api/v1/luqi-core", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ user_input: text, language: "SEPITORI_ENGLISH" }),
       });
 

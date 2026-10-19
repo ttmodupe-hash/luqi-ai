@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { getAuthHeaders, getApiKey, setApiKey, validateApiKey, clearApiKey } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
-const API_KEY = import.meta.env.VITE_API_KEY || 'dev-key-change-in-prod';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -27,35 +27,36 @@ export interface KBAnswer {
   category: string;
 }
 
-/** Get auth headers including JWT token if present in localStorage */
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'X-API-Key': API_KEY,
-  };
-  const token = localStorage.getItem('token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
-
 export function useApi<T = unknown>() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<T | null>(null);
+  const [currentKey, setCurrentKey] = useState<string>(getApiKey());
+
+  useEffect(() => {
+    const handleKeyChange = (e: any) => {
+      setCurrentKey(e.detail?.key || getApiKey());
+    };
+    window.addEventListener('luqi:api-key-updated', handleKeyChange);
+    return () => window.removeEventListener('luqi:api-key-updated', handleKeyChange);
+  }, []);
 
   const get = useCallback(async (endpoint: string) => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
+      const headers = getAuthHeaders();
       const res = await fetch(`${API_BASE}${endpoint}`, {
-        headers: getAuthHeaders(),
+        method: 'GET',
+        headers,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
       setData(result);
       return result;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setError(msg);
       throw e;
     } finally {
       setLoading(false);
@@ -63,11 +64,13 @@ export function useApi<T = unknown>() {
   }, []);
 
   const post = useCallback(async (endpoint: string, body: unknown) => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
+      const headers = getAuthHeaders({ 'Content-Type': 'application/json' });
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        headers,
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -75,7 +78,8 @@ export function useApi<T = unknown>() {
       setData(result);
       return result;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setError(msg);
       throw e;
     } finally {
       setLoading(false);
@@ -142,5 +146,21 @@ export function useApi<T = unknown>() {
     }
   }, [get]);
 
-  return { get, post, chat, getStatus, kbAsk, kbSearch, kbCategories, data, fetchData, loading, error };
+  return {
+    get,
+    post,
+    chat,
+    getStatus,
+    kbAsk,
+    kbSearch,
+    kbCategories,
+    data,
+    fetchData,
+    loading,
+    error,
+    currentKey,
+    saveApiKey: setApiKey,
+    removeApiKey: clearApiKey,
+    isKeyValid: validateApiKey(currentKey),
+  };
 }

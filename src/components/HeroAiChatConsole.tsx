@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import ApiSystemStatusDashboard from './ApiSystemStatusDashboard';
+import { getAuthHeaders } from '../lib/api';
 
 type ActiveTab = 'CHAT_CONSOLE' | 'EXPERIENTIAL_LABS' | 'FINOPS_SECURITY';
 type GradeLevel = 'PRE_SCHOOL' | 'PRIMARY' | 'HIGH_SCHOOL' | 'HIGHER_LEARNING';
@@ -248,7 +249,7 @@ export const HeroAiChatConsole: React.FC = () => {
     try {
       const res = await fetch('/api/v1/luqi-core', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ user_input: query, language })
       });
 

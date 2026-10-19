@@ -36,7 +36,11 @@ import {
   Eye,
   Flame,
   Filter,
+  Copy,
+  Download,
+  Check,
 } from "lucide-react";
+import { getAuthHeaders } from "../lib/api";
 
 export default function AfricanOpportunityRadarPage() {
   const location = useLocation();
@@ -67,9 +71,10 @@ export default function AfricanOpportunityRadarPage() {
   const [notification, setNotification] = useState<string | null>(null);
 
   // Grant Drafter State
-  const [selectedGrant, setSelectedGrant] = useState("afcfta_dic_2026");
+  const [selectedGrant, setSelectedGrant] = useState("tia_seed_fund_q4_2026");
   const [draftedProposal, setDraftedProposal] = useState<any>(null);
   const [isDrafting, setIsDrafting] = useState(false);
+  const [copiedProposal, setCopiedProposal] = useState(false);
 
   // API Wrapper State
   const [selectedApi, setSelectedApi] = useState("Flutterwave");
@@ -203,25 +208,84 @@ export default function AfricanOpportunityRadarPage() {
     }
   };
 
-  const handleDraftGrant = async () => {
+  const handleDraftGrant = async (targetGrantId?: string) => {
+    const idToDraft = targetGrantId || selectedGrant || "tia_seed_fund_q4_2026";
+    setSelectedGrant(idToDraft);
     setIsDrafting(true);
     setDraftedProposal(null);
     try {
       const res = await fetch("/api/v1/sensing/draft-grant", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grant_id: selectedGrant }),
+        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ grant_id: idToDraft }),
       });
       if (res.ok) {
         const data = await res.json();
         setDraftedProposal(data);
-        setNotification(`Proposal drafted for ${data.grant_title}! Ready for submission.`);
+        setNotification(`Proposal drafted for ${data.grant_title}! Ready for review.`);
+        setTimeout(() => {
+          document.getElementById("proposal-draft-preview")?.scrollIntoView({ behavior: "smooth" });
+        }, 120);
+      } else {
+        throw new Error(`Server returned ${res.status}`);
       }
     } catch (err: any) {
       setNotification(`Drafting error: ${err?.message}`);
     } finally {
       setIsDrafting(false);
     }
+  };
+
+  const handleCopyProposal = () => {
+    if (!draftedProposal) return;
+    const text = `# ${draftedProposal.grant_title}
+Proposal ID: ${draftedProposal.proposal_id}
+Sponsor: ${draftedProposal.sponsor}
+Requested Funding: ${draftedProposal.requested_funding}
+Status: ${draftedProposal.status}
+
+## Executive Summary
+${draftedProposal.executive_summary}
+
+## Technical Architecture Alignment
+${draftedProposal.technical_architecture_alignment?.map((a: any) => `- **${a.criterion}**: ${a.luqi_implementation} (${a.readiness})`).join('\n')}
+
+## Proposed Milestones & Deliverables
+${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${m.deliverable}`).join('\n')}
+`;
+    navigator.clipboard.writeText(text);
+    setCopiedProposal(true);
+    setNotification("Full grant proposal copied to clipboard!");
+    setTimeout(() => setCopiedProposal(false), 2000);
+  };
+
+  const handleDownloadProposal = () => {
+    if (!draftedProposal) return;
+    const text = `# ${draftedProposal.grant_title}
+Proposal ID: ${draftedProposal.proposal_id}
+Sponsor: ${draftedProposal.sponsor}
+Requested Funding: ${draftedProposal.requested_funding}
+Status: ${draftedProposal.status}
+
+## Executive Summary
+${draftedProposal.executive_summary}
+
+## Technical Architecture Alignment
+${draftedProposal.technical_architecture_alignment?.map((a: any) => `- **${a.criterion}**: ${a.luqi_implementation} (${a.readiness})`).join('\n')}
+
+## Proposed Milestones & Deliverables
+${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${m.deliverable}`).join('\n')}
+`;
+    const blob = new Blob([text], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${draftedProposal.proposal_id}_${draftedProposal.grant_id || 'proposal'}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setNotification("Proposal downloaded as markdown file!");
   };
 
   const handleGenerateWrapper = async (apiName: string) => {
@@ -546,11 +610,20 @@ export default function AfricanOpportunityRadarPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedGrant(grant.id);
-                          handleDraftGrant();
+                          handleDraftGrant(grant.id);
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] flex items-center gap-1 transition"
+                        disabled={isDrafting}
+                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] flex items-center gap-1 transition disabled:opacity-60"
                       >
-                        <FileText className="w-3 h-3" /> Auto-Draft Proposal
+                        {isDrafting && selectedGrant === grant.id ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" /> Drafting...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-3 h-3" /> Auto-Draft Proposal
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -560,18 +633,33 @@ export default function AfricanOpportunityRadarPage() {
 
             {/* Drafted Proposal Preview */}
             {draftedProposal && (
-              <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-6 space-y-4 shadow-xl">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div id="proposal-draft-preview" className="rounded-2xl border border-amber-500/40 bg-slate-900/90 p-6 space-y-5 shadow-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
                   <div>
                     <span className="text-[10px] uppercase font-mono text-amber-400 tracking-wider">
                       Executive Proposal Draft &middot; {draftedProposal.proposal_id}
                     </span>
                     <h4 className="text-lg font-bold text-white mt-0.5">{draftedProposal.grant_title}</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Sponsor: {draftedProposal.sponsor} &middot; Funding: {draftedProposal.requested_funding}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                       {draftedProposal.status}
                     </span>
+                    <button
+                      onClick={handleCopyProposal}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition"
+                    >
+                      {copiedProposal ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedProposal ? "Copied" : "Copy Brief"}</span>
+                    </button>
+                    <button
+                      onClick={handleDownloadProposal}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium flex items-center gap-1.5 transition"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download .md</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1117,10 +1205,10 @@ export default function AfricanOpportunityRadarPage() {
 
                     <button
                       onClick={() => {
-                        setSelectedGrant(item.grant_id || "afcfta_dic_2026");
+                        const gid = item.grant_id || "tia_seed_fund_q4_2026";
+                        setSelectedGrant(gid);
                         setActiveTab("grants");
-                        setNotification(`Selected "${item.title}". Click "Draft AI Proposal" to generate executive submission.`);
-                        window.scrollTo({ top: 350, behavior: "smooth" });
+                        handleDraftGrant(gid);
                       }}
                       className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold transition flex items-center gap-1"
                     >

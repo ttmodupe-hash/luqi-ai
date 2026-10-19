@@ -15,6 +15,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all source files
 COPY . .
 
+# Ensure start.sh is copied and made executable
+COPY start.sh ./
+RUN chmod +x ./start.sh
+
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 ENV CELERY_BROKER_URL=redis://redis:6379/0
@@ -22,4 +26,4 @@ ENV CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["bash", "./start.sh"]
