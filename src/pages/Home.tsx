@@ -49,6 +49,12 @@ export default function Home() {
               </kbd>
             </button>
             <Link
+              to="/companion"
+              className="text-xs px-3.5 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <Brain className="w-3.5 h-3.5 text-purple-400" /> AI Companion
+            </Link>
+            <Link
               to="/cert-academy"
               className="text-xs px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 font-medium"
             >
@@ -115,6 +121,33 @@ export default function Home() {
 
         {/* Core Subsystem Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card: Luqi AI Self-Improving Companion */}
+          <Link
+            to="/companion"
+            className="group rounded-3xl border border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-purple-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-purple-500/5 md:col-span-2 lg:col-span-1"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-105 transition-transform">
+                <Brain className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-purple-400 transition-colors">
+                  AI Companion
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30">
+                  SELF-IMPROVING
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Adaptive multi-personality companion with episodic memory, active capability teaching, Leitner drills, and voice synthesis. Continuously learns from your feedback and domain instructions.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-purple-400">
+              <span>Launch Companion & Mentors</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
           {/* Card 0: CertMaster Academy (ITIL AI Governance & Cisco CCNA/CCNP/CCIP) */}
           <Link
             to="/cert-academy"

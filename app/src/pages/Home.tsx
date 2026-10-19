@@ -1,251 +1,313 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { Button } from "@/components/ui/button";
-import WalletCard from "@/components/WalletCard";
+// =====================================================================
+// HOME PORTAL — Luqi AI Master Dashboard
+// =====================================================================
+
+import { Link } from "react-router";
 import {
-  Brain, Search, Wallet, FileText, TrendingUp, Clock, Star,
-  Sparkles, Zap, Sun, CloudRain, GraduationCap, HeartPulse,
-  LogIn, UserPlus, LogOut, User, Building2, Tractor, HardHat,
-  Monitor, Car, BookOpen, Globe, Phone
+  Film,
+  FlaskConical,
+  HeartPulse,
+  Archive,
+  CreditCard,
+  Shield,
+  Sparkles,
+  ArrowRight,
+  Coins,
+  Brain,
+  Wand2,
+  FileSpreadsheet,
+  GraduationCap,
+  Search,
 } from "lucide-react";
 
-const QUICK_ACTIONS = [
-  { id: "ai", label: "AI Chat", icon: Brain, path: "/ai-brain", color: "from-violet-500 to-purple-600" },
-  { id: "search", label: "Search", icon: Search, path: "/search", color: "from-blue-500 to-cyan-500" },
-  { id: "finance", label: "Finance", icon: Wallet, path: "/finance", color: "from-emerald-500 to-green-600" },
-  { id: "tender", label: "Tenders", icon: FileText, path: "/tenders", color: "from-orange-500 to-amber-600" },
-];
-
-const POPULAR = [
-  { name: "Load Shedding", icon: Zap, path: "/load-shedding" },
-  { name: "Solar Calculator", icon: Sun, path: "/solar" },
-  { name: "Weather", icon: CloudRain, path: "/weather" },
-  { name: "University Guide", icon: GraduationCap, path: "/university" },
-  { name: "Health", icon: HeartPulse, path: "/health" },
-  { name: "Job Market", icon: Building2, path: "/jobs" },
-  { name: "Farming", icon: Tractor, path: "/farming" },
-  { name: "Construction", icon: HardHat, path: "/construction" },
-  { name: "Cybersecurity", icon: Monitor, path: "/cybersecurity" },
-  { name: "Vehicle", icon: Car, path: "/vehicle" },
-  { name: "Education", icon: BookOpen, path: "/education" },
-  { name: "Travel", icon: Globe, path: "/travel" },
-];
-
-const INDUSTRY_MAP: Record<string, { label: string; items: { name: string; icon: any; path: string }[] }> = {
-  "IT & Technology": {
-    label: "Tech Tools",
-    items: [
-      { name: "AI Brain", icon: Brain, path: "/ai-brain" },
-      { name: "Cybersecurity", icon: Monitor, path: "/cybersecurity" },
-      { name: "Digital Transform", icon: Monitor, path: "/digital-transform" },
-      { name: "Local LLM", icon: Brain, path: "/local-llm" },
-    ]
-  },
-  "Agriculture": {
-    label: "Farming Tools",
-    items: [
-      { name: "Farming Guide", icon: Tractor, path: "/farming" },
-      { name: "Agriculture", icon: Tractor, path: "/agriculture" },
-      { name: "Weather", icon: CloudRain, path: "/weather" },
-      { name: "Load Shedding", icon: Zap, path: "/load-shedding" },
-    ]
-  },
-  "Construction": {
-    label: "Construction",
-    items: [
-      { name: "Construction Calc", icon: HardHat, path: "/construction" },
-      { name: "Tenders", icon: FileText, path: "/tenders" },
-      { name: "Load Shedding", icon: Zap, path: "/load-shedding" },
-      { name: "Water", icon: CloudRain, path: "/water" },
-    ]
-  },
-  "Finance": {
-    label: "Finance",
-    items: [
-      { name: "Loan Mastery", icon: TrendingUp, path: "/loan-mastery" },
-      { name: "Payroll", icon: Wallet, path: "/payroll" },
-      { name: "Invoice", icon: FileText, path: "/invoice" },
-      { name: "Funding", icon: Wallet, path: "/funding" },
-    ]
-  },
-  "Healthcare": {
-    label: "Healthcare",
-    items: [
-      { name: "Health", icon: HeartPulse, path: "/health" },
-      { name: "Healthcare Dir", icon: Phone, path: "/healthcare" },
-      { name: "Mental Health", icon: HeartPulse, path: "/mental-health" },
-      { name: "Nutrition", icon: HeartPulse, path: "/nutrition" },
-    ]
-  },
-  "Education": {
-    label: "Education",
-    items: [
-      { name: "University", icon: GraduationCap, path: "/university" },
-      { name: "Skills", icon: BookOpen, path: "/skills" },
-      { name: "Languages", icon: Globe, path: "/languages" },
-      { name: "Training", icon: BookOpen, path: "/training" },
-    ]
-  },
-  "Mining": {
-    label: "Mining",
-    items: [
-      { name: "Mining", icon: HardHat, path: "/mining" },
-      { name: "Investment", icon: TrendingUp, path: "/investment-mining" },
-      { name: "Safety", icon: HeartPulse, path: "/mining" },
-      { name: "Tenders", icon: FileText, path: "/tenders" },
-    ]
-  },
-};
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-function getRecentPages() {
-  try {
-    const r = localStorage.getItem("recentPages");
-    return r ? JSON.parse(r).slice(0, 5) : [];
-  } catch { return []; }
-}
-
 export default function Home() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [recent, setRecent] = useState<any[]>([]);
-
-  useEffect(() => {
-    try {
-      const u = localStorage.getItem("user");
-      if (u) setUser(JSON.parse(u));
-      setRecent(getRecentPages());
-    } catch { /* ignore */ }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-  };
-
-  const industry = user?.industry || "";
-  const recommended = INDUSTRY_MAP[industry] || {
-    label: "Popular",
-    items: POPULAR.slice(0, 4)
-  };
-
   return (
-    <div className="min-h-screen bg-neutral-900 text-white p-4 md:p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">
-              {user ? `${getGreeting()}, ${user.full_name?.split(" ")[0] || "Friend"}!` : `${getGreeting()}!`}
-            </h1>
-            <p className="text-sm text-gray-400 mt-1">
-              {user ? "Your personalized African AI dashboard" : "Welcome to LUQI AI — Built for Africa"}
-            </p>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-orange-500/20">
+              L
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">LUQI AI</h1>
+              <p className="text-xs text-slate-400">Pan-African & Global AI Platform</p>
+            </div>
           </div>
-          {user ? (
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-sm font-bold">
-                {(user.full_name || "U")[0]}
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-400 hover:text-white">
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Link to="/login"><Button variant="outline" size="sm" className="border-neutral-700 text-gray-300 hover:text-white">
-                <LogIn className="w-4 h-4 mr-1" /> Log In
-              </Button></Link>
-              <Link to="/signup"><Button size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
-                <UserPlus className="w-4 h-4 mr-1" /> Sign Up
-              </Button></Link>
-            </div>
-          )}
-        </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {QUICK_ACTIONS.map((a) => (
-            <Link key={a.id} to={a.path} className="group">
-              <div className={`bg-gradient-to-br ${a.color} rounded-xl p-4 hover:scale-[1.02] transition-transform cursor-pointer`}>
-                <a.icon className="w-6 h-6 text-white/90 mb-2" />
-                <p className="text-sm font-semibold text-white">{a.label}</p>
-              </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
+              className="text-xs px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 hover:border-amber-500/50 transition-all flex items-center gap-2 font-medium"
+              title="Global Command Palette (Cmd+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">Search 48 Pages</span>
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
+                ⌘K
+              </kbd>
+            </button>
+            <Link
+              to="/companion"
+              className="text-xs px-3.5 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <Brain className="w-3.5 h-3.5 text-purple-400" /> AI Companion
             </Link>
-          ))}
+            <Link
+              to="/cert-academy"
+              className="text-xs px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-amber-400" /> CertMaster Academy
+            </Link>
+            <Link
+              to="/african-radar"
+              className="text-xs px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> African Radar
+            </Link>
+            <Link
+              to="/archive"
+              className="text-xs px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <Archive className="w-3.5 h-3.5" /> Archive Vault
+            </Link>
+            <Link
+              to="/video-studio"
+              className="text-xs px-3.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <Film className="w-3.5 h-3.5" /> Video Studio
+            </Link>
+          </div>
         </div>
+      </header>
 
-        {/* Wallet */}
-        <WalletCard />
-
-        {/* Recommended / Personalized */}
-        <div>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-cyan-400" />
-            {user ? `Recommended for ${user.industry || "You"}` : "Popular Right Now"}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
+        {/* Hero Banner */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Sparkles className="w-3.5 h-3.5" /> One Engine &middot; Every Domain &middot; Total Archiving
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-100">
+            Active Intelligence & Complete Mechanical/Cognitive Archiving
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {recommended.items.map((item: any, i: number) => (
-              <Link key={i} to={item.path} className="group">
-                <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 hover:border-cyan-500/50 hover:bg-neutral-750 transition-all cursor-pointer">
-                  <item.icon className="w-5 h-5 text-cyan-400 mb-2" />
-                  <p className="text-sm font-medium text-white">{item.name}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            From interactive STEM lab calculations and margin-guarded generative animation, to LangGraph flight recorders and CrewAI persistent memory.
+          </p>
 
-        {/* Recently Used */}
-        {recent.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-gray-400" /> Recently Used
-            </h2>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {recent.map((r: any, i: number) => (
-                <Link key={i} to={r.path} className="flex-shrink-0">
-                  <div className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 hover:border-cyan-500/50 transition-all">
-                    <p className="text-sm text-gray-300">{r.name}</p>
-                  </div>
-                </Link>
-              ))}
+          {/* Interactive Global Command Palette Trigger Bar */}
+          <div
+            onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
+            className="max-w-xl mx-auto flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-900 transition-all cursor-pointer shadow-lg shadow-black/40 group text-left mt-4 ring-1 ring-white/5 hover:ring-amber-500/20"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400 group-hover:scale-105 transition-transform">
+                <Search className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-sm text-slate-200 font-semibold group-hover:text-amber-300 transition-colors block truncate">
+                  Jump quickly across all 48 operational pages...
+                </span>
+                <span className="text-[11px] text-slate-400 block truncate">
+                  ITIL® 5 AI, Cisco CLI, Subnet Bit Calc, 7 STEM Labs, AfCFTA, Video Studio, Flight Recorder
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* All Capabilities Grid */}
-        <div>
-          <h2 className="text-lg font-semibold mb-3">All Capabilities</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {POPULAR.map((p, i) => (
-              <Link key={i} to={p.path} className="group">
-                <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-3 text-center hover:border-cyan-500/50 hover:bg-neutral-750 transition-all cursor-pointer">
-                  <p.icon className="w-5 h-5 text-gray-400 mx-auto mb-1.5 group-hover:text-cyan-400 transition-colors" />
-                  <p className="text-xs text-gray-300">{p.name}</p>
-                </div>
-              </Link>
-            ))}
+            <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg shrink-0 ml-2">
+              ⌘K
+            </kbd>
           </div>
         </div>
 
-        {/* Stats Footer */}
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span>348 endpoints</span>
-            <span>130 modules</span>
-            <span>83 pages</span>
-          </div>
-          <p className="text-xs text-gray-600">LUQI AI v29.0 — Built for Africa</p>
+        {/* Core Subsystem Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card: Luqi AI Self-Improving Companion */}
+          <Link
+            to="/companion"
+            className="group rounded-3xl border border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-purple-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-purple-500/5 md:col-span-2 lg:col-span-1"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-105 transition-transform">
+                <Brain className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-purple-400 transition-colors">
+                  AI Companion
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30">
+                  SELF-IMPROVING
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Adaptive multi-personality companion with episodic memory, active capability teaching, Leitner drills, and voice synthesis. Continuously learns from your feedback and domain instructions.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-purple-400">
+              <span>Launch Companion & Mentors</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 0: CertMaster Academy (ITIL AI Governance & Cisco CCNA/CCNP/CCIP) */}
+          <Link
+            to="/cert-academy"
+            className="group rounded-3xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-amber-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-amber-500/5 md:col-span-2 lg:col-span-1"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors">
+                  CertMaster Academy
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30">
+                  ITIL® 5 + CISCO
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Exam preparation suite for ITIL® AI Governance (v5), CCNA 200-301, CCNP ENCOR/ENARSI & CCIP Service Provider. Includes live Cisco IOS CLI emulator, VLSM bit calculator, and Leitner spaced flashcards.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-amber-400">
+              <span>Launch Exam & CLI Labs</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 1: Video Studio */}
+          <Link
+            to="/video-studio"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-orange-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 mb-4 group-hover:scale-105 transition-transform">
+                <Film className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 group-hover:text-orange-400 transition-colors">
+                Generative Video & Voice Studio
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Native animation pipeline chaining ElevenLabs voiceover, Replicate WAN 2.1 video generation, and AI scriptwriting with a 50%+ Margin Protector.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-orange-400">
+              <span>Launch Studio</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 2: Total Archive Vault */}
+          <Link
+            to="/archive"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-indigo-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-105 transition-transform">
+                <Archive className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 group-hover:text-indigo-400 transition-colors">
+                Total Archiving Vault
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                LangGraph unalterable flight recorder, CrewAI unified cognitive memory, and date-partitioned file storage with paired JSON metadata.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-indigo-400">
+              <span>Inspect Flight Recorder</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 3: Lab Simulator */}
+          <Link
+            to="/lab-simulator"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-sky-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-4 group-hover:scale-105 transition-transform">
+                <FlaskConical className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 group-hover:text-sky-400 transition-colors">
+                STEM Lab Simulator
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                7 interactive physics/chemistry labs, 13 curriculum frameworks (CAPS, Cambridge, Gaokao), and real-time safe mathematical calculation engine.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-sky-400">
+              <span>Open Lab Simulator</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 4: Self-Healing Architecture */}
+          <Link
+            to="/self-healing"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-emerald-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-105 transition-transform">
+                <HeartPulse className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">
+                Self-Healing Engine
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Autonomous runtime error interception, automated patch generation, canary rollout monitoring, and predictive failure analytics.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-emerald-400">
+              <span>View System Health</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 5: Pricing & Subscriptions */}
+          <Link
+            to="/pricing"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-amber-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform">
+                <CreditCard className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors">
+                Virtual Credits & Pricing
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Unit cost transparency for ElevenLabs and Replicate. Subscription tiers and Paystack / Stripe credit replenishment.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-amber-400">
+              <span>View Pricing Plans</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 6: African Opportunity Radar */}
+          <Link
+            to="/african-radar"
+            className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-emerald-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">
+                African Opportunity Radar
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Autonomous Chief Strategy Officer loop scanning African tech verticals, drafting AfCFTA grant proposals, testing PAPSS/Flutterwave APIs, and calculating corridor tariffs.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-emerald-400">
+              <span>Open Opportunity Radar</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

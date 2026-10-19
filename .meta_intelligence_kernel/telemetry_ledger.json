@@ -1,0 +1,40 @@
+[
+  {
+    "id": "telemetry-seed-1",
+    "taskHash": "hash-compound-wealth",
+    "taskName": "Compound Wealth & PAPSS Foreign Exchange Simulator",
+    "executionTimeMs": 1240,
+    "attemptsBeforeSuccess": 1,
+    "rootCauseAnalysis": "Execution verified on initial compile layer with precision bounds.",
+    "optimizedPromptDelta": "Enforce strict number validation and boundary clamping for currency units.",
+    "status": "SUCCESS",
+    "timestamp": "2026-10-19T04:00:50.106Z",
+    "activeModel": "gemini-3.8-flash",
+    "codeSnippet": "function calculateWealth(p, r, y, m) { return p * Math.pow(1 + r/12, 12*y) + m * ((Math.pow(1+r/12, 12*y)-1)/(r/12)); }"
+  },
+  {
+    "id": "telemetry-seed-2",
+    "taskHash": "hash-cisco-vlsm",
+    "taskName": "Cisco VLSM Binary Bitmask Allocator",
+    "executionTimeMs": 2890,
+    "attemptsBeforeSuccess": 2,
+    "rootCauseAnalysis": "Initial code emitted 32-bit bitwise overflow on unsigned subnet calculations.",
+    "optimizedPromptDelta": "Always use unsigned right-shift operator (>>> 0) when computing IPv4 masks in JavaScript.",
+    "status": "SUCCESS",
+    "timestamp": "2026-10-19T01:00:50.106Z",
+    "activeModel": "gemini-4-argon",
+    "codeSnippet": "function calculateSubnet(prefix) { return (0xFFFFFFFF << (32 - prefix)) >>> 0; }"
+  },
+  {
+    "id": "telemetry-seed-3",
+    "taskHash": "hash-afcfta-rules",
+    "taskName": "AfCFTA Value Added Local Content Threshold Evaluator",
+    "executionTimeMs": 1420,
+    "attemptsBeforeSuccess": 1,
+    "rootCauseAnalysis": "Execution verified on initial compile layer.",
+    "optimizedPromptDelta": "Default tariff schedules to SADC / AfCFTA Annex 2 Origin protocols.",
+    "status": "SUCCESS",
+    "timestamp": "2026-10-18T22:00:50.106Z",
+    "activeModel": "gemini-3.8-flash"
+  }
+]

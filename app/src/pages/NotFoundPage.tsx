@@ -1,61 +1,22 @@
-/**
- * LUQI AI — 404 Not Found
- * ========================
- * Friendly error page for unknown routes.
- */
-
-import { useNavigate } from "react-router";
-import { Home, ArrowLeft, Search } from "lucide-react";
+import { Link } from "react-router";
+import { ArrowLeft } from "lucide-react";
 
 export default function NotFoundPage() {
-  const navigate = useNavigate();
-
   return (
-    <div className="min-h-screen bg-neutral-900 text-white flex items-center justify-center p-4">
-      <div className="text-center max-w-md space-y-6">
-        {/* 404 */}
-        <div className="text-8xl font-bold text-cyan-500/20">404</div>
-
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
-          <p className="text-neutral-400">
-            The page you're looking for doesn't exist or has been moved.
-          </p>
-        </div>
-
-        {/* Quick Links */}
-        <div className="grid grid-cols-1 gap-3">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-cyan-500 text-black font-medium hover:bg-cyan-400 transition-colors"
-          >
-            <Home size={18} />
-            Go Home
-          </button>
-          <button
-            onClick={() => navigate("/search")}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white hover:border-cyan-500/50 transition-colors"
-          >
-            <Search size={18} />
-            Search LUQI AI
-          </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white hover:border-cyan-500/50 transition-colors"
-          >
-            <ArrowLeft size={18} />
-            Go Back
-          </button>
-        </div>
-
-        <p className="text-xs text-neutral-600">
-          If you believe this is an error, please{" "}
-          <button onClick={() => navigate("/contact")} className="text-cyan-500 hover:underline">
-            contact us
-          </button>
-          .
-        </p>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-2xl font-black mb-4">
+        404
       </div>
+      <h1 className="text-2xl font-bold mb-2">Page Not Found</h1>
+      <p className="text-xs text-slate-400 max-w-sm mb-6">
+        The requested resource is not available or has been moved to another section of Luqi AI.
+      </p>
+      <Link
+        to="/"
+        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 inline-flex items-center gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to Home
+      </Link>
     </div>
   );
 }

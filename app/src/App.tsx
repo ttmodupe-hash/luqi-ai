@@ -52,11 +52,22 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import ContactPage from "@/pages/ContactPage";
+import CertMasterPage from "@/pages/CertMasterPage";
+import LabSimulatorPage from "@/pages/LabSimulatorPage";
+import AfricanOpportunityRadarPage from "@/pages/AfricanOpportunityRadarPage";
+import ArchiveVaultPage from "@/pages/ArchiveVaultPage";
+import SelfHealingPage from "@/pages/SelfHealingPage";
+import VideoStudioPage from "@/pages/VideoStudioPage";
+import PricingPage from "@/pages/PricingPage";
+import CompanionPage from "@/pages/CompanionPage";
+import TelemetryDashboardPage from "@/pages/TelemetryDashboardPage";
+import ExperientialEducationPage from "@/pages/ExperientialEducationPage";
 
 /* COMPONENTS */
 import CookieConsent from "@/components/CookieConsent";
 import WelcomeModal from "@/components/WelcomeModal";
 import ReportBugButton from "@/components/ReportBugButton";
+import { GlobalSearchTrigger } from "@/components/GlobalCommandPalette";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
@@ -448,6 +459,26 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/companion-prime" element={<CompanionPage />} />
+            <Route path="/mentor" element={<CompanionPage />} />
+            <Route path="/cert-academy" element={<CertMasterPage />} />
+            <Route path="/exam-prep" element={<CertMasterPage />} />
+            <Route path="/ccna" element={<CertMasterPage />} />
+            <Route path="/ccnp" element={<CertMasterPage />} />
+            <Route path="/itil-ai" element={<CertMasterPage />} />
+            <Route path="/lab-simulator" element={<LabSimulatorPage />} />
+            <Route path="/stem-labs" element={<LabSimulatorPage />} />
+            <Route path="/african-radar" element={<AfricanOpportunityRadarPage />} />
+            <Route path="/radar" element={<AfricanOpportunityRadarPage />} />
+            <Route path="/archive" element={<ArchiveVaultPage />} />
+            <Route path="/vault" element={<ArchiveVaultPage />} />
+            <Route path="/self-healing" element={<SelfHealingPage />} />
+            <Route path="/video-studio" element={<VideoStudioPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/telemetry" element={<TelemetryDashboardPage />} />
+            <Route path="/super-core" element={<TelemetryDashboardPage />} />
+            <Route path="/experiential-edu" element={<ExperientialEducationPage />} />
+            <Route path="/simulation-core" element={<ExperientialEducationPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/contact" element={<ContactPage />} />
@@ -459,6 +490,7 @@ function App() {
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} />}
       <CookieConsent />
       <ReportBugButton />
+      <GlobalSearchTrigger />
     </div>
   );
 }

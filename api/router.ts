@@ -14,6 +14,7 @@ import { guardianRouter } from "./guardian";
 import { offlineRouter } from "./offline";
 import { voiceRouter } from "./voice";
 import { archiveRouter } from "./archive";
+import { superCoreRouter } from "./superCoreRouter";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -32,6 +33,7 @@ export const appRouter = createRouter({
   offline: offlineRouter,
   voice: voiceRouter,
   archive: archiveRouter,
+  superCore: superCoreRouter,
 });
 
 export type AppRouter = typeof appRouter;

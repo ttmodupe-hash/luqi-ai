@@ -54,6 +54,19 @@ export interface OperationalPage {
 }
 
 export const ALL_48_OPERATIONAL_PAGES: OperationalPage[] = [
+  // ── 0. AI COMPANION (SELF-IMPROVING ADAPTIVE INTELLIGENCE) ──
+  {
+    id: "companion-prime",
+    title: "Luqi Prime Self-Improving AI Companion",
+    category: "CertMaster",
+    path: "/companion",
+    badge: "COMPANION",
+    badgeColor: "text-purple-400 bg-purple-400/10 border-purple-400/30",
+    description: "Adaptive Pan-African AI companion with episodic memory, active concept teaching, and continuous self-improvement.",
+    keywords: ["companion", "luqi prime", "mentor", "teach ai", "memory", "adaptive", "chat", "kwame", "amina", "chidi"],
+    icon: Brain,
+  },
+
   // ── 1. CERTMASTER ACADEMY (8 PAGES/TOOLS) ──
   {
     id: "cert-master-overview",

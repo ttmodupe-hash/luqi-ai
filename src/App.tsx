@@ -17,6 +17,9 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
 import CertMasterPage from "./pages/CertMasterPage";
+import CompanionPage from "./pages/CompanionPage";
+import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
+import ExperientialEducationPage from "./pages/ExperientialEducationPage";
 
 // Components
 import WelcomeModal from "@/components/WelcomeModal";
@@ -62,6 +65,13 @@ export default function App() {
     <AppLayout>
       <Routes>
         <RouterRoute path="/" element={<Home />} />
+        <RouterRoute path="/companion" element={<CompanionPage />} />
+        <RouterRoute path="/mentor" element={<CompanionPage />} />
+        <RouterRoute path="/ai-companion" element={<CompanionPage />} />
+        <RouterRoute path="/telemetry" element={<TelemetryDashboardPage />} />
+        <RouterRoute path="/super-core" element={<TelemetryDashboardPage />} />
+        <RouterRoute path="/experiential-edu" element={<ExperientialEducationPage />} />
+        <RouterRoute path="/simulation-core" element={<ExperientialEducationPage />} />
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
         <RouterRoute path="/self-healing" element={<SelfHealingPage />} />
         <RouterRoute path="/video-studio" element={<VideoStudioPage />} />

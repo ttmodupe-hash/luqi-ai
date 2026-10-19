@@ -1,0 +1,885 @@
+// =====================================================================
+// VIDEO STUDIO PAGE — Generative Video & Voiceover Studio with Margin Guard
+// =====================================================================
+// Multi-API native animation pipeline:
+// - Virtual Credit Margin Protector (10 credits/sec for $0.25 video -> 50% profit margin)
+// - ElevenLabs neural voiceover generation
+// - Replicate WAN 2.1 & RunwayML scene synthesis
+// - Full credit top-up, subscription tiers, and API unit cost transparency
+// =====================================================================
+
+import { useState } from "react";
+import { trpc } from "@/providers/trpc";
+import { Link } from "react-router";
+import {
+  Film,
+  Plus,
+  Loader2,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Trash2,
+  Globe,
+  Sparkles,
+  BarChart3,
+  X,
+  Wand2,
+  Languages,
+  Coins,
+  ShieldCheck,
+  CreditCard,
+  Info,
+  Play,
+  Volume2,
+  Zap,
+} from "lucide-react";
+
+// ── LANGUAGE MAP ────────────────────────────────────────────────────
+const LANGUAGE_MAP: Record<string, { name: string; flag: string }> = {
+  en: { name: "English", flag: "🇬🇧" },
+  zu: { name: "isiZulu", flag: "🇿🇦" },
+  xh: { name: "isiXhosa", flag: "🇿🇦" },
+  af: { name: "Afrikaans", flag: "🇿🇦" },
+  ns: { name: "Sepedi", flag: "🇿🇦" },
+  tn: { name: "Setswana", flag: "🇿🇦" },
+  st: { name: "Sesotho", flag: "🇿🇦" },
+  ts: { name: "Xitsonga", flag: "🇿🇦" },
+  ss: { name: "siSwati", flag: "🇿🇦" },
+  ve: { name: "Tshivenda", flag: "🇿🇦" },
+  nr: { name: "isiNdebele", flag: "🇿🇦" },
+  sw: { name: "Kiswahili", flag: "🇰🇪" },
+  fr: { name: "Français", flag: "🇫🇷" },
+  pt: { name: "Português", flag: "🇵🇹" },
+  ha: { name: "Hausa", flag: "🇳🇬" },
+  yo: { name: "Yorùbá", flag: "🇳🇬" },
+  ig: { name: "Igbo", flag: "🇳🇬" },
+  am: { name: "Amharic", flag: "🇪🇹" },
+  de: { name: "Deutsch", flag: "🇩🇪" },
+  ru: { name: "Русский", flag: "🇷🇺" },
+  ja: { name: "日本語", flag: "🇯🇵" },
+  zh: { name: "中文", flag: "🇨🇳" },
+};
+
+const VALID_LANGUAGES = Object.keys(LANGUAGE_MAP);
+
+// ── STATUS CONFIG ───────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  PENDING: {
+    label: "Pending",
+    color: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+    icon: <Clock className="w-4 h-4" />,
+  },
+  PROCESSING: {
+    label: "Rendering Scene",
+    color: "text-sky-400 bg-sky-400/10 border-sky-400/20",
+    icon: <Loader2 className="w-4 h-4 animate-spin" />,
+  },
+  SUCCESS: {
+    label: "Ready",
+    color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+    icon: <CheckCircle className="w-4 h-4" />,
+  },
+  FAILED: {
+    label: "Failed (Refunded)",
+    color: "text-red-400 bg-red-400/10 border-red-400/20",
+    icon: <AlertTriangle className="w-4 h-4" />,
+  },
+};
+
+interface VideoProject {
+  id: number;
+  title: string;
+  description: string | null;
+  prompt: string;
+  language: string;
+  status: string;
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+  progress: number | null;
+  errorMessage: string | null;
+  durationSeconds: number | null;
+  modelUsed: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  processedAt: Date | null;
+}
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${config.color}`}>
+      {config.icon}
+      {config.label}
+    </span>
+  );
+};
+
+const ProgressBar = ({ progress, status }: { progress: number; status: string }) => {
+  const color = status === "FAILED" ? "bg-red-500" : status === "SUCCESS" ? "bg-emerald-500" : "bg-sky-500";
+  return (
+    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+      <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${progress}%` }} />
+    </div>
+  );
+};
+
+export default function VideoStudioPage() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showProjectDetail, setShowProjectDetail] = useState<VideoProject | null>(null);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showApiStatusModal, setShowApiStatusModal] = useState(false);
+
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterLanguage, setFilterLanguage] = useState<string>("");
+
+  // Creation Form state
+  const [formTitle, setFormTitle] = useState("AI Physics Tutor Scene");
+  const [formDescription, setFormDescription] = useState("3D animation demonstrating harmonic oscillation");
+  const [formPrompt, setFormPrompt] = useState("3D cartoon style robot sitting at a futuristic lab desk explaining pendulum motion, bright volumetric lighting, vibrant colors");
+  const [formDialogue, setFormDialogue] = useState("Welcome to Luqi AI. Notice how energy converts from potential to kinetic as the pendulum swings.");
+  const [formLanguage, setFormLanguage] = useState("en");
+  const [formDuration, setFormDuration] = useState(5);
+  const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
+
+  const handleAutoStoryboard = async () => {
+    setIsGeneratingStoryboard(true);
+    try {
+      const res = await fetch("/api/v1/animation/storyboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: formTitle || "Science and Nature in Africa",
+          duration_seconds: formDuration,
+          language: LANGUAGE_MAP[formLanguage]?.name || "English",
+        }),
+      });
+      const data = await res.json();
+      if (data?.storyboard) {
+        if (data.storyboard.title) setFormTitle(data.storyboard.title);
+        if (data.storyboard.visual_prompt) setFormPrompt(data.storyboard.visual_prompt);
+        if (data.storyboard.dialogue) setFormDialogue(data.storyboard.dialogue);
+        if (data.storyboard.target_duration) setFormDuration(data.storyboard.target_duration);
+      }
+    } catch (e) {
+      console.error("Failed to generate storyboard:", e);
+    } finally {
+      setIsGeneratingStoryboard(false);
+    }
+  };
+
+  // Queries
+  const balance = trpc.video.getBalance.useQuery(undefined, { refetchInterval: 5000 });
+  const costBreakdown = trpc.video.calculateCost.useQuery({
+    durationSeconds: formDuration,
+    dialogue: formDialogue,
+  });
+  const apiStatus = trpc.video.getApiStatus.useQuery();
+  const pricingTiers = trpc.video.getSubscriptionTiers.useQuery();
+
+  const projects = trpc.video.list.useQuery(
+    { status: filterStatus as any, language: filterLanguage || undefined, limit: 50 },
+    { refetchInterval: 5000 }
+  );
+  const stats = trpc.video.stats.useQuery(undefined, { refetchInterval: 10000 });
+
+  // Mutations
+  const utils = trpc.useUtils();
+  const generateVideo = trpc.video.generate.useMutation({
+    onSuccess: (data) => {
+      utils.video.list.invalidate();
+      utils.video.stats.invalidate();
+      utils.video.getBalance.invalidate();
+      setShowCreateModal(false);
+    },
+  });
+  const deleteProject = trpc.video.delete.useMutation({
+    onSuccess: () => {
+      utils.video.list.invalidate();
+      utils.video.stats.invalidate();
+    },
+  });
+  const topupMutation = trpc.video.topupCredits.useMutation({
+    onSuccess: () => {
+      utils.video.getBalance.invalidate();
+    },
+  });
+
+  const handleGenerate = () => {
+    if (!formTitle.trim() || !formPrompt.trim()) return;
+    generateVideo.mutate({
+      title: formTitle,
+      description: formDescription,
+      prompt: formPrompt,
+      dialogue: formDialogue,
+      language: formLanguage as any,
+      durationSeconds: formDuration,
+    });
+  };
+
+  const handleQuickTopup = (credits: number, packId: string) => {
+    topupMutation.mutate({ credits, packId });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Header with Virtual Credit Margin Protector Bar */}
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+              <Film className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold tracking-tight">Luqi Video & Voice Studio</h1>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Margin Protected
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">Generative Animation Pipeline (ElevenLabs + WAN 2.1 + Gemini)</p>
+            </div>
+          </div>
+
+          {/* Wallet Balance & Cost Shield Pill */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
+              <Coins className="w-4 h-4 text-amber-400" />
+              <div className="text-left">
+                <div className="text-xs font-bold text-slate-200">
+                  {balance.data?.credits ?? 150} <span className="text-slate-500 font-normal">Luqi Credits</span>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  ≈ ${( (balance.data?.credits ?? 150) * 0.05 ).toFixed(2)} USD
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowPricingModal(true)}
+              className="text-xs px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 font-medium"
+            >
+              <CreditCard className="w-3.5 h-3.5" /> Top Up / Tiers
+            </button>
+
+            <button
+              onClick={() => setShowApiStatusModal(true)}
+              className="text-xs px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors flex items-center gap-1.5"
+              title="Inspect 2026 Underlying API Costs and Commercial Status"
+            >
+              <Info className="w-3.5 h-3.5 text-sky-400" /> API Unit Costs
+            </button>
+
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="text-xs px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-lg shadow-orange-600/20 transition-all flex items-center gap-1.5 font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" /> Render New Scene
+            </button>
+
+            <Link
+              to="/"
+              className="text-xs px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors text-slate-400"
+            >
+              Home
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Margin Guard Summary Banner */}
+        <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-950 p-5 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">
+                Virtual Credit Guard Active
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-slate-100">
+              Safe Commercialization: 1 Second Video = 10 Credits ($0.50) vs $0.25 API Cost
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Generative video (Replicate WAN 2.1) and voiceover (ElevenLabs) APIs are strictly rate-guarded into atomic credit deductions. Failed rendering jobs are automatically refunded with zero balance risk.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 bg-slate-950/70 p-3 rounded-xl border border-slate-800 shrink-0">
+            <div className="text-center px-3 border-r border-slate-800">
+              <div className="text-lg font-bold text-amber-400">10 cr/s</div>
+              <div className="text-[10px] text-slate-500 uppercase">Video Rate</div>
+            </div>
+            <div className="text-center px-3 border-r border-slate-800">
+              <div className="text-lg font-bold text-sky-400">2 cr/500ch</div>
+              <div className="text-[10px] text-slate-500 uppercase">ElevenLabs Voice</div>
+            </div>
+            <div className="text-center px-3">
+              <div className="text-lg font-bold text-emerald-400">50%+</div>
+              <div className="text-[10px] text-slate-500 uppercase">Guaranteed Margin</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Bar */}
+        {stats.data && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+              <div className="text-2xl font-bold text-slate-200">{stats.data.total}</div>
+              <div className="text-xs text-slate-500">Total Studio Projects</div>
+            </div>
+            {stats.data.byStatus.map((s: any) => (
+              <div key={s.status} className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+                <div
+                  className={`text-2xl font-bold ${
+                    s.status === "SUCCESS"
+                      ? "text-emerald-400"
+                      : s.status === "FAILED"
+                      ? "text-red-400"
+                      : s.status === "PROCESSING"
+                      ? "text-sky-400"
+                      : "text-amber-400"
+                  }`}
+                >
+                  {s.count}
+                </div>
+                <div className="text-xs text-slate-500">{STATUS_CONFIG[s.status]?.label || s.status}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-slate-500" />
+              <span className="text-xs text-slate-400">Filter:</span>
+            </div>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="SUCCESS">Ready</option>
+              <option value="FAILED">Failed</option>
+            </select>
+            <select
+              value={filterLanguage}
+              onChange={(e) => setFilterLanguage(e.target.value)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+            >
+              <option value="">All 22 Languages</option>
+              {VALID_LANGUAGES.map((code) => (
+                <option key={code} value={code}>
+                  {LANGUAGE_MAP[code]?.flag} {LANGUAGE_MAP[code]?.name}
+                </option>
+              ))}
+            </select>
+            {(filterStatus || filterLanguage) && (
+              <button
+                onClick={() => {
+                  setFilterStatus("");
+                  setFilterLanguage("");
+                }}
+                className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="text-xs text-slate-500">
+            Showing {projects.data?.length ?? 0} scenes
+          </div>
+        </div>
+
+        {/* Projects Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projects.data && projects.data.length > 0 ? (
+            projects.data.map((project: VideoProject) => (
+              <div
+                key={project.id}
+                className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-4 hover:border-slate-700 transition-all cursor-pointer group flex flex-col justify-between"
+                onClick={() => setShowProjectDetail(project)}
+              >
+                <div>
+                  <div className="flex items-start justify-between mb-3">
+                    <StatusBadge status={project.status} />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                        {LANGUAGE_MAP[project.language]?.flag} {LANGUAGE_MAP[project.language]?.name}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteProject.mutate({ id: project.id });
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all p-1"
+                        title="Delete project"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 className="text-sm font-semibold text-slate-100 mb-1 line-clamp-1">{project.title}</h3>
+                  <p className="text-xs text-slate-400 mb-3 line-clamp-2">{project.prompt}</p>
+
+                  <div className="mb-2">
+                    <ProgressBar progress={project.progress ?? 0} status={project.status} />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 mb-3">
+                    <span>{project.durationSeconds ? `${project.durationSeconds}s scene` : "5s scene"}</span>
+                    <span>{project.modelUsed ? project.modelUsed.slice(0, 24) : "Multi-API Pipeline"}</span>
+                  </div>
+                </div>
+
+                <div>
+                  {project.status === "SUCCESS" && (
+                    <div className="mt-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                      <span className="text-xs text-emerald-400 flex items-center gap-1.5 font-medium">
+                        <CheckCircle className="w-3.5 h-3.5" /> Scene Rendered
+                      </span>
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <Play className="w-3 h-3 text-sky-400" /> Click to Inspect
+                      </span>
+                    </div>
+                  )}
+
+                  {project.status === "FAILED" && (
+                    <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded-lg p-2 border border-red-500/20">
+                      {project.errorMessage || "Rendering failed. Credits refunded."}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-20 text-slate-500 bg-slate-900/20 rounded-2xl border border-slate-800/60">
+              <Film className="w-12 h-12 mx-auto mb-3 opacity-30 text-amber-500" />
+              <p className="text-sm font-semibold text-slate-400">No Animation Scenes Yet</p>
+              <p className="text-xs text-slate-600 mt-1 mb-4">
+                Launch your first scene to test ElevenLabs voiceovers and WAN 2.1 3D video generation!
+              </p>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="text-xs px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 transition-colors inline-flex items-center gap-1.5 font-semibold"
+              >
+                <Plus className="w-3.5 h-3.5" /> Create Test Scene
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* RENDER NEW SCENE MODAL (With Live Margin & Credit Calculator) */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-bold text-slate-100">Render 3D Animation Scene</h3>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-slate-500 hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-slate-300">Scene Title</label>
+                  <button
+                    type="button"
+                    onClick={handleAutoStoryboard}
+                    disabled={isGeneratingStoryboard}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/30 text-amber-300 flex items-center gap-1.5 transition-all font-medium disabled:opacity-50"
+                    title="Generate script and visual prompt via Google AI Studio GenAI (temperature=0.0 deterministic)"
+                  >
+                    {isGeneratingStoryboard ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                    ) : (
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                    )}
+                    {isGeneratingStoryboard ? "Extracting Storyboard..." : "Auto-Storyboard (google-genai temp=0.0)"}
+                  </button>
+                </div>
+                <input
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="e.g. Robot in Lab Explaining Acid-Base Titration"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 mb-1 block">
+                  Visual Scene Prompt (Replicate WAN 2.1 / RunwayML Gen-4.5)
+                </label>
+                <textarea
+                  value={formPrompt}
+                  onChange={(e) => setFormPrompt(e.target.value)}
+                  placeholder="Describe lighting, character action, 3D style..."
+                  rows={2}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 resize-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                    <Volume2 className="w-3.5 h-3.5 text-sky-400" /> Voiceover Dialogue (ElevenLabs)
+                  </label>
+                  <span className="text-[10px] text-slate-500">{formDialogue.length} characters</span>
+                </div>
+                <textarea
+                  value={formDialogue}
+                  onChange={(e) => setFormDialogue(e.target.value)}
+                  placeholder="Enter the speech narration for the character..."
+                  rows={2}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/50 resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-300 mb-1 block">
+                    Duration: <span className="text-amber-400 font-bold">{formDuration} seconds</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={2}
+                    max={30}
+                    step={1}
+                    value={formDuration}
+                    onChange={(e) => setFormDuration(parseInt(e.target.value))}
+                    className="w-full accent-amber-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                    <span>2s</span>
+                    <span>15s</span>
+                    <span>30s</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-slate-300 mb-1 block">Language</label>
+                  <select
+                    value={formLanguage}
+                    onChange={(e) => setFormLanguage(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200"
+                  >
+                    {VALID_LANGUAGES.map((code) => (
+                      <option key={code} value={code}>
+                        {LANGUAGE_MAP[code]?.flag} {LANGUAGE_MAP[code]?.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* REAL-TIME COST & MARGIN BREAKDOWN CARD */}
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-amber-300 flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-amber-400" /> Credit Calculation
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    {costBreakdown.data?.profitMarginPercent ?? 50}% Profit Margin Protected
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-800">
+                  <div>
+                    <div className="text-slate-500">Video (WAN 2.1)</div>
+                    <div className="font-bold text-slate-200">{costBreakdown.data?.videoCredits ?? 50} cr</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Voice (ElevenLabs)</div>
+                    <div className="font-bold text-slate-200">{costBreakdown.data?.voiceCredits ?? 2} cr</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Total User Charge</div>
+                    <div className="font-bold text-amber-400">
+                      {costBreakdown.data?.totalCredits ?? 53} Credits (${costBreakdown.data?.userPriceUsd ?? 2.65})
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-slate-400 pt-1 flex items-center justify-between">
+                  <span>Underlying API Unit Cost: ~${costBreakdown.data?.estimatedProviderCostUsd ?? 1.25}</span>
+                  <span>Wallet Balance: {balance.data?.credits ?? 150} cr</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                onClick={handleGenerate}
+                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim()}
+                className="flex-1 text-sm py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-600/20"
+              >
+                {generateVideo.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Rendering Animation Scene...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4" /> Deduct {costBreakdown.data?.totalCredits ?? 53} Credits & Render
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-400 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROJECT DETAIL & ASSET INSPECTION MODAL */}
+      {showProjectDetail && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <StatusBadge status={showProjectDetail.status} />
+              <button
+                onClick={() => setShowProjectDetail(null)}
+                className="text-slate-500 hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <h2 className="text-lg font-bold text-slate-100">{showProjectDetail.title}</h2>
+            {showProjectDetail.description && (
+              <p className="text-xs text-slate-400">{showProjectDetail.description}</p>
+            )}
+
+            {/* Video / Audio Preview Banner */}
+            {showProjectDetail.videoUrl && (
+              <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-950 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Film className="w-4 h-4 text-amber-400" /> Rendered Asset
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    {showProjectDetail.videoUrl}
+                  </span>
+                </div>
+                <div className="aspect-video rounded-lg bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-center p-4">
+                  <Play className="w-10 h-10 text-amber-400 mb-2 opacity-80" />
+                  <p className="text-xs text-slate-300 font-semibold">{showProjectDetail.title}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    {showProjectDetail.modelUsed || "Replicate (WAN 2.1) + ElevenLabs (Turbo v2.5)"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-xl bg-slate-950 border border-slate-800/80 p-3 space-y-1">
+              <div className="text-[10px] uppercase font-bold text-slate-500">Visual Scene Prompt</div>
+              <p className="text-xs text-slate-300 leading-relaxed">{showProjectDetail.prompt}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <div className="text-[10px] text-slate-500 mb-0.5">Language</div>
+                <div className="text-slate-200">
+                  {LANGUAGE_MAP[showProjectDetail.language]?.flag} {LANGUAGE_MAP[showProjectDetail.language]?.name}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <div className="text-[10px] text-slate-500 mb-0.5">Engine Stack</div>
+                <div className="text-slate-200 truncate">{showProjectDetail.modelUsed || "ElevenLabs + WAN 2.1"}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRICING & SUBSCRIPTION TIERS MODAL */}
+      {showPricingModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl p-6 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                  <Coins className="w-6 h-6 text-amber-400" /> Virtual Credit Packs & Subscriptions
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Protects margin while providing predictable monthly generative animation allowances.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPricingModal(false)}
+                className="text-slate-500 hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Top-up Packs */}
+            <div>
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+                Quick Top-Up Packs (Instant Credit Refill)
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {pricingTiers.data?.packs?.map((pack: any) => (
+                  <div
+                    key={pack.id}
+                    className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="text-sm font-bold text-slate-200">{pack.label}</div>
+                      <div className="text-2xl font-extrabold text-amber-400 mt-1">
+                        ${pack.priceUsd}{" "}
+                        <span className="text-xs font-normal text-slate-500">/ R{pack.priceZar} ZAR</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-2">
+                        {Math.floor(pack.credits / 10)}s of WAN 2.1 video + ElevenLabs voice
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleQuickTopup(pack.credits, pack.id)}
+                      disabled={topupMutation.isPending}
+                      className="mt-4 w-full py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    >
+                      {topupMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      Add {pack.credits} Credits
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Subscription Tiers */}
+            <div>
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+                Monthly Subscription Plans
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {pricingTiers.data?.tiers?.map((tier: any) => (
+                  <div
+                    key={tier.id}
+                    className={`p-4 rounded-2xl bg-slate-950 border ${
+                      tier.recommended ? "border-amber-500/50 shadow-lg shadow-amber-500/10" : "border-slate-800"
+                    } flex flex-col justify-between`}
+                  >
+                    <div>
+                      {tier.recommended && (
+                        <span className="text-[9px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 mb-2 inline-block">
+                          Most Popular
+                        </span>
+                      )}
+                      <h4 className="text-sm font-bold text-slate-200">{tier.name}</h4>
+                      <div className="text-xl font-black text-slate-100 mt-1">
+                        ${tier.priceUsd}{" "}
+                        <span className="text-xs font-normal text-slate-500">/ mo</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {tier.monthlyCredits.toLocaleString()} Credits / mo
+                      </div>
+                      <ul className="mt-3 space-y-1.5 text-[11px] text-slate-400">
+                        {tier.features.map((f: string, i: number) => (
+                          <li key={i} className="flex items-start gap-1.5">
+                            <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      onClick={() => handleQuickTopup(tier.monthlyCredits, tier.id)}
+                      className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+                    >
+                      Subscribe {tier.name}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2026 UNDERLYING API UNIT COST & COMMERCIAL DETAILS MODAL */}
+      {showApiStatusModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl p-6 space-y-5 max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" /> Underlying API Costs & Commercial Matrix
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real 2026 pricing for the underlying APIs orchestrated by Luqi AI.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowApiStatusModal(false)}
+                className="text-slate-500 hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {apiStatus.data?.providers?.map((provider: any) => (
+                <div
+                  key={provider.id}
+                  className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                >
+                  <div className="space-y-0.5 max-w-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-200">{provider.name}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                        {provider.envVar}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400">{provider.purpose}</div>
+                    <div className="text-[11px] text-amber-400/90 font-medium">
+                      Commercial note: {provider.commercialNotice}
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="text-xs font-bold text-slate-200">{provider.cost}</div>
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-1 ${
+                        provider.configured
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {provider.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-400 space-y-1.5">
+              <div className="font-bold text-slate-200 flex items-center gap-1.5">
+                <Info className="w-4 h-4 text-sky-400" /> Why Virtual Credits Protect Against Bankruptcy:
+              </div>
+              <p>
+                A single 60-second animated video costs between <strong>$3.60 and $15.60 in underlying API fees</strong> ($0.60 voiceover + $3.00 to $15.00 video generation). Offering an "unlimited" tier quickly leads to catastrophic losses. Abstracting costs into <strong>10 credits/second ($0.50 user charge)</strong> guarantees a minimum 50% profit margin on every second generated.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

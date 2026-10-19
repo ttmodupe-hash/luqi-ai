@@ -1,0 +1,75 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./meta_afrilearn_core.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model UserAccount {
+  id                     String    @id @default(uuid())
+  phoneNumber            String    @unique
+  accountTier            String    // "FREE_TIER" | "PREMIUM_5G_6G"
+  subscriptionValidUntil DateTime?
+  createdAt              DateTime  @default(now())
+}
+
+model UssdSession {
+  id               String   @id
+  phoneNumber      String
+  currentMenuState String   // "MAIN_MENU" | "CHOOSE_LEVEL" | "LESSON_VIEW"
+  selectedTopic    String?
+  updatedAt        DateTime @updatedAt
+}
+
+model DynamicDictionary {
+  id               String   @id @default(uuid())
+  languageCode     String   // "SEPITORI" | "ZULU" | "SWAHILI" | "YORUBA"
+  slangTerm        String   @unique
+  standardMeaning  String
+  confidenceScore  Int      // 0 to 100 graded by Claude Audit
+  learnedInSession String
+  createdAt        DateTime @default(now())
+}
+
+model EducationalModule {
+  id                 String   @id @default(uuid())
+  conceptHash        String   @unique
+  conceptName        String
+  targetGradeTier    String   // "PRE_SCHOOL" | "PRIMARY" | "HIGH_SCHOOL" | "HIGHER_LEARNING"
+  compiledFrontend   String   // Raw executable structural React/JS sandbox string
+  optimizationsCount Int      @default(1)
+  failureLog         String?
+  timestamp          DateTime @default(now())
+}
+
+model LearningTelemetry {
+  id               String @id @default(uuid())
+  moduleId         String
+  latencyMs        Int
+  compilationLoops Int
+  resolvedBugs     String
+  status           String // "ACTIVE" | "FAILED"
+}
+
+model ApiCostLedger {
+  id                String   @id @default(uuid())
+  providerName      String   // "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "ELEVENLABS" | "AFRICAS_TALKING"
+  modelName         String   // "claude-fable-5-1" | "gemini-4-argon" | "deepseek-chat" | etc.
+  tokensInput       Int      @default(0)
+  tokensOutput      Int      @default(0)
+  calculatedCostUsd Float
+  billingCycleDay   Int      @default(1) // Forces synchronization onto the 1st of every month
+  timestamp         DateTime @default(now())
+}
+
+model SystemErrorRegistry {
+  id                String   @id @default(uuid())
+  faultComponent    String   // "UI_COMPILER" | "API_GATEWAY" | "BUDGET_GUARD" | "SANDBOX_RUNTIME"
+  severityLevel     String   // "WARNING" | "CRITICAL_HALT"
+  errorTraceDump    String
+  resolvedStatus    Boolean  @default(false)
+  remediationAction String?
+  timestamp         DateTime @default(now())
+}

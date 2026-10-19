@@ -483,3 +483,47 @@ export const paymentEvents = mysqlTable("payment_events", {
   payloadJson: text("payload_json"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+/* ───────── Experiential Super-Intelligence Education Tables ───────── */
+
+export const educationalModules = mysqlTable("educational_modules", {
+  id: serial("id").primaryKey(),
+  conceptHash: varchar("concept_hash", { length: 255 }).notNull().unique(),
+  conceptName: varchar("concept_name", { length: 500 }).notNull(),
+  targetGradeTier: varchar("target_grade_tier", { length: 50 }).notNull(), // PRE_SCHOOL | PRIMARY | HIGH_SCHOOL | HIGHER_LEARNING
+  compiledFrontend: text("compiled_frontend").notNull(),
+  optimizationsCount: int("optimizations_count").default(1),
+  failureLog: text("failure_log"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export const learningTelemetry = mysqlTable("learning_telemetry", {
+  id: serial("id").primaryKey(),
+  moduleId: varchar("module_id", { length: 255 }).notNull(),
+  latencyMs: int("latency_ms").notNull(),
+  compilationLoops: int("compilation_loops").notNull(),
+  resolvedBugs: text("resolved_bugs"),
+  status: varchar("status", { length: 50 }).notNull(), // ACTIVE | FAILED
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+/* ───────── USSD Shortcode & Account Tier Tables ───────── */
+
+export const userAccounts = mysqlTable("user_accounts", {
+  id: serial("id").primaryKey(),
+  phoneNumber: varchar("phone_number", { length: 50 }).notNull().unique(),
+  accountTier: varchar("account_tier", { length: 50 }).default("FREE_TIER"), // FREE_TIER | PREMIUM_5G_6G
+  subscriptionValidUntil: timestamp("subscription_valid_until"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const ussdSessions = mysqlTable("ussd_sessions", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  phoneNumber: varchar("phone_number", { length: 50 }).notNull(),
+  currentMenuState: varchar("current_menu_state", { length: 50 }).default("MAIN_MENU"), // MAIN_MENU | CHOOSE_LEVEL | LESSON_VIEW
+  selectedTopic: varchar("selected_topic", { length: 255 }),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+

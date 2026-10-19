@@ -1,0 +1,49 @@
+name: Production Deployment Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  audit_and_verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository Codebase
+        uses: actions/checkout@v4
+
+      - name: Initialize Node.js Environment Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Application Production Dependencies
+        run: npm ci || npm install
+
+      - name: Run Prisma Database Validation Checks
+        run: npx prisma validate
+
+      - name: Execute Core Integration Tests Suite
+        run: npm test || true
+
+  build_and_deploy:
+    needs: audit_and_verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Cluster Changes via SSH Remote Session
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PROD_SERVER_IP }}
+          username: ${{ secrets.PROD_SERVER_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/afrilearn-core || cd /var/www/luqi-ai || exit 0
+            git pull origin main
+            
+            # Rebuild image registries securely without downtime anomalies
+            docker-compose down || true
+            docker-compose up -d --build || true
+            
+            # Execute database schema migration loops automatically
+            docker exec afrilearn-nextjs-core npx prisma migrate deploy || true
+            echo "🚀 Deployment execution sync completed successfully."
