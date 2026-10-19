@@ -230,7 +230,8 @@ interface ParsedStructuredOutput {
   uiWidgets?: any[];
 }
 
-function tryParseStructuredJson(text: string): ParsedStructuredOutput | null {
+function tryParseStructuredJson(text?: string | null): ParsedStructuredOutput | null {
+  if (!text || typeof text !== "string") return null;
   const trimmed = text.trim();
   if (!trimmed.startsWith("{") || !trimmed.includes('"uiWidgets"')) return null;
   try {
@@ -287,11 +288,13 @@ function parseMapTag(segment: string) {
 
 // ─── 5. PROGRESSIVE STREAMING AST PARSER ─────────────────────────────
 interface StreamRendererProps {
-  rawStreamText: string;
+  rawStreamText?: string;
+  content?: string;
 }
 
-export const IntelligentUIStreamRenderer: React.FC<StreamRendererProps> = ({ rawStreamText }) => {
-  const jsonOutput = tryParseStructuredJson(rawStreamText);
+export const IntelligentUIStreamRenderer: React.FC<StreamRendererProps> = ({ rawStreamText, content }) => {
+  const text = (rawStreamText ?? content ?? "") || "";
+  const jsonOutput = tryParseStructuredJson(text);
 
   if (jsonOutput) {
     return (
@@ -345,7 +348,7 @@ export const IntelligentUIStreamRenderer: React.FC<StreamRendererProps> = ({ raw
 
   // Tag parsing for <Calculator />, <Chart />, and <Map />
   const widgetRegex = /(<(?:Calculator|Chart|Map)\s+[^>]*\/>)/g;
-  const segments = rawStreamText.split(widgetRegex);
+  const segments = text.split(widgetRegex);
 
   return (
     <div className="space-y-2">

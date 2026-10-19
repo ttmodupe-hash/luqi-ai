@@ -27,71 +27,6 @@ import ApiSystemStatusDashboard from "@/components/ApiSystemStatusDashboard";
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-orange-500/20">
-              L
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">LUQI AI</h1>
-              <p className="text-xs text-slate-400">Pan-African & Global AI Platform</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to="/companion"
-              className="text-xs px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:brightness-110 text-white font-bold transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20"
-            >
-              <Brain className="w-3.5 h-3.5" /> AI Chat & Reasoning
-            </Link>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
-              className="text-xs px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 hover:border-amber-500/50 transition-all flex items-center gap-2 font-medium"
-              title="Global Omni-Query & Capabilities Palette (Cmd+K)"
-            >
-              <Search className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Omni-Query</span>
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
-                ⌘K
-              </kbd>
-            </button>
-            <Link
-              to="/pendulum-lab"
-              className="text-xs px-3.5 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 transition-all flex items-center gap-1.5 font-medium"
-            >
-              <Activity className="w-3.5 h-3.5 text-sky-400" /> Pendulum Lab
-            </Link>
-            <Link
-              to="/cert-academy"
-              className="text-xs px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5 font-medium"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-amber-400" /> CertMaster Academy
-            </Link>
-            <Link
-              to="/african-radar"
-              className="text-xs px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 font-medium"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> African Radar
-            </Link>
-            <Link
-              to="/archive"
-              className="text-xs px-3.5 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition-all flex items-center gap-1.5 font-medium"
-            >
-              <Archive className="w-3.5 h-3.5" /> Archive Vault
-            </Link>
-            <Link
-              to="/video-studio"
-              className="text-xs px-3.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 transition-all flex items-center gap-1.5 font-medium"
-            >
-              <Film className="w-3.5 h-3.5" /> Video Studio
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
         {/* Hero Banner with Interactive AI Query Console */}
         <div className="space-y-6 max-w-4xl mx-auto">
@@ -217,24 +152,29 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* Card 1: Video Studio */}
+          {/* Card 1: LuqiToons 3D Video Studio */}
           <Link
-            to="/video-studio"
+            to="/luqitoons"
             className="group rounded-3xl border border-slate-800 bg-slate-900/50 p-6 hover:border-orange-500/50 hover:bg-slate-900/80 transition-all flex flex-col justify-between"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 mb-4 group-hover:scale-105 transition-transform">
                 <Film className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-slate-100 group-hover:text-orange-400 transition-colors">
-                Generative Video & Voice Studio
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-orange-400 transition-colors">
+                  LuqiToons 3D Animation Studio
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-mono font-bold border border-orange-500/30">
+                  LUQITOONS 3D
+                </span>
+              </div>
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Native animation pipeline chaining ElevenLabs voiceover, Replicate WAN 2.1 video generation, and AI scriptwriting with a 50%+ Margin Protector.
+                Sovereign 3D cartoon and character animation studio. Chaining text-to-animation (WAN 2.1 / RunwayML Gen-4.5) and ElevenLabs neural voiceover across 22 African & global languages. Includes 1-click STEM & African folklore templates.
               </p>
             </div>
             <div className="mt-6 flex items-center justify-between text-xs font-semibold text-orange-400">
-              <span>Launch Studio</span>
+              <span>Launch LuqiToons Studio</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>

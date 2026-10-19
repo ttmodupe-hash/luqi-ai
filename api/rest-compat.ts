@@ -690,7 +690,7 @@ restCompat.post("/v1/extract", async (c) => {
 });
 
 // ─── Animation Storyboard Generation with High Precision ───
-restCompat.post("/v1/animation/storyboard", async (c) => {
+const handleAnimationStoryboard = async (c: any) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     topic?: string;
     duration_seconds?: number;
@@ -705,7 +705,7 @@ Duration: ${duration} seconds.
 Voiceover dialogue must be in ${language}.
 Return ONLY a valid JSON object with keys:
   - 'title': string
-  - 'visual_prompt': string (prompt for WAN 2.1 / Runway Gen-4.5)
+  - 'visual_prompt': string (prompt for WAN 2.1 / Runway Gen-4.5 cartoon/3D animation)
   - 'dialogue': string (spoken audio for ElevenLabs)
   - 'target_duration': integer`;
 
@@ -724,7 +724,7 @@ Return ONLY a valid JSON object with keys:
   } catch {
     storyboard = {
       title: topic,
-      visual_prompt: `Cinematic 3D render of ${topic}, vibrant colors, 720p smooth motion`,
+      visual_prompt: `Cinematic 3D cartoon style render of ${topic}, vibrant colors, 720p smooth motion`,
       dialogue: `Sawubona! Sifunda nge-${topic}.`,
       target_duration: duration,
     };
@@ -736,7 +736,10 @@ Return ONLY a valid JSON object with keys:
     precision: result.precision,
     storyboard,
   });
-});
+};
+
+restCompat.post("/v1/animation/storyboard", handleAnimationStoryboard);
+restCompat.post("/api/v1/animation/storyboard", handleAnimationStoryboard);
 
 // ─── ASYNC JOB QUEUE & TOKEN BILLING GATEWAY (Full-Stack Mirror) ──────────
 

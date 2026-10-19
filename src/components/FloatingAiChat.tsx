@@ -278,7 +278,7 @@ export default function FloatingAiChat() {
                       {isUser ? (
                         <p className="whitespace-pre-wrap">{m.content}</p>
                       ) : (
-                        <IntelligentUIStreamRenderer content={m.content} />
+                        <IntelligentUIStreamRenderer rawStreamText={m.content} content={m.content} />
                       )}
                     </div>
                   </div>

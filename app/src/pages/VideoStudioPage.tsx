@@ -62,6 +62,60 @@ const LANGUAGE_MAP: Record<string, { name: string; flag: string }> = {
 
 const VALID_LANGUAGES = Object.keys(LANGUAGE_MAP);
 
+// ── LUQITOONS 1-CLICK INSTANT PRESETS ─────────────────────────────────
+const LUQITOONS_PRESETS = [
+  {
+    icon: "🤖",
+    label: "3D Robot STEM Tutor",
+    title: "AI Physics Tutor Scene",
+    desc: "3D animation demonstrating harmonic oscillation",
+    prompt: "3D cartoon style friendly robot sitting at a futuristic science lab desk demonstrating pendulum motion, volumetric lighting, Pixar aesthetic, bright vibrant colors",
+    dialogue: "Welcome to Luqi AI. Notice how energy converts from potential to kinetic as the pendulum swings.",
+    lang: "en",
+    duration: 5,
+  },
+  {
+    icon: "☀️",
+    label: "Solar Microgrid Story",
+    title: "Township Clean Energy Story",
+    desc: "Township solar microgrid explainer with animated power flow",
+    prompt: "3D stylized animated village with rooftop solar panels, glowing battery storage, warm African sunset, gentle camera pan, vibrant colors",
+    dialogue: "Amandla elanga asiza imiphakathi yethu ukugcina ukukhanya ngesikhathi sokucima kukagesi.",
+    lang: "zu",
+    duration: 5,
+  },
+  {
+    icon: "🏪",
+    label: "Spaza Shop 3D",
+    title: "Township Merchant Finance Story",
+    desc: "Informal economy financial inclusion animation",
+    prompt: "Colorful vibrant 3D cartoon township convenience store, friendly merchant using phone payment with floating golden ledger symbols, Pixar cartoon lighting",
+    dialogue: "Re tshela ditlhahlobo tsa mabenkele a rona ka theknoloji e bolokehileng le e bonolo.",
+    lang: "st",
+    duration: 5,
+  },
+  {
+    icon: "🦁",
+    label: "African Folklore",
+    title: "Anansi & the Baobab Tree",
+    desc: "Cultural bedtime story animated scene",
+    prompt: "Stylized storybook 3D cartoon animation of an ancient African baobab tree under a starry night sky with mystical fireflies, rich saturated hues",
+    dialogue: "Hapo zamani za kale, chini ya mti mkubwa wa mbuyu, wanyama walikusanyika kusikiliza hekima.",
+    lang: "sw",
+    duration: 5,
+  },
+  {
+    icon: "📐",
+    label: "Maths Geometry",
+    title: "Harmonic Geometry Visualizer",
+    desc: "Educational geometry animated explainer",
+    prompt: "3D geometric shapes folding in harmonic rhythm with neon particles, educational cartoon graphics, smooth 60fps style, high visual contrast",
+    dialogue: "Angles, vectors, and velocity come alive when mathematics meets spatial motion in three dimensions.",
+    lang: "en",
+    duration: 5,
+  },
+];
+
 // ── STATUS CONFIG ───────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   PENDING: {
@@ -231,12 +285,15 @@ export default function VideoStudioPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight">Luqi Video & Voice Studio</h1>
+                <h1 className="text-lg font-bold tracking-tight">LuqiToons 3D Animation Studio</h1>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-orange-400" /> LuqiToons Native
+                </span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" /> Margin Protected
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Generative Animation Pipeline (ElevenLabs + WAN 2.1 + Gemini)</p>
+              <p className="text-xs text-slate-400">Sovereign 3D Cartoon & Character Animation Pipeline (WAN 2.1 + ElevenLabs + Gemini 3.8)</p>
             </div>
           </div>
 
@@ -316,6 +373,126 @@ export default function VideoStudioPage() {
             <div className="text-center px-3">
               <div className="text-lg font-bold text-emerald-400">50%+</div>
               <div className="text-[10px] text-slate-500 uppercase">Guaranteed Margin</div>
+            </div>
+          </div>
+        </div>
+
+        {/* LUQITOONS QUICK ANIMATION LAUNCHER */}
+        <div className="rounded-2xl border border-orange-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-orange-950/20 p-5 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-orange-400" /> LUQITOONS 1-CLICK STUDIO
+                </span>
+                <span className="text-xs text-slate-400">Direct 3D Cartoon & Voiceover Generator</span>
+              </div>
+              <h3 className="text-base font-bold text-white mt-1">
+                Generate 3D Cartoon Characters & Multilingual Animated Scenes
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition"
+              >
+                Advanced Modal
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Preset Selector */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              1-Click Instant Templates:
+            </label>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {LUQITOONS_PRESETS.map((p, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setFormTitle(p.title);
+                    setFormDescription(p.desc);
+                    setFormPrompt(p.prompt);
+                    setFormDialogue(p.dialogue);
+                    setFormLanguage(p.lang);
+                    setFormDuration(p.duration);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-950/80 hover:bg-orange-500/10 hover:border-orange-500/40 border border-slate-800 text-xs font-medium text-slate-200 whitespace-nowrap transition flex items-center gap-1.5"
+                >
+                  <span>{p.icon}</span>
+                  <span>{p.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Inline Quick Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <div className="md:col-span-6 space-y-1">
+              <label className="text-[11px] font-semibold text-slate-400">Visual Animation Prompt (WAN 2.1 3D Cartoon):</label>
+              <textarea
+                value={formPrompt}
+                onChange={(e) => setFormPrompt(e.target.value)}
+                rows={2}
+                className="w-full text-xs px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none text-slate-200 resize-none"
+                placeholder="Describe your 3D cartoon character, action, and lighting..."
+              />
+            </div>
+            <div className="md:col-span-6 space-y-1">
+              <label className="text-[11px] font-semibold text-slate-400">Character Dialogue / Voiceover (ElevenLabs):</label>
+              <textarea
+                value={formDialogue}
+                onChange={(e) => setFormDialogue(e.target.value)}
+                rows={2}
+                className="w-full text-xs px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none text-slate-200 resize-none"
+                placeholder="What should the character speak in the scene?"
+              />
+            </div>
+          </div>
+
+          {/* Action Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <Languages className="w-3.5 h-3.5 text-sky-400" />
+                <select
+                  value={formLanguage}
+                  onChange={(e) => setFormLanguage(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 text-xs px-2.5 py-1.5 rounded-lg text-slate-200"
+                >
+                  {VALID_LANGUAGES.map((code) => (
+                    <option key={code} value={code}>
+                      {LANGUAGE_MAP[code]?.flag} {LANGUAGE_MAP[code]?.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1 text-xs text-slate-400">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-mono text-slate-200 font-semibold">{formDuration}s</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAutoStoryboard}
+                disabled={isGeneratingStoryboard}
+                className="text-xs px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isGeneratingStoryboard ? <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-400" /> : <Wand2 className="w-3.5 h-3.5 text-orange-400" />}
+                <span>Auto-Direct with AI</span>
+              </button>
+
+              <button
+                onClick={handleGenerate}
+                disabled={generateVideo.isPending}
+                className="text-xs px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {generateVideo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                <span>Render Animation Now ({formDuration * 10} credits)</span>
+              </button>
             </div>
           </div>
         </div>
