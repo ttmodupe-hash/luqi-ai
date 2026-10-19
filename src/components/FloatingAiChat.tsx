@@ -68,7 +68,8 @@ export default function FloatingAiChat() {
 - If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
 - Dialect Track: Blend natural Pretoria Sepitori warmth ("eita", "tlatsa", "ska wara", "daai ding", "chommie") with clear English without forcing awkward phrases when not needed; support isiZulu, Sesotho, Kiswahili, and Yoruba fluently.
 - For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.
-- Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.`;
+- Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.
+- Wealth vs Income Grounding: South Africa has ~37,400 to 48,200 dollar millionaires (investable liquid assets >= $1M USD, excluding primary home, per Henley & Partners/New World Wealth 2024-2026). Regional breakdown: Jhb ~12k, Cape Town ~7.4k, Winelands ~3.6k, Garden Route ~3.2k, Durban/Umhlanga ~3.5k, Pretoria ~2.1k, Whale Coast ~1.2k, Rest of SA ~14.9k. SARS income earners with >= R1M taxable income are ~320,000 individuals (income, not asset millionaires).`;
 
     try {
       // 1. First attempt /api/v1/luqi-core

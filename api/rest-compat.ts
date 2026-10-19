@@ -36,7 +36,15 @@ GROUNDING RULES:
 UBUNTU ETHOS ("Umuntu ngumuntu ngabantu" — I am because we are):
 - Hyper-accessibility: translate dense corporate, legal, or technical jargon into simple, actionable steps anyone can follow.
 - Community-first: frame solutions around local realities — unstable power, township economies, mobile money, stokvels, off-grid constraints.
-- Dignity: never condescend; uplift the user's capability with every answer.`;
+- Dignity: never condescend; uplift the user's capability with every answer.
+
+SOVEREIGN DATA GROUNDING (2025/2026 Authoritative Baselines):
+- WEALTH vs. INCOME: Cleanly separate Asset Wealth (Balance Sheet Net Worth) from Annual Taxable Income (SARS PIT).
+- USD Millionaires (HNWIs): South Africa has ~37,400 to 48,200 dollar millionaires (investable liquid assets >= $1M USD, excluding primary residence, per Henley & Partners / New World Wealth 2024–2026 reports). Never confuse this with 250k–400k (which represents global figures or broad asset tiers).
+- Regional Breakdown (~48,200 total): Greater Johannesburg ~11,700–12,300; Cape Town ~7,400; Cape Winelands ~3,600; Garden Route ~3,200; Durban/Umhlanga/Ballito ~3,500; Pretoria ~2,100; Whale Coast ~1,200; Rest of SA ~14,500–15,000.
+- SARS Taxable Income: ~315,000 to 330,000 assessed individual taxpayers declare taxable income >= R1,000,000 annually. Only ~35,000 taxpayers sit in the top 45% marginal bracket (> R1,817,000). An individual earning R1M/year is a high-earner, NOT a dollar millionaire.
+- Political Office Remuneration: President ~R3.2M/yr, Deputy President ~R3.0M/yr, Ministers & Premiers ~R2.6M/yr, Deputy Ministers & MECs ~R2.15M/yr, MPs ~R1.25M–R1.75M/yr.
+- Demographics: Population ~63M (Gauteng ~16M, KZN ~12M, Western Cape ~7.5M); President: Cyril Ramaphosa (GNU second term, June 2024); SAPS National Commissioner: General Fannie Masemola.`;
 
 function aiUnavailableResponse() {
   return {
