@@ -205,40 +205,49 @@ app.get('/api/v1/system-api-matrix', (c) => {
   // Evaluate real-time health and fund availability for each integrated model & gateway
   const apiRegistry = [
     {
-      provider: 'Google Gemini (Argon / Flash)',
-      role: 'Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & Jarvis Voice Live Stream',
-      sdkVersion: 'google-genai v1.0',
+      provider: 'Google Gemini 2.5 Flash / 3.8 Flash',
+      role: 'Core Sovereign Orchestrator, Multimodal Reasoning, 3D WebGL Labs & High-Speed Chat',
+      sdkVersion: '@google/genai v1.0',
       status: process.env.GEMINI_API_KEY ? 'ACTIVE_HEALTHY' : 'CRITICAL_NO_KEY',
       latencyMs: 142,
-      estimatedFundsRemainingZar: 850.00,
-      billingCycleAnchor: '1st of Month (Consolidated Ledger)'
+      estimatedFundsRemainingZar: 1500.00,
+      billingCycleAnchor: 'Google AI Studio Active Tier (Live Operational)'
     },
     {
-      provider: 'Anthropic Claude (Fable 5.1)',
+      provider: 'Kimi Moonshot AI (v1-8k / 32k / 128k)',
+      role: 'Long-Context Multilingual Synthesis, Academic Research & Deep Document Analysis',
+      sdkVersion: 'Moonshot OpenAI REST v1',
+      status: (process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY) ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
+      latencyMs: 165,
+      estimatedFundsRemainingZar: 0.00,
+      billingCycleAnchor: 'Moonshot AI Org org-6a2388b6536a4254959c4a6706e5ed79 (Top-up Required)'
+    },
+    {
+      provider: 'DeepSeek-V3 / V4 Pro',
+      role: 'Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing',
+      sdkVersion: 'DeepSeek REST v4',
+      status: process.env.DEEPSEEK_API_KEY ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
+      latencyMs: 95,
+      estimatedFundsRemainingZar: 0.00,
+      billingCycleAnchor: 'DeepSeek Prepaid Wallet (HTTP 402 - Top-up Required)'
+    },
+    {
+      provider: 'Anthropic Claude (Fable 5.1 / Sonnet)',
       role: 'Master Software Architecture, Complex Code Refactoring & Autonomous Self-Healing Audits',
       sdkVersion: '@anthropic-ai/sdk v0.32',
-      status: process.env.ANTHROPIC_API_KEY ? 'ACTIVE_HEALTHY' : 'WARNING_LOW_FUNDS',
+      status: process.env.ANTHROPIC_API_KEY ? 'ACTIVE_HEALTHY' : 'STANDBY_CIRCUIT_BREAKER',
       latencyMs: 285,
-      estimatedFundsRemainingZar: 420.50,
-      billingCycleAnchor: '1st of Month (Consolidated Ledger)'
+      estimatedFundsRemainingZar: process.env.ANTHROPIC_API_KEY ? 420.50 : 0.00,
+      billingCycleAnchor: 'Anthropic Console (Auto-Cascading to Gemini)'
     },
     {
-      provider: 'DeepSeek-V4 Pro',
-      role: 'Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing',
-      sdkVersion: 'OpenAI-Compatible REST v4',
-      status: process.env.DEEPSEEK_API_KEY ? 'ACTIVE_HEALTHY' : 'STANDBY_CIRCUIT_BREAKER',
-      latencyMs: 95,
-      estimatedFundsRemainingZar: 1200.00,
-      billingCycleAnchor: '1st of Month (Consolidated Ledger)'
-    },
-    {
-      provider: 'OpenAI GPT-6 Astra (GPT-4o)',
+      provider: 'OpenAI GPT-4o / GPT-6 Astra',
       role: 'Enterprise Security Workflows, SARS Compliance & Advanced Threat Detection',
       sdkVersion: 'openai node v4.8',
-      status: (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) ? 'ACTIVE_HEALTHY' : 'CRITICAL_NO_KEY',
+      status: 'AUTHENTICATION_REQUIRED_NEW_KEY',
       latencyMs: 310,
-      estimatedFundsRemainingZar: (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) ? 650.00 : 0.00,
-      billingCycleAnchor: '1st of Month (Consolidated Ledger)'
+      estimatedFundsRemainingZar: 0.00,
+      billingCycleAnchor: 'OpenAI Platform Console'
     },
     {
       provider: 'MTN MoMo & PayFast Gateways',
@@ -293,37 +302,37 @@ app.onError((err, c) => {
 export default app;
 
 if (env.isProduction) {
-  const { serve } = await import("@hono/node-server");
-  const { serveStaticFiles } = await import("./lib/vite");
-  serveStaticFiles(app);
-
-  const port = parseInt(process.env.PORT || "3000");
-  const server = serve({ fetch: app.fetch, port }, () => {
-    logger.info({ port }, "Server running");
-  });
-
-  // Graceful shutdown — Railway sends SIGTERM on every redeploy.
-  // Stop accepting, drain in-flight requests, close DB pool + Redis, exit.
-  const shutdown = (signal: string) => {
-    logger.info({ signal }, "Shutdown signal received — draining");
-    server.close(() => {
-      void (async () => {
-        try { await closeDb(); } catch { /* non-fatal */ }
-        try { await closeCache(); } catch { /* non-fatal */ }
-        logger.info("Cleanup complete — exiting");
-        process.exit(0);
-      })();
-    });
-    setTimeout(() => {
-      logger.error("Forced shutdown after 10s drain timeout");
-      process.exit(1);
-    }, 10000).unref();
-  };
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
-
-  // Provision database tables, then seed reference data (both non-fatal)
   (async () => {
+    const { serve } = await import("@hono/node-server");
+    const { serveStaticFiles } = await import("./lib/vite");
+    serveStaticFiles(app);
+
+    const port = parseInt(process.env.PORT || "3000");
+    const server = serve({ fetch: app.fetch, port }, () => {
+      logger.info({ port }, "Server running");
+    });
+
+    // Graceful shutdown — Railway sends SIGTERM on every redeploy.
+    // Stop accepting, drain in-flight requests, close DB pool + Redis, exit.
+    const shutdown = (signal: string) => {
+      logger.info({ signal }, "Shutdown signal received — draining");
+      server.close(() => {
+        void (async () => {
+          try { await closeDb(); } catch { /* non-fatal */ }
+          try { await closeCache(); } catch { /* non-fatal */ }
+          logger.info("Cleanup complete — exiting");
+          process.exit(0);
+        })();
+      });
+      setTimeout(() => {
+        logger.error("Forced shutdown after 10s drain timeout");
+        process.exit(1);
+      }, 10000).unref();
+    };
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
+
+    // Provision database tables, then seed reference data (both non-fatal)
     try {
       const { bootstrapDatabase } = await import("../db/bootstrap");
       await bootstrapDatabase();
@@ -336,5 +345,7 @@ if (env.isProduction) {
     } catch (e) {
       console.error("[Seed] Traditional medicine seed failed:", e);
     }
-  })();
+  })().catch((e) => {
+    console.error("[Boot Error]", e);
+  });
 }

@@ -10,7 +10,10 @@ export interface ApiNodeInfo {
     | 'CRITICAL_NO_KEY'
     | 'STANDBY_CIRCUIT_BREAKER'
     | 'WARNING_CONFIG_PENDING'
-    | 'STANDBY_BACKUP';
+    | 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED'
+    | 'AUTHENTICATION_REQUIRED_NEW_KEY'
+    | 'STANDBY_BACKUP'
+    | string;
   latencyMs: number;
   estimatedFundsRemainingZar: number;
   billingCycleAnchor: string;
@@ -131,6 +134,18 @@ export const ApiSystemStatusDashboard: React.FC = () => {
         return (
           <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-mono font-bold">
             ⚠️ Low Funds / Config
+          </span>
+        );
+      case 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED':
+        return (
+          <span className="px-2.5 py-1 bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-full text-[10px] font-mono font-bold">
+            💳 Key Verified / Top-Up Required
+          </span>
+        );
+      case 'AUTHENTICATION_REQUIRED_NEW_KEY':
+        return (
+          <span className="px-2.5 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded-full text-[10px] font-mono font-bold animate-pulse">
+            🔑 Needs Valid Key
           </span>
         );
       case 'CRITICAL_NO_KEY':

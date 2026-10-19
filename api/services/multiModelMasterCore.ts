@@ -8,6 +8,7 @@ dotenv.config({ override: true });
 const getGemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 const getDeepSeek = () => new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY || '', baseURL: 'https://api.deepseek.com' });
+const getKimi = () => new OpenAI({ apiKey: process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || '', baseURL: 'https://api.moonshot.ai/v1' });
 const getOpenAI = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '', baseURL: 'https://api.openai.com/v1' });
 
 // Reliable Gemini invocation resolving to active production endpoint (gemini-3.8-flash)
@@ -30,7 +31,7 @@ const invokeGeminiEngine = async (contents: any, systemInstruction: string, temp
   }
 };
 
-export type MasterModelRole = 'ARCHITECTURE_REFACTOR' | 'VISUAL_3D_LAB' | 'BULK_COMPUTATION' | 'ENTERPRISE_CYBER';
+export type MasterModelRole = 'ARCHITECTURE_REFACTOR' | 'VISUAL_3D_LAB' | 'BULK_COMPUTATION' | 'ENTERPRISE_CYBER' | 'LONG_CONTEXT_KIMI';
 
 export interface MultiModelExecutionResult {
   model: string;
@@ -75,6 +76,16 @@ export class MultiModelMasterOrchestrator {
       lower.includes('audit')
     ) {
       return 'ENTERPRISE_CYBER'; // Handled by GPT Enterprise
+    }
+    if (
+      lower.includes('kimi') ||
+      lower.includes('moonshot') ||
+      lower.includes('long context') ||
+      lower.includes('synthesis') ||
+      lower.includes('translation') ||
+      lower.includes('document analysis')
+    ) {
+      return 'LONG_CONTEXT_KIMI'; // Handled by Kimi Moonshot AI
     }
     return 'BULK_COMPUTATION'; // Handled by DeepSeek / Fast logic tier
   }
@@ -151,6 +162,33 @@ export class MultiModelMasterOrchestrator {
         }
       }
 
+      if (role === 'LONG_CONTEXT_KIMI') {
+        const kimiKey = process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY;
+        if (kimiKey) {
+          try {
+            const kimi = getKimi();
+            const res = await kimi.chat.completions.create({
+              model: 'moonshot-v1-8k',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ]
+            });
+            const output = res.choices[0]?.message?.content || '';
+            if (output.trim()) {
+              return {
+                model: 'Kimi Moonshot AI (Long-Context & Deep Synthesis)',
+                output,
+                role,
+                costZar: 0.0028
+              };
+            }
+          } catch (kimiErr: any) {
+            console.warn('[Multi-Model Router] Kimi Moonshot paused (account suspended/balance required), cascading to Gemini...', kimiErr?.message);
+          }
+        }
+      }
+
       if (role === 'BULK_COMPUTATION') {
         if (process.env.DEEPSEEK_API_KEY) {
           try {
@@ -166,8 +204,8 @@ export class MultiModelMasterOrchestrator {
             if (output.trim()) {
               return { model: 'DeepSeek-V3 (Bulk Logic & Testing)', output, role, costZar: 0.0018 };
             }
-          } catch (deepseekErr) {
-            console.warn('[Multi-Model Router] DeepSeek invocation failed, cascading to Gemini...', deepseekErr);
+          } catch (deepseekErr: any) {
+            console.warn('[Multi-Model Router] DeepSeek invocation failed (balance/quota), cascading to Gemini...', deepseekErr?.message);
           }
         }
       }
