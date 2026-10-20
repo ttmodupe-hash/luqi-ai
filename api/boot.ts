@@ -7,6 +7,7 @@ import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { ZodError } from "zod";
 import { appRouter } from "./router";
+import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from "./auth";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { env } from "./lib/env";
@@ -35,7 +36,12 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 // CORS — allow frontend origin
 app.use("/*", cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: (origin) => {
+    const allowedOrigin = process.env.FRONTEND_URL;
+    if (!origin) return allowedOrigin || "*";
+    if (allowedOrigin) return origin === allowedOrigin ? allowedOrigin : "";
+    return process.env.NODE_ENV === "production" ? "" : origin;
+  },
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-KEY", "X-API-Key", "x-api-key"],
   exposeHeaders: ["Content-Length", "X-Request-Id"],
@@ -101,6 +107,63 @@ app.use(async (c, next) => {
     return next();
   }
   return bodyLimit({ maxSize: 50 * 1024 * 1024 })(c, next);
+});
+
+// ── ACCOUNT / SESSION API ───────────────────────────────────────────
+const SESSION_COOKIE = "luqi_session";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+
+function setSessionCookie(c: any, token: string) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  c.header("Set-Cookie", `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE}${secure}`);
+}
+
+function clearSessionCookie(c: any) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  c.header("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
+}
+
+app.post("/api/auth/register", async (c) => {
+  try {
+    const body = await c.req.json();
+    if (!body || typeof body.email !== "string" || typeof body.password !== "string") {
+      return c.json({ error: "Email and password are required." }, 400);
+    }
+    const session = await registerAccount(body.email, body.password, typeof body.name === "string" ? body.name : undefined);
+    setSessionCookie(c, session.token);
+    return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Registration failed.";
+    const status = /already exists/i.test(message) ? 409 : /persistent database|database is unavailable/i.test(message) ? 503 : 400;
+    return c.json({ error: message }, status);
+  }
+});
+
+app.post("/api/auth/login", async (c) => {
+  try {
+    const body = await c.req.json();
+    if (!body || typeof body.email !== "string" || typeof body.password !== "string") {
+      return c.json({ error: "Email and password are required." }, 400);
+    }
+    const session = await loginAccount(body.email, body.password);
+    setSessionCookie(c, session.token);
+    return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Sign-in failed.";
+    const status = /persistent database|database is unavailable/i.test(message) ? 503 : 401;
+    return c.json({ error: status === 401 ? "Invalid email or password." : message }, status);
+  }
+});
+
+app.get("/api/auth/me", async (c) => {
+  const user = await resolveSessionUser(c.req.raw);
+  return c.json({ user });
+});
+
+app.post("/api/auth/logout", async (c) => {
+  await revokeSession(c.req.raw);
+  clearSessionCookie(c);
+  return c.json({ ok: true });
 });
 
 // ── tRPC ───────────────────────────────────────────────────────────
