@@ -18,17 +18,19 @@ let realDrizzleDb: any = null;
 
 if (hasDbConfig) {
   try {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST || "localhost",
-      user: process.env.DB_USER || "root",
-      password: process.env.DB_PASSWORD || "",
-      database: process.env.DB_NAME || "luqi_ai",
-      port: parseInt(process.env.DB_PORT || "3306", 10),
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      enableKeepAlive: true,
-    });
+    pool = process.env.DATABASE_URL
+      ? mysql.createPool(process.env.DATABASE_URL)
+      : mysql.createPool({
+          host: process.env.DB_HOST || "localhost",
+          user: process.env.DB_USER || "root",
+          password: process.env.DB_PASSWORD || "",
+          database: process.env.DB_NAME || "luqi_ai",
+          port: parseInt(process.env.DB_PORT || "3306", 10),
+          waitForConnections: true,
+          connectionLimit: 10,
+          queueLimit: 0,
+          enableKeepAlive: true,
+        });
     realDrizzleDb = drizzle(pool);
   } catch (err) {
     console.warn("[DB] Pool creation failed, in-memory store active:", err);
