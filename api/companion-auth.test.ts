@@ -36,6 +36,17 @@ describe("companion authentication boundary", () => {
     });
   });
 
+  it("rejects memory deletion without an authenticated user", async () => {
+    const caller = appRouter.createCaller({
+      req: new Request("http://localhost/api/trpc"),
+      user: null,
+    });
+
+    await expect(caller.companion.deleteMemory({ id: 1 })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
   it("keeps personality metadata public", async () => {
     const caller = appRouter.createCaller({
       req: new Request("http://localhost/api/trpc"),
