@@ -114,11 +114,13 @@ const SESSION_COOKIE = "luqi_session";
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
 function setSessionCookie(c: any, token: string) {
+  c.header("Cache-Control", "no-store");
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   c.header("Set-Cookie", `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE}${secure}`);
 }
 
 function clearSessionCookie(c: any) {
+  c.header("Cache-Control", "no-store");
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   c.header("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
 }
@@ -156,6 +158,7 @@ app.post("/api/auth/login", async (c) => {
 });
 
 app.get("/api/auth/me", async (c) => {
+  c.header("Cache-Control", "no-store");
   const user = await resolveSessionUser(c.req.raw);
   return c.json({ user });
 });
