@@ -1,8 +1,10 @@
-import { inferRouterContext } from "@trpc/server";
-import type { AppRouter } from "./router";
+import { resolveSessionUser, type AuthenticatedUser } from "./auth";
 
-export type TrpcContext = inferRouterContext<AppRouter>;
+export type TrpcContext = {
+  req: Request;
+  user: AuthenticatedUser | null;
+};
 
-export async function createContext({ req }: { req: Request }) {
-  return { req };
+export async function createContext({ req }: { req: Request }): Promise<TrpcContext> {
+  return { req, user: await resolveSessionUser(req) };
 }
