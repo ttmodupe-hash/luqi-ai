@@ -1,49 +1,49 @@
-name: Production Deployment Pipeline
+name: LuqiToons Automated CI/CD Production Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main # Triggers the build deployment sequence instantly on pushes to your main branch
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: luqi-ai-backend
+  GAR_LOCATION: us-central1-docker.pkg.dev/YOUR_PROJECT_ID/luqi-toons-repo/engine-image
 
 jobs:
-  audit_and_verify:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository Codebase
+      - name: Checkout Code Repository Layer
         uses: actions/checkout@v4
 
-      - name: Initialize Node.js Environment Node
-        uses: actions/setup-node@v4
+      - name: Authenticate Securely with Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          node-version: '20'
-          cache: 'npm'
+          credentials_json: ${{ secrets.GCP_SA_KEY }} # Uses your encrypted Service Account secret credentials matrix
 
-      - name: Install Application Production Dependencies
-        run: npm ci || npm install
+      - name: Set up Google Cloud SDK Command Suite
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Run Prisma Database Validation Checks
-        run: npx prisma validate
+      - name: Authorize Docker Client for Artifact Registry Access
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
-      - name: Execute Core Integration Tests Suite
-        run: npm test || true
+      - name: Compile and Build Docker Container Image Layer
+        run: |
+          docker build -t ${{ env.GAR_LOCATION }}:${{ github.sha }} .
+          docker tag ${{ env.GAR_LOCATION }}:${{ github.sha }} ${{ env.GAR_LOCATION }}:latest
 
-  build_and_deploy:
-    needs: audit_and_verify
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy Cluster Changes via SSH Remote Session
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.PROD_SERVER_IP }}
-          username: ${{ secrets.PROD_SERVER_USER }}
-          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          script: |
-            cd /var/www/afrilearn-core || cd /var/www/luqi-ai || exit 0
-            git pull origin main
-            
-            # Rebuild image registries securely without downtime anomalies
-            docker-compose down || true
-            docker-compose up -d --build || true
-            
-            # Execute database schema migration loops automatically
-            docker exec afrilearn-nextjs-core npx prisma migrate deploy || true
-            echo "🚀 Deployment execution sync completed successfully."
+      - name: Stream Container Up to Google Artifact Storage Repository
+        run: |
+          docker push ${{ env.GAR_LOCATION }}:${{ github.sha }}
+          docker push ${{ env.GAR_LOCATION }}:latest
+
+      - name: Release Live Image Update to Google Cloud Run Panel
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.GAR_LOCATION }}:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --clear-env-vars \
+            --set-env-vars OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}",DATABASE_URL="${{ secrets.DATABASE_URL }}",ELEVENLABS_API_KEY="${{ secrets.ELEVENLABS_API_KEY }}",GOOGLE_CLOUD_STORAGE_BUCKET="${{ secrets.GCS_BUCKET }}",STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}",STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}",JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"

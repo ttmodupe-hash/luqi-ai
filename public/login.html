@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuqiToons HQ - Secure Authentication Gateway</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+        body { background: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #f1f5f9; }
+        .auth-container { background: #111827; border: 1px solid #1f2937; border-radius: 12px; width: 100%; max-width: 420px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .tabs { display: flex; margin-bottom: 24px; border-bottom: 1px solid #374151; }
+        .tab-btn { flex: 1; background: none; border: none; color: #9ca3af; padding: 12px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: color 0.2s; }
+        .tab-btn.active { color: #2563eb; border-bottom: 2px solid #2563eb; }
+        .input-group { margin-bottom: 18px; }
+        .input-group label { display: block; font-size: 0.8rem; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.05em; }
+        .input-group input { width: 100%; background: #0b0f19; border: 1px solid #374151; border-radius: 6px; padding: 12px; color: #fff; font-size: 0.95rem; outline: none; }
+        .input-group input:focus { border-color: #2563eb; }
+        .submit-btn { width: 100%; background: #2563eb; color: #fff; border: none; padding: 14px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+        .submit-btn:hover { background: #1d4ed8; }
+        #message-toast { font-size: 0.85rem; margin-top: 14px; text-align: center; display: none; padding: 10px; border-radius: 6px; }
+        .msg-error { background: #7f1d1d; color: #fca5a5; }
+        .msg-success { background: #064e3b; color: #a7f3d0; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="color: #fff; font-size: 1.5rem;">LuqiToons Command Access</h2>
+            <p style="color: #6b7280; font-size: 0.8rem; margin-top: 4px;">Protected Infrastructure Authentication Portal</p>
+        </div>
+
+        <div class="tabs">
+            <button id="tab-login" class="tab-btn active" onclick="switchView('login')">Sign In</button>
+            <button id="tab-register" class="tab-btn" onclick="switchView('register')">Register Admin</button>
+        </div>
+
+        <form id="auth-form" onsubmit="handleAuthSubmission(event)">
+            <div class="input-group">
+                <label for="auth-email">Corporate Email Address</label>
+                <input type="email" id="auth-email" required placeholder="admin@luqi-ai.com">
+            </div>
+            <div class="input-group">
+                <label for="auth-password">Security Password Matrix</label>
+                <input type="password" id="auth-password" required placeholder="••••••••••••">
+            </div>
+            
+            <button type="submit" id="action-btn" class="submit-btn">Authorize Session</button>
+        </form>
+
+        <div id="message-toast"></div>
+        <div style="margin-top: 16px; text-align: center;">
+            <a href="/" style="color: #60a5fa; font-size: 0.8rem; text-decoration: none;">← Back to Platform Hub</a>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>

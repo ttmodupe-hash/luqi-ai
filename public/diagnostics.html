@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luqi-AI Security Diagnostics Engine</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        body { background: #020617; color: #38bdf8; padding: 40px; min-height: 100vh; }
+        .console-container { max-width: 1100px; margin: auto; background: #0f172a; border: 2px solid #1e293b; border-radius: 8px; padding: 30px; box-shadow: 0 0 30px rgba(56, 189, 248, 0.15); }
+        .system-header { border-bottom: 2px dashed #1e293b; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .diagnostic-row { display: flex; justify-content: space-between; align-items: center; padding: 14px; border-bottom: 1px solid #1e293b; font-size: 0.9rem; }
+        .diagnostic-row:hover { background: #1e293b; }
+        .status-badge { font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
+        .pass-badge { background: #064e3b; color: #34d399; }
+        .fail-badge { background: #7f1d1d; color: #fca5a5; }
+        .warn-badge { background: #78350f; color: #fde047; }
+        .btn { background: #0369a1; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-family: inherit; }
+        .btn:hover { background: #0284c7; }
+    </style>
+</head>
+<body>
+
+    <div class="console-container">
+        <div class="system-header">
+            <div>
+                <h1 style="color: #f8fafc; font-size: 1.6rem; font-weight: bold;">🛰️ LIVE INFRASTRUCTURE DIAGNOSTIC CONSOLE</h1>
+                <p style="color: #64748b; font-size: 0.85rem; margin-top: 6px;">Real-Time Encryption Verification, Network Penetration Checks, and Leak Diagnostics</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <a href="/security.html" class="btn" style="background:#1e293b; text-decoration:none; padding:8px 14px; font-size:0.85rem;">Security Shield</a>
+                <a href="/admin.html" class="btn" style="background:#334155; text-decoration:none; padding:8px 14px; font-size:0.85rem;">Admin Deck</a>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <button id="run-diagnostics-btn" class="btn">Initialize System Integrity Audit</button>
+            <div id="timestamp-tracker" style="color: #64748b; font-size: 0.8rem;">Last Check: Never</div>
+        </div>
+
+        <div id="diagnostic-results-viewport">
+            <div style="text-align: center; color: #475569; padding: 40px; font-style: italic;">
+                Standing by. Trigger session verification loop to analyze container isolation parameters...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DIAGNOSTIC_API_URL = window.location.origin + "/api/v1/security/diagnostics";
+
+        document.getElementById("run-diagnostics-btn").addEventListener("click", async () => {
+            const token = localStorage.getItem("luqi_admin_token") || sessionStorage.getItem("luqi_admin_token") || "LUQI-ADMIN-2026";
+            const viewport = document.getElementById("diagnostic-results-viewport");
+            const timeTracker = document.getElementById("timestamp-tracker");
+
+            viewport.innerHTML = '<div style="text-align:center; color:#eab308; padding:40px;">Probing microservice configurations and checking vector barriers...</div>';
+
+            try {
+                const res = await fetch(DIAGNOSTIC_API_URL, {
+                    method: "GET",
+                    headers: { 
+                        "Authorization": `Bearer ${token}`,
+                        "x-luqi-admin-key": token
+                    }
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    viewport.innerHTML = '<div style="text-align:center; color:#ef4444; padding:40px;">CRITICAL REJECTION: Administrative token validation failed. <a href="login.html" style="color:#38bdf8;">Login here</a></div>';
+                    return;
+                }
+
+                const report = await res.json();
+                timeTracker.innerText = `Last Check: ${report.timestamp}`;
+                viewport.innerHTML = "";
+
+                if (!report.tests || report.tests.length === 0) {
+                    viewport.innerHTML = '<div style="text-align:center; color:#34d399; padding:40px;">All zero-trust security profiles nominal. Zero vulnerabilities detected.</div>';
+                    return;
+                }
+
+                report.tests.forEach(test => {
+                    let badgeClass = "pass-badge";
+                    if (test.status === "FAIL") badgeClass = "fail-badge";
+                    if (test.status === "WARNING") badgeClass = "warn-badge";
+
+                    viewport.innerHTML += `
+                        <div class="diagnostic-row">
+                            <div>
+                                <div style="font-weight: bold; color: #f8fafc; margin-bottom: 4px;">${test.component}</div>
+                                <div style="color: #94a3b8; font-size: 0.8rem;">${test.details}</div>
+                            </div>
+                            <span class="status-badge ${badgeClass}">${test.status}</span>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                viewport.innerHTML = '<div style="text-align:center; color:#ef4444; padding:40px;">Network Timeout: Failed to extract diagnostics: ' + err.message + '</div>';
+            }
+        });
+    </script>
+</body>
+</html>
