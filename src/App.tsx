@@ -34,6 +34,7 @@ import AdminSovereignPortal from "@/components/AdminSovereignPortal";
 import ConsumerRightsAssistant from "@/components/ConsumerRightsAssistant";
 import PublicPlatformView from "@/components/PublicPlatformView";
 import AdminKnowledgeAndGradingConsole from "@/components/AdminKnowledgeAndGradingConsole";
+import FloatingCritiqueWidget from "@/components/FloatingCritiqueWidget";
 
 // Icons
 import {
@@ -71,7 +72,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Toaster />
       <WelcomeModal />
-      <ReportBugButton />
       <GlobalSearchTrigger />
       <FloatingAiChat />
       <LiveVoiceFloatingCopilot />
@@ -232,6 +232,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+      <FloatingCritiqueWidget />
     </div>
   );
 }

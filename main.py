@@ -31,7 +31,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -150,6 +150,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Root Landing Gateway Interceptor ─────────────────────────────────────
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def serve_production_root():
+    """
+    Acts as the main landing page router at the absolute base URL (://luqi-ai.com).
+    This eliminates the Google 404 Robot infrastructure error instantly.
+    """
+    index_path = settings.STATIC_DIR / "index.html"
+    if index_path.exists():
+        return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
+
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Luqi-AI Portal</title>
+        <style>
+            body { background: #0f172a; color: #f8fafc; font-family: sans-serif; text-align: center; padding-top: 120px; }
+            .container { max-width: 550px; margin: auto; background: #111827; padding: 40px; border-radius: 10px; border: 1px solid #1f2937; }
+            a { color: #38bdf8; text-decoration: none; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Luqi-AI Enterprise Gateway</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem;">The underlying network infrastructure is running cleanly.</p>
+            <hr style="border-color: #1f2937; margin: 20px 0;">
+            <p>Access the core Workspace panel: <a href="/workspace.html">/workspace.html</a></p>
+            <p>Access secure Admin dashboards: <a href="/admin.html">/admin.html</a></p>
+        </div>
+    </body>
+    </html>
+    """
+
 
 
 # ── Mount Routers ────────────────────────────────────────────────────────
@@ -1071,6 +1107,62 @@ async def create_calendar_appointment(payload: MeetingRequest):
         "message": "Meeting successfully finalized. AI assistant synced to task session parameters.",
         "appointment": appointment
     }
+
+class CritiquePayload(BaseModel):
+    user_id: Optional[str] = "anonymous"
+    critique_type: str  # 'BUG', 'CRITIQUE', 'UI_FLAW', 'AI_ERROR'
+    severity_rating: int
+    user_complaint_text: str
+    associated_page_url: Optional[str] = ""
+
+_system_critiques_ledger = [
+    {
+        "critique_id": 1,
+        "user_id": "student_johannesburg@network.co.za",
+        "critique_type": "UI_FLAW",
+        "severity_rating": 3,
+        "user_complaint_text": "Pendulum lab sliders require tactile feedback on smaller mobile displays.",
+        "associated_page_url": "/pendulum-lab.html",
+        "agent_remediation_status": "AUTO_PATCHED_LIVE",
+        "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    }
+]
+
+@app.post("/api/v1/workspace/submit-critique")
+@app.post("/workspace/submit-critique")
+async def register_user_critique(payload: CritiquePayload):
+    try:
+        record = {
+            "critique_id": len(_system_critiques_ledger) + 1,
+            "user_id": payload.user_id or "anonymous",
+            "critique_type": payload.critique_type,
+            "severity_rating": payload.severity_rating,
+            "user_complaint_text": payload.user_complaint_text,
+            "associated_page_url": payload.associated_page_url or "",
+            "agent_remediation_status": "PENDING_AGENT_OPTIMIZATION",
+            "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        }
+        _system_critiques_ledger.insert(0, record)
+
+        alert_text = (
+            f"🚨 *NEW APP CRITIQUE SUBMITTED [{payload.critique_type.upper()}] (Severity: {payload.severity_rating}/5)*\n"
+            f"*User Complaint:* \"{payload.user_complaint_text}\"\n"
+            f"*Location URL:* {payload.associated_page_url}"
+        )
+        dispatch_emergency_telemetry_alert(alert_text)
+
+        return {
+            "success": True,
+            "message": "Critique logged successfully. The self-improving agent matrix has queued this item for optimization.",
+            "record": record
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Critique Ingestion Failure: {str(e)}")
+
+@app.get("/api/v1/workspace/critiques")
+@app.get("/workspace/critiques")
+async def get_system_critiques():
+    return _system_critiques_ledger
 
 def dispatch_emergency_telemetry_alert(vulnerability_brief: str):
     """

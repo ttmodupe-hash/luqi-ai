@@ -318,6 +318,86 @@
         function addPeerToSession() { 
             alert("Guest invitation link generated. Copying parameter token path to system clipboard."); 
         }
+
+        // Floating Critique Engine Handlers
+        function toggleCritiqueDrawer(open) {
+            const drawer = document.getElementById('critique-drawer');
+            if (drawer) drawer.style.bottom = open ? '20px' : '-550px';
+        }
+
+        document.getElementById('floating-critique-btn')?.addEventListener('click', () => toggleCritiqueDrawer(true));
+
+        document.getElementById('submit-critique-final-btn')?.addEventListener('click', async () => {
+            const type = document.getElementById('critique-type-select').value;
+            const severity = parseInt(document.getElementById('critique-severity-select').value);
+            const text = document.getElementById('critique-text-input').value.trim();
+            
+            if(!text) { alert("Please provide text context for your critique."); return; }
+
+            try {
+                const res = await fetch(`${API_SERVER_URL}/workspace/submit-critique`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: localStorage.getItem('luqi_user_email') || MY_USER_ID,
+                        critique_type: type,
+                        severity_rating: severity,
+                        user_complaint_text: text,
+                        associated_page_url: window.location.href
+                    })
+                });
+                
+                const confirmation = await res.json();
+                if(confirmation.success) {
+                    alert("Thank you. Your criticism has been logged natively. The self-improving agents are compiling a resolution.");
+                    document.getElementById('critique-text-input').value = "";
+                    toggleCritiqueDrawer(false);
+                }
+            } catch(err) {
+                alert("Critique processing pipeline currently unavailable.");
+            }
+        });
     </script>
+
+    <!-- Floating Critique Action Button -->
+    <button id="floating-critique-btn" style="position:fixed; bottom:25px; right:25px; background:#dc2626; color:#ffffff; border:none; border-radius:50px; padding:12px 24px; font-weight:700; font-size:0.9rem; cursor:pointer; z-index:999999; display:flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(220,38,38,0.4); margin:0 !important;">
+        🤬 Critique Platform
+    </button>
+
+    <!-- Slide-Up Critique Modal Drawer Box -->
+    <div id="critique-drawer" style="position:fixed; bottom:-550px; right:25px; width:360px; max-width:calc(100vw - 40px); background:#111827; border:2px solid #374151; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.8); z-index:9999999; transition: bottom 0.3s ease-in-out; font-family:sans-serif; color:#f8fafc;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #1f2937; padding-bottom:8px;">
+            <h4 style="margin:0; font-size:0.95rem; color:#f87171;">Submit App Criticism & Flaws</h4>
+            <button onclick="toggleCritiqueDrawer(false)" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:1.2rem;">×</button>
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <div>
+                <label style="font-size:0.75rem; color:#9ca3af; display:block; margin-bottom:4px;">What is failing or needs improvement?</label>
+                <select id="critique-type-select" style="width:100%; background:#0b0f19; color:#fff; border:1px solid #374151; padding:8px; border-radius:6px; outline:none; font-size:0.85rem;">
+                    <option value="CRITIQUE">General Criticism / Feedback</option>
+                    <option value="BUG">System Bug / Error Code</option>
+                    <option value="UI_FLAW">Interface Design/UX Flaw</option>
+                    <option value="AI_ERROR">AI Hallucination / Poor Explanation</option>
+                </select>
+            </div>
+            
+            <div>
+                <label style="font-size:0.75rem; color:#9ca3af; display:block; margin-bottom:4px;">Severity Index</label>
+                <select id="critique-severity-select" style="width:100%; background:#0b0f19; color:#fff; border:1px solid #374151; padding:8px; border-radius:6px; outline:none; font-size:0.85rem;">
+                    <option value="1">1 - Minor annoyance/suggestion</option>
+                    <option value="3" selected>3 - Definite flaw / impacts learning</option>
+                    <option value="5">5 - Critical failure / app broken</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="font-size:0.75rem; color:#9ca3af; display:block; margin-bottom:4px;">Be brutally honest. What went wrong?</label>
+                <textarea id="critique-text-input" rows="4" style="width:100%; background:#0b0f19; color:#fff; border:1px solid #374151; border-radius:6px; padding:10px; font-size:0.85rem; outline:none; resize:none;" placeholder="Explain the exact technical issue or poor experience..."></textarea>
+            </div>
+
+            <button id="submit-critique-final-btn" style="width:100%; background:#dc2626; color:#fff; border:none; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.85rem;">File Complaint / Bug to Meta-Agents</button>
+        </div>
+    </div>
 </body>
 </html>

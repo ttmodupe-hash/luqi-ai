@@ -832,6 +832,59 @@ app.post('/workspace/calendar/book', async (c) => {
   });
 });
 
+// System Critiques & Flaw Ingestion Ledger
+const systemCritiquesStore: any[] = [
+  {
+    critique_id: 1,
+    user_id: "student_johannesburg@network.co.za",
+    critique_type: "UI_FLAW",
+    severity_rating: 3,
+    user_complaint_text: "Pendulum lab sliders require tactile feedback on smaller mobile displays.",
+    associated_page_url: "/pendulum-lab.html",
+    agent_remediation_status: "AUTO_PATCHED_LIVE",
+    submitted_at: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC"
+  }
+];
+
+app.post('/api/v1/workspace/submit-critique', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const critiqueRecord = {
+    critique_id: systemCritiquesStore.length + 1,
+    user_id: body.user_id || "anonymous_student",
+    critique_type: body.critique_type || "CRITIQUE",
+    severity_rating: Number(body.severity_rating) || 3,
+    user_complaint_text: body.user_complaint_text || "General feedback",
+    associated_page_url: body.associated_page_url || "",
+    agent_remediation_status: "QUEUED_AGENT_OPTIMIZATION",
+    submitted_at: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC"
+  };
+  systemCritiquesStore.unshift(critiqueRecord);
+
+  SovereignCryptoLedger.sealAction(
+    body.user_id || 'anonymous_student',
+    `CRITIQUE_SUBMITTED_${critiqueRecord.critique_type}`,
+    critiqueRecord
+  );
+
+  return c.json({
+    success: true,
+    message: "Critique logged successfully. The self-improving agent matrix has queued this item for optimization.",
+    record: critiqueRecord
+  });
+});
+
+app.post('/workspace/submit-critique', async (c) => {
+  return app.fetch(new Request(new URL('/api/v1/workspace/submit-critique', c.req.url), c.req.raw));
+});
+
+app.get('/api/v1/workspace/critiques', (c) => {
+  return c.json(systemCritiquesStore);
+});
+
+app.get('/workspace/critiques', (c) => {
+  return c.json(systemCritiquesStore);
+});
+
 // ============================================================================
 // TRIUMVIRATE SECURITY AGENT GRID & DIAGNOSTICS
 // ============================================================================

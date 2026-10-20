@@ -245,8 +245,8 @@ export const LiveVoiceFloatingCopilot: React.FC = () => {
 
   return (
     <>
-      {/* Floating Omnipresent Trigger Orb (Always fixed bottom-right) */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
+      {/* Floating Omnipresent Trigger Orb (Uses live-voice-copilot-container layout isolation) */}
+      <div className="live-voice-copilot-container flex items-center gap-2">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}

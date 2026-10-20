@@ -49,8 +49,60 @@
   }
 }
 
-/* Plain CSS — no @apply directives */
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+/* 1. Target the Live Voice Copilot control panel container */
+.live-voice-copilot-container {
+  position: fixed !important;
+  bottom: 25px !important;
+  right: 270px !important; /* Pushes the copilot panel to the left, making room */
+  z-index: 99999 !important;
+}
+
+@media (max-width: 768px) {
+  .live-voice-copilot-container {
+    bottom: 95px !important; /* On mobile/narrow screens, stacks cleanly higher up */
+    right: 25px !important;
+  }
+}
+
+/* 2. Target the floating Critique Platform button element */
+#floating-critique-btn {
+  position: fixed !important;
+  bottom: 25px !important; /* Keeps the critique button at the baseline layer */
+  right: 25px !important;  /* Keeps the critique button in the absolute corner slot */
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 999999 !important; /* Ensures it stays cleanly interactive on top */
+  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+  margin: 0 !important;
+}
+
+/* 3. Omni Search Bar Container Layout Isolation */
+.omni-search-bar-container {
+  position: fixed !important;
+  bottom: 25px !important;
+  right: 480px !important; /* Sits to the left of the Live Voice Copilot */
+  z-index: 100 !important;
+}
+
+@media (max-width: 1024px) {
+  .omni-search-bar-container {
+    display: none !important;
+  }
+}
+
+

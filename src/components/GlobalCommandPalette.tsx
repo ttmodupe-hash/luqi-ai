@@ -361,18 +361,20 @@ export function GlobalSearchTrigger() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-36 z-40 flex items-center gap-2.5 px-3.5 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/40 hover:border-amber-400 shadow-xl shadow-amber-500/10 backdrop-blur-md transition-all group scale-100 hover:scale-105"
-        title="Open Omni Command Palette (Cmd+K)"
-        aria-label="Global Search Command Palette"
-      >
-        <Search className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-        <span className="text-xs font-semibold tracking-wide pr-1">Omni-Query (⌘K)</span>
-        <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
-          ⌘K
-        </kbd>
-      </button>
+      <div className="omni-search-bar-container fixed bottom-[25px] right-[240px] z-40 hidden md:block">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/40 hover:border-amber-400 shadow-xl shadow-amber-500/10 backdrop-blur-md transition-all group scale-100 hover:scale-105"
+          title="Open Omni Command Palette (Cmd+K)"
+          aria-label="Global Search Command Palette"
+        >
+          <Search className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+          <span className="text-xs font-semibold tracking-wide pr-1">Omni-Query (⌘K)</span>
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
+            ⌘K
+          </kbd>
+        </button>
+      </div>
 
       <GlobalCommandPalette isOpen={open} onClose={() => setOpen(false)} />
     </>
