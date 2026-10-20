@@ -89,6 +89,8 @@ async function respondInConversation(db: any, userId: number, conversationId: nu
     context: `RECENT CONVERSATION HISTORY (oldest first):\n${history || "(This is the start of the conversation.)"}\n\nSAVED USER MEMORIES AND PREFERENCES:\n${memoryContext}`,
     systemPrompt: `${personality.systemPrompt || "You are a helpful AI companion."}\n\nUse the supplied conversation history and saved user memories when relevant. Do not claim to remember information that is not present in the context.`,
     useSearch: false,
+    // Companion chats must not present deterministic demo fallback text as an AI answer.
+    throwOnProviderFailure: true,
   });
   await db.insert(companionMessages).values({ conversationId, role: "assistant", content: result.content });
   await db.update(companionConversations).set({ lastMessageAt: new Date() })
