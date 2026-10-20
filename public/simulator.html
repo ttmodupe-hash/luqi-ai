@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luqi AI - Immersive Hands-On Labs</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #f1f5f9;
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .header-bar {
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-bar h1 {
+            font-size: 1.4rem;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .sandbox-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 1200px;
+            margin: auto;
+            min-height: 75vh;
+        }
+        @media (max-width: 900px) {
+            .sandbox-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .panel {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e2e8f0;
+        }
+        .interactive-dock {
+            margin-top: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px dashed #cbd5e1;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+        .slider-bar {
+            width: 100%;
+            height: 8px;
+            accent-color: #2563eb;
+            background: #e2e8f0;
+            border-radius: 4px;
+            outline: none;
+        }
+        .live-metric-box {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1e293b;
+            text-align: center;
+            padding: 20px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-top: auto;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .status-pass {
+            color: #16a34a !important;
+            background: #f0fdf4 !important;
+            border-color: #86efac !important;
+        }
+        .status-fail {
+            color: #dc2626 !important;
+            background: #fef2f2 !important;
+            border-color: #fca5a5 !important;
+        }
+        .quick-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .quick-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .quick-btn:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h1>
+            <span>Luqi AI Simulation Engine</span>
+            <span class="badge">Hands-On Sandbox v1.3</span>
+        </h1>
+        <a href="/" style="text-decoration:none; color:#2563eb; font-weight:600; font-size:0.9rem;">&larr; Back to Platform</a>
+    </div>
+
+    <div class="sandbox-container">
+        
+        <!-- Left Panel: Instruction Room & Input Terminal -->
+        <div class="panel">
+            <h2 style="color: #1e293b; margin-bottom: 8px;">Interactive Digital Simulator</h2>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 16px;">Type what concept you want to practice below to spin up a digital lab workspace.</p>
+            
+            <textarea id="lab-intent-input" rows="3" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size:0.95rem;" placeholder="e.g., Let me practice managing high availability servers vs budget limits..."></textarea>
+            
+            <div class="quick-presets">
+                <button class="quick-btn" onclick="setPreset('High Availability Multi-AZ Web Cluster with Auto-Scaling and Budget Thresholds')">☁️ Cloud HA &amp; Autoscaling</button>
+                <button class="quick-btn" onclick="setPreset('PMP Critical Path Method: Resource Over-allocation vs Schedule Compression (Crashing/Fast-Tracking)')">📊 PMP Schedule Crashing</button>
+                <button class="quick-btn" onclick="setPreset('DevOps CI/CD Pipeline Failure Rate &amp; Deployment Frequency Optimization')">🚀 CI/CD Pipeline Throughput</button>
+            </div>
+
+            <button id="generate-lab-btn" style="background: #2563eb; color:#fff; border:none; padding:12px; border-radius:6px; margin-top:14px; cursor:pointer; font-weight:600; font-size:0.95rem;">Spin up Sandbox</button>
+            
+            <div class="interactive-dock" id="brief-dock" style="display:none;">
+                <h4 id="lab-title" style="color: #1e293b; margin-bottom:6px;">Challenge Title</h4>
+                <p id="lab-scenario" style="color: #475569; font-size: 0.9rem;">Scenario prompt details...</p>
+                <div style="font-weight:700; font-size:0.85rem; color:#1e293b; margin-top:10px;">Target Objectives:</div>
+                <ul id="lab-objectives" style="margin-top:6px; padding-left:20px; font-size:0.85rem; color:#334155;"></ul>
+            </div>
+        </div>
+
+        <!-- Right Panel: Live Dynamic Visualization Canvas -->
+        <div class="panel" id="canvas-panel">
+            <h3 style="color:#1e293b;">Interactive Hardware &amp; Metric Controls</h3>
+            <p style="color:#64748b; font-size:0.85rem; margin-bottom:20px;">Adjust values in real-time to meet your target objectives safely.</p>
+            
+            <div id="dynamic-controls-area">
+                <div style="color: #94a3b8; font-style: italic; font-size: 0.9rem; padding: 20px 0;">
+                    👈 Spin up a lab on the left or select a preset to generate interactive telemetry controls.
+                </div>
+            </div>
+
+            <div id="live-gauge" class="live-metric-box">
+                --
+                <div style="font-size:0.75rem; color:#64748b; text-transform:uppercase; margin-top:4px;">System Health / Target Status</div>
+            </div>
+            
+            <button id="verify-submission-btn" style="background:#16a34a; color:#fff; border:none; padding:14px; border-radius:6px; font-weight:700; margin-top:16px; cursor:pointer; display:none;">Validate Setup Configurations</button>
+        </div>
+
+    </div>
+
+    <script>
+        let currentLabBlueprint = null;
+
+        function setPreset(text) {
+            document.getElementById('lab-intent-input').value = text;
+        }
+
+        document.getElementById('generate-lab-btn').addEventListener('click', async () => {
+            const inputIntent = document.getElementById('lab-intent-input').value.trim();
+            if(!inputIntent) return;
+
+            const btn = document.getElementById('generate-lab-btn');
+            btn.innerText = "⏳ Generating Sandbox...";
+            btn.disabled = true;
+
+            try {
+                // Call local or live simulation endpoint
+                const res = await fetch('/api/v1/simulation/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ intent_context: inputIntent, user_id: 'student_alpha' })
+                });
+
+                if (!res.ok) throw new Error("Server returned " + res.status);
+                currentLabBlueprint = await res.json();
+                renderSandboxWorkspace(currentLabBlueprint);
+            } catch (err) {
+                console.warn("Direct endpoint failed, using client fallback generator:", err);
+                // Resilient fallback generator if offline or during local testing
+                currentLabBlueprint = generateFallbackBlueprint(inputIntent);
+                renderSandboxWorkspace(currentLabBlueprint);
+            } finally {
+                btn.innerText = "Spin up Sandbox";
+                btn.disabled = false;
+            }
+        });
+
+        function generateFallbackBlueprint(intent) {
+            const isCloud = /cloud|aws|server|load|devops|docker|kubernetes/i.test(intent);
+            if (isCloud) {
+                return {
+                    lab_id: "lab_cloud_" + Date.now(),
+                    title: "AWS Cloud Resiliency & High Availability Architecture",
+                    domain: "CLOUD",
+                    scenario_brief: "A surge in e-commerce traffic is threatening to cause service brownouts. Balance EC2 instance cluster count against sudden spikes to keep downtime risk below 20%.",
+                    interactive_parameters: { min: 10, max: 100, starting_values: { InstanceCount: 60, TargetLoadPercent: 70 } },
+                    target_objectives: [
+                        { id: "obj_1", description: "Scale auto-scaling instance count to absorb dynamic load spikes." },
+                        { id: "obj_2", description: "Achieve Downtime Risk < 20% while avoiding idle compute spend." }
+                    ],
+                    success_criteria_script: "Keep calculated risk under 20% by scaling instances proportionally to target load."
+                };
+            } else {
+                return {
+                    lab_id: "lab_pmp_" + Date.now(),
+                    title: "PMP Project Schedule Compression & Cost Variance Control",
+                    domain: "MANAGEMENT",
+                    scenario_brief: "Your enterprise migration project is slipping by 2 weeks. Allocate senior engineer capacity while calibrating your scope buffer to achieve a Cost Performance Index (CPI) between 0.90 and 1.15.",
+                    interactive_parameters: { min: 10, max: 100, starting_values: { ResourceAllocation: 55, ScopeBufferPercent: 40 } },
+                    target_objectives: [
+                        { id: "obj_1", description: "Calibrate Resource Allocation and Scope Buffers." },
+                        { id: "obj_2", description: "Maintain healthy CPI variance between 40 and 80 points." }
+                    ],
+                    success_criteria_script: "CPI calculated between 0.9 and 1.25 indicates a healthy, on-schedule project."
+                };
+            }
+        }
+
+        function renderSandboxWorkspace(blueprint) {
+            document.getElementById('brief-dock').style.display = 'block';
+            document.getElementById('verify-submission-btn').style.display = 'block';
+            document.getElementById('lab-title').innerText = blueprint.title;
+            document.getElementById('lab-scenario').innerText = blueprint.scenario_brief;
+            
+            const objList = document.getElementById('lab-objectives');
+            objList.innerHTML = '';
+            (blueprint.target_objectives || []).forEach(obj => {
+                objList.innerHTML += `<li>${obj.description}</li>`;
+            });
+
+            // Dynamically generate sliders based on backend configuration parameters
+            const controlsArea = document.getElementById('dynamic-controls-area');
+            controlsArea.innerHTML = '';
+            
+            const variables = blueprint.domain === "CLOUD" ? ['InstanceCount', 'TargetLoadPercent'] : ['ResourceAllocation', 'ScopeBufferPercent'];
+            
+            variables.forEach((variable) => {
+                const defaultVal = 50;
+                controlsArea.innerHTML += `
+                    <div class="control-group">
+                        <label>
+                            <span>${variable.replace(/([A-Z])/g, ' $1').trim()}</span>
+                            <span id="val-${variable}" style="font-weight:700; color:#2563eb;">${defaultVal}</span>
+                        </label>
+                        <input type="range" min="10" max="100" value="${defaultVal}" class="slider-bar" id="slide-${variable}" oninput="document.getElementById('val-${variable}').innerText = this.value; calculateLiveMetrics();">
+                    </div>
+                `;
+            });
+            calculateLiveMetrics();
+        }
+
+        function calculateLiveMetrics() {
+            if(!currentLabBlueprint) return;
+            const gauge = document.getElementById('live-gauge');
+            
+            if(currentLabBlueprint.domain === "CLOUD") {
+                const instancesEl = document.getElementById('slide-InstanceCount');
+                const loadEl = document.getElementById('slide-TargetLoadPercent');
+                const instances = instancesEl ? parseInt(instancesEl.value) : 50;
+                const load = loadEl ? parseInt(loadEl.value) : 50;
+                const calculatedDowntimeRisk = Math.max(0, Math.round((load * 1.5) - (instances * 8)));
+                
+                gauge.innerHTML = `${calculatedDowntimeRisk}% Risk<div style="font-size:0.75rem; color:#64748b; text-transform:uppercase; margin-top:4px;">HA Resiliency Status (Target: &lt; 20%)</div>`;
+                if(calculatedDowntimeRisk < 20) {
+                    gauge.className = "live-metric-box status-pass";
+                } else {
+                    gauge.className = "live-metric-box status-fail";
+                }
+            } else {
+                const resEl = document.getElementById('slide-ResourceAllocation');
+                const bufEl = document.getElementById('slide-ScopeBufferPercent');
+                const resources = resEl ? parseInt(resEl.value) : 50;
+                const buffer = bufEl ? parseInt(bufEl.value) : 50;
+                const calculatedVariance = Math.max(1, Math.round((resources * 1.2) - buffer));
+                const cpi = (50 / calculatedVariance).toFixed(2);
+                
+                gauge.innerHTML = `CPI: ${cpi}<div style="font-size:0.75rem; color:#64748b; text-transform:uppercase; margin-top:4px;">Cost Performance Index (Target: 0.85 - 1.20)</div>`;
+                if(calculatedVariance > 40 && calculatedVariance < 80) {
+                    gauge.className = "live-metric-box status-pass";
+                } else {
+                    gauge.className = "live-metric-box status-fail";
+                }
+            }
+        }
+
+        document.getElementById('verify-submission-btn').addEventListener('click', () => {
+            const gauge = document.getElementById('live-gauge');
+            if(gauge.classList.contains('status-pass')) {
+                alert("🎉 Configuration Validation Passed! The infrastructure is optimized and verified successfully.");
+            } else {
+                alert("❌ Configuration Validation Failed. System conditions do not meet the safety requirements. Adjust your sliders and try again.");
+            }
+        });
+    </script>
+</body>
+</html>

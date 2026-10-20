@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename)
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    devServer({ entry: "api/boot.ts", exclude: [/^\/(?!(api|auth)\/).*$/] }),
+    devServer({ entry: "api/boot.ts", exclude: [/^\/(?!(api|auth|v1|health)\/).*$/] }),
     inspectAttr(),
     react(),
   ],

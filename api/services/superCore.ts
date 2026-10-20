@@ -102,7 +102,7 @@ class SovereignMemoryLedger {
     );
     this.metaPrompts.set(
       'companion_sepitori',
-      'You are Luqi-AI (powered by Jarvis), an elite South African & Pan-African companion. You speak English, Sepitori (Pretoria urban lingua franca), isiZulu, Sesotho, Kiswahili, and Yoruba fluently. Match the user dialect naturally.'
+      'You are Luqi-AI (powered by KHORO — The Digital Council of Wisdom), an elite South African & Pan-African companion. You speak English, Sepitori (Pretoria urban lingua franca), isiZulu, Sesotho, Kiswahili, and Yoruba fluently. Match the user dialect naturally.'
     );
   }
 }
@@ -341,7 +341,7 @@ export class SuperIntelligenceOrchestrator {
     } else if (workflowMode === 'STORYBOOK_LAB') {
       workflowDirective = `\n[Workflow: STORYBOOK_LAB (Responses API)]: Generate culturally rich pedagogical storyboards and real-time physical simulation hooks connecting science concepts to African engineering.`;
     } else if (workflowMode === 'VOICE_AGENT') {
-      workflowDirective = `\n[Workflow: VOICE_AGENT (Jarvis Live Audio)]: Output concise, natural spoken-language answers tuned for South African Text-to-Speech synthesis with authentic pacing.`;
+      workflowDirective = `\n[Workflow: VOICE_AGENT (KHORO Live Audio)]: Output concise, natural spoken-language answers tuned for South African Text-to-Speech synthesis with authentic pacing.`;
     } else if (workflowMode === 'MODEL_UPGRADER') {
       workflowDirective = `\n[Workflow: MODEL_UPGRADER]: Audit token latency, evaluate context length, and guide zero-downtime model switches.`;
     } else if (workflowMode === 'API_OPTIMIZER') {
@@ -352,9 +352,9 @@ export class SuperIntelligenceOrchestrator {
 
     const csvDirective = csvContext ? `\n[Attached CSV Data Context]:\n${csvContext}` : '';
 
-    const fullSystemInstruction = `You are Luqi-AI (powered by Jarvis), a super-intelligent Pan-African and Global AI platform created in South Africa.
+    const fullSystemInstruction = `You are Luqi-AI (powered by KHORO — The Digital Council of Wisdom), a super-intelligent Pan-African and Global AI platform created in South Africa.
 - Answer every question directly, naturally, and intelligently. Never repeat a static template.
-- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
+- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI and KHORO, explaining your mission, architecture, and capabilities.
 - Dialect Track: Match the selected language track naturally (${language}). If SEPITORI / ENGLISH is selected, blend natural Pretoria Sepitori warmth ("eita", "tlatsa", "ska wara", "daai ding", "chommie") with clear English without forcing awkward phrases when not needed; if ISIZULU, SESOTHO, KISWAHILI, or YORUBA is selected, respond fluently in that language.
 - For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.
 - Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.
@@ -443,7 +443,7 @@ ${baseInstruction}${workflowDirective}${csvDirective}
         };
       } catch (fallbackErr: any) {
         // Final resilient dynamic response
-        const fallbackText = `I am Luqi-AI (powered by Jarvis), an advanced Pan-African and global AI platform developed in South Africa. I specialize in STEM interactive simulations, enterprise systems, and Pan-African linguistic intelligence. You asked: "${sanitizedPrompt}". I am ready to compute, build, or explain any technical or scientific domain for you.`;
+        const fallbackText = `I am Luqi-AI (powered by KHORO — The Digital Council of Wisdom), an advanced Pan-African and global AI platform developed in South Africa. I specialize in STEM interactive simulations, enterprise systems, and Pan-African linguistic intelligence. You asked: "${sanitizedPrompt}". I am ready to compute, build, or explain any technical or scientific domain for you.`;
 
         const costRecord = UnifiedFinOpsController.logUsage('GOOGLE_GEMINI', 'gemini-2.5-flash', 100, 200);
         const latencyMs = Math.round(performance.now() - startTime);

@@ -31,6 +31,9 @@ import LanguageSelectorDropdown from "@/components/LanguageSelectorDropdown";
 import FloatingAiChat from "@/components/FloatingAiChat";
 import { LiveVoiceFloatingCopilot } from "@/components/LiveVoiceFloatingCopilot";
 import AdminSovereignPortal from "@/components/AdminSovereignPortal";
+import ConsumerRightsAssistant from "@/components/ConsumerRightsAssistant";
+import PublicPlatformView from "@/components/PublicPlatformView";
+import AdminKnowledgeAndGradingConsole from "@/components/AdminKnowledgeAndGradingConsole";
 
 // Icons
 import {
@@ -278,7 +281,13 @@ export default function App() {
         <RouterRoute path="/terms" element={<TermsPage />} />
         <RouterRoute path="/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/contact" element={<ContactPage />} />
+        <RouterRoute path="/consumer-rights" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
+        <RouterRoute path="/cpa" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
+        <RouterRoute path="/dispute" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
+        <RouterRoute path="/public" element={<div className="max-w-7xl mx-auto py-8"><PublicPlatformView /></div>} />
+        <RouterRoute path="/portal" element={<div className="max-w-7xl mx-auto py-8"><PublicPlatformView /></div>} />
         <RouterRoute path="/admin" element={<AdminSovereignPortal />} />
+        <RouterRoute path="/admin/knowledge-grading" element={<AdminSovereignPortal />} />
         <RouterRoute path="*" element={<NotFoundPage />} />
       </Routes>
     </AppLayout>

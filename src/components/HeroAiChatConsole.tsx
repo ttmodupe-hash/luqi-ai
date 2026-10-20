@@ -1,40 +1,51 @@
 import React, { useState } from 'react';
+import { GoogleGenAI } from '@google/genai';
 
-const STARTER_CARDS = [
+export const SOVEREIGN_AGENT_NAME = 'KHORO';
+export const SOVEREIGN_AGENT_MEANING =
+  'The Digital Council of Wisdom — Inspired by the traditional African Khoro/Kgotla courtyard where thinkers gather to solve problems, settle disputes, and guide the community.';
+
+const FIRST_TIME_STARTER_CARDS = [
+  {
+    icon: '🏦',
+    label: 'How Loan Interest & Debt Traps Work',
+    prompt:
+      'Explain in simple Rand terms how banks calculate interest on a Home Loan, Car Loan (with a balloon payment), and Credit Card—and how I can save thousands and avoid rogue Debt Counselling (Form 16) traps.'
+  },
+  {
+    icon: '⚖️',
+    label: 'Consumer Rights & Ombud Guide',
+    prompt:
+      'A business sold me defective goods or treated me unfairly. Explain my rights under the Consumer Protection Act (CPA Section 56) and step-by-step how I report them to the Ombudsman or NCC.'
+  },
   {
     icon: '📄',
-    label: 'Help me write a professional CV & cover letter',
-    prompt: 'Can you help me write a professional CV and cover letter for a job application?'
+    label: 'Write a Winning CV & Cover Letter',
+    prompt:
+      'Help me write a clean, professional CV and cover letter tailored for the South African and global job market.'
   },
   {
-    icon: '🎓',
-    label: 'Explain a school or university topic simply',
-    prompt: 'Explain a difficult school or university topic to me step-by-step with easy examples.'
-  },
-  {
-    icon: '💼',
-    label: 'How do I start and register a small business?',
-    prompt: 'Give me a simple step-by-step guide on how to start, register, and grow a small business in South Africa.'
+    icon: '🌍',
+    label: 'Economics, Trade & Law Deep-Dive',
+    prompt:
+      'Break down how global trade inequities, workforce brain drain, and South African legislative updates impact local businesses and workers.'
   },
   {
     icon: '🏛️',
-    label: 'Help me with SARS tax, SASSA, or UIF questions',
-    prompt: 'How do I check my SARS tax status, SASSA grant, or UIF benefits step by step?'
-  },
-  {
-    icon: '🛡️',
-    label: 'Check if a WhatsApp message or job offer is a scam',
-    prompt: 'I received a suspicious message offering quick money or a job. How can we check if it is a scam?'
+    label: 'SARS Tax, CIPC BizPortal & UIF',
+    prompt:
+      'Guide me step-by-step on registering a company on the official CIPC BizPortal (for R125 without middlemen), checking SARS Turnover Tax, or claiming UIF.'
   },
   {
     icon: '🗣️',
-    label: "Let's chat in Sepitori, isiZulu, Sesotho, or English",
-    prompt: 'Eita Luqi! A re bue ka Sepitori, Setswana, isiZulu, goba English—o ka nthusa ka eng vandag?'
+    label: 'Chat in Sepitori, Zulu, Sotho or English',
+    prompt:
+      'Eita Khoro! A re bue ka Sepitori, Setswana, isiZulu, goba English—mpuleleori gore o ka nthusa ka eng vandag!'
   }
 ];
 
 export const HeroAiChatConsole: React.FC = () => {
-  const [language, setLanguage] = useState<string>('Auto-Detect (Any Language)');
+  const [languageFlow, setLanguageFlow] = useState<string>('🔄 Auto-Detect (Flexible Code-Switching)');
   const [inputPrompt, setInputPrompt] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [voiceActive, setVoiceActive] = useState<boolean>(false);
@@ -42,25 +53,19 @@ export const HeroAiChatConsole: React.FC = () => {
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
     {
       sender: 'ai',
-      text: 'Hello! 👋 Welcome to Luqi-AI. Even if this is your very first time using AI, you can talk to me just like a friend. Ask me anything—from writing a CV, helping with homework, or starting a business, to chatting in English, Sepitori, isiZulu, or Sesotho. How can I help you today?'
+      text: `Hello & Eita! 👋 Welcome to **Luqi-AI**, powered by **${SOVEREIGN_AGENT_NAME}**.\n\n*In Setswana, Sepedi, Sesotho, and Tshivenda, the **Khoro** is the central gathering courtyard where wisdom, problem-solving, and community protection meet.*\n\nEven if this is your very first time using AI, you can talk to me just like a trusted friend in **English, Sepitori, isiZulu, Sesotho, Setswana, Kiswahili, Yoruba**, or mix them freely. Ask me **anything**—from exposing hidden bank loan interest and fighting consumer disputes, to school/university subjects, macro-economics, coding, or writing a CV!`
     }
   ]);
 
   const speakResponse = (text: string) => {
     if (!voiceActive || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const cleanText = text.replace(/[*#_`]/g, '');
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      const voices = window.speechSynthesis.getVoices();
-      const saVoice = voices.find(
-        v => v.lang.includes('en-ZA') || v.lang.includes('af-ZA') || v.lang.includes('zu-ZA')
-      );
-      if (saVoice) utterance.voice = saVoice;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      // Speech synthesis error handled gracefully
-    }
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#_`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    const saVoice = voices.find(v => v.lang.includes('en-ZA') || v.lang.includes('af-ZA') || v.lang.includes('zu-ZA'));
+    if (saVoice) utterance.voice = saVoice;
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleSendPrompt = async (customPrompt?: string) => {
@@ -72,65 +77,76 @@ export const HeroAiChatConsole: React.FC = () => {
     setInputPrompt('');
     setIsLoading(true);
 
-    const openSystemInstruction = `You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant built for everyone—from someone using AI for the very first time to students, business owners, and professionals.
-- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.
-- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.
-- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.
-- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English.`;
+    const khoroSystemInstruction = `
+      You are KHORO (Knowledge, Heuristic Orchestration & Reasoning Overseer), the sovereign super-intelligence brain inside Luqi-AI.
+      Cultural Meaning: "Khoro" is the traditional African council courtyard where wisdom, justice, and problem-solving unite.
+
+      CORE DIRECTIVES:
+      1. UNRESTRICTED ALL-TOPIC MASTERY: You help first-time AI users, students, consumers, and executives with ANY topic—macro-economics, global trade, constitutional & property law, STEM subjects, software engineering, CVs, health/wellness info, and everyday questions.
+      2. MULTI-TURN MEMORY & TYPO RESOLUTION: Always read the conversation history so short follow-ups ("in south africa", "ke ba ba kae?", "and on a car?") connect seamlessly to the previous turn. Decode typos phonetically (e.g., "polotision" = politician).
+      3. CONSUMER LAW & FINANCIAL SAVER CHAMPION:
+         - Loans & Interest: Explain daily/monthly compounding interest on Home Loans, Car Loans (exposing balloon payment traps), Personal Loans, and Credit Cards with clear Rand figures and tips to slash years off debt.
+         - Rogue Debt Counselling Defense: Warn consumers about Form 16 / Form 17.2 traps that lock them at credit bureaus without informed consent, and guide them to report abuse to the National Credit Regulator (NCR: 0860 627 627) or National Consumer Tribunal.
+         - Mashonisa Protection: Cite NCA Section 40—retaining a consumer's ID book, bank card, or SASSA card/PIN is a criminal offense.
+         - Ombud & CPA Guide: Explain CPA Section 56 (6-month warranty on defective goods) and how to escalate to the Banking Ombud, Credit Ombud, NCC, or ICASA after giving the supplier 20 business days.
+         - Official Portals Only: Direct entrepreneurs to official CIPC BizPortal (bizportal.gov.za) and workers to official UIF uFiling so they never get overcharged by middlemen.
+      4. FLUID CODE-SWITCHING (${languageFlow}): Naturally mirror the user's language or mix of languages (English, Sepitori, Setswana, isiZulu, Sesotho, Afrikaans, Kiswahili, Yoruba). Never dump internal backend engineering rules into public chat.
+    `;
 
     try {
-      // 1. Send to primary backend endpoint
       const res = await fetch('/api/v1/luqi-core', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_input: query,
-          language,
-          history: updatedHistory.slice(-8)
+          language: languageFlow,
+          history: updatedHistory.slice(-12)
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        if (data.response) {
+        if (
+          data.response &&
+          !data.response.includes('sovereign fallback protocol') &&
+          !data.response.includes('1. Core Principles: In general chat')
+        ) {
           setMessages(prev => [...prev, { sender: 'ai', text: data.response }]);
           speakResponse(data.response);
           setIsLoading(false);
           return;
         }
       }
-      throw new Error('Fallback to server-side Gemini generate proxy');
+      throw new Error('Switch to direct client SDK');
     } catch {
-      // 2. Direct server-side Gemini proxy call with full history
       try {
-        const res = await fetch('/api/gemini/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: query,
-            model: 'gemini-3.8-flash',
-            systemInstruction: openSystemInstruction,
-            history: updatedHistory.slice(-8).map(m => ({
-              role: m.sender === 'user' ? 'user' : 'model',
-              parts: [{ text: m.text }]
-            }))
-          })
+        const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process as any).env?.GEMINI_API_KEY;
+        const ai = new GoogleGenAI({ apiKey });
+
+        const formattedContents = updatedHistory.slice(-12).map(m => ({
+          role: m.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }]
+        }));
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: formattedContents,
+          config: {
+            systemInstruction: khoroSystemInstruction,
+            tools: [{ googleSearch: {} }],
+            temperature: 0.35
+          }
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          const reply = data?.data?.text || 'Hello! 👋 How can I help make your day easier?';
-          setMessages(prev => [...prev, { sender: 'ai', text: reply }]);
-          speakResponse(reply);
-          return;
-        }
-        throw new Error('Gemini API call failed');
+        const reply = response.text || 'Khoro is here with you. Tell me more about what you would like to solve.';
+        setMessages(prev => [...prev, { sender: 'ai', text: reply }]);
+        speakResponse(reply);
       } catch {
         setMessages(prev => [
           ...prev,
           {
             sender: 'ai',
-            text: 'Hello! I am ready to help you with anything you need today. Ask me any question, homework help, CV writing, or advice!'
+            text: 'Khoro is online—please check your connection or send your question again so we can sort it out straight.'
           }
         ]);
       } finally {
@@ -141,15 +157,28 @@ export const HeroAiChatConsole: React.FC = () => {
 
   return (
     <section className="w-full max-w-4xl mx-auto my-4 space-y-6 font-sans">
-      {/* 6 Friendly One-Click Starter Cards for First-Time Users */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 px-1">
-        {STARTER_CARDS.map((card, i) => (
+      {/* Welcoming Hero Banner with Khoro Cultural Translation */}
+      <div className="text-center space-y-2 px-4">
+        <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+          🌍 Powered by KHORO · The Digital Council of Wisdom
+        </span>
+        <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight">
+          Ask Anything. Learn Anything. Protect Your Rights.
+        </h1>
+        <p className="text-xs md:text-sm text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          {SOVEREIGN_AGENT_MEANING}
+        </p>
+      </div>
+
+      {/* 6 Beginner-Friendly Starter Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 px-2">
+        {FIRST_TIME_STARTER_CARDS.map((card, i) => (
           <button
             key={i}
             onClick={() => handleSendPrompt(card.prompt)}
-            className="flex items-center gap-3 p-3.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-2xl text-left transition group shadow-sm hover:shadow-md"
+            className="flex items-center gap-3 p-3.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 rounded-2xl text-left transition group"
           >
-            <span className="text-xl shrink-0">{card.icon}</span>
+            <span className="text-xl">{card.icon}</span>
             <span className="text-xs font-semibold text-slate-200 group-hover:text-white leading-snug">
               {card.label}
             </span>
@@ -157,27 +186,33 @@ export const HeroAiChatConsole: React.FC = () => {
         ))}
       </div>
 
-      {/* Main Friendly Chat Box */}
+      {/* Main Khoro Chat Interface */}
       <div className="bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
-        {/* Simple Language & Voice Bar */}
-        <div className="bg-slate-900/80 border-b border-slate-800 px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+        {/* Flexible Code-Switching Language Selector */}
+        <div className="bg-slate-900/80 border-b border-slate-800 px-5 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-slate-400 mr-1 font-medium">🌍 Language:</span>
-            {['Auto-Detect (Any Language)', 'English', 'Sepitori', 'isiZulu', 'Sesotho', 'Setswana', 'Kiswahili'].map(
-              lang => (
-                <button
-                  key={lang}
-                  onClick={() => setLanguage(lang)}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition ${
-                    language === lang
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                      : 'bg-slate-950 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  {lang}
-                </button>
-              )
-            )}
+            <span className="text-slate-400 mr-1 font-semibold">🗣️ Language Flow:</span>
+            {[
+              '🔄 Auto-Detect (Flexible Code-Switching)',
+              'English',
+              'Sepitori / English Mix',
+              'isiZulu',
+              'Sesotho / Setswana',
+              'Kiswahili',
+              'Yoruba'
+            ].map(lang => (
+              <button
+                key={lang}
+                onClick={() => setLanguageFlow(lang)}
+                className={`px-2.5 py-1 rounded-lg transition ${
+                  languageFlow === lang
+                    ? 'bg-emerald-500 text-slate-950 font-bold'
+                    : 'bg-slate-950 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                {lang}
+              </button>
+            ))}
           </div>
 
           <button
@@ -185,21 +220,21 @@ export const HeroAiChatConsole: React.FC = () => {
             className={`px-3 py-1 rounded-lg text-xs font-semibold border transition ${
               voiceActive
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                : 'bg-slate-950 text-slate-400 border-slate-800'
             }`}
           >
-            {voiceActive ? '🔊 Read Answers Aloud: ON' : '🔈 Read Answers Aloud: OFF'}
+            {voiceActive ? '🔊 Khoro Voice: ON' : '🔈 Khoro Voice: OFF'}
           </button>
         </div>
 
-        {/* Conversation Messages */}
-        <div className="h-[420px] overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-950">
+        {/* Message Feed (Clean for Public Users — No Confusing Technical Route Badges) */}
+        <div className="h-[430px] overflow-y-auto p-5 space-y-4 bg-slate-950">
           {messages.map((m, idx) => (
             <div key={idx} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
                 className={`max-w-2xl rounded-2xl px-5 py-3.5 text-sm leading-relaxed ${
                   m.sender === 'user'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-medium rounded-br-none shadow-md shadow-orange-500/20'
+                    ? 'bg-emerald-600 text-white rounded-br-none'
                     : 'bg-slate-900 border border-slate-800 text-slate-100 rounded-bl-none'
                 }`}
               >
@@ -209,35 +244,34 @@ export const HeroAiChatConsole: React.FC = () => {
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-amber-400 animate-pulse flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                Luqi-AI is typing an answer for you...
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5 text-xs text-emerald-400 animate-pulse">
+                Khoro is deliberating and verifying facts...
               </div>
             </div>
           )}
         </div>
 
-        {/* Clean, Friendly Input Bar */}
+        {/* Simple WhatsApp-Style Input Box */}
         <form
           onSubmit={e => {
             e.preventDefault();
             handleSendPrompt();
           }}
-          className="p-3 bg-slate-900/90 border-t border-slate-800 flex gap-2"
+          className="p-3 bg-slate-900 border-t border-slate-800 flex gap-2"
         >
           <input
             type="text"
             value={inputPrompt}
             onChange={e => setInputPrompt(e.target.value)}
-            placeholder="Type any question here (just like sending a WhatsApp message)..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 transition-colors"
+            placeholder="Ask Khoro anything in English, Sepitori, Zulu, or any mix of languages..."
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
           />
           <button
             type="submit"
-            disabled={isLoading || !inputPrompt.trim()}
-            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-bold px-6 py-3 rounded-2xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-orange-500/20"
+            disabled={isLoading}
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-6 py-3 rounded-2xl text-sm transition disabled:opacity-50"
           >
-            {isLoading ? 'Sending...' : 'Ask Luqi'}
+            {isLoading ? 'Thinking...' : 'Ask Khoro'}
           </button>
         </form>
       </div>

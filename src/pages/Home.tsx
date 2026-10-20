@@ -22,53 +22,37 @@ import {
   Dna,
   Cpu,
 } from "lucide-react";
-import HeroAiChatConsole from "@/components/HeroAiChatConsole";
+import PublicPlatformView from "@/components/PublicPlatformView";
 import CapabilitiesComparisonMatrix from "@/components/CapabilitiesComparisonMatrix";
-import ApiSystemStatusDashboard from "@/components/ApiSystemStatusDashboard";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12">
-        {/* Hero Banner with Interactive AI Query Console */}
-        <div className="space-y-6 max-w-4xl mx-auto">
-          <div className="text-center space-y-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <Sparkles className="w-3.5 h-3.5" /> Built for Everyone · Speaks Your Language · 100% Free to Try
-            </span>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-100">
-              Meet Luqi-AI: Your Smart Everyday Assistant
-            </h1>
-            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              Ask any question, get help with schoolwork, write a CV, grow your business, or chat in your own language—simple, fast, and built for you.
-            </p>
-          </div>
+        {/* 100% PUBLIC-ONLY SOVEREIGN VIEW */}
+        <PublicPlatformView />
 
-          {/* FRONT-AND-CENTER INTERACTIVE AI CHAT CONSOLE */}
-          <HeroAiChatConsole />
-
-          {/* Quick Omni-Query Trigger Bar */}
-          <div
-            onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
-            className="max-w-xl mx-auto flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-900 transition-all cursor-pointer shadow-lg shadow-black/40 group text-left ring-1 ring-white/5 hover:ring-amber-500/20"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400 group-hover:scale-105 transition-transform">
-                <Search className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-sm text-slate-200 font-semibold group-hover:text-amber-300 transition-colors block truncate">
-                  Explore boundless capabilities, labs & sovereign engines...
-                </span>
-                <span className="text-[11px] text-slate-400 block truncate">
-                  ITIL® 5 AI, Cisco CLI, Simple & Double Pendulum, AfCFTA, Video Studio, Flight Recorder
-                </span>
-              </div>
+        {/* Quick Omni-Query Trigger Bar */}
+        <div
+          onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
+          className="max-w-xl mx-auto flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-900 transition-all cursor-pointer shadow-lg shadow-black/40 group text-left ring-1 ring-white/5 hover:ring-amber-500/20"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400 group-hover:scale-105 transition-transform">
+              <Search className="w-4 h-4" />
             </div>
-            <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg shrink-0 ml-2">
-              ⌘K
-            </kbd>
+            <div className="min-w-0">
+              <span className="text-sm text-slate-200 font-semibold group-hover:text-amber-300 transition-colors block truncate">
+                Explore boundless capabilities, labs & sovereign engines...
+              </span>
+              <span className="text-[11px] text-slate-400 block truncate">
+                ITIL® 5 AI, Cisco CLI, Simple & Double Pendulum, AfCFTA, Video Studio, Flight Recorder
+              </span>
+            </div>
           </div>
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg shrink-0 ml-2">
+            ⌘K
+          </kbd>
         </div>
 
         {/* Core Subsystem Cards Grid */}
@@ -96,6 +80,33 @@ export default function Home() {
             </div>
             <div className="mt-6 flex items-center justify-between text-xs font-semibold text-sky-400">
               <span>Enter Multimodal Hub</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card: Consumer Rights & Legal Demand Shield */}
+          <Link
+            to="/consumer-rights"
+            className="group rounded-3xl border border-amber-500/50 bg-gradient-to-br from-amber-500/15 via-slate-900/70 to-slate-900/95 p-6 hover:border-amber-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-xl shadow-amber-500/10 ring-1 ring-amber-500/20"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-amber-400 transition-colors">
+                  Consumer Rights & Legal Demand
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30">
+                  CPA · NCA · OMBUD
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Analyze consumer complaints, cite exact CPA & NCA laws (6-month warranty, debt review traps, illegal loan sharks), and instantly draft formal demand letters ready to copy and send.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-amber-400">
+              <span>Open Legal Defense Shield</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -321,9 +332,6 @@ export default function Home() {
 
         {/* AI Capabilities & Archiving Comparison Matrix */}
         <CapabilitiesComparisonMatrix />
-
-        {/* Real-Time Multi-Model API Health & FinOps Matrix */}
-        <ApiSystemStatusDashboard />
       </main>
     </div>
   );

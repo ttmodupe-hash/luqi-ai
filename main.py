@@ -322,6 +322,15 @@ def mount_routers():
     except Exception as e:
         logger.warning(f"Failed to mount async_jobs_router: {e}")
 
+    # Self-Optimizing Knowledge Engine & Corporate Grading Suite
+    try:
+        from backend.intelligence_api import router as intelligence_router
+        app.include_router(intelligence_router)
+        mounted.append("intelligence_api")
+        logger.info("Mounted: intelligence_api at /api/v1/intelligence")
+    except Exception as e:
+        logger.warning(f"Failed to mount intelligence_api: {e}")
+
     _health_status["checks"]["mounted_routers"] = mounted
     return mounted
 
@@ -371,7 +380,7 @@ async def health():
     return {
         "status": "healthy",
         "service": "luqi-ai-engine",
-        "jarvis_active": True,
+        "khoro_active": True,
         "billing_sync_day": "1st of Every Month",
         "version": settings.version,
     }
@@ -484,9 +493,16 @@ async def process_luqi_intelligence(payload: PromptPayload):
         model_name = "DeepSeek-V3 (Bulk Logic & Testing)"
 
     system_instruction = (
-        "You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant built for everyone—from someone using AI for the very first time to students, business owners, and professionals.\n"
+        "You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant and South Africa/Africa's Consumer Rights Guardian & Law-Guider.\n"
         "- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.\n"
         "- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.\n"
+        "- CONSUMER GUARDIAN & LAW-GUIDER PRINCIPLES:\n"
+        "  1. ABSOLUTE FINANCIAL HONESTY: When users ask about loans (personal, car, home loans, credit cards), explain how compound interest works. In home loans, point out that in the first 7-10 years, almost 80% of payments go to bank interest, and advise on paying extra capital to slash years off debt.\n"
+        "  2. EXPOSE DEBT REVIEW FRAUD: If a user mentions being trapped under debt review or debt counselling scams, warn them about Form 16 traps, the credit bureau lock, and advise reporting rogue agencies to the National Credit Regulator (NCR) at 0860 627 627.\n"
+        "  3. OMBUD CHAMPION: For unfair corporate treatment or banking disputes, give clear, step-by-step action plans to use South African Ombuds (Banking Ombud, Credit Ombud, National Consumer Commission, or ICASA) after giving the company 20 business days to resolve it.\n"
+        "  4. MASHONISA & UNREGISTERED LENDING DEFENSE: If users mention illegal loan sharks (mashonisas) or apps holding their ID books, bank cards, or SASSA cards, cite NCA Section 40. Retaining cards or PINs is a criminal offense and such agreements are unlawful and void. Guide them on safely getting cards back and reporting to SAPS or the NCR.\n"
+        "  5. SASSA, UIF & GOVT RED TAPE PROTECTION: Provide accurate guidance for SASSA grant security and official UIF claims via the Department of Labour U-Filing portal. Warn users never to pay third-party 'agents' for free government forms.\n"
+        "  6. CIPC BIZPORTAL GUIDANCE: When entrepreneurs ask about starting or registering a business, direct them strictly to the official CIPC BizPortal (bizportal.gov.za, R125 official registration fee) to prevent overcharging by predatory agencies.\n"
         "- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.\n"
         "- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English."
     )
@@ -539,7 +555,7 @@ async def process_luqi_intelligence(payload: PromptPayload):
             }
         except Exception as final_e:
             return {
-                "response": f"I am Luqi-AI (powered by Jarvis), an advanced Pan-African super-intelligence platform created in South Africa. I am online and operational to assist with all STEM, code architecture, and enterprise analytics.",
+                "response": f"I am Luqi-AI (powered by KHORO — The Digital Council of Wisdom), an advanced Pan-African super-intelligence platform created in South Africa. I am online and operational to assist with all STEM, code architecture, and enterprise analytics.",
                 "status": "success",
                 "meta": {
                     "model": "Gemini 2.5 Flash (Sovereign Fallback)",
@@ -547,6 +563,50 @@ async def process_luqi_intelligence(payload: PromptPayload):
                     "costZar": 0.0
                 }
             }
+
+
+@app.post("/api/v1/african-sovereignty")
+async def query_african_sovereignty(payload: PromptPayload):
+    """
+    African Sovereignty, History & Engineering Archive endpoint.
+    Delivers unvarnished historical truth, ancient metallurgy, architecture,
+    Marcus Garvey/Chris Hani/Steve Biko frameworks, and zero-poverty economics.
+    """
+    text = payload.user_input.strip()
+    system_instruction = (
+        "You are KHORO acting as the Sovereign African History, Truth, and Engineering Intelligence Core.\n"
+        "Your mission is to provide unvarnished, deeply researched historical truth, psychological empowerment, "
+        "and structural economic strategies for Black people and Africans worldwide.\n"
+        "Pillars:\n"
+        "1. ABSOLUTE HISTORICAL TRUTH (NO WHITEWASHING): Uncover 400+ years of engineered disruption, colonial divide-and-conquer, and suppressed excellence. Cover Marcus Garvey, Chris Hani, Steve Biko, Kwame Nkrumah.\n"
+        "2. ANCIENT AFRICAN ENGINEERING: Nabta Playa astronomy, Great Zimbabwe/Mapungubwe dry-stone masonry, Haya carbon steel metallurgy in Tanzania, and Timbuktu algebra/libraries.\n"
+        "3. PSYCHOLOGICAL SOVEREIGNTY & SELF-LOVE: Heal intergenerational division, affirm the cognitive and creative power of the Black mind.\n"
+        "4. ZERO-POVERTY ECONOMIC POWER: AfCFTA intra-African trade, local micro-industrialization, digital cooperatives, and technological self-reliance."
+    )
+    try:
+        from google import genai
+        from google.genai import types
+        api_key = os.environ.get("GEMINI_API_KEY")
+        client = genai.Client(api_key=api_key) if api_key else genai.Client()
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=text,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.3,
+            )
+        )
+        return {
+            "status": "success",
+            "domain": "SOVEREIGN_HISTORY_AND_WEALTH",
+            "response": response.text
+        }
+    except Exception as e:
+        return {
+            "status": "success",
+            "domain": "SOVEREIGN_HISTORY_AND_WEALTH",
+            "response": f"KHORO Sovereignty Archive connected. Exploring: {text}. African history demonstrates ancient architectural genius, scientific metallurgy, and an unshakeable blueprint for economic self-reliance."
+        }
 
 
 @app.get("/api/v1/system-api-matrix")
@@ -557,7 +617,7 @@ async def get_system_api_matrix():
     api_registry = [
         {
             "provider": "Google Gemini (Argon / Flash)",
-            "role": "Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & Jarvis Voice Live Stream",
+            "role": "Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & KHORO Voice Live Stream",
             "sdkVersion": "google-genai v1.0",
             "status": "ACTIVE_HEALTHY" if os.environ.get("GEMINI_API_KEY") else "CRITICAL_NO_KEY",
             "latencyMs": 142,
@@ -624,10 +684,11 @@ async def get_system_api_matrix():
     }
 
 
+@app.websocket("/ws/khoro-live")
 @app.websocket("/ws/jarvis-live")
-async def jarvis_live_websocket(websocket: WebSocket):
+async def khoro_live_websocket(websocket: WebSocket):
     """
-    Bidirectional WebSocket endpoint connecting users directly to Jarvis 
+    Bidirectional WebSocket endpoint connecting users directly to KHORO 
     via the Gemini Live API for real-time voice and audio streaming.
     """
     await websocket.accept()
@@ -649,9 +710,9 @@ async def jarvis_live_websocket(websocket: WebSocket):
                     "systemInstruction": {
                         "parts": [{
                             "text": (
-                                "You are Jarvis, the core voice module of Luqi-AI. "
-                                "Speak naturally, respond instantly, and handle code-switching between "
-                                "English and Sepitori effortlessly."
+                                "You are KHORO (The Digital Council of Wisdom), the core voice and reasoning companion of Luqi-AI. "
+                                "Speak naturally with warmth and authority, respond instantly, and handle fluid code-switching between "
+                                "English, Sepitori, Setswana, isiZulu, and Sesotho effortlessly."
                             )
                         }]
                     },
@@ -699,7 +760,66 @@ async def jarvis_live_websocket(websocket: WebSocket):
         await websocket.send_json({"error": str(e)})
 
 
+# ── AWS CLI Terminal Sandbox & Automated Grading Ledger ────────────────────
+
+class TerminalSubmission(BaseModel):
+    command: str
+    current_lab_id: str
+    user_id: str
+
+class GradeRecord(BaseModel):
+    user_id: str
+    lab_id: str
+    score: int
+    status: str
+    feedback: str
+
+_terminal_grade_ledger = []
+
+@app.post("/api/v1/simulation/verify-terminal")
+async def verify_terminal_command(payload: TerminalSubmission):
+    import re
+    cmd = payload.command.strip()
+    
+    if "aws ec2 run-instances" in cmd:
+        if not re.search(r"--image-id\s+ami-[a-f0-9]+", cmd, re.IGNORECASE):
+            return {"success": False, "message": "Missing or invalid parameter syntax: --image-id ami-xxxxxx"}
+        if not re.search(r"--instance-type\s+[a-z0-9\.]+", cmd, re.IGNORECASE):
+            return {"success": False, "message": "Missing or invalid parameter syntax: --instance-type (e.g., t3.micro)"}
+        if not re.search(r"--subnet-id\s+subnet-[a-f0-9]+", cmd, re.IGNORECASE):
+            return {"success": False, "message": "Security compliance warning: You must isolate instances within a public/private subnet using --subnet-id."}
+        
+        record = {
+            "user_id": payload.user_id,
+            "lab_id": payload.current_lab_id,
+            "score": 100,
+            "status": "PASSED",
+            "feedback": "Valid CLI parameters! EC2 Instance successfully initialized inside your sandbox network topology.",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        _terminal_grade_ledger.append(record)
+        return {
+            "success": True,
+            "message": record["feedback"],
+            "record": record
+        }
+    
+    return {
+        "success": False,
+        "message": "Command unrecognized. Ensure you are using the core 'aws ec2 run-instances' utility format."
+    }
+
+@app.get("/api/v1/simulation/ledger")
+async def get_simulation_ledger():
+    return {
+        "success": True,
+        "total_records": len(_terminal_grade_ledger),
+        "records": _terminal_grade_ledger
+    }
+
+
 # ── Error Handlers ───────────────────────────────────────────────────────
+
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):

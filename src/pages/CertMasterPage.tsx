@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
+import SocraticExamTutor from "@/components/SocraticExamTutor";
 
 // ── TYPES ────────────────────────────────────────────────────────────
 
@@ -399,7 +400,7 @@ const LAB_SCENARIOS: LabScenario[] = [
 
 export default function CertMasterPage() {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<"exam" | "terminal" | "subnet" | "flashcards" | "coach" | "topology">("exam");
+  const [activeTab, setActiveTab] = useState<"exam" | "terminal" | "subnet" | "flashcards" | "coach" | "topology" | "socratic_tutor">("socratic_tutor");
   const [selectedTrack, setSelectedTrack] = useState<TrackId>("ccna_200_301");
 
   // Sync tabs and tracks with URL parameters and paths
@@ -408,7 +409,7 @@ export default function CertMasterPage() {
     const tabParam = params.get("tab");
     const trackParam = params.get("track");
 
-    if (tabParam && ["exam", "terminal", "subnet", "flashcards", "coach", "topology"].includes(tabParam)) {
+    if (tabParam && ["exam", "terminal", "subnet", "flashcards", "coach", "topology", "socratic_tutor"].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
     if (trackParam && ["itil_ai_v5", "ccna_200_301", "ccnp_encor", "ccip_sp"].includes(trackParam)) {

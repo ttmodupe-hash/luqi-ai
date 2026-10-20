@@ -195,7 +195,7 @@ const ITIL_VIDEO_WALKTHROUGH: TechnicalWalkthroughPayload = {
   deepEngineeringExplanation:
     'ITIL 5 extends service value chains to autonomous generative pipelines. Under ISO/IEC 42001 (Artificial Intelligence Management System) and EU AI Act classification: Unacceptable risk systems are banned; High risk pipelines (critical infrastructure, credit, telecommunications) require mandatory asynchronous human authorization gates (70% autonomous / 30% human-gated boundary); Limited risk requires explicit user transparency.',
   ciscoIosVerification: `GovAudit# show ai-governance compliance detail
- Pipeline: MultiModel-Jarvis-Core-v29
+ Pipeline: MultiModel-KHORO-Core-v29
  Standard: ISO/IEC 42001:2023 & ITIL v5 SVS
  Human-in-the-Loop Threshold: Enforced on all mutations >= R50.00 ZAR or Route Modifications
  Telemetry Logging: WORM-compliant tamper-proof hash ledger active

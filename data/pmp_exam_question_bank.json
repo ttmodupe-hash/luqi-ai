@@ -1,0 +1,225 @@
+[
+  {
+    "id": "PMP-SIT-001",
+    "domain": "People",
+    "domainPercentage": 42,
+    "task": "Manage Conflict & Empower Team Members",
+    "scenario": "During the sprint execution of a high-visibility digital banking migration, the Lead Backend Architect and the DevOps Specialist strongly disagree on whether to enforce mandatory automated canary deployments. The argument is stalling the release pipeline, and other team members are feeling demotivated by the tension.",
+    "question": "What should the Project Manager do FIRST to resolve this situational crisis?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Escalate the issue to the Product Owner and Sponsor to make an executive architectural determination."
+      },
+      {
+        "key": "B",
+        "text": "Facilitate a private collaborative session with both specialists to analyze the trade-offs using objective project constraints (delivery speed, security risk, and rollback cost)."
+      },
+      {
+        "key": "C",
+        "text": "Instruct the team to proceed with manual deployments for this release to avoid schedule slippage, then address the conflict in the retrospective."
+      },
+      {
+        "key": "D",
+        "text": "Reassign the DevOps specialist to another workstream to eliminate interpersonal friction within the core pod."
+      }
+    ],
+    "correctKey": "B",
+    "rationale": {
+      "whyCorrect": "Under PMBOK 7th Edition (People Domain - Manage Conflict), the Project Manager should prioritize a 'Collaborating / Problem-Solving' approach. Facilitating an objective trade-off discussion allows technical specialists to find a win-win consensus based on data rather than emotion.",
+      "distractorAnalysis": {
+        "A": "Incorrect. Escalation to the sponsor abdication of PM leadership; conflicts should be addressed at the lowest possible level before escalating.",
+        "C": "Incorrect. Smoothing/forcing introduces technical debt and leaves the underlying disagreement unaddressed.",
+        "D": "Incorrect. Forcing separation damages team morale, does not resolve the pipeline bottleneck, and misuses resource management principles."
+      }
+    },
+    "pmbokReference": "PMBOK Guide 7th Edition - Section 2.2 Team Performance Domain; Process Group: Executing",
+    "examTrapAlert": "Beware of answers that suggest escalating to the Sponsor or imposing executive fiat when technical collaboration is possible."
+  },
+  {
+    "id": "PMP-SIT-002",
+    "domain": "Process",
+    "domainPercentage": 50,
+    "task": "Integrate Change Control & Scope Management",
+    "scenario": "A predictive (waterfall) infrastructure upgrade project for a tier-1 telecommunications provider is 65% complete. The client executive sends an urgent email directly to the senior database engineer requesting an unbudgeted multi-region replication feature, stating that 'it must be included in next week's milestone.' The engineer starts coding the feature immediately.",
+    "question": "What should the Project Manager do NEXT?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Issue a formal project change request (CR), evaluate the impact on baseline scope, schedule, and cost, and submit it to the Change Control Board (CCB)."
+      },
+      {
+        "key": "B",
+        "text": "Instruct the engineer to pause work on the unapproved feature immediately, review the formal change management plan with the team, and contact the client executive."
+      },
+      {
+        "key": "C",
+        "text": "Reject the client's request outright because the scope baseline was frozen during the planning phase."
+      },
+      {
+        "key": "D",
+        "text": "Approve the change immediately to preserve customer satisfaction and update the risk register."
+      }
+    ],
+    "correctKey": "B",
+    "rationale": {
+      "whyCorrect": "The immediate threat is unauthorized scope creep actively in progress. The PM must FIRST stop the unauthorized work and re-align the engineer with the change governance protocol, then engage the client to route the request through the formal Change Control Board (CCB).",
+      "distractorAnalysis": {
+        "A": "Partially correct in substance, but premature. The PM must first halt the active out-of-scope work before logging and assessing the CR.",
+        "C": "Incorrect. In predictive environments, scope can change provided it undergoes formal CCB impact assessment; refusing outright harms stakeholder engagement.",
+        "D": "Incorrect. The PM cannot unilaterally approve scope changes that breach cost and schedule baselines without CCB authorization."
+      }
+    },
+    "pmbokReference": "PMBOK Guide 7th Edition - Section 2.5 Delivery Performance Domain; Perform Integrated Change Control",
+    "examTrapAlert": "Order of operations trap: When unauthorized work is ongoing, STOP the leak first before initiating the formal paperwork."
+  },
+  {
+    "id": "PMP-SIT-003",
+    "domain": "Business Environment",
+    "domainPercentage": 8,
+    "task": "Manage Compliance & Regulatory Change",
+    "scenario": "A multinational fintech company is building a cross-border remittance gateway across Southern Africa. Two months prior to national launch, the South African Reserve Bank (SARB) and the Information Regulator issue new mandatory POPIA data sovereignty and cryptographic key escrow regulations.",
+    "question": "What should the Project Manager do FIRST?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Assess the impact of the new statutory regulations on the project deliverables, risk register, budget, and release roadmap."
+      },
+      {
+        "key": "B",
+        "text": "Halt all project development and request an emergency budget extension from the enterprise steering committee."
+      },
+      {
+        "key": "C",
+        "text": "Notify the regulatory authority that the system was planned prior to the new gazette and request a grace exemption."
+      },
+      {
+        "key": "D",
+        "text": "Release the software on schedule and schedule compliance remediation for post-launch patch version 1.1."
+      }
+    ],
+    "correctKey": "A",
+    "rationale": {
+      "whyCorrect": "Under Business Environment (Evaluate and Address External Business Environment Changes), whenever a statutory or regulatory shift occurs, the Project Manager must FIRST analyze the impact on project objectives, compliance matrices, and baselines before making any decisions.",
+      "distractorAnalysis": {
+        "A": "Correct: Impact assessment always precedes organizational action.",
+        "B": "Incorrect. Halting all work without an impact assessment causes unnecessary panic and cost.",
+        "C": "Incorrect. Compliance is non-negotiable in financial services; assuming an exemption is irresponsible.",
+        "D": "Incorrect. Launching non-compliant software creates catastrophic legal and financial liability under POPIA and banking law."
+      }
+    },
+    "pmbokReference": "PMBOK Guide 7th Edition - Section 2.8 Business Environment Domain; Compliance Management",
+    "examTrapAlert": "Always perform an impact analysis before escalating or requesting schedule/budget changes."
+  },
+  {
+    "id": "PMP-SIT-004",
+    "domain": "Process",
+    "domainPercentage": 50,
+    "task": "Agile / Hybrid Life Cycle Transition",
+    "scenario": "An enterprise software team transitioning from traditional Waterfall to Scrum is struggling. During the Daily Scrum, team members are spending 45 minutes defending their tasks directly to the Project Manager, turning the stand-up into a micro-managed status update.",
+    "question": "What should the Agile Project Manager / Scrum Master do to correct this behavior?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Cancel the Daily Scrum and replace it with a daily written asynchronous Jira status report."
+      },
+      {
+        "key": "B",
+        "text": "Coach the team on the true purpose of the Daily Scrum: peer-to-peer collaboration, progress toward the Sprint Goal, and identifying impediments in under 15 minutes."
+      },
+      {
+        "key": "C",
+        "text": "Take detailed minutes during the meeting and circulate action items with individual deadlines."
+      },
+      {
+        "key": "D",
+        "text": "Extend the scheduled time of the Daily Scrum to 60 minutes to ensure every technical roadblock is solved during the call."
+      }
+    ],
+    "correctKey": "B",
+    "rationale": {
+      "whyCorrect": "In Scrum, the Daily Stand-up is for the Developers, by the Developers, timeboxed to 15 minutes. The Scrum Master / Agile PM acts as a servant leader, coaching the team to talk to each other to inspect progress toward the Sprint Goal, not to give a status report to a manager.",
+      "distractorAnalysis": {
+        "A": "Incorrect. Reverting to written status updates eliminates the collaborative feedback loop essential to agility.",
+        "C": "Incorrect. Formal minute-taking reinforces command-and-control behavior.",
+        "D": "Incorrect. The Daily Scrum must strictly remain timeboxed to 15 minutes; deep problem-solving occurs in follow-up breakout sessions."
+      }
+    },
+    "pmbokReference": "Agile Practice Guide (PMI) - Chapter 5 Implementing Agile; Daily Standup Guidelines",
+    "examTrapAlert": "In Agile questions, the servant leader coaches and empowers the team—never micro-manages or turns ceremonies into command meetings."
+  },
+  {
+    "id": "pmp_001",
+    "domain": "Process",
+    "domainPercentage": 50,
+    "topic": "Change Control & Scope",
+    "scenario": "During a critical phase of a server migration project, a key stakeholder sends an urgent email to a software developer requesting a minor user interface tweak. The developer implements the change immediately to keep the client happy. During user acceptance testing, this change breaks an existing API integration.",
+    "question": "What process was missed, and what should the project manager do first?",
+    "options": [
+      {
+        "key": "A",
+        "text": "The developer should be formally disciplined for unauthorized coding."
+      },
+      {
+        "key": "B",
+        "text": "The project manager should immediately reverse the code change back to production defaults."
+      },
+      {
+        "key": "C",
+        "text": "A formal change request should have been submitted to evaluate scope, timeline, and quality impacts. The PM should now document the issue in the change log and submit it to the Change Control Board."
+      },
+      {
+        "key": "D",
+        "text": "The PM should adjust the project schedule baseline to account for the debugging time."
+      }
+    ],
+    "correctKey": "C",
+    "rationale": {
+      "whyCorrect": "Any modification to an established baseline must go through Integrated Change Control. Implementing features informally causes scope creep and unvalidated technical dependencies. The PM must log it immediately and follow protocol.",
+      "distractorAnalysis": {
+        "A": "Disciplinary action does not resolve the scope or integration failure.",
+        "B": "Reversing code unilaterally without assessment may create customer dissatisfaction before understanding the scope.",
+        "D": "Adjusting baselines without formal CCB approval is unauthorized baseline modification."
+      }
+    },
+    "pmbokReference": "PMBOK Guide 7th Edition - Section 2.5 Delivery Performance Domain; Perform Integrated Change Control",
+    "examTrapAlert": "Never alter baselines without going through formal Integrated Change Control."
+  },
+  {
+    "id": "pmp_002",
+    "domain": "People",
+    "domainPercentage": 42,
+    "topic": "Stakeholder Engagement & Scope Creep",
+    "scenario": "Two weeks into a complex 4-week Sprint for a new client onboarding platform, the Product Owner approaches the development team directly and insists they swap out an ongoing payment gateway feature for an upgraded authentication feature because of market pressure.",
+    "question": "According to Agile methodologies, how should the team handle this request?",
+    "options": [
+      {
+        "key": "A",
+        "text": "The development team should immediately halt work on the payment feature and pivot to the new request."
+      },
+      {
+        "key": "B",
+        "text": "The team should refer the Product Owner to the Scrum Master. Changes to a running Sprint are highly discouraged unless the current Sprint Goal becomes obsolete, in which case the Sprint must be formally cancelled and replanned."
+      },
+      {
+        "key": "C",
+        "text": "The team should work overtime to finish both features within the current iteration window."
+      },
+      {
+        "key": "D",
+        "text": "The project manager should write up a traditional Change Request document and send it to the executive steering committee."
+      }
+    ],
+    "correctKey": "B",
+    "rationale": {
+      "whyCorrect": "In Scrum, the scope of a Sprint is locked once it begins to protect the team's commitment and focus. If an update completely invalidates the Sprint Goal, the Sprint is cancelled by the Product Owner with Scrum Master guidance. Otherwise, it is added to the Product Backlog for the next refinement session.",
+      "distractorAnalysis": {
+        "A": "Pivoting mid-sprint destabilizes the team commitment and velocity.",
+        "C": "Overtime violates the Agile principle of sustainable pace.",
+        "D": "Traditional Change Requests and steering committees are Waterfall constructs, not standard Scrum practices."
+      }
+    },
+    "pmbokReference": "Agile Practice Guide (PMI) - Sprint Goal Protection and Scope Stability",
+    "examTrapAlert": "Sprint scope is protected; only the Product Owner can cancel a Sprint if the Sprint Goal is obsolete."
+  }
+]

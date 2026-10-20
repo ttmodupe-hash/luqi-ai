@@ -51,7 +51,7 @@ export const ApiSystemStatusDashboard: React.FC = () => {
         apis: [
           {
             provider: 'Google Gemini (Argon / Flash)',
-            role: 'Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & Jarvis Voice Live Stream',
+            role: 'Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & KHORO Voice Live Stream',
             sdkVersion: 'google-genai v1.0',
             status: 'ACTIVE_HEALTHY',
             latencyMs: 142,
