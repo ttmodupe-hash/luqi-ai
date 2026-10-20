@@ -215,11 +215,26 @@ export async function getDb() {
       conn.release();
       return realDrizzleDb;
     } catch {
-      // Database connection unreachable; return memoryDb fallback
+      // Database connection unreachable; non-auth features may use the memory fallback.
       return memoryDb;
     }
   }
   return memoryDb;
+}
+
+/**
+ * Authentication must fail closed: never authenticate against the in-memory
+ * query-builder fallback, whose intentionally simplified filters are not secure.
+ */
+export async function getAuthDb() {
+  if (!realDrizzleDb || !pool) return null;
+  try {
+    const conn = await pool.getConnection();
+    conn.release();
+    return realDrizzleDb;
+  } catch {
+    return null;
+  }
 }
 
 export async function closeDb() {
