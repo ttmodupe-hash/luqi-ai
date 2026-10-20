@@ -137,7 +137,7 @@ export const companionRouter = createRouter({
       .orderBy(desc(companionConversations.lastMessageAt)).limit(50);
   }),
 
-  getConversation: protectedQuery.input(z.object({ id: z.number().int().positive() }).query(async ({ input, ctx }) => {
+  getConversation: protectedQuery.input(z.object({ id: z.number().int().positive() })).query(async ({ input, ctx }) => {
     const db = await requireAuthDb();
     const [conversation] = await db.select().from(companionConversations)
       .where(and(eq(companionConversations.id, input.id), eq(companionConversations.userId, ctx.user.id))).limit(1);
