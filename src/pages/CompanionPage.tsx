@@ -217,16 +217,17 @@ function CompanionExperience() {
       setMessages((prev) => [...prev, assistantMsg]);
       setCapabilityScore((prev) => Math.min(99, prev + 1));
     } catch {
-      // Graceful offline fallback
-      const fallbackMsg: Message = {
-        id: createMessageId("ast-fallback"),
+      // Never fabricate an answer or imply that a failed request was processed.
+      const errorMsg: Message = {
+        id: createMessageId("ast-error"),
         role: "assistant",
-        content: `I have synthesized your request regarding "${query}". As your ${selectedPersonality.role}, I have integrated your learned preferences into my cognitive context. For hands-on simulations or certified drills, check the STEM Labs and CertMaster portals.`,
-        timestamp: 1,
+        content: "I couldn't reach the AI service, so I haven't generated a reliable answer. Your message may not have been saved. Please try again in a moment.",
+        timestamp: Date.now(),
         personality: selectedPersonality.name,
-        model: "luqi-sovereign-core",
+        model: "service unavailable",
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
+      toast.error("LUQI couldn't reach the AI service. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -261,8 +262,7 @@ function CompanionExperience() {
 
       toast.success("Capability Enhanced! Luqi AI has committed this knowledge into active memory.");
     } catch {
-      toast.info("Memory Recorded: New concept cached in session context.");
-      setTeachModalOpen(false);
+      toast.error("Could not save this memory. Please check your connection and try again.");
     }
   };
 
