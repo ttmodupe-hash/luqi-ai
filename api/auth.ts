@@ -48,15 +48,20 @@ export async function resolveSessionUser(req: Request): Promise<AuthenticatedUse
   const db = await getAuthDb();
   if (!db) return null;
 
-  const [session] = await db.select().from(sessions)
-    .where(and(eq(sessions.token, digestToken(token)), gt(sessions.expiresAt, new Date())))
-    .limit(1);
-  if (!session) return null;
+  try {
+    const [session] = await db.select().from(sessions)
+      .where(and(eq(sessions.token, digestToken(token)), gt(sessions.expiresAt, new Date())))
+      .limit(1);
+    if (!session) return null;
 
-  const [user] = await db.select().from(users)
-    .where(and(eq(users.id, session.userId), eq(users.isActive, true)))
-    .limit(1);
-  return user ? toPublicUser(user) : null;
+    const [user] = await db.select().from(users)
+      .where(and(eq(users.id, session.userId), eq(users.isActive, true)))
+      .limit(1);
+    return user ? toPublicUser(user) : null;
+  } catch {
+    // Fail closed on storage errors; do not turn public requests into a 500.
+    return null;
+  }
 }
 
 export async function registerAccount(emailInput: string, password: string, nameInput?: string): Promise<SessionResult> {
