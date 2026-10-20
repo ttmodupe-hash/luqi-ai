@@ -136,10 +136,39 @@ function CompanionExperience() {
   const chatMutation = trpc.companion.chatDirect.useMutation();
   const improveMutation = trpc.companion.improveCapability.useMutation();
   const memoriesQuery = trpc.companion.getMemories.useQuery(undefined, { staleTime: 30_000 });
+  const conversationsQuery = trpc.companion.getConversations.useQuery(undefined, { staleTime: 30_000 });
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
+  const conversationQuery = trpc.companion.getConversation.useQuery(
+    { id: activeConversationId ?? 0 },
+    { enabled: activeConversationId !== null },
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!conversationsQuery.data) return;
+    const existing = conversationsQuery.data.find((conversation) => Number(conversation.personalityId) === selectedPersonalityId);
+    setActiveConversationId(existing ? Number(existing.id) : null);
+    if (!existing) setMessages(INITIAL_MESSAGES);
+  }, [conversationsQuery.data, selectedPersonalityId]);
+
+  useEffect(() => {
+    const conversation = conversationQuery.data;
+    if (!conversation) return;
+    const persistedMessages = conversation.messages
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => ({
+        id: String(message.id),
+        role: message.role as "user" | "assistant",
+        content: message.content,
+        timestamp: message.createdAt ? new Date(message.createdAt).getTime() : Date.now(),
+        personality: selectedPersonality.name,
+        model: "saved conversation",
+      }));
+    setMessages(persistedMessages.length ? persistedMessages : INITIAL_MESSAGES);
+  }, [conversationQuery.data, selectedPersonality.name]);
 
   useEffect(() => {
     if (!memoriesQuery.data) return;
@@ -173,6 +202,8 @@ function CompanionExperience() {
         message: query,
         personalityId: selectedPersonalityId,
       });
+
+      if (response.conversationId) setActiveConversationId(response.conversationId);
 
       const assistantMsg: Message = {
         id: createMessageId("ast"),
