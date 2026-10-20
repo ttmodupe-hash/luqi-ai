@@ -19,6 +19,8 @@ import {
   GraduationCap,
   Search,
   Activity,
+  Dna,
+  Cpu,
 } from "lucide-react";
 import HeroAiChatConsole from "@/components/HeroAiChatConsole";
 import CapabilitiesComparisonMatrix from "@/components/CapabilitiesComparisonMatrix";
@@ -32,13 +34,13 @@ export default function Home() {
         <div className="space-y-6 max-w-4xl mx-auto">
           <div className="text-center space-y-3">
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <Sparkles className="w-3.5 h-3.5" /> Sovereign Pan-African AI &middot; Universal Execution &middot; Total Archiving
+              <Sparkles className="w-3.5 h-3.5" /> Built for Everyone · Speaks Your Language · 100% Free to Try
             </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-100">
-              Active Intelligence & STEM Simulation Engine
-            </h2>
-            <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Query any scientific formula, run offline physics simulations, generate dynamic calculators, or compare sovereign capabilities in real time.
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-100">
+              Meet Luqi-AI: Your Smart Everyday Assistant
+            </h1>
+            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              Ask any question, get help with schoolwork, write a CV, grow your business, or chat in your own language—simple, fast, and built for you.
             </p>
           </div>
 
@@ -71,10 +73,37 @@ export default function Home() {
 
         {/* Core Subsystem Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card: 3D Bioscience & Multimodal Innovation Hub */}
+          <Link
+            to="/multimodal-hub"
+            className="group rounded-3xl border border-sky-500/50 bg-gradient-to-br from-sky-500/20 via-slate-900/80 to-slate-900/95 p-6 hover:border-sky-400 hover:bg-slate-900/95 transition-all flex flex-col justify-between shadow-xl shadow-sky-500/15 ring-1 ring-sky-500/30"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-4 group-hover:scale-105 transition-transform">
+                <Dna className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-100 group-hover:text-sky-400 transition-colors">
+                  3D Bioscience & Multimodal Hub
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-mono font-bold border border-sky-500/30">
+                  ALPHAFOLD 3D
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                DeepMind Science AlphaFold pLDDT 4-band molecular structures, PDB crystals, 8-part procedural Three.js robotics tutor, Veo 3 generative studio, and live voice copilot.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center justify-between text-xs font-semibold text-sky-400">
+              <span>Enter Multimodal Hub</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
           {/* Card: Grade 10 Simple Pendulum & Energy Conservation Lab */}
           <Link
             to="/pendulum-lab"
-            className="group rounded-3xl border border-sky-500/50 bg-gradient-to-br from-sky-500/15 via-slate-900/70 to-slate-900/95 p-6 hover:border-sky-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-xl shadow-sky-500/10 md:col-span-2 lg:col-span-1 ring-1 ring-sky-500/20"
+            className="group rounded-3xl border border-sky-500/50 bg-gradient-to-br from-sky-500/15 via-slate-900/70 to-slate-900/95 p-6 hover:border-sky-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-xl shadow-sky-500/10 ring-1 ring-sky-500/20"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-4 group-hover:scale-105 transition-transform">

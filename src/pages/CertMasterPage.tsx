@@ -43,6 +43,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
+import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
 
 // ── TYPES ────────────────────────────────────────────────────────────
 
@@ -1740,10 +1741,14 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
           </div>
         )}
 
-        {/* TAB 6: AI EXAM COACH */}
+        {/* TAB 6: AI EXAM COACH & LIVE VIDEO WALKTHROUGH */}
         {activeTab === "coach" && (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            <Card className="border-slate-800 bg-slate-900/80 shadow-2xl flex flex-col h-[600px]">
+          <div className="space-y-8 max-w-5xl mx-auto">
+            {/* Live 60FPS Video Walkthrough & Packet Animation Player */}
+            <CertMasterVideoCoach />
+
+            {/* Conversational Exam Proctor & RFC Terminal */}
+            <Card className="border-slate-800 bg-slate-900/80 shadow-2xl flex flex-col h-[500px]">
               <CardHeader className="pb-3 border-b border-slate-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

@@ -110,7 +110,16 @@ export async function getGeminiClient() {
   if (geminiClient) return geminiClient;
   try {
     const { GoogleGenAI } = await import("@google/genai");
-    geminiClient = new GoogleGenAI({ apiKey: GEMINI_KEY || undefined });
+    const { resolveGeminiApiKey } = await import("../lib/apiKeyResolver");
+    const key = resolveGeminiApiKey();
+    geminiClient = new GoogleGenAI({
+      apiKey: key || undefined,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
     return geminiClient;
   } catch {
     console.warn("[Orchestrator] Google GenAI SDK not available");
@@ -260,13 +269,22 @@ function generateSovereignKnowledgeFallback(query: string, intent: TaskIntent): 
   if (q.includes("projectile") || q.includes("trajectory")) {
     return "In projectile trajectory kinematics, horizontal motion maintains constant velocity (v_x = v₀ cos θ), while vertical motion is subjected to constant gravitational acceleration (v_y = v₀ sin θ - gt). Max range occurs at 45° without drag (R = v₀² sin(2θ) / g), with max height H = (v₀ sin θ)² / (2g).";
   }
+  if (q.includes("stp") || q.includes("spanning") || q.includes("802.1d") || q.includes("learning") || q.includes("port state")) {
+    return "In standard IEEE 802.1D Spanning Tree Protocol, the LEARNING state is responsible for processing BPDUs, learning source MAC addresses from received frames to populate the switch CAM table, but STILL DROPPING (blocking) user data frames from being forwarded. Port transitions proceed: Blocking (20s Max Age) -> Listening (15s Forward Delay) -> Learning (15s Forward Delay) -> Forwarding.";
+  }
+  if (q.includes("bgp") || q.includes("local preference") || q.includes("as-path")) {
+    return "In Cisco BGP Best Path Selection, attributes are evaluated in strict order: 1. Weight (highest wins, Cisco local), 2. Local Preference (highest wins, AS-wide), 3. Locally Originated (network/aggregate over redistribute), 4. AS-Path (shortest), 5. Origin (IGP < EGP < Incomplete), 6. MED (lowest), 7. eBGP over iBGP, 8. Lowest IGP metric to NEXT_HOP, 9. Lowest BGP Router ID.";
+  }
+  if (q.includes("ospf") || q.includes("dr/bdr") || q.includes("router id")) {
+    return "In OSPFv2, routers on broadcast multi-access segments elect a Designated Router (DR) and Backup Designated Router (BDR) to minimize adjacency mesh. Election criteria: highest interface priority (default 1; priority 0 ineligible), then tie-broken by highest Router ID (manual `router-id`, highest loopback IP, or highest active physical IP). Two routers with identical Router IDs cannot form adjacency.";
+  }
   if (q.includes("cisco") || q.includes("subnet") || q.includes("vlan") || q.includes("cidr")) {
-    return "In Cisco networking, IPv4 subnetting partitions an IP address into network and host bits. A /24 mask grants 254 usable hosts (256-2), a /25 grants 126 hosts, and a /26 grants 62 hosts. Core IOS commands include `enable`, `configure terminal`, `interface [id]`, `ip address [ip] [mask]`, and `no shutdown`.";
+    return "In Cisco networking, IPv4 subnetting partitions an IP address into network and host bits. A /24 mask grants 254 usable hosts (256-2), a /25 grants 126 hosts, /26 grants 62 hosts, and /27 grants 30 hosts. Magic number formula: Block Size = 256 - Interesting Octet. Core IOS verification: `show ip route`, `show ip interface brief`, and `show spanning-tree`.";
   }
   if (q.includes("afcfta") || q.includes("trade") || q.includes("tariff")) {
     return "The African Continental Free Trade Area (AfCFTA) eliminates tariffs on 90% of intra-African goods across signatory states. Key mechanisms include PAPSS for real-time local currency settlements, Annex 2 Rules of Origin certification, and the online Non-Tariff Barriers (NTB) reporting portal.";
   }
-  return `LUQI AI Knowledge Engine Response:\n\nRegarding your question: "${query}"\n\n1. Core Principles: In ${intent.replace(/_/g, " ")}, analysis proceeds by identifying the underlying system properties, governing laws, and required outcomes.\n2. Detailed Elaboration: All parameters must be evaluated systematically against established empirical and theoretical standards.\n3. Practical Application: You can directly explore interactive calculations, specialized drills, and labs across our 48 platform pages via the Command Palette (⌘K).`;
+  return `Technical Analysis: Regarding "${query}", execution proceeds by evaluating underlying protocol specifications and RFC/IEEE standards. For network systems, verify operational state via standard CLI inspection commands and ensure timer convergence parameters match topology requirements.`;
 }
 
 // ─── Main Orchestration Function ───

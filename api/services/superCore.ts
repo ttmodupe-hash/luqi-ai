@@ -2,13 +2,19 @@ import { GoogleGenAI } from '@google/genai';
 import * as crypto from 'crypto';
 import * as vm from 'vm';
 
+import { resolveGeminiApiKey } from '../lib/apiKeyResolver';
+
 // Initialize Production Gemini Client
 const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return new GoogleGenAI({});
-  }
-  return new GoogleGenAI({ apiKey });
+  const apiKey = resolveGeminiApiKey();
+  return new GoogleGenAI({
+    apiKey: apiKey || undefined,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
 };
 
 // Model alias resolution to ensure compatibility with @google/genai specification

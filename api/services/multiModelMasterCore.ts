@@ -4,8 +4,20 @@ import OpenAI from 'openai';
 import dotenv from 'dotenv';
 dotenv.config({ override: true });
 
+import { resolveGeminiApiKey } from '../lib/apiKeyResolver';
+
 // Initialize Client SDKs safely from environment variables
-const getGemini = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const getGemini = () => {
+  const apiKey = resolveGeminiApiKey();
+  return new GoogleGenAI({
+    apiKey: apiKey || undefined,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
+};
 const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 const getDeepSeek = () => new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY || '', baseURL: 'https://api.deepseek.com' });
 const getKimi = () => new OpenAI({ apiKey: process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || '', baseURL: 'https://api.moonshot.ai/v1' });
@@ -100,27 +112,11 @@ export class MultiModelMasterOrchestrator {
   ): Promise<MultiModelExecutionResult> {
     const role = roleHint || this.routeTask(userPrompt);
 
-    const systemPrompt = `You are Luqi-AI (powered by Jarvis), a super-intelligent Pan-African and Global AI platform created in South Africa.
-- Answer every question directly, naturally, and intelligently. Never repeat a static template.
-- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
-- Dialect Track: Match the selected language track naturally (${language}). If SEPITORI / ENGLISH is selected, blend natural Pretoria Sepitori warmth ("eita", "tlatsa", "ska wara", "daai ding", "chommie") with clear English without forcing awkward phrases when not needed; if ISIZULU, SESOTHO, KISWAHILI, or YORUBA is selected, respond fluently in that language.
-- For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.
-- Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.
-- SOUTH AFRICAN WEALTH & DEMOGRAPHIC GROUNDING (Authoritative 2025/2026 Datasets):
-  * WEALTH vs. INCOME DISAMBIGUATION: Strictly separate Asset Wealth (Balance Sheet Net Worth) from Annual Taxable Income (SARS PIT).
-  * USD Millionaires (HNWIs): South Africa has ~37,400 to 48,200 dollar millionaires (investable liquid assets >= $1M USD, excluding primary residence, per Henley & Partners / New World Wealth 2024–2026 reports). Never confuse this with 250k–400k (which represents global figures or broad asset tiers).
-  * Regional Geographic Breakdown (~48,200 USD Millionaires total):
-    - Greater Johannesburg: ~11,700–12,300 (Sandton, Hyde Park, Houghton, Bryanston)
-    - Cape Town Metro: ~7,400 (Atlantic Seaboard, Constantia, Bishopscourt)
-    - Cape Winelands: ~3,600 (Franschhoek, Stellenbosch, Paarl)
-    - Garden Route: ~3,200 (Plettenberg Bay, Knysna, George)
-    - Durban, Umhlanga & Ballito: ~3,500
-    - Pretoria & Centurion: ~2,100 (Waterkloof, Silver Lakes)
-    - Whale Coast (Hermanus): ~1,200
-    - Rest of South Africa: ~14,500–15,000 (totaling exactly 100% of reported individuals).
-  * SARS Taxable Income Earners: ~315,000 to 330,000 assessed individual taxpayers declare taxable income >= R1,000,000/year on SARS IRP5 filings. Only ~35,000 taxpayers sit in the top 45% marginal bracket (> R1,817,000). An individual earning R1M/year is a high-income earner, NOT an asset dollar millionaire.
-  * Political Office Remuneration (Independent Commission): President ~R3.2M/yr, Deputy President ~R3.0M/yr, Ministers & Premiers ~R2.6M/yr, Deputy Ministers & MECs ~R2.15M/yr, MPs ~R1.25M–R1.75M/yr.
-  * Demographics & Governance: Population ~63M (Gauteng ~16M, KZN ~12M, Western Cape ~7.5M); President: Cyril Ramaphosa (GNU second term, June 2024); SAPS National Commissioner: General Fannie Masemola (appointed 2022).`;
+    const systemPrompt = `You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant built for everyone—from someone using AI for the very first time to students, business owners, and professionals.
+- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.
+- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.
+- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.
+- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English.`;
 
     try {
       if (role === 'VISUAL_3D_LAB') {

@@ -2370,12 +2370,25 @@ For any IPv4 address with mask /N:
 - Example: /26 = 255.255.255.192. Interesting octet = 192. Block size = 256 - 192 = **64**.
 - Subnets increment by 64: .0, .64, .128, .192.
 - Number of usable hosts = 2^(32 - N) - 2.
-- Wildcard Mask = 255.255.255.255 - Subnet Mask (used in OSPF and ACLs).`
+- Wildcard Mask = 255.255.255.255 - Subnet Mask (used in OSPF and ACLs).`,
+
+    stp: `### IEEE 802.1D Spanning Tree Protocol (STP) Port State Machine
+**Direct Answer**: In IEEE 802.1D STP, the **LEARNING** state is responsible for processing BPDUs and learning MAC addresses from incoming frames, but does **NOT** forward user data frames.
+
+**State Progression & Timers**:
+1. **Blocking** (20s Max Age): Discards user data frames, does not learn MAC addresses, only listens to BPDUs from Root Bridge.
+2. **Listening** (15s Forward Delay): Discards user data frames, does not learn MAC addresses, sends and receives BPDUs to elect Root/Designated ports.
+3. **Learning** (15s Forward Delay): Discards user data frames, processes BPDUs, and **populates the CAM (MAC address) table** with source MACs from incoming traffic to minimize unknown unicast flooding upon entering forwarding.
+4. **Forwarding**: Full bidirectional forwarding of user data frames, MAC learning, and BPDU processing.
+
+**Total Convergence Time**: 50 seconds (20s Max Age + 15s Listening + 15s Learning).`
   };
 
   const lowerQ = query.toLowerCase();
   let defaultContent = fallbackAnswers.bgp;
-  if (lowerQ.includes("itil") || lowerQ.includes("governance") || lowerQ.includes("iso") || lowerQ.includes("ethics")) {
+  if (lowerQ.includes("stp") || lowerQ.includes("spanning") || lowerQ.includes("802.1d") || lowerQ.includes("learning") || lowerQ.includes("port state") || lowerQ.includes("blocking")) {
+    defaultContent = fallbackAnswers.stp;
+  } else if (lowerQ.includes("itil") || lowerQ.includes("governance") || lowerQ.includes("iso") || lowerQ.includes("ethics")) {
     defaultContent = fallbackAnswers.itil;
   } else if (lowerQ.includes("subnet") || lowerQ.includes("vlsm") || lowerQ.includes("cidr") || lowerQ.includes("mask")) {
     defaultContent = fallbackAnswers.subnetting;

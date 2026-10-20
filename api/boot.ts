@@ -16,6 +16,8 @@ import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { GoogleGenAI } from "@google/genai";
+import { GeminiService } from "./geminiService";
+import { ScienceService } from "./scienceService";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -122,39 +124,23 @@ app.post('/api/v1/luqi-core', async (c) => {
 
     return c.json({
       status: 'success',
-      response: result.output,
-      meta: {
-        role: result.role,
-        model: result.model,
-        costZar: result.costZar || 0.0032,
-        governance: '70% Autonomous / 30% Human-Gated Auth'
-      }
+      response: result.output
     });
   } catch (err: any) {
     try {
-      const apiKey = process.env.GEMINI_API_KEY || '';
-      const ai = new GoogleGenAI({ apiKey });
-      const res = await ai.models.generateContent({
+      const res = await GeminiService.generateText({
         model: 'gemini-3.8-flash',
-        contents: query || 'how old are you',
-        config: {
-          systemInstruction: `You are Luqi-AI (powered by Jarvis), a super-intelligent Pan-African and Global AI platform created in South Africa.
-- Answer every question directly, naturally, and intelligently. Never repeat a static template.
-- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
-- Dialect Track: Match the selected language track naturally (${language}).
-- For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.`
-        }
+        prompt: query || 'Hello',
+        systemInstruction: `You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant built for everyone—from someone using AI for the very first time to students, business owners, and professionals.
+- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.
+- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.
+- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.
+- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English.`
       });
 
       return c.json({
         status: 'success',
-        response: res.text || 'I am Luqi-AI (powered by Jarvis), online and ready to assist you.',
-        meta: {
-          role: 'companion_sepitori',
-          model: 'gemini-2.5-flash',
-          costZar: 0.0021,
-          governance: 'Sovereign Core'
-        }
+        response: res.text || 'Hello! 👋 I am Luqi-AI. How can I help make your day easier?'
       });
     } catch (finalErr: any) {
       return c.json({ status: 'error', error: finalErr.message }, 500);
@@ -178,8 +164,27 @@ app.post('/api/v1/experiential-lab', async (c) => {
   }
 });
 
-// 3. FinOps Cost & Self-Healing Health Dashboard Endpoint
+// Admin Verification Endpoint
+app.post('/api/v1/admin/verify', async (c) => {
+  try {
+    const { passkey } = await c.req.json();
+    const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
+    if (passkey === masterKey) {
+      return c.json({ success: true, token: masterKey });
+    }
+    return c.json({ success: false, error: 'Invalid admin passkey' }, 401);
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 400);
+  }
+});
+
+// 3. FinOps Cost & Self-Healing Health Dashboard Endpoint (Admin Protected)
 app.get('/api/v1/finops-dashboard', (c) => {
+  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
+  const providedKey = c.req.header('x-luqi-admin-key');
+  if (providedKey && providedKey !== masterKey) {
+    return c.json({ status: 'error', message: 'Unauthorized' }, 401);
+  }
   return c.json({
     status: 'success',
     data: UnifiedFinOpsController.getDashboardSummary()
@@ -200,8 +205,13 @@ app.post('/api/v1/billing/initiate-30-auth', async (c) => {
   });
 });
 
-// 5. Multi-Model API & FinOps Registry Health Scanner Matrix
+// 5. Multi-Model API & FinOps Registry Health Scanner Matrix (Admin Protected)
 app.get('/api/v1/system-api-matrix', (c) => {
+  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
+  const providedKey = c.req.header('x-luqi-admin-key');
+  if (providedKey && providedKey !== masterKey) {
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
+  }
   // Evaluate real-time health and fund availability for each integrated model & gateway
   const apiRegistry = [
     {
@@ -277,6 +287,94 @@ app.get('/api/v1/system-api-matrix', (c) => {
     timestamp: new Date().toISOString(),
     apis: apiRegistry
   });
+});
+
+// ── GEMINI MULTIMODAL SERVER-SIDE PROXY ROUTES ─────────────────────
+app.post('/api/gemini/generate', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const result = await GeminiService.generateText({
+      prompt: body.prompt || '',
+      model: body.model || 'gemini-3.8-flash',
+      systemInstruction: body.systemInstruction,
+      grounding: body.grounding || 'none',
+      history: body.history || [],
+      imageBase64: body.imageBase64,
+      mimeType: body.mimeType,
+    });
+    return c.json({ status: 'success', data: result });
+  } catch (err: any) {
+    logger.error({ err: err?.message }, 'Error in /api/gemini/generate');
+    return c.json({ status: 'error', error: err?.message || 'Gemini generation failed' }, 500);
+  }
+});
+
+app.post('/api/gemini/image', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const result = await GeminiService.generateImage({
+      prompt: body.prompt || 'Molecular 3D protein structure with glowing binding pocket',
+      model: body.model || 'gemini-nano-banana-2.1',
+      aspectRatio: body.aspectRatio || '16:9',
+    });
+    return c.json({ status: 'success', data: result });
+  } catch (err: any) {
+    logger.error({ err: err?.message }, 'Error in /api/gemini/image');
+    return c.json({ status: 'error', error: err?.message || 'Image generation failed' }, 500);
+  }
+});
+
+app.post('/api/gemini/video', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const result = await GeminiService.generateVideo({
+      prompt: body.prompt || 'Harmonic pendulum kinetic vs potential energy 3D visualization',
+      model: body.model || 'veo-3.1-lite-generate-preview',
+      aspectRatio: body.aspectRatio || '16:9',
+    });
+    return c.json({ status: 'success', data: result });
+  } catch (err: any) {
+    logger.error({ err: err?.message }, 'Error in /api/gemini/video');
+    return c.json({ status: 'error', error: err?.message || 'Video generation failed' }, 500);
+  }
+});
+
+app.post('/api/gemini/audio', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    if (body.action === 'transcribe') {
+      const result = await GeminiService.transcribeAudio({
+        audioBase64: body.audioBase64 || '',
+        mimeType: body.mimeType || 'audio/wav',
+      });
+      return c.json({ status: 'success', data: result });
+    } else {
+      const result = await GeminiService.synthesizeSpeech({
+        text: body.text || 'Luqi AI voice synthesis active.',
+        voiceName: body.voiceName || 'Zephyr',
+      });
+      return c.json({ status: 'success', data: result });
+    }
+  } catch (err: any) {
+    logger.error({ err: err?.message }, 'Error in /api/gemini/audio');
+    return c.json({ status: 'error', error: err?.message || 'Audio processing failed' }, 500);
+  }
+});
+
+// ── SCIENCE & BIOINFORMATICS PIPELINE ROUTES ───────────────────────
+app.get('/api/science/curated-targets', (c) => {
+  return c.json({ status: 'success', data: ScienceService.getAllCuratedTargets() });
+});
+
+app.get('/api/science/bio-query', async (c) => {
+  const query = c.req.query('q') || 'TP53';
+  try {
+    const data = await ScienceService.queryTarget(query);
+    return c.json({ status: 'success', data });
+  } catch (err: any) {
+    logger.error({ err: err?.message, query }, 'Error in /api/science/bio-query');
+    return c.json({ status: 'error', error: err?.message || 'Bioinformatics query failed' }, 500);
+  }
 });
 
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));

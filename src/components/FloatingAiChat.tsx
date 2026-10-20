@@ -18,7 +18,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { IntelligentUIStreamRenderer } from "./IntelligentUIEngine";
-import { GoogleGenAI } from "@google/genai";
 import { getAuthHeaders } from "../lib/api";
 
 export default function FloatingAiChat() {
@@ -32,9 +31,9 @@ export default function FloatingAiChat() {
       id: "intro-1",
       role: "assistant",
       content:
-        "Hello! I am **Luqi Prime**, your universal AI Companion. You can query any science simulation, math derivation, trade rule, Cisco network command, or platform capability anytime from this floating console.",
+        "Hello! 👋 Welcome to Luqi-AI. Even if this is your very first time using AI, you can talk to me just like a friend. Ask me anything—from writing a CV, helping with homework, or starting a business, to chatting in English, Sepitori, isiZulu, or Sesotho. How can I help you today?",
       timestamp: 0,
-      model: "Gemini 2.5 Flash",
+      model: "Luqi-AI",
     },
   ]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -63,13 +62,11 @@ export default function FloatingAiChat() {
     setMessages(updatedMessages);
     setIsLoading(true);
 
-    const systemInstruction = `You are Luqi-AI (powered by Jarvis), a super-intelligent Pan-African and Global AI platform created in South Africa.
-- Answer every question directly, naturally, and intelligently. Never repeat a static template.
-- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
-- Dialect Track: Blend natural Pretoria Sepitori warmth ("eita", "tlatsa", "ska wara", "daai ding", "chommie") with clear English without forcing awkward phrases when not needed; support isiZulu, Sesotho, Kiswahili, and Yoruba fluently.
-- For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.
-- Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.
-- Wealth vs Income Grounding: South Africa has ~37,400 to 48,200 dollar millionaires (investable liquid assets >= $1M USD, excluding primary home, per Henley & Partners/New World Wealth 2024-2026). Regional breakdown: Jhb ~12k, Cape Town ~7.4k, Winelands ~3.6k, Garden Route ~3.2k, Durban/Umhlanga ~3.5k, Pretoria ~2.1k, Whale Coast ~1.2k, Rest of SA ~14.9k. SARS income earners with >= R1M taxable income are ~320,000 individuals (income, not asset millionaires).`;
+    const systemInstruction = `You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant built for everyone—from someone using AI for the very first time to students, business owners, and professionals.
+- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.
+- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.
+- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.
+- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English.`;
 
     try {
       // 1. First attempt /api/v1/luqi-core
@@ -89,41 +86,34 @@ export default function FloatingAiChat() {
         }
       }
 
-      // 2. If backend response is empty or non-200, execute direct Gemini SDK call
+      // 2. If backend response is empty or non-200, execute via server-side Gemini API
       if (!content || content.length < 5) {
-        const apiKey =
-          process.env.GEMINI_API_KEY ||
-          (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-          "";
-        const ai = new GoogleGenAI({ apiKey });
-        const contents = [
-          ...updatedMessages.slice(-6).map((m) => ({
-            role: m.role === "user" ? "user" : "model",
-            parts: [{ text: m.content }],
-          })),
-        ];
-
         try {
-          const directRes = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
-            contents,
-            config: { systemInstruction, temperature: 0.6 },
+          const genRes = await fetch("/api/gemini/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: text,
+              model: "gemini-3.8-flash",
+              systemInstruction,
+              history: updatedMessages.slice(-6).map((m) => ({
+                role: m.role === "user" ? "user" : "model",
+                parts: [{ text: m.content }],
+              })),
+            }),
           });
-          content = directRes.text || "";
-          model = "Gemini 2.5 Flash (Direct)";
+          if (genRes.ok) {
+            const genData = await genRes.json();
+            content = genData?.data?.text || "";
+            model = genData?.data?.model || "gemini-3.8-flash";
+          }
         } catch {
-          const fallbackRes = await ai.models.generateContent({
-            model: "gemini-flash-latest",
-            contents,
-            config: { systemInstruction, temperature: 0.6 },
-          });
-          content = fallbackRes.text || "";
-          model = "Gemini 2.5 Flash (Fallback)";
+          // Handled below
         }
       }
 
       if (!content) {
-        content = `I am Luqi-AI (powered by Jarvis), an advanced Pan-African super-intelligence platform created in South Africa. I'm ready to answer questions, guide your STEM simulations, analyze data, and build with you. How can I assist you right now?`;
+        content = `Hello! 👋 I am Luqi-AI. I am here and ready to help you with anything—from schoolwork and CV writing to starting a business or everyday questions. How can I make your day easier?`;
       }
 
       setMessages((prev) => [
@@ -131,34 +121,16 @@ export default function FloatingAiChat() {
         { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model },
       ]);
     } catch (err) {
-      try {
-        const apiKey =
-          process.env.GEMINI_API_KEY ||
-          (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-          "";
-        const ai = new GoogleGenAI({ apiKey });
-        const directRes = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: text,
-          config: { systemInstruction, temperature: 0.6 },
-        });
-        const content = directRes.text || "Hello! I am Luqi-AI, online and ready to assist you.";
-        setMessages((prev) => [
-          ...prev,
-          { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model: "Gemini 2.5 Flash (Direct)" },
-        ]);
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: "ai-" + Date.now(),
-            role: "assistant",
-            content: `Hello! I am Luqi-AI (powered by Jarvis). I am operational across all classical mechanics simulations, code refactoring, and enterprise auditing. What would you like to explore?`,
-            timestamp: Date.now(),
-            model: "Gemini 2.5 Flash (Local Sovereign)",
-          },
-        ]);
-      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: "ai-" + Date.now(),
+          role: "assistant",
+          content: `Hello! 👋 I am Luqi-AI. I am ready to help you with anything you need today. How can I assist you?`,
+          timestamp: Date.now(),
+          model: "Luqi-AI",
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -309,7 +281,7 @@ export default function FloatingAiChat() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ask anything..."
+                placeholder="Type any question here (just like sending a WhatsApp message)..."
                 className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-amber-500"
               />
               <button

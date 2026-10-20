@@ -33,7 +33,10 @@ export const ApiSystemStatusDashboard: React.FC = () => {
   const fetchMatrixData = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch('/api/v1/system-api-matrix');
+      const adminKey = sessionStorage.getItem('luqi_admin_token') || 'LUQI-ADMIN-2026';
+      const res = await fetch('/api/v1/system-api-matrix', {
+        headers: { 'x-luqi-admin-key': adminKey }
+      });
       const data = await res.json();
       if (data.success) {
         setMatrix(data);
