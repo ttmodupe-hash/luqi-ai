@@ -11,7 +11,7 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 
-const hasDbConfig = Boolean(process.env.DATABASE_URL || (process.env.DB_HOST && process.env.DB_HOST !== "localhost"));
+const hasDbConfig = Boolean(process.env.DATABASE_URL || process.env.DB_HOST);
 
 let pool: mysql.Pool | null = null;
 let realDrizzleDb: any = null;
