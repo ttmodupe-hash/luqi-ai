@@ -188,6 +188,18 @@ export const companionRouter = createRouter({
       .orderBy(desc(companionMemories.importance)).limit(100);
   }),
 
+  deleteMemory: protectedQuery.input(z.object({
+    id: z.number().int().positive(),
+  })).mutation(async ({ input, ctx }) => {
+    const db = await requireAuthDb();
+    const [memory] = await db.select({ id: companionMemories.id }).from(companionMemories)
+      .where(and(eq(companionMemories.id, input.id), eq(companionMemories.userId, ctx.user.id))).limit(1);
+    if (!memory) throw new TRPCError({ code: "NOT_FOUND", message: "Memory not found." });
+    await db.delete(companionMemories)
+      .where(and(eq(companionMemories.id, input.id), eq(companionMemories.userId, ctx.user.id)));
+    return { deleted: true };
+  }),
+
   addMemory: protectedQuery.input(z.object({
     content: z.string().trim().min(1).max(10000),
     category: z.string().trim().min(1).max(100),
