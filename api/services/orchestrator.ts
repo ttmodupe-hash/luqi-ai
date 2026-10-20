@@ -295,6 +295,7 @@ export async function orchestrateRequest(options: {
   useSearch?: boolean;
   forceProvider?: "openai" | "anthropic" | "google" | "kimi";
   forceModel?: string;
+  throwOnProviderFailure?: boolean;
 }): Promise<OrchestratorResult> {
   const startTime = Date.now();
   const context = options.context || "";
@@ -442,7 +443,11 @@ export async function orchestrateRequest(options: {
     }
   }
 
-  if (!result || !usedConfig) {
+  if ((!result || !usedConfig || !result.content.trim()) && options.throwOnProviderFailure) {
+    throw new Error(lastError ? `All configured AI providers failed: ${lastError.message}` : "AI providers returned no usable response.");
+  }
+
+  if (!result || !usedConfig || !result.content.trim()) {
     result = {
       content: generateSovereignKnowledgeFallback(options.query, intent),
       tokensUsed: 150,
