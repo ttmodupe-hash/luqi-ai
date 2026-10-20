@@ -111,7 +111,7 @@ const INITIAL_MESSAGES: Message[] = [
   },
 ];
 
-export default function CompanionPage() {
+function CompanionExperience() {
   const [selectedPersonalityId, setSelectedPersonalityId] = useState(1);
   const [inputMessage, setInputMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -126,29 +126,7 @@ export default function CompanionPage() {
   const [newConceptText, setNewConceptText] = useState("");
   const [newConceptFeedback, setNewConceptFeedback] = useState("");
 
-  const [activeMemories, setActiveMemories] = useState<MemoryItem[]>([
-    {
-      id: "mem-1",
-      category: "User Preference",
-      content: "Prefers step-by-step mathematical derivations with SI units explicitly shown.",
-      importance: 4.8,
-      timestamp: "Today",
-    },
-    {
-      id: "mem-2",
-      category: "Networking Focus",
-      content: "Prioritizes Cisco IOS CLI commands and VLSM bit-level subnet allocations.",
-      importance: 4.9,
-      timestamp: "Yesterday",
-    },
-    {
-      id: "mem-3",
-      category: "Trade Alignment",
-      content: "Follows AfCFTA Annex 2 Rule of Origin requirements for agricultural exports.",
-      importance: 4.5,
-      timestamp: "2 days ago",
-    },
-  ]);
+  const [activeMemories, setActiveMemories] = useState<MemoryItem[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -157,10 +135,22 @@ export default function CompanionPage() {
 
   const chatMutation = trpc.companion.chatDirect.useMutation();
   const improveMutation = trpc.companion.improveCapability.useMutation();
+  const memoriesQuery = trpc.companion.getMemories.useQuery(undefined, { staleTime: 30_000 });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!memoriesQuery.data) return;
+    setActiveMemories(memoriesQuery.data.map((memory) => ({
+      id: String(memory.id),
+      category: memory.category || memory.memoryType || "Saved memory",
+      content: memory.content,
+      importance: Number(memory.importance ?? 5),
+      timestamp: memory.createdAt ? new Date(memory.createdAt).toLocaleDateString() : "Saved",
+    })));
+  }, [memoriesQuery.data]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -182,7 +172,6 @@ export default function CompanionPage() {
       const response = await chatMutation.mutateAsync({
         message: query,
         personalityId: selectedPersonalityId,
-        memories: activeMemories.map((m) => `${m.category}: ${m.content}`),
       });
 
       const assistantMsg: Message = {
@@ -267,6 +256,11 @@ export default function CompanionPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Header */}
@@ -297,6 +291,12 @@ export default function CompanionPage() {
               className="text-xs px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/10"
             >
               <Plus className="w-3.5 h-3.5" /> Teach / Improve Capability
+            </button>
+            <button
+              onClick={handleLogout}
+              className="text-xs px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-all"
+            >
+              Sign out
             </button>
             <Link
               to="/"
@@ -673,6 +673,92 @@ export default function CompanionPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function CompanionPage() {
+  const [user, setUser] = useState<{ email: string; name?: string | null } | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((response) => response.json())
+      .then((data) => { if (mounted) setUser(data.user ?? null); })
+      .catch(() => { if (mounted) setUser(null); })
+      .finally(() => { if (mounted) setCheckingSession(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  const handleAuth = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setAuthError("");
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/auth/${mode === "register" ? "register" : "login"}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, ...(mode === "register" ? { name } : {}) }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Authentication failed.");
+      setUser(data.user);
+      setPassword("");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Authentication failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (checkingSession) {
+    return <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">Checking your secure session…</div>;
+  }
+  if (user) return <CompanionExperience key={user.email} />;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/80 p-7 shadow-2xl">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-xl font-bold">L</div>
+          <div>
+            <h1 className="text-xl font-bold">LUQI AI Companion</h1>
+            <p className="text-xs text-slate-400">Private conversations and persistent memory</p>
+          </div>
+        </div>
+        <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1">
+          <button type="button" onClick={() => { setMode("login"); setAuthError(""); }} className={`rounded-lg px-3 py-2 text-sm ${mode === "login" ? "bg-amber-500 font-semibold text-slate-950" : "text-slate-400"}`}>Sign in</button>
+          <button type="button" onClick={() => { setMode("register"); setAuthError(""); }} className={`rounded-lg px-3 py-2 text-sm ${mode === "register" ? "bg-amber-500 font-semibold text-slate-950" : "text-slate-400"}`}>Create account</button>
+        </div>
+        <form onSubmit={handleAuth} className="space-y-4">
+          {mode === "register" && <div>
+            <label htmlFor="luqi-name" className="mb-1 block text-xs font-semibold text-slate-300">Name (optional)</label>
+            <input id="luqi-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={255} autoComplete="name" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm outline-none focus:border-amber-500" />
+          </div>}
+          <div>
+            <label htmlFor="luqi-email" className="mb-1 block text-xs font-semibold text-slate-300">Email</label>
+            <input id="luqi-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label htmlFor="luqi-password" className="mb-1 block text-xs font-semibold text-slate-300">Password</label>
+            <input id="luqi-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={mode === "register" ? 12 : 1} autoComplete={mode === "register" ? "new-password" : "current-password"} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm outline-none focus:border-amber-500" />
+            {mode === "register" && <p className="mt-1 text-[11px] text-slate-500">Use at least 12 characters.</p>}
+          </div>
+          {authError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{authError}</p>}
+          <button disabled={submitting} type="submit" className="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50">
+            {submitting ? "Please wait…" : mode === "register" ? "Create secure account" : "Sign in"}
+          </button>
+        </form>
+        <p className="mt-5 text-[11px] leading-relaxed text-slate-500">Your companion conversations and memories are linked to your account. Account creation requires the server's persistent database to be configured.</p>
+      </div>
     </div>
   );
 }
