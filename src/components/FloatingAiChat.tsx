@@ -16,6 +16,8 @@ import {
   Check,
   Cpu,
   ChevronDown,
+  Camera,
+  Paperclip,
 } from "lucide-react";
 import { IntelligentUIStreamRenderer } from "./IntelligentUIEngine";
 import { getAuthHeaders } from "../lib/api";
@@ -23,6 +25,9 @@ import { getAuthHeaders } from "../lib/api";
 export default function FloatingAiChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<
     { id: string; role: "user" | "assistant"; content: string; timestamp: number; model?: string }[]

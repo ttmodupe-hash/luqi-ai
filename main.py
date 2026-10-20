@@ -29,7 +29,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -1163,6 +1163,79 @@ async def register_user_critique(payload: CritiquePayload):
 @app.get("/workspace/critiques")
 async def get_system_critiques():
     return _system_critiques_ledger
+
+@app.post("/api/khoro-legal")
+@app.post("/api/v1/khoro-legal")
+async def process_khoro_legal_endpoint(payload: dict):
+    from khoro_legal_advisor import handle_khoro_legal_query
+    query = payload.get("userQuery") or payload.get("query") or payload.get("prompt") or "key concepts of south african criminal law : crw1501"
+    res = handle_khoro_legal_query(query)
+    return {
+        "success": True,
+        "apiResponse": json.dumps(res),
+        "data": res
+    }
+
+@app.post("/api/v1/animation/generate-african-cartoon")
+@app.post("/animation/generate-african-cartoon")
+async def generate_african_cartoon_endpoint(payload: dict):
+    import urllib.parse
+    dialect = payload.get("dialect", "mzansi")  # "mzansi" or "jojo"
+    pollinations_key = os.environ.get("POLLINATIONS_API_KEY", "sk_8KC5kIwRQlDB3K0zfwRhuorb8GH3OMGl")
+    
+    if dialect == "jojo":
+        script = "Ah-ah! Who put pepper inside the solar battery?! Light come, my garri don turn hot water o!"
+        art_prompt = "2D vibrant cartoon illustration, African folklore character Jojo holding glowing solar panel, Pixar style, sunny Nigerian village with palm trees"
+    else:
+        script = "Aweh bra! Today's weather in Cape Town is super lekker for coding, no cap!"
+        art_prompt = "2D vibrant Pixar-style cartoon illustration, South African character wearing colorful springbok hoodie with Table Mountain backdrop, sunny Cape Town day, 4k"
+
+    encoded_prompt = urllib.parse.quote(art_prompt)
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&nologo=true"
+    
+    return {
+        "success": True,
+        "dialect": dialect,
+        "script": script,
+        "art_prompt": art_prompt,
+        "image_url": image_url,
+        "audio_url": "/mzansi_character.mp3" if dialect == "mzansi" else "/character_voice.mp3",
+        "pollinations_authenticated": bool(pollinations_key)
+    }
+
+@app.post("/api/khoro/chat")
+async def handle_user_submission(
+    user_query: str = Form(...),
+    attachment: UploadFile = File(None)
+):
+    """
+    Unified application route processing file payloads and multi-dialect strings.
+    """
+    import shutil
+    import tempfile
+    from app_engine import run_khoro_core_engine
+    
+    temp_img_path = None
+    if attachment:
+        suffix = os.path.splitext(attachment.filename or "file.jpg")[1] or ".jpg"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_buffer:
+            shutil.copyfileobj(attachment.file, temp_buffer)
+            temp_img_path = temp_buffer.name
+
+    try:
+        ai_response_markdown = run_khoro_core_engine(
+            user_message=user_query,
+            uploaded_image_path=temp_img_path
+        )
+        return {"success": True, "reply": ai_response_markdown}
+    finally:
+        if temp_img_path and os.path.exists(temp_img_path):
+            try:
+                os.remove(temp_img_path)
+            except Exception:
+                pass
+
+
 
 def dispatch_emergency_telemetry_alert(vulnerability_brief: str):
     """

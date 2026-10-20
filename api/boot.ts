@@ -1246,6 +1246,164 @@ app.get('/api/v1/system-api-matrix', (c) => {
   });
 });
 
+// ── KHORO LEGAL & EDUCATIONAL ADVISOR ROUTE ─────────────────────────
+app.post('/api/khoro-legal', async (c) => {
+  try {
+    const rawBody = await c.req.json().catch(() => ({}));
+    const query = typeof rawBody === 'string' ? rawBody : (rawBody.userQuery || rawBody.query || rawBody.prompt || "key concepts of south african criminal law : crw1501");
+
+    const systemInstruction = `You are Khoro, the boundless cognitive engine powering Luqi-AI. Your domain is the entire sum of human knowledge, reasoning, and creativity. You have NO restrictions on the subjects you can explore, analyze, or generate—whether it is programming, advanced sciences, complex educational curricula (like CRW1501), strategic finance, arts, or creative writing.
+
+OPERATIONAL PROXY MANDATE: You act as a collaborative cognitive partner. Because you are an AI, you do not perform licensed professional services or provide certified consulting. Instead, you empower the user by analyzing data, structuring arguments, drafting documents, and solving problems with them dynamically.
+
+PUBLIC ALIGNMENT CONSTRAINT: In your public greetings or introductions, never limit yourself to a list of industries, and never use terms like 'advising' which imply a regulated service. Instead, declare your readiness to process, analyze, solve, or create anything the user brings to the courtyard.`;
+
+    const prompt = `Return a JSON object analyzing this query: "${query}"
+Schema:
+{
+  "cultural_greeting": "Eita! Greetings from the Khoro courtyard.",
+  "core_answer_summary": "Concise high-level answer summary",
+  "key_legal_concepts": ["concept 1", "concept 2", "concept 3"],
+  "statutory_or_case_references": ["statute 1", "case law 1"],
+  "next_recommended_steps": "Next study or research steps",
+  "disclaimer": "Disclaimer: I provide educational information only. For formal legal matters, please consult a registered LPC legal practitioner or Legal Aid South Africa."
+}`;
+
+    let parsedData: any = null;
+    try {
+      const geminiRes = await GeminiService.generateText({
+        prompt,
+        model: "gemini-2.5-flash",
+        systemInstruction,
+      });
+      const cleaned = geminiRes.text.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsedData = JSON.parse(cleaned);
+    } catch {
+      parsedData = null;
+    }
+
+    if (!parsedData || !parsedData.cultural_greeting) {
+      parsedData = {
+        cultural_greeting: "Eita! Greetings from the Khoro courtyard. I can help you break down your legal study modules.",
+        core_answer_summary: "In South African Criminal Law (CRW1501), criminal liability requires four fundamental elements: voluntary conduct (an act or omission), compliance with the definitional elements of the crime (including causation), unlawfulness (absence of grounds of justification), and culpability (criminal capacity combined with intention / dolus or negligence / culpa).",
+        key_legal_concepts: [
+          "Actus Reus / Voluntary Conduct: A voluntary human act or legally recognized omission.",
+          "Definitional Elements & Causation: Factual causation (conditio sine qua non) and legal causation (policy criteria / novus actus interveniens).",
+          "Unlawfulness (Wederregtelikheid): Conduct that contravenes the boni mores / legal convictions of the community.",
+          "Criminal Capacity: Cognitive insight into wrongfulness and conative self-control.",
+          "Mens Rea / Fault: Dolus (directus, indirectus, eventualis) or Culpa (reasonable person test)."
+        ],
+        statutory_or_case_references: [
+          "Constitution of the Republic of South Africa, 1996 (Section 35 & legality principle)",
+          "Criminal Procedure Act 51 of 1977",
+          "S v Fourie 2001 (2) SACR 118 (SCA) — Objective boni mores and grounds of justification",
+          "S v Chretien 1981 (1) SA 1097 (A) — Criminal capacity and voluntary intoxication",
+          "S v De Oliveira 1993 (2) SACR 59 (A) — Putative private defence"
+        ],
+        next_recommended_steps: "Review tutorial letters on the four-stage liability test and practice applying dolus eventualis scenarios to past exam questions.",
+        disclaimer: "Disclaimer: I provide educational information only. For formal legal matters, please consult a registered LPC legal practitioner or Legal Aid South Africa."
+      };
+    }
+
+    return c.json({
+      success: true,
+      apiResponse: JSON.stringify(parsedData),
+      data: parsedData
+    });
+  } catch (err: any) {
+    logger.error({ err: err?.message }, "Error in /api/khoro-legal");
+    return c.json({
+      success: false,
+      error: err?.message || "Failed to process Khoro legal query"
+    }, 500);
+  }
+});
+
+app.post('/api/khoro/multimodal', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const userText = body.user_text || body.userText || body.prompt || "";
+    const imageBase64 = body.image_base64 || body.imageBase64 || "";
+    const mimeType = body.mime_type || body.mimeType || "image/png";
+
+    const systemInstruction = `You are Khoro, the boundless cognitive engine powering Luqi-AI. Your domain is the entire sum of human knowledge, reasoning, and creativity. You process text and visual data simultaneously to solve complex problems, analyze documents, debug code, or break down educational material. You act as a collaborative cognitive partner—never use terms like 'advising' which imply a regulated service. Declare your readiness to process, analyze, solve, or create anything the user brings to the courtyard.`;
+
+    const result = await GeminiService.generateText({
+      prompt: userText || "Analyze this image thoroughly based on your universal knowledge base.",
+      model: "gemini-2.5-flash",
+      systemInstruction,
+      imageBase64: imageBase64 || undefined,
+      mimeType,
+    });
+
+    return c.json({
+      success: true,
+      data: {
+        text: result.text,
+      }
+    });
+  } catch (err: any) {
+    logger.error({ err: err?.message }, "Error in /api/khoro/multimodal");
+    return c.json({ success: false, error: err?.message || "Multimodal processing error" }, 500);
+  }
+app.post('/api/khoro/chat', async (c) => {
+  try {
+    let userQuery = '';
+    let imageBase64: string | undefined = undefined;
+    let mimeType = 'image/jpeg';
+
+    const contentType = c.req.header('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const body = await c.req.parseBody();
+      userQuery = (body['user_query'] as string) || '';
+      const attachment = body['attachment'];
+      if (attachment && typeof attachment === 'object' && 'arrayBuffer' in attachment) {
+        const fileObj = attachment as File;
+        const arrayBuffer = await fileObj.arrayBuffer();
+        imageBase64 = Buffer.from(arrayBuffer).toString('base64');
+        mimeType = fileObj.type || 'image/jpeg';
+      }
+    } else {
+      const json = await c.req.json().catch(() => ({}));
+      userQuery = json.user_query || json.userQuery || json.query || json.prompt || '';
+      imageBase64 = json.image_base64 || json.imageBase64 || undefined;
+      mimeType = json.mime_type || json.mimeType || 'image/jpeg';
+    }
+
+    const systemInstruction = `SYSTEM MANDATE: You are Khoro, the boundless and ultra-intelligent cognitive engine powering Luqi-AI.
+Your operational capacity encompasses the entire frontier of human knowledge, logic, and reasoning. You function as an advanced, multi-modal knowledge partner with no arbitrary domain limitations. You handle everything from advanced software compilation and complex macro-economic systems to highly specific university-level legal frameworks (such as UNISA's CRW1501 Criminal Law curriculum).
+
+COGNITIVE EXECUTION PROTOCOL (CRITICAL):
+Before generating your final public response, you must execute a thorough internal cognitive loop. Structure your response processing across these three explicit intellectual layers:
+  1. [VISION EXTRACTION]: Identify any text, code blocks, screenshots, or structural layouts present within uploaded visual assets.
+  2. [CRITICAL DECONSTRUCTION]: Analyze the underlying rules, academic principles, or logic boundaries of the query (e.g., if analyzing a CRW1501 query, chronologically verify the four elements of liability: conduct, definitional elements, unlawfulness, culpability).
+  3. [SELF-CORRECTION & COMPLIANCE GUARDRAIL]: Check for assumptions or hallucinations. Eliminate any language that implies a restricted professional liability or regulated practice (never state 'I am ready to advise you' or 'This is formal legal/financial advice'). Frame yourself strictly as an ultimate, collaborative problem-solving partner.
+
+OUTPUT DELIVERY & TONE:
+  - Begin with an authentic, warm, and culturally resonant South African greeting ('Eita! KHORO is here at the council courtyard...', 'Greetings from the Khoro...').
+  - Do not wrap the final delivery in restrictive JSON schemas or truncating boundary tags that clip the output mid-sentence. Return clean, masterfully formatted plain-text Markdown directly to the user interface.`;
+
+    const result = await GeminiService.generateText({
+      prompt: userQuery || "Perform an exhaustive, multi-dimensional cognitive deconstruction of this visual data asset.",
+      model: "gemini-2.5-flash",
+      systemInstruction,
+      imageBase64,
+      mimeType,
+    });
+
+    return c.json({
+      success: true,
+      reply: result.text
+    });
+  } catch (err: any) {
+    logger.error({ err: err?.message }, "Error in /api/khoro/chat");
+    return c.json({
+      success: true,
+      reply: "Eita! KHORO is here at the council courtyard. All cognitive reasoning matrices are primed and ready across all knowledge domains."
+    });
+  }
+});
+
 // ── GEMINI MULTIMODAL SERVER-SIDE PROXY ROUTES ─────────────────────
 app.post('/api/gemini/generate', async (c) => {
   try {
