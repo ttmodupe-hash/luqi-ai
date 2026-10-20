@@ -1,4 +1,4 @@
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
 
@@ -10,23 +10,13 @@ export const createRouter = t.router;
 export const publicQuery = t.procedure;
 
 // ── AUTHENTICATION MIDDLEWARE ──────────────────────────────────────
+// Never bypass authentication based on NODE_ENV. Identity is established
+// from a validated, unexpired database session in api/context.ts.
 export const protectedQuery = t.procedure.use(async ({ ctx, next }) => {
-  if (process.env.NODE_ENV !== "production") {
-    return next({ ctx });
+  if (!ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Please sign in to continue." });
   }
-  
-  const authHeader = ctx.req?.headers?.get?.("authorization");
-  const appSecret = process.env.APP_SECRET;
-  
-  if (!appSecret) {
-    throw new Error("Server misconfigured: APP_SECRET not set");
-  }
-  
-  if (!authHeader || authHeader !== `Bearer ${appSecret}`) {
-    throw new Error("Unauthorized: Invalid or missing authentication token");
-  }
-  
-  return next({ ctx });
+  return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
 // ── RATE LIMITING ──────────────────────────────────────────────────
