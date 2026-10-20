@@ -2,7 +2,7 @@ name: Node CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, "fix/**"]
   push:
     branches: [main, develop, "fix/**"]
 
