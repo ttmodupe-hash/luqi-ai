@@ -211,7 +211,7 @@ function CompanionExperience() {
         id: createMessageId("ast"),
         role: "assistant",
         content: response.content,
-        timestamp: response.timestamp || 1,
+        timestamp: Date.now(),
         personality: response.personality || selectedPersonality.name,
         model: response.model || "gemini-3.8-flash",
       };
