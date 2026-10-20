@@ -68,3 +68,10 @@ pandas==2.1.4
 PyJWT==2.8.0
 email-validator==2.2.0
 pypdf==4.0.1
+
+# AI Governance & Cloud Storage
+google-cloud-storage>=2.16.0
+langchain>=0.2.0
+langchain-openai>=0.1.0
+langchain-core>=0.2.0
+

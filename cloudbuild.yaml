@@ -26,6 +26,7 @@ steps:
       - '--allow-unauthenticated'
       # CRITICAL ROUTING FIXES: Forces Google infrastructure to scale traffic to the latest build instantly
       - '--update-traffic=latest=100'
+      - '--port=3000'
 
 options:
   logging: CLOUD_LOGGING_ONLY

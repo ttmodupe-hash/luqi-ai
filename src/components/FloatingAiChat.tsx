@@ -119,20 +119,39 @@ Cultural Meaning: In Setswana, Sepedi, Sesotho, and Tshivenda, 'Khoro' is the tr
       }
 
       if (!content) {
-        content = `Hello! 👋 I am Luqi-AI. I am here and ready to help you with anything—from schoolwork and CV writing to starting a business or everyday questions. How can I make your day easier?`;
+        const lower = text.toLowerCase();
+        if (lower.includes('car') && (lower.includes('pay') || lower.includes('month') || lower.includes('arrear') || lower.includes('repo') || lower.includes('sheriff') || lower.includes('debt'))) {
+          content = `### 🛡️ National Credit Act (NCA) Vehicle Repossession Shield
+
+**1. The Mandatory Section 129 Notice of Default**
+Under **Section 129 & Section 130 of the National Credit Act (NCA No. 34 of 2005)**, because you are 3 months in arrears, your credit provider **cannot take legal action or repossess your vehicle without first delivering a formal Section 129 Notice**.
+- The bank must give you at least **10 business days** to respond before they can issue summons or approach a court.
+- The notice grants you the right to refer the matter to a debt counsellor or the **National Financial Ombud Scheme (NFO)** to structure a payment arrangement.
+
+**2. Absolute Prohibition of "Self-Help" Repossession (Tow-Truck Traps)**
+- A debt recovery agent **CANNOT legally seize your vehicle from your driveway, road, or mall parking lot** without a **valid Court Order (Warrant of Execution)** served by an official **Sheriff of the Court**.
+- **WARNING — Do NOT Sign a Section 127 Form:** Rogue repo agents often pretend to conduct a "vehicle inspection" and trick you into signing a **Section 127 Voluntary Surrender Form**. Once signed, you give up the car and forfeit court protection!
+
+**3. Immediate Recommended Actions**
+1. **Contact the Bank's Hardship Desk:** Propose a restructured installment plan under Section 129.
+2. **Keep the Vehicle on Private Property:** A repo agent cannot enter private property without a court order.
+3. **Lodge an Inquiry with the NFO:** Visit www.nfosa.co.za to halt premature litigation.`;
+        } else {
+          content = `Hello! 👋 I am **Luqi Prime**, powered by **KHORO**. I am here and ready to help you with anything—from legal consumer protection and mathematical calculations to schoolwork and everyday questions. What shall we solve together?`;
+        }
       }
 
       setMessages((prev) => [
         ...prev,
         { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model },
       ]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           id: "ai-" + Date.now(),
           role: "assistant",
-          content: `Hello! 👋 I am Luqi-AI. I am ready to help you with anything you need today. How can I assist you?`,
+          content: `Hello! 👋 I am **Luqi Prime**, powered by **KHORO**. I am ready to help you with anything you need today. How can I assist you?`,
           timestamp: Date.now(),
           model: "Luqi-AI",
         },

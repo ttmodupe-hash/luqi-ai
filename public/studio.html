@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuqiToons - Peak Intelligence Studio</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #070a13; color: #f1f5f9; padding: 30px; }
+        .studio-grid { max-width: 1600px; margin: auto; display: grid; grid-template-columns: 420px 1fr; gap: 30px; height: 85vh; }
+        .card-workspace { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; overflow: hidden; }
+        .scroll-box { flex: 1; overflow-y: auto; margin-top: 16px; padding-right: 4px; }
+        textarea { width: 100%; background: #020617; border: 1px solid #334155; border-radius: 6px; color: #38bdf8; padding: 14px; font-size: 0.9rem; outline: none; resize: none; }
+        .btn-action { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: background 0.2s; width: 100%; }
+        .btn-action:hover { background: #1d4ed8; }
+        .blueprint-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .badge-track { display: inline-block; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; margin-bottom: 8px; }
+        .badge-blue { background: #1e3a8a; color: #60a5fa; }
+        .badge-green { background: #064e3b; color: #34d399; }
+        .nav-links a { color: #38bdf8; text-decoration: none; margin-right: 16px; font-size: 0.85rem; font-weight: 600; }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div style="max-width:1600px; margin:0 auto 24px auto; border-bottom: 1px dashed #1e293b; padding-bottom:12px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: #fff;">LuqiToons Peak Optimization Studio</h1>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Tier-5 Super-Intelligence Infrastructure & Media Synthesis Platform</p>
+        </div>
+        <div class="nav-links">
+            <a href="/transparency.html">📋 Public Transparency</a>
+            <a href="/governance.html">🛡️ Governance Desk</a>
+            <a href="/">🏠 Main Application</a>
+        </div>
+    </div>
+
+    <div class="studio-grid">
+        <!-- LEFT PANEL: INGESTION CONTROL ENGINE -->
+        <div class="card-workspace">
+            <h2>Asset Synthesizer Request</h2>
+            <p style="color:#64748b; font-size:0.8rem; margin-bottom:12px;">Enter the exact cloud architecture layout topic or practice scenario blueprint you wish to deploy.</p>
+            
+            <textarea id="studio-topic-input" rows="8" placeholder="e.g., Create a high-value lab deployment tutorial explaining how to configure AWS Route 53 latency routing matrices..."></textarea>
+            
+            <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="badge-track badge-blue" style="cursor:pointer; border:none;" onclick="document.getElementById('studio-topic-input').value = 'AWS Route 53 Multi-Region Latency & DNS Failover Matrix'">Preset: Route 53 Failover</button>
+                <button type="button" class="badge-track badge-green" style="cursor:pointer; border:none;" onclick="document.getElementById('studio-topic-input').value = 'S3 Object Storage Zero-Trust KMS Encryption & C2PA Provenance'">Preset: S3 Zero-Trust</button>
+            </div>
+
+            <button id="compile-studio-asset-btn" class="btn-action" style="margin-top:14px;">Trigger Asset Synthesis Swarm</button>
+        </div>
+
+        <!-- RIGHT PANEL: FULL INTEGRATED BLUEPRINT OUTPUT INTERFACE -->
+        <div class="card-workspace">
+            <h2>Assembled Enterprise Blueprint Output</h2>
+            <p style="color:#64748b; font-size:0.8rem; margin-bottom:16px;">Real-time review of code layers, audio timelines, and responsive control widgets compiled by the sub-agents.</p>
+            
+            <div class="scroll-box" id="blueprint-render-target">
+                <div style="text-align:center; color:#475569; padding:6px; font-style:italic;">Awaiting orchestration input parameters...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("compile-studio-asset-btn").addEventListener("click", async () => {
+            const topicText = document.getElementById("studio-topic-input").value.trim();
+            const viewport = document.getElementById("blueprint-render-target");
+
+            if(!topicText) return;
+            viewport.innerHTML = '<div style="color:#eab308; text-align:center; padding:40px;">Orchestrating background sub-agents... Compiling syntax code and media tracks...</div>';
+
+            try {
+                const res = await fetch("/api/v1/studio/synthesize-asset", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        topic_instructions: topicText,
+                        user_id: "admin_master_node"
+                    })
+                });
+
+                const asset = await res.json();
+                viewport.innerHTML = `
+                    <div style="margin-bottom:20px; border-bottom:1px solid #1e293b; padding-bottom:14px;">
+                        <h2 style="color:#fff; font-size:1.4rem; margin-bottom:6px;">${asset.syllabus_title}</h2>
+                        <span class="badge-track badge-blue">${asset.domain_classification}</span>
+                        <p style="color:#cbd5e1; font-size:0.9rem; margin-top:10px;">${asset.technical_brief_context}</p>
+                    </div>
+
+                    <!-- MULTI-TRACK AUDIO TIMELINE -->
+                    <div class="blueprint-card">
+                        <h4 style="color:#38bdf8; margin-bottom:10px;">🎙️ Context-Locked Audio Timeline Track</h4>
+                        ${asset.audio_production_timeline.map(track => `
+                            <div style="background:#020617; padding:10px; border-radius:4px; margin-bottom:8px; font-size:0.8rem;">
+                                <strong>[${track.target_tone_profile}]:</strong> "${track.spoken_dialogue}" 
+                                <span style="color:#64748b; font-size:0.75rem; float:right;">Music Ducking: ${track.music_ducking_level}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- SIMULATOR WIDGET CONFIGURATION BLOCK -->
+                    <div class="blueprint-card">
+                        <h4 style="color:#34d399; margin-bottom:10px;">🕹️ Interactive Component Widget Sliders</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            ${asset.sandbox_interface_blueprints.map(widget => `
+                                <div style="background:#020617; padding:12px; border-radius:6px; font-size:0.8rem;">
+                                    <strong>Control Title:</strong> ${widget.widget_title}<br>
+                                    <span style="color:#94a3b8;">Variable: ${widget.control_variable_name} (Range: ${widget.minimum_value} - ${widget.maximum_value})</span><br>
+                                    <span style="color:#eab308;">Target Target Value: ${widget.passing_threshold_value}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- AWS CLI SANDBOX TERMINAL RULES -->
+                    <div class="blueprint-card">
+                        <h4 style="color:#f43f5e; margin-bottom:6px;">💻 Terminal Command Validation String</h4>
+                        <code style="background:#020617; display:block; padding:12px; border-radius:4px; font-size:0.85rem; color:#fda4af;">${asset.target_aws_cli_validation_command}</code>
+                    </div>
+
+                    <!-- C2PA WATERMARK HEADER DATA -->
+                    <div class="blueprint-card" style="border-color:#475569;">
+                        <h4 style="color:#94a3b8; margin-bottom:6px;">🔒 Provenance Signature Cryptography</h4>
+                        <pre style="background:#020617; font-size:0.75rem; padding:10px; border-radius:4px; color:#94a3b8;">${JSON.stringify(asset.c2pa_provenance_header_manifest, null, 2)}</pre>
+                    </div>
+                `;
+            } catch(err) {
+                viewport.innerHTML = '<div style="color:#ef4444; text-align:center; padding:40px;">Error compiling framework arrays from endpoint. Check server connection logs.</div>';
+            }
+        });
+    </script>
+</body>
+</html>

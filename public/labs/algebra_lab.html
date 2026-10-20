@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Polynomial & Calculus Studio | Executive STEM Mathematics</title>
+  <style>
+    :root {
+      --bg-obsidian: #080d1a;
+      --bg-surface: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-gold: rgba(245, 158, 11, 0.35);
+      --border-subtle: rgba(56, 189, 248, 0.15);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --gold-accent: #f59e0b;
+      --sapphire: #38bdf8;
+      --emerald: #10b981;
+      --purple: #c084fc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #080d1a 65%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border-gold);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #d97706, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #080d1a;
+    }
+
+    .title-area h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tier-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--border-gold);
+      color: #fde68a;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .title-area p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      border-color: var(--gold-accent);
+      background: rgba(51, 65, 85, 0.9);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: #f59e0b;
+      color: #fff;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .visual-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--sapphire);
+    }
+
+    .canvas-box {
+      position: relative;
+      width: 100%;
+      height: 620px;
+      background: radial-gradient(circle at 50% 50%, #0d1a33 0%, #060913 100%);
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sidebar-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .param-group {
+      margin-bottom: 14px;
+    }
+
+    .param-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .param-val {
+      color: var(--gold-accent);
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    input[type=range] {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--gold-accent);
+      border: 2px solid #ffffff;
+    }
+
+    .btn-segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .segment-btn {
+      padding: 6px;
+      font-size: 0.72rem;
+      text-align: center;
+      background: #0b1329;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    .segment-btn.active {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold-accent);
+      color: var(--gold-accent);
+      font-weight: 700;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-card {
+      background: rgba(11, 19, 41, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-card .caption {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-card .digit {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--sapphire);
+      font-family: monospace;
+    }
+
+    .gold-box {
+      border: 1px solid var(--border-gold);
+      background: rgba(245, 158, 11, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-group">
+      <div class="brand-emblem">&fnof;</div>
+      <div class="title-area">
+        <h1>Dynamic Polynomial & Calculus Studio <span class="tier-badge">Executive Mathematics</span></h1>
+        <p>Higher-Order Polynomials &bull; Tangent Slope Analysis &bull; Definite Riemann Integrals</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btnReset">&#8634; Reset Coordinates</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="visual-column">
+      <div class="glass-card">
+        <div class="card-header">
+          <span>CARTESIAN VECTOR CANVAS WITH REAL-TIME TANGENT SLIDER</span>
+          <span id="dispEq" style="color: var(--gold-accent); font-family: monospace;">f(x) = x³ - 3x</span>
+        </div>
+        <div class="canvas-box" id="gridBox">
+          <canvas id="mathCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR CONTROLS -->
+    <div class="sidebar-panel">
+      
+      <div class="glass-card" style="padding: 16px;">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; color: #fff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+          Function Family
+        </h2>
+
+        <div class="btn-segmented">
+          <button class="segment-btn active" id="btnCubic" onclick="setMode('cubic')">Cubic</button>
+          <button class="segment-btn" id="btnQuad" onclick="setMode('quadratic')">Quadratic</button>
+          <button class="segment-btn" id="btnSine" onclick="setMode('sine')">Sinusoidal</button>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <div class="param-group">
+            <div class="param-header">
+              <span>Leading Coeff (a)</span>
+              <span class="param-val" id="dispA">1.00</span>
+            </div>
+            <input type="range" id="sliderA" min="-3" max="3" step="0.1" value="1">
+          </div>
+
+          <div class="param-group">
+            <div class="param-header">
+              <span>Secondary Coeff (b)</span>
+              <span class="param-val" id="dispB">0.00</span>
+            </div>
+            <input type="range" id="sliderB" min="-4" max="4" step="0.2" value="0">
+          </div>
+
+          <div class="param-group">
+            <div class="param-header">
+              <span>Tertiary Coeff (c)</span>
+              <span class="param-val" id="dispC">-3.00</span>
+            </div>
+            <input type="range" id="sliderC" min="-6" max="6" step="0.5" value="-3">
+          </div>
+
+          <div class="param-group">
+            <div class="param-header">
+              <span>Tangent Pivot Point (x₀)</span>
+              <span class="param-val" id="dispX0">1.00</span>
+            </div>
+            <input type="range" id="sliderX0" min="-4" max="4" step="0.05" value="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- CALCULUS TELEMETRY -->
+      <div class="glass-card" style="padding: 16px;">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; color: #fff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+          Calculus & Analytic Telemetry
+        </h2>
+        <div class="telemetry-grid">
+          <div class="metric-card">
+            <span class="caption">Slope f'(x₀)</span>
+            <span class="digit" id="dispSlope" style="color: var(--emerald);">0.00</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Coordinates (x₀, y₀)</span>
+            <span class="digit" id="dispCoords" style="font-size: 0.95rem;">(1.0, -2.0)</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Integral Area [-2, 2]</span>
+            <span class="digit" id="dispArea">0.00</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Roots / Zeros</span>
+            <span class="digit" id="dispRoots" style="font-size: 0.9rem; color: var(--gold-accent);">x = -1.73, 0, 1.73</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="gold-box">
+        <h3 style="color: var(--gold-accent); margin-bottom: 4px;">Derivative & Curvature Proof</h3>
+        <p>The gold line represents the instantaneous tangent line: $y - y_0 = f'(x_0)(x - x_0)$. When the slope equals zero, $f'(x_0) = 0$, you have discovered a local maximum or minimum turning point!</p>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const math = {
+      mode: 'cubic', // 'cubic', 'quadratic', 'sine'
+      a: 1.0,
+      b: 0.0,
+      c: -3.0,
+      d: 0.0,
+      x0: 1.0,
+      zoom: 45 // pixels per unit
+    };
+
+    const canvas = document.getElementById('mathCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const sliderA = document.getElementById('sliderA');
+    const sliderB = document.getElementById('sliderB');
+    const sliderC = document.getElementById('sliderC');
+    const sliderX0 = document.getElementById('sliderX0');
+
+    const dispA = document.getElementById('dispA');
+    const dispB = document.getElementById('dispB');
+    const dispC = document.getElementById('dispC');
+    const dispX0 = document.getElementById('dispX0');
+    const dispEq = document.getElementById('dispEq');
+    const dispSlope = document.getElementById('dispSlope');
+    const dispCoords = document.getElementById('dispCoords');
+    const dispArea = document.getElementById('dispArea');
+    const dispRoots = document.getElementById('dispRoots');
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+    window.addEventListener('resize', resize);
+
+    function f(x) {
+      if (math.mode === 'cubic') return math.a * Math.pow(x, 3) + math.b * Math.pow(x, 2) + math.c * x + math.d;
+      if (math.mode === 'quadratic') return math.a * Math.pow(x, 2) + math.b * x + math.c;
+      if (math.mode === 'sine') return math.a * Math.sin(math.b * x + math.c);
+      return 0;
+    }
+
+    function fPrime(x) {
+      const h = 0.0001;
+      return (f(x + h) - f(x - h)) / (2 * h);
+    }
+
+    window.setMode = function(m) {
+      math.mode = m;
+      document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+      if (m === 'cubic') {
+        document.getElementById('btnCubic').classList.add('active');
+        math.a = 1.0; math.b = 0.0; math.c = -3.0;
+      } else if (m === 'quadratic') {
+        document.getElementById('btnQuad').classList.add('active');
+        math.a = 1.0; math.b = -2.0; math.c = -1.0;
+      } else if (m === 'sine') {
+        document.getElementById('btnSine').classList.add('active');
+        math.a = 2.0; math.b = 1.0; math.c = 0.0;
+      }
+      sliderA.value = math.a;
+      sliderB.value = math.b;
+      sliderC.value = math.c;
+      update();
+    };
+
+    function update() {
+      math.a = parseFloat(sliderA.value);
+      math.b = parseFloat(sliderB.value);
+      math.c = parseFloat(sliderC.value);
+      math.x0 = parseFloat(sliderX0.value);
+
+      dispA.textContent = math.a.toFixed(2);
+      dispB.textContent = math.b.toFixed(2);
+      dispC.textContent = math.c.toFixed(2);
+      dispX0.textContent = math.x0.toFixed(2);
+
+      const y0 = f(math.x0);
+      const slope = fPrime(math.x0);
+      dispSlope.textContent = slope.toFixed(2);
+      dispCoords.textContent = `(${math.x0.toFixed(1)}, ${y0.toFixed(1)})`;
+
+      if (math.mode === 'cubic') {
+        dispEq.textContent = `f(x) = ${math.a}x³ + ${math.b}x² + ${math.c}x`;
+      } else if (math.mode === 'quadratic') {
+        dispEq.textContent = `f(x) = ${math.a}x² + ${math.b}x + ${math.c}`;
+      } else {
+        dispEq.textContent = `f(x) = ${math.a}sin(${math.b}x + ${math.c})`;
+      }
+
+      // Riemann Sum area [-2, 2]
+      let area = 0;
+      const steps = 100;
+      const dx = 4 / steps;
+      for (let i = 0; i < steps; i++) {
+        const x = -2 + i * dx + dx / 2;
+        area += f(x) * dx;
+      }
+      dispArea.textContent = area.toFixed(2);
+
+      draw();
+    }
+
+    sliderA.addEventListener('input', update);
+    sliderB.addEventListener('input', update);
+    sliderC.addEventListener('input', update);
+    sliderX0.addEventListener('input', update);
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      setMode('cubic');
+    });
+
+    function draw() {
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      const originX = w / 2;
+      const originY = h / 2;
+      const zoom = math.zoom;
+
+      // Coordinate Grid
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1;
+
+      for (let x = originX % zoom; x < w; x += zoom) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = originY % zoom; y < h; y += zoom) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Main Axes
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(w, originY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(originX, 0); ctx.lineTo(originX, h); ctx.stroke();
+
+      // Riemann Area shading [-2, 2]
+      ctx.fillStyle = "rgba(56, 189, 248, 0.15)";
+      ctx.beginPath();
+      const xStart = originX - 2 * zoom;
+      const xEnd = originX + 2 * zoom;
+      ctx.moveTo(xStart, originY);
+      for (let px = xStart; px <= xEnd; px += 2) {
+        const mathX = (px - originX) / zoom;
+        const py = originY - f(mathX) * zoom;
+        ctx.lineTo(px, py);
+      }
+      ctx.lineTo(xEnd, originY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Plot Main Curve
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      for (let px = 0; px <= w; px += 2) {
+        const mathX = (px - originX) / zoom;
+        const mathY = f(mathX);
+        const py = originY - mathY * zoom;
+        if (px === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Tangent Line at x0
+      const y0 = f(math.x0);
+      const slope = fPrime(math.x0);
+      const pX0 = originX + math.x0 * zoom;
+      const pY0 = originY - y0 * zoom;
+
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const tanRange = 3;
+      const xLeft = math.x0 - tanRange;
+      const yLeft = y0 - slope * tanRange;
+      const xRight = math.x0 + tanRange;
+      const yRight = y0 + slope * tanRange;
+
+      ctx.moveTo(originX + xLeft * zoom, originY - yLeft * zoom);
+      ctx.lineTo(originX + xRight * zoom, originY - yRight * zoom);
+      ctx.stroke();
+
+      // Tangent Touchpoint Dot
+      ctx.beginPath();
+      ctx.arc(pX0, pY0, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "#f59e0b";
+      ctx.shadowColor = "rgba(245, 158, 11, 0.8)";
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    resize();
+    update();
+  </script>
+</body>
+</html>

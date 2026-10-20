@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Pendulum & Mechanical Energy Lab | Executive STEM Physics</title>
+  <style>
+    :root {
+      --bg-obsidian: #080d1a;
+      --bg-surface: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-gold: rgba(245, 158, 11, 0.35);
+      --border-subtle: rgba(56, 189, 248, 0.15);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --gold-accent: #f59e0b;
+      --ke-color: #10b981;
+      --pe-color: #38bdf8;
+      --total-color: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #080d1a 65%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border-gold);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #d97706, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #080d1a;
+    }
+
+    .title-area h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tier-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--border-gold);
+      color: #fde68a;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .title-area p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      border-color: var(--gold-accent);
+      background: rgba(51, 65, 85, 0.9);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: #f59e0b;
+      color: #fff;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .visual-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--pe-color);
+    }
+
+    .canvas-box {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      background: radial-gradient(circle at 50% 50%, #0d1a33 0%, #060913 100%);
+      cursor: crosshair;
+    }
+
+    .graph-box {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      background: #060913;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sidebar-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .param-group {
+      margin-bottom: 14px;
+    }
+
+    .param-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .param-val {
+      color: var(--gold-accent);
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    input[type=range] {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--gold-accent);
+      border: 2px solid #ffffff;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-card {
+      background: rgba(11, 19, 41, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-card .caption {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-card .digit {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--pe-color);
+      font-family: monospace;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: #0f172a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      transition: width 0.05s linear;
+    }
+
+    .fill-ke { background: var(--ke-color); }
+    .fill-pe { background: var(--pe-color); }
+    .fill-tot { background: var(--total-color); }
+
+    .gold-box {
+      border: 1px solid var(--border-gold);
+      background: rgba(245, 158, 11, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-group">
+      <div class="brand-emblem">&Phi;</div>
+      <div class="title-area">
+        <h1>Simple Pendulum Laboratory <span class="tier-badge">Executive Physics</span></h1>
+        <p>Conservation of Mechanical Energy &bull; Runge-Kutta 4th Order &bull; Vector Overlays</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btnPlayPause" class="primary">
+        <span id="playIcon">&#9658;</span> <span id="playLabel">Simulate</span>
+      </button>
+      <button id="btnReset">&#8634; Reset Oscillation</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="visual-column">
+      <div class="glass-card">
+        <div class="card-header">
+          <span>PENDULUM VECTOR FIELD & OSCILLATION PHASE</span>
+          <span id="dispSimTime">t = 0.00 s</span>
+        </div>
+        <div class="canvas-box" id="pBox">
+          <canvas id="pendulumCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-header">
+          <span>REAL-TIME KINETIC (E<sub>k</sub>) vs POTENTIAL (E<sub>p</sub>) ENERGY GRAPH</span>
+          <span style="color: var(--total-color);">E<sub>mech</sub> = E<sub>k</sub> + E<sub>p</sub> (Constant)</span>
+        </div>
+        <div class="graph-box">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR CONTROLS -->
+    <div class="sidebar-panel">
+      
+      <div class="glass-card" style="padding: 16px;">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; color: #fff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+          Physical Variables
+        </h2>
+
+        <!-- LENGTH -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>String Length (L)</span>
+            <span class="param-val" id="dispL">1.50 m</span>
+          </div>
+          <input type="range" id="sliderL" min="0.5" max="3.0" step="0.05" value="1.5">
+        </div>
+
+        <!-- MASS -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Bob Mass (m)</span>
+            <span class="param-val" id="dispM">1.00 kg</span>
+          </div>
+          <input type="range" id="sliderM" min="0.2" max="5.0" step="0.1" value="1.0">
+        </div>
+
+        <!-- GRAVITY -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Gravitational Accel. (g)</span>
+            <span class="param-val" id="dispG">9.80 m/s²</span>
+          </div>
+          <input type="range" id="sliderG" min="1.0" max="25.0" step="0.1" value="9.8">
+        </div>
+      </div>
+
+      <!-- ENERGY TELEMETRY -->
+      <div class="glass-card" style="padding: 16px;">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; color: #fff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+          Energy & Phase Spectrum
+        </h2>
+        
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+            <span style="color: var(--ke-color);">Kinetic (E_k)</span>
+            <span id="dispKE" style="font-family: monospace;">0.00 J</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill fill-ke" id="barKE"></div></div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+            <span style="color: var(--pe-color);">Potential (E_p)</span>
+            <span id="dispPE" style="font-family: monospace;">0.00 J</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill fill-pe" id="barPE"></div></div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+            <span style="color: var(--total-color);">Total Mechanical (E_mech)</span>
+            <span id="dispTotal" style="font-family: monospace;">0.00 J</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill fill-tot" id="barTotal"></div></div>
+        </div>
+
+        <div class="telemetry-grid">
+          <div class="metric-card">
+            <span class="caption">Angle (&theta;)</span>
+            <span class="digit" id="dispAngle">35.0&deg;</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Period (T)</span>
+            <span class="digit" id="dispT">2.46 s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="gold-box">
+        <h3 style="color: var(--gold-accent); margin-bottom: 4px;">Energy Conservation Invariant</h3>
+        <p>$$E_{\text{total}} = \frac{1}{2}mv^2 + mgL(1 - \cos\theta)$$ Notice how the gold dashed line on the energy graph stays perfectly flat, illustrating zero energy loss during oscillation.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const sim = {
+      length: 1.5,
+      mass: 1.0,
+      gravity: 9.8,
+      theta: 35 * Math.PI / 180,
+      omega: 0.0,
+      isRunning: false,
+      isDragging: false,
+      time: 0.0,
+      history: []
+    };
+
+    const pCanvas = document.getElementById('pendulumCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    const gCanvas = document.getElementById('graphCanvas');
+    const gCtx = gCanvas.getContext('2d');
+
+    const dispL = document.getElementById('dispL');
+    const dispM = document.getElementById('dispM');
+    const dispG = document.getElementById('dispG');
+    const dispKE = document.getElementById('dispKE');
+    const dispPE = document.getElementById('dispPE');
+    const dispTotal = document.getElementById('dispTotal');
+    const barKE = document.getElementById('barKE');
+    const barPE = document.getElementById('barPE');
+    const barTotal = document.getElementById('barTotal');
+    const dispAngle = document.getElementById('dispAngle');
+    const dispT = document.getElementById('dispT');
+    const dispSimTime = document.getElementById('dispSimTime');
+    const btnPlay = document.getElementById('btnPlayPause');
+    const playIcon = document.getElementById('playIcon');
+    const playLabel = document.getElementById('playLabel');
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const pRect = pCanvas.parentElement.getBoundingClientRect();
+      pCanvas.width = pRect.width * dpr;
+      pCanvas.height = pRect.height * dpr;
+      pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const gRect = gCanvas.parentElement.getBoundingClientRect();
+      gCanvas.width = gRect.width * dpr;
+      gCanvas.height = gRect.height * dpr;
+      gCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+
+    function rk4(dt) {
+      function accel(th, om) {
+        return -(sim.gravity / sim.length) * Math.sin(th);
+      }
+      const k1_th = sim.omega;
+      const k1_om = accel(sim.theta, sim.omega);
+      const k2_th = sim.omega + 0.5 * dt * k1_om;
+      const k2_om = accel(sim.theta + 0.5 * dt * k1_th, sim.omega + 0.5 * dt * k1_om);
+      const k3_th = sim.omega + 0.5 * dt * k2_om;
+      const k3_om = accel(sim.theta + 0.5 * dt * k2_th, sim.omega + 0.5 * dt * k2_om);
+      const k4_th = sim.omega + dt * k3_om;
+      const k4_om = accel(sim.theta + dt * k3_th, sim.omega + dt * k3_om);
+
+      sim.theta += (dt / 6) * (k1_th + 2 * k2_th + 2 * k3_th + k4_th);
+      sim.omega += (dt / 6) * (k1_om + 2 * k2_om + 2 * k3_om + k4_om);
+    }
+
+    function computeEnergies() {
+      const h = sim.length * (1 - Math.cos(sim.theta));
+      const v = sim.length * sim.omega;
+      const PE = sim.mass * sim.gravity * h;
+      const KE = 0.5 * sim.mass * v * v;
+      return { PE, KE, Total: PE + KE, v: Math.abs(v), h };
+    }
+
+    btnPlay.addEventListener('click', () => {
+      sim.isRunning = !sim.isRunning;
+      playIcon.innerHTML = sim.isRunning ? "&#10074;&#10074;" : "&#9658;";
+      playLabel.textContent = sim.isRunning ? "Pause" : "Simulate";
+      btnPlay.style.background = sim.isRunning ? "#e11d48" : "linear-gradient(135deg, #d97706, #b45309)";
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      sim.theta = 35 * Math.PI / 180;
+      sim.omega = 0.0;
+      sim.time = 0.0;
+      sim.history = [];
+    });
+
+    document.getElementById('sliderL').addEventListener('input', (e) => {
+      sim.length = parseFloat(e.target.value);
+      dispL.textContent = `${sim.length.toFixed(2)} m`;
+    });
+    document.getElementById('sliderM').addEventListener('input', (e) => {
+      sim.mass = parseFloat(e.target.value);
+      dispM.textContent = `${sim.mass.toFixed(2)} kg`;
+    });
+    document.getElementById('sliderG').addEventListener('input', (e) => {
+      sim.gravity = parseFloat(e.target.value);
+      dispG.textContent = `${sim.gravity.toFixed(2)} m/s²`;
+    });
+
+    // Drag bob
+    pCanvas.addEventListener('mousedown', (e) => {
+      sim.isDragging = true;
+      sim.isRunning = false;
+      playIcon.innerHTML = "&#9658;";
+      playLabel.textContent = "Simulate";
+      btnPlay.style.background = "linear-gradient(135deg, #d97706, #b45309)";
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!sim.isDragging) return;
+      const rect = pCanvas.parentElement.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - 50;
+      sim.theta = Math.max(-1.4, Math.min(1.4, Math.atan2(x, y)));
+      sim.omega = 0;
+    });
+    window.addEventListener('mouseup', () => sim.isDragging = false);
+
+    function draw() {
+      const w = pCanvas.parentElement.clientWidth;
+      const h = pCanvas.parentElement.clientHeight;
+      pCtx.clearRect(0, 0, w, h);
+
+      const pivotX = w / 2;
+      const pivotY = 50;
+      const scale = (h - 100) / 3.0;
+      const bobX = pivotX + Math.sin(sim.theta) * (sim.length * scale);
+      const bobY = pivotY + Math.cos(sim.theta) * (sim.length * scale);
+      const bobR = 14 + sim.mass * 3;
+
+      // Arc guide
+      pCtx.strokeStyle = "rgba(255,255,255,0.08)";
+      pCtx.beginPath();
+      pCtx.arc(pivotX, pivotY, sim.length * scale, 0, Math.PI);
+      pCtx.stroke();
+
+      // String
+      pCtx.strokeStyle = "#cbd5e1";
+      pCtx.lineWidth = 2.5;
+      pCtx.beginPath();
+      pCtx.moveTo(pivotX, pivotY);
+      pCtx.lineTo(bobX, bobY);
+      pCtx.stroke();
+
+      // Bob
+      pCtx.beginPath();
+      pCtx.arc(bobX, bobY, bobR, 0, Math.PI * 2);
+      pCtx.fillStyle = "#38bdf8";
+      pCtx.shadowColor = "rgba(56, 189, 248, 0.6)";
+      pCtx.shadowBlur = 12;
+      pCtx.fill();
+      pCtx.shadowBlur = 0;
+      pCtx.strokeStyle = "#fff";
+      pCtx.lineWidth = 2;
+      pCtx.stroke();
+
+      // Pivot
+      pCtx.beginPath();
+      pCtx.arc(pivotX, pivotY, 5, 0, Math.PI * 2);
+      pCtx.fillStyle = "#f59e0b";
+      pCtx.fill();
+
+      // Energy Graph
+      const gw = gCanvas.parentElement.clientWidth;
+      const gh = gCanvas.parentElement.clientHeight;
+      gCtx.clearRect(0, 0, gw, gh);
+
+      const padL = 40, padR = 20, padT = 15, padB = 25;
+      const plotW = gw - padL - padR;
+      const plotH = gh - padT - padB;
+
+      let maxE = 10;
+      for (const pt of sim.history) if (pt.Total > maxE) maxE = pt.Total;
+      maxE *= 1.1;
+
+      // Grid
+      gCtx.strokeStyle = "rgba(255,255,255,0.08)";
+      gCtx.beginPath();
+      gCtx.moveTo(padL, padT + plotH); gCtx.lineTo(padL + plotW, padT + plotH);
+      gCtx.stroke();
+
+      if (sim.history.length > 1) {
+        function plot(key, color, dashed = false) {
+          gCtx.strokeStyle = color;
+          gCtx.lineWidth = 2;
+          if (dashed) gCtx.setLineDash([4, 4]); else gCtx.setLineDash([]);
+          gCtx.beginPath();
+          for (let i = 0; i < sim.history.length; i++) {
+            const x = padL + (i / 300) * plotW;
+            const y = padT + plotH - (sim.history[i][key] / maxE) * plotH;
+            if (i === 0) gCtx.moveTo(x, y); else gCtx.lineTo(x, y);
+          }
+          gCtx.stroke();
+          gCtx.setLineDash([]);
+        }
+        plot('PE', '#38bdf8');
+        plot('KE', '#10b981');
+        plot('Total', '#f59e0b', true);
+      }
+    }
+
+    let lastTick = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastTick) / 1000);
+      lastTick = now;
+
+      if (sim.isRunning && !sim.isDragging) {
+        for (let s = 0; s < 4; s++) rk4(dt / 4);
+        sim.time += dt;
+
+        const en = computeEnergies();
+        sim.history.push(en);
+        if (sim.history.length > 300) sim.history.shift();
+      }
+
+      const en = computeEnergies();
+      dispAngle.textContent = `${(sim.theta * 180 / Math.PI).toFixed(1)}°`;
+      dispT.textContent = `${(2 * Math.PI * Math.sqrt(sim.length / sim.gravity)).toFixed(2)} s`;
+      dispSimTime.textContent = `t = ${sim.time.toFixed(2)} s`;
+
+      dispKE.textContent = `${en.KE.toFixed(2)} J`;
+      dispPE.textContent = `${en.PE.toFixed(2)} J`;
+      dispTotal.textContent = `${en.Total.toFixed(2)} J`;
+
+      const maxE = Math.max(en.Total, 1);
+      barKE.style.width = `${Math.min(100, (en.KE / maxE) * 100)}%`;
+      barPE.style.width = `${Math.min(100, (en.PE / maxE) * 100)}%`;
+      barTotal.style.width = `${Math.min(100, (en.Total / maxE) * 100)}%`;
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    resize();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

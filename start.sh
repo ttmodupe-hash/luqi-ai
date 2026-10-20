@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-PORT="${PORT:-8000}"
+PORT="${PORT:-3000}"
 export PORT
 export HOST="0.0.0.0"
 

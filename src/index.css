@@ -105,4 +105,46 @@ body {
   }
 }
 
+/* ==========================================================================
+   LUQI-AI SUPER-INTELLIGENCE MASTER THEME CONFIGURATION
+   ========================================================================== */
+:root {
+    /* Pure Dark Premium Space Accents */
+    --bg-main: #070a13;
+    --bg-panel: #0f172a;
+    --border-glow: #1e293b;
+    
+    /* Neon Cybernetic Functional Colors */
+    --accent-blue: #2563eb;
+    --accent-blue-hover: #1d4ed8;
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    
+    /* High-Fidelity Infrastructure Feedback Indicators */
+    --status-success: #34d399;
+    --status-warning: #fde047;
+    --status-error: #f87171;
+}
+
+/* Apply Unified Color Rules to Workspace Panels */
+.card-workspace, .panel {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Standardize Navigation and System Action Buttons */
+.btn-action, .btn {
+    background-color: var(--accent-blue);
+    color: var(--text-primary);
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-action:hover, .btn:hover {
+    background-color: var(--accent-blue-hover);
+    transform: translateY(-1px);
+}
+
+
 

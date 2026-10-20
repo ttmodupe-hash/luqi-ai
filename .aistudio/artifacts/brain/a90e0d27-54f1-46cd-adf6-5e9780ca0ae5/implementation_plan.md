@@ -1,119 +1,117 @@
-# Luqi AI Sovereign Multimodal & Bioscience 3D Innovation Architecture
+# Executive STEM Digital Simulation Suite: Implementation Plan
 
-A comprehensive expansion of the Luqi AI sovereign platform integrating DeepMind Science bioinformatics, procedural Three.js 3D spatial environments, and the Google Gemini multimodal model family into a unified experiential intelligence suite.
+## Executive Summary
+This implementation plan outlines the creation of an executive-tier, zero-external-dependency digital simulation suite spanning **Biology**, **Chemistry**, **Algebra**, and **Geometry**. Designed for high-net-worth educational standards (reminiscent of private academies and bespoke tutoring institutes), the suite marries rigorous scientific accuracy with an ultra-premium visual language: **Obsidian deep slate, luminous sapphire accents, and brushed 24k gold highlights with frosted glassmorphism**.
 
----
-
-### User Review & Critical Decisions
-
-> [!IMPORTANT]
-> **User-Confirmed Architectural Mandate**: Based on the Phase 1 consultation, all capabilities will be delivered in an integrated, multi-tier layout:
-> 1. **Unified Multimodal Innovation Hub (`/multimodal-hub`)**: Central command center providing instant access to all specialized studios (Bioscience 3D, Live Voice, Video & Image Studio, Search/Maps Grounding).
-> 2. **Dual Three.js 3D Environments**: 
->    - **3D Molecular Bioscience & Drug Discovery Explorer** (AlphaFold pLDDT, PDB crystal structures, binding pockets, 2D SMILES, and Lipinski metrics).
->    - **3D Procedural STEM Physics & Robotics Laboratory** (multi-part robot tutor, harmonic mechanical kinematics, and studio PBR lighting).
-> 3. **Persistent Omnipresent Voice & Live Conversation Suite**:
->    - A global floating live voice copilot (`gemini-3.8-live` & audio transcription `gemini-3.5-transcribe`) accessible from any page.
->    - A dedicated full-screen conversational laboratory with real-time audio waveforms and multi-turn role switching (`gemini-4-argon`, `gemini-3.8-flash`, `gemini-3.1-flash-lite`).
+Each laboratory is engineered as a **standalone, self-contained interactive application** (single-file HTML/Canvas/Vanilla JS) that functions completely offline on local school servers or mobile tablets, accompanied by an executive launcher portal.
 
 ---
 
-### 1. Overview & Core Concept
+## 1. Visual & Architectural Foundation: Obsidian, Sapphire & Gold
 
-- **What It Does**: Upgrades Luqi AI into a next-generation Pan-African and global research platform combining computational biology, procedural 3D graphics, live vocal interaction, generative video (Veo 3), and multi-engine grounded intelligence.
-- **Target Audience / Persona**: High school and university STEM students, African biotechnology researchers, educators, and engineers requiring offline-first numerical rigor and cutting-edge generative AI.
-- **Key Value**: Replaces fragmented single-purpose tools with a sovereign, high-contrast, publication-grade workbench with zero external 404 dependencies, guaranteed 60fps WebGL execution, and native African multilingual voice capabilities.
-
----
-
-### 2. User Experience & Visual Design
-
-#### Key User Flows
-1. **Bioscience Exploration Flow**: User selects or queries a target protein/gene (e.g., `TP53`, `BRCA1`, `EGFR`, `Imatinib`) ➔ System queries AlphaFold DB / PDB / UniProt / PubChem ➔ 3D viewer renders interactive molecular structure colored by AlphaFold pLDDT confidence (Very High >90, Confident 70-90, Low 50-70, Very Low <50) with synchronized clinical variant and pathway inspector.
-2. **Procedural 3D Physics & Robotics Flow**: User toggles to the 3D Physics Lab ➔ Full-bleed Three.js viewport renders a composite 8-part articulated robotic tutor demonstrating mechanical physics under studio PBR lighting (`ACESFilmicToneMapping`, `RoomEnvironment`) with a collapsible bottom control dock.
-3. **Live Voice & Audio Transcription Flow**: User clicks the microphone icon in the header or floating dock ➔ Real-time voice interaction begins via `gemini-3.8-live` with visual audio oscilloscope ➔ Live speech transcription powered by `gemini-3.5-transcribe` outputs real-time notes with one-click export.
-4. **Generative Multimodal Studio Flow**: User inputs a scientific prompt or uploads a reference photo ➔ Generates high-fidelity images with `gemini-nano-banana-2.1` or renders high-definition scientific animation videos via Veo 3 (`veo-3.1-fast-generate-preview`) in landscape (16:9) or portrait (9:16).
-5. **Grounded Multi-Turn Chat Flow**: User engages with domain-specialized bots with explicit role directives, dynamically switching between `gemini-4-argon` (complex derivations), `gemini-3.8-flash` (general inquiry with live Google Search / Google Maps grounding), and `gemini-3.1-flash-lite` (rapid calculations).
-
-#### Visual Identity & Theme
-- **Aesthetic Direction**: High-contrast scientific laboratory workbench with obsidian viewports. Clean, calibrated, publication-grade instrumentation avoiding neon cliches or static pill clutter.
-- **Color Palette (60-30-10 Rule)**:
-  - `60% Dominant Canvas`: Obsidian Void (`#020617` / `#090D16`) for 3D viewports; Clinical Crisp Slate (`#0B0F19`) for UI containers.
-  - `30% Structural Panels`: Flat slate panels (`#111827`), hairline dividers (`#1E293B`), and coordinate axes.
-  - `10% Telemetry Accents`: DeepMind Scientific Blue (`#1A73E8`), Telemetry Amber (`#F59E0B`), and Laser Cyan (`#06B6D4`).
-- **Typography & Precision Notation**:
-  - Interface Headers & Brand: `Plus Jakarta Sans` with balanced line wraps.
-  - Numeric Telemetry & Coordinates: `JetBrains Mono` / `font-mono tabular-nums`.
-  - Canonical 4-Band AlphaFold Scale: `#0053D6` (Very High), `#65CBF3` (Confident), `#FFDB13` (Low), `#FF7D45` (Very Low).
-- **Layout Ergonomics**:
-  - Full-bleed 3D canvas with a collapsible bottom control dock (`<= 15%` viewport footprint) ensuring zero viewport occlusion of primary models.
-  - Single-line controls with truncation safeguards and accessible touch targets.
+### Design Constitution
+- **Palette**:
+  - **Obsidian Core**: `#0b0f19`, `#0f172a`, `#1e293b` (deep velvet slate surfaces with subtle backdrop blur `backdrop-filter: blur(12px)`)
+  - **Sapphire Luminescence**: `#2563eb`, `#38bdf8`, `#60a5fa` (fluid telemetry, active trajectories, and vector fields)
+  - **24k Gold Accents**: `#d97706`, `#f59e0b`, `#fbbf24` (executive badges, equilibrium markers, and conservation invariants)
+  - **Fine Border Gradients**: 1px linear gradients from `rgba(245, 158, 11, 0.4)` to `rgba(56, 189, 248, 0.15)`
+- **Typography & Ergonomics**:
+  - High-legibility modern sans-serif paired with crisp tabular monospace for numerical readouts
+  - High-DPI canvas rendering (`devicePixelRatio` scaling) for ultra-sharp retinas and 4K displays
+  - Zero lag, 60 FPS animation loops with sub-stepped numerical integration
+  - Touch and mouse precision controls with tactile feedback and sound cue toggles
 
 ---
 
-### 3. Key Product Decisions & Trade-Offs
+## 2. The Four Bespoke Standalone Luxury Laboratories
 
-- **Decision 1: Dual 3D Three.js Architecture (Bioscience + Robotic Physics)**
-  - *Chosen Approach*: Implement a procedural 3D rendering pipeline in Three.js featuring both an atomistic/ribbon molecular geometry builder and a composite 8-part mechanical robotic tutor.
-  - *Why*: Gives users both micro-scale biological exploration and macro-scale physical mechanics in the same zero-dependency WebGL engine without external heavy model downloads.
-- **Decision 2: Server-Side Gemini API Proxy Routing**
-  - *Chosen Approach*: All calls to Gemini models (`gemini-4-argon`, `gemini-3.8-flash`, `gemini-nano-banana-2.1`, `veo-3.1-fast-generate-preview`, `gemini-3.8-live`, `gemini-3.5-transcribe`) route through authenticated `/api/gemini/*` endpoints on the server.
-  - *Why*: Adheres strictly to security guidelines (no API key leakage to browser), provides unified rate-limit buffering, and enables server-side tool hybrid mode (Google Search + Google Maps grounding).
-- **Decision 3: Zero-External-Asset Three.js Guarantee**
-  - *Chosen Approach*: Generate all textures, normal maps, and bump surfaces procedurally using HTML5 2D Canvas and `PMREMGenerator` + `RoomEnvironment`.
-  - *Why*: Guarantees the application runs 100% offline on local African school servers with zero 404 image or HDR texture errors.
+### Lab A: Biology — Cellular Dynamics & Enzyme Kinetics
+*Target: Grade 10–12 / AP / IB Biology*
+- **Primary Visual Simulation**:
+  - Microscopic viewport rendering an active enzyme-substrate lock-and-key / induced fit reaction chamber.
+  - Interactive macromolecules, substrate ligands, and allosteric/competitive inhibitor molecules colliding and binding in real time.
+- **Controls & Sliders**:
+  - Substrate Concentration $[S]$ (mM)
+  - Temperature ($^\circ\text{C}$, showing thermal denaturation above optimal threshold)
+  - pH Level (demonstrating charge denaturation outside optimal range)
+  - Enzyme Concentration $[E]$
+  - Inhibitor Type (None, Competitive, Non-Competitive/Allosteric)
+- **Live Analytical Telemetry**:
+  - Real-time Michaelis-Menten saturation velocity curve:
+    $$V_0 = \frac{V_{\max}[S]}{K_m + [S]}$$
+  - Dynamic $K_m$ and $V_{\max}$ computation with instant Lineweaver-Burk double-reciprocal plot.
+  - Active site turnover rate meter in gold and sapphire.
+
+### Lab B: Chemistry — Reaction Kinetics & Precision Acid-Base Titration
+*Target: Grade 10–12 / Cambridge / AP Chemistry*
+- **Primary Visual Simulation**:
+  - High-precision digital automated burette dispensing micro-droplets into an Erlenmeyer flask with continuous magnetic stirring.
+  - Molecular collision inset showing particle kinetic energy distribution (Maxwell-Boltzmann) against the activation energy barrier ($E_a$).
+  - Solution color gradient transitioning smoothly based on universal indicator or phenolphthalein ($pH < 8.2$ clear $\rightarrow$ faint pink $\rightarrow$ vibrant magenta).
+- **Controls & Sliders**:
+  - Analyte selection (Strong Acid $\text{HCl}$, Weak Acid $\text{CH}_3\text{COOH}$) and Titrant ($\text{NaOH}$)
+  - Analyte Volume & Initial Concentration ($M$)
+  - Dispense Rate (Single drop, continuous stream, or automated micro-titrator)
+  - Temperature ($K$) and Catalyst toggle
+- **Live Analytical Telemetry**:
+  - Real-time $pH$ titration curve ($pH$ vs Volume Added).
+  - First-derivative inflection analysis ($\frac{dpH}{dV}$) pinpointing the exact stoichiometric equivalence point.
+  - Live ionic species concentration ledger ($[\text{H}^+], [\text{OH}^-], [\text{A}^-], [\text{HA}]$).
+
+### Lab C: Algebra & Calculus — Dynamic Polynomial & Function Studio
+*Target: Grade 10–12 Algebra II, Pre-Calculus & Intro to Calculus*
+- **Primary Visual Simulation**:
+  - Ultra-crisp Cartesian coordinate grid with interactive draggable control points and coefficient sliders.
+  - Multi-function graphing: Quadratic, Cubic ($f(x) = ax^3 + bx^2 + cx + d$), Rational, and Exponential models.
+  - Dynamic tangent line slider illustrating the instantaneous rate of change (derivative slope $f'(x)$) with zoomable local linearity.
+- **Controls & Sliders**:
+  - Coefficient sliders ($a, b, c, d$) with direct numerical inputs
+  - Root / Zero Finder, Vertex / Extrema Tracker, and Inflection Point highlights
+  - Integral Area Under Curve accumulator with adjustable Riemann sum partitions ($n = 4$ to $100$)
+- **Live Analytical Telemetry**:
+  - Discriminant ($\Delta$) calculation and root type categorization (real, equal, complex)
+  - Real-time derivative equation display and slope indicator
+  - Area calculation with percentage approximation vs exact definite integral
+
+### Lab D: Geometry — 3D Spatial Solids & Geometric Proofs Studio
+*Target: Grade 10–12 Geometry & Spatial Mathematics*
+- **Primary Visual Simulation**:
+  - 3D interactive polyhedra and curved solids (Cube, Tetrahedron, Octahedron, Dodecahedron, Cylinder, Cone, Sphere) rendered via pure mathematical 3D-to-2D perspective projection.
+  - Drag-to-rotate in full 360-degree Euler angles with dynamic gold vertex lighting and sapphire-tinted glass faces.
+  - Dynamic slicing plane that cuts through 3D shapes to reveal 2D cross-sections (circles, ellipses, parabolas, triangles).
+- **Controls & Sliders**:
+  - Solid selector & net unfolding slider (folds/unfolds 3D solid into 2D printable net)
+  - Dimension controls (radius, height, edge length, slant height)
+  - Slicing plane angle ($\theta$) and height offset
+  - Angle bisector & proof overlay toggle (e.g., Pythagorean spatial proofs)
+- **Live Analytical Telemetry**:
+  - Real-time Surface Area ($A$) and Volume ($V$) formulas with dynamic substitution
+  - Euler's Polyhedral Formula live verification:
+    $$V - E + F = 2$$
+  - Cross-section area and eccentricity computation
 
 ---
 
-### 4. Technical Architecture & Data Strategy
+## 3. Executive Portal & Standalone File Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       LUQI AI GLOBAL NAVIGATION HEADER                      │
-│   Brand Wordmark  │  Nav Links (STEM, LuqiToons, Radar, Archive)  │ 22-Lang │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-┌──────────────────────────────────────▼──────────────────────────────────────┐
-│                    UNIFIED MULTIMODAL HUB & STUDIOS                         │
-│                                                                             │
-│  ┌──────────────────────────┐  ┌─────────────────────────────────────────┐  │
-│  │   3D BIOSCIENCE STUDIO   │  │        3D STEM ROBOTICS STUDIO          │  │
-│  │  - AlphaFold pLDDT Viewer│  │  - 8-Part Procedural Robot Tutor        │  │
-│  │  - RCSB PDB Structure    │  │  - Harmonic Pendulum Kinematics         │  │
-│  │  - PubChem / SMILES 2D   │  │  - Studio PBR Lighting & Softboxes      │  │
-│  │  - ClinVar / PubMed Sync │  │  - Collapsible Bottom Cinema Dock       │  │
-│  └─────────────┬────────────┘  └────────────────────┬────────────────────┘  │
-│                │                                    │                       │
-│  ┌─────────────▼────────────────────────────────────▼────────────────────┐  │
-│  │               GEMINI MULTIMODAL INTELLIGENCE ENGINE                   │  │
-│  │  - Live Voice Copilot (gemini-3.8-live + WebSocket Audio Stream)     │  │
-│  │  - Audio Transcription (gemini-3.5-transcribe + Mic Input)           │  │
-│  │  - Image Studio (gemini-nano-banana-2.1 Text-to-Image / Editing)     │  │
-│  │  - Veo 3 Video Studio (veo-3.1-fast-generate-preview 16:9 & 9:16)    │  │
-│  │  - Multi-Turn Chat (gemini-4-argon / gemini-3.8-flash / flash-lite)   │  │
-│  │  - Grounding Tools (Google Search & Google Maps Tool Integration)     │  │
-│  └───────────────────────────────────┬───────────────────────────────────┘  │
-└──────────────────────────────────────┼──────────────────────────────────────┘
-                                       │
-┌──────────────────────────────────────▼──────────────────────────────────────┐
-│                     HONO / EXPRESS SERVER-SIDE PROXY                        │
-│   /api/gemini/generate  │  /api/gemini/image  │  /api/gemini/video          │
-│   /api/gemini/live-ws   │  /api/gemini/audio  │  /api/science/bio-query     │
-└─────────────────────────────────────────────────────────────────────────────┘
+/public/labs/
+  ├── biology_lab.html     # Standalone Cellular Dynamics & Enzyme Kinetics
+  ├── chemistry_lab.html   # Standalone Precision Titration & Reaction Kinetics
+  ├── algebra_lab.html     # Standalone Polynomial & Calculus Function Studio
+  └── geometry_lab.html    # Standalone 3D Polyhedra & Spatial Geometry Studio
+/src/components/
+  └── ExecutiveLabSuite.tsx # Master Obsidian-Gold Executive Suite Portal
 ```
 
-#### Data Model & State Mapping
-- **Protein/Gene Query State**: `accession`, `geneSymbol`, `plddtScores`, `structureCoordinates`, `variants`, `citationList`.
-- **Three.js Scene State**: `activeMode` ("bioscience" | "physics"), `cameraPreset`, `pbrSettings` (`metalness`, `roughness`, `exposure`), `playbackSpeed`, `dockCollapsed`.
-- **Voice & Live Audio State**: `isLiveConnected`, `audioInputBuffer`, `transcriptionHistory`, `activeVoicePersona` ("Zephyr" | "Puck" | "Kore").
-- **Veo / Image Generation State**: `operationId`, `generationProgress`, `mediaUrl`, `aspectRatio` ("16:9" | "9:16"), `model` ("veo-3.1-fast-generate-preview" | "gemini-nano-banana-2.1").
-- **Chat State**: `messages` (`role`, `content`, `groundingMetadata`), `selectedModel` ("gemini-4-argon" | "gemini-3.8-flash" | "gemini-3.1-flash-lite"), `activeGrounding` ("search" | "maps" | "none").
+### Key Deliverables:
+1. **Four Zero-Dependency Standalone Lab HTML Files**: Completely offline, self-contained, and ready for deployment or direct student distribution.
+2. **Executive Suite Portal**: An elite launcher dashboard embedded into the main application navigation, allowing students and educators to select, preview, and launch any lab in full-screen or side-by-side mode.
+3. **Curriculum Alignment Guides**: Clear Grade 10–12 CAPS, DBE, AP, and Cambridge learning objectives embedded directly into each lab's executive drawer.
 
-#### Interactive Component Mapping
-1. `src/pages/MultimodalHubPage.tsx`: Primary launchpad with tabbed navigation across Bioscience 3D, Live Audio, Veo Video, and Grounded Reasoning.
-2. `src/components/Bioscience3DViewer.tsx`: Dedicated Three.js canvas rendering ribbon and atomistic models with pLDDT 4-band coloring, synchronized with UniProt/AlphaFold/PubMed data panels.
-3. `src/components/PhysicsRobotics3DViewer.tsx`: Three.js procedural multi-part articulated robotic tutor with collapsible bottom dock.
-4. `src/components/LiveVoiceFloatingCopilot.tsx`: Global floating audio orb connecting to `gemini-3.8-live` with real-time waveform visualization and `gemini-3.5-transcribe` speech capture.
-5. `src/components/VeoVideoImageStudio.tsx`: Dual generative pane for `gemini-nano-banana-2.1` image creation/editing and `veo-3.1-fast-generate-preview` text-to-video / image-to-video.
-6. `src/components/GroundedGeminiChat.tsx`: Multi-turn chat interface with role selection, search grounding, and maps grounding.
-7. `api/geminiService.ts`: Centralized server-side SDK service initializing `@google/genai` with `User-Agent: aistudio-build`.
+---
+
+## 4. Verification & Quality Assurance
+- **Physics & Mathematical Accuracy**: Validate all integration algorithms (Runge-Kutta, Michaelis-Menten, Henderson-Hasselbalch, and Riemann sums) against analytical closed-form solutions.
+- **Cross-Platform Fluidity**: Test touch responsiveness on mobile/tablet viewports, ensuring smooth dragging on low-power devices.
+- **Zero-Dependency Check**: Confirm all four labs operate without any external CDN or network requests, guaranteeing 100% offline compliance.

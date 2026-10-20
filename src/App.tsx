@@ -22,6 +22,7 @@ import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
 import ExperientialEducationPage from "./pages/ExperientialEducationPage";
 import PendulumLabPage from "./pages/PendulumLabPage";
 import { MultimodalHubPage } from "./pages/MultimodalHubPage";
+import ExecutiveLabSuite from "@/components/ExecutiveLabSuite";
 
 // Components
 import WelcomeModal from "@/components/WelcomeModal";
@@ -255,6 +256,12 @@ export default function App() {
         <RouterRoute path="/experiential-edu" element={<ExperientialEducationPage />} />
         <RouterRoute path="/simulation-core" element={<ExperientialEducationPage />} />
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
+        <RouterRoute path="/executive-labs" element={<div className="max-w-7xl mx-auto px-4 py-8"><ExecutiveLabSuite /></div>} />
+        <RouterRoute path="/stem-suite" element={<div className="max-w-7xl mx-auto px-4 py-8"><ExecutiveLabSuite /></div>} />
+        <RouterRoute path="/biology-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/biology_lab.html" title="Biology Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/chemistry-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/chemistry_lab.html" title="Chemistry Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/algebra-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/algebra_lab.html" title="Algebra Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/geometry-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/geometry_lab.html" title="Geometry Lab" className="w-full h-full border-0" /></div>} />
         <RouterRoute path="/pendulum-lab" element={<PendulumLabPage />} />
         <RouterRoute path="/pendulum" element={<PendulumLabPage />} />
         <RouterRoute path="/simple-pendulum" element={<PendulumLabPage />} />

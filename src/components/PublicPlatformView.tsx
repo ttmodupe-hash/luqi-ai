@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import HeroAiChatConsole from './HeroAiChatConsole';
 import ConsumerRightsAssistant from './ConsumerRightsAssistant';
+import MotherTongueExamEngine from './MotherTongueExamEngine';
 import {
   MessageSquare,
   FlaskConical,
@@ -33,7 +34,8 @@ import { Link } from 'react-router';
 // PUBLIC PLATFORM VIEW — 100% PUBLIC-FACING & PRODUCTION-ISOLATED
 // ============================================================================
 
-type ActivePublicTab = 'COMPANION' | 'CONSUMER_SHIELD' | 'STEM_LABS' | 'CERT_ACADEMY' | 'WALLET_SUBSCRIPTION';
+type ActivePublicTab = 'COMPANION' | 'MOTHER_TONGUE_BRIDGE' | 'CONSUMER_SHIELD' | 'STEM_LABS' | 'CERT_ACADEMY' | 'WALLET_SUBSCRIPTION';
+
 
 export const PublicPlatformView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActivePublicTab>('COMPANION');
@@ -426,6 +428,17 @@ export const PublicPlatformView: React.FC = () => {
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>💬 Ask Khoro (AI Chat)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('MOTHER_TONGUE_BRIDGE')}
+            className={`flex-1 min-w-[130px] py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'MOTHER_TONGUE_BRIDGE'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+            }`}
+          >
+            <span>📚 Mother-Tongue Exam Bridge</span>
           </button>
 
           <button

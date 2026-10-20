@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cellular Dynamics & Enzyme Kinetics Lab | Executive STEM Biology</title>
+  <style>
+    :root {
+      --bg-obsidian: #080d1a;
+      --bg-surface: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-gold: rgba(245, 158, 11, 0.35);
+      --border-subtle: rgba(56, 189, 248, 0.15);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --gold-accent: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --sapphire: #38bdf8;
+      --emerald: #10b981;
+      --ruby: #f43f5e;
+      --purple: #a855f7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #080d1a 65%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border-gold);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #d97706, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #080d1a;
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    .title-area h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tier-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--border-gold);
+      color: #fde68a;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .title-area p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      border-color: var(--gold-accent);
+      background: rgba(51, 65, 85, 0.9);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: #f59e0b;
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .visual-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--sapphire);
+      letter-spacing: 0.03em;
+    }
+
+    .canvas-box {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      background: radial-gradient(circle at 50% 50%, #0d1a33 0%, #060913 100%);
+    }
+
+    .graph-box {
+      position: relative;
+      width: 100%;
+      height: 240px;
+      background: #060913;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .legend-overlay {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      display: flex;
+      gap: 12px;
+      background: rgba(8, 13, 26, 0.85);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    .sidebar-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .param-group {
+      margin-bottom: 14px;
+    }
+
+    .param-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .param-val {
+      color: var(--gold-accent);
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+
+    input[type=range] {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--gold-accent);
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    .btn-segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .segment-btn {
+      padding: 6px;
+      font-size: 0.72rem;
+      text-align: center;
+      background: #0b1329;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    .segment-btn.active {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold-accent);
+      color: var(--gold-accent);
+      font-weight: 700;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .metric-card {
+      background: rgba(11, 19, 41, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-card .caption {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-card .digit {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--sapphire);
+      font-family: monospace;
+    }
+
+    .gold-box {
+      border: 1px solid var(--border-gold);
+      background: rgba(245, 158, 11, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .gold-box h3 {
+      font-size: 0.85rem;
+      color: var(--gold-accent);
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-group">
+      <div class="brand-emblem">&Xi;</div>
+      <div class="title-area">
+        <h1>Cellular Dynamics & Enzyme Kinetics <span class="tier-badge">Executive Biology</span></h1>
+        <p>Michaelis-Menten Steady State &bull; Induced Fit Catalysis &bull; Molecular Thermodynamics</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btnPlayPause" class="primary">
+        <span id="playIcon">&#9658;</span> <span id="playLabel">Simulate</span>
+      </button>
+      <button id="btnReset">&#8634; Reset Assay</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="visual-column">
+      <!-- MOLECULAR REACTION CHAMBER -->
+      <div class="glass-card">
+        <div class="card-header">
+          <span>ACTIVE CELLULAR MEMBRANE & CATALYTIC ACTIVE SITES</span>
+          <span id="activeComplexCount">Enzyme-Substrate Complexes [ES]: 0</span>
+        </div>
+        <div class="canvas-box" id="cellCanvasBox">
+          <canvas id="cellCanvas"></canvas>
+          <div class="legend-overlay">
+            <div><span class="legend-dot" style="background: var(--purple);"></span>Enzyme [E]</div>
+            <div><span class="legend-dot" style="background: var(--sapphire);"></span>Substrate [S]</div>
+            <div><span class="legend-dot" style="background: var(--emerald);"></span>Product [P]</div>
+            <div><span class="legend-dot" style="background: var(--ruby);"></span>Inhibitor [I]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MICHAELIS-MENTEN GRAPH -->
+      <div class="glass-card">
+        <div class="card-header">
+          <span>MICHAELIS-MENTEN SATURATION VELOCITY (V<sub>0</sub> vs [S])</span>
+          <span style="color: var(--gold-accent);">V<sub>0</sub> = (V<sub>max</sub> &bull; [S]) / (K<sub>m</sub> + [S])</span>
+        </div>
+        <div class="graph-box" id="graphBox">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR CONTROLS -->
+    <div class="sidebar-panel">
+      
+      <div class="glass-card" style="padding: 16px;">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; color: #fff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+          Physicochemical Variables
+        </h2>
+
+        <!-- SUBSTRATE CONCENTRATION -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Substrate Concentration [S]</span>
+            <span class="param-val" id="dispSubstrate">40 mM</span>
+          </div>
+          <input type="range" id="sliderSubstrate" min="5" max="100" value="40">
+        </div>
+
+        <!-- ENZYME CONCENTRATION -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Enzyme Concentration [E]</span>
+            <span class="param-val" id="dispEnzymes">12 Units</span>
+          </div>
+          <input type="range" id="sliderEnzymes" min="4" max="24" value="12">
+        </div>
+
+        <!-- TEMPERATURE -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Thermodynamic Temp (T)</span>
+            <span class="param-val" id="dispTemp">37 &deg;C (Optimal)</span>
+          </div>
+          <input type="range" id="sliderTemp" min="5" max="75" value="37">
+        </div>
+
+        <!-- pH LEVEL -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Environmental pH</span>
+            <span class="param-val" id="dispPH">7.4 (Physiological)</span>
+          </div>
+          <input type="range" id="sliderPH" min="2.0" max="12.0" step="0.2" value="7.4">
+        </div>
+
+        <!-- INHIBITOR -->
+        <div class="param-group">
+          <div class="param-header">
+            <span>Inhibitor Mechanism</span>
+          </div>
+          <div class="btn-segmented">
+            <button class="segment-btn active" id="inhNone" onclick="setInhibitor('none')">None</button>
+            <button class="segment-btn" id="inhComp" onclick="setInhibitor('competitive')">Competitive</button>
+            <button class="segment-btn" id="inhAllosteric" onclick="setInhibitor('allosteric')">Allosteric</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- REACTION METRICS -->
+      <div class="glass-card" style="padding: 16px;">
+        <h2 style="font-size: 0.95rem; margin-bottom: 12px; color: #fff; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px;">
+          Enzymatic Telemetry
+        </h2>
+        <div class="telemetry-grid">
+          <div class="metric-card">
+            <span class="caption">Velocity (V<sub>0</sub>)</span>
+            <span class="digit" id="dispV0">0.0 &mu;M/s</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Max Rate (V<sub>max</sub>)</span>
+            <span class="digit" id="dispVmax">85.0 &mu;M/s</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Affinity (K<sub>m</sub>)</span>
+            <span class="digit" id="dispKm">22.5 mM</span>
+          </div>
+          <div class="metric-card">
+            <span class="caption">Products [P]</span>
+            <span class="digit" id="dispProducts" style="color: var(--emerald);">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CURRICULUM GUIDANCE -->
+      <div class="gold-box">
+        <h3>Mastery Insight: Induced Fit Theory</h3>
+        <p>As temperature exceeds 45&deg;C, thermal agitation disrupts tertiary hydrogen and ionic bonds, denaturing active sites. Notice how competitive inhibitors increase apparent <strong>K<sub>m</sub></strong> without altering <strong>V<sub>max</sub></strong>!</p>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const sim = {
+      isRunning: false,
+      substrateCount: 40,
+      enzymeCount: 12,
+      temp: 37,
+      pH: 7.4,
+      inhibitorType: 'none',
+      particles: [],
+      enzymes: [],
+      productsFormed: 0,
+      currentV0: 0,
+      recentCatalysisCount: 0,
+      catalysisHistory: []
+    };
+
+    const cellCanvas = document.getElementById('cellCanvas');
+    const cCtx = cellCanvas.getContext('2d');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const gCtx = graphCanvas.getContext('2d');
+
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const playIcon = document.getElementById('playIcon');
+    const playLabel = document.getElementById('playLabel');
+    const btnReset = document.getElementById('btnReset');
+
+    const sliderSubstrate = document.getElementById('sliderSubstrate');
+    const dispSubstrate = document.getElementById('dispSubstrate');
+    const sliderEnzymes = document.getElementById('sliderEnzymes');
+    const dispEnzymes = document.getElementById('dispEnzymes');
+    const sliderTemp = document.getElementById('sliderTemp');
+    const dispTemp = document.getElementById('dispTemp');
+    const sliderPH = document.getElementById('sliderPH');
+    const dispPH = document.getElementById('dispPH');
+
+    const dispV0 = document.getElementById('dispV0');
+    const dispVmax = document.getElementById('dispVmax');
+    const dispKm = document.getElementById('dispKm');
+    const dispProducts = document.getElementById('dispProducts');
+    const activeComplexCount = document.getElementById('activeComplexCount');
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const cRect = cellCanvas.parentElement.getBoundingClientRect();
+      cellCanvas.width = cRect.width * dpr;
+      cellCanvas.height = cRect.height * dpr;
+      cCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const gRect = graphCanvas.parentElement.getBoundingClientRect();
+      graphCanvas.width = gRect.width * dpr;
+      graphCanvas.height = gRect.height * dpr;
+      gCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+
+    function initSimulation() {
+      const w = cellCanvas.parentElement.clientWidth || 800;
+      const h = cellCanvas.parentElement.clientHeight || 420;
+
+      sim.enzymes = [];
+      for (let i = 0; i < sim.enzymeCount; i++) {
+        sim.enzymes.push({
+          x: 60 + Math.random() * (w - 120),
+          y: 60 + Math.random() * (h - 120),
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: (Math.random() - 0.5) * 0.8,
+          radius: 22,
+          boundSubstrate: null,
+          boundTimer: 0,
+          isDenatured: false
+        });
+      }
+
+      sim.particles = [];
+      for (let i = 0; i < sim.substrateCount; i++) {
+        sim.particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          type: 'substrate',
+          radius: 6
+        });
+      }
+
+      if (sim.inhibitorType !== 'none') {
+        for (let i = 0; i < 15; i++) {
+          sim.particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            type: 'inhibitor',
+            radius: 7
+          });
+        }
+      }
+    }
+
+    window.setInhibitor = function(type) {
+      sim.inhibitorType = type;
+      document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+      if (type === 'none') document.getElementById('inhNone').classList.add('active');
+      if (type === 'competitive') document.getElementById('inhComp').classList.add('active');
+      if (type === 'allosteric') document.getElementById('inhAllosteric').classList.add('active');
+      initSimulation();
+    };
+
+    sliderSubstrate.addEventListener('input', (e) => {
+      sim.substrateCount = parseInt(e.target.value);
+      dispSubstrate.textContent = `${sim.substrateCount} mM`;
+      initSimulation();
+    });
+
+    sliderEnzymes.addEventListener('input', (e) => {
+      sim.enzymeCount = parseInt(e.target.value);
+      dispEnzymes.textContent = `${sim.enzymeCount} Units`;
+      initSimulation();
+    });
+
+    sliderTemp.addEventListener('input', (e) => {
+      sim.temp = parseInt(e.target.value);
+      let status = sim.temp > 50 ? "(Denaturing)" : (sim.temp === 37 ? "(Optimal)" : "(Sub-optimal)");
+      dispTemp.textContent = `${sim.temp} °C ${status}`;
+    });
+
+    sliderPH.addEventListener('input', (e) => {
+      sim.pH = parseFloat(e.target.value);
+      let status = (sim.pH >= 7.0 && sim.pH <= 7.8) ? "(Optimal)" : "(Denaturing)";
+      dispPH.textContent = `${sim.pH.toFixed(1)} ${status}`;
+    });
+
+    btnPlayPause.addEventListener('click', () => {
+      sim.isRunning = !sim.isRunning;
+      if (sim.isRunning) {
+        playIcon.innerHTML = "&#10074;&#10074;";
+        playLabel.textContent = "Pause";
+        btnPlayPause.style.background = "#e11d48";
+      } else {
+        playIcon.innerHTML = "&#9658;";
+        playLabel.textContent = "Simulate";
+        btnPlayPause.style.background = "linear-gradient(135deg, #d97706, #b45309)";
+      }
+    });
+
+    btnReset.addEventListener('click', () => {
+      sim.productsFormed = 0;
+      sim.recentCatalysisCount = 0;
+      sim.catalysisHistory = [];
+      initSimulation();
+    });
+
+    function getActivityCoeff() {
+      // Temperature curve: bell curve peaked around 37C, drops sharply past 48C
+      let tempFactor = 0;
+      if (sim.temp < 45) {
+        tempFactor = Math.pow((sim.temp / 37), 1.6);
+      } else {
+        tempFactor = Math.max(0, 1.3 - (sim.temp - 45) * 0.05);
+      }
+
+      // pH curve: optimum 7.4
+      const pHDiff = Math.abs(sim.pH - 7.4);
+      const pHFactor = Math.max(0, 1.0 - (pHDiff * 0.22));
+
+      return Math.max(0, tempFactor * pHFactor);
+    }
+
+    function updateSimulation(dt) {
+      const w = cellCanvas.parentElement.clientWidth;
+      const h = cellCanvas.parentElement.clientHeight;
+      const activity = getActivityCoeff();
+      const speedScale = (sim.temp / 37) * 1.5;
+
+      let boundCount = 0;
+
+      // Update Enzymes
+      for (const enz of sim.enzymes) {
+        enz.isDenatured = activity < 0.15;
+        enz.x += enz.vx * speedScale;
+        enz.y += enz.vy * speedScale;
+        if (enz.x < 30 || enz.x > w - 30) enz.vx *= -1;
+        if (enz.y < 30 || enz.y > h - 30) enz.vy *= -1;
+
+        if (enz.boundSubstrate) {
+          boundCount++;
+          enz.boundTimer += dt;
+          if (enz.boundTimer > 0.8 / (activity + 0.1)) {
+            // Catalysis event: Release Product
+            sim.productsFormed++;
+            sim.recentCatalysisCount++;
+            sim.particles.push({
+              x: enz.x + 25 * Math.cos(Math.random() * 6.28),
+              y: enz.y + 25 * Math.sin(Math.random() * 6.28),
+              vx: (Math.random() - 0.5) * 3,
+              vy: (Math.random() - 0.5) * 3,
+              type: 'product',
+              radius: 5
+            });
+            enz.boundSubstrate = null;
+            enz.boundTimer = 0;
+          }
+        }
+      }
+
+      // Update Particles
+      for (let i = sim.particles.length - 1; i >= 0; i--) {
+        const p = sim.particles[i];
+        p.x += p.vx * speedScale;
+        p.y += p.vy * speedScale;
+        if (p.x < 10 || p.x > w - 10) p.vx *= -1;
+        if (p.y < 10 || p.y > h - 10) p.vy *= -1;
+
+        // Collision with enzyme active sites
+        if (p.type === 'substrate' && activity > 0.15) {
+          for (const enz of sim.enzymes) {
+            if (!enz.boundSubstrate && !enz.isDenatured) {
+              const d = Math.hypot(p.x - enz.x, p.y - enz.y);
+              if (d < enz.radius + p.radius) {
+                enz.boundSubstrate = p;
+                enz.boundTimer = 0;
+                sim.particles.splice(i, 1);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      activeComplexCount.textContent = `Enzyme-Substrate Complexes [ES]: ${boundCount}`;
+      dispProducts.textContent = sim.productsFormed;
+
+      // Rate measurement
+      sim.catalysisHistory.push(sim.recentCatalysisCount);
+      sim.recentCatalysisCount = 0;
+      if (sim.catalysisHistory.length > 30) sim.catalysisHistory.shift();
+
+      const avgRate = sim.catalysisHistory.reduce((a, b) => a + b, 0) / (sim.catalysisHistory.length || 1);
+      sim.currentV0 = avgRate * 25 * activity;
+      dispV0.textContent = `${sim.currentV0.toFixed(1)} μM/s`;
+
+      const Vmax = sim.enzymeCount * 7.5 * activity;
+      let Km = 25;
+      if (sim.inhibitorType === 'competitive') Km = 55;
+      dispVmax.textContent = `${Vmax.toFixed(1)} μM/s`;
+      dispKm.textContent = `${Km.toFixed(1)} mM`;
+    }
+
+    function drawCell() {
+      const w = cellCanvas.parentElement.clientWidth;
+      const h = cellCanvas.parentElement.clientHeight;
+      cCtx.clearRect(0, 0, w, h);
+
+      // Cell Membrane Border (fluid curved boundary)
+      cCtx.strokeStyle = "rgba(56, 189, 248, 0.25)";
+      cCtx.lineWidth = 4;
+      cCtx.strokeRect(10, 10, w - 20, h - 20);
+
+      // Enzymes
+      for (const enz of sim.enzymes) {
+        cCtx.beginPath();
+        cCtx.arc(enz.x, enz.y, enz.radius, 0, Math.PI * 2);
+        cCtx.fillStyle = enz.isDenatured ? "#475569" : (enz.boundSubstrate ? "#d97706" : "#8b5cf6");
+        cCtx.fill();
+        cCtx.strokeStyle = "#ffffff";
+        cCtx.lineWidth = 1.5;
+        cCtx.stroke();
+
+        // Active site notch
+        cCtx.beginPath();
+        cCtx.arc(enz.x + 12, enz.y, 8, 0, Math.PI * 2);
+        cCtx.fillStyle = "#080d1a";
+        cCtx.fill();
+      }
+
+      // Particles
+      for (const p of sim.particles) {
+        cCtx.beginPath();
+        cCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        if (p.type === 'substrate') cCtx.fillStyle = "#38bdf8";
+        else if (p.type === 'product') cCtx.fillStyle = "#10b981";
+        else if (p.type === 'inhibitor') cCtx.fillStyle = "#f43f5e";
+        cCtx.fill();
+        cCtx.strokeStyle = "#ffffff";
+        cCtx.lineWidth = 1;
+        cCtx.stroke();
+      }
+    }
+
+    function drawGraph() {
+      const w = graphCanvas.parentElement.clientWidth;
+      const h = graphCanvas.parentElement.clientHeight;
+      gCtx.clearRect(0, 0, w, h);
+
+      const padL = 45;
+      const padR = 20;
+      const padT = 20;
+      const padB = 30;
+      const gW = w - padL - padR;
+      const gH = h - padT - padB;
+
+      // Axes
+      gCtx.strokeStyle = "rgba(255,255,255,0.15)";
+      gCtx.lineWidth = 1;
+      gCtx.beginPath();
+      gCtx.moveTo(padL, padT);
+      gCtx.lineTo(padL, padT + gH);
+      gCtx.lineTo(padL + gW, padT + gH);
+      gCtx.stroke();
+
+      gCtx.fillStyle = "#64748b";
+      gCtx.font = "10px monospace";
+      gCtx.fillText("[S] Substrate Concentration (mM)", padL + gW / 2 - 80, padT + gH + 22);
+
+      // Plot Theoretical Michaelis-Menten Curve
+      const activity = getActivityCoeff();
+      const Vmax = sim.enzymeCount * 7.5 * activity;
+      let Km = 25;
+      if (sim.inhibitorType === 'competitive') Km = 55;
+
+      gCtx.beginPath();
+      gCtx.strokeStyle = "#f59e0b";
+      gCtx.lineWidth = 2.5;
+
+      for (let s = 0; s <= 100; s++) {
+        const v = (Vmax * s) / (Km + s);
+        const x = padL + (s / 100) * gW;
+        const y = padT + gH - (v / 180) * gH;
+        if (s === 0) gCtx.moveTo(x, y);
+        else gCtx.lineTo(x, y);
+      }
+      gCtx.stroke();
+
+      // Current Operational State Dot
+      const currentX = padL + (sim.substrateCount / 100) * gW;
+      const theoreticalV = (Vmax * sim.substrateCount) / (Km + sim.substrateCount);
+      const currentY = padT + gH - (theoreticalV / 180) * gH;
+
+      gCtx.beginPath();
+      gCtx.arc(currentX, currentY, 6, 0, Math.PI * 2);
+      gCtx.fillStyle = "#38bdf8";
+      gCtx.fill();
+      gCtx.strokeStyle = "#fff";
+      gCtx.lineWidth = 2;
+      gCtx.stroke();
+    }
+
+    let lastTick = performance.now();
+    function mainLoop(now) {
+      const dt = (now - lastTick) / 1000;
+      lastTick = now;
+
+      if (sim.isRunning) {
+        updateSimulation(dt);
+      }
+      drawCell();
+      drawGraph();
+      requestAnimationFrame(mainLoop);
+    }
+
+    resize();
+    initSimulation();
+    requestAnimationFrame(mainLoop);
+  </script>
+</body>
+</html>
