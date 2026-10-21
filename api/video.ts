@@ -3,12 +3,11 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery, protectedQuery, adminQuery } from "./middleware";
 import { getPrivateDb, assertOwnUserId } from "./security/access";
 import { getDb } from "./queries/connection";
-import { videoProjects } from "../db/schema";
+import { videoProjects, creditWallets, paymentEvents } from "../db/schema";
+import { initializeTopup, paymentsConfigured } from "./services/payments";
 import { eq, desc, and, sql } from "drizzle-orm";
 import {
   calculateJobCost,
-  getCreditBalance,
-  addCredits,
   getApiRequirementsStatus,
   SUBSCRIPTION_TIERS,
   CREDIT_PACKS,
@@ -40,11 +39,24 @@ export const videoRouter = createRouter({
       return breakdown;
     }),
 
-  getBalance: disabledVideoProcedure
-    .input(z.object({ userKey: z.string().optional() }).optional())
-    .query(async ({ input }) => {
-      const key = input?.userKey || "guest@luqi.ai";
-      return getCreditBalance(key);
+  getBalance: protectedQuery
+    .input(z.object({ userKey: z.string().trim().email().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      if (input?.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
+      }
+      const db = await getPrivateDb();
+      const [wallet] = await db.select().from(creditWallets)
+        .where(eq(creditWallets.userKey, ctx.user.email.toLowerCase())).limit(1);
+      return {
+        userKey: ctx.user.email.toLowerCase(),
+        balanceCents: wallet?.balanceCents ?? 0,
+        currency: wallet?.currency ?? "ZAR",
+        // Credits cannot be spent on rendering until a durable consumption
+        // ledger and provider-side cost controls have been verified.
+        spendableVideoCredits: 0,
+        videoRenderingEnabled: false,
+      };
     }),
 
   // Provider credential presence and configuration state are internal-only details.
@@ -60,20 +72,44 @@ export const videoRouter = createRouter({
     };
   }),
 
-  topupCredits: disabledVideoProcedure
+  topupCredits: protectedQuery
     .input(z.object({
-      userKey: z.string().optional(),
-      credits: z.number().min(10),
-      packId: z.string().optional(),
+      userKey: z.string().trim().email().optional(),
+      credits: z.number().int().positive(),
+      packId: z.string().min(1).max(50),
     }))
-    .mutation(async ({ input }) => {
-      const key = input.userKey || "guest@luqi.ai";
-      const result = await addCredits(
-        key,
-        input.credits,
-        `Credit Pack Top-Up (${input.credits} Luqi Credits)`
-      );
-      return result;
+    .mutation(async ({ input, ctx }) => {
+      if (input.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
+      }
+      const pack = CREDIT_PACKS.find((p) => p.id === input.packId && p.credits === input.credits);
+      if (!pack) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Select an available credit pack." });
+      }
+      if (!paymentsConfigured()) {
+        throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Payment provider is not configured." });
+      }
+      const db = await getPrivateDb();
+      const amountCents = Math.round(pack.priceZar * 100);
+      const checkout = await initializeTopup(ctx.user.email.toLowerCase(), amountCents, "ZAR");
+      if (!checkout) {
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "Could not create a verified checkout." });
+      }
+      await db.insert(paymentEvents).values({
+        reference: checkout.reference,
+        userKey: ctx.user.email.toLowerCase(),
+        eventType: "topup_initialized",
+        amountCents,
+        currency: "ZAR",
+        status: "pending",
+      });
+      return {
+        pending: true,
+        credited: false,
+        authorizationUrl: checkout.authorizationUrl,
+        reference: checkout.reference,
+        creditsRequested: pack.credits,
+      };
     }),
 
   // Personal video projects: all access is based on a validated session,
