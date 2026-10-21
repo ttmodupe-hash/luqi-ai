@@ -3,13 +3,13 @@
 // =====================================================================
 
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
 import { superIntelligenceCore } from "./services/superIntelligenceCore";
 import { experientialEducationOrchestrator, type GradeTier } from "./services/experientialEducationOrchestrator";
 import { afriLearnAdaptiveEngine } from "./services/afriLearnAdaptiveEngine";
 
 export const superCoreRouter = createRouter({
-  getTelemetry: publicQuery.query(async () => {
+  getTelemetry: legacyRestrictedProcedure.query(async () => {
     const summary = superIntelligenceCore.getSummary();
     const records = superIntelligenceCore.getRecords(25);
     return {
@@ -18,7 +18,7 @@ export const superCoreRouter = createRouter({
     };
   }),
 
-  runAutonomousRefinement: publicQuery
+  runAutonomousRefinement: legacyRestrictedProcedure
     .input(
       z.object({
         taskName: z.string().min(1),
@@ -37,7 +37,7 @@ export const superCoreRouter = createRouter({
       return result;
     }),
 
-  getHistoricalPatches: publicQuery.query(async () => {
+  getHistoricalPatches: legacyRestrictedProcedure.query(async () => {
     const records = superIntelligenceCore.getRecords(15);
     return records.filter((r) => r.attemptsBeforeSuccess > 1 || r.optimizedPromptDelta.length > 15);
   }),
@@ -53,7 +53,7 @@ export const superCoreRouter = createRouter({
       return experientialEducationOrchestrator.getModule(input.conceptHash);
     }),
 
-  compileEducationalSimulation: publicQuery
+  compileEducationalSimulation: legacyRestrictedProcedure
     .input(
       z.object({
         conceptName: z.string().min(1),
@@ -71,12 +71,12 @@ export const superCoreRouter = createRouter({
       );
     }),
 
-  getEducationalTelemetry: publicQuery.query(async () => {
+  getEducationalTelemetry: legacyRestrictedProcedure.query(async () => {
     return experientialEducationOrchestrator.getTelemetry();
   }),
 
   // ─── AfriLearn Adaptive Bandwidth Pipeline ───
-  compileAdaptiveLesson: publicQuery
+  compileAdaptiveLesson: legacyRestrictedProcedure
     .input(
       z.object({
         conceptTheory: z.string().min(1),
