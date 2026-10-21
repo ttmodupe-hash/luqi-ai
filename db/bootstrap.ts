@@ -140,6 +140,7 @@ const CREATE_STATEMENTS: string[] = [
   \`request_digest\` varchar(64) NOT NULL,
   \`asset_key\` varchar(400),
   \`charge_credits\` int NOT NULL,
+  \`mode\` varchar(30) NOT NULL DEFAULT 'silent_mp4',
   \`status\` varchar(30) NOT NULL DEFAULT 'PROCESSING',
   \`error_message\` text,
   \`created_at\` timestamp DEFAULT (now()),
