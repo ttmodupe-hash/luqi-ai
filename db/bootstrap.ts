@@ -1,9 +1,9 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
-// Creates all 35 tables on startup when they do not exist yet.
-// DDL matches db/schema.ts exactly. Idempotent (IF NOT EXISTS) and never
-// throws — a database that is unreachable or already provisioned must
-// not block server startup. Also ensures the demo login account exists.
+// Development/test convenience schema bootstrap. Production DDL MUST run
+// separately under an approved, backed-up database migration; starting the
+// application must not implicitly create or change production tables.
+// The historical demo credential is never seeded.
 // =====================================================================
 
 import mysql from "mysql2/promise";
@@ -537,11 +537,14 @@ export async function bootstrapDatabase(): Promise<void> {
   try {
     connection = await mysql.createConnection(config);
 
-    for (const statement of CREATE_STATEMENTS) {
-      await connection.execute(statement);
+    if (process.env.NODE_ENV !== "production") {
+      for (const statement of CREATE_STATEMENTS) {
+        await connection.execute(statement);
+      }
+      console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} development tables`);
+    } else {
+      console.log("[Bootstrap] Production schema writes disabled; reviewed migrations required");
     }
-
-    console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
 
     // Never provision a known-password demo account. Deactivate the historical
     // default only if its stored hash still matches the compromised password.
