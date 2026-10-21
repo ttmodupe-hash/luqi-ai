@@ -1242,9 +1242,9 @@ app.get('/api/v1/system-api-matrix', (c) => {
       provider: 'Google Gemini 2.5 Flash / 3.8 Flash',
       role: 'Core Sovereign Orchestrator, Multimodal Reasoning, 3D WebGL Labs & High-Speed Chat',
       sdkVersion: '@google/genai v1.0',
-      status: process.env.GEMINI_API_KEY ? 'ACTIVE_HEALTHY' : 'CRITICAL_NO_KEY',
-      latencyMs: 142,
-      estimatedFundsRemainingZar: 1500.00,
+      status: process.env.GEMINI_API_KEY ? 'CONFIGURED_NOT_PROBED' : 'CRITICAL_NO_KEY',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Google AI Studio Active Tier (Live Operational)'
     },
     {
@@ -1252,8 +1252,8 @@ app.get('/api/v1/system-api-matrix', (c) => {
       role: 'Long-Context Multilingual Synthesis, Academic Research & Deep Document Analysis',
       sdkVersion: 'Moonshot OpenAI REST v1',
       status: (process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY) ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
-      latencyMs: 165,
-      estimatedFundsRemainingZar: 0.00,
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Moonshot AI Org org-6a2388b6536a4254959c4a6706e5ed79 (Top-up Required)'
     },
     {
@@ -1261,17 +1261,17 @@ app.get('/api/v1/system-api-matrix', (c) => {
       role: 'Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing',
       sdkVersion: 'DeepSeek REST v4',
       status: process.env.DEEPSEEK_API_KEY ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
-      latencyMs: 95,
-      estimatedFundsRemainingZar: 0.00,
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'DeepSeek Prepaid Wallet (HTTP 402 - Top-up Required)'
     },
     {
       provider: 'Anthropic Claude (Fable 5.1 / Sonnet)',
       role: 'Master Software Architecture, Complex Code Refactoring & Autonomous Self-Healing Audits',
       sdkVersion: '@anthropic-ai/sdk v0.32',
-      status: process.env.ANTHROPIC_API_KEY ? 'ACTIVE_HEALTHY' : 'STANDBY_CIRCUIT_BREAKER',
-      latencyMs: 285,
-      estimatedFundsRemainingZar: process.env.ANTHROPIC_API_KEY ? 420.50 : 0.00,
+      status: process.env.ANTHROPIC_API_KEY ? 'CONFIGURED_NOT_PROBED' : 'STANDBY_CIRCUIT_BREAKER',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Anthropic Console (Auto-Cascading to Gemini)'
     },
     {
@@ -1279,35 +1279,35 @@ app.get('/api/v1/system-api-matrix', (c) => {
       role: 'Enterprise Security Workflows, SARS Compliance & Advanced Threat Detection',
       sdkVersion: 'openai node v4.8',
       status: 'AUTHENTICATION_REQUIRED_NEW_KEY',
-      latencyMs: 310,
-      estimatedFundsRemainingZar: 0.00,
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'OpenAI Platform Console'
     },
     {
       provider: 'MTN MoMo & PayFast Gateways',
       role: '70/30 Human-in-the-Loop Payment Authentication & Token Tollbooth Collection Rails',
       sdkVersion: 'Custom REST / Webhooks',
-      status: process.env.MTN_MOMO_SUBSCRIPTION_KEY ? 'ACTIVE_HEALTHY' : 'WARNING_CONFIG_PENDING',
-      latencyMs: 180,
-      estimatedFundsRemainingZar: 9999.00,
+      status: process.env.MTN_MOMO_SUBSCRIPTION_KEY ? 'CONFIGURED_NOT_PROBED' : 'WARNING_CONFIG_PENDING',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Live Settlement Integration'
     },
     {
       provider: "Africa's Talking & Twilio",
       role: 'Emergency WhatsApp Outpost Alerts & 2G USSD Feature Phone Network Messaging',
       sdkVersion: 'africastalking-ts v0.5',
-      status: process.env.TWILIO_AUTH_TOKEN ? 'ACTIVE_HEALTHY' : 'STANDBY_BACKUP',
-      latencyMs: 215,
-      estimatedFundsRemainingZar: 310.00,
+      status: process.env.TWILIO_AUTH_TOKEN ? 'CONFIGURED_NOT_PROBED' : 'STANDBY_BACKUP',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Prepaid Wallet Balance'
     }
   ];
 
-  const hasOutage = apiRegistry.some(api => api.status.includes('CRITICAL') || api.estimatedFundsRemainingZar <= 0);
+  const hasOutage = apiRegistry.some(api => api.status.includes('CRITICAL'));
 
   return c.json({
     success: true,
-    systemGlobalStatus: hasOutage ? 'DEGRADED_FUNDS_OR_KEYS_MISSING' : '100_PERCENT_OPERATIONAL',
+    systemGlobalStatus: hasOutage ? 'DEGRADED_FUNDS_OR_KEYS_MISSING' : 'CONFIGURATION_ONLY_NOT_HEALTH_VERIFIED',
     timestamp: new Date().toISOString(),
     apis: apiRegistry
   });
