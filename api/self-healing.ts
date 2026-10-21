@@ -4,6 +4,7 @@ import { getPrivateDb } from "./security/access";
 import { errorLogs, healingPatches, systemMetrics, agentActivityLog, benchmarkFeeds } from "../db/schema";
 import { eq, desc, and, gte, sql, count } from "drizzle-orm";
 import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrator";
+import { summarizeMetricSamples, countIncidentTrend } from "./services/reliabilityAnalytics";
 
 export const selfHealingRouter = createRouter({
   logError: adminQuery
@@ -309,19 +310,73 @@ export const selfHealingRouter = createRouter({
   }),
 
   detectAnomalies: adminQuery
-    .input(z.object({ metricType: z.string(), module: z.string(), hours: z.number().default(24) }))
+    .input(z.object({
+      metricType: z.string().trim().min(1).max(100),
+      module: z.string().trim().min(1).max(255),
+      hours: z.number().int().min(1).max(168).default(24),
+    }))
     .query(async ({ input }) => {
-      return { anomalies: [], mean: 0, stdDev: 0 };
+      const db = await getPrivateDb();
+      const since = new Date(Date.now() - input.hours * 60 * 60 * 1000);
+      const rows = await db.select().from(systemMetrics)
+        .where(and(
+          eq(systemMetrics.metricType, input.metricType),
+          eq(systemMetrics.module, input.module),
+          gte(systemMetrics.timestamp, since),
+        )).orderBy(systemMetrics.timestamp).limit(1000);
+      const summary = summarizeMetricSamples(rows.map((row) => ({
+        value: Number(row.value),
+        at: row.timestamp?.getTime() ?? NaN,
+        threshold: row.threshold === null ? null : Number(row.threshold),
+      })));
+      const anomalies = summary.anomalyIndices.map((i) => rows[i]).filter(Boolean);
+      return {
+        anomalies,
+        mean: summary.mean,
+        stdDev: summary.stdDev,
+        samples: summary.samples,
+        method: "recorded thresholds + conservative statistical deviation",
+        note: "A flagged metric is a review signal, not verified root cause.",
+      };
     }),
 
   forecastErrorVolume: adminQuery.query(async () => {
-    return { currentHourlyRate: 0, predictedNextHour: 0, predictedNext24h: 0, trend: "stable", confidence: 0 };
+    const db = await getPrivateDb();
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const [current] = await db.select({ total: count() }).from(errorLogs)
+      .where(gte(errorLogs.timestamp, oneHourAgo));
+    const [previous] = await db.select({ total: count() }).from(errorLogs)
+      .where(and(
+        gte(errorLogs.timestamp, twoHoursAgo),
+        sql`${errorLogs.timestamp} < ${oneHourAgo}`,
+      ));
+    return countIncidentTrend(Number(current?.total ?? 0), Number(previous?.total ?? 0));
   }),
 
   analyzeTrend: adminQuery
-    .input(z.object({ metricType: z.string(), module: z.string(), hours: z.number().default(6) }))
+    .input(z.object({
+      metricType: z.string().trim().min(1).max(100),
+      module: z.string().trim().min(1).max(255),
+      hours: z.number().int().min(1).max(168).default(6),
+    }))
     .query(async ({ input }) => {
-      return null;
+      const db = await getPrivateDb();
+      const since = new Date(Date.now() - input.hours * 60 * 60 * 1000);
+      const rows = await db.select().from(systemMetrics)
+        .where(and(
+          eq(systemMetrics.metricType, input.metricType),
+          eq(systemMetrics.module, input.module),
+          gte(systemMetrics.timestamp, since),
+        )).orderBy(systemMetrics.timestamp).limit(1000);
+      return {
+        ...summarizeMetricSamples(rows.map((row) => ({
+          value: Number(row.value),
+          at: row.timestamp?.getTime() ?? NaN,
+          threshold: row.threshold === null ? null : Number(row.threshold),
+        }))),
+        note: "Linear trend over observed measurements, not an AI prediction.",
+      };
     }),
 
   sendNotification: adminQuery
