@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExperimentNotebook from "./ExperimentNotebook";
 import {
   Sparkles,
   ExternalLink,
@@ -267,6 +268,8 @@ export default function ExecutiveLabSuite() {
           );
         })}
       </div>
+
+      {selectedLab && <ExperimentNotebook key={selectedLab.id} labId={selectedLab.id} />}
 
       {/* Interactive In-App Simulation Modal */}
       {selectedLab && (
