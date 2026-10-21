@@ -1,11 +1,11 @@
 // =====================================================================
 // VIDEO STUDIO PAGE — Generative Video & Voiceover Studio with Margin Guard
 // =====================================================================
-// Multi-API native animation pipeline:
-// - Virtual Credit Margin Protector (10 credits/sec for $0.25 video -> 50% profit margin)
-// - ElevenLabs neural voiceover generation
-// - Replicate WAN 2.1 & RunwayML scene synthesis
-// - Full credit top-up, subscription tiers, and API unit cost transparency
+// Verified silent-video checkout and private rendering:
+// - Server-quoted video credits, charged transactionally
+// - No voiceover, fake MP4s or starter credits included in this mode
+// - Genuine Replicate output retained in private object storage
+// - Hosted Paystack checkout with provider-verified credit settlement
 // =====================================================================
 
 import { useRef, useState } from "react";
@@ -214,7 +214,7 @@ export default function VideoStudioPage() {
         if (data.storyboard.title) setFormTitle(data.storyboard.title);
         if (data.storyboard.visual_prompt) setFormPrompt(data.storyboard.visual_prompt);
         if (data.storyboard.dialogue) setFormDialogue(data.storyboard.dialogue);
-        if (data.storyboard.target_duration) setFormDuration(data.storyboard.target_duration);
+        if (data.storyboard.target_duration) setFormDuration(Math.min(10, Math.max(2, Math.round(data.storyboard.target_duration))));
       }
     } catch (e) {
       console.error("Failed to generate storyboard:", e);
@@ -377,7 +377,7 @@ export default function VideoStudioPage() {
             </div>
             <div className="text-center px-3 border-r border-slate-800">
               <div className="text-lg font-bold text-sky-400">2 cr/500ch</div>
-              <div className="text-[10px] text-slate-500 uppercase">ElevenLabs Voice</div>
+              <div className="text-[10px] text-slate-500 uppercase">Voiceover not in this mode</div>
             </div>
             <div className="text-center px-3">
               <div className="text-lg font-bold text-emerald-400">50%+</div>
@@ -394,7 +394,7 @@ export default function VideoStudioPage() {
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-orange-400" /> LUQITOONS 1-CLICK STUDIO
                 </span>
-                <span className="text-xs text-slate-400">Direct 3D Cartoon & Voiceover Generator</span>
+                <span className="text-xs text-slate-400">Private MP4 scene renderer — soundtrack separate</span>
               </div>
               <h3 className="text-base font-bold text-white mt-1">
                 Generate 3D Cartoon Characters & Multilingual Animated Scenes
@@ -425,7 +425,7 @@ export default function VideoStudioPage() {
                     setFormPrompt(p.prompt);
                     setFormDialogue(p.dialogue);
                     setFormLanguage(p.lang);
-                    setFormDuration(p.duration);
+                    setFormDuration(Math.min(10, Math.max(2, p.duration)));
                   }}
                   className="px-3 py-1.5 rounded-xl bg-slate-950/80 hover:bg-orange-500/10 hover:border-orange-500/40 border border-slate-800 text-xs font-medium text-slate-200 whitespace-nowrap transition flex items-center gap-1.5"
                 >
@@ -449,7 +449,7 @@ export default function VideoStudioPage() {
               />
             </div>
             <div className="md:col-span-6 space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400">Character Dialogue / Voiceover (ElevenLabs):</label>
+              <label className="text-[11px] font-semibold text-slate-400">Narration script draft (not rendered in silent MP4):</label>
               <textarea
                 value={formDialogue}
                 onChange={(e) => setFormDialogue(e.target.value)}
@@ -648,7 +648,7 @@ export default function VideoStudioPage() {
               <Film className="w-12 h-12 mx-auto mb-3 opacity-30 text-amber-500" />
               <p className="text-sm font-semibold text-slate-400">No Animation Scenes Yet</p>
               <p className="text-xs text-slate-600 mt-1 mb-4">
-                Launch your first scene to test ElevenLabs voiceovers and WAN 2.1 3D video generation!
+                Create your first real, silent MP4 scene after the renderer and private storage are configured.
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -788,7 +788,7 @@ export default function VideoStudioPage() {
                     <div className="font-bold text-slate-200">{renderQuote.data?.creditsRequired ?? 0} cr</div>
                   </div>
                   <div>
-                    <div className="text-slate-500">Voice (ElevenLabs)</div>
+                    <div className="text-slate-500">Voiceover (not included)</div>
                     <div className="font-bold text-slate-200">0 cr</div>
                   </div>
                   <div>
@@ -938,7 +938,7 @@ export default function VideoStudioPage() {
                     </div>
                     <button
                       onClick={() => handleQuickTopup(pack.credits, pack.id)}
-                      disabled={topupMutation.isPending}
+                      disabled={topupMutation.isPending || !balance.data?.videoRenderingEnabled}
                       className="mt-4 w-full py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                     >
                       {topupMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
