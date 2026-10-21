@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { videoProjects } from "../db/schema";
@@ -20,7 +21,7 @@ const VALID_LANGUAGES = [
 
 const VALID_STATUSES = ["PENDING", "PROCESSING", "SUCCESS", "FAILED"] as const;
 
-export const videoRouter = createRouter({
+// Fail closed: these legacy endpoints trust caller-controlled user keys and project IDs.\n// Restore only after authenticated ownership checks and verified payment settlement.\nconst disabledVideoProcedure = publicQuery.use(() => {\n  throw new TRPCError({ code: "FORBIDDEN", message: "Video account operations are temporarily unavailable pending secure authentication and payment verification." });\n});\n\nexport const videoRouter = createRouter({
   // ── Virtual Credit & Pricing Endpoints ────────────────────────────
   calculateCost: publicQuery
     .input(z.object({
@@ -32,7 +33,7 @@ export const videoRouter = createRouter({
       return breakdown;
     }),
 
-  getBalance: publicQuery
+  getBalance: disabledVideoProcedure
     .input(z.object({ userKey: z.string().optional() }).optional())
     .query(async ({ input }) => {
       const key = input?.userKey || "guest@luqi.ai";
@@ -50,7 +51,7 @@ export const videoRouter = createRouter({
     };
   }),
 
-  topupCredits: publicQuery
+  topupCredits: disabledVideoProcedure
     .input(z.object({
       userKey: z.string().optional(),
       credits: z.number().min(10),
@@ -67,7 +68,7 @@ export const videoRouter = createRouter({
     }),
 
   // ── Project Management Endpoints ──────────────────────────────────
-  create: publicQuery
+  create: disabledVideoProcedure
     .input(z.object({
       title: z.string().min(1).max(255),
       description: z.string().max(5000).optional(),
@@ -89,7 +90,7 @@ export const videoRouter = createRouter({
       return { id: Number(result.insertId), created: true };
     }),
 
-  list: publicQuery
+  list: disabledVideoProcedure
     .input(z.object({
       status: z.enum(VALID_STATUSES).optional(),
       language: z.string().optional(),
@@ -119,7 +120,7 @@ export const videoRouter = createRouter({
       return rows;
     }),
 
-  get: publicQuery
+  get: disabledVideoProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -131,7 +132,7 @@ export const videoRouter = createRouter({
       return row ?? null;
     }),
 
-  update: publicQuery
+  update: disabledVideoProcedure
     .input(z.object({
       id: z.number(),
       title: z.string().min(1).max(255).optional(),
@@ -152,7 +153,7 @@ export const videoRouter = createRouter({
       return { updated: true };
     }),
 
-  delete: publicQuery
+  delete: disabledVideoProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -160,7 +161,7 @@ export const videoRouter = createRouter({
       return { deleted: true };
     }),
 
-  startProcessing: publicQuery
+  startProcessing: disabledVideoProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -175,7 +176,7 @@ export const videoRouter = createRouter({
       return { status: "PROCESSING" };
     }),
 
-  updateProgress: publicQuery
+  updateProgress: disabledVideoProcedure
     .input(z.object({
       id: z.number(),
       progress: z.number().min(0).max(100),
@@ -192,7 +193,7 @@ export const videoRouter = createRouter({
       return { progress: input.progress };
     }),
 
-  markSuccess: publicQuery
+  markSuccess: disabledVideoProcedure
     .input(z.object({
       id: z.number(),
       videoUrl: z.string(),
@@ -218,7 +219,7 @@ export const videoRouter = createRouter({
       return { status: "SUCCESS" };
     }),
 
-  markFailed: publicQuery
+  markFailed: disabledVideoProcedure
     .input(z.object({
       id: z.number(),
       errorMessage: z.string(),
@@ -237,7 +238,7 @@ export const videoRouter = createRouter({
       return { status: "FAILED" };
     }),
 
-  stats: publicQuery.query(async () => {
+  stats: disabledVideoProcedure.query(async () => {
     const db = await getDb();
     const total = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -263,7 +264,7 @@ export const videoRouter = createRouter({
   }),
 
   // ── Native Animation Pipeline Generation (Chained API Execution) ──
-  generate: publicQuery
+  generate: disabledVideoProcedure
     .input(z.object({
       prompt: z.string().min(1).max(5000),
       title: z.string().min(1).max(255),
