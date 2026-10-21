@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { offlineSyncQueue } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export const offlineRouter = createRouter({
-  queueAction: publicQuery
+  queueAction: legacyRestrictedProcedure
     .input(z.object({
       userId: z.number().optional(),
       deviceId: z.string(),
@@ -24,7 +24,7 @@ export const offlineRouter = createRouter({
       return { id: Number(result.insertId), queued: true };
     }),
 
-  getPending: publicQuery
+  getPending: legacyRestrictedProcedure
     .input(z.object({ deviceId: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -35,7 +35,7 @@ export const offlineRouter = createRouter({
         .orderBy(offlineSyncQueue.createdAt);
     }),
 
-  markSynced: publicQuery
+  markSynced: legacyRestrictedProcedure
     .input(z.object({ ids: z.array(z.number()) }))
     .mutation(async ({ input }) => {
       const db = await getDb();
