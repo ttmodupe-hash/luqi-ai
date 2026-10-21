@@ -1,11 +1,19 @@
 import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import { users, videoProjects, videoCreditWallets, videoCreditLedger, videoRenderRequests } from "../../db/schema";
 import { getPrivateDb } from "../security/access";
 
 export const MIN_PAID_VIDEO_SECONDS = 2;
 export const MAX_PAID_VIDEO_SECONDS = 10;
+export const STALE_RENDER_MS = 15 * 60 * 1000;
+
+export function isStaleRender(createdAt: Date | null | undefined, now = Date.now()): boolean {
+  return createdAt instanceof Date &&
+    Number.isFinite(createdAt.getTime()) &&
+    now - createdAt.getTime() > STALE_RENDER_MS;
+}
+
 const CREDITS_PER_SECOND = 10;
 
 export function quotePaidVideoCredits(durationSeconds: number): number {
@@ -145,12 +153,13 @@ export async function completePaidVideo(requestKey: string, assetKey: string, pr
  * Idempotent transaction: at most one refund per request. Also used by
  * authorised operational reconciliation of interrupted render requests.
  */
-export async function refundPaidVideo(requestKey: string, reason: string): Promise<boolean> {
+export async function refundPaidVideo(requestKey: string, reason: string, requireStale = false): Promise<boolean> {
   const db = await getPrivateDb();
   return db.transaction(async (tx: any) => {
     const [job] = await tx.select().from(videoRenderRequests)
       .where(eq(videoRenderRequests.requestKey, requestKey)).limit(1).for("update");
     if (!job || job.status !== "PROCESSING") return false;
+    if (requireStale && !isStaleRender(job.createdAt)) return false;
     const [wallet] = await tx.select().from(videoCreditWallets)
       .where(eq(videoCreditWallets.userKey, job.userKey)).limit(1).for("update");
     if (!wallet) throw new Error("Video credit wallet is missing; refund requires review.");
@@ -171,6 +180,29 @@ export async function refundPaidVideo(requestKey: string, reason: string): Promi
     }).where(and(eq(videoProjects.id, job.projectId), eq(videoProjects.userId, job.userId)));
     return true;
   });
+}
+
+/**
+ * An interrupted request can be recovered on the next wallet/status read.
+ * The provider polling window is under two minutes, so a fifteen-minute job
+ * is abandoned. The lock and status re-check prevent duplicate refunds and
+ * races with render completion.
+ */
+export async function reconcileStalledVideo(userId: number): Promise<number> {
+  const db = await getPrivateDb();
+  const cutoff = new Date(Date.now() - STALE_RENDER_MS);
+  const candidates = await db.select({ requestKey: videoRenderRequests.requestKey })
+    .from(videoRenderRequests)
+    .where(and(
+      eq(videoRenderRequests.userId, userId),
+      eq(videoRenderRequests.status, "PROCESSING"),
+      lt(videoRenderRequests.createdAt, cutoff),
+    )).limit(10);
+  let refunded = 0;
+  for (const candidate of candidates) {
+    if (await refundPaidVideo(candidate.requestKey, "Render interrupted; credit reservation expired", true)) refunded++;
+  }
+  return refunded;
 }
 
 export async function getPaidVideoRequest(userId: number, requestKey: string) {
