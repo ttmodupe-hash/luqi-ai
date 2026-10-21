@@ -1,9 +1,9 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
-// Creates all 35 tables on startup when they do not exist yet.
-// DDL matches db/schema.ts exactly. Idempotent (IF NOT EXISTS) and never
-// throws — a database that is unreachable or already provisioned must
-// not block server startup. Also ensures the demo login account exists.
+// Development/test convenience schema bootstrap. Production DDL MUST run
+// separately under an approved, backed-up database migration; starting the
+// application must not implicitly create or change production tables.
+// The historical demo credential is never seeded.
 // =====================================================================
 
 import mysql from "mysql2/promise";
@@ -110,6 +110,55 @@ const CREATE_STATEMENTS: string[] = [
 	\`created_at\` timestamp DEFAULT (now()),
 	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT \`botanical_entries_id\` PRIMARY KEY(\`id\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`ai_global_daily_quota\` (
+  \`day_key\` varchar(10) NOT NULL,
+  \`jobs\` int NOT NULL DEFAULT 0,
+  PRIMARY KEY (\`day_key\`),
+  CONSTRAINT \`ai_global_daily_quota_nonnegative\` CHECK (\`jobs\` >= 0)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`video_global_daily_quota\` (
+  \`day_key\` varchar(10) NOT NULL,
+  \`jobs\` int NOT NULL DEFAULT 0,
+  PRIMARY KEY (\`day_key\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`video_credit_wallets\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`user_key\` varchar(255) NOT NULL,
+  \`credits\` int NOT NULL DEFAULT 0,
+  \`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`video_credit_wallets_user_key_unique\` (\`user_key\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`video_credit_ledger\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`reference\` varchar(100) NOT NULL,
+  \`user_key\` varchar(255) NOT NULL,
+  \`entry_type\` varchar(30) NOT NULL,
+  \`delta_credits\` int NOT NULL,
+  \`balance_after\` int NOT NULL,
+  \`created_at\` timestamp DEFAULT (now()),
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`video_credit_ledger_reference_unique\` (\`reference\`),
+  INDEX \`video_credit_ledger_user_key_idx\` (\`user_key\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`video_render_requests\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`request_key\` varchar(64) NOT NULL,
+  \`user_id\` int NOT NULL,
+  \`user_key\` varchar(255) NOT NULL,
+  \`project_id\` int NOT NULL,
+  \`request_digest\` varchar(64) NOT NULL,
+  \`asset_key\` varchar(400),
+  \`charge_credits\` int NOT NULL,
+  \`mode\` varchar(30) NOT NULL DEFAULT 'silent_mp4',
+  \`status\` varchar(30) NOT NULL DEFAULT 'PROCESSING',
+  \`error_message\` text,
+  \`created_at\` timestamp DEFAULT (now()),
+  \`completed_at\` timestamp,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`video_render_requests_request_key_unique\` (\`request_key\`),
+  INDEX \`video_render_requests_user_id_idx\` (\`user_id\`)
 );`,
   `CREATE TABLE IF NOT EXISTS \`credit_wallets\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -494,27 +543,33 @@ export async function bootstrapDatabase(): Promise<void> {
   try {
     connection = await mysql.createConnection(config);
 
-    for (const statement of CREATE_STATEMENTS) {
-      await connection.execute(statement);
-    }
-
-    console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
-
-    // Ensure the demo account exists (it is advertised on the login page)
-    try {
-      const bcrypt = (await import("bcryptjs")).default;
-      const [rows] = await connection.query("SELECT id FROM users WHERE email = ? LIMIT 1", ["demo@luqi.ai"]);
-      if ((rows as Array<unknown>).length === 0) {
-        const hash = await bcrypt.hash("demo123", 10);
-        await connection.execute(
-          "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)",
-          ["demo@luqi.ai", hash, "Demo User", "user"]
-        );
-        console.log("[Bootstrap] Demo account created: demo@luqi.ai");
+    if (process.env.NODE_ENV !== "production") {
+      for (const statement of CREATE_STATEMENTS) {
+        await connection.execute(statement);
       }
-    } catch (seedError) {
-      console.error("[Bootstrap] Demo account seed failed (non-fatal):", seedError);
+      console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} development tables`);
+    } else {
+      console.log("[Bootstrap] Production schema writes disabled; reviewed migrations required");
     }
+
+    // Never provision a known-password demo account. Deactivate the historical
+    // default only if its stored hash still matches the compromised password.
+    // Do not alter accounts whose passwords have already been changed.
+    if (process.env.NODE_ENV === "production") {
+      const [rows] = await connection.query(
+        "SELECT id, password_hash FROM users WHERE email = ? LIMIT 1",
+        ["demo@luqi.ai"],
+      );
+      const demo = (rows as Array<{ id: number; password_hash: string }>)[0];
+      if (demo?.password_hash) {
+        const bcrypt = (await import("bcryptjs")).default;
+        if (await bcrypt.compare("demo123", demo.password_hash)) {
+          await connection.execute("UPDATE users SET is_active = 0 WHERE id = ?", [demo.id]);
+          console.warn("[Bootstrap] Insecure default-password demonstration account disabled");
+        }
+      }
+    }
+
   } catch (error) {
     console.error("[Bootstrap] Table creation failed (non-fatal):", error);
   } finally {

@@ -31,7 +31,7 @@ export const AdminSovereignPortal: React.FC = () => {
   const [edgeTelemetry, setEdgeTelemetry] = useState<any>(null);
   const [offlineSyncData, setOfflineSyncData] = useState<any>(null);
 
-  // Tab 2: HITL Items
+  // Tab 2: illustrative HITL items only; real decisions require a server-side queue.
   const [hitlItems, setHitlItems] = useState<PendingHitlItem[]>([
     {
       id: 'HITL-TX-8812',
@@ -76,8 +76,11 @@ export const AdminSovereignPortal: React.FC = () => {
 
   useEffect(() => {
     const savedToken = sessionStorage.getItem('luqi_admin_token');
+    // A cached key is not proof of authorization; verify it with the server.
     if (savedToken) {
-      setIsAuthenticated(true);
+      fetch('/api/v1/admin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passkey: savedToken }) })
+        .then(res => { if (res.ok) setIsAuthenticated(true); else sessionStorage.removeItem('luqi_admin_token'); })
+        .catch(() => sessionStorage.removeItem('luqi_admin_token'));
     }
     if (typeof window !== 'undefined' && window.location.pathname.includes('knowledge-grading')) {
       setActiveTab('KNOWLEDGE_GRADING');
@@ -100,21 +103,10 @@ export const AdminSovereignPortal: React.FC = () => {
         sessionStorage.setItem('luqi_admin_token', passkeyInput);
         setIsAuthenticated(true);
       } else {
-        // Fallback check against default key
-        if (passkeyInput === 'LUQI-ADMIN-2026') {
-          sessionStorage.setItem('luqi_admin_token', passkeyInput);
-          setIsAuthenticated(true);
-        } else {
-          setAuthError('Access denied: Invalid Admin Passkey');
-        }
+        setAuthError('Access denied: Invalid Admin Passkey');
       }
     } catch {
-      if (passkeyInput === 'LUQI-ADMIN-2026') {
-        sessionStorage.setItem('luqi_admin_token', passkeyInput);
-        setIsAuthenticated(true);
-      } else {
-        setAuthError('Authentication service unreachable or invalid passkey');
-      }
+      setAuthError('Authentication service unreachable');
     } finally {
       setIsVerifying(false);
     }
@@ -124,35 +116,6 @@ export const AdminSovereignPortal: React.FC = () => {
     sessionStorage.removeItem('luqi_admin_token');
     setIsAuthenticated(false);
     setPasskeyInput('');
-  };
-
-  const handleHitlAction = async (id: string, action: 'APPROVED' | 'REJECTED') => {
-    const item = hitlItems.find(i => i.id === id);
-    setHitlItems(prev =>
-      prev.map(i => (i.id === id ? { ...i, status: action } : i))
-    );
-
-    // Cryptographically seal action into append-only SHA-256 chain
-    try {
-      await fetch('/api/v1/audit/seal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actor: 'System Administrator',
-          action: `HITL_${action}_${item?.type || 'ACTION'}`,
-          payload: {
-            itemId: id,
-            title: item?.title,
-            amountZar: item?.amountZar,
-            decision: action,
-            sealedAt: new Date().toISOString()
-          }
-        })
-      });
-      loadCryptoLedgerData();
-    } catch (e) {
-      console.warn('Audit seal dispatch error:', e);
-    }
   };
 
   const loadCryptoLedgerData = async () => {
@@ -262,7 +225,7 @@ export const AdminSovereignPortal: React.FC = () => {
                 type="password"
                 value={passkeyInput}
                 onChange={e => setPasskeyInput(e.target.value)}
-                placeholder="Enter passkey (e.g. LUQI-ADMIN-2026)"
+                placeholder="Enter administrator passkey"
                 className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
               />
             </div>
@@ -455,16 +418,18 @@ export const AdminSovereignPortal: React.FC = () => {
                   {item.status === 'PENDING' ? (
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleHitlAction(item.id, 'APPROVED')}
+                        disabled
+                        title="Requires authenticated server-side approval workflow"
                         className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
                       >
-                        Approve & Sign
+                        Approval unavailable
                       </button>
                       <button
-                        onClick={() => handleHitlAction(item.id, 'REJECTED')}
+                        disabled
+                        title="Requires authenticated server-side approval workflow"
                         className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
                       >
-                        Reject
+                        Rejection unavailable
                       </button>
                     </div>
                   ) : (

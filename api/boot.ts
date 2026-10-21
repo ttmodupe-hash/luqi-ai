@@ -1,5 +1,7 @@
 import dotenv from "dotenv";
-dotenv.config({ override: true });
+import { timingSafeEqual } from "node:crypto";
+// Preserve cloud-injected Secret Manager / runtime settings over local .env files.
+dotenv.config({ override: false });
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
@@ -8,8 +10,17 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from "./auth";
+import { verifyStripeWebhook } from "./security/stripeWebhook";
+import { inspectLogIndicators } from "./security/logHeuristics";
+import { getPrivateDb } from "./security/access";
+import { getPaidVideoRequest } from "./services/paidVideoLedger";
+import { readPaidVideoAsset } from "./services/paidVideo";
+import { paymentEvents, healingPatches, errorLogs, analyticsEvents } from "../db/schema";
+import { desc, eq, sql } from "drizzle-orm";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
+import { trustedOrigins, isAllowedApiMutation } from "./security/requestOrigin";
+import { reserveAiRequest } from "./security/aiBudget";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
@@ -34,20 +45,29 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────────
 
-// CORS — allow frontend origin
+// Browser origins are explicit. Never use wildcard CORS with credentials.
+const approvedOrigins = trustedOrigins(
+  process.env.FRONTEND_URL,
+  process.env.ALLOWED_ORIGINS,
+  process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000",
+);
 app.use("/*", cors({
-  origin: (origin) => {
-    const allowedOrigin = process.env.FRONTEND_URL;
-    if (!origin) return allowedOrigin || "*";
-    if (allowedOrigin) return origin === allowedOrigin ? allowedOrigin : "";
-    return process.env.NODE_ENV === "production" ? "" : origin;
-  },
+  origin: (origin) => origin && approvedOrigins.has(origin) ? origin : "",
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-KEY", "X-API-Key", "x-api-key"],
   exposeHeaders: ["Content-Length", "X-Request-Id"],
   maxAge: 86400,
   credentials: true,
 }));
+
+// State-changing cookie-authenticated requests must originate from the
+// configured frontend. This is separate from CORS, which is not CSRF defence.
+app.use("/*", async (c, next) => {
+  if (!isAllowedApiMutation(c.req.raw, approvedOrigins)) {
+    return c.json({ error: "Cross-origin state-changing request denied." }, 403);
+  }
+  return next();
+});
 
 // Security headers
 app.use("/*", async (c, next) => {
@@ -62,29 +82,16 @@ app.use("/*", async (c, next) => {
   }
 });
 
-// Rate limiting (simple in-memory)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100; // requests per minute
-const RATE_WINDOW = 60 * 1000;
-
-app.use("/api/*", async (c, next) => {
-  const ip = c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
-  const now = Date.now();
-  const data = rateLimitMap.get(ip);
-  
-  if (data && now < data.resetAt) {
-    if (data.count >= RATE_LIMIT) {
-      return c.json({ error: "Rate limit exceeded" }, 429);
-    }
-    data.count++;
-  } else {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
-  }
-  
-  return next();
-});
+// Request admission is enforced by trusted, database-backed quotas on
+// authentication, paid AI, and guarded tRPC operations. The former process-
+// local limiter trusted caller-supplied x-forwarded-for headers, and was easy
+// to reset or evade across instances. Do not replace it with a process-global
+// counter that would make one user exhaust everybody else's allowance.
+// Add managed edge/WAF limits for unauthenticated legacy HTTP routes before
+// staging traffic is enabled.
 
 // ── REQUEST CORRELATION + STRUCTURED LOGGING ───────────────────────
+
 app.use("/*", async (c, next) => {
   const requestId = crypto.randomUUID();
   const start = Date.now();
@@ -99,14 +106,127 @@ app.use("/*", async (c, next) => {
   }, "request");
 });
 
+// Legacy administrative HTTP paths must be protected by the same verified,
+// database-backed session and role as tRPC adminQuery. Neither an arbitrary
+// x-forwarded-for header nor an account identifier passed in a URL is authority.
+const internalAdminPaths = new Set([
+  "/api/v1/security/diagnostics",
+  "/api/v1/security/shield-audit",
+  "/security/shield-audit",
+  "/security/diagnostics",
+  "/api/v1/diagnostics/database-indexes",
+  "/api/v1/audit/ledger",
+  "/api/v1/audit/seal",
+  "/api/v1/intelligence/self-optimize",
+  "/intelligence/self-optimize",
+  "/api/v1/governance/generate-system-card",
+  "/api/v1/governance/system-cards",
+  "/api/v1/workspace/critiques",
+  "/workspace/critiques",
+]);
+app.use("/*", async (c, next) => {
+  const adminPath = internalAdminPaths.has(c.req.path) ||
+    c.req.path.startsWith("/api/v1/intelligence/") ||
+    c.req.path === "/api/v1/finops-dashboard" ||
+    c.req.path === "/api/v1/system-api-matrix" ||
+    c.req.path === "/api/v1/admin/verify" ||
+    c.req.path === "/api/v1/consensus/execute" ||
+    c.req.path === "/api/v1/edge-cache/telemetry";
+  const studentLedger = /^\/api\/v1\/grading\/ledger\/[^/]+$/.test(c.req.path);
+  if (!adminPath && !studentLedger) return next();
+
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authenticated session required." }, 401);
+
+  if (adminPath && user.role !== "admin") {
+    return c.json({ error: "Administrator access required." }, 403);
+  }
+  if (studentLedger && user.role !== "admin" &&
+      c.req.path.split("/").at(-1) !== String(user.id)) {
+    return c.json({ error: "Access denied." }, 403);
+  }
+  c.header("Cache-Control", "no-store");
+  return next();
+});
+
+// Paid Gemini media generation uses a verified session and durable AI quota.
+// Anonymous callers cannot use LUQI's vendor keys or bypass daily budgets by
+// changing IP addresses or moving between Cloud Run instances.
+app.use("/api/gemini/*", async (c, next) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI generation." }, 401);
+  if (c.req.method.toUpperCase() !== "POST") return c.json({ error: "Method not allowed." }, 405);
+  try {
+    await reserveAiRequest(user.id, `gemini:${c.req.path.slice(0, 80)}`);
+  } catch (error: any) {
+    const code = error?.code;
+    if (code === "TOO_MANY_REQUESTS") return c.json({ error: "Daily AI request limit reached." }, 429);
+    if (code === "UNAUTHORIZED") return c.json({ error: "Account is unavailable." }, 401);
+    return c.json({ error: "Verified AI usage accounting is unavailable." }, 503);
+  }
+  c.header("Cache-Control", "no-store");
+  return next();
+});
+
+// Khoro's text, voice, image and stream endpoints use the same persistent
+// account quota as direct Gemini APIs. A new browser IP cannot reset usage.
+const protectPaidKhoro = async (context: any, next: () => Promise<void>) => {
+  const user = await resolveSessionUser(context.req.raw);
+  if (!user) return context.json({ error: "Sign in to use the AI companion." }, 401);
+  if (context.req.method.toUpperCase() !== "POST") {
+    return context.json({ error: "Method not allowed." }, 405);
+  }
+  try {
+    await reserveAiRequest(user.id, `khoro:${context.req.path.slice(0, 80)}`);
+  } catch (error: any) {
+    if (error?.code === "TOO_MANY_REQUESTS") {
+      return context.json({ error: "Daily AI allowance reached." }, 429);
+    }
+    return context.json({ error: "Verified AI usage accounting is unavailable." }, 503);
+  }
+  context.header("Cache-Control", "no-store");
+  return next();
+};
+app.use("/api/khoro/*", protectPaidKhoro);
+app.use("/api/khoro-legal", protectPaidKhoro);
+
 // ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(async (c, next) => {
   const method = c.req.method.toUpperCase();
   const contentLength = c.req.header("content-length");
-  if (method === "GET" || method === "HEAD" || !contentLength || contentLength === "0") {
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return next();
   }
-  return bodyLimit({ maxSize: 50 * 1024 * 1024 })(c, next);
+  // Never skip the streaming body cap when Content-Length is omitted or
+  // chunked encoding is used. AI proxies have a smaller per-request budget.
+  const expensive = c.req.path.startsWith("/api/gemini/") ||
+    c.req.path.startsWith("/api/khoro");
+  return bodyLimit({ maxSize: expensive ? 8 * 1024 * 1024 : 50 * 1024 * 1024 })(c, next);
+});
+
+// Private video asset gateway: a browser cookie does not grant access to
+// somebody else's object. Every request performs fresh session+owner checks.
+app.get("/api/video/assets/:requestKey", async (c) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  const requestKey = c.req.param("requestKey");
+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestKey)) {
+    return c.json({ error: "Invalid video reference." }, 400);
+  }
+  try {
+    const job = await getPaidVideoRequest(user.id, requestKey);
+    if (!job || job.status !== "SUCCESS") {
+      return c.json({ error: "Video not found." }, 404);
+    }
+    const bytes = await readPaidVideoAsset(user.id, requestKey);
+    return c.body(Buffer.from(bytes), 200, {
+      "Content-Type": "video/mp4",
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+  } catch {
+    return c.json({ error: "Private video asset could not be retrieved." }, 503);
+  }
 });
 
 // ── ACCOUNT / SESSION API ───────────────────────────────────────────
@@ -136,7 +256,9 @@ app.post("/api/auth/register", async (c) => {
     return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() }, 201);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Registration failed.";
-    const status = /already exists/i.test(message) ? 409 : /persistent database|database is unavailable/i.test(message) ? 503 : 400;
+    const status = (error as { code?: string })?.code === "TOO_MANY_REQUESTS" ? 429 :
+      (error as { code?: string })?.code === "SERVICE_UNAVAILABLE" ? 503 :
+      /already exists/i.test(message) ? 409 : /persistent database|database is unavailable/i.test(message) ? 503 : 400;
     return c.json({ error: message }, status);
   }
 });
@@ -152,8 +274,10 @@ app.post("/api/auth/login", async (c) => {
     return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sign-in failed.";
-    const status = /persistent database|database is unavailable/i.test(message) ? 503 : 401;
-    return c.json({ error: status === 401 ? "Invalid email or password." : message }, status);
+    const status = (error as { code?: string })?.code === "TOO_MANY_REQUESTS" ? 429 :
+      (error as { code?: string })?.code === "SERVICE_UNAVAILABLE" ? 503 :
+      /persistent database|database is unavailable/i.test(message) ? 503 : 401;
+    return c.json({ error: status === 401 ? "Invalid email or password." : status === 429 ? "Too many attempts. Try again shortly." : message }, status);
   }
 });
 
@@ -164,9 +288,15 @@ app.get("/api/auth/me", async (c) => {
 });
 
 app.post("/api/auth/logout", async (c) => {
-  await revokeSession(c.req.raw);
-  clearSessionCookie(c);
-  return c.json({ ok: true });
+  c.header("Cache-Control", "no-store");
+  try {
+    // Only report success after persistent session revocation succeeds.
+    await revokeSession(c.req.raw);
+    clearSessionCookie(c);
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ error: "Session revocation is currently unavailable. Please retry." }, 503);
+  }
 });
 
 // ── tRPC ───────────────────────────────────────────────────────────
@@ -188,6 +318,20 @@ app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(),
 app.route("/", restCompat);
 
 // 1. Unified Chat & KHORO Sovereign Companion Endpoint
+app.use("/api/v1/luqi-core", async (c, next) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Please sign in to use this AI capability." }, 401);
+  try {
+    await reserveAiRequest(user.id, "luqi-core");
+  } catch (err: any) {
+    return c.json({
+      error: err?.code === "TOO_MANY_REQUESTS"
+        ? "Daily AI allowance reached." : "AI usage authorisation is unavailable.",
+    }, err?.code === "TOO_MANY_REQUESTS" ? 429 : 503);
+  }
+  await next();
+});
+
 app.post('/api/v1/luqi-core', async (c) => {
   let body: any = {};
   try {
@@ -359,8 +503,11 @@ app.post('/api/v1/simulation/generate', async (c) => {
 // Helper for Zero-Trust Sovereign Admin Authorization
 const checkSovereignAdminAuth = (c: any): boolean => {
   const headerKey = c.req.header('x-luqi-admin-key') || c.req.header('X-LUQI-ADMIN-KEY') || c.req.header('x-api-key');
-  const expectedKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  return headerKey === expectedKey;
+  const expectedKey = process.env.LUQI_ADMIN_MASTER_KEY;
+  if (!expectedKey || !headerKey) return false;
+  const a = Buffer.from(headerKey);
+  const b = Buffer.from(expectedKey);
+  return a.length === b.length && timingSafeEqual(a, b);
 };
 
 // ============================================================================
@@ -649,61 +796,32 @@ app.get('/api/v1/grading/ledger/:user_id', (c) => {
   const userId = c.req.param('user_id');
   const chain = SovereignCryptoLedger.getLedgerChain();
   const entries = chain
-    .filter(b => b.actor === userId || b.action.includes('GRADED') || b.action.includes('TERMINAL') || b.action.includes('SIMULATION'))
+    .filter(b => b.actor === userId)
     .map(b => ({
       session_id: b.currentBlockHash.substring(0, 12),
       track: b.action,
-      activity_summary: typeof b.payload === 'object' ? JSON.stringify(b.payload) : String(b.payload || 'Lab Exercise Verified'),
+      activity_summary: b.action,
       completion_date: new Date(b.timestamp).toISOString().replace('T', ' ').substring(0, 16)
     }));
 
-  return c.json(entries.length > 0 ? entries : [
-    {
-      session_id: 'SES-INIT-01',
-      track: 'AWS_CLOUD_SANDBOX',
-      activity_summary: 'AWS EC2 High Availability Auto-Scaling Lab Verified',
-      completion_date: new Date().toISOString().replace('T', ' ').substring(0, 16)
-    }
-  ]);
+  // This is a legacy in-memory activity record, not certified grading.
+  // Never fabricate a passed lab when a student has no records.
+  return c.json(entries);
 });
 
 // ============================================================================
 // LUQITOONS MULTI-AGENT STORYBOARD, STRIPE LEDGER & SELF-IMPROVEMENT
 // ============================================================================
 
-const corporateBillingLedgerStore = [
-  {
-    id: "TX-STRIPE-9901",
-    customer: "enterprise-client@luqi-ai.com",
-    transaction_reference: "cs_live_990184712049",
-    payout_details: "$499.00 USD (Unlimited Multi-Scene Storyboard)",
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-  },
-  {
-    id: "TX-STRIPE-9902",
-    customer: "academy@pan-africa.edu",
-    transaction_reference: "cs_live_990284712050",
-    payout_details: "$249.00 USD (Grade 10 STEM Simulation Engine)",
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-  }
-];
-
-// Authentication Gateways
-app.post('/api/v1/auth/register', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "User registered successfully.", email: body.email });
-});
-app.post('/auth/register', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "User registered successfully.", email: body.email });
-});
-
-app.post('/api/v1/auth/login', async (c) => {
-  return c.json({ access_token: `LUQI-JWT-${Date.now()}`, token_type: "bearer" });
-});
-app.post('/auth/login', async (c) => {
-  return c.json({ access_token: `LUQI-JWT-${Date.now()}`, token_type: "bearer" });
-});
+// Legacy authentication paths now delegate to the real database-backed
+// session endpoints. 307 preserves method and POST body on the same origin;
+// no fabricated JWTs or fake registrations are issued.
+for (const path of ["/api/v1/auth/register", "/auth/register"]) {
+  app.post(path, (c) => c.redirect("/api/auth/register", 307));
+}
+for (const path of ["/api/v1/auth/login", "/auth/login"]) {
+  app.post(path, (c) => c.redirect("/api/auth/login", 307));
+}
 
 // Creative Storyboard Creation Router
 app.post('/api/v1/media/orchestrate', async (c) => {
@@ -777,85 +895,106 @@ app.post('/media/compile-and-stream', async (c) => {
   });
 });
 
-// Stripe Billing Public Webhook
-app.post('/api/v1/billing/stripe-webhook', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const event = body.type || 'checkout.session.completed';
-  const newRecord = {
-    id: `TX-STRIPE-${corporateBillingLedgerStore.length + 1001}`,
-    customer: body.customer || "corporate-partner@luqi-ai.com",
-    transaction_reference: body.id || `cs_live_${Date.now()}`,
-    payout_details: `$${body.amount || 299.0} USD (${event})`,
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
-  };
-  corporateBillingLedgerStore.unshift(newRecord);
-  return c.json({ status: "success", record: newRecord });
-});
-
-// Protected Admin Billing Ledger
-app.get('/api/v1/admin/billing-ledger', (c) => {
-  return c.json(corporateBillingLedgerStore);
-});
-app.get('/admin/billing-ledger', (c) => {
-  return c.json(corporateBillingLedgerStore);
-});
-
-// Self-Improving Intelligence Agent Module
-app.post('/api/v1/intelligence/self-optimize', async (c) => {
+// Authenticated Stripe delivery is an audited event, never a payment credit.
+// The unique event ID makes repeat webhook delivery idempotent. Checkout
+// reconciliation and wallet settlement are handled separately after provider
+// verification; this endpoint never takes amounts from an unsigned body.
+app.post("/api/v1/billing/stripe-webhook", async (c) => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "Stripe webhook is not configured." }, 503);
+  const raw = await c.req.text();
+  const event = verifyStripeWebhook(raw, c.req.header("stripe-signature") ?? null, secret);
+  if (!event) return c.json({ error: "Invalid Stripe webhook signature." }, 400);
   try {
-    const report = {
-      detected_bottlenecks: [
-        "FFmpeg audio-visual frame drift on mobile web viewports",
-        "Slight token latency during recursive Pinecone namespace queries",
-        "Zero-trust SHA-256 block consensus verification queue backlog"
-      ],
-      code_optimization_patch: "APPLIED: Replaced polling threads with asynchronous event hooks; updated model routing to gemini-2.5-flash with cached token contexts.",
-      capability_expansion_score: 28,
-      recommended_system_prompt_update: "Reinforce audio-first timing constraints and automated parameter validation on all CLI sandboxes."
-    };
-    
-    try {
-      SovereignCryptoLedger.sealAction(
-        'META_OPTIMIZATION_AGENT',
-        'SYSTEM_SELF_OPTIMIZE',
-        report
-      );
-    } catch (ledgerErr: any) {
-      console.warn("Ledger seal warning:", ledgerErr?.message);
-    }
-    
-    return c.json(report);
-  } catch (err: any) {
-    console.error("self-optimize error:", err);
-    return c.json({ error: err.message, stack: err.stack }, 500);
+    const db = await getPrivateDb();
+    await db.insert(paymentEvents).values({
+      reference: event.id,
+      eventType: event.type,
+      status: "verified_received",
+      channel: "stripe",
+      payloadJson: JSON.stringify({ created: event.created, livemode: event.livemode }),
+    }).onDuplicateKeyUpdate({ set: { reference: event.id } });
+    return c.json({ received: true });
+  } catch {
+    return c.json({ error: "Webhook storage is unavailable." }, 503);
   }
 });
-app.post('/intelligence/self-optimize', async (c) => {
-  return c.json({
-    detected_bottlenecks: ["Audio sync frame drift", "Token latency in recursive retrieval"],
-    code_optimization_patch: "APPLIED: Async event hooks & prompt compression active.",
-    capability_expansion_score: 25,
-    recommended_system_prompt_update: "Reinforce audio-first timing constraints."
-  });
-});
 
-// Workspace Asset Upload
-app.post('/api/v1/workspace/upload-asset', async (c) => {
-  const filename = `workspace_${Date.now()}_document.pdf`;
-  return c.json({
-    success: true,
-    asset_url: `https://storage.googleapis.com/luqi-vault/workspace_assets/${filename}`,
-    filename
+// Admin ledger now reads recorded payment events from durable database storage.
+// A verified webhook receipt is NOT an invoice, proof of cleared funds or a
+// completed wallet top-up. Never show fabricated sample transactions as real.
+for (const path of ["/api/v1/admin/billing-ledger", "/admin/billing-ledger"]) {
+  app.get(path, async (c) => {
+    if (!checkSovereignAdminAuth(c)) return c.json({ error: "Unauthorized" }, 401);
+    c.header("Cache-Control", "no-store");
+    try {
+      const db = await getPrivateDb();
+      const events = await db.select({
+        reference: paymentEvents.reference,
+        eventType: paymentEvents.eventType,
+        channel: paymentEvents.channel,
+        status: paymentEvents.status,
+        amountCents: paymentEvents.amountCents,
+        currency: paymentEvents.currency,
+        createdAt: paymentEvents.createdAt,
+      }).from(paymentEvents).orderBy(desc(paymentEvents.createdAt)).limit(100);
+      return c.json({
+        events,
+        notice: "Provider event receipts are not independently reconciled settlements or invoices.",
+      });
+    } catch {
+      return c.json({ error: "Verified billing records are unavailable." }, 503);
+    }
   });
-});
-app.post('/workspace/upload-asset', async (c) => {
-  const filename = `workspace_${Date.now()}_document.pdf`;
-  return c.json({
-    success: true,
-    asset_url: `https://storage.googleapis.com/luqi-vault/workspace_assets/${filename}`,
-    filename
+}
+
+// Self-Improving Intelligence Agent Module
+// Legacy self-improvement routes now report actual pending review work.
+// They never assert that an AI-generated code patch was deployed or applied.
+for (const path of ["/api/v1/intelligence/self-optimize", "/intelligence/self-optimize"]) {
+  app.post(path, async (c) => {
+    try {
+      const db = await getPrivateDb();
+      const [recentErrors, proposals] = await Promise.all([
+        db.select({
+          id: errorLogs.id,
+          severity: errorLogs.severity,
+          sourceModule: errorLogs.sourceModule,
+        }).from(errorLogs).orderBy(desc(errorLogs.timestamp)).limit(10),
+        db.select({
+          id: healingPatches.id,
+          status: healingPatches.status,
+          createdAt: healingPatches.createdAt,
+        }).from(healingPatches).orderBy(desc(healingPatches.createdAt)).limit(10),
+      ]);
+      return c.json({
+        status: "REVIEW_REQUIRED",
+        codeChanged: false,
+        deployed: false,
+        recentErrors,
+        proposals,
+        nextAction: "Review errors and request a patch proposal using authenticated selfHealing.aiDiagnoseError. Approve GitHub CI before merging any change.",
+      });
+    } catch {
+      return c.json({ error: "Verified diagnosis data is unavailable." }, 503);
+    }
   });
-});
+}
+
+// Legacy workspace upload never stored bytes and returned a fabricated public
+// storage URL. Fail explicitly until an authenticated, private upload flow
+// with content validation, ownership and malware scanning is implemented.
+for (const route of ["/api/v1/workspace/upload-asset", "/workspace/upload-asset"]) {
+  app.post(route, async (c) => {
+    const user = await resolveSessionUser(c.req.raw);
+    if (!user) return c.json({ error: "Authenticated session required." }, 401);
+    return c.json({
+      error: "Legacy upload is unavailable. No file was stored.",
+      storageCommitted: false,
+      nextAction: "Use an approved owner-scoped private storage upload workflow.",
+    }, 501);
+  });
+}
 
 // Workspace AI Calendar Booking
 const calendarLedgerStore: any[] = [];
@@ -955,123 +1094,58 @@ app.get('/workspace/critiques', (c) => {
 // TRIUMVIRATE SECURITY AGENT GRID & DIAGNOSTICS
 // ============================================================================
 
-app.post('/api/v1/security/shield-audit', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const logData = body.log_buffer_stream || '';
-  if (!logData) {
-    return c.json({ error: "Empty transaction streaming logs." }, 400);
-  }
-
-  const logUpper = logData.toUpperCase();
-  const isSqlInjection = logUpper.includes("SELECT") && (logUpper.includes("OR '1'='1'") || logUpper.includes("1=1") || logData.includes("--"));
-  const isXss = logUpper.includes("<SCRIPT>") || logUpper.includes("DOCUMENT.COOKIE") || logUpper.includes("JAVASCRIPT:");
-  const isRce = logUpper.includes("RM -RF") || logUpper.includes("; ECHO") || logUpper.includes("SYSTEM COMPROMISED") || logUpper.includes("/APP/CORE");
-  const isPii = logUpper.includes("BILLING CREDENTIALS WITHOUT JWT") || logUpper.includes("CUSTOMER PROFILES") || logUpper.includes("LEAKED TOKEN");
-
-  let verdict: any;
-  if (isSqlInjection) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 95,
-      threat_vector_type: "SQL Injection Attack",
-      exploit_analysis_details: "Unescaped boolean injection detected. Potential unauthorized dump of customer/users schema tables.",
-      remediation_patch_code: "APPLIED: Enforced parameterized SQLAlchemy queries (:user_id) with strict whitelist regex validation."
-    };
-  } else if (isXss) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 90,
-      threat_vector_type: "Cross-Site Scripting (XSS) Token Hijack",
-      exploit_analysis_details: "Malicious script tag attempting client cookie/JWT extraction. CSP and DOM sanitization triggered.",
-      remediation_patch_code: "APPLIED: Enabled DOMPurify and strict Content-Security-Policy (script-src 'self')."
-    };
-  } else if (isRce) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 99,
-      threat_vector_type: "Unauthorized Remote Code Execution (RCE)",
-      exploit_analysis_details: "Shell meta-characters (;) with destructive system commands detected. Subprocess sandbox isolated.",
-      remediation_patch_code: "APPLIED: Restricted subprocess exec commands to non-root whitelist containers with read-only root filesystems."
-    };
-  } else if (isPii) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 85,
-      threat_vector_type: "PII Leakage & Account Harvest",
-      exploit_analysis_details: "Unauthenticated harvesting request attempting bypass of OAuth2/JWT session gates.",
-      remediation_patch_code: "APPLIED: Activated Zero-Trust JWT bearer enforcement on all tenant records with rate limiting."
-    };
-  } else {
-    verdict = {
-      vulnerability_detected: false,
-      risk_score: 10,
-      threat_vector_type: "Standard Traffic",
-      exploit_analysis_details: "Transaction matches expected enterprise request pattern. Zero vulnerability vectors identified.",
-      remediation_patch_code: ""
-    };
-  }
-
-  if (verdict.vulnerability_detected && verdict.risk_score >= 70) {
-    SovereignCryptoLedger.sealAction(
-      'SECURITY_SHIELD_AGENT',
-      `THREAT_INTERCEPTED_${verdict.threat_vector_type.replace(/\s+/g, '_')}`,
-      verdict
-    );
-  }
-
-  return c.json(verdict);
-});
-
-app.post('/security/shield-audit', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const logData = body.log_buffer_stream || '';
-  const logUpper = logData.toUpperCase();
-  const isThreat = logUpper.includes("SELECT") || logUpper.includes("<SCRIPT>") || logUpper.includes("RM -RF") || logUpper.includes("JWT");
-  return c.json({
-    vulnerability_detected: isThreat,
-    risk_score: isThreat ? 95 : 10,
-    threat_vector_type: isThreat ? "Automated Probe Caught" : "Standard Traffic",
-    exploit_analysis_details: isThreat ? "Isolated by Triumvirate Shield" : "Nominal",
-    remediation_patch_code: isThreat ? "APPLIED: Whitelist active" : ""
-  });
-});
-
-app.get('/api/v1/security/diagnostics', (c) => {
-  const jwtKey = process.env.JWT_SECRET_KEY || "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123";
-  const jwtStatus = jwtKey.length >= 32 && jwtKey !== "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123" ? "PASS" : "WARNING";
-  const dbUrl = process.env.DATABASE_URL || "";
-  const dbStatus = !dbUrl || dbUrl.includes("sqlite") || dbUrl.includes("10.") || dbUrl.includes("172.") ? "PASS" : "WARNING";
-  const bucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET || "luqi-vault";
-  const gcsStatus = bucket && !bucket.includes("mock") ? "PASS" : "WARNING";
-
-  const tests = [
-    {
-      component: "JWT Cryptography Layer",
-      status: jwtStatus,
-      details: jwtStatus === "PASS" ? "High-entropy key profile confirmed. Session tokens securely protected." : "Default development signature key active. Ensure production rotation in Secret Manager."
-    },
-    {
-      component: "Database Access Vector",
-      status: dbStatus,
-      details: dbStatus === "PASS" ? "Database engine completely isolated within private network parameters." : "Database IP appears public. Verify VPC network peering."
-    },
-    {
-      component: "Cloud Storage Vault",
-      status: gcsStatus,
-      details: gcsStatus === "PASS" ? `Cloud storage vault configured for bucket '${bucket}'. Asset objects inherit strict identity parameters.` : "GCS storage target utilizing mock parameters."
-    },
-    {
-      component: "Zero-Trust SHA-256 Ledger",
-      status: "PASS",
-      details: "Consensus chain verification integrity 100% nominal. Immutable append-only audit active."
+// Diagnostic keyword scan only; same authenticated behaviour on aliases.
+// A log excerpt does not prove an attack was blocked or a patch was applied.
+for (const path of ["/api/v1/security/shield-audit", "/security/shield-audit"]) {
+  app.post(path, async (c) => {
+    const data: unknown = await c.req.json().catch(() => null);
+    const log = data && typeof data === "object"
+      ? (data as Record<string, unknown>).log_buffer_stream : null;
+    if (typeof log !== "string") {
+      return c.json({ error: "A bounded log_buffer_stream string is required." }, 400);
     }
-  ];
+    try {
+      return c.json(inspectLogIndicators(log));
+    } catch {
+      return c.json({ error: "Log excerpt must contain 1–20,000 characters." }, 400);
+    }
+  });
+}
 
+// Verified administrative diagnostics: only report a check that actually ran.
+// Environment variables, apparent hostnames, and seed records do not prove
+// network isolation, IAM security, backup readiness, or ledger immutability.
+app.get('/api/v1/security/diagnostics', async (c) => {
+  let storageStatus: "PASS" | "UNAVAILABLE" = "UNAVAILABLE";
+  try {
+    const db = await getPrivateDb();
+    await db.execute(sql`SELECT 1 AS ready`);
+    storageStatus = "PASS";
+  } catch {
+    storageStatus = "UNAVAILABLE";
+  }
   return c.json({
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC",
-    total_tests: tests.length,
-    system_status: "SECURE_HARDENED",
-    tests
+    generatedAt: new Date().toISOString(),
+    assessment: "limited_live_checks",
+    overallStatus: storageStatus === "PASS" ? "PARTIALLY_VERIFIED" : "DEGRADED",
+    checks: [
+      {
+        component: "Administrator session",
+        status: "PASS",
+        evidence: "Current request authenticated and assigned an administrator role by persistent session.",
+      },
+      {
+        component: "Relational database",
+        status: storageStatus,
+        evidence: storageStatus === "PASS" ? "SELECT 1 returned successfully." : "Database probe failed.",
+      },
+    ],
+    notVerified: [
+      "Cloud IAM permissions", "Private networking", "Backup restore",
+      "Secret rotation", "Storage object access policy", "External penetration testing",
+      "Production deployment posture", "Ledger immutability",
+    ],
+    notice: "Only listed live checks were performed; no automatic repairs or security certification occurred.",
   });
 });
 
@@ -1097,15 +1171,28 @@ app.get('/api/v1/audit/ledger', (c) => {
 
 app.post('/api/v1/audit/seal', async (c) => {
   try {
-    const { actor, action, payload } = await c.req.json();
+    // Admin has already been authenticated by the legacy route gate.
+    // The actor is derived from the session rather than a caller-provided ID.
+    const user = await resolveSessionUser(c.req.raw);
+    if (!user || user.role !== "admin") return c.json({ error: "Unauthorized." }, 403);
+    const raw: unknown = await c.req.json();
+    if (!raw || typeof raw !== "object") return c.json({ error: "Invalid audit entry." }, 400);
+    const { action, payload } = raw as Record<string, unknown>;
+    if (typeof action !== "string" || !/^[A-Z][A-Z0-9_]{2,79}$/.test(action) ||
+        !payload || typeof payload !== "object" || Array.isArray(payload) ||
+        JSON.stringify(payload).length > 2000) {
+      return c.json({ error: "An action and a bounded metadata object are required." }, 400);
+    }
     const block = SovereignCryptoLedger.sealAction(
-      actor || 'System Administrator',
-      action || 'ADMIN_ACTION',
-      payload || {}
+      `admin:${user.id}`, action, payload,
     );
-    return c.json({ status: 'success', block });
-  } catch (err: any) {
-    return c.json({ status: 'error', error: err.message }, 500);
+    return c.json({
+      status: "recorded_in_process",
+      hash: block.currentBlockHash,
+      warning: "This in-process ledger is not an independently durable audit log.",
+    });
+  } catch {
+    return c.json({ error: "Could not record the audit entry." }, 500);
   }
 });
 
@@ -1191,9 +1278,10 @@ app.get('/api/v1/exam-tutor/domains', (c) => {
 app.post('/api/v1/admin/verify', async (c) => {
   try {
     const { passkey } = await c.req.json();
-    const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-    if (passkey === masterKey) {
-      return c.json({ success: true, token: masterKey });
+    const masterKey = process.env.LUQI_ADMIN_MASTER_KEY;
+    if (masterKey && typeof passkey === 'string' && Buffer.byteLength(passkey) === Buffer.byteLength(masterKey) && timingSafeEqual(Buffer.from(passkey), Buffer.from(masterKey))) {
+      c.header('Cache-Control', 'no-store');
+      return c.json({ success: true });
     }
     return c.json({ success: false, error: 'Invalid admin passkey' }, 401);
   } catch (err: any) {
@@ -1203,9 +1291,7 @@ app.post('/api/v1/admin/verify', async (c) => {
 
 // 3. FinOps Cost & Self-Healing Health Dashboard Endpoint (Admin Protected)
 app.get('/api/v1/finops-dashboard', (c) => {
-  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  const providedKey = c.req.header('x-luqi-admin-key');
-  if (providedKey && providedKey !== masterKey) {
+  if (!checkSovereignAdminAuth(c)) {
     return c.json({ status: 'error', message: 'Unauthorized' }, 401);
   }
   return c.json({
@@ -1230,9 +1316,7 @@ app.post('/api/v1/billing/initiate-30-auth', async (c) => {
 
 // 5. Multi-Model API & FinOps Registry Health Scanner Matrix (Admin Protected)
 app.get('/api/v1/system-api-matrix', (c) => {
-  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  const providedKey = c.req.header('x-luqi-admin-key');
-  if (providedKey && providedKey !== masterKey) {
+  if (!checkSovereignAdminAuth(c)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
   // Evaluate real-time health and fund availability for each integrated model & gateway
@@ -1241,9 +1325,9 @@ app.get('/api/v1/system-api-matrix', (c) => {
       provider: 'Google Gemini 2.5 Flash / 3.8 Flash',
       role: 'Core Sovereign Orchestrator, Multimodal Reasoning, 3D WebGL Labs & High-Speed Chat',
       sdkVersion: '@google/genai v1.0',
-      status: process.env.GEMINI_API_KEY ? 'ACTIVE_HEALTHY' : 'CRITICAL_NO_KEY',
-      latencyMs: 142,
-      estimatedFundsRemainingZar: 1500.00,
+      status: process.env.GEMINI_API_KEY ? 'CONFIGURED_NOT_PROBED' : 'CRITICAL_NO_KEY',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Google AI Studio Active Tier (Live Operational)'
     },
     {
@@ -1251,8 +1335,8 @@ app.get('/api/v1/system-api-matrix', (c) => {
       role: 'Long-Context Multilingual Synthesis, Academic Research & Deep Document Analysis',
       sdkVersion: 'Moonshot OpenAI REST v1',
       status: (process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY) ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
-      latencyMs: 165,
-      estimatedFundsRemainingZar: 0.00,
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Moonshot AI Org org-6a2388b6536a4254959c4a6706e5ed79 (Top-up Required)'
     },
     {
@@ -1260,17 +1344,17 @@ app.get('/api/v1/system-api-matrix', (c) => {
       role: 'Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing',
       sdkVersion: 'DeepSeek REST v4',
       status: process.env.DEEPSEEK_API_KEY ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
-      latencyMs: 95,
-      estimatedFundsRemainingZar: 0.00,
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'DeepSeek Prepaid Wallet (HTTP 402 - Top-up Required)'
     },
     {
       provider: 'Anthropic Claude (Fable 5.1 / Sonnet)',
       role: 'Master Software Architecture, Complex Code Refactoring & Autonomous Self-Healing Audits',
       sdkVersion: '@anthropic-ai/sdk v0.32',
-      status: process.env.ANTHROPIC_API_KEY ? 'ACTIVE_HEALTHY' : 'STANDBY_CIRCUIT_BREAKER',
-      latencyMs: 285,
-      estimatedFundsRemainingZar: process.env.ANTHROPIC_API_KEY ? 420.50 : 0.00,
+      status: process.env.ANTHROPIC_API_KEY ? 'CONFIGURED_NOT_PROBED' : 'STANDBY_CIRCUIT_BREAKER',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Anthropic Console (Auto-Cascading to Gemini)'
     },
     {
@@ -1278,35 +1362,35 @@ app.get('/api/v1/system-api-matrix', (c) => {
       role: 'Enterprise Security Workflows, SARS Compliance & Advanced Threat Detection',
       sdkVersion: 'openai node v4.8',
       status: 'AUTHENTICATION_REQUIRED_NEW_KEY',
-      latencyMs: 310,
-      estimatedFundsRemainingZar: 0.00,
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'OpenAI Platform Console'
     },
     {
       provider: 'MTN MoMo & PayFast Gateways',
       role: '70/30 Human-in-the-Loop Payment Authentication & Token Tollbooth Collection Rails',
       sdkVersion: 'Custom REST / Webhooks',
-      status: process.env.MTN_MOMO_SUBSCRIPTION_KEY ? 'ACTIVE_HEALTHY' : 'WARNING_CONFIG_PENDING',
-      latencyMs: 180,
-      estimatedFundsRemainingZar: 9999.00,
+      status: process.env.MTN_MOMO_SUBSCRIPTION_KEY ? 'CONFIGURED_NOT_PROBED' : 'WARNING_CONFIG_PENDING',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Live Settlement Integration'
     },
     {
       provider: "Africa's Talking & Twilio",
       role: 'Emergency WhatsApp Outpost Alerts & 2G USSD Feature Phone Network Messaging',
       sdkVersion: 'africastalking-ts v0.5',
-      status: process.env.TWILIO_AUTH_TOKEN ? 'ACTIVE_HEALTHY' : 'STANDBY_BACKUP',
-      latencyMs: 215,
-      estimatedFundsRemainingZar: 310.00,
+      status: process.env.TWILIO_AUTH_TOKEN ? 'CONFIGURED_NOT_PROBED' : 'STANDBY_BACKUP',
+      latencyMs: null,
+      estimatedFundsRemainingZar: null,
       billingCycleAnchor: 'Prepaid Wallet Balance'
     }
   ];
 
-  const hasOutage = apiRegistry.some(api => api.status.includes('CRITICAL') || api.estimatedFundsRemainingZar <= 0);
+  const hasOutage = apiRegistry.some(api => api.status.includes('CRITICAL'));
 
   return c.json({
     success: true,
-    systemGlobalStatus: hasOutage ? 'DEGRADED_FUNDS_OR_KEYS_MISSING' : '100_PERCENT_OPERATIONAL',
+    systemGlobalStatus: hasOutage ? 'DEGRADED_FUNDS_OR_KEYS_MISSING' : 'CONFIGURATION_ONLY_NOT_HEALTH_VERIFIED',
     timestamp: new Date().toISOString(),
     apis: apiRegistry
   });
@@ -1466,9 +1550,9 @@ OUTPUT DELIVERY & TONE:
   } catch (err: any) {
     logger.error({ err: err?.message }, "Error in /api/khoro/chat");
     return c.json({
-      success: true,
-      reply: "Eita! KHORO is here at the council courtyard. All cognitive reasoning matrices are primed and ready across all knowledge domains."
-    });
+      success: false,
+      error: "The AI provider could not complete the request. Please try again later."
+    }, 503);
   }
 });
 
@@ -1559,37 +1643,33 @@ const SYSTEM_CARDS_STORAGE: any[] = [
   }
 ];
 
+// A system card is a self-reported draft, not a compliance certification.
+// Do not invent evaluator clearance, security test results or FLOP thresholds.
 app.post('/api/v1/governance/generate-system-card', async (c) => {
-  try {
-    const body = await c.req.json().catch(() => ({}));
-    const patchId = body.patch_id || `PATCH-${Date.now()}`;
-    const targetModel = body.target_model_base || "luqitoons-v5-pro";
-    const flopEstimate = body.training_flop_estimate || "1.2e24 FLOP";
-    const featuresSummary = body.modified_features_summary || "Automated circuit breaker and resilience optimization";
-    const vulns = body.detected_vulnerabilities_fixed || ["SEC-PROMPT-INJECTION-V3"];
-
-    const docId = `SYS-CARD-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-
-    const card = {
-      document_id: docId,
-      generation_timestamp: timestamp,
-      model_identifier: targetModel,
-      flop_scale_compliance: `${flopEstimate} (Strictly below the 10^25 FLOP Covered Developer scope boundary)`,
-      risk_mitigation_posture: {
-        biological_defense: "PASS - Gene synthesis screening & biological hazard filters fully operational with zero dual-use capabilities.",
-        cyber_operations: "PASS - Defensive patch applied; hardened against prompt-injection and unauthorized autonomous code execution.",
-        control_loss_prevention: "PASS - Deception monitoring, speed-of-iteration governor, and kill-switch heartbeat telemetry active."
-      },
-      external_evaluator_clearance: true,
-      public_transparency_summary: `Autonomous release assessment for patch '${patchId}'. Modified capabilities: ${featuresSummary}. Verified mitigations for: ${vulns.join(', ')}.`
-    };
-
-    SYSTEM_CARDS_STORAGE.unshift(card);
-    return c.json(card);
-  } catch (err: any) {
-    return c.json({ error: err?.message || "Failed to generate system card" }, 500);
-  }
+  const body = await c.req.json().catch(() => ({}));
+  const text = (value: unknown, max = 400) =>
+    typeof value === "string" ? value.trim().slice(0, max) : "";
+  const card = {
+    document_id: `SYS-CARD-DRAFT-${crypto.randomUUID()}`,
+    generation_timestamp: new Date().toISOString(),
+    status: "DRAFT_UNVERIFIED",
+    model_identifier: text(body.target_model_base) || "unspecified",
+    patch_id: text(body.patch_id),
+    modified_features_summary: text(body.modified_features_summary, 1200),
+    training_flop_estimate: text(body.training_flop_estimate) || null,
+    risk_mitigation_posture: {
+      biological_defense: "NOT_VERIFIED",
+      cyber_operations: "NOT_VERIFIED",
+      control_loss_prevention: "NOT_VERIFIED",
+    },
+    external_evaluator_clearance: false,
+    independent_security_audit: false,
+    production_release_approved: false,
+    notice: "User-supplied draft only. No evaluator clearance, tests, legal compliance or production deployment verified.",
+  };
+  SYSTEM_CARDS_STORAGE.unshift(card);
+  if (SYSTEM_CARDS_STORAGE.length > 100) SYSTEM_CARDS_STORAGE.length = 100;
+  return c.json(card, 201);
 });
 
 app.get('/api/v1/governance/system-cards', async (c) => {
@@ -1696,31 +1776,69 @@ app.post('/api/v1/studio/synthesize-asset', async (c) => {
   return c.json(asset);
 });
 
+// Educational progress is stored against the actual authenticated user.
+// Self-reported completion is NOT assessor-verified grading or certification.
 app.post('/api/v1/analytics/log-progression', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({
-    success: true,
-    message: "Telemetry progression safely logged to relational tables.",
-    record: {
-      user_id: body.user_id || "anonymous",
-      lab_id: body.lab_id || "lab-01",
-      completion_status: body.completion_status || "PASSED",
-      timestamp: new Date().toISOString()
-    }
-  });
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  const body: unknown = await c.req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "Invalid progress submission." }, 400);
+  }
+  const data = body as Record<string, unknown>;
+  const labId = data.lab_id;
+  if (typeof labId !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(labId)) {
+    return c.json({ error: "A valid lab_id is required." }, 400);
+  }
+  if (data.user_id != null && String(data.user_id) !== String(user.id)) {
+    return c.json({ error: "You cannot submit another user's progress." }, 403);
+  }
+  try {
+    const db = await getPrivateDb();
+    const [saved] = await db.insert(analyticsEvents).values({
+      userId: user.id,
+      eventType: "learning_self_report",
+      eventName: "lab_progress_submission",
+      properties: { labId, status: "self_reported_not_verified" },
+    });
+    return c.json({
+      success: true,
+      id: Number(saved.insertId),
+      userId: user.id,
+      labId,
+      assessmentStatus: "self_reported_not_verified",
+      message: "Learning activity recorded. No grade or certification was awarded.",
+    }, 201);
+  } catch {
+    return c.json({ error: "Secure progress storage unavailable." }, 503);
+  }
 });
 
 app.get('/api/v1/diagnostics/database-indexes', async (c) => {
-  return c.json({
-    status: "OPERATIONAL",
-    active_catalog_timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-    index_telemetry: [
-      { index_identifier: "idx_chat_user_id", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_analytics_user_domain", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_critique_status", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_c2pa_provenance_hash", status: "HEALTHY", remediation_action: "NONE REQUIRED" }
-    ]
-  });
+  try {
+    const db = await getPrivateDb();
+    const result = await db.execute(sql`
+      SELECT TABLE_NAME AS tableName, INDEX_NAME AS indexName
+      FROM information_schema.statistics
+      WHERE TABLE_SCHEMA = DATABASE()
+      GROUP BY TABLE_NAME, INDEX_NAME
+      ORDER BY TABLE_NAME, INDEX_NAME
+      LIMIT 100
+    `);
+    const rows = Array.isArray(result) && Array.isArray(result[0])
+      ? result[0] : result;
+    return c.json({
+      status: "OBSERVED",
+      checkedAt: new Date().toISOString(),
+      indexes: rows,
+      note: "Indexes reported from information_schema; no optimizer or production performance analysis was run.",
+    });
+  } catch {
+    return c.json({
+      status: "UNAVAILABLE",
+      error: "Database index inspection failed.",
+    }, 503);
+  }
 });
 
 // ── GEMINI MULTIMODAL SERVER-SIDE PROXY ROUTES ─────────────────────
@@ -1823,12 +1941,17 @@ app.onError((err, c) => {
   }
 
   if (err?.name === "AbortError") {
-    return c.json({ success: false, error: "Client closed request", requestId }, 499);
+    return c.json({ success: false, error: "Client closed request", requestId }, 400);
   }
 
   logger.error({ err: err?.message, stack: err?.stack?.slice(0, 500), requestId }, "unhandled error");
   const status = typeof (err as any)?.status === "number" ? (err as any).status : 500;
-  return c.json({ success: false, error: err?.message || "Internal Server Error", requestId }, status as 500);
+  const safeStatus = status >= 400 && status < 500 ? status : 500;
+  return c.json({
+    success: false,
+    error: safeStatus === 500 ? "Internal Server Error" : "Request failed.",
+    requestId,
+  }, safeStatus as 500);
 });
 
 export default app;
@@ -1871,11 +1994,15 @@ if (env.isProduction) {
     } catch (e) {
       console.error("[Bootstrap] Database bootstrap failed:", e);
     }
-    try {
-      const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
-      await seedTraditionalMedicine();
-    } catch (e) {
-      console.error("[Seed] Traditional medicine seed failed:", e);
+    if (!env.isProduction) {
+      try {
+        const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
+        await seedTraditionalMedicine();
+      } catch (e) {
+        console.error("[Seed] Development reference-data seed failed:", e);
+      }
+    } else {
+      logger.info("Automatic production data seeding disabled; import approved content through reviewed migrations");
     }
   })().catch((e) => {
     console.error("[Boot Error]", e);

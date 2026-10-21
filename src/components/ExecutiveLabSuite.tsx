@@ -1,4 +1,7 @@
 import { useState } from "react";
+import ExperimentNotebook from "./ExperimentNotebook";
+import PendulumReplay from "./PendulumReplay";
+import ScienceTimeline from "./ScienceTimeline";
 import {
   Sparkles,
   ExternalLink,
@@ -325,14 +328,20 @@ export default function ExecutiveLabSuite() {
               </div>
             </div>
 
-            {/* Embedded Iframe */}
-            <div className="flex-1 w-full h-full bg-slate-950">
+            {/* Preserve the original lab while providing an independent learning notebook. */}
+            <div className="flex-1 min-h-0 overflow-y-auto bg-slate-950">
               <iframe
                 src={selectedLab.offlinePath}
                 title={selectedLab.title}
-                className="w-full h-full border-0"
+                className="w-full h-[55vh] border-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               />
+              <div className="px-4 pb-4">
+                <ExperimentNotebook key={selectedLab.id} labId={selectedLab.id} />
+                {selectedLab.id === "pendulum-physics" && <PendulumReplay />}
+                {selectedLab.id === "biology-enzyme" && <ScienceTimeline subject="biology" />}
+                {selectedLab.id === "chemistry-titration" && <ScienceTimeline subject="chemistry" />}
+              </div>
             </div>
           </div>
         </div>

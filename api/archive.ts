@@ -3,7 +3,8 @@
 // =====================================================================
 
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { TRPCError } from "@trpc/server";
+import { createRouter, adminQuery } from "./middleware";
 import {
   listActiveThreads,
   getThreadCheckpoints,
@@ -20,19 +21,19 @@ import {
 
 export const archiveRouter = createRouter({
   // ── 1. Orchestration Flight Recorder (LangGraph Checkpointers) ───
-  listThreads: publicQuery
+  listThreads: adminQuery
     .input(z.object({ limit: z.number().default(50) }).optional())
     .query(async ({ input }) => {
       return listActiveThreads(input?.limit ?? 50);
     }),
 
-  getThreadTimeline: publicQuery
-    .input(z.object({ threadId: z.string() }))
+  getThreadTimeline: adminQuery
+    .input(z.object({ threadId: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/) }))
     .query(async ({ input }) => {
       return getThreadCheckpoints(input.threadId);
     }),
 
-  recordCheckpoint: publicQuery
+  recordCheckpoint: adminQuery
     .input(
       z.object({
         threadId: z.string(),
@@ -55,12 +56,17 @@ export const archiveRouter = createRouter({
         threadId: input.threadId,
         nodeName: input.nodeName,
         channelValues: input.channelValues,
-        toolCalls: input.toolCalls,
+        toolCalls: input.toolCalls?.map((call) => ({
+          toolName: call.toolName,
+          arguments: call.arguments,
+          result: call.result,
+          durationMs: call.durationMs,
+        })),
       });
     }),
 
   // ── 2. Cognitive Archiving (CrewAI Unified Memory) ───────────────
-  getCognitiveMemory: publicQuery
+  getCognitiveMemory: adminQuery
     .input(
       z
         .object({
@@ -74,7 +80,7 @@ export const archiveRouter = createRouter({
       return queryCognitiveMemory(input);
     }),
 
-  storeCognitiveFact: publicQuery
+  storeCognitiveFact: adminQuery
     .input(
       z.object({
         category: z.enum(["short_term", "long_term", "entity"]),
@@ -88,11 +94,20 @@ export const archiveRouter = createRouter({
       })
     )
     .mutation(async ({ input }) => {
-      return storeCognitiveFact(input);
+      return storeCognitiveFact({
+        category: input.category,
+        subject: input.subject,
+        predicate: input.predicate,
+        object: input.object,
+        context: input.context,
+        confidence: input.confidence ?? 1,
+        sourceTask: input.sourceTask,
+        agentRole: input.agentRole,
+      });
     }),
 
   // ── 3. Custom Artifact Vault (Files & Paired JSON Metadata) ──────
-  listArtifacts: publicQuery
+  listArtifacts: adminQuery
     .input(
       z
         .object({
@@ -106,13 +121,13 @@ export const archiveRouter = createRouter({
       return listArchivedArtifacts(input);
     }),
 
-  archiveArtifact: publicQuery
+  archiveArtifact: adminQuery
     .input(
       z.object({
-        fileName: z.string(),
+        fileName: z.string().min(1).max(255),
         fileType: z.enum(["excel", "pdf", "json", "video", "audio", "report"]),
-        contentBase64: z.string().optional(),
-        contentText: z.string().optional(),
+        contentBase64: z.string().max(7000000).optional(),
+        contentText: z.string().max(1000000).optional(),
         taskOutput: z.object({
           agentRole: z.string(),
           taskName: z.string(),
@@ -124,23 +139,41 @@ export const archiveRouter = createRouter({
           primaryKeysReconciled: z.number().optional(),
           status: z.enum(["verified", "completed"]).default("verified"),
         }),
+      }).refine((value) => Number(value.contentBase64 !== undefined) + Number(value.contentText !== undefined) === 1, {
+        message: "Supply exactly one of contentBase64 or contentText.",
       })
     )
     .mutation(async ({ input }) => {
-      const buffer = input.contentBase64
+      if (input.contentBase64 !== undefined && (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(input.contentBase64))) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid base64 artifact content." });
+      }
+      const buffer = input.contentBase64 !== undefined
         ? Buffer.from(input.contentBase64, "base64")
-        : Buffer.from(input.contentText || "Sample Artifact Content", "utf-8");
+        : Buffer.from(input.contentText!, "utf-8");
+      if (buffer.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Artifact content cannot be empty." });
+      }
 
       return archiveArtifact({
         fileName: input.fileName,
         fileType: input.fileType,
         content: buffer,
-        taskOutput: input.taskOutput,
+        taskOutput: {
+          agentRole: input.taskOutput.agentRole,
+          taskName: input.taskOutput.taskName,
+          crewId: input.taskOutput.crewId,
+          threadId: input.taskOutput.threadId,
+          modelUsed: input.taskOutput.modelUsed,
+          promptSummary: input.taskOutput.promptSummary,
+          executionDurationMs: input.taskOutput.executionDurationMs,
+          primaryKeysReconciled: input.taskOutput.primaryKeysReconciled,
+          status: input.taskOutput.status ?? "verified",
+        },
       });
     }),
 
   // ── Archival System Status & Volume Statistics ───────────────────
-  getArchiveStatus: publicQuery.query(async () => {
+  getArchiveStatus: adminQuery.query(async () => {
     const threads = await listActiveThreads(100);
     const cognitive = await queryCognitiveMemory({ limit: 100 });
     const artifacts = await listArchivedArtifacts({ limit: 100 });

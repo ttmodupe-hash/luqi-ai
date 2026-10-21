@@ -471,6 +471,62 @@ export const creditWallets = mysqlTable("credit_wallets", {
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
+/**
+ * Paid video credits are separate from a ZAR cash wallet. Only verified
+ * Paystack checkout settlement creates positive balance entries.
+ */
+export const videoCreditWallets = mysqlTable("video_credit_wallets", {
+  id: serial("id").primaryKey(),
+  userKey: varchar("user_key", { length: 255 }).notNull().unique(),
+  credits: int("credits").notNull().default(0),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export const videoCreditLedger = mysqlTable("video_credit_ledger", {
+  id: serial("id").primaryKey(),
+  reference: varchar("reference", { length: 100 }).notNull().unique(),
+  userKey: varchar("user_key", { length: 255 }).notNull(),
+  entryType: varchar("entry_type", { length: 30 }).notNull(),
+  deltaCredits: int("delta_credits").notNull(),
+  balanceAfter: int("balance_after").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+/** One immutable client idempotency key per rendering intent. */
+/**
+ * A single daily quota row is locked before launching any paid video, so
+ * separate accounts cannot exhaust provider funds through coordinated abuse.
+ */
+/**
+ * Shared, persistent budget for AI vendor requests across all accounts.
+ * Guards against attackers creating many accounts to reset per-user limits.
+ */
+export const aiGlobalDailyQuota = mysqlTable("ai_global_daily_quota", {
+  dayKey: varchar("day_key", { length: 10 }).primaryKey(),
+  jobs: int("jobs").notNull().default(0),
+});
+
+export const videoGlobalDailyQuota = mysqlTable("video_global_daily_quota", {
+  dayKey: varchar("day_key", { length: 10 }).primaryKey(),
+  jobs: int("jobs").notNull().default(0),
+});
+
+export const videoRenderRequests = mysqlTable("video_render_requests", {
+  id: serial("id").primaryKey(),
+  requestKey: varchar("request_key", { length: 64 }).notNull().unique(),
+  userId: int("user_id").notNull(),
+  userKey: varchar("user_key", { length: 255 }).notNull(),
+  projectId: int("project_id").notNull(),
+  requestDigest: varchar("request_digest", { length: 64 }).notNull(),
+  chargeCredits: int("charge_credits").notNull(),
+  mode: varchar("mode", { length: 30 }).notNull().default("silent_mp4"),
+  status: varchar("status", { length: 30 }).notNull().default("PROCESSING"),
+  errorMessage: text("error_message"),
+  assetKey: varchar("asset_key", { length: 400 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 export const paymentEvents = mysqlTable("payment_events", {
   id: serial("id").primaryKey(),
   reference: varchar("reference", { length: 255 }).notNull().unique(),

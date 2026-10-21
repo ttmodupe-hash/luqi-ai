@@ -2,7 +2,7 @@ name: Node CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, "fix/**"]
   push:
     branches: [main, develop, "fix/**"]
 
@@ -15,10 +15,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Lockfile is committed and must be respected by every release validation.
+      - run: npm ci --no-audit --no-fund
       - name: TypeScript project check
         run: npm run check
       - name: Unit tests
+        if: always()
         run: npm test
       - name: Production build
+        if: always()
         run: npm run build

@@ -8,10 +8,13 @@
 
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "./queries/connection";
-import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
+import { getPrivateDb } from "./security/access";
+import { reserveAiRequest } from "./security/aiBudget";
+import { registerAccount, loginAccount, resolveSessionUser, type AuthenticatedUser } from "./auth";
+import { users, knowledgeArticles, creditWallets, paymentEvents, videoCreditWallets, videoCreditLedger } from "../db/schema";
+import { settleVerifiedPaystackCharge } from "./services/paystackSettlement";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
 import { appendTurn, getHistory, historyToContext } from "./services/session";
@@ -23,6 +26,73 @@ import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services
 import { streamSSE } from "hono/streaming";
 import { ussdAndBillingService } from "./services/ussdAndBillingService";
 export const restCompat = new Hono();
+
+/**
+ * Permanent REST access boundary: the old /v1 routes do not pass through
+ * tRPC and must use the same validated server session checks.
+ */
+const adminGate = async (c: any, next: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  if (user.role !== "admin") return c.json({ error: "Administrator access required." }, 403);
+  await next();
+};
+
+const userGate = async (c: any, next: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  await next();
+};
+
+const paidAiGate = async (c: any, next: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Please sign in to use this AI capability." }, 401);
+  try {
+    await reserveAiRequest(user.id, c.req.path);
+  } catch (err: any) {
+    if (err?.code === "TOO_MANY_REQUESTS") {
+      return c.json({ error: "Daily AI allowance reached." }, 429);
+    }
+    return c.json({ error: "AI usage authorisation is unavailable." }, 503);
+  }
+  await next();
+};
+
+restCompat.use("/api/v25/ai-brain/*", paidAiGate);
+restCompat.use("/api/v25/chat", paidAiGate);
+restCompat.use("/api/v25/kb/ask", paidAiGate);
+restCompat.use("/api/v25/media/image", paidAiGate);
+restCompat.use("/api/v25/legal/analyze", paidAiGate);
+restCompat.use("/api/v25/insights/scan", paidAiGate);
+restCompat.use("/v1/extract", paidAiGate);
+restCompat.use("/api/v1/animation/*", paidAiGate);
+restCompat.use("/v1/animation/*", paidAiGate);
+restCompat.use("/api/v1/cert-academy/coach", paidAiGate);
+restCompat.use("/api/v1/cert-academy/cli-eval", paidAiGate);
+restCompat.use("/api/v1/sensing/draft-grant", paidAiGate);
+restCompat.use("/api/v1/sensing/generate-api-wrapper", paidAiGate);
+restCompat.use("/api/v1/sensing/agritech-predict", paidAiGate);
+restCompat.use("/api/v1/sensing/afcfta-corridor", paidAiGate);
+
+restCompat.use("/api/v1/zta/*", adminGate);
+restCompat.use("/v1/zta/*", adminGate);
+restCompat.use("/api/v1/self-healing/*", adminGate);
+restCompat.use("/v1/self-healing/*", adminGate);
+restCompat.use("/api/billing/*", adminGate);
+restCompat.use("/api/system/*", adminGate);
+restCompat.use("/api/v1/jobs/*", userGate);
+restCompat.use("/v1/jobs/*", userGate);
+// Stripe signs its own server-to-server webhook requests. Browser sessions
+// must not be required here; the HMAC verifier in api/boot.ts authenticates
+// the raw body before any event is recorded.
+restCompat.use("/api/v1/billing/*", async (c, next) => {
+  if (c.req.path === "/api/v1/billing/stripe-webhook" && c.req.method === "POST") {
+    return next();
+  }
+  return userGate(c, next);
+});
+restCompat.use("/v1/billing/*", userGate);
+
 
 const LUQI_SYSTEM_PROMPT = `You are LUQI AI, an intelligent assistant for South Africa and the broader African continent.
 
@@ -55,41 +125,33 @@ function aiUnavailableResponse() {
   };
 }
 
-function jwtSecret(): string {
-  return process.env.JWT_SECRET || process.env.APP_SECRET || "luqi-dev-secret-change-me";
-}
-
-function signToken(userId: number): string {
-  return jwt.sign({ userId }, jwtSecret(), { expiresIn: "30d" });
-}
-
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
 
-async function handleChat(message: string, sessionId?: string, userKey?: string) {
+async function handleChat(message: string, sessionId?: string, user?: AuthenticatedUser | null) {
   const status = getOrchestratorStatus();
   if (status.demo) {
     return aiUnavailableResponse();
   }
 
   // Multi-turn memory: load prior conversation turns for this session
-  const session = sessionId || "guest";
+  const session = sessionId || `user_${user?.id ?? "anon"}`;
   const history = sessionId ? await getHistory(session) : [];
   const historyContext = historyToContext(history);
 
   // User context: region/language/wallet — injected so answers fit the
   // user's real situation (Ubuntu context layer)
   let userContext: string | undefined;
-  if (userKey && (process.env.DATABASE_URL || process.env.DB_HOST)) {
+  if (user) {
     try {
-      const db = await getDb();
-      const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, userKey.toLowerCase())).limit(1);
+      const db = await getPrivateDb();
+      const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, user.email.toLowerCase())).limit(1);
       if (wallet) {
         userContext = `User context: region=South Africa, currency=${wallet.currency ?? "ZAR"}, wallet balance R${((wallet.balanceCents ?? 0) / 100).toFixed(2)}. If the request involves paid features, be mindful of their balance.`;
       }
     } catch { /* context lookup is non-fatal */ }
   }
 
-  const cacheKey = hashPrompt(message);
+  const cacheKey = hashPrompt(`${user?.id ?? "anon"}:${sessionId ?? "none"}:${message}`);
   const cached = await getCachedAIResponse(cacheKey);
   if (cached) {
     try {
@@ -166,6 +228,13 @@ async function handleChat(message: string, sessionId?: string, userKey?: string)
   }
 }
 
+function sessionForUser(userId: number, submitted: unknown): string {
+  const raw = typeof submitted === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(submitted)
+    ? submitted : "default";
+  const ownPrefix = `user_${userId}_`;
+  return raw.startsWith(ownPrefix) ? raw : ownPrefix + raw;
+}
+
 // AI Brain page endpoint
 restCompat.post("/api/v25/ai-brain/chat", async (c) => {
   const body = await c.req.json().catch(() => ({}));
@@ -173,7 +242,10 @@ restCompat.post("/api/v25/ai-brain/chat", async (c) => {
   if (!message.trim()) {
     return c.json({ error: "message is required" }, 400);
   }
-  return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI chat." }, 401);
+  const sessionId = sessionForUser(user.id, body.session_id);
+  return c.json(await handleChat(message, sessionId, user));
 });
 
 // Legacy chat endpoint used by useApi.chat
@@ -183,7 +255,10 @@ restCompat.post("/api/v25/chat", async (c) => {
   if (!message.trim()) {
     return c.json({ error: "query is required" }, 400);
   }
-  return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI chat." }, 401);
+  const sessionId = sessionForUser(user.id, body.session_id);
+  return c.json(await handleChat(message, sessionId, user));
 });
 
 // ─── SSE STREAMING CHAT ───────────────────────────────────────────────
@@ -203,10 +278,13 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
     return c.json(aiUnavailableResponse());
   }
 
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI chat." }, 401);
+  const sessionId = sessionForUser(user.id, body.session_id);
   const route = routeCapability(message);
   const streamPrompt = route.systemHint ? `${LUQI_SYSTEM_PROMPT}\n\n${route.systemHint}` : LUQI_SYSTEM_PROMPT;
 
-  const cacheKey = hashPrompt(message);
+  const cacheKey = hashPrompt(`${user?.id ?? "anon"}:${sessionId ?? "none"}:${message}`);
   const cached = await getCachedAIResponse(cacheKey);
 
   return streamSSE(c, async (stream) => {
@@ -476,190 +554,133 @@ restCompat.post("/api/v25/media/image", async (c) => {
 // credited only after HMAC-verified webhook + server-side re-verification.
 
 restCompat.post("/api/v25/payments/topup", async (c) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Please sign in to purchase credits." }, 401);
   const body = await c.req.json().catch(() => ({}));
-  const email = (body.email || "").toString().trim().toLowerCase();
+  const suppliedEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
+  if (suppliedEmail && suppliedEmail !== user.email.toLowerCase()) {
+    return c.json({ detail: "You may only purchase credits for your own account." }, 403);
+  }
   const amountZar = Number(body.amountZar ?? body.amount ?? 0);
-
-  if (!email || !email.includes("@")) return c.json({ detail: "Valid email is required" }, 400);
   if (!Number.isFinite(amountZar) || amountZar < 5 || amountZar > 50000) {
-    return c.json({ detail: "Amount must be between R5 and R50,000" }, 400);
+    return c.json({ detail: "Amount must be between R5 and R50,000." }, 400);
   }
-
-  if (!paymentsConfigured()) {
-    return c.json(
-      { detail: "Payments are not configured yet — the server needs PAYSTACK_SECRET_KEY. Top-ups go live the moment it is set." },
-      503
-    );
-  }
-
-  const amountCents = Math.round(amountZar * 100);
+  if (!paymentsConfigured()) return c.json({ detail: "Payment provider is not configured." }, 503);
 
   try {
-    const db = await getDb();
-    const init = await initializeTopup(email, amountCents, "ZAR");
-    if (!init) return c.json({ detail: "Payment provider rejected the request — check amount and try again." }, 502);
-
+    const db = await getPrivateDb();
+    const amountCents = Math.round(amountZar * 100);
+    const init = await initializeTopup(user.email.toLowerCase(), amountCents, "ZAR");
+    if (!init) return c.json({ detail: "Payment provider could not start checkout." }, 502);
     await db.insert(paymentEvents).values({
       reference: init.reference,
-      userKey: email,
+      userKey: user.email.toLowerCase(),
       eventType: "topup_initialized",
       amountCents,
       currency: "ZAR",
       status: "pending",
     });
-
     return c.json({ authorizationUrl: init.authorizationUrl, reference: init.reference });
-  } catch (e: any) {
-    return c.json({ detail: "Payments unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+  } catch {
+    return c.json({ detail: "Secure payment processing is unavailable." }, 503);
   }
 });
 
 restCompat.post("/api/v25/payments/webhook", async (c) => {
-  // Raw body is required for HMAC verification — do NOT parse first
-  const rawBody = await c.req.text();
-  const signature = c.req.header("x-paystack-signature");
-
-  if (!paymentsConfigured()) return c.json({ detail: "payments not configured" }, 503);
-  if (!verifyWebhookSignature(rawBody, signature)) {
-    return c.json({ detail: "Invalid signature" }, 401);
+  // Webhook is authenticated using the provider's HMAC over the RAW body.
+  const raw = await c.req.text();
+  if (!paymentsConfigured()) return c.json({ detail: "Payment provider is not configured." }, 503);
+  if (!verifyWebhookSignature(raw, c.req.header("x-paystack-signature"))) {
+    return c.json({ detail: "Invalid payment signature." }, 401);
   }
-
-  const event = JSON.parse(rawBody || "{}");
-  if (event?.event !== "charge.success") {
-    return c.json({ received: true }); // acknowledge non-charge events
-  }
+  let event: any;
+  try { event = JSON.parse(raw); } catch { return c.json({ detail: "Malformed webhook." }, 400); }
+  if (event?.event !== "charge.success") return c.json({ received: true });
 
   const reference = event?.data?.reference;
-  if (!reference) return c.json({ received: true });
-
-  // Double-check with Paystack before crediting
+  if (typeof reference !== "string" || !/^luqi_[0-9a-f-]{36}$/.test(reference)) {
+    return c.json({ detail: "Unknown payment reference." }, 400);
+  }
   const verified = await verifyTransaction(reference);
-  if (!verified) return c.json({ detail: "Transaction verification failed" }, 400);
-
-  const userKey = (verified.email || "").toLowerCase() || "unknown";
+  if (!verified || !Number.isSafeInteger(verified.amountCents) ||
+      verified.amountCents < 500 || verified.amountCents > 5000000 ||
+      verified.currency !== "ZAR" || !verified.email) {
+    return c.json({ detail: "Payment verification failed." }, 400);
+  }
 
   try {
-    const db = await getDb();
-
-    // Idempotency: duplicate webhook deliveries hit the unique reference key
-    const [existing] = await db.select().from(paymentEvents).where(eq(paymentEvents.reference, reference)).limit(1);
-    if (existing && existing.status === "credited") {
-      return c.json({ received: true, status: "already_processed" });
+    const result = await settleVerifiedPaystackCharge(reference, verified);
+    if (result === "unknown" || result === "mismatch") {
+      return c.json({ detail: "Payment reference does not match an approved checkout." }, 400);
     }
-
-    if (existing) {
-      await db.update(paymentEvents)
-        .set({ status: "credited", eventType: "charge.success", channel: verified.channel, payloadJson: JSON.stringify(event.data).slice(0, 60000) })
-        .where(eq(paymentEvents.reference, reference));
-    } else {
-      await db.insert(paymentEvents).values({
-        reference,
-        userKey,
-        eventType: "charge.success",
-        amountCents: verified.amountCents,
-        currency: verified.currency,
-        channel: verified.channel,
-        status: "credited",
-        payloadJson: JSON.stringify(event.data).slice(0, 60000),
-      });
-    }
-
-    // Credit the wallet (upsert on user_key)
-    await db.execute(
-      sql`INSERT INTO credit_wallets (user_key, balance_cents, currency)
-          VALUES (${userKey}, ${verified.amountCents}, ${verified.currency})
-          ON DUPLICATE KEY UPDATE balance_cents = balance_cents + ${verified.amountCents}`
-    );
-
-    return c.json({ received: true, status: "credited" });
-  } catch (e: any) {
-    return c.json({ detail: "Database error during credit (" + (e?.code || "error") + ")" }, 503);
+    return c.json({ received: true, status: result });
+  } catch {
+    // Returning an error lets the provider safely retry the same reference.
+    return c.json({ detail: "Payment settlement unavailable; retry later." }, 503);
   }
 });
 
 restCompat.get("/api/v25/payments/balance", async (c) => {
-  const key = (c.req.query("key") || "").toString().trim().toLowerCase();
-  if (!key) return c.json({ detail: "key (email) is required" }, 400);
-
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Authentication required." }, 401);
+  const requested = c.req.query("key")?.trim().toLowerCase();
+  if (requested && requested !== user.email.toLowerCase()) {
+    return c.json({ detail: "Access denied." }, 403);
+  }
   try {
-    const db = await getDb();
-    const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, key)).limit(1);
+    const db = await getPrivateDb();
+    const [wallet] = await db.select().from(creditWallets)
+      .where(eq(creditWallets.userKey, user.email.toLowerCase())).limit(1);
     return c.json({
       balanceCents: wallet?.balanceCents ?? 0,
       currency: wallet?.currency ?? "ZAR",
     });
-  } catch (e: any) {
-    return c.json({ detail: "Balance unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+  } catch {
+    return c.json({ detail: "Secure balance storage is unavailable." }, 503);
   }
 });
 
-// ─── AUTH ─────────────────────────────────────────────────────────────
+// ─── COMPATIBLE AUTH: same hashed, expiring database sessions as /api/auth ───
+function setLegacyAuthCookie(c: any, token: string) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  c.header("Cache-Control", "no-store");
+  c.header("Set-Cookie", `luqi_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000${secure}`);
+}
 
 restCompat.post("/auth/signup", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const email = (body.email || "").toString().trim().toLowerCase();
-  const password = (body.password || "").toString();
-  const name = (body.name || "").toString().trim() || null;
-
-  if (!email || !email.includes("@")) return c.json({ detail: "Valid email is required" }, 400);
-  if (password.length < 6) return c.json({ detail: "Password must be at least 6 characters" }, 400);
-
   try {
-    const db = await getDb();
-    const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (existing) return c.json({ detail: "An account with this email already exists" }, 409);
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const [result] = await db.insert(users).values({ email, passwordHash, name });
-    const userId = Number(result.insertId);
-
-    return c.json({
-      token: signToken(userId),
-      user: { id: userId, email, name },
-    });
-  } catch (e: any) {
-    return c.json({ detail: "Signup unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+    const session = await registerAccount(
+      typeof body.email === "string" ? body.email : "",
+      typeof body.password === "string" ? body.password : "",
+      typeof body.name === "string" ? body.name : undefined,
+    );
+    setLegacyAuthCookie(c, session.token);
+    return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() }, 201);
+  } catch {
+    return c.json({ detail: "Unable to register. Verify your details or try again." }, 400);
   }
 });
 
 restCompat.post("/auth/login", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const email = (body.email || "").toString().trim().toLowerCase();
-  const password = (body.password || "").toString();
-
-  if (!email || !password) return c.json({ detail: "Email and password are required" }, 400);
-
   try {
-    const db = await getDb();
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (!user) return c.json({ detail: "Invalid credentials" }, 401);
-
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return c.json({ detail: "Invalid credentials" }, 401);
-
-    return c.json({
-      token: signToken(user.id),
-      user: { id: user.id, email: user.email, name: user.name },
-    });
-  } catch (e: any) {
-    return c.json({ detail: "Login unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+    const session = await loginAccount(
+      typeof body.email === "string" ? body.email : "",
+      typeof body.password === "string" ? body.password : "",
+    );
+    setLegacyAuthCookie(c, session.token);
+    return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() });
+  } catch {
+    return c.json({ detail: "Invalid email or password." }, 401);
   }
 });
 
 restCompat.get("/auth/me", async (c) => {
-  const auth = c.req.header("authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token) return c.json({ detail: "Missing token" }, 401);
-
-  try {
-    const payload = jwt.verify(token, jwtSecret()) as { userId: number };
-    const db = await getDb();
-    const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
-    if (!user) return c.json({ detail: "User not found" }, 404);
-    return c.json({ id: user.id, email: user.email, name: user.name });
-  } catch {
-    return c.json({ detail: "Invalid or expired token" }, 401);
-  }
+  c.header("Cache-Control", "no-store");
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Not signed in." }, 401);
+  return c.json(user);
 });
 
 // ─── High-Precision Data Extraction (Google AI Studio / GenAI Standard) ───
@@ -741,218 +762,88 @@ Return ONLY a valid JSON object with keys:
 restCompat.post("/v1/animation/storyboard", handleAnimationStoryboard);
 restCompat.post("/api/v1/animation/storyboard", handleAnimationStoryboard);
 
-// ─── ASYNC JOB QUEUE & TOKEN BILLING GATEWAY (Full-Stack Mirror) ──────────
+// Legacy public job queue used invented credit balances and unverified charging.
+// Remove these endpoints permanently rather than presenting simulated charging,
+// results or provider execution as genuine.
+const retiredJobEndpoint = (c: any) => c.json({
+  detail: "The old in-memory job API has been retired. Paid jobs require authenticated persistent billing and verified execution.",
+}, 410);
+restCompat.post("/api/v1/jobs/submit", retiredJobEndpoint);
+restCompat.post("/v1/jobs/submit", retiredJobEndpoint);
+restCompat.get("/api/v1/jobs/:taskId", retiredJobEndpoint);
+restCompat.get("/v1/jobs/:taskId", retiredJobEndpoint);
 
-interface JobRecord {
-  taskId: string;
-  userEmail: string;
-  taskType: string;
-  status: "QUEUED" | "PROCESSING" | "SUCCESS" | "FAILURE";
-  tokensDeducted: number;
-  result: any;
-  error: string | null;
-  createdAt: number;
-}
-
-const inMemoryJobs = new Map<string, JobRecord>();
-const inMemoryCredits = new Map<string, number>([["guest@luqi.ai", 150]]);
-
-// Helper: Get user credits
-function getUserCredits(email: string): number {
-  const clean = (email || "guest@luqi.ai").toLowerCase().trim();
-  if (!inMemoryCredits.has(clean)) {
-    inMemoryCredits.set(clean, 100);
+// Compatibility balance is read from the same verified Paystack wallet.
+const handleBalance = async (c: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Authentication required." }, 401);
+  const requested = c.req.query("user_email")?.trim().toLowerCase();
+  if (requested && requested !== user.email.toLowerCase()) {
+    return c.json({ detail: "Access denied." }, 403);
   }
-  return inMemoryCredits.get(clean)!;
-}
-
-// Helper: Deduct credits
-function deductUserCredits(email: string, amount: number): { success: boolean; remaining: number } {
-  const clean = (email || "guest@luqi.ai").toLowerCase().trim();
-  const current = getUserCredits(clean);
-  if (current < amount) {
-    return { success: false, remaining: current };
+  try {
+    const db = await getPrivateDb();
+    const [wallet] = await db.select().from(creditWallets)
+      .where(eq(creditWallets.userKey, user.email.toLowerCase())).limit(1);
+    const balanceCents = wallet?.balanceCents ?? 0;
+    return c.json({
+      user_email: user.email, balance_cents: balanceCents,
+      currency: wallet?.currency ?? "ZAR",
+      // Nominal internal credits are displayed for legacy UI compatibility.
+      // Only the settled ZAR wallet balance is authoritative.
+      credits: Math.floor(balanceCents / 90),
+      price_per_credit_zar: 0.9,
+      video_seconds_available: 0,
+      paid_rendering_enabled: false,
+    });
+  } catch {
+    return c.json({ detail: "Secure balance storage unavailable." }, 503);
   }
-  const remaining = current - amount;
-  inMemoryCredits.set(clean, remaining);
-  return { success: true, remaining };
-}
-
-// 1. Submit Async Job (with pre-deduction token guard)
-const handleJobSubmit = async (c: any) => {
-  const body = (await c.req.json().catch(() => ({}))) as {
-    prompt?: string;
-    task_type?: string;
-    user_email?: string;
-    required_tokens?: number;
-  };
-
-  const prompt = (body.prompt || "").trim();
-  if (!prompt) return c.json({ detail: "prompt field is required" }, 400);
-
-  const taskType = body.task_type || "data_reconciliation";
-  const userEmail = (body.user_email || "guest@luqi.ai").toLowerCase().trim();
-  const requiredTokens = Math.max(1, Number(body.required_tokens) || 5);
-
-  // Pre-execution token check & deduction
-  const deduction = deductUserCredits(userEmail, requiredTokens);
-  if (!deduction.success) {
-    return c.json(
-      {
-        detail: `Payment Required: Insufficient Luqi credits. Required: ${requiredTokens}, Available: ${deduction.remaining}.`,
-        current_balance: deduction.remaining,
-        required_tokens: requiredTokens,
-        action: "Please top up via /api/v1/billing/topup or the Pricing page.",
-      },
-      402
-    );
-  }
-
-  const taskId = "job_" + Math.random().toString(36).substring(2, 11);
-  const record: JobRecord = {
-    taskId,
-    userEmail,
-    taskType,
-    status: "PROCESSING",
-    tokensDeducted: requiredTokens,
-    result: null,
-    error: null,
-    createdAt: Date.now(),
-  };
-  inMemoryJobs.set(taskId, record);
-
-  // Execute asynchronously in background so client receives taskId immediately
-  setTimeout(async () => {
-    try {
-      const extResult = await executeHighPrecisionExtraction(
-        prompt,
-        `You are Luqi AI's data architect agent executing an asynchronous task (${taskType}). Output precise, structured results.`
-      );
-      record.status = "SUCCESS";
-      record.result = {
-        output: extResult.text,
-        framework: "Google-GenAI",
-        precision: extResult.precision,
-        model: extResult.model,
-      };
-    } catch (err: any) {
-      record.status = "FAILURE";
-      record.error = err?.message || "Execution failure";
-    }
-  }, 100);
-
-  return c.json({
-    status: "queued",
-    task_id: taskId,
-    queue: "async_worker",
-    tokens_deducted: requiredTokens,
-    remaining_balance: deduction.remaining,
-    poll_url: `/api/v1/jobs/${taskId}`,
-  });
 };
-
-restCompat.post("/api/v1/jobs/submit", handleJobSubmit);
-restCompat.post("/v1/jobs/submit", handleJobSubmit);
-
-// 2. Poll Job Status
-const handleJobPoll = (c: any) => {
-  const taskId = c.req.param("taskId");
-  const job = inMemoryJobs.get(taskId);
-  if (!job) {
-    return c.json({ task_id: taskId, status: "PENDING", result: null, error: null });
-  }
-  return c.json({
-    task_id: job.taskId,
-    status: job.status,
-    result: job.result,
-    error: job.error,
-    tokens_deducted: job.tokensDeducted,
-  });
-};
-
-restCompat.get("/api/v1/jobs/:taskId", handleJobPoll);
-restCompat.get("/v1/jobs/:taskId", handleJobPoll);
-
-// 3. Billing Balance
-const handleBalance = (c: any) => {
-  const email = (c.req.query("user_email") || "guest@luqi.ai").toLowerCase().trim();
-  const credits = getUserCredits(email);
-  return c.json({
-    user_email: email,
-    credits,
-    price_per_credit_usd: 0.05,
-    video_seconds_available: Math.floor(credits / 10),
-  });
-};
-
 restCompat.get("/api/v1/billing/balance", handleBalance);
 restCompat.get("/v1/billing/balance", handleBalance);
 
-// 4. Billing Top-up
+// Top-up requests now start verified hosted checkout; they never grant credits.
 const handleTopup = async (c: any) => {
-  const body = (await c.req.json().catch(() => ({}))) as { user_email?: string; credits?: number };
-  const email = (body.user_email || "guest@luqi.ai").toLowerCase().trim();
-  const addCredits = Math.max(1, Number(body.credits) || 100);
-  const current = getUserCredits(email);
-  const newBal = current + addCredits;
-  inMemoryCredits.set(email, newBal);
-  return c.json({
-    success: true,
-    credited: addCredits,
-    new_balance: newBal,
-    user_email: email,
-  });
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Authentication required." }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const requestedEmail = String(body.user_email ?? "").trim().toLowerCase();
+  if (requestedEmail && requestedEmail !== user.email.toLowerCase()) {
+    return c.json({ detail: "Access denied." }, 403);
+  }
+  const amountZar = Number(body.amount_zar ?? body.amountZar ??
+    (Number.isFinite(Number(body.credits)) ? Number(body.credits) * 0.9 : 0));
+  if (!Number.isFinite(amountZar) || amountZar < 5 || amountZar > 50000) {
+    return c.json({ detail: "Top-up amount must be R5 to R50,000." }, 400);
+  }
+  if (!paymentsConfigured()) return c.json({ detail: "Payment provider not configured." }, 503);
+  try {
+    const db = await getPrivateDb();
+    const amountCents = Math.round(amountZar * 100);
+    const payment = await initializeTopup(user.email.toLowerCase(), amountCents, "ZAR");
+    if (!payment) return c.json({ detail: "Could not start checkout." }, 502);
+    await db.insert(paymentEvents).values({
+      reference: payment.reference, userKey: user.email.toLowerCase(),
+      eventType: "topup_initialized", amountCents, currency: "ZAR", status: "pending",
+    });
+    return c.json({ pending: true, authorizationUrl: payment.authorizationUrl, reference: payment.reference });
+  } catch {
+    return c.json({ detail: "Secure checkout unavailable." }, 503);
+  }
 };
-
 restCompat.post("/api/v1/billing/topup", handleTopup);
 restCompat.post("/v1/billing/topup", handleTopup);
 
-// 5. PayFast Webhook
-const handlePayfastWebhook = async (c: any) => {
-  const body = await c.req.parseBody().catch(async () => c.req.json().catch(() => ({})));
-  const data = body as Record<string, any>;
-  const mPaymentId = data.m_payment_id || `pf_${Date.now()}`;
-  const amountGross = Number(data.amount_gross) || 0;
-  const userEmail = (data.custom_str1 || data.email_address || "guest@luqi.ai").toLowerCase().trim();
-  const tokensToGrant = Math.max(50, Math.floor(amountGross * 20));
-
-  const current = getUserCredits(userEmail);
-  inMemoryCredits.set(userEmail, current + tokensToGrant);
-
-  return c.json({
-    status: "Acknowledged",
-    payment_id: mPaymentId,
-    credited: tokensToGrant,
-  });
-};
-
-restCompat.post("/api/v1/billing/payfast/webhook", handlePayfastWebhook);
-restCompat.post("/v1/billing/payfast/webhook", handlePayfastWebhook);
-
-// 6. Stripe Webhook
-const handleStripeWebhook = async (c: any) => {
-  const payload = (await c.req.json().catch(() => ({}))) as Record<string, any>;
-  const eventType = payload.type || "";
-  const dataObj = payload.data?.object || {};
-
-  if (eventType === "checkout.session.completed" || eventType === "payment_intent.succeeded") {
-    const userEmail = (
-      dataObj.customer_email ||
-      dataObj.customer_details?.email ||
-      dataObj.metadata?.user_email ||
-      "guest@luqi.ai"
-    ).toLowerCase().trim();
-    const amountTotal = Number(dataObj.amount_total || dataObj.amount || 500) / 100;
-    const tokens = Math.max(100, Math.floor(amountTotal * 20));
-    const current = getUserCredits(userEmail);
-    inMemoryCredits.set(userEmail, current + tokens);
-  }
-
-  return c.json({ status: "Acknowledged" });
-};
-
-restCompat.post("/api/v1/billing/stripe/webhook", handleStripeWebhook);
-restCompat.post("/v1/billing/stripe/webhook", handleStripeWebhook);
+// Unsigned webhook implementations are removed. Provider integrations must
+// prove signature, settlement, reference ownership and replay safety first.
+const retiredUnsignedWebhook = (c: any) => c.json({
+  detail: "Unsigned payment webhooks are not supported. Use the verified Paystack integration.",
+}, 410);
+restCompat.post("/api/v1/billing/payfast/webhook", retiredUnsignedWebhook);
+restCompat.post("/v1/billing/payfast/webhook", retiredUnsignedWebhook);
+restCompat.post("/api/v1/billing/stripe/webhook", retiredUnsignedWebhook);
+restCompat.post("/v1/billing/stripe/webhook", retiredUnsignedWebhook);
 
 // ─── 7. ZERO TRUST ARCHITECTURE (ZTA) & OWASP AST10 (2026) ─────────────
 
@@ -972,43 +863,8 @@ interface ZtaApproval {
   reviewed_at?: string;
 }
 
-const inMemoryZtaApprovals: ZtaApproval[] = [
-  {
-    id: "hitl_pf_901",
-    agent_id: "payfast-settlement-agent",
-    agent_spiffe: "spiffe://luqi.ai/agent/payfast-settlement/a89f01",
-    action_type: "payfast_charge",
-    action_label: "Financial Transaction (PayFast R450.00 charge)",
-    parameters: {
-      amount_zar: 450.0,
-      user_email: "thabo@enterprise.co.za",
-      purpose: "Enterprise Token Pack Top-Up",
-    },
-    risk_level: "CRITICAL",
-    reason: "Autonomous payment execution requires explicit Human-in-the-Loop review and Step-Up verification (AST07).",
-    created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    status: "PENDING",
-    step_up_verified: false,
-  },
-  {
-    id: "hitl_db_402",
-    agent_id: "luqi-data-architect",
-    agent_spiffe: "spiffe://luqi.ai/agent/luqi-data-architect/7c2e99",
-    action_type: "delete_vault_record",
-    action_label: "Irreversible Data Destruction (Vault Records Purge)",
-    parameters: {
-      record_id: "vault_contracts_2025_q3",
-      retention_policy: "7_years",
-    },
-    risk_level: "HIGH",
-    reason: "Deletion of compliance vault archives must be confirmed by a human security operator (AST07).",
-    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    status: "PENDING",
-    step_up_verified: false,
-  },
-];
-
-const inMemoryStepUpChallenges = new Map<string, { code: string; email: string; action: string; expiresAt: number; verified: boolean }>();
+// No fabricated approvals or verification codes are seeded in production.
+const inMemoryZtaApprovals: ZtaApproval[] = [];
 
 const AST10_CATALOG = {
   AST01: {
@@ -1084,90 +940,27 @@ const AST10_CATALOG = {
 };
 
 // 7a. Telemetry status
-const handleZtaStatus = (c: any) => {
-  return c.json({
-    defense_status: "ACTIVE_ZERO_TRUST",
-    framework_version: "OWASP Agentic Skills Top 10 (AST10) 2026 Edition",
-    layers: {
-      layer1_identity: {
-        status: "ENFORCING",
-        mtls_active: true,
-        active_certificates: 3,
-        certificates: [
-          {
-            spiffe_id: "spiffe://luqi.ai/agent/luqi-data-architect/7c2e99",
-            serial_number: "7c2e994a0f81",
-            agent_name: "luqi-data-architect",
-            expires_in_seconds: 780,
-            is_valid: true,
-            allowed_scopes: ["data:read", "data:write", "analytics"],
-            fingerprint: "e3b0c44298fc1c14..."
-          },
-          {
-            spiffe_id: "spiffe://luqi.ai/agent/payfast-settlement/a89f01",
-            serial_number: "a89f01bb413c",
-            agent_name: "payfast-settlement-agent",
-            expires_in_seconds: 540,
-            is_valid: true,
-            allowed_scopes: ["payments:initiate", "billing:query"],
-            fingerprint: "9f83c2677112879f..."
-          },
-          {
-            spiffe_id: "spiffe://luqi.ai/agent/lab-physics-agent/bb3102",
-            serial_number: "bb3102ef1904",
-            agent_name: "lab-physics-agent",
-            expires_in_seconds: 890,
-            is_valid: true,
-            allowed_scopes: ["simulation:run"],
-            fingerprint: "a1435f082e63a152..."
-          }
-        ]
-      },
-      layer2_tool_gateway: {
-        status: "ENFORCING",
-        least_privilege: true,
-        credential_brokering: true,
-        pending_hitl_approvals: inMemoryZtaApprovals.filter(a => a.status === "PENDING").length,
-        total_hitl_requests: inMemoryZtaApprovals.length,
-      },
-      layer3_runtime_defenses: {
-        status: "ENFORCING",
-        dlp_sanitization: "ACTIVE_DUAL_PASS",
-        circuit_breaker: "ARMED_10_STEPS_MAX",
-        spending_cap_enforced: true,
-      }
+const handleZtaStatus = (c: any) => c.json({
+  defense_status: "PARTIALLY_IMPLEMENTED_NOT_CERTIFIED",
+  framework_version: "LUQI Security Policy",
+  layers: {
+    layer1_identity: { status: "SESSION_AUTHENTICATION", mtls_active: false, active_certificates: 0, certificates: [] },
+    layer2_tool_gateway: {
+      status: "ADMIN_ROLE_RESTRICTION",
+      least_privilege: true, credential_brokering: false,
+      pending_hitl_approvals: 0, total_hitl_requests: 0,
     },
-    threat_radar: AST10_CATALOG,
-    pending_approvals: inMemoryZtaApprovals,
-    recent_audit_events: [
-      {
-        timestamp: new Date().toISOString(),
-        event_type: "IDENTITY_ISSUED",
-        ast_tag: "AST06",
-        ast_meta: AST10_CATALOG.AST06,
-        message: "Continuous mTLS verification passed for agent spiffe://luqi.ai/agent/luqi-data-architect/7c2e99",
-        severity: "LOW"
-      },
-      {
-        timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-        event_type: "HITL_GATE_TRIGGERED",
-        ast_tag: "AST07",
-        ast_meta: AST10_CATALOG.AST07,
-        message: "Intercepted PayFast R450 charge tool call; gated pending human verification",
-        severity: "HIGH"
-      },
-      {
-        timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-        event_type: "DLP_SCRUBBED",
-        ast_tag: "AST04",
-        ast_meta: AST10_CATALOG.AST04,
-        message: "Dual-pass DLP redacted sensitive credit card patterns from outbound buffer",
-        severity: "INFO"
-      }
-    ]
-  });
-};
-
+    layer3_runtime_defenses: {
+      status: "REQUIRES_INDEPENDENT_TESTING",
+      dlp_sanitization: "NOT_EXTERNALLY_VERIFIED",
+      circuit_breaker: "NOT_EXTERNALLY_VERIFIED",
+      spending_cap_enforced: false,
+    },
+  },
+  threat_radar: AST10_CATALOG,
+  pending_approvals: [],
+  recent_audit_events: [],
+});
 restCompat.get("/api/v1/zta/status", handleZtaStatus);
 restCompat.get("/v1/zta/status", handleZtaStatus);
 
@@ -1175,80 +968,18 @@ restCompat.get("/v1/zta/status", handleZtaStatus);
 restCompat.get("/api/v1/zta/approvals", (c: any) => c.json({ pending_approvals: inMemoryZtaApprovals }));
 restCompat.get("/v1/zta/approvals", (c: any) => c.json({ pending_approvals: inMemoryZtaApprovals }));
 
-restCompat.post("/api/v1/zta/approvals/:approvalId/resolve", async (c: any) => {
-  const approvalId = c.req.param("approvalId");
-  const body = await c.req.json().catch(() => ({}));
-  const decision = (body.decision || "APPROVE").toUpperCase();
-  const reviewer = body.reviewer || "security_operator@luqi.ai";
-
-  const item = inMemoryZtaApprovals.find(a => a.id === approvalId);
-  if (!item) {
-    return c.json({ success: false, message: "Approval request not found" }, 404);
-  }
-
-  item.status = decision as any;
-  item.reviewed_by = reviewer;
-  item.reviewed_at = new Date().toISOString();
-  item.step_up_verified = !!body.step_up_token;
-
-  return c.json({
-    success: true,
-    message: `Action ${decision} recorded for ticket ${approvalId}`,
-    decision,
-    item
-  });
-});
-
-// 7c. Step-up Challenge
-restCompat.post("/api/v1/zta/step-up/challenge", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const challengeId = "mfa_" + Math.random().toString(36).substring(2, 10);
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const email = body.user_email || "admin@luqi.ai";
-  const action = body.action || "payfast_charge";
-  const amountZar = Number(body.amount_zar) || 0;
-
-  inMemoryStepUpChallenges.set(challengeId, {
-    code,
-    email,
-    action,
-    expiresAt: Date.now() + 180 * 1000,
-    verified: false,
-  });
-
-  return c.json({
-    challenge_id: challengeId,
-    action,
-    amount_zar: amountZar,
-    expires_in_seconds: 180,
-    hint: `Verification code sent to ${email.substring(0, 3)}***@luqi.ai (Demo test code: ${code})`,
-  });
-});
-
-// 7d. Step-up Verify
-restCompat.post("/api/v1/zta/step-up/verify", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const { challenge_id, code } = body;
-  const challenge = inMemoryStepUpChallenges.get(challenge_id);
-
-  if (!challenge) {
-    return c.json({ success: false, message: "Invalid or expired challenge" }, 400);
-  }
-  if (challenge.expiresAt < Date.now()) {
-    return c.json({ success: false, message: "Challenge expired. Please request a new code." }, 400);
-  }
-  if (challenge.code !== String(code).trim()) {
-    return c.json({ success: false, message: "Incorrect verification code." }, 400);
-  }
-
-  challenge.verified = true;
-  const stepUpToken = "stepup_tok_" + Math.random().toString(36).substring(2, 14);
-  return c.json({
-    success: true,
-    message: "Step-up authentication verified successfully.",
-    step_up_token: stepUpToken,
-  });
-});
+// Financial and security approvals require separately verified MFA and a
+// durable audit ledger. A caller-supplied string must never count as step-up.
+restCompat.post("/api/v1/zta/approvals/:approvalId/resolve", (c: any) => c.json({
+  success: false,
+  message: "Strong authentication and durable approval audit are required. No approval was recorded.",
+}, 501));
+restCompat.post("/api/v1/zta/step-up/challenge", (c: any) => c.json({
+  success: false, message: "A verified out-of-band MFA provider is required. No code was sent.",
+}, 501));
+restCompat.post("/api/v1/zta/step-up/verify", (c: any) => c.json({
+  success: false, message: "No verified MFA challenge exists; authentication was not elevated.",
+}, 501));
 
 // 7e. DLP and Injection Test Bench
 restCompat.post("/api/v1/zta/sanitize-test", async (c: any) => {
@@ -1495,26 +1226,8 @@ interface PipelineJobNode {
   execution_trace: Array<{ step: string; phase: string; status: string; detail: string }>;
 }
 
-const inMemoryPipelineJobs: PipelineJobNode[] = [
-  {
-    job_id: "sh_job_918",
-    bug_report: "PayFast webhook signature validation mismatch on valid test payloads.",
-    target_file: "token_billing_gateway.py",
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: "Execution Output:\nTest Suite: test_payfast_itn_signature()\nPassed: 4/4\nCircuit Breaker: OK (1.2s runtime)\nErrors:\nNone",
-    pr_url: "https://github.com/LimitlessTelecoms/luqi-ai/pull/142",
-    pr_number: 142,
-    branch_name: "agent-fix/payfast-signature-canonicalization",
-    fix_diff: `--- a/token_billing_gateway.py\n+++ b/token_billing_gateway.py\n@@ -108,3 +108,5 @@\n-    param_str = urlencode(cleaned_dict)\n+    # RFC 3986 parameter sorting & URL encoding fix\n+    sorted_params = dict(sorted(cleaned_dict.items()))\n+    param_str = urlencode(sorted_params)`,
-    created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    execution_trace: [
-      { step: "Telemetry Ingestion", phase: "70% Autonomous", status: "COMPLETED", detail: "Intercepted recurring 400 Bad Request on PayFast ITN webhook." },
-      { step: "Docker Sandbox Isolation", phase: "70% Autonomous", status: "COMPLETED", detail: "Executed reproduction test in isolated Python 3.11 sandbox (SWE-ReX guard)." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: "Opened PR #142 against LimitlessTelecoms/luqi-ai." },
-      { step: "LangGraph HITL Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Halted before deploy_to_production. Requires explicit human authorization." },
-    ],
-  },
-];
+// Only independently verified CI jobs may be listed; no mock PRs or test runs.
+const inMemoryPipelineJobs: PipelineJobNode[] = [];
 
 restCompat.get("/api/v1/self-healing/pipeline/jobs", (c: any) => {
   return c.json({ jobs: inMemoryPipelineJobs });
@@ -1523,152 +1236,16 @@ restCompat.get("/v1/self-healing/pipeline/jobs", (c: any) => {
   return c.json({ jobs: inMemoryPipelineJobs });
 });
 
-restCompat.post("/api/v1/self-healing/pipeline/run", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const bugReport = String(body.bug_report || "Intermittent timeout on database session pool.");
-  const targetFile = String(body.target_file || "db/queries/connection.ts");
-  const branchName = "agent-fix/" + Math.random().toString(36).substring(2, 8);
-  const prNum = Math.floor(150 + Math.random() * 800);
-  const prUrl = `https://github.com/LimitlessTelecoms/luqi-ai/pull/${prNum}`;
-  const jobId = "sh_" + Math.random().toString(36).substring(2, 10);
-
-  const newJob: PipelineJobNode = {
-    job_id: jobId,
-    bug_report: bugReport,
-    target_file: targetFile,
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: `[Docker Container python:3.11-slim]
-Isolated Workspace: /workspace/test_${jobId.substring(3, 7)}.py
-Test Matrix:
-  - Unit assertion test: PASSED (0.42s)
-  - Memory leak scan: CLEAN (0 bytes leaked)
-  - Circuit Breaker guard: OK (30s limit respected)
-Output:
-  OK: 1 passed in 0.45s
-Errors: None`,
-    pr_url: prUrl,
-    pr_number: prNum,
-    branch_name: branchName,
-    fix_diff: `--- a/${targetFile}\n+++ b/${targetFile}\n@@ -45,3 +45,5 @@\n-    // Unprotected call\n+    // Zero-trust isolated wrapper with retry\n+    return await executeWithSanitizedPool(req);`,
-    created_at: new Date().toISOString(),
-    execution_trace: [
-      { step: "Bug Ingestion & Diagnostic", phase: "70% Autonomous", status: "COMPLETED", detail: `Agent analyzed report: "${bugReport.slice(0, 70)}..."` },
-      { step: "Docker Sandbox Isolation", phase: "70% Autonomous", status: "COMPLETED", detail: "Executed code inside isolated Docker container; 0 errors." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: `Opened PR #${prNum} on branch ${branchName}.` },
-      { step: "LangGraph Security Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Mathematically halted before deploy_to_production. Awaiting human click." },
-    ],
-  };
-
-  inMemoryPipelineJobs.unshift(newJob);
-
-  return c.json({
-    success: true,
-    job_id: jobId,
-    status: "AWAITING_HUMAN_AUTH",
-    pr_url: prUrl,
-    branch_name: branchName,
-    execution_trace: newJob.execution_trace,
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/sandbox-exec", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const code = String(body.code || "");
-
-  // Safe container simulation / execution
-  const hasDestructive = /rm\s+-rf|dd\s+if=|mkfs/i.test(code);
-  const hasInfiniteLoop = /while\s+True|for\s+.*\s+in\s+iter\(int/i.test(code);
-
-  if (hasDestructive) {
-    return c.json({
-      output: "[Sandbox Guard: Docker Isolation Active]\nNotice: Attempted dangerous host system deletion command.\nAction: Contained inside disposable container. Host filesystem remains intact and untouched.\nExecution Output:\nPermission denied inside read-only guest mount.",
-      duration_seconds: 0.12,
-      circuit_breaker_timeout: 30,
-      isolated: true,
-    });
-  }
-
-  if (hasInfiniteLoop) {
-    return c.json({
-      output: "Error: Code execution timed out (30s circuit breaker reached). Infinite loop terminated by Docker sandbox supervisor.",
-      duration_seconds: 30.0,
-      circuit_breaker_timeout: 30,
-      isolated: true,
-    });
-  }
-
-  return c.json({
-    output: `[Docker python:3.11-slim Isolated Container]
-Executed snippet:
-${code.slice(0, 150)}${code.length > 150 ? "..." : ""}
-
-STDOUT:
->> Hello from isolated sandbox environment!
->> Invariant assertions passed.
-STDERR: None
-Exit Code: 0`,
-    duration_seconds: 0.48,
-    circuit_breaker_timeout: 30,
-    isolated: true,
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/authorize", async (c: any) => {
-  const jobId = c.req.param("jobId");
-  const body = await c.req.json().catch(() => ({}));
-  const reviewer = body.reviewer || "Lead SRE Operator";
-
-  const job = inMemoryPipelineJobs.find(j => j.job_id === jobId);
-  if (!job) {
-    return c.json({ success: false, message: "Job not found" }, 404);
-  }
-
-  job.status = "DEPLOYED_TO_PROD";
-  job.reviewer = reviewer;
-  job.resolved_at = new Date().toISOString();
-  job.execution_trace.push({
-    step: "Human Authorization & Production Merge",
-    phase: "30% Gated Phase",
-    status: "APPROVED",
-    detail: `Human operator (${reviewer}) clicked Approve. PR merged to main and CI/CD deployed to production.`,
-  });
-
-  return c.json({
-    success: true,
-    message: "Human authorization approved. PR merged to main and production deployment initiated.",
-    job_id: jobId,
-    status: "DEPLOYED_TO_PROD",
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/reject", async (c: any) => {
-  const jobId = c.req.param("jobId");
-  const body = await c.req.json().catch(() => ({}));
-  const reviewer = body.reviewer || "Lead SRE Operator";
-  const reason = body.reason || "Rejected during manual review";
-
-  const job = inMemoryPipelineJobs.find(j => j.job_id === jobId);
-  if (!job) {
-    return c.json({ success: false, message: "Job not found" }, 404);
-  }
-
-  job.status = "REJECTED";
-  job.reviewer = reviewer;
-  job.resolved_at = new Date().toISOString();
-  job.execution_trace.push({
-    step: "Human Authorization",
-    phase: "30% Gated Phase",
-    status: "REJECTED",
-    detail: `Deployment rejected by ${reviewer}. Reason: ${reason}.`,
-  });
-
-  return c.json({
-    success: true,
-    message: "Deployment rejected. Pipeline halted.",
-    job_id: jobId,
-    status: "REJECTED",
-  });
-});
+// A real self-healing operation must be executed by a permission-scoped CI
+// worker, with published test evidence and an explicitly approved deployment.
+const noVerifiedWorker = (c: any) => c.json({
+  success: false, executed: false, deployed: false,
+  message: "No secure CI execution worker is connected. No tests, PRs or deployments were performed.",
+}, 501);
+restCompat.post("/api/v1/self-healing/pipeline/run", noVerifiedWorker);
+restCompat.post("/api/v1/self-healing/pipeline/sandbox-exec", noVerifiedWorker);
+restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/authorize", noVerifiedWorker);
+restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/reject", noVerifiedWorker);
 
 // ─── 9. AUTONOMOUS AFRICAN MARKET & TECHNOLOGY SENSING LOOP ─────────────
 
@@ -2315,7 +1892,6 @@ Your duty:
       query,
       systemPrompt: certPrompt,
       context,
-      taskType: "technical"
     });
 
     if (aiResponse && aiResponse.content) {
@@ -2542,7 +2118,7 @@ restCompat.post("/api/ussd", async (c) => {
     phoneNumber = json.phoneNumber || phoneNumber;
     text = json.text || "";
   } else {
-    const body = await c.req.parseBody().catch(() => ({}));
+    const body: Record<string, string | File> = await c.req.parseBody().catch(() => ({}));
     sessionId = (body.sessionId as string) || sessionId;
     phoneNumber = (body.phoneNumber as string) || phoneNumber;
     text = (body.text as string) || "";

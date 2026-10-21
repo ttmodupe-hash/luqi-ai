@@ -1,14 +1,15 @@
 // =====================================================================
-// VIDEO STUDIO PAGE — Generative Video & Voiceover Studio with Margin Guard
+// VIDEO STUDIO PAGE — Verified credit wallet and private video rendering
 // =====================================================================
-// Multi-API native animation pipeline:
-// - Virtual Credit Margin Protector (10 credits/sec for $0.25 video -> 50% profit margin)
-// - ElevenLabs neural voiceover generation
-// - Replicate WAN 2.1 & RunwayML scene synthesis
-// - Full credit top-up, subscription tiers, and API unit cost transparency
+// Verified silent-video checkout and private rendering:
+// - Server-quoted video credits, charged transactionally
+// - Optional narrated mode; no mock MP4s or fictional starter credits
+// - Genuine Replicate output retained in private object storage
+// - Hosted Paystack checkout with provider-verified credit settlement
 // =====================================================================
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import ToonChatCreator from "@/components/ToonChatCreator";
 import { trpc } from "@/providers/trpc";
 import { Link } from "react-router";
 import {
@@ -191,9 +192,11 @@ export default function VideoStudioPage() {
   const [formDescription, setFormDescription] = useState("3D animation demonstrating harmonic oscillation");
   const [formPrompt, setFormPrompt] = useState("3D cartoon style robot sitting at a futuristic lab desk explaining pendulum motion, bright volumetric lighting, vibrant colors");
   const [formDialogue, setFormDialogue] = useState("Welcome to Luqi AI. Notice how energy converts from potential to kinetic as the pendulum swings.");
+  const [renderMode, setRenderMode] = useState<"silent_mp4" | "narrated_mp4">("silent_mp4");
   const [formLanguage, setFormLanguage] = useState("en");
   const [formDuration, setFormDuration] = useState(5);
   const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
+  const renderRequestRef = useRef<{ key: string; intent: string } | null>(null);
 
   const handleAutoStoryboard = async () => {
     setIsGeneratingStoryboard(true);
@@ -212,7 +215,7 @@ export default function VideoStudioPage() {
         if (data.storyboard.title) setFormTitle(data.storyboard.title);
         if (data.storyboard.visual_prompt) setFormPrompt(data.storyboard.visual_prompt);
         if (data.storyboard.dialogue) setFormDialogue(data.storyboard.dialogue);
-        if (data.storyboard.target_duration) setFormDuration(data.storyboard.target_duration);
+        if (data.storyboard.target_duration) setFormDuration(Math.min(10, Math.max(2, Math.round(data.storyboard.target_duration))));
       }
     } catch (e) {
       console.error("Failed to generate storyboard:", e);
@@ -223,18 +226,19 @@ export default function VideoStudioPage() {
 
   // Queries
   const balance = trpc.video.getBalance.useQuery(undefined, { refetchInterval: 5000 });
-  const costBreakdown = trpc.video.calculateCost.useQuery({
-    durationSeconds: formDuration,
-    dialogue: formDialogue,
-  });
-  const apiStatus = trpc.video.getApiStatus.useQuery();
+  const renderQuote = trpc.video.quoteRender.useQuery({
+    durationSeconds: Math.min(10, Math.max(2, formDuration)),
+    mode: renderMode,
+    narration: renderMode === "narrated_mp4" ? formDialogue : undefined,
+  }, { enabled: renderMode === "silent_mp4" || (formDialogue.trim().length > 0 && formDialogue.length <= 500) });
+  const apiStatus = trpc.video.getApiStatus.useQuery(undefined, { enabled: false });
   const pricingTiers = trpc.video.getSubscriptionTiers.useQuery();
 
   const projects = trpc.video.list.useQuery(
     { status: filterStatus as any, language: filterLanguage || undefined, limit: 50 },
     { refetchInterval: 5000 }
   );
-  const stats = trpc.video.stats.useQuery(undefined, { refetchInterval: 10000 });
+  const stats = trpc.video.stats.useQuery(undefined, { enabled: false });
 
   // Mutations
   const utils = trpc.useUtils();
@@ -243,6 +247,7 @@ export default function VideoStudioPage() {
       utils.video.list.invalidate();
       utils.video.stats.invalidate();
       utils.video.getBalance.invalidate();
+      renderRequestRef.current = null;
       setShowCreateModal(false);
     },
   });
@@ -253,20 +258,32 @@ export default function VideoStudioPage() {
     },
   });
   const topupMutation = trpc.video.topupCredits.useMutation({
-    onSuccess: () => {
-      utils.video.getBalance.invalidate();
+    onSuccess: (data) => {
+      // Opening a checkout is not proof of payment or credited funds.
+      if (data.authorizationUrl) window.location.assign(data.authorizationUrl);
     },
   });
 
   const handleGenerate = () => {
-    if (!formTitle.trim() || !formPrompt.trim()) return;
+    if (!formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled ||
+      (renderMode === "narrated_mp4" && (!balance.data?.narratedVideoEnabled ||
+        !formDialogue.trim() || formDialogue.trim().length > formDuration * 15))) return;
+    const durationSeconds = Math.min(10, Math.max(2, formDuration));
+    const confirmedCredits = renderQuote.data?.creditsRequired;
+    if (!confirmedCredits || (balance.data?.credits ?? 0) < confirmedCredits) return;
+    const label = renderMode === "narrated_mp4" ? "narrated MP4 with generated speech" : "silent MP4";
+    if (!window.confirm(`Render a ${durationSeconds}-second ${label} for ${confirmedCredits} verified credits? Credits are reserved before provider execution.`)) return;
+    const narration = renderMode === "narrated_mp4" ? formDialogue : undefined;
+    const intent = JSON.stringify([formTitle, formPrompt, formLanguage, durationSeconds, renderMode, narration]);
+    const requestKey = renderRequestRef.current?.intent === intent
+      ? renderRequestRef.current.key : crypto.randomUUID();
+    renderRequestRef.current = { key: requestKey, intent };
     generateVideo.mutate({
+      requestKey, mode: renderMode, narration, confirmedCredits,
       title: formTitle,
-      description: formDescription,
       prompt: formPrompt,
-      dialogue: formDialogue,
       language: formLanguage as any,
-      durationSeconds: formDuration,
+      durationSeconds,
     });
   };
 
@@ -293,7 +310,7 @@ export default function VideoStudioPage() {
                   <ShieldCheck className="w-3 h-3" /> Margin Protected
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Sovereign 3D Cartoon & Character Animation Pipeline (WAN 2.1 + ElevenLabs + Gemini 3.8)</p>
+              <p className="text-xs text-slate-400">Private MP4 rendering • purchased credits • verified Paystack payments</p>
             </div>
           </div>
 
@@ -303,10 +320,10 @@ export default function VideoStudioPage() {
               <Coins className="w-4 h-4 text-amber-400" />
               <div className="text-left">
                 <div className="text-xs font-bold text-slate-200">
-                  {balance.data?.credits ?? 150} <span className="text-slate-500 font-normal">Luqi Credits</span>
+                  {balance.data?.credits ?? 0} <span className="text-slate-500 font-normal">Luqi Credits</span>
                 </div>
                 <div className="text-[10px] text-slate-400">
-                  ≈ ${( (balance.data?.credits ?? 150) * 0.05 ).toFixed(2)} USD
+                  Purchased credits only — no demo balance
                 </div>
               </div>
             </div>
@@ -344,20 +361,38 @@ export default function VideoStudioPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {!balance.data?.videoRenderingEnabled && (
+          <p role="status" className="rounded-xl border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-200">
+            Paid rendering and video-credit checkout require a real provider and configured private object storage. No charge can be made until they are available.
+          </p>
+        )}
+        {generateVideo.error && (
+          <p role="alert" className="rounded-xl border border-red-700 p-3 text-sm text-red-200">
+            Render request: {generateVideo.error.message}
+            {" "}Check your project status before starting a different request.
+          </p>
+        )}
+        {topupMutation.error && (
+          <p role="alert" className="rounded-xl border border-red-700 p-3 text-sm text-red-200">
+            Checkout could not start: {topupMutation.error.message}. Your account was not credited by this failed request.
+          </p>
+        )}
+
+        <ToonChatCreator />
         {/* Margin Guard Summary Banner */}
         <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-950 p-5 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">
-                Virtual Credit Guard Active
+                Verified Credit Ledger
               </span>
             </div>
             <h2 className="text-base font-bold text-slate-100">
-              Safe Commercialization: 1 Second Video = 10 Credits ($0.50) vs $0.25 API Cost
+              Secure video rendering: 10 credits per second, with optional +4-credit narration
             </h2>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Generative video (Replicate WAN 2.1) and voiceover (ElevenLabs) APIs are strictly rate-guarded into atomic credit deductions. Failed rendering jobs are automatically refunded with zero balance risk.
+              Only settled credit packs can fund real Replicate video renders. Charges are recorded transactionally and failed requests are refunded when recovery succeeds. Narration is optional and billed only when explicitly chosen.
             </p>
           </div>
 
@@ -367,12 +402,12 @@ export default function VideoStudioPage() {
               <div className="text-[10px] text-slate-500 uppercase">Video Rate</div>
             </div>
             <div className="text-center px-3 border-r border-slate-800">
-              <div className="text-lg font-bold text-sky-400">2 cr/500ch</div>
-              <div className="text-[10px] text-slate-500 uppercase">ElevenLabs Voice</div>
+              <div className="text-lg font-bold text-sky-400">+4 credits</div>
+              <div className="text-[10px] text-slate-500 uppercase">Narration (optional)</div>
             </div>
             <div className="text-center px-3">
-              <div className="text-lg font-bold text-emerald-400">50%+</div>
-              <div className="text-[10px] text-slate-500 uppercase">Guaranteed Margin</div>
+              <div className="text-lg font-bold text-emerald-400">Limited</div>
+              <div className="text-[10px] text-slate-500 uppercase">Daily Provider Jobs</div>
             </div>
           </div>
         </div>
@@ -385,7 +420,7 @@ export default function VideoStudioPage() {
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-orange-400" /> LUQITOONS 1-CLICK STUDIO
                 </span>
-                <span className="text-xs text-slate-400">Direct 3D Cartoon & Voiceover Generator</span>
+                <span className="text-xs text-slate-400">Private MP4 scene renderer — soundtrack separate</span>
               </div>
               <h3 className="text-base font-bold text-white mt-1">
                 Generate 3D Cartoon Characters & Multilingual Animated Scenes
@@ -416,7 +451,7 @@ export default function VideoStudioPage() {
                     setFormPrompt(p.prompt);
                     setFormDialogue(p.dialogue);
                     setFormLanguage(p.lang);
-                    setFormDuration(p.duration);
+                    setFormDuration(Math.min(10, Math.max(2, p.duration)));
                   }}
                   className="px-3 py-1.5 rounded-xl bg-slate-950/80 hover:bg-orange-500/10 hover:border-orange-500/40 border border-slate-800 text-xs font-medium text-slate-200 whitespace-nowrap transition flex items-center gap-1.5"
                 >
@@ -440,7 +475,7 @@ export default function VideoStudioPage() {
               />
             </div>
             <div className="md:col-span-6 space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400">Character Dialogue / Voiceover (ElevenLabs):</label>
+              <label className="text-[11px] font-semibold text-slate-400">Narration script draft (not rendered in silent MP4):</label>
               <textarea
                 value={formDialogue}
                 onChange={(e) => setFormDialogue(e.target.value)}
@@ -487,11 +522,11 @@ export default function VideoStudioPage() {
 
               <button
                 onClick={handleGenerate}
-                disabled={generateVideo.isPending}
+                disabled={generateVideo.isPending || !balance.data?.videoRenderingEnabled || (renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled)}
                 className="text-xs px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
               >
                 {generateVideo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>Render Animation Now ({formDuration * 10} credits)</span>
+                <span>Render {renderMode === "narrated_mp4" ? "Narrated" : "Silent"} MP4 ({renderQuote.data?.creditsRequired ?? 0} credits)</span>
               </button>
             </div>
           </div>
@@ -628,7 +663,7 @@ export default function VideoStudioPage() {
 
                   {project.status === "FAILED" && (
                     <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded-lg p-2 border border-red-500/20">
-                      {project.errorMessage || "Rendering failed. Credits refunded."}
+                      {project.errorMessage || "Rendering failed. Check your wallet ledger to confirm refund status."}
                     </div>
                   )}
                 </div>
@@ -639,7 +674,7 @@ export default function VideoStudioPage() {
               <Film className="w-12 h-12 mx-auto mb-3 opacity-30 text-amber-500" />
               <p className="text-sm font-semibold text-slate-400">No Animation Scenes Yet</p>
               <p className="text-xs text-slate-600 mt-1 mb-4">
-                Launch your first scene to test ElevenLabs voiceovers and WAN 2.1 3D video generation!
+                Create your first real, silent MP4 scene after the renderer and private storage are configured.
               </p>
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -709,17 +744,41 @@ export default function VideoStudioPage() {
                 />
               </div>
 
+              <div className="rounded-lg border border-slate-700 p-3 space-y-2">
+                <label className="text-xs font-semibold text-slate-200" htmlFor="luqi-video-mode">Rendering mode</label>
+                <select id="luqi-video-mode" value={renderMode}
+                  onChange={(e) => setRenderMode(e.target.value as "silent_mp4" | "narrated_mp4")}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm">
+                  <option value="silent_mp4">Silent MP4 — 10 credits per second</option>
+                  <option value="narrated_mp4">Narrated MP4 — video plus 4 credits for speech</option>
+                </select>
+                {renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled && (
+                  <p role="status" className="text-xs text-amber-300">
+                    Narrated rendering needs an ElevenLabs account and an installed FFmpeg mixer in the server.
+                  </p>
+                )}
+                <p className="text-xs text-slate-400">
+                  Narration uses the configured provider voice and is mixed into the scene. It is not lip-synced to a character.
+                </p>
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                    <Volume2 className="w-3.5 h-3.5 text-sky-400" /> Voiceover Dialogue (ElevenLabs)
+                    <Volume2 className="w-3.5 h-3.5 text-sky-400" /> Narration script (used only for narrated MP4)
                   </label>
                   <span className="text-[10px] text-slate-500">{formDialogue.length} characters</span>
                 </div>
+                {renderMode === "narrated_mp4" && formDialogue.trim().length > formDuration * 15 && (
+                  <p role="alert" className="mb-2 text-xs text-amber-300">
+                    Narration is too long for this scene. Shorten it to about {formDuration * 15} characters or increase the scene duration.
+                  </p>
+                )}
                 <textarea
                   value={formDialogue}
                   onChange={(e) => setFormDialogue(e.target.value)}
-                  placeholder="Enter the speech narration for the character..."
+                  maxLength={500}
+                  placeholder={`Narration: at most ${formDuration * 15} characters for ${formDuration} seconds`}
                   rows={2}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/50 resize-none"
                 />
@@ -769,30 +828,30 @@ export default function VideoStudioPage() {
                     <Coins className="w-4 h-4 text-amber-400" /> Credit Calculation
                   </span>
                   <span className="text-emerald-400 font-bold">
-                    {costBreakdown.data?.profitMarginPercent ?? 50}% Profit Margin Protected
+                    Verified quote — no unverified margin claims
                   </span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-800">
                   <div>
                     <div className="text-slate-500">Video (WAN 2.1)</div>
-                    <div className="font-bold text-slate-200">{costBreakdown.data?.videoCredits ?? 50} cr</div>
+                    <div className="font-bold text-slate-200">{Math.min(10, Math.max(2, formDuration)) * 10} cr</div>
                   </div>
                   <div>
-                    <div className="text-slate-500">Voice (ElevenLabs)</div>
-                    <div className="font-bold text-slate-200">{costBreakdown.data?.voiceCredits ?? 2} cr</div>
+                    <div className="text-slate-500">Voiceover</div>
+                    <div className="font-bold text-slate-200">{renderMode === "narrated_mp4" ? 4 : 0} cr</div>
                   </div>
                   <div>
                     <div className="text-slate-500">Total User Charge</div>
                     <div className="font-bold text-amber-400">
-                      {costBreakdown.data?.totalCredits ?? 53} Credits (${costBreakdown.data?.userPriceUsd ?? 2.65})
+                      {renderQuote.data?.creditsRequired ?? 0} Credits ({renderMode === "narrated_mp4" ? "narrated" : "silent"} MP4)
                     </div>
                   </div>
                 </div>
 
                 <div className="text-[10px] text-slate-400 pt-1 flex items-center justify-between">
-                  <span>Underlying API Unit Cost: ~${costBreakdown.data?.estimatedProviderCostUsd ?? 1.25}</span>
-                  <span>Wallet Balance: {balance.data?.credits ?? 150} cr</span>
+                  <span>Provider costs vary; credits are quoted before rendering</span>
+                  <span>Wallet Balance: {balance.data?.credits ?? 0} cr</span>
                 </div>
               </div>
             </div>
@@ -800,7 +859,7 @@ export default function VideoStudioPage() {
             <div className="flex gap-2.5 pt-2">
               <button
                 onClick={handleGenerate}
-                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim()}
+                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled || (renderMode === "narrated_mp4" && (!balance.data?.narratedVideoEnabled || !formDialogue.trim() || formDialogue.trim().length > formDuration * 15)) || (balance.data?.credits ?? 0) < (renderQuote.data?.creditsRequired ?? Infinity)}
                 className="flex-1 text-sm py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-600/20"
               >
                 {generateVideo.isPending ? (
@@ -809,7 +868,7 @@ export default function VideoStudioPage() {
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4" /> Deduct {costBreakdown.data?.totalCredits ?? 53} Credits & Render
+                    <Zap className="w-4 h-4" /> Confirm {renderQuote.data?.creditsRequired ?? 0} Credits & Render {renderMode === "narrated_mp4" ? "Narrated" : "Silent"} MP4
                   </>
                 )}
               </button>
@@ -895,7 +954,7 @@ export default function VideoStudioPage() {
                   <Coins className="w-6 h-6 text-amber-400" /> Virtual Credit Packs & Subscriptions
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Protects margin while providing predictable monthly generative animation allowances.
+                  Illustrative tiers. Only one-time packs with verified Paystack checkout can be purchased until recurring settlements are integrated.
                 </p>
               </div>
               <button
@@ -909,7 +968,7 @@ export default function VideoStudioPage() {
             {/* Quick Top-up Packs */}
             <div>
               <div className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
-                Quick Top-Up Packs (Instant Credit Refill)
+                Secure top-up checkout (credits credited after verified payment)
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {pricingTiers.data?.packs?.map((pack: any) => (
@@ -924,12 +983,12 @@ export default function VideoStudioPage() {
                         <span className="text-xs font-normal text-slate-500">/ R{pack.priceZar} ZAR</span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-2">
-                        {Math.floor(pack.credits / 10)}s of WAN 2.1 video + ElevenLabs voice
+                        {Math.floor(pack.credits / 10)}s of silent WAN 2.1 MP4 video
                       </p>
                     </div>
                     <button
                       onClick={() => handleQuickTopup(pack.credits, pack.id)}
-                      disabled={topupMutation.isPending}
+                      disabled={topupMutation.isPending || !balance.data?.videoRenderingEnabled}
                       className="mt-4 w-full py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                     >
                       {topupMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
@@ -980,7 +1039,7 @@ export default function VideoStudioPage() {
                       onClick={() => handleQuickTopup(tier.monthlyCredits, tier.id)}
                       className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
                     >
-                      Subscribe {tier.name}
+                      Recurring subscription not yet enabled
                     </button>
                   </div>
                 ))}
@@ -1051,7 +1110,7 @@ export default function VideoStudioPage() {
                 <Info className="w-4 h-4 text-sky-400" /> Why Virtual Credits Protect Against Bankruptcy:
               </div>
               <p>
-                A single 60-second animated video costs between <strong>$3.60 and $15.60 in underlying API fees</strong> ($0.60 voiceover + $3.00 to $15.00 video generation). Offering an "unlimited" tier quickly leads to catastrophic losses. Abstracting costs into <strong>10 credits/second ($0.50 user charge)</strong> guarantees a minimum 50% profit margin on every second generated.
+                Vendor rates and foreign exchange fluctuate. LUQI quotes <strong>10 credits per second for video, plus 4 credits per clip when narration is selected</strong>; no guarantee of profit margin is implied. Video assets are stored privately after real generation.
               </p>
             </div>
           </div>

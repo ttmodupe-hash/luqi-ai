@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
+import { getPrivateDb } from "./security/access";
 import { knowledgeArticles } from "../db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -16,10 +17,10 @@ export const knowledgeRouter = createRouter({
       return query.limit(input?.limit ?? 50);
     }),
 
-  saveArticle: publicQuery
+  saveArticle: adminQuery
     .input(z.object({ title: z.string(), content: z.string(), category: z.string(), sourceUrl: z.string().optional() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       const [result] = await db.insert(knowledgeArticles).values({
         title: input.title,
         content: input.content,

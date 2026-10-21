@@ -1,0 +1,39 @@
+name: LUQI Lockfile Repair Artifact (no deployment)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/lockfile-repair.yml
+permissions:
+  contents: read
+jobs:
+  generate-lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reconcile lockfile without running install scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Validate locked installation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Record machine-readable production dependency audit
+        run: |
+          npm audit --omit=dev --json > production-audit.json || true
+          node -e 'const a=require("./production-audit.json"); if(a.error) process.exit(1); console.log(JSON.stringify(a.metadata?.vulnerabilities ?? {},null,2))'
+      - name: Verify dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Upload reconciled lockfile for review and commit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-package-lock
+          path: |
+            package-lock.json
+            production-audit.json
+          retention-days: 7

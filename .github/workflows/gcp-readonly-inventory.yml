@@ -1,0 +1,44 @@
+# Manual, read-only project discovery. No deployment or resource writes.
+# Identity must be a dedicated Google Cloud service account with Cloud Run
+# Viewer + Browser/Viewer only, using GitHub OIDC workload identity federation.
+name: LUQI GCP Read-Only Inventory
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type READ_ONLY_INVENTORY to list service identities and regions"
+        type: string
+        required: true
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  inspect:
+    if: github.event.inputs.confirmation == 'READ_ONLY_INVENTORY'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate using restricted workload identity
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_INVENTORY_SERVICE_ACCOUNT }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          token_format: access_token
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Inspect configured project and deployed services without mutations
+        env:
+          GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GCP_PROJECT"
+          echo "GCP project: $GCP_PROJECT"
+          gcloud config set project "$GCP_PROJECT" >/dev/null
+          for region in europe-west1 us-central1; do
+            echo "Cloud Run services in $region:"
+            gcloud run services list --region "$region"               --format='table(metadata.name,status.url)'               --quiet
+          done
+          echo "Inventory completed. No service, IAM, DNS, secrets or traffic were changed."

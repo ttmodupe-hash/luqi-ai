@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { and, eq, gt } from "drizzle-orm";
 import { users, sessions } from "../db/schema";
 import { getAuthDb } from "./queries/connection";
+import { reserveRateLimit } from "./security/rateLimit";
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -64,8 +65,18 @@ export async function resolveSessionUser(req: Request): Promise<AuthenticatedUse
   }
 }
 
+// Bound both per-account guessing and aggregate unauthenticated traffic.
+// Key is a one-way digest so plain email addresses are never persisted in quotas.
+// Global quotas require edge-level bot protection for public-scale traffic.
+async function reserveAuthAttempt(action: "login" | "register", email: string): Promise<void> {
+  const key = createHash("sha256").update(email).digest("hex");
+  await reserveRateLimit(`auth:${action}:global`, 100);
+  await reserveRateLimit(`auth:${action}:${key}`, action === "login" ? 10 : 5);
+}
+
 export async function registerAccount(emailInput: string, password: string, nameInput?: string): Promise<SessionResult> {
   const email = emailInput.trim().toLowerCase();
+  await reserveAuthAttempt("register", email);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
   if (password.length < 12) throw new Error("Password must be at least 12 characters.");
   if (password.length > 200) throw new Error("Password is too long.");
@@ -93,6 +104,7 @@ export async function registerAccount(emailInput: string, password: string, name
 
 export async function loginAccount(emailInput: string, password: string): Promise<SessionResult> {
   const email = emailInput.trim().toLowerCase();
+  await reserveAuthAttempt("login", email);
   const db = await getAuthDb();
   if (!db) throw new Error("Authentication requires an available persistent database. Configure DATABASE_URL or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME.");
 
@@ -123,6 +135,6 @@ export async function revokeSession(req: Request): Promise<void> {
   const token = readToken(req);
   if (!token) return;
   const db = await getAuthDb();
-  if (!db) return;
+  if (!db) throw new Error("Persistent session storage is unavailable.");
   await db.delete(sessions).where(eq(sessions.token, digestToken(token)));
 }
