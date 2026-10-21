@@ -23,7 +23,7 @@ const admin = selfHealingRouter.createCaller(context("admin") as any);
 const ordinary = selfHealingRouter.createCaller(context("user") as any);
 const anonymous = selfHealingRouter.createCaller(context(null) as any);
 
-function fakeDb(error: Record<string, unknown> | undefined = {
+function fakeDb(error: Record<string, unknown> | null = {
   id: 7, errorType: "api_error", severity: "warning",
   message: "authorization Bearer hidden-token password=hidden-password",
   sourceModule: "backend", sourceFile: "api/boot.ts",
@@ -79,7 +79,7 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
   });
 
   it("never reserves or calls a paid provider for an unknown error", async () => {
-    mocks.getPrivateDb.mockResolvedValue(fakeDb(undefined));
+    mocks.getPrivateDb.mockResolvedValue(fakeDb(null));
     const response = await admin.aiDiagnoseError({ errorLogId: 7 });
     expect(response.diagnosed).toBe(false);
     expect(mocks.reserveAiRequest).not.toHaveBeenCalled();
