@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { voiceCommands } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
 
 export const voiceRouter = createRouter({
-  processCommand: publicQuery
+  processCommand: legacyRestrictedProcedure
     .input(z.object({
       userId: z.number().optional(),
       labSlug: z.string().optional(),
@@ -43,7 +43,7 @@ export const voiceRouter = createRouter({
       return { action, parameters, confidence: 0.85 };
     }),
 
-  getHistory: publicQuery
+  getHistory: legacyRestrictedProcedure
     .input(z.object({ userId: z.number(), limit: z.number().default(50) }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -55,7 +55,7 @@ export const voiceRouter = createRouter({
         .limit(input.limit);
     }),
 
-  markExecuted: publicQuery
+  markExecuted: legacyRestrictedProcedure
     .input(z.object({ commandId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
