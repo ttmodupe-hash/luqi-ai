@@ -12,6 +12,7 @@ import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from
 import { verifyStripeWebhook } from "./security/stripeWebhook";
 import { getPrivateDb } from "./security/access";
 import { paymentEvents } from "../db/schema";
+import { desc } from "drizzle-orm";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { trustedOrigins, isAllowedApiMutation } from "./security/requestOrigin";
@@ -703,23 +704,6 @@ app.get('/api/v1/grading/ledger/:user_id', (c) => {
 // LUQITOONS MULTI-AGENT STORYBOARD, STRIPE LEDGER & SELF-IMPROVEMENT
 // ============================================================================
 
-const corporateBillingLedgerStore = [
-  {
-    id: "TX-STRIPE-9901",
-    customer: "enterprise-client@luqi-ai.com",
-    transaction_reference: "cs_live_990184712049",
-    payout_details: "$499.00 USD (Unlimited Multi-Scene Storyboard)",
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-  },
-  {
-    id: "TX-STRIPE-9902",
-    customer: "academy@pan-africa.edu",
-    transaction_reference: "cs_live_990284712050",
-    payout_details: "$249.00 USD (Grade 10 STEM Simulation Engine)",
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-  }
-];
-
 // Legacy authentication paths now delegate to the real database-backed
 // session endpoints. 307 preserves method and POST body on the same origin;
 // no fabricated JWTs or fake registrations are issued.
@@ -827,17 +811,33 @@ app.post("/api/v1/billing/stripe-webhook", async (c) => {
   }
 });
 
-// Protected Admin Billing Ledger
-app.get('/api/v1/admin/billing-ledger', (c) => {
-  if (!checkSovereignAdminAuth(c)) return c.json({ error: 'Unauthorized' }, 401);
-  c.header('Cache-Control', 'no-store');
-  return c.json(corporateBillingLedgerStore);
-});
-app.get('/admin/billing-ledger', (c) => {
-  if (!checkSovereignAdminAuth(c)) return c.json({ error: 'Unauthorized' }, 401);
-  c.header('Cache-Control', 'no-store');
-  return c.json(corporateBillingLedgerStore);
-});
+// Admin ledger now reads recorded payment events from durable database storage.
+// A verified webhook receipt is NOT an invoice, proof of cleared funds or a
+// completed wallet top-up. Never show fabricated sample transactions as real.
+for (const path of ["/api/v1/admin/billing-ledger", "/admin/billing-ledger"]) {
+  app.get(path, async (c) => {
+    if (!checkSovereignAdminAuth(c)) return c.json({ error: "Unauthorized" }, 401);
+    c.header("Cache-Control", "no-store");
+    try {
+      const db = await getPrivateDb();
+      const events = await db.select({
+        reference: paymentEvents.reference,
+        eventType: paymentEvents.eventType,
+        channel: paymentEvents.channel,
+        status: paymentEvents.status,
+        amountCents: paymentEvents.amountCents,
+        currency: paymentEvents.currency,
+        createdAt: paymentEvents.createdAt,
+      }).from(paymentEvents).orderBy(desc(paymentEvents.createdAt)).limit(100);
+      return c.json({
+        events,
+        notice: "Provider event receipts are not independently reconciled settlements or invoices.",
+      });
+    } catch {
+      return c.json({ error: "Verified billing records are unavailable." }, 503);
+    }
+  });
+}
 
 // Self-Improving Intelligence Agent Module
 app.post('/api/v1/intelligence/self-optimize', async (c) => {
