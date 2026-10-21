@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { timingSafeEqual } from "node:crypto";
-dotenv.config({ override: true });
+// Preserve cloud-injected Secret Manager / runtime settings over local .env files.
+dotenv.config({ override: false });
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
