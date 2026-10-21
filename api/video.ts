@@ -13,7 +13,7 @@ import {
   CREDIT_PACKS,
 } from "./services/credits";
 import { paidVideoAvailable, renderPaidVideo } from "./services/paidVideo";
-import { quotePaidVideoCredits, reservePaidVideo, completePaidVideo, refundPaidVideo, getPaidVideoRequest } from "./services/paidVideoLedger";
+import { quotePaidVideoCredits, reservePaidVideo, completePaidVideo, refundPaidVideo, getPaidVideoRequest, reconcileStalledVideo } from "./services/paidVideoLedger";
 
 const VALID_LANGUAGES = [
   "en", "zu", "xh", "af", "ns", "tn", "st", "ts", "ss", "ve", "nr",
@@ -40,6 +40,7 @@ export const videoRouter = createRouter({
       if (input?.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
       }
+      await reconcileStalledVideo(ctx.user.id);
       const db = await getPrivateDb();
       const [wallet] = await db.select().from(creditWallets)
         .where(eq(creditWallets.userKey, ctx.user.email.toLowerCase())).limit(1);
@@ -313,7 +314,10 @@ export const videoRouter = createRouter({
 
   getRenderStatus: protectedQuery
     .input(z.object({ requestKey: z.string().uuid() }))
-    .query(async ({ input, ctx }) => getPaidVideoRequest(ctx.user.id, input.requestKey)),
+    .query(async ({ input, ctx }) => {
+      await reconcileStalledVideo(ctx.user.id);
+      return getPaidVideoRequest(ctx.user.id, input.requestKey);
+    }),
 
   /**
    * Paid rendering: idempotent, user-scoped debit before the provider call,
@@ -342,6 +346,7 @@ export const videoRouter = createRouter({
           message: "Secure video rendering is unavailable until the video provider and private storage are configured.",
         });
       }
+      await reconcileStalledVideo(ctx.user.id);
       const job = await reservePaidVideo({
         userId: ctx.user.id,
         email: ctx.user.email.toLowerCase(),
