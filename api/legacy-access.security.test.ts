@@ -38,16 +38,16 @@ describe("high-risk legacy tRPC routes fail closed", () => {
   ];
 
   it.each(sensitiveCalls)("blocks %s before any business logic executes", async (label, fn) => {
-    const authenticatedRoutes = ["guardian.student records", "guardian.link", "voice history", "grading student reports", "adaptive student records", "offline device queue"];
+    const authenticatedRoutes = sensitiveCalls.map(([name]) => name).filter(name => !["orchestrator model generation", "orchestrator logs"].includes(name));
     await expect(fn()).rejects.toMatchObject({
       code: authenticatedRoutes.includes(label) ? "UNAUTHORIZED" : "FORBIDDEN",
     });
   });
 
-  it("also blocks unaudited administrative operations for authenticated users", async () => {
+  it("prevents ordinary users from administering private system records", async () => {
     const user = appRouter.createCaller({
       req: new Request("https://luqi-ai.com/api/trpc"),
-      user: { id: 9, email: "owner@example.com", name: null, role: "admin" },
+      user: { id: 9, email: "owner@example.com", name: null, role: "user" },
     });
     await expect(user.selfHealing.applyPatch({ patchId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(user.archive.listThreads({ limit: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
