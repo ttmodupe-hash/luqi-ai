@@ -55,7 +55,12 @@ export const archiveRouter = createRouter({
         threadId: input.threadId,
         nodeName: input.nodeName,
         channelValues: input.channelValues,
-        toolCalls: input.toolCalls,
+        toolCalls: input.toolCalls?.map((call) => ({
+          toolName: call.toolName,
+          arguments: call.arguments,
+          result: call.result,
+          durationMs: call.durationMs,
+        })),
       });
     }),
 
@@ -88,7 +93,16 @@ export const archiveRouter = createRouter({
       })
     )
     .mutation(async ({ input }) => {
-      return storeCognitiveFact(input);
+      return storeCognitiveFact({
+        category: input.category,
+        subject: input.subject,
+        predicate: input.predicate,
+        object: input.object,
+        context: input.context,
+        confidence: input.confidence ?? 1,
+        sourceTask: input.sourceTask,
+        agentRole: input.agentRole,
+      });
     }),
 
   // ── 3. Custom Artifact Vault (Files & Paired JSON Metadata) ──────
@@ -135,7 +149,17 @@ export const archiveRouter = createRouter({
         fileName: input.fileName,
         fileType: input.fileType,
         content: buffer,
-        taskOutput: input.taskOutput,
+        taskOutput: {
+          agentRole: input.taskOutput.agentRole,
+          taskName: input.taskOutput.taskName,
+          crewId: input.taskOutput.crewId,
+          threadId: input.taskOutput.threadId,
+          modelUsed: input.taskOutput.modelUsed,
+          promptSummary: input.taskOutput.promptSummary,
+          executionDurationMs: input.taskOutput.executionDurationMs,
+          primaryKeysReconciled: input.taskOutput.primaryKeysReconciled,
+          status: input.taskOutput.status ?? "verified",
+        },
       });
     }),
 
