@@ -224,6 +224,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             <Link to="/terms" className="hover:text-slate-400 transition">Terms</Link>
             <Link to="/privacy" className="hover:text-slate-400 transition">Privacy</Link>
             <Link to="/contact" className="hover:text-slate-400 transition">Contact</Link>
+            <Link to="/api-billing" className="hover:text-slate-400 transition">API Cost Planner</Link>
             <Link
               to="/admin"
               className="p-1 rounded-md text-slate-600 hover:text-slate-400 transition"
