@@ -12,7 +12,10 @@ export function rateLimitBucket(userId: number | undefined): string {
   return userId === undefined ? "anonymous:global" : `user:${userId}`;
 }
 
-export async function reserveRateLimit(bucket: string): Promise<void> {
+export async function reserveRateLimit(bucket: string, limit = LIMIT): Promise<void> {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > LIMIT) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid request limit." });
+  }
   const db = await getPrivateDb();
   const windowStart = Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS;
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -30,7 +33,7 @@ export async function reserveRateLimit(bucket: string): Promise<void> {
       if (!Number.isSafeInteger(hits) || hits < 0) {
         throw new Error("Invalid rate-limit state");
       }
-      if (hits >= LIMIT) {
+      if (hits >= limit) {
         throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Request limit reached. Try again shortly." });
       }
       await tx.execute(sql`UPDATE rate_limit_windows SET hits = hits + 1
