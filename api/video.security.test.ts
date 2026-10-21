@@ -3,8 +3,8 @@ import { videoRouter } from "./video";
 
 /**
  * Authenticated project CRUD is restored with per-user SQL ownership;
- * account credits and expensive rendering remain blocked until server-side
- * payment settlement and a durable credit ledger are implemented.
+ * account balances and top-up checkout are session protected; paid rendering
+ * remains unavailable until a durable consumption ledger is implemented.
  */
 describe("video route authentication and spending controls", () => {
   const caller = videoRouter.createCaller({
@@ -13,9 +13,9 @@ describe("video route authentication and spending controls", () => {
   });
 
   const forbiddenCalls: Array<[string, () => Promise<unknown>]> = [
-    ["getBalance", () => caller.getBalance({ userKey: "another-user" })],
+    ["getBalance", () => caller.getBalance({ userKey: "another-user@example.com" })],
     ["getApiStatus", () => caller.getApiStatus()],
-    ["topupCredits", () => caller.topupCredits({ userKey: "another-user", credits: 1000 })],
+    ["topupCredits", () => caller.topupCredits({ userKey: "another-user@example.com", credits: 100, packId: "pack-100" })],
     ["create", () => caller.create({ title: "example", prompt: "example", userId: 123 })],
     ["list", () => caller.list({})],
     ["get", () => caller.get({ id: 123 })],
@@ -31,7 +31,7 @@ describe("video route authentication and spending controls", () => {
 
   it.each(forbiddenCalls)("%s cannot be invoked by unauthenticated callers", async (_name, invoke) => {
     await expect(invoke()).rejects.toMatchObject({
-      code: ["getBalance", "topupCredits", "generate"].includes(_name) ? "FORBIDDEN" : "UNAUTHORIZED",
+      code: _name === "generate" ? "FORBIDDEN" : "UNAUTHORIZED",
     });
   });
 
