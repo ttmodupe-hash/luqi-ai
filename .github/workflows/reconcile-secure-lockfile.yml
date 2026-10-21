@@ -1,0 +1,46 @@
+# One-time development-branch lockfile reconciliation.
+# Never runs on main, pull_request, or production deployment.
+name: LUQI Reconcile Secure Lockfile
+on:
+  push:
+    branches:
+      - fix/companion-audit-reliability
+    paths:
+      - .github/workflows/reconcile-secure-lockfile.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/fix/companion-audit-reliability'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/companion-audit-reliability
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Generate dependency lockfile without lifecycle scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify reproducible installation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require clean production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Verify TypeScript, tests and build
+        run: |
+          npm run check
+          npm test
+          npm run build
+      - name: Commit only the validated lockfile to development branch
+        run: |
+          git add -- package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes needed"
+          else
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore(security): sync audited dependency lockfile'
+            git push origin HEAD:fix/companion-audit-reliability
+          fi
