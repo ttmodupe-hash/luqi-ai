@@ -32,6 +32,15 @@ assert.doesNotMatch(floatingChat, /GoogleGenAI|VITE_GEMINI_API_KEY|process\.env\
 assert.match(backend, /status: 'unavailable'[\s\S]*?503/,
   "failed AI calls must return honest server errors rather than fake success");
 
+const educationUI = fs.readFileSync("app/src/components/ExperientialSimulatorSandbox.tsx", "utf8");
+const educationServer = fs.readFileSync("api/services/experientialEducationOrchestrator.ts", "utf8");
+assert.doesNotMatch(educationUI, /new\\s+Function\\s*\\(|\\beval\\s*\\(/,
+  "untrusted educational JS must not execute in the browser");
+assert.doesNotMatch(educationServer, /execSync|generateContent|orchestrateRequest/,
+  "untrusted model JS or paid self-repair must not execute server-side");
+assert.match(educationServer, /status: "FAILED"/,
+  "unreviewed simulations must report failure, never fabricated success");
+
 // Existing legacy Railway configs remain unchanged until live service config
 // and precedence can be inspected through the Railway account permissions.
 console.log("Railway staging configuration passed static fail-closed preflight.");
