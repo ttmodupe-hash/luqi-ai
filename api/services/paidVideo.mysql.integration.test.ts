@@ -5,7 +5,7 @@ import { bootstrapDatabase } from "../../db/bootstrap";
 import { getPrivateDb } from "../security/access";
 import {
   users, paymentEvents, videoCreditWallets, videoCreditLedger,
-  videoProjects, videoRenderRequests,
+  videoProjects, videoRenderRequests, videoGlobalDailyQuota,
 } from "../../db/schema";
 import { settleVerifiedPaystackCharge } from "./paystackSettlement";
 import {
@@ -65,6 +65,7 @@ integration("verified payments and video debits in real MySQL", () => {
     await db.delete(paymentEvents).where(eq(paymentEvents.reference, paymentReference));
     await db.delete(users).where(eq(users.id, userId));
     await db.delete(users).where(eq(users.id, otherId));
+    await db.delete(videoGlobalDailyQuota).where(eq(videoGlobalDailyQuota.dayKey, new Date().toISOString().slice(0, 10)));
   }, 30000);
 
   it("rejects a forged settlement without changing any account balance", async () => {
@@ -128,4 +129,25 @@ integration("verified payments and video debits in real MySQL", () => {
     expect(request?.status).toBe("FAILED");
     expect(request?.videoUrl).toBeNull();
   });
+
+  it("enforces a global provider limit across accounts before any debit", async () => {
+    const [current] = await db.select().from(videoGlobalDailyQuota)
+      .where(eq(videoGlobalDailyQuota.dayKey, new Date().toISOString().slice(0, 10)));
+    expect(current.jobs).toBeGreaterThanOrEqual(1);
+    process.env.LUQI_VIDEO_GLOBAL_DAILY_LIMIT = String(current.jobs);
+    try {
+      await expect(reservePaidVideo({
+        userId, email, requestKey: randomUUID(),
+        title: "Not billed", prompt: "A wave moving",
+        language: "en", durationSeconds: 2, confirmedCredits: 20,
+      })).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      const [wallet] = await db.select().from(videoCreditWallets)
+        .where(eq(videoCreditWallets.userKey, email));
+      expect(wallet.credits).toBe(500);
+    } finally {
+      delete process.env.LUQI_VIDEO_GLOBAL_DAILY_LIMIT;
+    }
+  });
+
+
 });
