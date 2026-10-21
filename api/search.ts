@@ -9,7 +9,7 @@ export const searchRouter = createRouter({
       num: z.number().min(1).max(10).default(5),
     }))
     .query(async ({ input }) => {
-      const results = await searchWeb(input.query, { num: input.num });
+      const results = await searchWeb(input.query, { numResults: input.num });
       return {
         results: results?.organic || [],
         answerBox: results?.answerBox || null,
@@ -23,7 +23,7 @@ export const searchRouter = createRouter({
       num: z.number().min(1).max(10).default(5),
     }))
     .query(async ({ input }) => {
-      const results = await searchNews(input.query, { num: input.num });
+      const results = await searchNews(input.query, { numResults: input.num });
       return {
         results: results?.news || [],
         answerBox: results?.answerBox || null,
@@ -35,7 +35,7 @@ export const searchRouter = createRouter({
       query: z.string().min(1).max(500),
     }))
     .query(async ({ input }) => {
-      const results = await searchWeb(`weather ${input.query}`, { num: 3 });
+      const results = await searchWeb(`weather ${input.query}`, { numResults: 3 });
       return {
         results: results?.organic || [],
         answerBox: results?.answerBox || null,
@@ -47,7 +47,7 @@ export const searchRouter = createRouter({
       query: z.string().min(1).max(500),
     }))
     .query(async ({ input }) => {
-      const results = await searchWeb(`stock finance ${input.query}`, { num: 5 });
+      const results = await searchWeb(`stock finance ${input.query}`, { numResults: 5 });
       return {
         results: results?.organic || [],
         answerBox: results?.answerBox || null,
@@ -59,7 +59,7 @@ export const searchRouter = createRouter({
       query: z.string().min(1).max(500),
     }))
     .query(async ({ input }) => {
-      const results = await searchWeb(`crypto ${input.query}`, { num: 5 });
+      const results = await searchWeb(`crypto ${input.query}`, { numResults: 5 });
       return {
         results: results?.organic || [],
         answerBox: results?.answerBox || null,
