@@ -984,23 +984,20 @@ for (const path of ["/api/v1/intelligence/self-optimize", "/intelligence/self-op
   });
 }
 
-// Workspace Asset Upload
-app.post('/api/v1/workspace/upload-asset', async (c) => {
-  const filename = `workspace_${Date.now()}_document.pdf`;
-  return c.json({
-    success: true,
-    asset_url: `https://storage.googleapis.com/luqi-vault/workspace_assets/${filename}`,
-    filename
+// Legacy workspace upload never stored bytes and returned a fabricated public
+// storage URL. Fail explicitly until an authenticated, private upload flow
+// with content validation, ownership and malware scanning is implemented.
+for (const route of ["/api/v1/workspace/upload-asset", "/workspace/upload-asset"]) {
+  app.post(route, async (c) => {
+    const user = await resolveSessionUser(c.req.raw);
+    if (!user) return c.json({ error: "Authenticated session required." }, 401);
+    return c.json({
+      error: "Legacy upload is unavailable. No file was stored.",
+      storageCommitted: false,
+      nextAction: "Use an approved owner-scoped private storage upload workflow.",
+    }, 501);
   });
-});
-app.post('/workspace/upload-asset', async (c) => {
-  const filename = `workspace_${Date.now()}_document.pdf`;
-  return c.json({
-    success: true,
-    asset_url: `https://storage.googleapis.com/luqi-vault/workspace_assets/${filename}`,
-    filename
-  });
-});
+}
 
 // Workspace AI Calendar Booking
 const calendarLedgerStore: any[] = [];
