@@ -34,8 +34,12 @@ export function quotePaidVideoCredits(
     return durationSeconds * CREDITS_PER_SECOND;
   }
   if (mode !== "narrated_mp4" || !narration.trim() ||
-      narration.length > MAX_NARRATION_CHARS) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Narration must contain 1–500 characters." });
+      narration.length > MAX_NARRATION_CHARS ||
+      narration.trim().length > durationSeconds * 15) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Narration must be short enough to fit the selected video duration (approximately 15 characters per second).",
+    });
   }
   // Flat per-clip surcharge for one short multilingual spoken narration.
   // Rendering and provider costs must be reconciled independently.
