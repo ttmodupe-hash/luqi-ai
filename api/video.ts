@@ -54,6 +54,7 @@ export const videoRouter = createRouter({
         currency: wallet?.currency ?? "ZAR",
         // Credits cannot be spent on rendering until a durable consumption
         // ledger and provider-side cost controls have been verified.
+        credits: 0,
         spendableVideoCredits: 0,
         videoRenderingEnabled: false,
       };
