@@ -34,7 +34,7 @@ assert.match(backend, /status: 'unavailable'[\s\S]*?503/,
 
 const educationUI = fs.readFileSync("app/src/components/ExperientialSimulatorSandbox.tsx", "utf8");
 const educationServer = fs.readFileSync("api/services/experientialEducationOrchestrator.ts", "utf8");
-assert.doesNotMatch(educationUI, /new\\s+Function\\s*\\(|\\beval\\s*\\(/,
+assert.doesNotMatch(educationUI, /new\s+Function\s*\(|\beval\s*\(/,
   "untrusted educational JS must not execute in the browser");
 assert.doesNotMatch(educationServer, /execSync|generateContent|orchestrateRequest/,
   "untrusted model JS or paid self-repair must not execute server-side");
