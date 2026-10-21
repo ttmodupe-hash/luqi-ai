@@ -144,7 +144,7 @@ export async function renderPaidVideo(
       Bucket: bucket, Key: objectKey, Body: bytes,
       ContentType: "video/mp4",
       Metadata: { source: "replicate", mode },
-    }));
+    }), { abortSignal: AbortSignal.timeout(30000) });
   } finally {
     client.destroy();
   }
@@ -158,7 +158,9 @@ export async function renderPaidVideo(
 export async function checkPrivateVideoStorage(): Promise<boolean> {
   const { bucket, client } = videoClient();
   try {
-    await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    await client.send(new HeadBucketCommand({ Bucket: bucket }), {
+      abortSignal: AbortSignal.timeout(10000),
+    });
     return true;
   } finally {
     client.destroy();
@@ -177,13 +179,21 @@ export async function readPaidVideoAsset(
     const response = await client.send(new GetObjectCommand({
       Bucket: bucket,
       Key: `video/${userId}/${requestKey}.mp4`,
-    }));
+    }), { abortSignal: AbortSignal.timeout(30000) });
     if (response.ContentLength && response.ContentLength > MAX_MP4_BYTES) {
       throw new Error("Stored video exceeds size limit.");
     }
     if (!response.Body) throw new Error("Video object missing.");
-    const bytes = await response.Body.transformToByteArray();
-    if (bytes.length > MAX_MP4_BYTES) throw new Error("Stored video exceeds size limit.");
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+      const data = Buffer.from(chunk);
+      total += data.length;
+      if (total > MAX_MP4_BYTES) throw new Error("Stored video exceeds size limit.");
+      chunks.push(data);
+    }
+    const bytes = Buffer.concat(chunks, total);
+    if (!hasMp4Header(bytes)) throw new Error("Stored video is not a valid MP4.");
     return bytes;
   } finally {
     client.destroy();
