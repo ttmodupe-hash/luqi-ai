@@ -82,29 +82,16 @@ app.use("/*", async (c, next) => {
   }
 });
 
-// Rate limiting (simple in-memory)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100; // requests per minute
-const RATE_WINDOW = 60 * 1000;
-
-app.use("/api/*", async (c, next) => {
-  const ip = c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
-  const now = Date.now();
-  const data = rateLimitMap.get(ip);
-  
-  if (data && now < data.resetAt) {
-    if (data.count >= RATE_LIMIT) {
-      return c.json({ error: "Rate limit exceeded" }, 429);
-    }
-    data.count++;
-  } else {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
-  }
-  
-  return next();
-});
+// Request admission is enforced by trusted, database-backed quotas on
+// authentication, paid AI, and guarded tRPC operations. The former process-
+// local limiter trusted caller-supplied x-forwarded-for headers, and was easy
+// to reset or evade across instances. Do not replace it with a process-global
+// counter that would make one user exhaust everybody else's allowance.
+// Add managed edge/WAF limits for unauthenticated legacy HTTP routes before
+// staging traffic is enabled.
 
 // ── REQUEST CORRELATION + STRUCTURED LOGGING ───────────────────────
+
 app.use("/*", async (c, next) => {
   const requestId = crypto.randomUUID();
   const start = Date.now();
@@ -301,9 +288,15 @@ app.get("/api/auth/me", async (c) => {
 });
 
 app.post("/api/auth/logout", async (c) => {
-  await revokeSession(c.req.raw);
-  clearSessionCookie(c);
-  return c.json({ ok: true });
+  c.header("Cache-Control", "no-store");
+  try {
+    // Only report success after persistent session revocation succeeds.
+    await revokeSession(c.req.raw);
+    clearSessionCookie(c);
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ error: "Session revocation is currently unavailable. Please retry." }, 503);
+  }
 });
 
 // ── tRPC ───────────────────────────────────────────────────────────
