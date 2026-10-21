@@ -123,6 +123,7 @@ app.use("/*", async (c, next) => {
 // x-forwarded-for header nor an account identifier passed in a URL is authority.
 const internalAdminPaths = new Set([
   "/api/v1/security/diagnostics",
+  "/security/diagnostics",
   "/api/v1/diagnostics/database-indexes",
   "/api/v1/audit/ledger",
   "/api/v1/audit/seal",
