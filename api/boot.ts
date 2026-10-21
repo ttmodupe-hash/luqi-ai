@@ -914,43 +914,37 @@ for (const path of ["/api/v1/admin/billing-ledger", "/admin/billing-ledger"]) {
 }
 
 // Self-Improving Intelligence Agent Module
-app.post('/api/v1/intelligence/self-optimize', async (c) => {
-  try {
-    const report = {
-      detected_bottlenecks: [
-        "FFmpeg audio-visual frame drift on mobile web viewports",
-        "Slight token latency during recursive Pinecone namespace queries",
-        "Zero-trust SHA-256 block consensus verification queue backlog"
-      ],
-      code_optimization_patch: "APPLIED: Replaced polling threads with asynchronous event hooks; updated model routing to gemini-2.5-flash with cached token contexts.",
-      capability_expansion_score: 28,
-      recommended_system_prompt_update: "Reinforce audio-first timing constraints and automated parameter validation on all CLI sandboxes."
-    };
-    
+// Legacy self-improvement routes now report actual pending review work.
+// They never assert that an AI-generated code patch was deployed or applied.
+for (const path of ["/api/v1/intelligence/self-optimize", "/intelligence/self-optimize"]) {
+  app.post(path, async (c) => {
     try {
-      SovereignCryptoLedger.sealAction(
-        'META_OPTIMIZATION_AGENT',
-        'SYSTEM_SELF_OPTIMIZE',
-        report
-      );
-    } catch (ledgerErr: any) {
-      console.warn("Ledger seal warning:", ledgerErr?.message);
+      const db = await getPrivateDb();
+      const [recentErrors, proposals] = await Promise.all([
+        db.select({
+          id: errorLogs.id,
+          severity: errorLogs.severity,
+          sourceModule: errorLogs.sourceModule,
+        }).from(errorLogs).orderBy(desc(errorLogs.timestamp)).limit(10),
+        db.select({
+          id: healingPatches.id,
+          status: healingPatches.status,
+          createdAt: healingPatches.createdAt,
+        }).from(healingPatches).orderBy(desc(healingPatches.createdAt)).limit(10),
+      ]);
+      return c.json({
+        status: "REVIEW_REQUIRED",
+        codeChanged: false,
+        deployed: false,
+        recentErrors,
+        proposals,
+        nextAction: "Review errors and request a patch proposal using authenticated selfHealing.aiDiagnoseError. Approve GitHub CI before merging any change.",
+      });
+    } catch {
+      return c.json({ error: "Verified diagnosis data is unavailable." }, 503);
     }
-    
-    return c.json(report);
-  } catch (err: any) {
-    console.error("self-optimize error:", err);
-    return c.json({ error: err.message, stack: err.stack }, 500);
-  }
-});
-app.post('/intelligence/self-optimize', async (c) => {
-  return c.json({
-    detected_bottlenecks: ["Audio sync frame drift", "Token latency in recursive retrieval"],
-    code_optimization_patch: "APPLIED: Async event hooks & prompt compression active.",
-    capability_expansion_score: 25,
-    recommended_system_prompt_update: "Reinforce audio-first timing constraints."
   });
-});
+}
 
 // Workspace Asset Upload
 app.post('/api/v1/workspace/upload-asset', async (c) => {
@@ -1208,15 +1202,28 @@ app.get('/api/v1/audit/ledger', (c) => {
 
 app.post('/api/v1/audit/seal', async (c) => {
   try {
-    const { actor, action, payload } = await c.req.json();
+    // Admin has already been authenticated by the legacy route gate.
+    // The actor is derived from the session rather than a caller-provided ID.
+    const user = await resolveSessionUser(c.req.raw);
+    if (!user || user.role !== "admin") return c.json({ error: "Unauthorized." }, 403);
+    const raw: unknown = await c.req.json();
+    if (!raw || typeof raw !== "object") return c.json({ error: "Invalid audit entry." }, 400);
+    const { action, payload } = raw as Record<string, unknown>;
+    if (typeof action !== "string" || !/^[A-Z][A-Z0-9_]{2,79}$/.test(action) ||
+        !payload || typeof payload !== "object" || Array.isArray(payload) ||
+        JSON.stringify(payload).length > 2000) {
+      return c.json({ error: "An action and a bounded metadata object are required." }, 400);
+    }
     const block = SovereignCryptoLedger.sealAction(
-      actor || 'System Administrator',
-      action || 'ADMIN_ACTION',
-      payload || {}
+      `admin:${user.id}`, action, payload,
     );
-    return c.json({ status: 'success', block });
-  } catch (err: any) {
-    return c.json({ status: 'error', error: err.message }, 500);
+    return c.json({
+      status: "recorded_in_process",
+      hash: block.currentBlockHash,
+      warning: "This in-process ledger is not an independently durable audit log.",
+    });
+  } catch {
+    return c.json({ error: "Could not record the audit entry." }, 500);
   }
 });
 
