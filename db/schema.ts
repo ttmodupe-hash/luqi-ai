@@ -501,6 +501,7 @@ export const videoRenderRequests = mysqlTable("video_render_requests", {
   projectId: int("project_id").notNull(),
   requestDigest: varchar("request_digest", { length: 64 }).notNull(),
   chargeCredits: int("charge_credits").notNull(),
+  mode: varchar("mode", { length: 30 }).notNull().default("silent_mp4"),
   status: varchar("status", { length: 30 }).notNull().default("PROCESSING"),
   errorMessage: text("error_message"),
   assetKey: varchar("asset_key", { length: 400 }),
