@@ -27,7 +27,7 @@ export type UsageReceipt = {
 /** Conservatively round fractional minor units upward. */
 export function calculateProviderCostMinor(usage: Pick<MeteredUsage,
   "inputTokens" | "outputTokens" | "pricePerMillionInputMinor" | "pricePerMillionOutputMinor">): number {
-  const amounts = Object.values(usage);
+  const amounts = [usage.inputTokens, usage.outputTokens, usage.pricePerMillionInputMinor, usage.pricePerMillionOutputMinor];
   if (amounts.some((n) => !Number.isSafeInteger(n) || n < 0)) {
     throw new RangeError("Token counts and unit prices must be nonnegative safe integers");
   }
