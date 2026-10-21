@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
+import { createRouter, publicQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { getPrivateDb } from "./security/access";
 import { knowledgeArticles } from "../db/schema";
