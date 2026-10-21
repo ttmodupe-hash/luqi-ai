@@ -12,6 +12,8 @@ import { appRouter } from "./router";
 import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from "./auth";
 import { verifyStripeWebhook } from "./security/stripeWebhook";
 import { getPrivateDb } from "./security/access";
+import { getPaidVideoRequest } from "./services/paidVideoLedger";
+import { readPaidVideoAsset } from "./services/paidVideo";
 import { paymentEvents } from "../db/schema";
 import { desc } from "drizzle-orm";
 import { restCompat } from "./rest-compat";
@@ -124,6 +126,31 @@ app.use(async (c, next) => {
     return next();
   }
   return bodyLimit({ maxSize: 50 * 1024 * 1024 })(c, next);
+});
+
+// Private video asset gateway: a browser cookie does not grant access to
+// somebody else's object. Every request performs fresh session+owner checks.
+app.get("/api/video/assets/:requestKey", async (c) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  const requestKey = c.req.param("requestKey");
+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestKey)) {
+    return c.json({ error: "Invalid video reference." }, 400);
+  }
+  try {
+    const job = await getPaidVideoRequest(user.id, requestKey);
+    if (!job || job.status !== "SUCCESS") {
+      return c.json({ error: "Video not found." }, 404);
+    }
+    const bytes = await readPaidVideoAsset(user.id, requestKey);
+    return c.body(Buffer.from(bytes), 200, {
+      "Content-Type": "video/mp4",
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+  } catch {
+    return c.json({ error: "Private video asset could not be retrieved." }, 503);
+  }
 });
 
 // ── ACCOUNT / SESSION API ───────────────────────────────────────────
