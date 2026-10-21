@@ -3,6 +3,8 @@ const mocks = vi.hoisted(() => ({
   db: vi.fn(),
   initialize: vi.fn(),
   configured: vi.fn(),
+  provider: vi.fn(),
+  reconcile: vi.fn(),
 }));
 vi.mock("./security/access", async (importOriginal) => {
   const existing = await importOriginal<typeof import("./security/access")>();
@@ -12,6 +14,14 @@ vi.mock("./services/payments", () => ({
   initializeTopup: mocks.initialize,
   paymentsConfigured: mocks.configured,
 }));
+vi.mock("./services/paidVideo", () => ({
+  paidVideoAvailable: mocks.provider,
+  renderPaidVideo: vi.fn(),
+}));
+vi.mock("./services/paidVideoLedger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./services/paidVideoLedger")>();
+  return { ...actual, reconcileStalledVideo: mocks.reconcile };
+});
 import { videoRouter } from "./video";
 
 const caller = videoRouter.createCaller({
@@ -25,6 +35,8 @@ describe("real credit checkout security", () => {
     vi.clearAllMocks();
     events = [];
     mocks.configured.mockReturnValue(true);
+    mocks.provider.mockReturnValue(true);
+    mocks.reconcile.mockResolvedValue(0);
     mocks.initialize.mockResolvedValue({
       reference: "luqi_12345678-1234-1234-1234-123456789abc",
       authorizationUrl: "https://checkout.example.org/pay",
@@ -69,15 +81,22 @@ describe("real credit checkout security", () => {
     expect(mocks.initialize).not.toHaveBeenCalled();
   });
 
-  it("reads only the signed-in wallet and does not claim video credits are spendable", async () => {
+  it("reads only the signed-in wallet and reports settled video credits distinctly from cash", async () => {
     const result = await caller.getBalance();
     expect(result).toMatchObject({
       userKey: "learner@example.com", balanceCents: 18000,
-      currency: "ZAR", spendableVideoCredits: 0, videoRenderingEnabled: false,
+      currency: "ZAR", spendableVideoCredits: 0, videoRenderingEnabled: true,
     });
     await expect(caller.getBalance({
       userKey: "another@example.com",
     })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("never offers credit checkout when durable video delivery is unavailable", async () => {
+    mocks.provider.mockReturnValue(false);
+    await expect(caller.topupCredits({ packId: "pack-100", credits: 100 }))
+      .rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+    expect(mocks.initialize).not.toHaveBeenCalled();
   });
 
   it("cannot credit wallets merely by starting a checkout", async () => {
