@@ -49,6 +49,7 @@ export function useApi<T = unknown>() {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'GET',
         headers,
+        credentials: 'include',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
@@ -71,6 +72,7 @@ export function useApi<T = unknown>() {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
