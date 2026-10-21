@@ -44,7 +44,7 @@ export function proposalDigest(fields: ProposalFields): string {
 type EventFields = {
   patchId: number;
   actorUserId: number;
-  action: ProposalAction;
+  action: string;
   previousStatus: string | null;
   nextStatus: string;
   proposalDigest: string;
@@ -92,7 +92,7 @@ export async function createEvidenceProposal(input: ProposalFields & {
   logAgent?: boolean;
 }): Promise<{ patchId: number; status: "proposed"; eventHash: string; deployed: false; ciVerified: false }> {
   validActor(input.actorUserId);
-  if (!input.description?.trim() || input.description.length > 1800 ||
+  if (!input.description?.trim() || input.description.length > 4000 ||
       (input.codeDiff?.length ?? 0) > 12000 ||
       (input.targetFile?.length ?? 0) > 500 ||
       (input.targetModule?.length ?? 0) > 255) {
