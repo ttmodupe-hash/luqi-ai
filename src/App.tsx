@@ -18,6 +18,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
 import AfricanKnowledgeArchivePage from "./pages/AfricanKnowledgeArchivePage";
+import VocationalSkillsPage from "./pages/VocationalSkillsPage";
 import CertMasterPage from "./pages/CertMasterPage";
 import CompanionPage from "./pages/CompanionPage";
 import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
@@ -266,6 +267,7 @@ export default function App() {
       <Routes>
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/african-knowledge" element={<AfricanKnowledgeArchivePage />} />
+        <RouterRoute path="/vocational-skills" element={<VocationalSkillsPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />
         <RouterRoute path="/ai-companion" element={<CompanionPage />} />
