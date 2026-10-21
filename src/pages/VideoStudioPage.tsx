@@ -192,6 +192,7 @@ export default function VideoStudioPage() {
   const [formDescription, setFormDescription] = useState("3D animation demonstrating harmonic oscillation");
   const [formPrompt, setFormPrompt] = useState("3D cartoon style robot sitting at a futuristic lab desk explaining pendulum motion, bright volumetric lighting, vibrant colors");
   const [formDialogue, setFormDialogue] = useState("Welcome to Luqi AI. Notice how energy converts from potential to kinetic as the pendulum swings.");
+  const [renderMode, setRenderMode] = useState<"silent_mp4" | "narrated_mp4">("silent_mp4");
   const [formLanguage, setFormLanguage] = useState("en");
   const [formDuration, setFormDuration] = useState(5);
   const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
@@ -225,7 +226,11 @@ export default function VideoStudioPage() {
 
   // Queries
   const balance = trpc.video.getBalance.useQuery(undefined, { refetchInterval: 5000 });
-  const renderQuote = trpc.video.quoteRender.useQuery({ durationSeconds: Math.min(10, Math.max(2, formDuration)) });
+  const renderQuote = trpc.video.quoteRender.useQuery({
+    durationSeconds: Math.min(10, Math.max(2, formDuration)),
+    mode: renderMode,
+    narration: renderMode === "narrated_mp4" ? formDialogue : undefined,
+  }, { enabled: renderMode === "silent_mp4" || (formDialogue.trim().length > 0 && formDialogue.length <= 500) });
   const apiStatus = trpc.video.getApiStatus.useQuery(undefined, { enabled: false });
   const pricingTiers = trpc.video.getSubscriptionTiers.useQuery();
 
@@ -260,17 +265,20 @@ export default function VideoStudioPage() {
   });
 
   const handleGenerate = () => {
-    if (!formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled) return;
+    if (!formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled ||
+      (renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled)) return;
     const durationSeconds = Math.min(10, Math.max(2, formDuration));
     const confirmedCredits = renderQuote.data?.creditsRequired;
     if (!confirmedCredits || (balance.data?.credits ?? 0) < confirmedCredits) return;
-    if (!window.confirm(`Render a ${durationSeconds}-second silent MP4 for ${confirmedCredits} verified credits? Voiceover is NOT included. Credits are reserved before provider execution.`)) return;
-    const intent = JSON.stringify([formTitle, formPrompt, formLanguage, durationSeconds]);
+    const label = renderMode === "narrated_mp4" ? "narrated MP4 with generated speech" : "silent MP4";
+    if (!window.confirm(`Render a ${durationSeconds}-second ${label} for ${confirmedCredits} verified credits? Credits are reserved before provider execution.`)) return;
+    const narration = renderMode === "narrated_mp4" ? formDialogue : undefined;
+    const intent = JSON.stringify([formTitle, formPrompt, formLanguage, durationSeconds, renderMode, narration]);
     const requestKey = renderRequestRef.current?.intent === intent
       ? renderRequestRef.current.key : crypto.randomUUID();
     renderRequestRef.current = { key: requestKey, intent };
     generateVideo.mutate({
-      requestKey, mode: "silent_mp4", confirmedCredits,
+      requestKey, mode: renderMode, narration, confirmedCredits,
       title: formTitle,
       prompt: formPrompt,
       language: formLanguage as any,
@@ -513,11 +521,11 @@ export default function VideoStudioPage() {
 
               <button
                 onClick={handleGenerate}
-                disabled={generateVideo.isPending || !balance.data?.videoRenderingEnabled}
+                disabled={generateVideo.isPending || !balance.data?.videoRenderingEnabled || (renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled)}
                 className="text-xs px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
               >
                 {generateVideo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                <span>Render Silent MP4 ({Math.min(formDuration, 10) * 10} credits)</span>
+                <span>Render {renderMode === "narrated_mp4" ? "Narrated" : "Silent"} MP4 ({renderQuote.data?.creditsRequired ?? 0} credits)</span>
               </button>
             </div>
           </div>
@@ -735,17 +743,36 @@ export default function VideoStudioPage() {
                 />
               </div>
 
+              <div className="rounded-lg border border-slate-700 p-3 space-y-2">
+                <label className="text-xs font-semibold text-slate-200" htmlFor="luqi-video-mode">Rendering mode</label>
+                <select id="luqi-video-mode" value={renderMode}
+                  onChange={(e) => setRenderMode(e.target.value as "silent_mp4" | "narrated_mp4")}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm">
+                  <option value="silent_mp4">Silent MP4 — 10 credits per second</option>
+                  <option value="narrated_mp4">Narrated MP4 — video plus 4 credits for speech</option>
+                </select>
+                {renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled && (
+                  <p role="status" className="text-xs text-amber-300">
+                    Narrated rendering needs an ElevenLabs account and an installed FFmpeg mixer in the server.
+                  </p>
+                )}
+                <p className="text-xs text-slate-400">
+                  Narration uses the configured provider voice and is mixed into the scene. It is not lip-synced to a character.
+                </p>
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                    <Volume2 className="w-3.5 h-3.5 text-sky-400" /> Narration draft (not included in silent MP4)
+                    <Volume2 className="w-3.5 h-3.5 text-sky-400" /> Narration script (used only for narrated MP4)
                   </label>
                   <span className="text-[10px] text-slate-500">{formDialogue.length} characters</span>
                 </div>
                 <textarea
                   value={formDialogue}
                   onChange={(e) => setFormDialogue(e.target.value)}
-                  placeholder="Enter the speech narration for the character..."
+                  maxLength={500}
+                  placeholder="Describe what the narrator says (maximum 500 characters)..."
                   rows={2}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/50 resize-none"
                 />
@@ -802,16 +829,16 @@ export default function VideoStudioPage() {
                 <div className="grid grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-800">
                   <div>
                     <div className="text-slate-500">Video (WAN 2.1)</div>
-                    <div className="font-bold text-slate-200">{renderQuote.data?.creditsRequired ?? 0} cr</div>
+                    <div className="font-bold text-slate-200">{Math.min(10, Math.max(2, formDuration)) * 10} cr</div>
                   </div>
                   <div>
-                    <div className="text-slate-500">Voiceover (not included)</div>
-                    <div className="font-bold text-slate-200">0 cr</div>
+                    <div className="text-slate-500">Voiceover</div>
+                    <div className="font-bold text-slate-200">{renderMode === "narrated_mp4" ? 4 : 0} cr</div>
                   </div>
                   <div>
                     <div className="text-slate-500">Total User Charge</div>
                     <div className="font-bold text-amber-400">
-                      {renderQuote.data?.creditsRequired ?? 0} Credits (silent MP4 only)
+                      {renderQuote.data?.creditsRequired ?? 0} Credits ({renderMode === "narrated_mp4" ? "narrated" : "silent"} MP4)
                     </div>
                   </div>
                 </div>
@@ -826,7 +853,7 @@ export default function VideoStudioPage() {
             <div className="flex gap-2.5 pt-2">
               <button
                 onClick={handleGenerate}
-                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled || (balance.data?.credits ?? 0) < (renderQuote.data?.creditsRequired ?? Infinity)}
+                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled || (renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled) || (balance.data?.credits ?? 0) < (renderQuote.data?.creditsRequired ?? Infinity)}
                 className="flex-1 text-sm py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-600/20"
               >
                 {generateVideo.isPending ? (
