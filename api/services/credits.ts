@@ -192,15 +192,15 @@ export async function getCreditBalance(userKey: string, authenticatedEmail?: str
  * They must not be used; use paidVideoLedger's transactional reservation and
  * refund functions, or the verified payment webhook, instead.
  */
-export async function deductCredits(_userKey: string, _credits: number, _reason: string): Promise<never> {
+export async function deductCredits(_userKey: string, _credits: number, _reason: string): Promise<{ success: boolean; newBalance: number; error?: string }> {
   throw new Error("Unverified wallet deductions are forbidden. Use reservePaidVideo.");
 }
 
-export async function refundCredits(_userKey: string, _credits: number, _reason: string): Promise<never> {
+export async function refundCredits(_userKey: string, _credits: number, _reason: string): Promise<{ success: boolean; newBalance: number }> {
   throw new Error("Unmatched credit refunds are forbidden. Use refundPaidVideo.");
 }
 
-export async function addCredits(_userKey: string, _credits: number, _reason: string): Promise<never> {
+export async function addCredits(_userKey: string, _credits: number, _reason: string): Promise<{ success: boolean; newBalance: number }> {
   throw new Error("Credits require provider-verified payment settlement.");
 }
 
