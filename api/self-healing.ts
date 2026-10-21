@@ -90,7 +90,7 @@ export const selfHealingRouter = createRouter({
       const resolved = await db
         .select({ count: count() })
         .from(errorLogs)
-        .where(and(gte(errorLogs.timestamp, since), eq(errorLogs.resolved, 1)))
+        .where(and(gte(errorLogs.timestamp, since), eq(errorLogs.resolved, true)))
         .then((r) => Number(r[0]?.count ?? 0));
       
       return { total, critical, warning, resolved };
@@ -145,7 +145,7 @@ export const selfHealingRouter = createRouter({
     const recentAnomalies = await db
       .select({ count: count() })
       .from(systemMetrics)
-      .where(and(gte(systemMetrics.timestamp, fiveMinAgo), eq(systemMetrics.isAnomaly, 1)))
+      .where(and(gte(systemMetrics.timestamp, fiveMinAgo), eq(systemMetrics.isAnomaly, true)))
       .then((r) => Number(r[0]?.count ?? 0));
     
     return { scanned: recentErrors + recentAnomalies, detected: recentErrors, anomalies: recentAnomalies };
