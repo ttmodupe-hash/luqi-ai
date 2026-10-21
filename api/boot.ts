@@ -14,8 +14,8 @@ import { verifyStripeWebhook } from "./security/stripeWebhook";
 import { getPrivateDb } from "./security/access";
 import { getPaidVideoRequest } from "./services/paidVideoLedger";
 import { readPaidVideoAsset } from "./services/paidVideo";
-import { paymentEvents } from "../db/schema";
-import { desc } from "drizzle-orm";
+import { paymentEvents, healingPatches, errorLogs } from "../db/schema";
+import { desc, eq, sql } from "drizzle-orm";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { trustedOrigins, isAllowedApiMutation } from "./security/requestOrigin";
@@ -1149,42 +1149,40 @@ app.post('/security/shield-audit', async (c) => {
   });
 });
 
-app.get('/api/v1/security/diagnostics', (c) => {
-  const jwtKey = process.env.JWT_SECRET_KEY || "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123";
-  const jwtStatus = jwtKey.length >= 32 && jwtKey !== "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123" ? "PASS" : "WARNING";
-  const dbUrl = process.env.DATABASE_URL || "";
-  const dbStatus = !dbUrl || dbUrl.includes("sqlite") || dbUrl.includes("10.") || dbUrl.includes("172.") ? "PASS" : "WARNING";
-  const bucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET || "luqi-vault";
-  const gcsStatus = bucket && !bucket.includes("mock") ? "PASS" : "WARNING";
-
-  const tests = [
-    {
-      component: "JWT Cryptography Layer",
-      status: jwtStatus,
-      details: jwtStatus === "PASS" ? "High-entropy key profile confirmed. Session tokens securely protected." : "Default development signature key active. Ensure production rotation in Secret Manager."
-    },
-    {
-      component: "Database Access Vector",
-      status: dbStatus,
-      details: dbStatus === "PASS" ? "Database engine completely isolated within private network parameters." : "Database IP appears public. Verify VPC network peering."
-    },
-    {
-      component: "Cloud Storage Vault",
-      status: gcsStatus,
-      details: gcsStatus === "PASS" ? `Cloud storage vault configured for bucket '${bucket}'. Asset objects inherit strict identity parameters.` : "GCS storage target utilizing mock parameters."
-    },
-    {
-      component: "Zero-Trust SHA-256 Ledger",
-      status: "PASS",
-      details: "Consensus chain verification integrity 100% nominal. Immutable append-only audit active."
-    }
-  ];
-
+// Verified administrative diagnostics: only report a check that actually ran.
+// Environment variables, apparent hostnames, and seed records do not prove
+// network isolation, IAM security, backup readiness, or ledger immutability.
+app.get('/api/v1/security/diagnostics', async (c) => {
+  let storageStatus: "PASS" | "UNAVAILABLE" = "UNAVAILABLE";
+  try {
+    const db = await getPrivateDb();
+    await db.execute(sql`SELECT 1 AS ready`);
+    storageStatus = "PASS";
+  } catch {
+    storageStatus = "UNAVAILABLE";
+  }
   return c.json({
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC",
-    total_tests: tests.length,
-    system_status: "SECURE_HARDENED",
-    tests
+    generatedAt: new Date().toISOString(),
+    assessment: "limited_live_checks",
+    overallStatus: storageStatus === "PASS" ? "PARTIALLY_VERIFIED" : "DEGRADED",
+    checks: [
+      {
+        component: "Administrator session",
+        status: "PASS",
+        evidence: "Current request authenticated and assigned an administrator role by persistent session.",
+      },
+      {
+        component: "Relational database",
+        status: storageStatus,
+        evidence: storageStatus === "PASS" ? "SELECT 1 returned successfully." : "Database probe failed.",
+      },
+    ],
+    notVerified: [
+      "Cloud IAM permissions", "Private networking", "Backup restore",
+      "Secret rotation", "Storage object access policy", "External penetration testing",
+      "Production deployment posture", "Ledger immutability",
+    ],
+    notice: "Only listed live checks were performed; no automatic repairs or security certification occurred.",
   });
 });
 
@@ -1821,16 +1819,30 @@ app.post('/api/v1/analytics/log-progression', async (c) => {
 });
 
 app.get('/api/v1/diagnostics/database-indexes', async (c) => {
-  return c.json({
-    status: "OPERATIONAL",
-    active_catalog_timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-    index_telemetry: [
-      { index_identifier: "idx_chat_user_id", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_analytics_user_domain", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_critique_status", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_c2pa_provenance_hash", status: "HEALTHY", remediation_action: "NONE REQUIRED" }
-    ]
-  });
+  try {
+    const db = await getPrivateDb();
+    const result = await db.execute(sql`
+      SELECT TABLE_NAME AS tableName, INDEX_NAME AS indexName
+      FROM information_schema.statistics
+      WHERE TABLE_SCHEMA = DATABASE()
+      GROUP BY TABLE_NAME, INDEX_NAME
+      ORDER BY TABLE_NAME, INDEX_NAME
+      LIMIT 100
+    `);
+    const rows = Array.isArray(result) && Array.isArray(result[0])
+      ? result[0] : result;
+    return c.json({
+      status: "OBSERVED",
+      checkedAt: new Date().toISOString(),
+      indexes: rows,
+      note: "Indexes reported from information_schema; no optimizer or production performance analysis was run.",
+    });
+  } catch {
+    return c.json({
+      status: "UNAVAILABLE",
+      error: "Database index inspection failed.",
+    }, 503);
+  }
 });
 
 // ── GEMINI MULTIMODAL SERVER-SIDE PROXY ROUTES ─────────────────────
