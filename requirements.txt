@@ -36,7 +36,7 @@ pyotp==2.9.0
 # AI / LLM
 google-genai==1.75.0  # Reviewed 1.x SDK; avoid unconstrained major-version upgrades
 openai==1.60.2
-anthropic==0.28.0
+anthropic==0.42.0
 
 
 # HTTP & Async
