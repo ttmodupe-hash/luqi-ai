@@ -113,6 +113,27 @@ describe("secure personalised learning and device APIs", () => {
     expect(db.predicates.some(p => p.params.includes(1) && p.params.includes(42))).toBe(true);
   });
 
+  it("enforces video project ownership at creation and in SQL retrieval", async () => {
+    await expect(caller.video.create({
+      title: "invalid", prompt: "wrong owner", userId: 77,
+    })).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    await caller.video.create({
+      title: "my video", prompt: "my lesson", userId: 42,
+    });
+    expect(db.insertions.at(-1)?.userId).toBe(42);
+
+    await caller.video.list({});
+    await caller.video.get({ id: 999 });
+    await caller.video.update({ id: 999, title: "new title" });
+    await caller.video.delete({ id: 999 });
+
+    const recent = db.predicates.slice(-4);
+    expect(recent).toHaveLength(4);
+    for (const clause of recent) expect(clause.params).toContain(42);
+    expect(recent.some(p => p.params.includes(999) && p.params.includes(42))).toBe(true);
+  });
+
   it("fails with SERVICE_UNAVAILABLE when persistent identity storage is down", async () => {
     mocks.getAuthDb.mockResolvedValue(null);
     await expect(caller.grading.getReports({ studentId: 42 })).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
