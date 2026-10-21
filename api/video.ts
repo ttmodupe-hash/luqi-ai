@@ -12,7 +12,8 @@ import {
   SUBSCRIPTION_TIERS,
   CREDIT_PACKS,
 } from "./services/credits";
-import { executeAnimationPipeline } from "./services/animation";
+import { paidVideoAvailable, renderPaidVideo } from "./services/paidVideo";
+import { quotePaidVideoCredits, reservePaidVideo, completePaidVideo, refundPaidVideo, getPaidVideoRequest } from "./services/paidVideoLedger";
 
 const VALID_LANGUAGES = [
   "en", "zu", "xh", "af", "ns", "tn", "st", "ts", "ss", "ve", "nr",
@@ -20,12 +21,6 @@ const VALID_LANGUAGES = [
 ] as const;
 
 const VALID_STATUSES = ["PENDING", "PROCESSING", "SUCCESS", "FAILED"] as const;
-
-// Fail closed: these legacy endpoints trust caller-controlled user keys and project IDs.
-// Restore only after authenticated ownership checks and verified payment settlement.
-const disabledVideoProcedure = publicQuery.use(() => {
-  throw new TRPCError({ code: "FORBIDDEN", message: "Video account operations are temporarily unavailable pending secure authentication and payment verification." });
-});
 
 export const videoRouter = createRouter({
   // ── Virtual Credit & Pricing Endpoints ────────────────────────────
@@ -56,8 +51,7 @@ export const videoRouter = createRouter({
         currency: wallet?.currency ?? "ZAR",
         credits: videoWallet?.credits ?? 0,
         spendableVideoCredits: videoWallet?.credits ?? 0,
-        // Will only be true after a secured rendering worker is activated.
-        videoRenderingEnabled: false,
+        videoRenderingEnabled: paidVideoAvailable(),
       };
     }),
 
@@ -306,82 +300,88 @@ export const videoRouter = createRouter({
     return { total, byStatus, byLanguage };
   }),
 
-  // ── Native Animation Pipeline Generation (Chained API Execution) ──
-  generate: disabledVideoProcedure
+  // Explicit, auditable quote for a silent, genuine MP4 (no fabricated audio).
+  // We never silently bill voiceover or scripting services not delivered.
+  quoteRender: publicQuery
+    .input(z.object({ durationSeconds: z.number().int().min(2).max(10) }))
+    .query(({ input }) => ({
+      durationSeconds: input.durationSeconds,
+      creditsRequired: quotePaidVideoCredits(input.durationSeconds),
+      mode: "silent_mp4" as const,
+      soundtrackIncluded: false,
+    })),
+
+  getRenderStatus: protectedQuery
+    .input(z.object({ requestKey: z.string().uuid() }))
+    .query(async ({ input, ctx }) => getPaidVideoRequest(ctx.user.id, input.requestKey)),
+
+  /**
+   * Paid rendering: idempotent, user-scoped debit before the provider call,
+   * real MP4 stored in private object storage, atomic refund on failures.
+   * Unlike the former legacy pipeline this never uses in-memory credits,
+   * mock MP4s, fake audio or caller-controlled account identifiers.
+   */
+  generate: protectedQuery
     .input(z.object({
-      prompt: z.string().min(1).max(5000),
-      title: z.string().min(1).max(255),
+      requestKey: z.string().uuid(),
+      mode: z.literal("silent_mp4"),
+      confirmedCredits: z.number().int().min(20).max(100),
+      prompt: z.string().trim().min(1).max(1000),
+      title: z.string().trim().min(1).max(255),
       language: z.enum(VALID_LANGUAGES).default("en"),
-      description: z.string().max(5000).optional(),
-      dialogue: z.string().max(2000).optional(),
-      durationSeconds: z.number().min(2).max(60).default(5),
-      userKey: z.string().optional(),
+      durationSeconds: z.number().int().min(2).max(10),
+      userKey: z.string().trim().email().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
-      const userKey = input.userKey || "guest@luqi.ai";
-      const duration = input.durationSeconds || 5;
-
-      // 1. Create project entry in PENDING state
-      const [insertResult] = await db.insert(videoProjects).values({
-        title: input.title,
-        description: input.description ?? null,
-        prompt: input.prompt,
-        language: input.language,
-        status: "PROCESSING",
-        progress: 15,
-        durationSeconds: duration,
-      });
-      const projectId = Number(insertResult.insertId);
-
-      try {
-        // 2. Execute Animation Pipeline (ElevenLabs + Replicate WAN 2.1 + Storyboard)
-        const pipelineResult = await executeAnimationPipeline({
-          title: input.title,
-          scenePrompt: input.prompt,
-          dialogue: input.dialogue || input.description || `Welcome to Luqi AI. Visualizing ${input.title}.`,
-          durationSeconds: duration,
-          userKey,
-          language: input.language,
+    .mutation(async ({ input, ctx }) => {
+      if (input.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
+      }
+      if (!paidVideoAvailable()) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message: "Secure video rendering is unavailable until the video provider and private storage are configured.",
         });
-
-        // 3. Mark as SUCCESS with generated assets & model info
-        await db
-          .update(videoProjects)
-          .set({
-            status: "SUCCESS",
-            progress: 100,
-            videoUrl: pipelineResult.videoUrl,
-            thumbnailUrl: pipelineResult.videoUrl,
-            durationSeconds: duration,
-            modelUsed: `${pipelineResult.videoProvider} + ${pipelineResult.voiceProvider}`,
-            processedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(videoProjects.id, projectId));
-
+      }
+      const job = await reservePaidVideo({
+        userId: ctx.user.id,
+        email: ctx.user.email.toLowerCase(),
+        requestKey: input.requestKey,
+        prompt: input.prompt,
+        title: input.title,
+        language: input.language,
+        durationSeconds: input.durationSeconds,
+        confirmedCredits: input.confirmedCredits,
+      });
+      if (!job.started) return {
+        ...job,
+        videoUrl: job.status === "SUCCESS" ? `/api/video/assets/${input.requestKey}` : null,
+      };
+      try {
+        const result = await renderPaidVideo({
+          userId: ctx.user.id, requestKey: input.requestKey,
+          prompt: input.prompt, durationSeconds: input.durationSeconds,
+        });
+        await completePaidVideo(input.requestKey, result.objectKey, result.provider);
         return {
-          projectId,
-          status: "SUCCESS",
-          videoUrl: pipelineResult.videoUrl,
-          audioUrl: pipelineResult.audioUrl,
-          model: `${pipelineResult.videoProvider} + ${pipelineResult.voiceProvider}`,
-          creditsDeducted: pipelineResult.creditsDeducted,
-          costBreakdown: pipelineResult.costBreakdown,
-          scriptContent: pipelineResult.scriptContent,
+          ...job, status: "SUCCESS" as const,
+          videoUrl: `/api/video/assets/${input.requestKey}`,
+          provider: result.provider,
         };
-      } catch (err: any) {
-        await db
-          .update(videoProjects)
-          .set({
-            status: "FAILED",
-            errorMessage: err.message ?? "Animation generation failed",
-            processedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(videoProjects.id, projectId));
-
-        throw new Error(err.message || "Animation generation failed");
+      } catch {
+        try {
+          await refundPaidVideo(input.requestKey, "Video generation failed");
+        } catch {
+          // Preserve the transaction and stop unsafe retries if payment
+          // recovery is unavailable; operator reconciliation is required.
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Video request requires billing reconciliation. Do not retry with a new request key.",
+          });
+        }
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message: "The video could not be produced. Your reserved credits were refunded.",
+        });
       }
     }),
 });
