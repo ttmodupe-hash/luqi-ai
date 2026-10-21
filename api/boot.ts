@@ -12,6 +12,7 @@ import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { trustedOrigins, isAllowedApiMutation } from "./security/requestOrigin";
+import { reserveAiRequest } from "./security/aiBudget";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
@@ -199,6 +200,20 @@ app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(),
 app.route("/", restCompat);
 
 // 1. Unified Chat & KHORO Sovereign Companion Endpoint
+app.use("/api/v1/luqi-core", async (c, next) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Please sign in to use this AI capability." }, 401);
+  try {
+    await reserveAiRequest(user.id, "luqi-core");
+  } catch (err: any) {
+    return c.json({
+      error: err?.code === "TOO_MANY_REQUESTS"
+        ? "Daily AI allowance reached." : "AI usage authorisation is unavailable.",
+    }, err?.code === "TOO_MANY_REQUESTS" ? 429 : 503);
+  }
+  await next();
+});
+
 app.post('/api/v1/luqi-core', async (c) => {
   let body: any = {};
   try {
