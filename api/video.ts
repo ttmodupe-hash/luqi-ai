@@ -53,6 +53,7 @@ export const videoRouter = createRouter({
         credits: videoWallet?.credits ?? 0,
         spendableVideoCredits: videoWallet?.credits ?? 0,
         videoRenderingEnabled: paidVideoAvailable(),
+        narratedVideoEnabled: paidVideoAvailable("narrated_mp4"),
       };
     }),
 
@@ -312,15 +313,19 @@ export const videoRouter = createRouter({
     .input(z.object({ limit: z.number().int().min(1).max(100).default(25) }).optional())
     .mutation(async ({ input }) => reconcileAllStalledVideo(input?.limit ?? 25)),
 
-  // Explicit, auditable quote for a silent, genuine MP4 (no fabricated audio).
-  // We never silently bill voiceover or scripting services not delivered.
+  // Explicit, auditable quote for genuine MP4, with optional provider narration.
+  // No unapproved soundtrack charges, fictional credits or hidden fallback.
   quoteRender: publicQuery
-    .input(z.object({ durationSeconds: z.number().int().min(2).max(10) }))
+    .input(z.object({
+      durationSeconds: z.number().int().min(2).max(10),
+      mode: z.enum(["silent_mp4", "narrated_mp4"]).default("silent_mp4"),
+      narration: z.string().max(500).optional(),
+    }))
     .query(({ input }) => ({
       durationSeconds: input.durationSeconds,
-      creditsRequired: quotePaidVideoCredits(input.durationSeconds),
-      mode: "silent_mp4" as const,
-      soundtrackIncluded: false,
+      creditsRequired: quotePaidVideoCredits(input.durationSeconds, input.mode, input.narration),
+      mode: input.mode,
+      soundtrackIncluded: input.mode === "narrated_mp4",
     })),
 
   getRenderStatus: protectedQuery
@@ -339,8 +344,9 @@ export const videoRouter = createRouter({
   generate: protectedQuery
     .input(z.object({
       requestKey: z.string().uuid(),
-      mode: z.literal("silent_mp4"),
-      confirmedCredits: z.number().int().min(20).max(100),
+      mode: z.enum(["silent_mp4", "narrated_mp4"]),
+      narration: z.string().max(500).optional(),
+      confirmedCredits: z.number().int().min(20).max(104),
       prompt: z.string().trim().min(1).max(1000),
       title: z.string().trim().min(1).max(255),
       language: z.enum(VALID_LANGUAGES).default("en"),
@@ -351,10 +357,12 @@ export const videoRouter = createRouter({
       if (input.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
       }
-      if (!paidVideoAvailable()) {
+      // Validate price and narration before any database change or provider call.
+      quotePaidVideoCredits(input.durationSeconds, input.mode, input.narration);
+      if (!paidVideoAvailable(input.mode)) {
         throw new TRPCError({
           code: "SERVICE_UNAVAILABLE",
-          message: "Secure video rendering is unavailable until the video provider and private storage are configured.",
+          message: "Real video, narration, FFmpeg, or private storage is not configured for this mode.",
         });
       }
       await reconcileStalledVideo(ctx.user.id);
@@ -367,6 +375,8 @@ export const videoRouter = createRouter({
         language: input.language,
         durationSeconds: input.durationSeconds,
         confirmedCredits: input.confirmedCredits,
+        mode: input.mode,
+        narration: input.narration,
       });
       if (!job.started) return {
         ...job,
@@ -376,6 +386,7 @@ export const videoRouter = createRouter({
         const result = await renderPaidVideo({
           userId: ctx.user.id, requestKey: input.requestKey,
           prompt: input.prompt, durationSeconds: input.durationSeconds,
+          mode: input.mode, narration: input.narration,
         });
         await completePaidVideo(input.requestKey, result.objectKey, result.provider);
         return {
