@@ -26,6 +26,17 @@ describe("companion context", () => {
       .toBe("Prefers isiZulu explanations");
   });
 
+  it("ignores empty memories and enforces a selection limit", () => {
+    const memories = [
+      { content: "" },
+      { content: "Prefers Sesotho", importance: 7 },
+      { content: "Enjoys science", importance: 4 },
+    ];
+    expect(selectRelevantCompanionMemories(memories, "Sesotho", 1))
+      .toEqual([{ content: "Prefers Sesotho", importance: 7 }]);
+    expect(selectRelevantCompanionMemories(memories, "Sesotho", 0)).toEqual([]);
+  });
+
   it("does not mutate retrieved memories", () => {
     const memories = [{ content: "A", importance: 2 }, { content: "B", importance: 9 }];
     selectRelevantCompanionMemories(memories, "unrelated");
