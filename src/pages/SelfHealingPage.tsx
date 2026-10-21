@@ -395,9 +395,9 @@ print("STATUS: Verification test passed with zero errors.")
   const patches = trpc.selfHealing.getPatches.useQuery({ limit: 50 }, { refetchInterval: autoRefresh ? 5000 : false });
   const benchmarks = trpc.selfHealing.getBenchmarkFeeds.useQuery({ limit: 50 }, { refetchInterval: autoRefresh ? 5000 : false });
   const activity = trpc.selfHealing.getAgentActivity.useQuery({ limit: 100 }, { refetchInterval: autoRefresh ? 5000 : false });
-  const predictions = trpc.selfHealing.predictFailures.useQuery({}, { refetchInterval: autoRefresh ? 15000 : false });
+  const predictions = trpc.selfHealing.predictFailures.useQuery(undefined, { refetchInterval: autoRefresh ? 15000 : false });
   const supervisorReport = trpc.selfHealing.runSupervisorScan.useQuery(undefined, { refetchInterval: autoRefresh ? 30000 : false });
-  const errorForecast = trpc.selfHealing.forecastErrorVolume.useQuery({ hours: 24 }, { refetchInterval: autoRefresh ? 60000 : false });
+  const errorForecast = trpc.selfHealing.forecastErrorVolume.useQuery(undefined, { refetchInterval: autoRefresh ? 60000 : false });
 
   // Mutations
   const utils = trpc.useUtils();
