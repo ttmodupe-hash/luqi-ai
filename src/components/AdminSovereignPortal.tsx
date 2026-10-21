@@ -76,8 +76,11 @@ export const AdminSovereignPortal: React.FC = () => {
 
   useEffect(() => {
     const savedToken = sessionStorage.getItem('luqi_admin_token');
+    // A cached key is not proof of authorization; verify it with the server.
     if (savedToken) {
-      setIsAuthenticated(true);
+      fetch('/api/v1/admin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passkey: savedToken }) })
+        .then(res => { if (res.ok) setIsAuthenticated(true); else sessionStorage.removeItem('luqi_admin_token'); })
+        .catch(() => sessionStorage.removeItem('luqi_admin_token'));
     }
     if (typeof window !== 'undefined' && window.location.pathname.includes('knowledge-grading')) {
       setActiveTab('KNOWLEDGE_GRADING');
@@ -100,21 +103,10 @@ export const AdminSovereignPortal: React.FC = () => {
         sessionStorage.setItem('luqi_admin_token', passkeyInput);
         setIsAuthenticated(true);
       } else {
-        // Fallback check against default key
-        if (passkeyInput === 'LUQI-ADMIN-2026') {
-          sessionStorage.setItem('luqi_admin_token', passkeyInput);
-          setIsAuthenticated(true);
-        } else {
-          setAuthError('Access denied: Invalid Admin Passkey');
-        }
+        setAuthError('Access denied: Invalid Admin Passkey');
       }
     } catch {
-      if (passkeyInput === 'LUQI-ADMIN-2026') {
-        sessionStorage.setItem('luqi_admin_token', passkeyInput);
-        setIsAuthenticated(true);
-      } else {
-        setAuthError('Authentication service unreachable or invalid passkey');
-      }
+      setAuthError('Authentication service unreachable');
     } finally {
       setIsVerifying(false);
     }
@@ -262,7 +254,7 @@ export const AdminSovereignPortal: React.FC = () => {
                 type="password"
                 value={passkeyInput}
                 onChange={e => setPasskeyInput(e.target.value)}
-                placeholder="Enter passkey (e.g. LUQI-ADMIN-2026)"
+                placeholder="Enter administrator passkey"
                 className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
               />
             </div>
