@@ -15,16 +15,31 @@ export function isStaleRender(createdAt: Date | null | undefined, now = Date.now
 }
 
 const CREDITS_PER_SECOND = 10;
+export type PaidRenderMode = "silent_mp4" | "narrated_mp4";
+export const VOICE_CREDITS_PER_CLIP = 4;
+export const MAX_NARRATION_CHARS = 500;
 
-export function quotePaidVideoCredits(durationSeconds: number): number {
+export function quotePaidVideoCredits(
+  durationSeconds: number,
+  mode: PaidRenderMode = "silent_mp4",
+  narration = "",
+): number {
   if (!Number.isSafeInteger(durationSeconds) ||
       durationSeconds < MIN_PAID_VIDEO_SECONDS ||
       durationSeconds > MAX_PAID_VIDEO_SECONDS) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Video duration must be between 2 and 10 seconds." });
   }
-  // Explicit price of a silent MP4 clip: voiceover and script charges are
-  // separate products and cannot be silently included in this checkout.
-  return durationSeconds * CREDITS_PER_SECOND;
+  if (mode === "silent_mp4") {
+    if (narration) throw new TRPCError({ code: "BAD_REQUEST", message: "Silent videos cannot have a billed narration." });
+    return durationSeconds * CREDITS_PER_SECOND;
+  }
+  if (mode !== "narrated_mp4" || !narration.trim() ||
+      narration.length > MAX_NARRATION_CHARS) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Narration must contain 1–500 characters." });
+  }
+  // Flat per-clip surcharge for one short multilingual spoken narration.
+  // Rendering and provider costs must be reconciled independently.
+  return durationSeconds * CREDITS_PER_SECOND + VOICE_CREDITS_PER_CLIP;
 }
 
 export type RenderInput = {
@@ -36,6 +51,8 @@ export type RenderInput = {
   language: string;
   durationSeconds: number;
   confirmedCredits: number;
+  mode?: PaidRenderMode;
+  narration?: string;
 };
 
 export function renderIntentDigest(input: RenderInput): string {
@@ -47,6 +64,8 @@ export function renderIntentDigest(input: RenderInput): string {
     language: input.language,
     durationSeconds: input.durationSeconds,
     confirmedCredits: input.confirmedCredits,
+    mode: input.mode ?? "silent_mp4",
+    narration: input.narration ?? "",
   })).digest("hex");
 }
 
@@ -59,7 +78,7 @@ export type ReservedRender = {
 };
 
 export async function reservePaidVideo(input: RenderInput): Promise<ReservedRender> {
-  const charge = quotePaidVideoCredits(input.durationSeconds);
+  const charge = quotePaidVideoCredits(input.durationSeconds, input.mode, input.narration);
   if (input.confirmedCredits !== charge) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Video price changed. Confirm the displayed quote." });
   }
@@ -137,7 +156,7 @@ export async function reservePaidVideo(input: RenderInput): Promise<ReservedRend
       requestKey: input.requestKey,
       userId: input.userId, userKey: email,
       projectId, requestDigest: digest,
-      chargeCredits: charge, status: "PROCESSING",
+      chargeCredits: charge, mode: input.mode ?? "silent_mp4", status: "PROCESSING",
     });
     return { started: true, projectId, requestKey: input.requestKey, status: "PROCESSING", chargeCredits: charge };
   });
