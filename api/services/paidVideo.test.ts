@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isTrustedReplicateUrl, paidVideoAvailable } from "./paidVideo";
-import { quotePaidVideoCredits, renderIntentDigest } from "./paidVideoLedger";
+import { quotePaidVideoCredits, renderIntentDigest, isStaleRender, STALE_RENDER_MS } from "./paidVideoLedger";
 
 describe("paid video safety contracts", () => {
   it("quotes whole-second silent video from the explicit published price", () => {
@@ -32,6 +32,13 @@ describe("paid video safety contracts", () => {
       "file:///etc/passwd", "https://user:pass@replicate.delivery/file",
       "https://169.254.169.254/latest/meta-data",
     ]) expect(isTrustedReplicateUrl(url)).toBe(false);
+  });
+
+  it("does not refund active requests, and flags abandoned work after fifteen minutes", () => {
+    const now = Date.parse("2026-10-21T12:00:00Z");
+    expect(isStaleRender(new Date(now - STALE_RENDER_MS + 500), now)).toBe(false);
+    expect(isStaleRender(new Date(now - STALE_RENDER_MS - 500), now)).toBe(true);
+    expect(isStaleRender(null, now)).toBe(false);
   });
 
   it("fails closed without an actual provider and private storage", () => {
