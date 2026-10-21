@@ -621,12 +621,7 @@ print("STATUS: Verification test passed with zero errors.")
                   <div className="flex justify-between"><span className="text-slate-400">AI Generated</span><span className="text-sky-400 font-medium">{patches.data?.filter((p: Patch) => p.aiModel).length ?? 0}</span></div>
                   <div className="flex justify-between"><span className="text-slate-400">Auto-deployment / rollback</span><span className="text-purple-400 font-medium">Disabled</span></div>
                 </div>
-                <div className="mt-4 flex items-center gap-2">
-                  <label className="text-xs text-slate-400 flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={useAI} onChange={(e) => setUseAI(e.target.checked)} className="rounded bg-slate-800 border-slate-700" />
-                    <Wand2 className="w-3 h-3" /> AI Patch Generation
-                  </label>
-                </div>
+                <div className="mt-4 text-xs text-slate-400">No app-host generated code execution, test claims, or deployments.</div>
               </div>
 
               {/* Predictive Analyst */}
