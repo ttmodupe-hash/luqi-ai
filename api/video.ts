@@ -21,7 +21,13 @@ const VALID_LANGUAGES = [
 
 const VALID_STATUSES = ["PENDING", "PROCESSING", "SUCCESS", "FAILED"] as const;
 
-// Fail closed: these legacy endpoints trust caller-controlled user keys and project IDs.\n// Restore only after authenticated ownership checks and verified payment settlement.\nconst disabledVideoProcedure = publicQuery.use(() => {\n  throw new TRPCError({ code: "FORBIDDEN", message: "Video account operations are temporarily unavailable pending secure authentication and payment verification." });\n});\n\nexport const videoRouter = createRouter({
+// Fail closed: these legacy endpoints trust caller-controlled user keys and project IDs.
+// Restore only after authenticated ownership checks and verified payment settlement.
+const disabledVideoProcedure = publicQuery.use(() => {
+  throw new TRPCError({ code: "FORBIDDEN", message: "Video account operations are temporarily unavailable pending secure authentication and payment verification." });
+});
+
+export const videoRouter = createRouter({
   // ── Virtual Credit & Pricing Endpoints ────────────────────────────
   calculateCost: publicQuery
     .input(z.object({
