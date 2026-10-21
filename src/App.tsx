@@ -17,6 +17,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
+import AfricanKnowledgeArchivePage from "./pages/AfricanKnowledgeArchivePage";
 import CertMasterPage from "./pages/CertMasterPage";
 import CompanionPage from "./pages/CompanionPage";
 import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
@@ -124,6 +125,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
 
               <Link
+                to="/african-knowledge"
+                className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
+                  location.pathname.startsWith("/african-knowledge")
+                    ? "bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30"
+                    : "text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent"
+                }`}
+              >
+                <span>🌍 African Knowledge</span>
+              </Link>
+
+              <Link
                 to="/cert-academy"
                 className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
                   location.pathname.includes("cert") || location.pathname.includes("academy")
@@ -194,6 +206,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               <span>🎓 School & STEM Labs</span>
             </Link>
             <Link
+              to="/african-knowledge"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
+            >
+              <span>🌍 African Knowledge Library</span>
+            </Link>
+            <Link
               to="/cert-academy"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
@@ -223,6 +242,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <Link to="/terms" className="hover:text-slate-400 transition">Terms</Link>
             <Link to="/privacy" className="hover:text-slate-400 transition">Privacy</Link>
+            <Link to="/african-knowledge" className="hover:text-slate-400 transition">African Knowledge</Link>
             <Link to="/contact" className="hover:text-slate-400 transition">Contact</Link>
             <Link to="/api-billing" className="hover:text-slate-400 transition">API Cost Planner</Link>
             <Link
@@ -245,6 +265,7 @@ export default function App() {
     <AppLayout>
       <Routes>
         <RouterRoute path="/" element={<Home />} />
+        <RouterRoute path="/african-knowledge" element={<AfricanKnowledgeArchivePage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />
         <RouterRoute path="/ai-companion" element={<CompanionPage />} />
