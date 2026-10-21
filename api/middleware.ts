@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { rateLimitBucket, reserveRateLimit } from "./security/rateLimit";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -40,33 +41,10 @@ export const adminQuery = protectedQuery.use(async ({ ctx, next }) => {
   return next({ ctx });
 });
 
-// ── RATE LIMITING ──────────────────────────────────────────────────
-const requestCounts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100;
-const RATE_WINDOW = 60 * 1000;
-
+// ── DISTRIBUTED RATE LIMITING ──────────────────────────────────────
+// Persistent InnoDB row locks serialize reservations across Cloud Run instances.
+// No client-controlled x-forwarded-for/x-real-ip value is trusted.
 export const rateLimitedQuery = t.procedure.use(async ({ ctx, next }) => {
-  const clientIp = ctx.req?.headers?.get?.("x-forwarded-for") || 
-                   ctx.req?.headers?.get?.("x-real-ip") || 
-                   "unknown";
-  
-  const now = Date.now();
-  const clientData = requestCounts.get(clientIp);
-  
-  if (clientData && now < clientData.resetAt) {
-    if (clientData.count >= RATE_LIMIT) {
-      throw new Error("Rate limit exceeded. Please try again later.");
-    }
-    clientData.count++;
-  } else {
-    requestCounts.set(clientIp, { count: 1, resetAt: now + RATE_WINDOW });
-  }
-  
-  if (Math.random() < 0.01) {
-    for (const [ip, data] of requestCounts.entries()) {
-      if (now > data.resetAt) requestCounts.delete(ip);
-    }
-  }
-  
+  await reserveRateLimit(rateLimitBucket(ctx.user?.id));
   return next({ ctx });
 });
