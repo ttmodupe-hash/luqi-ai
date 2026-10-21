@@ -26,6 +26,7 @@ describe("video route authentication and spending controls", () => {
     ["markSuccess", () => caller.markSuccess({ id: 123, videoUrl: "https://example.com/file.mp4" })],
     ["markFailed", () => caller.markFailed({ id: 123, errorMessage: "tampered" })],
     ["stats", () => caller.stats()],
+    ["reconcileStalled", () => caller.reconcileStalled({ limit: 10 })],
     ["generate", () => caller.generate({
       title: "example", prompt: "expensive rendering", userKey: "another-user@example.com",
       requestKey: "12345678-1234-4123-8123-123456789abc", mode: "silent_mp4",
@@ -52,5 +53,6 @@ describe("video route authentication and spending controls", () => {
       durationSeconds: 2, confirmedCredits: 20,
     })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(signedIn.getApiStatus()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.reconcileStalled({ limit: 10 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
