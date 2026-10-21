@@ -269,7 +269,9 @@ app.post("/api/auth/register", async (c) => {
     return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() }, 201);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Registration failed.";
-    const status = /already exists/i.test(message) ? 409 : /persistent database|database is unavailable/i.test(message) ? 503 : 400;
+    const status = (error as { code?: string })?.code === "TOO_MANY_REQUESTS" ? 429 :
+      (error as { code?: string })?.code === "SERVICE_UNAVAILABLE" ? 503 :
+      /already exists/i.test(message) ? 409 : /persistent database|database is unavailable/i.test(message) ? 503 : 400;
     return c.json({ error: message }, status);
   }
 });
@@ -285,8 +287,10 @@ app.post("/api/auth/login", async (c) => {
     return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sign-in failed.";
-    const status = /persistent database|database is unavailable/i.test(message) ? 503 : 401;
-    return c.json({ error: status === 401 ? "Invalid email or password." : message }, status);
+    const status = (error as { code?: string })?.code === "TOO_MANY_REQUESTS" ? 429 :
+      (error as { code?: string })?.code === "SERVICE_UNAVAILABLE" ? 503 :
+      /persistent database|database is unavailable/i.test(message) ? 503 : 401;
+    return c.json({ error: status === 401 ? "Invalid email or password." : status === 429 ? "Too many attempts. Try again shortly." : message }, status);
   }
 });
 
