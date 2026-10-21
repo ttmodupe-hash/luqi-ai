@@ -29,6 +29,17 @@ export const protectedQuery = t.procedure.use(async ({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
+/**
+ * Server-validated administrator access, reserved for internal telemetry,
+ * audit and agent-management operations. Never trust a role passed as input.
+ */
+export const adminQuery = protectedQuery.use(async ({ ctx, next }) => {
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required." });
+  }
+  return next({ ctx });
+});
+
 // ── RATE LIMITING ──────────────────────────────────────────────────
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 100;
