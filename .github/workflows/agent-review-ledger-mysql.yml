@@ -1,0 +1,47 @@
+name: LUQI Agent Review Ledger MySQL (no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**", "security/**"]
+    paths:
+      - "api/services/agentProposalLedger*"
+      - "api/services/agentReview.ts"
+      - "api/self-healing.ts"
+      - "db/schema.ts"
+      - "db/migrations/20261021_agent_review_events.sql"
+      - ".github/workflows/agent-review-ledger-mysql.yml"
+  push:
+    branches: ["feat/agent-review-ledger-*"]
+permissions:
+  contents: read
+jobs:
+  proposal-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+          MYSQL_DATABASE: luqi_integration
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      CI: "true"
+      DATABASE_URL: mysql://root:ci-only-password@127.0.0.1:3306/luqi_integration
+      RUN_MYSQL_INTEGRATION: "1"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run genuine InnoDB reviewer concurrency and history checks
+        run: npx vitest run api/services/agentProposalLedger.mysql.integration.test.ts
