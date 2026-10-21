@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { errorLogs, healingPatches, systemMetrics, agentActivityLog, benchmarkFeeds } from "../db/schema";
 import { eq, desc, and, gte, sql, count } from "drizzle-orm";
 import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrator";
 
 export const selfHealingRouter = createRouter({
-  logError: publicQuery
+  logError: legacyRestrictedProcedure
     .input(z.object({
       errorType: z.string(),
       severity: z.string(),
@@ -30,7 +30,7 @@ export const selfHealingRouter = createRouter({
       return { id: Number(result.insertId), logged: true };
     }),
 
-  recordMetric: publicQuery
+  recordMetric: legacyRestrictedProcedure
     .input(z.object({
       metricType: z.string(),
       module: z.string(),
@@ -50,7 +50,7 @@ export const selfHealingRouter = createRouter({
       return { recorded: true };
     }),
 
-  getRecentErrors: publicQuery
+  getRecentErrors: legacyRestrictedProcedure
     .input(z.object({ limit: z.number().default(50), severity: z.string().optional() }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -63,7 +63,7 @@ export const selfHealingRouter = createRouter({
         .limit(input?.limit ?? 50);
     }),
 
-  getErrorStats: publicQuery
+  getErrorStats: legacyRestrictedProcedure
     .input(z.object({ hours: z.number().default(24) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -96,7 +96,7 @@ export const selfHealingRouter = createRouter({
       return { total, critical, warning, resolved };
     }),
 
-  getRecentMetrics: publicQuery
+  getRecentMetrics: legacyRestrictedProcedure
     .input(z.object({ limit: z.number().default(100), module: z.string().optional() }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -109,7 +109,7 @@ export const selfHealingRouter = createRouter({
         .limit(input?.limit ?? 100);
     }),
 
-  getMetricTrends: publicQuery
+  getMetricTrends: legacyRestrictedProcedure
     .input(z.object({ metricType: z.string(), hours: z.number().default(24) }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -121,7 +121,7 @@ export const selfHealingRouter = createRouter({
         .orderBy(systemMetrics.timestamp);
     }),
 
-  getAgentActivity: publicQuery
+  getAgentActivity: legacyRestrictedProcedure
     .input(z.object({ limit: z.number().default(100) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -132,7 +132,7 @@ export const selfHealingRouter = createRouter({
         .limit(input?.limit ?? 100);
     }),
 
-  runTelemetryScan: publicQuery.mutation(async () => {
+  runTelemetryScan: legacyRestrictedProcedure.mutation(async () => {
     const db = await getDb();
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
     
@@ -151,7 +151,7 @@ export const selfHealingRouter = createRouter({
     return { scanned: recentErrors + recentAnomalies, detected: recentErrors, anomalies: recentAnomalies };
   }),
 
-  markErrorResolved: publicQuery
+  markErrorResolved: legacyRestrictedProcedure
     .input(z.object({ errorId: z.number(), patchId: z.number().optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -162,7 +162,7 @@ export const selfHealingRouter = createRouter({
       return { resolved: true };
     }),
 
-  analyzeAndProposePatch: publicQuery
+  analyzeAndProposePatch: legacyRestrictedProcedure
     .input(z.object({ errorLogId: z.number(), useAI: z.boolean().default(true) }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -186,7 +186,7 @@ export const selfHealingRouter = createRouter({
   // AI-driven root-cause diagnosis of a logged error — real analysis via
   // the orchestrator chain, stored as a patch proposal. Honest when no
   // provider is configured. Never fabricates a fix.
-  aiDiagnoseError: publicQuery
+  aiDiagnoseError: legacyRestrictedProcedure
     .input(z.object({ errorLogId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -222,7 +222,7 @@ export const selfHealingRouter = createRouter({
       };
     }),
 
-  applyPatch: publicQuery
+  applyPatch: legacyRestrictedProcedure
     .input(z.object({ patchId: z.number(), skipTests: z.boolean().default(false), abTestPercent: z.number().optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -233,7 +233,7 @@ export const selfHealingRouter = createRouter({
       return { success: true, message: "Patch applied" };
     }),
 
-  rollbackPatch: publicQuery
+  rollbackPatch: legacyRestrictedProcedure
     .input(z.object({ patchId: z.number(), reason: z.string() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -244,7 +244,7 @@ export const selfHealingRouter = createRouter({
       return { success: true, message: "Patch rolled back" };
     }),
 
-  promoteABTest: publicQuery
+  promoteABTest: legacyRestrictedProcedure
     .input(z.object({ patchId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -255,7 +255,7 @@ export const selfHealingRouter = createRouter({
       return { success: true, message: "Promoted to full deployment" };
     }),
 
-  getPatches: publicQuery
+  getPatches: legacyRestrictedProcedure
     .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -268,7 +268,7 @@ export const selfHealingRouter = createRouter({
         .limit(input?.limit ?? 50);
     }),
 
-  getPatchStats: publicQuery
+  getPatchStats: legacyRestrictedProcedure
     .input(z.object({ hours: z.number().default(24) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -289,42 +289,42 @@ export const selfHealingRouter = createRouter({
       return { total, applied: Number(applied), failed: Number(failed), rolledBack: Number(rolledBack), pending: Number(pending) };
     }),
 
-  executePatch: publicQuery
+  executePatch: legacyRestrictedProcedure
     .input(z.object({ patchId: z.number() }))
     .mutation(async ({ input }) => {
       // Execute the patch (simulated)
       return { success: true, message: "Patch executed", executionLog: "Patch applied successfully" };
     }),
 
-  runTests: publicQuery.mutation(async () => {
+  runTests: legacyRestrictedProcedure.mutation(async () => {
     return { success: true, testsPassed: 10, testsTotal: 10 };
   }),
 
-  runTypeCheck: publicQuery.mutation(async () => {
+  runTypeCheck: legacyRestrictedProcedure.mutation(async () => {
     return { success: true, errors: 0 };
   }),
 
-  predictFailures: publicQuery.query(async () => {
+  predictFailures: legacyRestrictedProcedure.query(async () => {
     return [];
   }),
 
-  detectAnomalies: publicQuery
+  detectAnomalies: legacyRestrictedProcedure
     .input(z.object({ metricType: z.string(), module: z.string(), hours: z.number().default(24) }))
     .query(async ({ input }) => {
       return { anomalies: [], mean: 0, stdDev: 0 };
     }),
 
-  forecastErrorVolume: publicQuery.query(async () => {
+  forecastErrorVolume: legacyRestrictedProcedure.query(async () => {
     return { currentHourlyRate: 0, predictedNextHour: 0, predictedNext24h: 0, trend: "stable", confidence: 0 };
   }),
 
-  analyzeTrend: publicQuery
+  analyzeTrend: legacyRestrictedProcedure
     .input(z.object({ metricType: z.string(), module: z.string(), hours: z.number().default(6) }))
     .query(async ({ input }) => {
       return null;
     }),
 
-  sendNotification: publicQuery
+  sendNotification: legacyRestrictedProcedure
     .input(z.object({
       title: z.string(),
       body: z.string(),
@@ -336,13 +336,13 @@ export const selfHealingRouter = createRouter({
       return { success: true, channels: input.channels };
     }),
 
-  testNotification: publicQuery
+  testNotification: legacyRestrictedProcedure
     .input(z.object({ channel: z.string() }))
     .mutation(async ({ input }) => {
       return { success: true, channel: input.channel };
     }),
 
-  runSupervisorScan: publicQuery.query(async () => {
+  runSupervisorScan: legacyRestrictedProcedure.query(async () => {
     return {
       timestamp: new Date(),
       overallStatus: "healthy",
@@ -352,15 +352,15 @@ export const selfHealingRouter = createRouter({
     };
   }),
 
-  attemptSelfRepair: publicQuery.mutation(async () => {
+  attemptSelfRepair: legacyRestrictedProcedure.mutation(async () => {
     return { attempted: 0, succeeded: 0, failed: 0, details: [] };
   }),
 
-  checkAgentHealth: publicQuery.query(async () => {
+  checkAgentHealth: legacyRestrictedProcedure.query(async () => {
     return [];
   }),
 
-  ingestBenchmark: publicQuery
+  ingestBenchmark: legacyRestrictedProcedure
     .input(z.object({
       feedSource: z.string(),
       region: z.string(),
@@ -380,11 +380,11 @@ export const selfHealingRouter = createRouter({
       return { id: Number(result.insertId), ingested: true };
     }),
 
-  processPendingBenchmarks: publicQuery.mutation(async () => {
+  processPendingBenchmarks: legacyRestrictedProcedure.mutation(async () => {
     return { processed: 0, succeeded: 0, failed: 0 };
   }),
 
-  getBenchmarkFeeds: publicQuery
+  getBenchmarkFeeds: legacyRestrictedProcedure
     .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
@@ -397,17 +397,17 @@ export const selfHealingRouter = createRouter({
         .limit(input?.limit ?? 50);
     }),
 
-  getBenchmarkStats: publicQuery
+  getBenchmarkStats: legacyRestrictedProcedure
     .input(z.object({ hours: z.number().default(168) }).optional())
     .query(async ({ input }) => {
       return { total: 0, processed: 0, pending: 0, failed: 0 };
     }),
 
-  seedDemoBenchmarks: publicQuery.mutation(async () => {
+  seedDemoBenchmarks: legacyRestrictedProcedure.mutation(async () => {
     return { seeded: true };
   }),
 
-  runFullHealthCheck: publicQuery.mutation(async () => {
+  runFullHealthCheck: legacyRestrictedProcedure.mutation(async () => {
     return {
       telemetry: { scanned: 0, detected: 0, anomalies: 0 },
       benchmarks: { processed: 0, succeeded: 0, failed: 0 },
