@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { guardianLinks, progressAlerts, studentProfiles, adaptiveHistory, labReports } from "../db/schema";
 import { eq, and, desc, gte, sql, count } from "drizzle-orm";
 
 export const guardianRouter = createRouter({
-  link: publicQuery
+  link: legacyRestrictedProcedure
     .input(z.object({
       guardianUserId: z.number(),
       studentUserId: z.number(),
@@ -21,7 +21,7 @@ export const guardianRouter = createRouter({
       return { id: Number(result.insertId), linked: true };
     }),
 
-  getStudents: publicQuery
+  getStudents: legacyRestrictedProcedure
     .input(z.object({ guardianUserId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -63,7 +63,7 @@ export const guardianRouter = createRouter({
       return students;
     }),
 
-  createAlert: publicQuery
+  createAlert: legacyRestrictedProcedure
     .input(z.object({
       guardianId: z.number(),
       studentId: z.number(),
@@ -81,7 +81,7 @@ export const guardianRouter = createRouter({
       return { created: true };
     }),
 
-  checkAlerts: publicQuery
+  checkAlerts: legacyRestrictedProcedure
     .input(z.object({ guardianUserId: z.number() }))
     .mutation(async ({ input }) => {
       // Check and create alerts based on student activity
