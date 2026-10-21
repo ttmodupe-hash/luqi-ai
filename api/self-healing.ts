@@ -398,12 +398,35 @@ export const selfHealingRouter = createRouter({
     }),
 
   runSupervisorScan: adminQuery.query(async () => {
+    const db = await getPrivateDb();
+    const recent = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [critical] = await db.select({ total: count() }).from(errorLogs)
+      .where(and(gte(errorLogs.timestamp, recent), eq(errorLogs.severity, "critical"), eq(errorLogs.resolved, false)));
+    const [anomalies] = await db.select({ total: count() }).from(systemMetrics)
+      .where(and(gte(systemMetrics.timestamp, recent), eq(systemMetrics.isAnomaly, true)));
+    const [pending] = await db.select({ total: count() }).from(healingPatches)
+      .where(eq(healingPatches.status, "proposed"));
+    const criticalCount = Number(critical?.total ?? 0);
+    const anomalyCount = Number(anomalies?.total ?? 0);
     return {
       timestamp: new Date(),
-      overallStatus: "unverified",
+      overallStatus: criticalCount || anomalyCount ? "attention_required" : "no_recorded_alerts_in_window",
       agents: [],
-      systemIntegrity: { errorLogTable: false, patchTable: false, metricsTable: false, activityTable: false },
-      recommendations: ["Connect verified monitoring and database health probes."],
+      systemIntegrity: {
+        errorLogTable: true,
+        patchTable: true,
+        metricsTable: true,
+        activityTable: false, // no live activity probe was executed
+      },
+      evidence: {
+        unresolvedCriticalErrors24h: criticalCount,
+        recordedAnomalies24h: anomalyCount,
+        pendingReviewProposals: Number(pending?.total ?? 0),
+      },
+      recommendations: [
+        "Review recorded critical events and proposals before deploying any patch.",
+        "A database-read probe does not validate Cloud IAM, backups, connectivity or live providers.",
+      ],
     };
   }),
 
@@ -463,23 +486,76 @@ export const selfHealingRouter = createRouter({
   }),
 
   runFullHealthCheck: adminQuery.mutation(async () => {
+    const started = Date.now();
+    const db = await getPrivateDb();
+    const since24h = new Date(started - 24 * 60 * 60 * 1000);
+    const since7d = new Date(started - 7 * 24 * 60 * 60 * 1000);
+    const since5m = new Date(started - 5 * 60 * 1000);
+
+    const [errors, critical, warning, resolved, recordedAnomalies, recentErrors, patches, pending, benchmarks, processed] =
+      await Promise.all([
+        db.select({ total: count() }).from(errorLogs).where(gte(errorLogs.timestamp, since24h)),
+        db.select({ total: count() }).from(errorLogs).where(and(
+          gte(errorLogs.timestamp, since24h), eq(errorLogs.severity, "critical"))),
+        db.select({ total: count() }).from(errorLogs).where(and(
+          gte(errorLogs.timestamp, since24h), eq(errorLogs.severity, "warning"))),
+        db.select({ total: count() }).from(errorLogs).where(and(
+          gte(errorLogs.timestamp, since24h), eq(errorLogs.resolved, true))),
+        db.select({ total: count() }).from(systemMetrics).where(and(
+          gte(systemMetrics.timestamp, since5m), eq(systemMetrics.isAnomaly, true))),
+        db.select({ total: count() }).from(errorLogs).where(gte(errorLogs.timestamp, since5m)),
+        db.select({ total: count() }).from(healingPatches).where(gte(healingPatches.createdAt, since24h)),
+        db.select({ total: count() }).from(healingPatches).where(and(
+          gte(healingPatches.createdAt, since24h), eq(healingPatches.status, "proposed"))),
+        db.select({ total: count() }).from(benchmarkFeeds).where(gte(benchmarkFeeds.timestamp, since7d)),
+        db.select({ total: count() }).from(benchmarkFeeds).where(and(
+          gte(benchmarkFeeds.timestamp, since7d), eq(benchmarkFeeds.processed, true))),
+      ]);
+    const n = (rows: Array<{ total: number | string }>) => Number(rows[0]?.total ?? 0);
+    const totalErrors = n(errors);
+    const anomalies = n(recordedAnomalies);
+    const recentCount = n(recentErrors);
+    const totalBenchmarks = n(benchmarks);
+    const processedBenchmarks = n(processed);
     return {
-      telemetry: { scanned: 0, detected: 0, anomalies: 0 },
-      benchmarks: { processed: 0, succeeded: 0, failed: 0 },
+      telemetry: {
+        scanned: recentCount + anomalies, detected: recentCount, anomalies,
+        source: "actual 5-minute persistent error and metrics tables",
+      },
+      benchmarks: {
+        processed: processedBenchmarks, succeeded: processedBenchmarks,
+        failed: 0, // no processing attempted; not a processing failure metric
+        attemptedThisRun: 0,
+      },
       predictions: [],
       supervisor: {
         timestamp: new Date(),
-        overallStatus: "unverified",
+        overallStatus: n(critical) || anomalies ? "attention_required" : "no_recorded_alerts_in_window",
         agents: [],
-        systemIntegrity: { errorLogTable: false, patchTable: false, metricsTable: false, activityTable: false },
-        recommendations: ["Connect verified monitoring and database health probes."],
+        systemIntegrity: {
+          errorLogTable: true, patchTable: true,
+          metricsTable: true, activityTable: false,
+        },
+        recommendations: ["Review observed error and anomaly records. No autonomous code was applied."],
       },
       summary: {
-        errors24h: { total: 0, critical: 0, warning: 0, resolved: 0 },
-        patches24h: { total: 0, applied: 0, failed: 0, rolledBack: 0, pending: 0 },
-        benchmarks7d: { total: 0, processed: 0, pending: 0, failed: 0 },
+        errors24h: {
+          total: totalErrors, critical: n(critical),
+          warning: n(warning), resolved: n(resolved),
+        },
+        patches24h: {
+          total: n(patches), applied: null, failed: null,
+          rolledBack: null, pending: n(pending),
+        },
+        benchmarks7d: {
+          total: totalBenchmarks, processed: processedBenchmarks,
+          pending: totalBenchmarks - processedBenchmarks, failed: null,
+        },
       },
-      durationMs: 0,
+      verifiedOperations: ["persistent database queries"],
+      notVerified: ["AI provider health", "Cloud IAM", "external API latency", "backup recovery", "deployment correctness"],
+      durationMs: Date.now() - started,
     };
   }),
+
 });
