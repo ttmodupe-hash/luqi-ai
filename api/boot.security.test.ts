@@ -39,6 +39,40 @@ describe("legacy HTTP security integration", () => {
     expect(body).not.toHaveProperty("status", "success");
   });
 
+  it.each([
+    ["GET", "/api/v1/security/diagnostics"],
+    ["GET", "/security/diagnostics"],
+    ["GET", "/api/v1/diagnostics/database-indexes"],
+    ["GET", "/api/v1/audit/ledger"],
+    ["POST", "/api/v1/audit/seal"],
+    ["POST", "/api/v1/intelligence/self-optimize"],
+    ["POST", "/intelligence/self-optimize"],
+    ["GET", "/api/v1/workspace/critiques"],
+    ["GET", "/workspace/critiques"],
+    ["GET", "/api/v1/grading/ledger/123"],
+  ])("requires a real session for sensitive legacy route %s %s", async (method, path) => {
+    const res = await app.request(path, {
+      method, headers: { "content-type": "application/json" },
+      ...(method === "POST" ? { body: JSON.stringify({ actor: "admin", action: "DUMP", payload: {} }) } : {}),
+    });
+    // A denial may be CSRF-403 (for cross-site browser traffic) or 401.
+    expect([401, 403]).toContain(res.status);
+    const data = await res.json();
+    expect(data).not.toHaveProperty("system_status", "SECURE_HARDENED");
+    expect(data).not.toHaveProperty("code_optimization_patch", expect.stringContaining("APPLIED"));
+  });
+
+  it.each([
+    "/api/gemini/generate", "/api/gemini/image",
+    "/api/gemini/video", "/api/gemini/audio",
+  ])("blocks anonymous vendor spending before external AI calls: %s", async (path) => {
+    const res = await app.request(path, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Trigger a billable request" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
   it("requires administrator credentials before returning billing records", async () => {
     const res = await app.request("/api/v1/admin/billing-ledger");
     expect(res.status).toBe(401);
