@@ -9,6 +9,16 @@ const t = initTRPC.context<TrpcContext>().create({
 export const createRouter = t.router;
 export const publicQuery = t.procedure;
 
+// Fail-closed guard for older routes without proven per-user/per-object access
+// control. These are intentionally unavailable even to signed-in users until
+// they are replaced with authenticated, authorised and tested procedures.
+export const legacyRestrictedProcedure = t.procedure.use(() => {
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "This feature is temporarily unavailable pending security verification.",
+  });
+});
+
 // ── AUTHENTICATION MIDDLEWARE ──────────────────────────────────────
 // Never bypass authentication based on NODE_ENV. Identity is established
 // from a validated, unexpired database session in api/context.ts.
