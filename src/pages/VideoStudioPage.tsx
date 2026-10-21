@@ -1,9 +1,9 @@
 // =====================================================================
-// VIDEO STUDIO PAGE — Generative Video & Voiceover Studio with Margin Guard
+// VIDEO STUDIO PAGE — Verified credit wallet and private video rendering
 // =====================================================================
 // Verified silent-video checkout and private rendering:
 // - Server-quoted video credits, charged transactionally
-// - No voiceover, fake MP4s or starter credits included in this mode
+// - Optional narrated mode; no mock MP4s or fictional starter credits
 // - Genuine Replicate output retained in private object storage
 // - Hosted Paystack checkout with provider-verified credit settlement
 // =====================================================================
@@ -388,10 +388,10 @@ export default function VideoStudioPage() {
               </span>
             </div>
             <h2 className="text-base font-bold text-slate-100">
-              Secure video rendering: 10 credits per second (silent MP4)
+              Secure video rendering: 10 credits per second, with optional +4-credit narration
             </h2>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Only settled credit packs can fund real Replicate video renders. Charges are recorded transactionally and failed requests are refunded when recovery succeeds. Voiceover is not included in this rendering mode.
+              Only settled credit packs can fund real Replicate video renders. Charges are recorded transactionally and failed requests are refunded when recovery succeeds. Narration is optional and billed only when explicitly chosen.
             </p>
           </div>
 
@@ -401,12 +401,12 @@ export default function VideoStudioPage() {
               <div className="text-[10px] text-slate-500 uppercase">Video Rate</div>
             </div>
             <div className="text-center px-3 border-r border-slate-800">
-              <div className="text-lg font-bold text-sky-400">2 cr/500ch</div>
-              <div className="text-[10px] text-slate-500 uppercase">Voiceover not in this mode</div>
+              <div className="text-lg font-bold text-sky-400">+4 credits</div>
+              <div className="text-[10px] text-slate-500 uppercase">Narration (optional)</div>
             </div>
             <div className="text-center px-3">
-              <div className="text-lg font-bold text-emerald-400">50%+</div>
-              <div className="text-[10px] text-slate-500 uppercase">Guaranteed Margin</div>
+              <div className="text-lg font-bold text-emerald-400">Limited</div>
+              <div className="text-[10px] text-slate-500 uppercase">Daily Provider Jobs</div>
             </div>
           </div>
         </div>
@@ -662,7 +662,7 @@ export default function VideoStudioPage() {
 
                   {project.status === "FAILED" && (
                     <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded-lg p-2 border border-red-500/20">
-                      {project.errorMessage || "Rendering failed. Credits refunded."}
+                      {project.errorMessage || "Rendering failed. Check your wallet ledger to confirm refund status."}
                     </div>
                   )}
                 </div>
@@ -862,7 +862,7 @@ export default function VideoStudioPage() {
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4" /> Confirm {renderQuote.data?.creditsRequired ?? 0} Credits & Render Silent MP4
+                    <Zap className="w-4 h-4" /> Confirm {renderQuote.data?.creditsRequired ?? 0} Credits & Render {renderMode === "narrated_mp4" ? "Narrated" : "Silent"} MP4
                   </>
                 )}
               </button>
@@ -948,7 +948,7 @@ export default function VideoStudioPage() {
                   <Coins className="w-6 h-6 text-amber-400" /> Virtual Credit Packs & Subscriptions
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Protects margin while providing predictable monthly generative animation allowances.
+                  Illustrative tiers. Only one-time packs with verified Paystack checkout can be purchased until recurring settlements are integrated.
                 </p>
               </div>
               <button
@@ -1033,7 +1033,7 @@ export default function VideoStudioPage() {
                       onClick={() => handleQuickTopup(tier.monthlyCredits, tier.id)}
                       className="mt-4 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
                     >
-                      Subscribe {tier.name}
+                      Recurring subscription not yet enabled
                     </button>
                   </div>
                 ))}
@@ -1104,7 +1104,7 @@ export default function VideoStudioPage() {
                 <Info className="w-4 h-4 text-sky-400" /> Why Virtual Credits Protect Against Bankruptcy:
               </div>
               <p>
-                Vendor rates and foreign exchange fluctuate. LUQI quotes <strong>10 credits per second for silent MP4 rendering</strong>; no guarantee of profit margin or soundtrack is implied. Video assets are stored privately after real generation.
+                Vendor rates and foreign exchange fluctuate. LUQI quotes <strong>10 credits per second for video, plus 4 credits per clip when narration is selected</strong>; no guarantee of profit margin is implied. Video assets are stored privately after real generation.
               </p>
             </div>
           </div>
