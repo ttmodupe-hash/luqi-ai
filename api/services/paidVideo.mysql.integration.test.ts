@@ -5,9 +5,10 @@ import { bootstrapDatabase } from "../../db/bootstrap";
 import { getPrivateDb } from "../security/access";
 import {
   users, paymentEvents, videoCreditWallets, videoCreditLedger,
-  videoProjects, videoRenderRequests, videoGlobalDailyQuota,
+  videoProjects, videoRenderRequests, videoGlobalDailyQuota, aiGlobalDailyQuota, analyticsEvents,
 } from "../../db/schema";
 import { settleVerifiedPaystackCharge } from "./paystackSettlement";
+import { reserveAiRequest } from "../security/aiBudget";
 import {
   reservePaidVideo, refundPaidVideo, completePaidVideo, getPaidVideoRequest,
 } from "./paidVideoLedger";
@@ -66,6 +67,8 @@ integration("verified payments and video debits in real MySQL", () => {
     await db.delete(users).where(eq(users.id, userId));
     await db.delete(users).where(eq(users.id, otherId));
     await db.delete(videoGlobalDailyQuota).where(eq(videoGlobalDailyQuota.dayKey, new Date().toISOString().slice(0, 10)));
+    await db.delete(analyticsEvents).where(eq(analyticsEvents.userId, userId));
+    await db.delete(aiGlobalDailyQuota).where(eq(aiGlobalDailyQuota.dayKey, new Date().toISOString().slice(0, 10)));
   }, 30000);
 
   it("rejects a forged settlement without changing any account balance", async () => {
@@ -153,6 +156,24 @@ integration("verified payments and video debits in real MySQL", () => {
     const [restored] = await db.select().from(videoCreditWallets)
       .where(eq(videoCreditWallets.userKey, email));
     expect(restored.credits).toBe(500);
+  });
+
+  it("uses a shared daily MySQL quota to prevent AI budget resets across accounts", async () => {
+    process.env.LUQI_MAX_AI_CALLS_GLOBAL_PER_DAY = "1";
+    try {
+      await reserveAiRequest(userId, "integration.test.ai");
+      await expect(reserveAiRequest(otherId, "integration.test.ai"))
+        .rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+      const [quota] = await db.select().from(aiGlobalDailyQuota)
+        .where(eq(aiGlobalDailyQuota.dayKey, new Date().toISOString().slice(0, 10)));
+      expect(quota.jobs).toBe(1);
+      const events = await db.select().from(analyticsEvents)
+        .where(eq(analyticsEvents.eventType, "paid_ai_reservation"));
+      expect(events.filter((event) => event.userId === userId)).toHaveLength(1);
+      expect(events.some((event) => event.userId === otherId)).toBe(false);
+    } finally {
+      delete process.env.LUQI_MAX_AI_CALLS_GLOBAL_PER_DAY;
+    }
   });
 
   it("enforces a global provider limit across accounts before any debit", async () => {
