@@ -9,6 +9,7 @@
 // =====================================================================
 
 import { useState } from "react";
+import ToonChatCreator from "@/components/ToonChatCreator";
 import { trpc } from "@/providers/trpc";
 import { Link } from "react-router";
 import {
@@ -344,6 +345,7 @@ export default function VideoStudioPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <ToonChatCreator />
         {/* Margin Guard Summary Banner */}
         <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-950 p-5 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
