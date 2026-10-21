@@ -24,7 +24,9 @@ function fakeDatabase() {
     },
     orderBy: () => query,
     groupBy: () => query,
-    limit: async (_n: number) => [],
+    limit: (_n: number) => query,
+    offset: async (_n: number) => [],
+    then: (resolve: (rows: unknown[]) => unknown) => Promise.resolve([]).then(resolve),
   };
   return {
     predicates,
