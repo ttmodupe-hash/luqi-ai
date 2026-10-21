@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { studentProfiles, adaptiveHistory } from "../db/schema";
 import { eq, desc, sql, count } from "drizzle-orm";
 
 export const adaptiveRouter = createRouter({
-  getProfile: publicQuery
+  getProfile: legacyRestrictedProcedure
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -45,7 +45,7 @@ export const adaptiveRouter = createRouter({
       };
     }),
 
-  recordAttempt: publicQuery
+  recordAttempt: legacyRestrictedProcedure
     .input(z.object({
       userId: z.number(),
       labSlug: z.string(),
@@ -69,7 +69,7 @@ export const adaptiveRouter = createRouter({
       return { recorded: true };
     }),
 
-  getRecommendations: publicQuery
+  getRecommendations: legacyRestrictedProcedure
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
