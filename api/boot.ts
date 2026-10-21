@@ -11,6 +11,7 @@ import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from "./auth";
 import { verifyStripeWebhook } from "./security/stripeWebhook";
+import { inspectLogIndicators } from "./security/logHeuristics";
 import { getPrivateDb } from "./security/access";
 import { getPaidVideoRequest } from "./services/paidVideoLedger";
 import { readPaidVideoAsset } from "./services/paidVideo";
@@ -123,6 +124,8 @@ app.use("/*", async (c, next) => {
 // x-forwarded-for header nor an account identifier passed in a URL is authority.
 const internalAdminPaths = new Set([
   "/api/v1/security/diagnostics",
+  "/api/v1/security/shield-audit",
+  "/security/shield-audit",
   "/security/diagnostics",
   "/api/v1/diagnostics/database-indexes",
   "/api/v1/audit/ledger",
@@ -1089,86 +1092,23 @@ app.get('/workspace/critiques', (c) => {
 // TRIUMVIRATE SECURITY AGENT GRID & DIAGNOSTICS
 // ============================================================================
 
-app.post('/api/v1/security/shield-audit', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const logData = body.log_buffer_stream || '';
-  if (!logData) {
-    return c.json({ error: "Empty transaction streaming logs." }, 400);
-  }
-
-  const logUpper = logData.toUpperCase();
-  const isSqlInjection = logUpper.includes("SELECT") && (logUpper.includes("OR '1'='1'") || logUpper.includes("1=1") || logData.includes("--"));
-  const isXss = logUpper.includes("<SCRIPT>") || logUpper.includes("DOCUMENT.COOKIE") || logUpper.includes("JAVASCRIPT:");
-  const isRce = logUpper.includes("RM -RF") || logUpper.includes("; ECHO") || logUpper.includes("SYSTEM COMPROMISED") || logUpper.includes("/APP/CORE");
-  const isPii = logUpper.includes("BILLING CREDENTIALS WITHOUT JWT") || logUpper.includes("CUSTOMER PROFILES") || logUpper.includes("LEAKED TOKEN");
-
-  let verdict: any;
-  if (isSqlInjection) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 95,
-      threat_vector_type: "SQL Injection Attack",
-      exploit_analysis_details: "Unescaped boolean injection detected. Potential unauthorized dump of customer/users schema tables.",
-      remediation_patch_code: "APPLIED: Enforced parameterized SQLAlchemy queries (:user_id) with strict whitelist regex validation."
-    };
-  } else if (isXss) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 90,
-      threat_vector_type: "Cross-Site Scripting (XSS) Token Hijack",
-      exploit_analysis_details: "Malicious script tag attempting client cookie/JWT extraction. CSP and DOM sanitization triggered.",
-      remediation_patch_code: "APPLIED: Enabled DOMPurify and strict Content-Security-Policy (script-src 'self')."
-    };
-  } else if (isRce) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 99,
-      threat_vector_type: "Unauthorized Remote Code Execution (RCE)",
-      exploit_analysis_details: "Shell meta-characters (;) with destructive system commands detected. Subprocess sandbox isolated.",
-      remediation_patch_code: "APPLIED: Restricted subprocess exec commands to non-root whitelist containers with read-only root filesystems."
-    };
-  } else if (isPii) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 85,
-      threat_vector_type: "PII Leakage & Account Harvest",
-      exploit_analysis_details: "Unauthenticated harvesting request attempting bypass of OAuth2/JWT session gates.",
-      remediation_patch_code: "APPLIED: Activated Zero-Trust JWT bearer enforcement on all tenant records with rate limiting."
-    };
-  } else {
-    verdict = {
-      vulnerability_detected: false,
-      risk_score: 10,
-      threat_vector_type: "Standard Traffic",
-      exploit_analysis_details: "Transaction matches expected enterprise request pattern. Zero vulnerability vectors identified.",
-      remediation_patch_code: ""
-    };
-  }
-
-  if (verdict.vulnerability_detected && verdict.risk_score >= 70) {
-    SovereignCryptoLedger.sealAction(
-      'SECURITY_SHIELD_AGENT',
-      `THREAT_INTERCEPTED_${verdict.threat_vector_type.replace(/\s+/g, '_')}`,
-      verdict
-    );
-  }
-
-  return c.json(verdict);
-});
-
-app.post('/security/shield-audit', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const logData = body.log_buffer_stream || '';
-  const logUpper = logData.toUpperCase();
-  const isThreat = logUpper.includes("SELECT") || logUpper.includes("<SCRIPT>") || logUpper.includes("RM -RF") || logUpper.includes("JWT");
-  return c.json({
-    vulnerability_detected: isThreat,
-    risk_score: isThreat ? 95 : 10,
-    threat_vector_type: isThreat ? "Automated Probe Caught" : "Standard Traffic",
-    exploit_analysis_details: isThreat ? "Isolated by Triumvirate Shield" : "Nominal",
-    remediation_patch_code: isThreat ? "APPLIED: Whitelist active" : ""
+// Diagnostic keyword scan only; same authenticated behaviour on aliases.
+// A log excerpt does not prove an attack was blocked or a patch was applied.
+for (const path of ["/api/v1/security/shield-audit", "/security/shield-audit"]) {
+  app.post(path, async (c) => {
+    const data: unknown = await c.req.json().catch(() => null);
+    const log = data && typeof data === "object"
+      ? (data as Record<string, unknown>).log_buffer_stream : null;
+    if (typeof log !== "string") {
+      return c.json({ error: "A bounded log_buffer_stream string is required." }, 400);
+    }
+    try {
+      return c.json(inspectLogIndicators(log));
+    } catch {
+      return c.json({ error: "Log excerpt must contain 1–20,000 characters." }, 400);
+    }
   });
-});
+}
 
 // Verified administrative diagnostics: only report a check that actually ran.
 // Environment variables, apparent hostnames, and seed records do not prove
@@ -2008,7 +1948,12 @@ app.onError((err, c) => {
 
   logger.error({ err: err?.message, stack: err?.stack?.slice(0, 500), requestId }, "unhandled error");
   const status = typeof (err as any)?.status === "number" ? (err as any).status : 500;
-  return c.json({ success: false, error: err?.message || "Internal Server Error", requestId }, status as 500);
+  const safeStatus = status >= 400 && status < 500 ? status : 500;
+  return c.json({
+    success: false,
+    error: safeStatus === 500 ? "Internal Server Error" : "Request failed.",
+    requestId,
+  }, safeStatus as 500);
 });
 
 export default app;
