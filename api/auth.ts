@@ -135,6 +135,6 @@ export async function revokeSession(req: Request): Promise<void> {
   const token = readToken(req);
   if (!token) return;
   const db = await getAuthDb();
-  if (!db) return;
+  if (!db) throw new Error("Persistent session storage is unavailable.");
   await db.delete(sessions).where(eq(sessions.token, digestToken(token)));
 }
