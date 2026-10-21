@@ -11,6 +11,7 @@ import { appRouter } from "./router";
 import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from "./auth";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
+import { trustedOrigins, isAllowedApiMutation } from "./security/requestOrigin";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
@@ -35,20 +36,29 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────────
 
-// CORS — allow frontend origin
+// Browser origins are explicit. Never use wildcard CORS with credentials.
+const approvedOrigins = trustedOrigins(
+  process.env.FRONTEND_URL,
+  process.env.ALLOWED_ORIGINS,
+  process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000",
+);
 app.use("/*", cors({
-  origin: (origin) => {
-    const allowedOrigin = process.env.FRONTEND_URL;
-    if (!origin) return allowedOrigin || "*";
-    if (allowedOrigin) return origin === allowedOrigin ? allowedOrigin : "";
-    return process.env.NODE_ENV === "production" ? "" : origin;
-  },
+  origin: (origin) => origin && approvedOrigins.has(origin) ? origin : "",
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-KEY", "X-API-Key", "x-api-key"],
   exposeHeaders: ["Content-Length", "X-Request-Id"],
   maxAge: 86400,
   credentials: true,
 }));
+
+// State-changing cookie-authenticated requests must originate from the
+// configured frontend. This is separate from CORS, which is not CSRF defence.
+app.use("/api/*", async (c, next) => {
+  if (!isAllowedApiMutation(c.req.raw, approvedOrigins)) {
+    return c.json({ error: "Cross-origin state-changing request denied." }, 403);
+  }
+  return next();
+});
 
 // Security headers
 app.use("/*", async (c, next) => {
