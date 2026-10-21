@@ -159,133 +159,49 @@ export function calculateJobCost(durationSeconds: number, dialogue = ""): Credit
   };
 }
 
-// ── In-Memory Wallet Store (Resilient fallback when DB is offline) ─────
-interface WalletRecord {
-  userKey: string;
-  credits: number;
-  balanceCents: number;
-  currency: string;
-  transactions: Array<{
-    id: string;
-    type: "credit" | "debit" | "refund";
-    amount: number;
-    reason: string;
-    timestamp: number;
-  }>;
-}
-
-const memoryWallets = new Map<string, WalletRecord>();
-
-function getOrCreateWallet(userKey: string): WalletRecord {
-  const key = (userKey || "guest@luqi.ai").toLowerCase();
-  let wallet = memoryWallets.get(key);
-  if (!wallet) {
-    wallet = {
-      userKey: key,
-      // Provide 150 starter credits so all new sessions can generate a sample clip immediately
-      credits: 150,
-      balanceCents: 150 * Math.round((CREDIT_PRICE_USD * USD_TO_ZAR * 100) / 10),
-      currency: "ZAR",
-      transactions: [
-        {
-          id: `tx_${Date.now()}_init`,
-          type: "credit",
-          amount: 150,
-          reason: "Onboarding Welcome Bonus (150 Luqi Credits)",
-          timestamp: Date.now(),
-        },
-      ],
-    };
-    memoryWallets.set(key, wallet);
+/**
+ * All credit accounting is stored in MySQL, never local process memory.
+ * A caller's claimed email is not authentication: require the session email
+ * established by the server before reading the wallet.
+ */
+export async function getCreditBalance(userKey: string, authenticatedEmail?: string) {
+  if (!authenticatedEmail || userKey.trim().toLowerCase() !== authenticatedEmail.trim().toLowerCase()) {
+    throw new Error("Verified account context is required to read video credits.");
   }
-  return wallet;
-}
-
-export async function getCreditBalance(userKey: string): Promise<{
-  userKey: string;
-  credits: number;
-  balanceCents: number;
-  currency: string;
-  transactions: WalletRecord["transactions"];
-}> {
-  const wallet = getOrCreateWallet(userKey);
+  const { getPrivateDb } = await import("../security/access");
+  const { videoCreditWallets, videoCreditLedger } = await import("../../db/schema");
+  const { eq, desc } = await import("drizzle-orm");
+  const db = await getPrivateDb();
+  const key = authenticatedEmail.trim().toLowerCase();
+  const [wallet] = await db.select().from(videoCreditWallets)
+    .where(eq(videoCreditWallets.userKey, key)).limit(1);
+  const transactions = await db.select().from(videoCreditLedger)
+    .where(eq(videoCreditLedger.userKey, key))
+    .orderBy(desc(videoCreditLedger.createdAt)).limit(20);
   return {
-    userKey: wallet.userKey,
-    credits: wallet.credits,
-    balanceCents: wallet.balanceCents,
-    currency: wallet.currency,
-    transactions: wallet.transactions.slice(-20).reverse(),
+    userKey: key, credits: wallet?.credits ?? 0,
+    // Credit packs have their own contractual unit; never pretend that their
+    // balance is a cash or USD amount.
+    balanceCents: 0, currency: "CREDITS",
+    transactions,
   };
 }
 
 /**
- * Margin Protector: Checks balance and atomically deducts credits before launching rendering.
+ * The old free-form mutations have no idempotency key or settlement proof.
+ * They must not be used; use paidVideoLedger's transactional reservation and
+ * refund functions, or the verified payment webhook, instead.
  */
-export async function deductCredits(
-  userKey: string,
-  credits: number,
-  reason: string
-): Promise<{ success: boolean; newBalance: number; error?: string }> {
-  const wallet = getOrCreateWallet(userKey);
-
-  if (wallet.credits < credits) {
-    return {
-      success: false,
-      newBalance: wallet.credits,
-      error: `Insufficient Luqi Credits. Required: ${credits} credits, Available: ${wallet.credits} credits. Please top up your wallet to proceed.`,
-    };
-  }
-
-  wallet.credits -= credits;
-  wallet.transactions.push({
-    id: `tx_${Date.now()}_deduct`,
-    type: "debit",
-    amount: credits,
-    reason,
-    timestamp: Date.now(),
-  });
-
-  return { success: true, newBalance: wallet.credits };
+export async function deductCredits(_userKey: string, _credits: number, _reason: string): Promise<never> {
+  throw new Error("Unverified wallet deductions are forbidden. Use reservePaidVideo.");
 }
 
-/**
- * Refunds credits back to user if video or audio rendering fails.
- */
-export async function refundCredits(
-  userKey: string,
-  credits: number,
-  reason: string
-): Promise<{ success: boolean; newBalance: number }> {
-  const wallet = getOrCreateWallet(userKey);
-  wallet.credits += credits;
-  wallet.transactions.push({
-    id: `tx_${Date.now()}_refund`,
-    type: "refund",
-    amount: credits,
-    reason: `Refund: ${reason}`,
-    timestamp: Date.now(),
-  });
-  return { success: true, newBalance: wallet.credits };
+export async function refundCredits(_userKey: string, _credits: number, _reason: string): Promise<never> {
+  throw new Error("Unmatched credit refunds are forbidden. Use refundPaidVideo.");
 }
 
-/**
- * Adds credits via topup or subscription webhook.
- */
-export async function addCredits(
-  userKey: string,
-  credits: number,
-  reason: string
-): Promise<{ success: boolean; newBalance: number }> {
-  const wallet = getOrCreateWallet(userKey);
-  wallet.credits += credits;
-  wallet.transactions.push({
-    id: `tx_${Date.now()}_topup`,
-    type: "credit",
-    amount: credits,
-    reason,
-    timestamp: Date.now(),
-  });
-  return { success: true, newBalance: wallet.credits };
+export async function addCredits(_userKey: string, _credits: number, _reason: string): Promise<never> {
+  throw new Error("Credits require provider-verified payment settlement.");
 }
 
 /**
