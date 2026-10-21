@@ -3,6 +3,7 @@
 // =====================================================================
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, adminQuery } from "./middleware";
 import {
   listActiveThreads,
@@ -138,12 +139,20 @@ export const archiveRouter = createRouter({
           primaryKeysReconciled: z.number().optional(),
           status: z.enum(["verified", "completed"]).default("verified"),
         }),
+      }).refine((value) => Number(value.contentBase64 !== undefined) + Number(value.contentText !== undefined) === 1, {
+        message: "Supply exactly one of contentBase64 or contentText.",
       })
     )
     .mutation(async ({ input }) => {
-      const buffer = input.contentBase64
+      if (input.contentBase64 !== undefined && (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(input.contentBase64))) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid base64 artifact content." });
+      }
+      const buffer = input.contentBase64 !== undefined
         ? Buffer.from(input.contentBase64, "base64")
-        : Buffer.from(input.contentText || "Sample Artifact Content", "utf-8");
+        : Buffer.from(input.contentText!, "utf-8");
+      if (buffer.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Artifact content cannot be empty." });
+      }
 
       return archiveArtifact({
         fileName: input.fileName,
