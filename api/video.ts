@@ -13,7 +13,7 @@ import {
   CREDIT_PACKS,
 } from "./services/credits";
 import { paidVideoAvailable, renderPaidVideo } from "./services/paidVideo";
-import { quotePaidVideoCredits, reservePaidVideo, completePaidVideo, refundPaidVideo, getPaidVideoRequest, reconcileStalledVideo } from "./services/paidVideoLedger";
+import { quotePaidVideoCredits, reservePaidVideo, completePaidVideo, refundPaidVideo, getPaidVideoRequest, reconcileStalledVideo, reconcileAllStalledVideo } from "./services/paidVideoLedger";
 
 const VALID_LANGUAGES = [
   "en", "zu", "xh", "af", "ns", "tn", "st", "ts", "ss", "ve", "nr",
@@ -306,6 +306,11 @@ export const videoRouter = createRouter({
       .limit(10);
     return { total, byStatus, byLanguage };
   }),
+
+  // Internal recovery: always deduplicates refunds in the database transaction.
+  reconcileStalled: adminQuery
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(25) }).optional())
+    .mutation(async ({ input }) => reconcileAllStalledVideo(input?.limit ?? 25)),
 
   // Explicit, auditable quote for a silent, genuine MP4 (no fabricated audio).
   // We never silently bill voiceover or scripting services not delivered.
