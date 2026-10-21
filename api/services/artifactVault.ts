@@ -54,52 +54,8 @@ function getTodayFolder(): { fullPath: string; dateStr: string } {
 // In-Memory index of archived items
 const artifactRegistry: ArtifactMetadata[] = [];
 
-function initSampleArtifacts() {
-  if (artifactRegistry.length === 0) {
-    const { fullPath, dateStr } = getTodayFolder();
-    const artifactId = `art_${Date.now()}_excel01`;
-    const sampleWorkbook = Buffer.from(
-      "PK\x03\x04SampleStandardizedWorkbookWithSerialNumbersAndMultiTabReconciliation"
-    );
-    const fileName = "Consolidated_Equipment_Serials.xlsx";
-    const filePath = path.join(fullPath, `${artifactId}_${fileName}`);
-    const metadataPath = path.join(fullPath, `${artifactId}_metadata.json`);
-    const sha256 = crypto.createHash("sha256").update(sampleWorkbook).digest("hex");
-
-    const meta: ArtifactMetadata = {
-      artifactId,
-      fileName,
-      fileType: "excel",
-      fileSizeBytes: sampleWorkbook.length,
-      sha256,
-      dateFolder: dateStr,
-      filePath,
-      metadataPath,
-      taskOutput: {
-        agentRole: "Data Architect",
-        taskName: "Multi-tab Excel Serial Number Reconciliation",
-        crewId: "crew_finance_reconciliation",
-        threadId: "sess_reconciliation_2026",
-        modelUsed: "Gemini 3.1 Pro / GPT-4o",
-        promptSummary: "Reconcile serial numbers across sheets A, B, and C with primary key standardization",
-        executionDurationMs: 1420,
-        primaryKeysReconciled: 418,
-        status: "verified",
-      },
-      createdAt: new Date().toISOString(),
-    };
-
-    try {
-      fs.writeFileSync(filePath, sampleWorkbook);
-      fs.writeFileSync(metadataPath, JSON.stringify(meta, null, 2), "utf-8");
-    } catch {
-      // non-fatal
-    }
-
-    artifactRegistry.push(meta);
-  }
-}
-initSampleArtifacts();
+// The vault never fabricates records or writes demonstration artifacts at startup.
+// Durable index reconstruction from stored metadata is a separate release gate.
 
 /**
  * Archives a file artifact alongside its paired JSON metadata file in the date-structured directory.
@@ -116,6 +72,9 @@ export async function archiveArtifact(params: {
   const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
 
   const safeFileName = params.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  if (!safeFileName || safeFileName === "." || safeFileName === ".." || buffer.length === 0) {
+    throw new Error("Archive artifact requires a valid filename and nonempty content.");
+  }
   const storedFileName = `${artifactId}_${safeFileName}`;
   const filePath = path.join(fullPath, storedFileName);
   const metadataPath = path.join(fullPath, `${artifactId}_metadata.json`);
@@ -137,7 +96,10 @@ export async function archiveArtifact(params: {
     fs.writeFileSync(filePath, buffer);
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
   } catch (err) {
-    console.warn("[ArtifactVault] File write error:", err);
+    // Never register failed writes as verified archive evidence.
+    try { fs.unlinkSync(filePath); } catch { /* file may not exist */ }
+    try { fs.unlinkSync(metadataPath); } catch { /* file may not exist */ }
+    throw err;
   }
 
   artifactRegistry.push(metadata);
