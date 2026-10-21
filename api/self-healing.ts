@@ -7,6 +7,7 @@ import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrat
 import { summarizeMetricSamples, countIncidentTrend } from "./services/reliabilityAnalytics";
 import { reserveAiRequest } from "./security/aiBudget";
 import { formatUntrustedDiagnosisEvidence } from "./security/diagnosisEvidence";
+import { createEvidenceProposal, transitionEvidenceProposal, readEvidenceProposalTrail } from "./services/agentProposalLedger";
 
 export const selfHealingRouter = createRouter({
   logError: adminQuery
@@ -166,24 +167,23 @@ export const selfHealingRouter = createRouter({
     }),
 
   analyzeAndProposePatch: adminQuery
-    .input(z.object({ errorLogId: z.number(), useAI: z.boolean().default(true) }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ errorLogId: z.number().int().positive(), useAI: z.literal(false).default(false) }))
+    .mutation(async ({ ctx, input }) => {
       const db = await getPrivateDb();
-      const [error] = await db.select().from(errorLogs).where(eq(errorLogs.id, input.errorLogId)).limit(1);
+      const [error] = await db.select().from(errorLogs)
+        .where(eq(errorLogs.id, input.errorLogId)).limit(1);
       if (!error) return { patchId: null, proposed: false };
-
-      // Create patch proposal
-      const [result] = await db.insert(healingPatches).values({
+      // This route only records evidence, not a generated code fix.
+      const created = await createEvidenceProposal({
+        actorUserId: ctx.user.id,
         errorLogId: input.errorLogId,
         patchType: "code_fix",
-        status: "pending",
         targetModule: error.sourceModule ?? "unknown",
-        targetFile: error.sourceFile ?? null,
-        description: `Patch for ${error.errorType}: ${error.message.substring(0, 100)}`,
+        targetFile: error.sourceFile,
         agentName: "HealingEngineer",
+        description: `Manual investigation requested for error #${input.errorLogId}; no patch written or tested.`,
       });
-
-      return { patchId: Number(result.insertId), proposed: true };
+      return { patchId: created.patchId, proposed: true, applied: false, ciVerified: false };
     }),
 
   // AI-driven root-cause diagnosis of a logged error — real analysis via
@@ -228,19 +228,19 @@ export const selfHealingRouter = createRouter({
         throw new Error("External diagnostic provider returned no usable analysis.");
       }
 
-      const [ins] = await db.insert(healingPatches).values({
+      const created = await createEvidenceProposal({
+        actorUserId: ctx.user.id,
         errorLogId: input.errorLogId,
         patchType: "ai_diagnosis",
         description: analysis,
-        status: "proposed",
         agentName: "AI-Diagnostician",
         targetModule: error.sourceModule ?? "unknown",
-        targetFile: error.sourceFile ?? null,
+        targetFile: error.sourceFile,
       });
 
       return {
         diagnosed: true,
-        patchId: Number(ins.insertId),
+        patchId: created.patchId,
         provider: result.provider,
         model: result.model,
         analysis,
@@ -252,52 +252,63 @@ export const selfHealingRouter = createRouter({
   // Approval is a workflow state transition, never executable code.
   // Disallow skipped tests, nonexistent proposal IDs, and approving a
   // proposal that was already revoked, rejected or promoted.
+  // Review state only, NOT a merge, a real CI dispatch, a test result or a deploy.
   applyPatch: adminQuery
     .input(z.object({
       patchId: z.number().int().positive(),
       skipTests: z.literal(false).default(false),
-      abTestPercent: z.number().min(0).max(100).optional(),
+      reason: z.string().trim().min(12).max(1000),
     }))
-    .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
-      const [result] = await db.update(healingPatches)
-        .set({ status: "approved_for_ci" })
-        .where(and(
-          eq(healingPatches.id, input.patchId),
-          eq(healingPatches.status, "proposed"),
-        ));
-      if (Number(result.affectedRows ?? 0) !== 1) {
-        return {
-          success: false,
-          approved: false,
-          message: "Proposal not found or not in proposed state; no code was modified.",
-        };
-      }
+    .mutation(async ({ ctx, input }) => {
+      const changed = await transitionEvidenceProposal({
+        patchId: input.patchId,
+        actorUserId: ctx.user.id,
+        action: "review_requested",
+        reason: input.reason,
+      });
       return {
-        success: true, approved: true, deployed: false, testsPassed: false,
-        message: "Proposal approved for external CI review only. No code was modified or deployed.",
+        success: changed.changed, approved: true,
+        deployed: false, testsPassed: false,
+        message: "Independently reviewed proposal recorded as awaiting external CI. No CI was started and no code was deployed.",
       };
     }),
 
   rollbackPatch: adminQuery
     .input(z.object({
       patchId: z.number().int().positive(),
-      reason: z.string().trim().min(5).max(1000),
+      reason: z.string().trim().min(12).max(1000),
     }))
-    .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
-      const [result] = await db.update(healingPatches)
-        .set({ status: "review_revoked", rolledBackAt: new Date(), rollbackReason: input.reason })
-        .where(and(
-          eq(healingPatches.id, input.patchId),
-          eq(healingPatches.status, "approved_for_ci"),
-        ));
-      if (Number(result.affectedRows ?? 0) !== 1) {
-        return { success: false, revoked: false, message: "Only approved proposals can be revoked; no production rollback occurred." };
-      }
-      return { success: true, revoked: true, productionRollback: false,
-        message: "Approval revoked. No production rollback was executed." };
+    .mutation(async ({ ctx, input }) => {
+      const result = await transitionEvidenceProposal({
+        patchId: input.patchId,
+        actorUserId: ctx.user.id,
+        action: "review_revoked",
+        reason: input.reason,
+      });
+      return {
+        success: result.changed, revoked: true, productionRollback: false,
+        message: "Review authorization revoked. No production rollback occurred.",
+      };
     }),
+
+  rejectPatchProposal: adminQuery
+    .input(z.object({
+      patchId: z.number().int().positive(),
+      reason: z.string().trim().min(12).max(1000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await transitionEvidenceProposal({
+        patchId: input.patchId,
+        actorUserId: ctx.user.id,
+        action: "rejected",
+        reason: input.reason,
+      });
+      return { rejected: result.changed, deployed: false, testsPassed: false };
+    }),
+
+  getProposalReviewTrail: adminQuery
+    .input(z.object({ patchId: z.number().int().positive() }))
+    .query(async ({ input }) => readEvidenceProposalTrail(input.patchId)),
 
   promoteABTest: adminQuery
     .input(z.object({ patchId: z.number().int().positive() }))
