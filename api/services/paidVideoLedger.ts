@@ -220,6 +220,26 @@ export async function reconcileStalledVideo(userId: number): Promise<number> {
   return refunded;
 }
 
+/**
+ * Operator reconciliation for abandoned requests whose users do not return.
+ * Use after reviewing vendor jobs and signed billing logs. The same locked,
+ * idempotent refund primitive ensures retries never mint duplicate credits.
+ */
+export async function reconcileAllStalledVideo(limit = 25): Promise<{ checked: number; refunded: number }> {
+  const db = await getPrivateDb();
+  const cutoff = new Date(Date.now() - STALE_RENDER_MS);
+  const jobs = await db.select({ requestKey: videoRenderRequests.requestKey })
+    .from(videoRenderRequests).where(and(
+      eq(videoRenderRequests.status, "PROCESSING"),
+      lt(videoRenderRequests.createdAt, cutoff),
+    )).limit(Math.min(Math.max(Math.floor(limit), 1), 100));
+  let refunded = 0;
+  for (const job of jobs) {
+    if (await refundPaidVideo(job.requestKey, "Unfinished render reconciled by operations", true)) refunded++;
+  }
+  return { checked: jobs.length, refunded };
+}
+
 export async function getPaidVideoRequest(userId: number, requestKey: string) {
   const db = await getPrivateDb();
   const [job] = await db.select().from(videoRenderRequests)
