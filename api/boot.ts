@@ -1996,11 +1996,15 @@ if (env.isProduction) {
     } catch (e) {
       console.error("[Bootstrap] Database bootstrap failed:", e);
     }
-    try {
-      const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
-      await seedTraditionalMedicine();
-    } catch (e) {
-      console.error("[Seed] Traditional medicine seed failed:", e);
+    if (!env.isProduction) {
+      try {
+        const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
+        await seedTraditionalMedicine();
+      } catch (e) {
+        console.error("[Seed] Development reference-data seed failed:", e);
+      }
+    } else {
+      logger.info("Automatic production data seeding disabled; import approved content through reviewed migrations");
     }
   })().catch((e) => {
     console.error("[Boot Error]", e);
