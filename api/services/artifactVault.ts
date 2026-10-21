@@ -51,11 +51,43 @@ function getTodayFolder(): { fullPath: string; dateStr: string } {
   return { fullPath, dateStr };
 }
 
-// In-Memory index of archived items
-const artifactRegistry: ArtifactMetadata[] = [];
-
-// The vault never fabricates records or writes demonstration artifacts at startup.
-// Durable index reconstruction from stored metadata is a separate release gate.
+// Archive listings are reconstructed from persisted metadata, not process memory.
+// Local disk remains unsuitable for multi-instance ephemeral Cloud Run storage.
+function readPersistedArtifacts(): ArtifactMetadata[] {
+  if (!fs.existsSync(VAULT_ROOT)) return [];
+  const records: ArtifactMetadata[] = [];
+  for (const folder of fs.readdirSync(VAULT_ROOT, { withFileTypes: true })) {
+    if (!folder.isDirectory() || !/^\d{4}-\d{2}-\d{2}$/.test(folder.name)) continue;
+    const dir = path.join(VAULT_ROOT, folder.name);
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile() || !/^art_[a-zA-Z0-9_-]+_metadata\.json$/.test(entry.name)) continue;
+      const metadataPath = path.join(dir, entry.name);
+      try {
+        const meta = JSON.parse(fs.readFileSync(metadataPath, "utf8")) as ArtifactMetadata;
+        if (typeof meta.artifactId !== "string" ||
+            typeof meta.fileName !== "string" ||
+            typeof meta.sha256 !== "string" ||
+            !/^[a-f0-9]{64}$/.test(meta.sha256) ||
+            !/^art_[a-zA-Z0-9_-]+$/.test(meta.artifactId) ||
+            !/^[a-zA-Z0-9._-]+$/.test(meta.fileName) ||
+            meta.dateFolder !== folder.name ||
+            typeof meta.fileSizeBytes !== "number" ||
+            !Number.isSafeInteger(meta.fileSizeBytes) ||
+            meta.fileSizeBytes <= 0 ||
+            typeof meta.createdAt !== "string") continue;
+        const expectedFile = path.join(dir, meta.artifactId + "_" + meta.fileName);
+        if (!fs.existsSync(expectedFile) || !fs.statSync(expectedFile).isFile()) continue;
+        const bytes = fs.readFileSync(expectedFile);
+        if (bytes.length !== meta.fileSizeBytes ||
+            crypto.createHash("sha256").update(bytes).digest("hex") !== meta.sha256) continue;
+        records.push({ ...meta, filePath: expectedFile, metadataPath });
+      } catch {
+        // Ignore corrupt or incomplete archive entries; never claim them as verified.
+      }
+    }
+  }
+  return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
 
 /**
  * Archives a file artifact alongside its paired JSON metadata file in the date-structured directory.
@@ -102,7 +134,6 @@ export async function archiveArtifact(params: {
     throw err;
   }
 
-  artifactRegistry.push(metadata);
   return metadata;
 }
 
@@ -119,7 +150,8 @@ export async function listArchivedArtifacts(params?: {
   vaultRoot: string;
   dates: string[];
 }> {
-  let list = [...artifactRegistry];
+  const all = readPersistedArtifacts();
+  let list = all;
 
   if (params?.fileType) {
     list = list.filter((a) => a.fileType === params.fileType);
@@ -129,12 +161,12 @@ export async function listArchivedArtifacts(params?: {
     list = list.filter((a) => a.dateFolder === params.dateFolder);
   }
 
-  const limit = params?.limit ?? 50;
-  const dates = Array.from(new Set(artifactRegistry.map((a) => a.dateFolder))).sort().reverse();
+  const limit = Math.max(1, Math.min(100, Math.trunc(params?.limit ?? 50)));
+  const dates = Array.from(new Set(all.map((a) => a.dateFolder))).sort().reverse();
 
   return {
-    artifacts: list.slice(-limit).reverse(),
-    totalCount: artifactRegistry.length,
+    artifacts: list.slice(0, limit),
+    totalCount: list.length,
     vaultRoot: VAULT_ROOT,
     dates,
   };
