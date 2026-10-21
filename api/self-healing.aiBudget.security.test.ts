@@ -6,11 +6,13 @@ const mocks = vi.hoisted(() => ({
   getOrchestratorStatus: vi.fn(),
   orchestrateRequest: vi.fn(),
   createEvidenceProposal: vi.fn(),
+  assertEvidenceLedgerReady: vi.fn(),
 }));
 vi.mock("./security/access", () => ({ getPrivateDb: mocks.getPrivateDb }));
 vi.mock("./security/aiBudget", () => ({ reserveAiRequest: mocks.reserveAiRequest }));
 vi.mock("./services/agentProposalLedger", () => ({
   createEvidenceProposal: mocks.createEvidenceProposal,
+  assertEvidenceLedgerReady: mocks.assertEvidenceLedgerReady,
   transitionEvidenceProposal: vi.fn(),
   readEvidenceProposalTrail: vi.fn(),
 }));
@@ -59,6 +61,7 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     vi.clearAllMocks();
     mocks.getOrchestratorStatus.mockReturnValue({ demo: false });
     mocks.reserveAiRequest.mockResolvedValue(undefined);
+    mocks.assertEvidenceLedgerReady.mockResolvedValue(undefined);
     mocks.createEvidenceProposal.mockResolvedValue({ patchId: 101 });
     mocks.orchestrateRequest.mockResolvedValue({
       content: "Hypothesis: retry failed, needs an independent staging test.",
@@ -92,6 +95,18 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     expect(response.diagnosed).toBe(false);
     expect(mocks.reserveAiRequest).not.toHaveBeenCalled();
     expect(mocks.orchestrateRequest).not.toHaveBeenCalled();
+  });
+
+  it("blocks paid AI requests when the reviewed ledger schema is missing", async () => {
+    mocks.getPrivateDb.mockResolvedValue(fakeDb());
+    mocks.assertEvidenceLedgerReady.mockRejectedValue(
+      new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Ledger unavailable" })
+    );
+    await expect(admin.aiDiagnoseError({ errorLogId: 7 }))
+      .rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+    expect(mocks.reserveAiRequest).not.toHaveBeenCalled();
+    expect(mocks.orchestrateRequest).not.toHaveBeenCalled();
+    expect(mocks.createEvidenceProposal).not.toHaveBeenCalled();
   });
 
   it("must reserve both user and global allowance before any paid call", async () => {
