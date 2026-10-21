@@ -35,10 +35,15 @@ describe("session revocation never reports false success", () => {
     expect(del).toHaveBeenCalledOnce();
     expect(where).toHaveBeenCalledOnce();
     const query = where.mock.calls[0][0];
-    expect(JSON.stringify(query)).toContain(
+    // Drizzle query objects reference table metadata cyclically; inspect only
+    // bound parameter values rather than serializing the full SQL AST.
+    const values = query.queryChunks
+      .filter((chunk: unknown) => !!chunk && typeof chunk === "object" && "value" in chunk)
+      .map((chunk: { value: unknown }) => chunk.value);
+    expect(values).toContain(
       createHash("sha256").update("known-session-token").digest("hex"),
     );
-    expect(JSON.stringify(query)).not.toContain("known-session-token");
+    expect(values).not.toContain("known-session-token");
   });
 
   it("propagates failed database deletes rather than claiming logout worked", async () => {
