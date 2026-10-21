@@ -130,6 +130,31 @@ integration("verified payments and video debits in real MySQL", () => {
     expect(request?.videoUrl).toBeNull();
   });
 
+  it("charges the narrated option exactly and binds its spoken words to the request", async () => {
+    const key = randomUUID();
+    const request = {
+      userId, email, requestKey: key, title: "Spoken physics",
+      prompt: "A visible waveform", language: "en",
+      durationSeconds: 2, confirmedCredits: 24,
+      mode: "narrated_mp4" as const,
+      narration: "This is LUQI's spoken demonstration",
+    };
+    const started = await reservePaidVideo(request);
+    expect(started.chargeCredits).toBe(24);
+    const [saved] = await db.select().from(videoRenderRequests)
+      .where(eq(videoRenderRequests.requestKey, key));
+    expect(saved.mode).toBe("narrated_mp4");
+    const [wallet] = await db.select().from(videoCreditWallets)
+      .where(eq(videoCreditWallets.userKey, email));
+    expect(wallet.credits).toBe(476);
+    await expect(reservePaidVideo({ ...request, narration: "Altered words" }))
+      .rejects.toMatchObject({ code: "CONFLICT" });
+    expect(await refundPaidVideo(key, "Narration generation failed")).toBe(true);
+    const [restored] = await db.select().from(videoCreditWallets)
+      .where(eq(videoCreditWallets.userKey, email));
+    expect(restored.credits).toBe(500);
+  });
+
   it("enforces a global provider limit across accounts before any debit", async () => {
     const [current] = await db.select().from(videoGlobalDailyQuota)
       .where(eq(videoGlobalDailyQuota.dayKey, new Date().toISOString().slice(0, 10)));
