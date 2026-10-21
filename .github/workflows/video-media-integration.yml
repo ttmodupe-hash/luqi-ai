@@ -22,8 +22,10 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-      - name: Verify real FFmpeg and FFprobe are available
+      - name: Install FFmpeg / FFprobe on the isolated CI worker
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
           test -x /usr/bin/ffmpeg
           test -x /usr/bin/ffprobe
           /usr/bin/ffmpeg -version | head -n 1
