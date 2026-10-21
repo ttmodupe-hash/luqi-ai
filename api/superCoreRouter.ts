@@ -18,7 +18,12 @@ export const superCoreRouter = createRouter({
       assertions: z.string().trim().min(1).max(2000),
       maxCycles: z.number().int().min(1).max(5).default(3),
     }))
-    .mutation(async ({ input, ctx }) => proposeAgentImprovement(input, ctx.user.id)),
+    .mutation(async ({ input, ctx }) => proposeAgentImprovement({
+      taskName: input.taskName!,
+      taskDescription: input.taskDescription!,
+      assertions: input.assertions!,
+      maxCycles: input.maxCycles ?? 3,
+    }, ctx.user.id)),
 
   getHistoricalPatches: adminQuery.query(async () => {
     const review = await getAgentProposalTelemetry(15);
