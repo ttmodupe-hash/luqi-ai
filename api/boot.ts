@@ -798,9 +798,13 @@ app.post('/api/v1/billing/stripe-webhook', async (c) => {
 
 // Protected Admin Billing Ledger
 app.get('/api/v1/admin/billing-ledger', (c) => {
+  if (!checkSovereignAdminAuth(c)) return c.json({ error: 'Unauthorized' }, 401);
+  c.header('Cache-Control', 'no-store');
   return c.json(corporateBillingLedgerStore);
 });
 app.get('/admin/billing-ledger', (c) => {
+  if (!checkSovereignAdminAuth(c)) return c.json({ error: 'Unauthorized' }, 401);
+  c.header('Cache-Control', 'no-store');
   return c.json(corporateBillingLedgerStore);
 });
 
