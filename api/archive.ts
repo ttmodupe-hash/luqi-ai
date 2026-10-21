@@ -36,8 +36,8 @@ export const archiveRouter = createRouter({
   recordCheckpoint: adminQuery
     .input(
       z.object({
-        threadId: z.string(),
-        nodeName: z.string(),
+        threadId: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
+        nodeName: z.string().min(1).max(100),
         channelValues: z.record(z.string(), z.any()),
         toolCalls: z
           .array(
