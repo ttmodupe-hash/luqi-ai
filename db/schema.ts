@@ -497,6 +497,15 @@ export const videoCreditLedger = mysqlTable("video_credit_ledger", {
  * A single daily quota row is locked before launching any paid video, so
  * separate accounts cannot exhaust provider funds through coordinated abuse.
  */
+/**
+ * Shared, persistent budget for AI vendor requests across all accounts.
+ * Guards against attackers creating many accounts to reset per-user limits.
+ */
+export const aiGlobalDailyQuota = mysqlTable("ai_global_daily_quota", {
+  dayKey: varchar("day_key", { length: 10 }).primaryKey(),
+  jobs: int("jobs").notNull().default(0),
+});
+
 export const videoGlobalDailyQuota = mysqlTable("video_global_daily_quota", {
   dayKey: varchar("day_key", { length: 10 }).primaryKey(),
   jobs: int("jobs").notNull().default(0),
