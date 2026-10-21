@@ -203,6 +203,7 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
     return c.json(aiUnavailableResponse());
   }
 
+  const sessionId = typeof body.session_id === "string" ? body.session_id : undefined;
   const route = routeCapability(message);
   const streamPrompt = route.systemHint ? `${LUQI_SYSTEM_PROMPT}\n\n${route.systemHint}` : LUQI_SYSTEM_PROMPT;
 
@@ -2315,7 +2316,6 @@ Your duty:
       query,
       systemPrompt: certPrompt,
       context,
-      taskType: "technical"
     });
 
     if (aiResponse && aiResponse.content) {
