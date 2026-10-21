@@ -111,6 +111,12 @@ const CREATE_STATEMENTS: string[] = [
 	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT \`botanical_entries_id\` PRIMARY KEY(\`id\`)
 );`,
+  `CREATE TABLE IF NOT EXISTS \`ai_global_daily_quota\` (
+  \`day_key\` varchar(10) NOT NULL,
+  \`jobs\` int NOT NULL DEFAULT 0,
+  PRIMARY KEY (\`day_key\`),
+  CONSTRAINT \`ai_global_daily_quota_nonnegative\` CHECK (\`jobs\` >= 0)
+);`,
   `CREATE TABLE IF NOT EXISTS \`video_global_daily_quota\` (
   \`day_key\` varchar(10) NOT NULL,
   \`jobs\` int NOT NULL DEFAULT 0,
