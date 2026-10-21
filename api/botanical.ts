@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { botanicalEntries } from "../db/schema";
 import { eq, desc, sql } from "drizzle-orm";
@@ -31,7 +31,7 @@ export const botanicalRouter = createRouter({
       return entry ?? null;
     }),
 
-  ask: publicQuery
+  ask: legacyRestrictedProcedure
     .input(z.object({ question: z.string(), plantId: z.number().optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -57,7 +57,7 @@ export const botanicalRouter = createRouter({
       return { answer: result.content, model: result.model };
     }),
 
-  verify: publicQuery
+  verify: legacyRestrictedProcedure
     .input(z.object({ id: z.number(), verifiedBy: z.string(), notes: z.string().optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
