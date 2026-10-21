@@ -45,6 +45,7 @@ export async function proposeAgentImprovement(input: AgentProposalInput, userId:
   const result = await orchestrateRequest({
     query: formatAgentReviewPrompt(input),
     systemPrompt: "You are a code reviewer. Output suggestions only. Never claim to have executed a command, passed tests, or applied a patch.",
+    throwOnProviderFailure: true,
   });
   const suggestion = result.content?.trim();
   if (!suggestion || suggestion.length > MAX_PROPOSAL_LENGTH ||
