@@ -5,7 +5,7 @@ import { healingPatches } from "../../db/schema";
 import { getPrivateDb } from "../security/access";
 import { reserveAiRequest } from "../security/aiBudget";
 import { orchestrateRequest, getOrchestratorStatus } from "./orchestrator";
-import { createEvidenceProposal } from "./agentProposalLedger";
+import { assertEvidenceLedgerReady, createEvidenceProposal } from "./agentProposalLedger";
 
 const MAX_PROPOSAL_LENGTH = 12000;
 
@@ -41,6 +41,7 @@ export async function proposeAgentImprovement(input: AgentProposalInput, userId:
       message: "No real AI provider is configured for agent diagnosis.",
     });
   }
+  await assertEvidenceLedgerReady();
   await reserveAiRequest(userId, "superCore.reviewableImprovementProposal");
   const start = Date.now();
   const result = await orchestrateRequest({
