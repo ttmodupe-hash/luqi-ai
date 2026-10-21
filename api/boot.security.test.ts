@@ -3,6 +3,27 @@ import app from "./boot";
 
 describe("legacy HTTP security integration", () => {
   it.each([
+    ["https://malicious.example", "luqi_session=forged"],
+    ["https://malicious.example", ""],
+  ])("rejects cross-origin logout without changing session cookie (%s)", async (origin, cookie) => {
+    const res = await app.request("/api/auth/logout", {
+      method: "POST",
+      headers: { origin, ...(cookie ? { cookie } : {}) },
+    });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("rejects cookie-authenticated logout lacking origin evidence", async () => {
+    const res = await app.request("/api/auth/logout", {
+      method: "POST",
+      headers: { cookie: "luqi_session=presented-session" },
+    });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it.each([
     ["/api/v1/auth/login", "/api/auth/login"],
     ["/auth/register", "/api/auth/register"],
     ["/api/v1/auth/register", "/api/auth/register"],
