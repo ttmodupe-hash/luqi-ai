@@ -79,7 +79,7 @@ async function respondInConversation(db: any, userId: number, conversationId: nu
 
   const memories = await db.select().from(companionMemories)
     .where(eq(companionMemories.userId, userId))
-    .orderBy(desc(companionMemories.importance)).limit(10);
+    .orderBy(desc(companionMemories.importance)).limit(100);
   const relevantMemories = selectRelevantCompanionMemories(memories, content);
   const memoryContext = relevantMemories.length
     ? relevantMemories.map((memory: any, index: number) => `${index + 1}. [${memory.category || memory.memoryType || "Memory"}] ${memory.content}`).join("\n")
