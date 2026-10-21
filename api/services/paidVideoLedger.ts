@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, lt, gte, count } from "drizzle-orm";
 import { users, videoProjects, videoCreditWallets, videoCreditLedger, videoRenderRequests } from "../../db/schema";
 import { getPrivateDb } from "../security/access";
 
@@ -95,6 +95,21 @@ export async function reservePaidVideo(input: RenderInput): Promise<ReservedRend
       .limit(1);
     if (inProgress) {
       throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Finish your current video before starting another." });
+    }
+
+    // One paid render at a time and a bounded daily quota limit vendor
+    // exposure. The locked user row serializes this check across instances.
+    const configLimit = Number(process.env.LUQI_VIDEO_DAILY_JOB_LIMIT);
+    const dailyLimit = Number.isSafeInteger(configLimit) && configLimit >= 1 && configLimit <= 10
+      ? configLimit : 3;
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [recent] = await tx.select({ total: count() }).from(videoRenderRequests)
+      .where(and(
+        eq(videoRenderRequests.userId, input.userId),
+        gte(videoRenderRequests.createdAt, since),
+      ));
+    if (Number(recent?.total ?? 0) >= dailyLimit) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Daily paid-video limit reached." });
     }
 
     const [wallet] = await tx.select().from(videoCreditWallets)
