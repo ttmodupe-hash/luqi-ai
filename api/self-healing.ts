@@ -388,7 +388,7 @@ export const selfHealingRouter = createRouter({
     .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
-      const conditions = input?.status ? eq(benchmarkFeeds.processed, input.status === "processed" ? 1 : 0) : undefined;
+      const conditions = input?.status ? eq(benchmarkFeeds.processed, input.status === "processed") : undefined;
       return db
         .select()
         .from(benchmarkFeeds)
