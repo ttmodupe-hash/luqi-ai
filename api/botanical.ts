@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
+import { createRouter, publicQuery, legacyRestrictedProcedure, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
+import { getPrivateDb } from "./security/access";
 import { botanicalEntries } from "../db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { orchestrateRequest } from "./services/orchestrator";
@@ -57,10 +58,10 @@ export const botanicalRouter = createRouter({
       return { answer: result.content, model: result.model };
     }),
 
-  verify: legacyRestrictedProcedure
+  verify: adminQuery
     .input(z.object({ id: z.number(), verifiedBy: z.string(), notes: z.string().optional() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       await db
         .update(botanicalEntries)
         .set({
