@@ -11,7 +11,7 @@ assert.match(docker, /npm ci\b/, "deterministic dependency install required");
 assert.match(docker, /npm run check && npm run build/, "typecheck and build must fail closed");
 assert.match(docker, /USER node/, "staging runtime must not be root");
 assert.match(docker, /CMD \["node", "dist\/boot\.js"\]/);
-assert.doesNotMatch(docker, /\|\|\s*true|pip install|npm install\s|legacy-peer-deps/i,
+assert.doesNotMatch(docker.split("\n").filter((line) => !/^\s*#/.test(line)).join("\n"), /\|\|\s*true|pip install|npm install\s|legacy-peer-deps/i,
   "never mask dependency failures or install the unrelated legacy Python stack");
 assert.match(ignore, /^\.env\.\*$/m);
 assert.match(ignore, /^data\/archive$/m);
