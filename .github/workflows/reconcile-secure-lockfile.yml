@@ -1,10 +1,8 @@
-# One-time development-branch lockfile reconciliation.
-# Never runs on main, pull_request, or production deployment.
+# Temporary same-repository, development-branch-only dependency repair.
+# No production deployment, no automatic merge, and no fork PR execution.
 name: LUQI Reconcile Secure Lockfile
 on:
-  push:
-    branches:
-      - fix/companion-audit-reliability
+  pull_request:
     paths:
       - .github/workflows/reconcile-secure-lockfile.yml
   workflow_dispatch:
@@ -12,35 +10,43 @@ permissions:
   contents: write
 jobs:
   reconcile:
-    if: github.ref == 'refs/heads/fix/companion-audit-reliability'
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'fix/companion-audit-reliability') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/fix/companion-audit-reliability')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/companion-audit-reliability
-          persist-credentials: true
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Generate dependency lockfile without lifecycle scripts
+      - name: Generate lockfile without lifecycle scripts
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Verify reproducible installation
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Require clean production dependency audit
         run: npm audit --omit=dev --audit-level=high
-      - name: Verify TypeScript, tests and build
+      - name: Verify TypeScript, tests and production build
         run: |
           npm run check
           npm test
           npm run build
-      - name: Commit only the validated lockfile to development branch
+      - name: Commit only verified lockfile back to development branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add -- package-lock.json
           if git diff --cached --quiet; then
-            echo "No lockfile changes needed"
+            echo "Lockfile already matches package.json"
           else
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore(security): sync audited dependency lockfile'
-            git push origin HEAD:fix/companion-audit-reliability
+            auth_header="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+            git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin HEAD:fix/companion-audit-reliability
           fi
