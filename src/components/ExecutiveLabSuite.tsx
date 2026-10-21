@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ExperimentNotebook from "./ExperimentNotebook";
 import PendulumReplay from "./PendulumReplay";
+import ScienceTimeline from "./ScienceTimeline";
 import {
   Sparkles,
   ExternalLink,
@@ -338,6 +339,8 @@ export default function ExecutiveLabSuite() {
               <div className="px-4 pb-4">
                 <ExperimentNotebook key={selectedLab.id} labId={selectedLab.id} />
                 {selectedLab.id === "pendulum-physics" && <PendulumReplay />}
+                {selectedLab.id === "biology-enzyme" && <ScienceTimeline subject="biology" />}
+                {selectedLab.id === "chemistry-titration" && <ScienceTimeline subject="chemistry" />}
               </div>
             </div>
           </div>
