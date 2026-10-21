@@ -120,8 +120,14 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     expect(payload.query).not.toContain("SECRET_STACK_CONTENT");
     expect(payload.systemPrompt).toContain("untrusted");
     expect(result).toMatchObject({ diagnosed: true, deployed: false, testsPassed: false });
-    expect(db.inserts).toHaveLength(1);
-    expect(db.inserts[0]).toMatchObject({ status: "proposed", patchType: "ai_diagnosis" });
+    expect(mocks.createEvidenceProposal).toHaveBeenCalledTimes(1);
+    expect(mocks.createEvidenceProposal).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 42, patchType: "ai_diagnosis", errorLogId: 7,
+      description: "Hypothesis: retry failed, needs an independent staging test.",
+    }));
+    // Persisted proposal and genesis event are now committed by the ledger
+    // in one transaction (tested independently against real MySQL).
+    expect(db.inserts).toHaveLength(0);
   });
 
   it("does not store a diagnosis when the provider returns an empty result", async () => {
