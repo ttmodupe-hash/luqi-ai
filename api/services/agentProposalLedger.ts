@@ -82,6 +82,21 @@ function validReason(value: string): string {
   return sha256(reason);
 }
 
+/** Fail closed BEFORE a paid AI call if the reviewed schema migration is absent.
+ * A database or table outage must not consume tokens and then lose the proposal.
+ */
+export async function assertEvidenceLedgerReady(): Promise<void> {
+  const db = await getPrivateDb();
+  try {
+    await db.select({ id: agentReviewEvents.id }).from(agentReviewEvents).limit(1);
+  } catch {
+    throw new TRPCError({
+      code: "SERVICE_UNAVAILABLE",
+      message: "Private agent review storage is not ready. No AI analysis was started.",
+    });
+  }
+}
+
 /** Transactional creation: no proposal exists without a corresponding genesis event.
  * This records a proposed change only; does not execute code or dispatch CI.
  */
