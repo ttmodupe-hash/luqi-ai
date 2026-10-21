@@ -257,14 +257,14 @@ export const selfHealingRouter = createRouter({
     .input(z.object({
       patchId: z.number().int().positive(),
       skipTests: z.literal(false).default(false),
-      reason: z.string().trim().min(12).max(1000),
+      reason: z.string().trim().min(12).max(1000).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const changed = await transitionEvidenceProposal({
         patchId: input.patchId,
         actorUserId: ctx.user.id,
         action: "review_requested",
-        reason: input.reason,
+        reason: input.reason ?? "Legacy administrator review requested",
       });
       return {
         success: changed.changed, approved: true,
