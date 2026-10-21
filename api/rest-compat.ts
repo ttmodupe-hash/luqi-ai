@@ -81,7 +81,15 @@ restCompat.use("/api/billing/*", adminGate);
 restCompat.use("/api/system/*", adminGate);
 restCompat.use("/api/v1/jobs/*", userGate);
 restCompat.use("/v1/jobs/*", userGate);
-restCompat.use("/api/v1/billing/*", userGate);
+// Stripe signs its own server-to-server webhook requests. Browser sessions
+// must not be required here; the HMAC verifier in api/boot.ts authenticates
+// the raw body before any event is recorded.
+restCompat.use("/api/v1/billing/*", async (c, next) => {
+  if (c.req.path === "/api/v1/billing/stripe-webhook" && c.req.method === "POST") {
+    return next();
+  }
+  return userGate(c, next);
+});
 restCompat.use("/v1/billing/*", userGate);
 
 
