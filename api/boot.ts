@@ -53,7 +53,7 @@ app.use("/*", cors({
 
 // State-changing cookie-authenticated requests must originate from the
 // configured frontend. This is separate from CORS, which is not CSRF defence.
-app.use("/api/*", async (c, next) => {
+app.use("/*", async (c, next) => {
   if (!isAllowedApiMutation(c.req.raw, approvedOrigins)) {
     return c.json({ error: "Cross-origin state-changing request denied." }, 403);
   }
