@@ -11,7 +11,7 @@ import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "./queries/connection";
 import { getPrivateDb } from "./security/access";
-import { registerAccount, loginAccount, resolveSessionUser } from "./auth";
+import { registerAccount, loginAccount, resolveSessionUser, type AuthenticatedUser } from "./auth";
 import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
@@ -42,6 +42,8 @@ const userGate = async (c: any, next: any) => {
   await next();
 };
 
+restCompat.use("/api/v25/ai-brain/*", userGate);
+restCompat.use("/api/v25/chat", userGate);
 restCompat.use("/api/v1/zta/*", adminGate);
 restCompat.use("/v1/zta/*", adminGate);
 restCompat.use("/api/v1/self-healing/*", adminGate);
@@ -87,31 +89,31 @@ function aiUnavailableResponse() {
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
 
-async function handleChat(message: string, sessionId?: string, userKey?: string) {
+async function handleChat(message: string, sessionId?: string, user?: AuthenticatedUser | null) {
   const status = getOrchestratorStatus();
   if (status.demo) {
     return aiUnavailableResponse();
   }
 
   // Multi-turn memory: load prior conversation turns for this session
-  const session = sessionId || "guest";
+  const session = sessionId || `user_${user?.id ?? "anon"}`;
   const history = sessionId ? await getHistory(session) : [];
   const historyContext = historyToContext(history);
 
   // User context: region/language/wallet — injected so answers fit the
   // user's real situation (Ubuntu context layer)
   let userContext: string | undefined;
-  if (userKey && (process.env.DATABASE_URL || process.env.DB_HOST)) {
+  if (user) {
     try {
-      const db = await getDb();
-      const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, userKey.toLowerCase())).limit(1);
+      const db = await getPrivateDb();
+      const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, user.email.toLowerCase())).limit(1);
       if (wallet) {
         userContext = `User context: region=South Africa, currency=${wallet.currency ?? "ZAR"}, wallet balance R${((wallet.balanceCents ?? 0) / 100).toFixed(2)}. If the request involves paid features, be mindful of their balance.`;
       }
     } catch { /* context lookup is non-fatal */ }
   }
 
-  const cacheKey = hashPrompt(message);
+  const cacheKey = hashPrompt(`${user?.id ?? "anon"}:${sessionId ?? "none"}:${message}`);
   const cached = await getCachedAIResponse(cacheKey);
   if (cached) {
     try {
@@ -188,6 +190,13 @@ async function handleChat(message: string, sessionId?: string, userKey?: string)
   }
 }
 
+function sessionForUser(userId: number, submitted: unknown): string {
+  const raw = typeof submitted === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(submitted)
+    ? submitted : "default";
+  const ownPrefix = `user_${userId}_`;
+  return raw.startsWith(ownPrefix) ? raw : ownPrefix + raw;
+}
+
 // AI Brain page endpoint
 restCompat.post("/api/v25/ai-brain/chat", async (c) => {
   const body = await c.req.json().catch(() => ({}));
@@ -195,7 +204,10 @@ restCompat.post("/api/v25/ai-brain/chat", async (c) => {
   if (!message.trim()) {
     return c.json({ error: "message is required" }, 400);
   }
-  return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI chat." }, 401);
+  const sessionId = sessionForUser(user.id, body.session_id);
+  return c.json(await handleChat(message, sessionId, user));
 });
 
 // Legacy chat endpoint used by useApi.chat
@@ -205,7 +217,10 @@ restCompat.post("/api/v25/chat", async (c) => {
   if (!message.trim()) {
     return c.json({ error: "query is required" }, 400);
   }
-  return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI chat." }, 401);
+  const sessionId = sessionForUser(user.id, body.session_id);
+  return c.json(await handleChat(message, sessionId, user));
 });
 
 // ─── SSE STREAMING CHAT ───────────────────────────────────────────────
@@ -225,11 +240,13 @@ restCompat.post("/api/v25/ai-brain/stream", async (c) => {
     return c.json(aiUnavailableResponse());
   }
 
-  const sessionId = typeof body.session_id === "string" ? body.session_id : undefined;
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI chat." }, 401);
+  const sessionId = sessionForUser(user.id, body.session_id);
   const route = routeCapability(message);
   const streamPrompt = route.systemHint ? `${LUQI_SYSTEM_PROMPT}\n\n${route.systemHint}` : LUQI_SYSTEM_PROMPT;
 
-  const cacheKey = hashPrompt(message);
+  const cacheKey = hashPrompt(`${user?.id ?? "anon"}:${sessionId ?? "none"}:${message}`);
   const cached = await getCachedAIResponse(cacheKey);
 
   return streamSSE(c, async (stream) => {
