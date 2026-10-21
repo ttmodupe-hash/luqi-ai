@@ -138,6 +138,7 @@ const CREATE_STATEMENTS: string[] = [
   \`user_key\` varchar(255) NOT NULL,
   \`project_id\` int NOT NULL,
   \`request_digest\` varchar(64) NOT NULL,
+  \`asset_key\` varchar(400),
   \`charge_credits\` int NOT NULL,
   \`status\` varchar(30) NOT NULL DEFAULT 'PROCESSING',
   \`error_message\` text,
