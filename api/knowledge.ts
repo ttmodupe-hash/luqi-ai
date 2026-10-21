@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { knowledgeArticles } from "../db/schema";
 import { eq, desc, sql } from "drizzle-orm";
@@ -16,7 +16,7 @@ export const knowledgeRouter = createRouter({
       return query.limit(input?.limit ?? 50);
     }),
 
-  saveArticle: publicQuery
+  saveArticle: legacyRestrictedProcedure
     .input(z.object({ title: z.string(), content: z.string(), category: z.string(), sourceUrl: z.string().optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
