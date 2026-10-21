@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, legacyRestrictedProcedure } from "./middleware";
 import { orchestrateRequest } from "./services/orchestrator";
 
 export const orchestratorRouter = createRouter({
-  generate: publicQuery
+  generate: legacyRestrictedProcedure
     .input(z.object({
       query: z.string().min(1).max(10000),
       context: z.string().max(50000).optional(),
@@ -29,11 +29,11 @@ export const orchestratorRouter = createRouter({
       return classifyIntent(input.query);
     }),
 
-  status: publicQuery.query(() => {
+  status: legacyRestrictedProcedure.query(() => {
     return getOrchestratorStatus();
   }),
 
-  logs: publicQuery
+  logs: legacyRestrictedProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(20) }))
     .query(async ({ input }) => {
       return getRecentLogs(input.limit);
