@@ -11,6 +11,7 @@ import SelfHealingPage from "./pages/SelfHealingPage";
 import VideoStudioPage from "./pages/VideoStudioPage";
 import ArchiveVaultPage from "./pages/ArchiveVaultPage";
 import PricingPage from "./pages/PricingPage";
+import ApiBillingDashboardPage from "./pages/ApiBillingDashboardPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -277,6 +278,7 @@ export default function App() {
         <RouterRoute path="/archive" element={<ArchiveVaultPage />} />
         <RouterRoute path="/vault" element={<ArchiveVaultPage />} />
         <RouterRoute path="/pricing" element={<PricingPage />} />
+        <RouterRoute path="/api-billing" element={<ApiBillingDashboardPage />} />
         <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
