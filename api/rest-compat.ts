@@ -831,43 +831,8 @@ interface ZtaApproval {
   reviewed_at?: string;
 }
 
-const inMemoryZtaApprovals: ZtaApproval[] = [
-  {
-    id: "hitl_pf_901",
-    agent_id: "payfast-settlement-agent",
-    agent_spiffe: "spiffe://luqi.ai/agent/payfast-settlement/a89f01",
-    action_type: "payfast_charge",
-    action_label: "Financial Transaction (PayFast R450.00 charge)",
-    parameters: {
-      amount_zar: 450.0,
-      user_email: "thabo@enterprise.co.za",
-      purpose: "Enterprise Token Pack Top-Up",
-    },
-    risk_level: "CRITICAL",
-    reason: "Autonomous payment execution requires explicit Human-in-the-Loop review and Step-Up verification (AST07).",
-    created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    status: "PENDING",
-    step_up_verified: false,
-  },
-  {
-    id: "hitl_db_402",
-    agent_id: "luqi-data-architect",
-    agent_spiffe: "spiffe://luqi.ai/agent/luqi-data-architect/7c2e99",
-    action_type: "delete_vault_record",
-    action_label: "Irreversible Data Destruction (Vault Records Purge)",
-    parameters: {
-      record_id: "vault_contracts_2025_q3",
-      retention_policy: "7_years",
-    },
-    risk_level: "HIGH",
-    reason: "Deletion of compliance vault archives must be confirmed by a human security operator (AST07).",
-    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    status: "PENDING",
-    step_up_verified: false,
-  },
-];
-
-const inMemoryStepUpChallenges = new Map<string, { code: string; email: string; action: string; expiresAt: number; verified: boolean }>();
+// No fabricated approvals or verification codes are seeded in production.
+const inMemoryZtaApprovals: ZtaApproval[] = [];
 
 const AST10_CATALOG = {
   AST01: {
@@ -943,90 +908,27 @@ const AST10_CATALOG = {
 };
 
 // 7a. Telemetry status
-const handleZtaStatus = (c: any) => {
-  return c.json({
-    defense_status: "ACTIVE_ZERO_TRUST",
-    framework_version: "OWASP Agentic Skills Top 10 (AST10) 2026 Edition",
-    layers: {
-      layer1_identity: {
-        status: "ENFORCING",
-        mtls_active: true,
-        active_certificates: 3,
-        certificates: [
-          {
-            spiffe_id: "spiffe://luqi.ai/agent/luqi-data-architect/7c2e99",
-            serial_number: "7c2e994a0f81",
-            agent_name: "luqi-data-architect",
-            expires_in_seconds: 780,
-            is_valid: true,
-            allowed_scopes: ["data:read", "data:write", "analytics"],
-            fingerprint: "e3b0c44298fc1c14..."
-          },
-          {
-            spiffe_id: "spiffe://luqi.ai/agent/payfast-settlement/a89f01",
-            serial_number: "a89f01bb413c",
-            agent_name: "payfast-settlement-agent",
-            expires_in_seconds: 540,
-            is_valid: true,
-            allowed_scopes: ["payments:initiate", "billing:query"],
-            fingerprint: "9f83c2677112879f..."
-          },
-          {
-            spiffe_id: "spiffe://luqi.ai/agent/lab-physics-agent/bb3102",
-            serial_number: "bb3102ef1904",
-            agent_name: "lab-physics-agent",
-            expires_in_seconds: 890,
-            is_valid: true,
-            allowed_scopes: ["simulation:run"],
-            fingerprint: "a1435f082e63a152..."
-          }
-        ]
-      },
-      layer2_tool_gateway: {
-        status: "ENFORCING",
-        least_privilege: true,
-        credential_brokering: true,
-        pending_hitl_approvals: inMemoryZtaApprovals.filter(a => a.status === "PENDING").length,
-        total_hitl_requests: inMemoryZtaApprovals.length,
-      },
-      layer3_runtime_defenses: {
-        status: "ENFORCING",
-        dlp_sanitization: "ACTIVE_DUAL_PASS",
-        circuit_breaker: "ARMED_10_STEPS_MAX",
-        spending_cap_enforced: true,
-      }
+const handleZtaStatus = (c: any) => c.json({
+  defense_status: "PARTIALLY_IMPLEMENTED_NOT_CERTIFIED",
+  framework_version: "LUQI Security Policy",
+  layers: {
+    layer1_identity: { status: "SESSION_AUTHENTICATION", mtls_active: false, active_certificates: 0, certificates: [] },
+    layer2_tool_gateway: {
+      status: "ADMIN_ROLE_RESTRICTION",
+      least_privilege: true, credential_brokering: false,
+      pending_hitl_approvals: 0, total_hitl_requests: 0,
     },
-    threat_radar: AST10_CATALOG,
-    pending_approvals: inMemoryZtaApprovals,
-    recent_audit_events: [
-      {
-        timestamp: new Date().toISOString(),
-        event_type: "IDENTITY_ISSUED",
-        ast_tag: "AST06",
-        ast_meta: AST10_CATALOG.AST06,
-        message: "Continuous mTLS verification passed for agent spiffe://luqi.ai/agent/luqi-data-architect/7c2e99",
-        severity: "LOW"
-      },
-      {
-        timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-        event_type: "HITL_GATE_TRIGGERED",
-        ast_tag: "AST07",
-        ast_meta: AST10_CATALOG.AST07,
-        message: "Intercepted PayFast R450 charge tool call; gated pending human verification",
-        severity: "HIGH"
-      },
-      {
-        timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-        event_type: "DLP_SCRUBBED",
-        ast_tag: "AST04",
-        ast_meta: AST10_CATALOG.AST04,
-        message: "Dual-pass DLP redacted sensitive credit card patterns from outbound buffer",
-        severity: "INFO"
-      }
-    ]
-  });
-};
-
+    layer3_runtime_defenses: {
+      status: "REQUIRES_INDEPENDENT_TESTING",
+      dlp_sanitization: "NOT_EXTERNALLY_VERIFIED",
+      circuit_breaker: "NOT_EXTERNALLY_VERIFIED",
+      spending_cap_enforced: false,
+    },
+  },
+  threat_radar: AST10_CATALOG,
+  pending_approvals: [],
+  recent_audit_events: [],
+});
 restCompat.get("/api/v1/zta/status", handleZtaStatus);
 restCompat.get("/v1/zta/status", handleZtaStatus);
 
@@ -1034,80 +936,18 @@ restCompat.get("/v1/zta/status", handleZtaStatus);
 restCompat.get("/api/v1/zta/approvals", (c: any) => c.json({ pending_approvals: inMemoryZtaApprovals }));
 restCompat.get("/v1/zta/approvals", (c: any) => c.json({ pending_approvals: inMemoryZtaApprovals }));
 
-restCompat.post("/api/v1/zta/approvals/:approvalId/resolve", async (c: any) => {
-  const approvalId = c.req.param("approvalId");
-  const body = await c.req.json().catch(() => ({}));
-  const decision = (body.decision || "APPROVE").toUpperCase();
-  const reviewer = body.reviewer || "security_operator@luqi.ai";
-
-  const item = inMemoryZtaApprovals.find(a => a.id === approvalId);
-  if (!item) {
-    return c.json({ success: false, message: "Approval request not found" }, 404);
-  }
-
-  item.status = decision as any;
-  item.reviewed_by = reviewer;
-  item.reviewed_at = new Date().toISOString();
-  item.step_up_verified = !!body.step_up_token;
-
-  return c.json({
-    success: true,
-    message: `Action ${decision} recorded for ticket ${approvalId}`,
-    decision,
-    item
-  });
-});
-
-// 7c. Step-up Challenge
-restCompat.post("/api/v1/zta/step-up/challenge", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const challengeId = "mfa_" + Math.random().toString(36).substring(2, 10);
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const email = body.user_email || "admin@luqi.ai";
-  const action = body.action || "payfast_charge";
-  const amountZar = Number(body.amount_zar) || 0;
-
-  inMemoryStepUpChallenges.set(challengeId, {
-    code,
-    email,
-    action,
-    expiresAt: Date.now() + 180 * 1000,
-    verified: false,
-  });
-
-  return c.json({
-    challenge_id: challengeId,
-    action,
-    amount_zar: amountZar,
-    expires_in_seconds: 180,
-    hint: `Verification code sent to ${email.substring(0, 3)}***@luqi.ai (Demo test code: ${code})`,
-  });
-});
-
-// 7d. Step-up Verify
-restCompat.post("/api/v1/zta/step-up/verify", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const { challenge_id, code } = body;
-  const challenge = inMemoryStepUpChallenges.get(challenge_id);
-
-  if (!challenge) {
-    return c.json({ success: false, message: "Invalid or expired challenge" }, 400);
-  }
-  if (challenge.expiresAt < Date.now()) {
-    return c.json({ success: false, message: "Challenge expired. Please request a new code." }, 400);
-  }
-  if (challenge.code !== String(code).trim()) {
-    return c.json({ success: false, message: "Incorrect verification code." }, 400);
-  }
-
-  challenge.verified = true;
-  const stepUpToken = "stepup_tok_" + Math.random().toString(36).substring(2, 14);
-  return c.json({
-    success: true,
-    message: "Step-up authentication verified successfully.",
-    step_up_token: stepUpToken,
-  });
-});
+// Financial and security approvals require separately verified MFA and a
+// durable audit ledger. A caller-supplied string must never count as step-up.
+restCompat.post("/api/v1/zta/approvals/:approvalId/resolve", (c: any) => c.json({
+  success: false,
+  message: "Strong authentication and durable approval audit are required. No approval was recorded.",
+}, 501));
+restCompat.post("/api/v1/zta/step-up/challenge", (c: any) => c.json({
+  success: false, message: "A verified out-of-band MFA provider is required. No code was sent.",
+}, 501));
+restCompat.post("/api/v1/zta/step-up/verify", (c: any) => c.json({
+  success: false, message: "No verified MFA challenge exists; authentication was not elevated.",
+}, 501));
 
 // 7e. DLP and Injection Test Bench
 restCompat.post("/api/v1/zta/sanitize-test", async (c: any) => {
@@ -1354,26 +1194,8 @@ interface PipelineJobNode {
   execution_trace: Array<{ step: string; phase: string; status: string; detail: string }>;
 }
 
-const inMemoryPipelineJobs: PipelineJobNode[] = [
-  {
-    job_id: "sh_job_918",
-    bug_report: "PayFast webhook signature validation mismatch on valid test payloads.",
-    target_file: "token_billing_gateway.py",
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: "Execution Output:\nTest Suite: test_payfast_itn_signature()\nPassed: 4/4\nCircuit Breaker: OK (1.2s runtime)\nErrors:\nNone",
-    pr_url: "https://github.com/LimitlessTelecoms/luqi-ai/pull/142",
-    pr_number: 142,
-    branch_name: "agent-fix/payfast-signature-canonicalization",
-    fix_diff: `--- a/token_billing_gateway.py\n+++ b/token_billing_gateway.py\n@@ -108,3 +108,5 @@\n-    param_str = urlencode(cleaned_dict)\n+    # RFC 3986 parameter sorting & URL encoding fix\n+    sorted_params = dict(sorted(cleaned_dict.items()))\n+    param_str = urlencode(sorted_params)`,
-    created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    execution_trace: [
-      { step: "Telemetry Ingestion", phase: "70% Autonomous", status: "COMPLETED", detail: "Intercepted recurring 400 Bad Request on PayFast ITN webhook." },
-      { step: "Docker Sandbox Isolation", phase: "70% Autonomous", status: "COMPLETED", detail: "Executed reproduction test in isolated Python 3.11 sandbox (SWE-ReX guard)." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: "Opened PR #142 against LimitlessTelecoms/luqi-ai." },
-      { step: "LangGraph HITL Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Halted before deploy_to_production. Requires explicit human authorization." },
-    ],
-  },
-];
+// Only independently verified CI jobs may be listed; no mock PRs or test runs.
+const inMemoryPipelineJobs: PipelineJobNode[] = [];
 
 restCompat.get("/api/v1/self-healing/pipeline/jobs", (c: any) => {
   return c.json({ jobs: inMemoryPipelineJobs });
@@ -1382,152 +1204,16 @@ restCompat.get("/v1/self-healing/pipeline/jobs", (c: any) => {
   return c.json({ jobs: inMemoryPipelineJobs });
 });
 
-restCompat.post("/api/v1/self-healing/pipeline/run", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const bugReport = String(body.bug_report || "Intermittent timeout on database session pool.");
-  const targetFile = String(body.target_file || "db/queries/connection.ts");
-  const branchName = "agent-fix/" + Math.random().toString(36).substring(2, 8);
-  const prNum = Math.floor(150 + Math.random() * 800);
-  const prUrl = `https://github.com/LimitlessTelecoms/luqi-ai/pull/${prNum}`;
-  const jobId = "sh_" + Math.random().toString(36).substring(2, 10);
-
-  const newJob: PipelineJobNode = {
-    job_id: jobId,
-    bug_report: bugReport,
-    target_file: targetFile,
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: `[Docker Container python:3.11-slim]
-Isolated Workspace: /workspace/test_${jobId.substring(3, 7)}.py
-Test Matrix:
-  - Unit assertion test: PASSED (0.42s)
-  - Memory leak scan: CLEAN (0 bytes leaked)
-  - Circuit Breaker guard: OK (30s limit respected)
-Output:
-  OK: 1 passed in 0.45s
-Errors: None`,
-    pr_url: prUrl,
-    pr_number: prNum,
-    branch_name: branchName,
-    fix_diff: `--- a/${targetFile}\n+++ b/${targetFile}\n@@ -45,3 +45,5 @@\n-    // Unprotected call\n+    // Zero-trust isolated wrapper with retry\n+    return await executeWithSanitizedPool(req);`,
-    created_at: new Date().toISOString(),
-    execution_trace: [
-      { step: "Bug Ingestion & Diagnostic", phase: "70% Autonomous", status: "COMPLETED", detail: `Agent analyzed report: "${bugReport.slice(0, 70)}..."` },
-      { step: "Docker Sandbox Isolation", phase: "70% Autonomous", status: "COMPLETED", detail: "Executed code inside isolated Docker container; 0 errors." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: `Opened PR #${prNum} on branch ${branchName}.` },
-      { step: "LangGraph Security Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Mathematically halted before deploy_to_production. Awaiting human click." },
-    ],
-  };
-
-  inMemoryPipelineJobs.unshift(newJob);
-
-  return c.json({
-    success: true,
-    job_id: jobId,
-    status: "AWAITING_HUMAN_AUTH",
-    pr_url: prUrl,
-    branch_name: branchName,
-    execution_trace: newJob.execution_trace,
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/sandbox-exec", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const code = String(body.code || "");
-
-  // Safe container simulation / execution
-  const hasDestructive = /rm\s+-rf|dd\s+if=|mkfs/i.test(code);
-  const hasInfiniteLoop = /while\s+True|for\s+.*\s+in\s+iter\(int/i.test(code);
-
-  if (hasDestructive) {
-    return c.json({
-      output: "[Sandbox Guard: Docker Isolation Active]\nNotice: Attempted dangerous host system deletion command.\nAction: Contained inside disposable container. Host filesystem remains intact and untouched.\nExecution Output:\nPermission denied inside read-only guest mount.",
-      duration_seconds: 0.12,
-      circuit_breaker_timeout: 30,
-      isolated: true,
-    });
-  }
-
-  if (hasInfiniteLoop) {
-    return c.json({
-      output: "Error: Code execution timed out (30s circuit breaker reached). Infinite loop terminated by Docker sandbox supervisor.",
-      duration_seconds: 30.0,
-      circuit_breaker_timeout: 30,
-      isolated: true,
-    });
-  }
-
-  return c.json({
-    output: `[Docker python:3.11-slim Isolated Container]
-Executed snippet:
-${code.slice(0, 150)}${code.length > 150 ? "..." : ""}
-
-STDOUT:
->> Hello from isolated sandbox environment!
->> Invariant assertions passed.
-STDERR: None
-Exit Code: 0`,
-    duration_seconds: 0.48,
-    circuit_breaker_timeout: 30,
-    isolated: true,
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/authorize", async (c: any) => {
-  const jobId = c.req.param("jobId");
-  const body = await c.req.json().catch(() => ({}));
-  const reviewer = body.reviewer || "Lead SRE Operator";
-
-  const job = inMemoryPipelineJobs.find(j => j.job_id === jobId);
-  if (!job) {
-    return c.json({ success: false, message: "Job not found" }, 404);
-  }
-
-  job.status = "DEPLOYED_TO_PROD";
-  job.reviewer = reviewer;
-  job.resolved_at = new Date().toISOString();
-  job.execution_trace.push({
-    step: "Human Authorization & Production Merge",
-    phase: "30% Gated Phase",
-    status: "APPROVED",
-    detail: `Human operator (${reviewer}) clicked Approve. PR merged to main and CI/CD deployed to production.`,
-  });
-
-  return c.json({
-    success: true,
-    message: "Human authorization approved. PR merged to main and production deployment initiated.",
-    job_id: jobId,
-    status: "DEPLOYED_TO_PROD",
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/reject", async (c: any) => {
-  const jobId = c.req.param("jobId");
-  const body = await c.req.json().catch(() => ({}));
-  const reviewer = body.reviewer || "Lead SRE Operator";
-  const reason = body.reason || "Rejected during manual review";
-
-  const job = inMemoryPipelineJobs.find(j => j.job_id === jobId);
-  if (!job) {
-    return c.json({ success: false, message: "Job not found" }, 404);
-  }
-
-  job.status = "REJECTED";
-  job.reviewer = reviewer;
-  job.resolved_at = new Date().toISOString();
-  job.execution_trace.push({
-    step: "Human Authorization",
-    phase: "30% Gated Phase",
-    status: "REJECTED",
-    detail: `Deployment rejected by ${reviewer}. Reason: ${reason}.`,
-  });
-
-  return c.json({
-    success: true,
-    message: "Deployment rejected. Pipeline halted.",
-    job_id: jobId,
-    status: "REJECTED",
-  });
-});
+// A real self-healing operation must be executed by a permission-scoped CI
+// worker, with published test evidence and an explicitly approved deployment.
+const noVerifiedWorker = (c: any) => c.json({
+  success: false, executed: false, deployed: false,
+  message: "No secure CI execution worker is connected. No tests, PRs or deployments were performed.",
+}, 501);
+restCompat.post("/api/v1/self-healing/pipeline/run", noVerifiedWorker);
+restCompat.post("/api/v1/self-healing/pipeline/sandbox-exec", noVerifiedWorker);
+restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/authorize", noVerifiedWorker);
+restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/reject", noVerifiedWorker);
 
 // ─── 9. AUTONOMOUS AFRICAN MARKET & TECHNOLOGY SENSING LOOP ─────────────
 
