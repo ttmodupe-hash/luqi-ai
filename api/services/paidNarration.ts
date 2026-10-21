@@ -1,7 +1,7 @@
 import { constants, accessSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, isAbsolute } from "node:path";
+import { join, dirname, isAbsolute } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { hasMp3Header, hasMp4Header, readBoundedMedia } from "./privateMediaValidation";
@@ -24,6 +24,7 @@ export function narratedVideoAvailable(): boolean {
       !/^[a-zA-Z0-9_-]{10,50}$/.test(voiceId)) return false;
   try {
     accessSync(executable, constants.X_OK);
+    accessSync(join(dirname(executable), "ffprobe"), constants.X_OK);
     return true;
   } catch {
     return false;
@@ -76,6 +77,18 @@ export async function combineVideoAndNarration(
     const outputPath = join(directory, "complete.mp4");
     await Promise.all([writeFile(videoPath, video, { mode: 0o600 }),
       writeFile(voicePath, voice, { mode: 0o600 })]);
+    // Customer buys a fixed clip length. Do not silently cut off speech;
+    // reject/refund when the actual provider voice exceeds that duration.
+    const { stdout: narrationLength } = await execFileAsync(
+      join(dirname(process.env.LUQI_FFMPEG_PATH!), "ffprobe"), [
+        "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", voicePath,
+      ], { timeout: 15000, maxBuffer: 8192 });
+    const spokenSeconds = Number(narrationLength.trim());
+    if (!Number.isFinite(spokenSeconds) || spokenSeconds <= 0 ||
+        spokenSeconds > durationSeconds + 0.15) {
+      throw new Error("Narration audio does not fit the confirmed clip duration.");
+    }
     await execFileAsync(process.env.LUQI_FFMPEG_PATH!, [
       "-nostdin", "-y", "-hide_banner", "-loglevel", "error",
       "-i", videoPath, "-i", voicePath,
