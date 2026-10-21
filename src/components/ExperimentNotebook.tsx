@@ -25,6 +25,28 @@ export default function ExperimentNotebook({ labId }: { labId: string }) {
       setResult(answer); setError("");
     } catch (e) { setResult(null); setError(e instanceof Error ? e.message : "Invalid inputs"); }
   };
+  const exportNotebook = () => {
+    if (result === null) return;
+    const report = {
+      schemaVersion: 1,
+      labId,
+      referenceModel: model.title,
+      inputs: model.labels.map((label, index) => ({ label, value: values[index] })),
+      prediction,
+      referenceResult: result,
+      unit: model.unit,
+      reflection,
+      generatedAt: new Date().toISOString(),
+      disclaimer: "Educational reference calculation, not a measurement from the embedded simulator.",
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "luqi-experiment-" + labId + ".json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   return <section aria-label="Experiment notebook" className="mt-4 rounded-xl border border-sky-500/30 bg-slate-900 p-4">
     <h4 className="text-sm font-bold text-sky-300">Experiment notebook: {model.title}</h4>
     <p className="text-xs text-slate-400 mt-1">Explore a reference calculation alongside the existing simulation. This is not a measurement from the simulation.</p>
@@ -33,6 +55,7 @@ export default function ExperimentNotebook({ labId }: { labId: string }) {
     </label>)}</div>
     <label className="block mt-3 text-xs text-slate-200">Prediction<textarea value={prediction} onChange={e => setPrediction(e.target.value)} rows={2} className="block mt-1 w-full bg-slate-950 border border-slate-600 rounded p-2 text-white" /></label>
     <button type="button" onClick={calculate} className="mt-3 bg-sky-600 text-white rounded px-3 py-2 text-xs font-bold">Calculate reference</button>
+    <button type="button" onClick={exportNotebook} disabled={result === null} className="ml-2 mt-3 border border-slate-500 text-white rounded px-3 py-2 text-xs disabled:opacity-40">Export experiment record</button>
     {error && <p role="alert" className="text-xs text-rose-300 mt-2">{error}</p>}
     {result !== null && <p aria-live="polite" className="mt-2 text-sm text-emerald-300">Reference result: {Number(result.toPrecision(8))} {model.unit}</p>}
     <label className="block mt-3 text-xs text-slate-200">What did you learn?<textarea value={reflection} onChange={e => setReflection(e.target.value)} rows={2} className="block mt-1 w-full bg-slate-950 border border-slate-600 rounded p-2 text-white" /></label>
