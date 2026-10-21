@@ -1,0 +1,19 @@
+# REVIEW-ONLY template. No route, DNS or automatic deployment is configured.
+# Copy to a staging-specific Wrangler config only after confirming the
+# Cloudflare account/zone, approved hostname, and origin ingress policy.
+# Requires Wrangler >= 4.36.0. Change namespace IDs to unused integers in
+# the intended Cloudflare account; collisions SHARE counters across Workers.
+name = "luqi-edge-guard-staging"
+main = "edge/cloudflareWorker.js"
+compatibility_date = "2026-10-21"
+workers_dev = false
+
+[[ratelimits]]
+name = "LUQI_API_RATE_LIMITER"
+namespace_id = "821001"
+simple = { limit = 240, period = 60 }
+
+[[ratelimits]]
+name = "LUQI_AUTH_RATE_LIMITER"
+namespace_id = "821002"
+simple = { limit = 20, period = 60 }
