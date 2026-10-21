@@ -493,6 +493,15 @@ export const videoCreditLedger = mysqlTable("video_credit_ledger", {
 });
 
 /** One immutable client idempotency key per rendering intent. */
+/**
+ * A single daily quota row is locked before launching any paid video, so
+ * separate accounts cannot exhaust provider funds through coordinated abuse.
+ */
+export const videoGlobalDailyQuota = mysqlTable("video_global_daily_quota", {
+  dayKey: varchar("day_key", { length: 10 }).primaryKey(),
+  jobs: int("jobs").notNull().default(0),
+});
+
 export const videoRenderRequests = mysqlTable("video_render_requests", {
   id: serial("id").primaryKey(),
   requestKey: varchar("request_key", { length: 64 }).notNull().unique(),
