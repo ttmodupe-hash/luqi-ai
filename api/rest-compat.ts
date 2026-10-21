@@ -13,7 +13,8 @@ import { getDb } from "./queries/connection";
 import { getPrivateDb } from "./security/access";
 import { reserveAiRequest } from "./security/aiBudget";
 import { registerAccount, loginAccount, resolveSessionUser, type AuthenticatedUser } from "./auth";
-import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
+import { users, knowledgeArticles, creditWallets, paymentEvents, videoCreditWallets, videoCreditLedger } from "../db/schema";
+import { resolveVideoPaymentProduct } from "./services/videoPaymentProduct";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
 import { appendTurn, getHistory, historyToContext } from "./services/session";
@@ -621,14 +622,40 @@ restCompat.post("/api/v25/payments/webhook", async (c) => {
           pending.currency !== verified.currency ||
           pending.userKey?.toLowerCase() !== verified.email.trim().toLowerCase()) return "mismatch";
 
-      await tx.execute(sql`INSERT INTO credit_wallets (user_key, balance_cents, currency)
-          VALUES (${pending.userKey}, ${verified.amountCents}, 'ZAR')
-          ON DUPLICATE KEY UPDATE balance_cents = balance_cents + ${verified.amountCents}`);
+      const product = resolveVideoPaymentProduct(pending.payloadJson, verified.amountCents);
+      if (product.kind === "invalid") return "mismatch";
+      if (product.kind === "pack") {
+        // Only a verified payment for a server-recorded pack can mint credits.
+        // The pending row is locked until commit: duplicate callbacks cannot
+        // award credits twice, including across different Cloud Run instances.
+        await tx.execute(sql`INSERT INTO video_credit_wallets (user_key, credits)
+            VALUES (${pending.userKey}, ${product.credits})
+            ON DUPLICATE KEY UPDATE credits = credits + ${product.credits}`);
+        const [wallet] = await tx.select({ credits: videoCreditWallets.credits })
+          .from(videoCreditWallets)
+          .where(eq(videoCreditWallets.userKey, pending.userKey)).limit(1);
+        await tx.insert(videoCreditLedger).values({
+          reference: `paystack:${reference}`,
+          userKey: pending.userKey,
+          entryType: "verified_topup",
+          deltaCredits: product.credits,
+          balanceAfter: wallet.credits,
+        });
+      } else {
+        // General ZAR deposits remain separate from purchased video credits.
+        await tx.execute(sql`INSERT INTO credit_wallets (user_key, balance_cents, currency)
+            VALUES (${pending.userKey}, ${verified.amountCents}, 'ZAR')
+            ON DUPLICATE KEY UPDATE balance_cents = balance_cents + ${verified.amountCents}`);
+      }
       await tx.update(paymentEvents)
         .set({
-          status: "credited", eventType: "charge.success",
+          status: "credited",
+          eventType: product.kind === "pack" ? "video_pack_settled" : "charge.success",
           channel: verified.channel,
-          payloadJson: JSON.stringify({ provider: "paystack", reference }),
+          payloadJson: JSON.stringify({
+            provider: "paystack", reference,
+            ...(product.kind === "pack" ? { product: "video_credit_pack", packId: product.packId, credits: product.credits } : {}),
+          }),
         }).where(eq(paymentEvents.reference, reference));
       return "credited";
     });
