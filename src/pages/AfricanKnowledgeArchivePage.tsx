@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BookOpen, LibraryBig, Search, ShieldAlert, Clock3, ArrowLeft } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { trpc } from "@/providers/trpc";
 
 type Archive = "history" | "heritage" | "iks";
 type Choice = { archive: Archive; id: string };
