@@ -9,6 +9,9 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { loginAccount, registerAccount, resolveSessionUser, revokeSession } from "./auth";
+import { verifyStripeWebhook } from "./security/stripeWebhook";
+import { getPrivateDb } from "./security/access";
+import { paymentEvents } from "../db/schema";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
 import { trustedOrigins, isAllowedApiMutation } from "./security/requestOrigin";
@@ -717,22 +720,15 @@ const corporateBillingLedgerStore = [
   }
 ];
 
-// Authentication Gateways
-app.post('/api/v1/auth/register', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "User registered successfully.", email: body.email });
-});
-app.post('/auth/register', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "User registered successfully.", email: body.email });
-});
-
-app.post('/api/v1/auth/login', async (c) => {
-  return c.json({ access_token: `LUQI-JWT-${Date.now()}`, token_type: "bearer" });
-});
-app.post('/auth/login', async (c) => {
-  return c.json({ access_token: `LUQI-JWT-${Date.now()}`, token_type: "bearer" });
-});
+// Legacy authentication paths now delegate to the real database-backed
+// session endpoints. 307 preserves method and POST body on the same origin;
+// no fabricated JWTs or fake registrations are issued.
+for (const path of ["/api/v1/auth/register", "/auth/register"]) {
+  app.post(path, (c) => c.redirect("/api/auth/register", 307));
+}
+for (const path of ["/api/v1/auth/login", "/auth/login"]) {
+  app.post(path, (c) => c.redirect("/api/auth/login", 307));
+}
 
 // Creative Storyboard Creation Router
 app.post('/api/v1/media/orchestrate', async (c) => {
@@ -806,19 +802,29 @@ app.post('/media/compile-and-stream', async (c) => {
   });
 });
 
-// Stripe Billing Public Webhook
-app.post('/api/v1/billing/stripe-webhook', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const event = body.type || 'checkout.session.completed';
-  const newRecord = {
-    id: `TX-STRIPE-${corporateBillingLedgerStore.length + 1001}`,
-    customer: body.customer || "corporate-partner@luqi-ai.com",
-    transaction_reference: body.id || `cs_live_${Date.now()}`,
-    payout_details: `$${body.amount || 299.0} USD (${event})`,
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
-  };
-  corporateBillingLedgerStore.unshift(newRecord);
-  return c.json({ status: "success", record: newRecord });
+// Authenticated Stripe delivery is an audited event, never a payment credit.
+// The unique event ID makes repeat webhook delivery idempotent. Checkout
+// reconciliation and wallet settlement are handled separately after provider
+// verification; this endpoint never takes amounts from an unsigned body.
+app.post("/api/v1/billing/stripe-webhook", async (c) => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "Stripe webhook is not configured." }, 503);
+  const raw = await c.req.text();
+  const event = verifyStripeWebhook(raw, c.req.header("stripe-signature") ?? null, secret);
+  if (!event) return c.json({ error: "Invalid Stripe webhook signature." }, 400);
+  try {
+    const db = await getPrivateDb();
+    await db.insert(paymentEvents).values({
+      reference: event.id,
+      eventType: event.type,
+      status: "verified_received",
+      channel: "stripe",
+      payloadJson: JSON.stringify({ created: event.created, livemode: event.livemode }),
+    }).onDuplicateKeyUpdate({ set: { reference: event.id } });
+    return c.json({ received: true });
+  } catch {
+    return c.json({ error: "Webhook storage is unavailable." }, 503);
+  }
 });
 
 // Protected Admin Billing Ledger
