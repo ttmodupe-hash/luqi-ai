@@ -5,9 +5,15 @@ const mocks = vi.hoisted(() => ({
   reserveAiRequest: vi.fn(),
   getOrchestratorStatus: vi.fn(),
   orchestrateRequest: vi.fn(),
+  createEvidenceProposal: vi.fn(),
 }));
 vi.mock("./security/access", () => ({ getPrivateDb: mocks.getPrivateDb }));
 vi.mock("./security/aiBudget", () => ({ reserveAiRequest: mocks.reserveAiRequest }));
+vi.mock("./services/agentProposalLedger", () => ({
+  createEvidenceProposal: mocks.createEvidenceProposal,
+  transitionEvidenceProposal: vi.fn(),
+  readEvidenceProposalTrail: vi.fn(),
+}));
 vi.mock("./services/orchestrator", () => ({
   getOrchestratorStatus: mocks.getOrchestratorStatus,
   orchestrateRequest: mocks.orchestrateRequest,
@@ -53,6 +59,7 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     vi.clearAllMocks();
     mocks.getOrchestratorStatus.mockReturnValue({ demo: false });
     mocks.reserveAiRequest.mockResolvedValue(undefined);
+    mocks.createEvidenceProposal.mockResolvedValue({ patchId: 101 });
     mocks.orchestrateRequest.mockResolvedValue({
       content: "Hypothesis: retry failed, needs an independent staging test.",
       provider: "review-provider", model: "review-model",
