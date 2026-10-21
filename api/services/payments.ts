@@ -79,7 +79,7 @@ export async function verifyTransaction(
     });
     const data = (await res.json()) as any;
     const t = data?.data;
-    if (!res.ok || !t || t.status !== "success") return null;
+    if (!res.ok || !t || t.status !== "success" || t.reference !== reference) return null;
     return {
       amountCents: Number(t.amount),
       currency: t.currency || "ZAR",
