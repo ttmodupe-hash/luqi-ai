@@ -84,6 +84,14 @@ describe("legacy HTTP security integration", () => {
     expect(response.status).toBe(401);
   });
 
+  it("will not accept forged anonymous learner grades or other users' progress", async () => {
+    const result = await app.request("/api/v1/analytics/log-progression", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ user_id: 777, lab_id: "chemistry-lab", completion_status: "PASSED" }),
+    });
+    expect(result.status).toBe(401);
+  });
+
   it("requires administrator credentials before returning billing records", async () => {
     const res = await app.request("/api/v1/admin/billing-ledger");
     expect(res.status).toBe(401);
