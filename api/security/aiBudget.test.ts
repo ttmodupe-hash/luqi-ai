@@ -6,6 +6,7 @@ import { reserveAiRequest } from "./aiBudget";
 
 function makeDatabase(initialCount = 0) {
   let reservations = 0;
+  let globalJobs = 0;
   let lockedUser = false;
   let userFound = true;
   const tx = {
@@ -19,14 +20,20 @@ function makeDatabase(initialCount = 0) {
         where: (_condition: unknown) => query,
         limit: (_max: number) => query,
         for: async (_type: string) => {
-          lockedUser = true;
-          return userFound ? [{ id: 42 }] : [];
+          if (table === "users") {
+            lockedUser = true;
+            return userFound ? [{ id: 42 }] : [];
+          }
+          if (table === "ai_global_daily_quota") return [{ jobs: globalJobs }];
+          return [];
         },
         then: (resolve: (items: unknown[]) => unknown) =>
           Promise.resolve(table === "analytics_events" ? [{ total: initialCount + reservations }] : []).then(resolve),
       };
       return query;
     },
+    execute: async () => [],
+    update: () => ({ set: (record: { jobs: number }) => ({ where: async () => { globalJobs = record.jobs; } }) }),
     insert: () => ({
       values: async (record: any) => {
         expect(record.userId).toBe(42);
@@ -38,6 +45,7 @@ function makeDatabase(initialCount = 0) {
   return {
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(tx),
     get reservations() { return reservations; },
+    get globalJobs() { return globalJobs; },
     get lockedUser() { return lockedUser; },
     set userExists(value: boolean) { userFound = value; },
   };
@@ -63,6 +71,18 @@ describe("persistent per-user AI spending allowance", () => {
       code: "TOO_MANY_REQUESTS",
     });
     expect(db.reservations).toBe(2);
+  });
+
+  it("shares a hard daily provider budget instead of resetting by account", async () => {
+    vi.stubEnv("LUQI_MAX_AI_CALLS_GLOBAL_PER_DAY", "1");
+    const db = makeDatabase();
+    mock.getPrivateDb.mockResolvedValue(db);
+    await reserveAiRequest(42, "ai-chat");
+    expect(db.globalJobs).toBe(1);
+    await expect(reserveAiRequest(42, "another-chat")).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
+    expect(db.reservations).toBe(1);
   });
 
   it("never reserves usage for a missing account", async () => {
