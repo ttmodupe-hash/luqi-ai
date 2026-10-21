@@ -46,7 +46,9 @@ export const videoRouter = createRouter({
       return getCreditBalance(key);
     }),
 
-  getApiStatus: publicQuery.query(() => {
+  // Provider credential presence and configuration state are internal-only details.
+  // Do not reveal infrastructure status to unauthenticated callers.
+  getApiStatus: disabledVideoProcedure.query(() => {
     return getApiRequirementsStatus();
   }),
 
