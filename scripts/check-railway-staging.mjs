@@ -23,6 +23,15 @@ assert.equal(config.deploy.startCommand, "node dist/boot.js");
 assert.match(boot, /app\.get\("\/v1\/health"/);
 assert.equal(Object.hasOwn(config, "domains"), false, "no production domains in staging example");
 
+const floatingChat = fs.readFileSync("app/src/components/FloatingAiChat.tsx", "utf8");
+const backend = fs.readFileSync("api/boot.ts", "utf8");
+assert.match(floatingChat, /fetch\("\/api\/v1\/luqi-core"/,
+  "floating chat must use the quota-controlled backend route");
+assert.doesNotMatch(floatingChat, /GoogleGenAI|VITE_GEMINI_API_KEY|process\.env\.GEMINI_API_KEY/,
+  "no browser-side Gemini fallback or API key exposure");
+assert.match(backend, /status: 'unavailable'[\s\S]*?503/,
+  "failed AI calls must return honest server errors rather than fake success");
+
 // Existing legacy Railway configs remain unchanged until live service config
 // and precedence can be inspected through the Railway account permissions.
 console.log("Railway staging configuration passed static fail-closed preflight.");
