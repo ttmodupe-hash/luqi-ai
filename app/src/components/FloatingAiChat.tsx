@@ -62,7 +62,7 @@ export default function FloatingAiChat() {
     setIsLoading(true);
 
     // Provider keys, model selection, and spending quotas belong on the server.
-    // Never call GoogleGenAI in the browser or invent an assistant answer on failure.
+    // Never call a provider SDK in the browser or invent an assistant answer on failure.
     try {
       const res = await fetch("/api/v1/luqi-core", {
         method: "POST",
