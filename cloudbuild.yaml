@@ -1,32 +1,18 @@
+# LUQI verification-only Cloud Build configuration.
+# The legacy file previously deployed to Cloud Run and sent 100% of traffic
+# on any Cloud Build invocation. This is no longer permitted.
+# A production deployment requires a separate, manually approved release
+# workflow with validated target, immutable image digest, staging evidence,
+# rollback instructions and workload identity. No secret substitution here.
 steps:
-  # Step 1: Build the container image using the Dockerfile context cleanly
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build', 
-      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/luqi-toons-repo/engine-image:latest', 
-      '.'
-    ]
-
-  # Step 2: Stream the container layer directly up to Google Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'push', 
-      'us-central1-docker.pkg.dev/$PROJECT_ID/luqi-toons-repo/engine-image:latest'
-    ]
-
-  # Step 3: Deploy the image live to Cloud Run and explicitly update routing parameters
-  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'build-only'
     args:
-      - 'run'
-      - 'deploy'
-      - 'luqi-ai-backend'
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/luqi-toons-repo/engine-image:latest'
-      - '--region=us-central1'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      # CRITICAL ROUTING FIXES: Forces Google infrastructure to scale traffic to the latest build instantly
-      - '--update-traffic=latest=100'
-      - '--port=3000'
-
+      - 'build'
+      - '--pull'
+      - '-t'
+      - 'luqi-ai-validation:$SHORT_SHA'
+      - '.'
 options:
   logging: CLOUD_LOGGING_ONLY
+timeout: '1800s'
