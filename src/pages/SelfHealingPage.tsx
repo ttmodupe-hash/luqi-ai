@@ -264,7 +264,7 @@ export default function SelfHealingPage() {
     return () => window.removeEventListener("luqi:navigate-tab", handleCustomNav);
   }, []);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [useAI, setUseAI] = useState(true);
+
   const [expandedPatch, setExpandedPatch] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -418,7 +418,7 @@ print("STATUS: Verification test passed with zero errors.")
   const applyPatch = trpc.selfHealing.applyPatch.useMutation({ onSuccess: refreshAll });
   const rollbackPatch = trpc.selfHealing.rollbackPatch.useMutation({ onSuccess: refreshAll });
   const proposePatch = trpc.selfHealing.analyzeAndProposePatch.useMutation({ onSuccess: refreshAll });
-  const promoteABTest = trpc.selfHealing.promoteABTest.useMutation({ onSuccess: refreshAll });
+  const rejectPatch = trpc.selfHealing.rejectPatchProposal.useMutation({ onSuccess: refreshAll });
   const processBenchmarks = trpc.selfHealing.processPendingBenchmarks.useMutation({ onSuccess: refreshAll });
   const seedBenchmarks = trpc.selfHealing.seedDemoBenchmarks.useMutation({ onSuccess: refreshAll });
   const runHealthCheck = trpc.selfHealing.runFullHealthCheck.useMutation({ onSuccess: refreshAll });
@@ -612,21 +612,16 @@ print("STATUS: Verification test passed with zero errors.")
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400"><Hammer className="w-5 h-5" /></div>
                   <div>
                     <div className="font-semibold text-sm">HealingEngineer Agent</div>
-                    <div className="text-xs text-slate-500">AI-Powered Patch Generation</div>
+                    <div className="text-xs text-slate-500">Review proposals only — no code execution</div>
                   </div>
                 </div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-slate-400">Patches Generated</span><span className="text-slate-200">{patchStats.data?.total ?? 0}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Applied</span><span className="text-emerald-400 font-medium">{patchStats.data?.applied ?? 0}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Awaiting external CI review</span><span className="text-emerald-400 font-medium">{patches.data?.filter((p: Patch) => p.status === "approved_for_ci").length ?? 0}</span></div>
                   <div className="flex justify-between"><span className="text-slate-400">AI Generated</span><span className="text-sky-400 font-medium">{patches.data?.filter((p: Patch) => p.aiModel).length ?? 0}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Auto-Rollback</span><span className="text-purple-400 font-medium">Active</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Auto-deployment / rollback</span><span className="text-purple-400 font-medium">Disabled</span></div>
                 </div>
-                <div className="mt-4 flex items-center gap-2">
-                  <label className="text-xs text-slate-400 flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={useAI} onChange={(e) => setUseAI(e.target.checked)} className="rounded bg-slate-800 border-slate-700" />
-                    <Wand2 className="w-3 h-3" /> AI Patch Generation
-                  </label>
-                </div>
+                <div className="mt-4 text-xs text-slate-400">No app-host generated code execution, test claims, or deployments.</div>
               </div>
 
               {/* Predictive Analyst */}
@@ -710,12 +705,12 @@ print("STATUS: Verification test passed with zero errors.")
                         <span className="text-[10px] text-slate-500 whitespace-nowrap">{timeAgo(e.timestamp)}</span>
                         {!e.resolved && (
                           <button
-                            onClick={() => proposePatch.mutate({ errorLogId: e.id, useAI })}
+                            onClick={() => proposePatch.mutate({ errorLogId: e.id, useAI: false })}
                             disabled={proposePatch.isPending}
                             className="text-[10px] px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1"
                           >
-                            {proposePatch.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : useAI ? <Wand2 className="w-3 h-3" /> : <Hammer className="w-3 h-3" />}
-                            {useAI ? "AI Patch" : "Propose Patch"}
+                            {proposePatch.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Hammer className="w-3 h-3" />}
+                            Create review proposal
                           </button>
                         )}
                       </div>
@@ -733,7 +728,7 @@ print("STATUS: Verification test passed with zero errors.")
         {activeTab === "patches" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><Hammer className="w-4 h-4 text-emerald-400" /> Healing Patches</h3>
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Hammer className="w-4 h-4 text-emerald-400" /> Agent Review Proposals (no deployment)</h3>
             </div>
             <div className="space-y-2">
               {patches.data && patches.data.length > 0 ? (
@@ -766,33 +761,39 @@ print("STATUS: Verification test passed with zero errors.")
                             <pre className="text-[10px] text-slate-500 bg-slate-900 rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">{p.executionLog}</pre>
                           </div>
                         )}
-                        <div className="flex items-center gap-2 pt-2">
-                          {p.status === "pending" && (
+                        <div className="text-xs text-slate-400">
+                          Proposals are inert. Review approval does not start CI, deploy code or confirm a fix.
+                          Legacy proposals without an event history cannot be approved.
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-2">
+                          {p.status === "proposed" && (
                             <>
-                              <button onClick={() => applyPatch.mutate({ patchId: p.id })} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
-                                Apply Patch
+                              <button onClick={() => {
+                                const reason = window.prompt("Independent review rationale (12–1000 characters). No tests or deployment will run:");
+                                if (reason?.trim() && reason.trim().length >= 12) {
+                                  applyPatch.mutate({ patchId: p.id, reason: reason.trim(), skipTests: false });
+                                }
+                              }} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20">
+                                Request independent CI review
                               </button>
-                              <button onClick={() => applyPatch.mutate({ patchId: p.id, abTestPercent: 10 })} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors">
-                                A/B Test (10%)
-                              </button>
-                              <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "User rejected" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
-                                Reject
+                              <button onClick={() => {
+                                const reason = window.prompt("Explain why this proposal should be rejected:");
+                                if (reason?.trim() && reason.trim().length >= 12) {
+                                  rejectPatch.mutate({ patchId: p.id, reason: reason.trim() });
+                                }
+                              }} disabled={rejectPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                                Reject proposal
                               </button>
                             </>
                           )}
-                          {p.status === "ab_testing" && (
-                            <>
-                              <button onClick={() => promoteABTest.mutate({ patchId: p.id })} disabled={promoteABTest.isPending} className="text-xs px-3 py-1.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1">
-                                <ArrowRight className="w-3 h-3" /> Promote to 100%
-                              </button>
-                              <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "A/B test rollback" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors flex items-center gap-1">
-                                <Undo2 className="w-3 h-3" /> Rollback
-                              </button>
-                            </>
-                          )}
-                          {p.status === "applied" && (
-                            <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "User rollback" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors flex items-center gap-1">
-                              <Undo2 className="w-3 h-3" /> Rollback
+                          {p.status === "approved_for_ci" && (
+                            <button onClick={() => {
+                              const reason = window.prompt("Why revoke this review request? No production rollback is performed:");
+                              if (reason?.trim() && reason.trim().length >= 12) {
+                                rollbackPatch.mutate({ patchId: p.id, reason: reason.trim() });
+                              }
+                            }} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              Revoke review request
                             </button>
                           )}
                         </div>

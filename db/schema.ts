@@ -1,4 +1,4 @@
-import { mysqlTable, serial, varchar, text, int, timestamp, boolean, json, decimal, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, int, timestamp, boolean, json, decimal, mysqlEnum, bigint } from "drizzle-orm/mysql-core";
 
 /* ───────── Companion Tables ───────── */
 
@@ -244,6 +244,23 @@ export const healingPatches = mysqlTable("healing_patches", {
   rollbackReason: text("rollback_reason"),
   status: varchar("status", { length: 50 }).default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+/** Append-only, admin-attributed proposal review transitions.
+ * A local hash chain is evidence of inconsistent rows, not immutable forensic proof.
+ */
+export const agentReviewEvents = mysqlTable("agent_review_events", {
+  id: serial("id").primaryKey(),
+  patchId: bigint("patch_id", { mode: "number", unsigned: true }).notNull(),
+  actorUserId: bigint("actor_user_id", { mode: "number", unsigned: true }).notNull(),
+  action: varchar("action", { length: 40 }).notNull(),
+  previousStatus: varchar("previous_status", { length: 50 }),
+  nextStatus: varchar("next_status", { length: 50 }).notNull(),
+  proposalDigest: varchar("proposal_digest", { length: 64 }).notNull(),
+  previousEventHash: varchar("previous_event_hash", { length: 64 }).notNull(),
+  eventHash: varchar("event_hash", { length: 64 }).notNull(),
+  reasonDigest: varchar("reason_digest", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
 });
 
 export const systemMetrics = mysqlTable("system_metrics", {

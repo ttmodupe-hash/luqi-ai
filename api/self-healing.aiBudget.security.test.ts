@@ -5,9 +5,17 @@ const mocks = vi.hoisted(() => ({
   reserveAiRequest: vi.fn(),
   getOrchestratorStatus: vi.fn(),
   orchestrateRequest: vi.fn(),
+  createEvidenceProposal: vi.fn(),
+  assertEvidenceLedgerReady: vi.fn(),
 }));
 vi.mock("./security/access", () => ({ getPrivateDb: mocks.getPrivateDb }));
 vi.mock("./security/aiBudget", () => ({ reserveAiRequest: mocks.reserveAiRequest }));
+vi.mock("./services/agentProposalLedger", () => ({
+  createEvidenceProposal: mocks.createEvidenceProposal,
+  assertEvidenceLedgerReady: mocks.assertEvidenceLedgerReady,
+  transitionEvidenceProposal: vi.fn(),
+  readEvidenceProposalTrail: vi.fn(),
+}));
 vi.mock("./services/orchestrator", () => ({
   getOrchestratorStatus: mocks.getOrchestratorStatus,
   orchestrateRequest: mocks.orchestrateRequest,
@@ -53,6 +61,8 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     vi.clearAllMocks();
     mocks.getOrchestratorStatus.mockReturnValue({ demo: false });
     mocks.reserveAiRequest.mockResolvedValue(undefined);
+    mocks.assertEvidenceLedgerReady.mockResolvedValue(undefined);
+    mocks.createEvidenceProposal.mockResolvedValue({ patchId: 101 });
     mocks.orchestrateRequest.mockResolvedValue({
       content: "Hypothesis: retry failed, needs an independent staging test.",
       provider: "review-provider", model: "review-model",
@@ -87,6 +97,18 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     expect(mocks.orchestrateRequest).not.toHaveBeenCalled();
   });
 
+  it("blocks paid AI requests when the reviewed ledger schema is missing", async () => {
+    mocks.getPrivateDb.mockResolvedValue(fakeDb());
+    mocks.assertEvidenceLedgerReady.mockRejectedValue(
+      new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Ledger unavailable" })
+    );
+    await expect(admin.aiDiagnoseError({ errorLogId: 7 }))
+      .rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+    expect(mocks.reserveAiRequest).not.toHaveBeenCalled();
+    expect(mocks.orchestrateRequest).not.toHaveBeenCalled();
+    expect(mocks.createEvidenceProposal).not.toHaveBeenCalled();
+  });
+
   it("must reserve both user and global allowance before any paid call", async () => {
     const db = fakeDb();
     mocks.getPrivateDb.mockResolvedValue(db);
@@ -113,8 +135,14 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     expect(payload.query).not.toContain("SECRET_STACK_CONTENT");
     expect(payload.systemPrompt).toContain("untrusted");
     expect(result).toMatchObject({ diagnosed: true, deployed: false, testsPassed: false });
-    expect(db.inserts).toHaveLength(1);
-    expect(db.inserts[0]).toMatchObject({ status: "proposed", patchType: "ai_diagnosis" });
+    expect(mocks.createEvidenceProposal).toHaveBeenCalledTimes(1);
+    expect(mocks.createEvidenceProposal).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: 42, patchType: "ai_diagnosis", errorLogId: 7,
+      description: "Hypothesis: retry failed, needs an independent staging test.",
+    }));
+    // Persisted proposal and genesis event are now committed by the ledger
+    // in one transaction (tested independently against real MySQL).
+    expect(db.inserts).toHaveLength(0);
   });
 
   it("does not store a diagnosis when the provider returns an empty result", async () => {

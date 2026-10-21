@@ -24,10 +24,13 @@ describe("LUQI autonomous safety and release invariants", () => {
 
   it("only persists agent suggestions and never describes them as applied", () => {
     const agent = read("api/services/agentReview.ts");
-    expect(agent).toContain('status: "proposed"');
-    expect(agent).toContain("verifiedByCI: false");
-    expect(agent).toContain("codeExecuted: false");
-    expect(agent).toContain("humanReviewRequired: true");
+    const ledger = read("api/services/agentProposalLedger.ts");
+    expect(agent).toContain("createEvidenceProposal({");
+    expect(ledger).toContain('status: "proposed" as const');
+    expect(ledger).toContain("verifiedByCI: false");
+    expect(ledger).toContain("codeExecuted: false");
+    expect(ledger).toContain("ciVerified: false");
+    expect(agent).toContain("human review");
     expect(agent).toContain("applied: false");
     expect(agent).toContain("verified: false");
   });
