@@ -13,6 +13,7 @@ import { narratedVideoAvailable } from "../api/services/paidNarration";
 const requiredTables = [
   "users", "payment_events", "video_projects", "video_credit_wallets",
   "video_credit_ledger", "video_render_requests", "video_global_daily_quota",
+  "ai_global_daily_quota",
 ];
 
 function required(key: string): string {
