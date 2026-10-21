@@ -4,42 +4,25 @@
 
 import { z } from "zod";
 import { createRouter, publicQuery, adminQuery } from "./middleware";
-import { superIntelligenceCore } from "./services/superIntelligenceCore";
+import { proposeAgentImprovement, getAgentProposalTelemetry } from "./services/agentReview";
 import { experientialEducationOrchestrator, type GradeTier } from "./services/experientialEducationOrchestrator";
 import { afriLearnAdaptiveEngine } from "./services/afriLearnAdaptiveEngine";
 
 export const superCoreRouter = createRouter({
-  getTelemetry: adminQuery.query(async () => {
-    const summary = superIntelligenceCore.getSummary();
-    const records = superIntelligenceCore.getRecords(25);
-    return {
-      summary,
-      records,
-    };
-  }),
+  getTelemetry: adminQuery.query(() => getAgentProposalTelemetry(25)),
 
   runAutonomousRefinement: adminQuery
-    .input(
-      z.object({
-        taskName: z.string().min(1),
-        taskDescription: z.string().min(1),
-        assertions: z.string().min(1),
-        maxCycles: z.number().min(1).max(5).default(3),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const result = await superIntelligenceCore.executeAutonomousLoop(
-        input.taskName,
-        input.taskDescription,
-        input.assertions,
-        input.maxCycles
-      );
-      return result;
-    }),
+    .input(z.object({
+      taskName: z.string().trim().min(1).max(150),
+      taskDescription: z.string().trim().min(1).max(3000),
+      assertions: z.string().trim().min(1).max(2000),
+      maxCycles: z.number().int().min(1).max(5).default(3),
+    }))
+    .mutation(async ({ input, ctx }) => proposeAgentImprovement(input, ctx.user.id)),
 
   getHistoricalPatches: adminQuery.query(async () => {
-    const records = superIntelligenceCore.getRecords(15);
-    return records.filter((r) => r.attemptsBeforeSuccess > 1 || r.optimizedPromptDelta.length > 15);
+    const review = await getAgentProposalTelemetry(15);
+    return review.records;
   }),
 
   // ─── Experiential Super-Intelligence Education ───
