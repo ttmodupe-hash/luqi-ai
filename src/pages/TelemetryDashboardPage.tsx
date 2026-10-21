@@ -65,11 +65,11 @@ export default function TelemetryDashboardPage() {
   const refinementMutation = trpc.superCore.runAutonomousRefinement.useMutation();
 
   const summary = telemetryQuery.data?.summary || {
-    totalExecutions: 42,
-    averageLatencyMs: 1420,
-    averageAttempts: 1.15,
+    totalExecutions: 0,
+    averageLatencyMs: 0,
+    averageAttempts: 0,
     failedCycles: 0,
-    successRatePercent: 100,
+    successRatePercent: 0,
   };
 
   const records = telemetryQuery.data?.records || [];
@@ -79,7 +79,7 @@ export default function TelemetryDashboardPage() {
     if (isRunning) return;
 
     setIsRunning(true);
-    setExecutionLogs(["[Dispatcher] Initializing sandboxed autonomous verification..."]);
+    setExecutionLogs(["[Review] Requesting a proposed change for human and CI evaluation..."]);
     setActiveCodeResult(null);
 
     try {
@@ -94,16 +94,12 @@ export default function TelemetryDashboardPage() {
       setExecutionLogs(res.logs);
       setCircuitPath(res.circuitPath);
 
-      if (res.telemetry.status === "SUCCESS") {
-        toast.success(`Task verified successfully in ${res.telemetry.executionTimeMs}ms (${res.telemetry.attemptsBeforeSuccess} cycles).`);
-      } else {
-        toast.error("Auto-correction reached bound limits.");
-      }
+      toast.success(`Reviewable proposal #${res.patchId} saved. No code was executed or deployed.`);
 
       telemetryQuery.refetch();
     } catch (err: any) {
-      toast.error(err?.message || "Execution failed.");
-      setExecutionLogs((prev) => [...prev, `[Critical Fail] ${err?.message}`]);
+      toast.error(err?.message || "Proposal request failed.");
+      setExecutionLogs((prev) => [...prev, `[Request failed] ${err?.message}`]);
     } finally {
       setIsRunning(false);
     }
@@ -134,7 +130,7 @@ export default function TelemetryDashboardPage() {
                   CIRCUIT BREAKER ACTIVE
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Autonomous Test-Driven Self-Refinement & VM Sandbox</p>
+              <p className="text-xs text-slate-400">AI-assisted repair proposals · persistent records · CI and human approval</p>
             </div>
           </div>
 
@@ -160,27 +156,27 @@ export default function TelemetryDashboardPage() {
         {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-            <span className="text-xs text-slate-400 font-medium">Total Code Generations</span>
+            <span className="text-xs text-slate-400 font-medium">Verified code executions</span>
             <p className="text-2xl font-bold text-teal-400 mt-1">{summary.totalExecutions}</p>
-            <span className="text-[10px] text-slate-400 mt-1 block">Vectorized ledger events</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">No runtime execution of model-generated code</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-            <span className="text-xs text-slate-400 font-medium">Average Latency Window</span>
+            <span className="text-xs text-slate-400 font-medium">Recorded execution latency</span>
             <p className="text-2xl font-bold text-cyan-400 mt-1">{summary.averageLatencyMs}ms</p>
-            <span className="text-[10px] text-slate-400 mt-1 block">Full verification cycle</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">Not inferred from AI proposals</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-            <span className="text-xs text-slate-400 font-medium">Self-Refinement Iterations</span>
+            <span className="text-xs text-slate-400 font-medium">Verified test cycles</span>
             <p className="text-2xl font-bold text-purple-400 mt-1">{summary.averageAttempts}x</p>
-            <span className="text-[10px] text-slate-400 mt-1 block">Mean loop count per task</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">Only externally verified results count</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
-            <span className="text-xs text-slate-400 font-medium">Success Rate</span>
+            <span className="text-xs text-slate-400 font-medium">Verified execution rate</span>
             <p className="text-2xl font-bold text-emerald-400 mt-1">{summary.successRatePercent}%</p>
-            <span className="text-[10px] text-slate-400 mt-1 block">{summary.failedCycles} critical disruptions</span>
+            <span className="text-[10px] text-slate-400 mt-1 block">Unverified proposals never count as successes</span>
           </div>
         </div>
 
@@ -191,7 +187,7 @@ export default function TelemetryDashboardPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-teal-400" />
-                <h2 className="text-sm font-bold text-slate-100">Autonomous Test-Driven Sandbox</h2>
+                <h2 className="text-sm font-bold text-slate-100">Reviewable Change Proposal</h2>
               </div>
               <span className="text-[10px] font-mono text-slate-400">Node.js Sandbox Isolation</span>
             </div>
@@ -242,7 +238,7 @@ export default function TelemetryDashboardPage() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Programmatic Assertion Code (Sandbox Verifier)
+                  Proposed CI Verification Assertions
                 </label>
                 <textarea
                   value={assertions}
@@ -261,12 +257,12 @@ export default function TelemetryDashboardPage() {
                 {isRunning ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Executing Self-Correction Ring...</span>
+                    <span>Generating review proposal...</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5" />
-                    <span>Run Autonomous Refinement Loop</span>
+                    <span>Generate Proposal for Review</span>
                   </>
                 )}
               </button>
@@ -279,7 +275,7 @@ export default function TelemetryDashboardPage() {
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Activity className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-sm font-bold text-slate-100">Live Verification Ring Output</h3>
+                  <h3 className="text-sm font-bold text-slate-100">Proposal Creation & Review Audit</h3>
                 </div>
                 {circuitPath.length > 0 && (
                   <div className="flex items-center gap-1 text-[10px] font-mono text-slate-400">
@@ -319,14 +315,14 @@ export default function TelemetryDashboardPage() {
               </div>
             </div>
 
-            {/* Verified Production Code Output */}
+            {/* Unverified Suggested Changes */}
             {activeCodeResult && (
               <div className="space-y-2 pt-2 border-t border-slate-800">
                 <div className="flex items-center justify-between text-xs font-semibold text-emerald-400">
                   <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Verified Code Result
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Review Required: Not Tested
                   </span>
-                  <span className="text-[10px] font-mono text-slate-400">Sandbox Passed</span>
+                  <span className="text-[10px] font-mono text-slate-400">No execution or deployment</span>
                 </div>
                 <pre className="p-3 bg-slate-950 rounded-xl border border-emerald-500/30 text-xs font-mono text-emerald-300 overflow-x-auto max-h-48 leading-relaxed">
                   {activeCodeResult}
@@ -341,7 +337,7 @@ export default function TelemetryDashboardPage() {
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <History className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-bold text-slate-100">Autonomous Core Processing History</h3>
+              <h3 className="text-sm font-bold text-slate-100">Persistent AI Review Proposals</h3>
             </div>
             <span className="text-[10px] font-mono text-slate-400">{records.length} historical records</span>
           </div>
