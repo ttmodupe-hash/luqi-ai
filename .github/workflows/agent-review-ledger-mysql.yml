@@ -45,3 +45,20 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Run genuine InnoDB reviewer concurrency and history checks
         run: npx vitest run api/services/agentProposalLedger.mysql.integration.test.ts
+  node-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript correctness
+        run: npm run check
+      - name: Complete offline Node regression suite
+        run: npm test
+      - name: Production build validation (without deployment)
+        run: npm run build
