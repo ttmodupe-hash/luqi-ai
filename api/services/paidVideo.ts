@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { hasMp4Header, readBoundedMedia } from "./privateMediaValidation";
 import { narratedVideoAvailable, synthesizePaidNarration, combineVideoAndNarration } from "./paidNarration";
 
@@ -149,6 +149,20 @@ export async function renderPaidVideo(
     client.destroy();
   }
   return { objectKey, provider: mode === "narrated_mp4" ? "Replicate WAN 2.1 + ElevenLabs + FFmpeg" : "Replicate WAN 2.1" };
+}
+
+/**
+ * Read-only private object-store preflight; no paid generation, upload, or
+ * customer content. Used by the manual staging readiness workflow.
+ */
+export async function checkPrivateVideoStorage(): Promise<boolean> {
+  const { bucket, client } = videoClient();
+  try {
+    await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    return true;
+  } finally {
+    client.destroy();
+  }
 }
 
 /**
