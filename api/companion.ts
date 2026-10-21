@@ -5,6 +5,7 @@ import { companionPersonalities, companionConversations, companionMessages, comp
 import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { orchestrateRequest } from "./services/orchestrator";
+import { formatCompanionHistory, selectRelevantCompanionMemories } from "./companion-context";
 
 export const DEFAULT_PERSONALITIES = [
   {
@@ -74,13 +75,14 @@ async function respondInConversation(db: any, userId: number, conversationId: nu
   const priorMessages = await db.select().from(companionMessages)
     .where(eq(companionMessages.conversationId, conversationId))
     .orderBy(desc(companionMessages.createdAt)).limit(20);
-  const history = priorMessages.reverse().map((message: any) => `${message.role === "assistant" ? "Assistant" : "User"}: ${message.content}`).join("\n");
+  const history = formatCompanionHistory(priorMessages.reverse());
 
   const memories = await db.select().from(companionMemories)
     .where(eq(companionMemories.userId, userId))
     .orderBy(desc(companionMemories.importance)).limit(10);
-  const memoryContext = memories.length
-    ? memories.map((memory: any, index: number) => `${index + 1}. [${memory.category || memory.memoryType || "Memory"}] ${memory.content}`).join("\n")
+  const relevantMemories = selectRelevantCompanionMemories(memories, content);
+  const memoryContext = relevantMemories.length
+    ? relevantMemories.map((memory: any, index: number) => `${index + 1}. [${memory.category || memory.memoryType || "Memory"}] ${memory.content}`).join("\n")
     : "No saved personal memories yet.";
 
   await db.insert(companionMessages).values({ conversationId, role: "user", content });
