@@ -118,6 +118,38 @@ app.use("/*", async (c, next) => {
   }, "request");
 });
 
+// Legacy administrative HTTP paths must be protected by the same verified,
+// database-backed session and role as tRPC adminQuery. Neither an arbitrary
+// x-forwarded-for header nor an account identifier passed in a URL is authority.
+const internalAdminPaths = new Set([
+  "/api/v1/security/diagnostics",
+  "/api/v1/diagnostics/database-indexes",
+  "/api/v1/audit/ledger",
+  "/api/v1/audit/seal",
+  "/api/v1/intelligence/self-optimize",
+  "/intelligence/self-optimize",
+  "/api/v1/workspace/critiques",
+  "/workspace/critiques",
+]);
+app.use("/*", async (c, next) => {
+  const adminPath = internalAdminPaths.has(c.req.path);
+  const studentLedger = /^\/api\/v1\/grading\/ledger\/[^/]+$/.test(c.req.path);
+  if (!adminPath && !studentLedger) return next();
+
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authenticated session required." }, 401);
+
+  if (adminPath && user.role !== "admin") {
+    return c.json({ error: "Administrator access required." }, 403);
+  }
+  if (studentLedger && user.role !== "admin" &&
+      c.req.path.split("/").at(-1) !== String(user.id)) {
+    return c.json({ error: "Access denied." }, 403);
+  }
+  c.header("Cache-Control", "no-store");
+  return next();
+});
+
 // ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(async (c, next) => {
   const method = c.req.method.toUpperCase();
@@ -710,7 +742,7 @@ app.get('/api/v1/grading/ledger/:user_id', (c) => {
   const userId = c.req.param('user_id');
   const chain = SovereignCryptoLedger.getLedgerChain();
   const entries = chain
-    .filter(b => b.actor === userId || b.action.includes('GRADED') || b.action.includes('TERMINAL') || b.action.includes('SIMULATION'))
+    .filter(b => b.actor === userId)
     .map(b => ({
       session_id: b.currentBlockHash.substring(0, 12),
       track: b.action,
@@ -718,14 +750,9 @@ app.get('/api/v1/grading/ledger/:user_id', (c) => {
       completion_date: new Date(b.timestamp).toISOString().replace('T', ' ').substring(0, 16)
     }));
 
-  return c.json(entries.length > 0 ? entries : [
-    {
-      session_id: 'SES-INIT-01',
-      track: 'AWS_CLOUD_SANDBOX',
-      activity_summary: 'AWS EC2 High Availability Auto-Scaling Lab Verified',
-      completion_date: new Date().toISOString().replace('T', ' ').substring(0, 16)
-    }
-  ]);
+  // This is a legacy in-memory activity record, not certified grading.
+  // Never fabricate a passed lab when a student has no records.
+  return c.json(entries);
 });
 
 // ============================================================================
