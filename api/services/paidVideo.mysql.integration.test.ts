@@ -137,7 +137,7 @@ integration("verified payments and video debits in real MySQL", () => {
       prompt: "A visible waveform", language: "en",
       durationSeconds: 2, confirmedCredits: 24,
       mode: "narrated_mp4" as const,
-      narration: "This is LUQI's spoken demonstration",
+      narration: "LUQI demonstrates a wave",
     };
     const started = await reservePaidVideo(request);
     expect(started.chargeCredits).toBe(24);
