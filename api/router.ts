@@ -16,6 +16,7 @@ import { voiceRouter } from "./voice";
 import { archiveRouter } from "./archive";
 import { superCoreRouter } from "./superCoreRouter";
 import { omegaKnowledgeRouter } from "./omega-knowledge";
+import { omegaTradesRouter } from "./omega-trades";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -36,6 +37,7 @@ export const appRouter = createRouter({
   archive: archiveRouter,
   superCore: superCoreRouter,
   omegaKnowledge: omegaKnowledgeRouter,
+  omegaTrades: omegaTradesRouter,
 });
 
 export type AppRouter = typeof appRouter;
