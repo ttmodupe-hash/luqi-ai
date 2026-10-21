@@ -93,6 +93,7 @@ export async function renderPaidVideo(
       },
     }),
     signal: AbortSignal.timeout(30000),
+    redirect: "error",
   });
   let prediction = await readApiResponse(createResponse);
   if (prediction?.status !== "succeeded") {
@@ -109,6 +110,7 @@ export async function renderPaidVideo(
       const response = await fetch(pollingUrl, {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(15000),
+        redirect: "error",
       });
       prediction = await readApiResponse(response);
       if (prediction?.status === "succeeded") break;
@@ -116,7 +118,7 @@ export async function renderPaidVideo(
   }
   if (prediction?.status !== "succeeded") throw new Error("Video provider timed out.");
   const sourceUrl = extractOutputUrl(prediction);
-  const download = await fetch(sourceUrl, { signal: AbortSignal.timeout(30000) });
+  const download = await fetch(sourceUrl, { signal: AbortSignal.timeout(30000), redirect: "error" });
   if (!download.ok) throw new Error("Generated video could not be retrieved.");
   const declaredLength = Number(download.headers.get("content-length") || "0");
   if (declaredLength > MAX_MP4_BYTES) throw new Error("Generated video exceeds size limit.");
