@@ -1,0 +1,27 @@
+name: LUQI Edge Guard Verification (no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**"]
+    paths:
+      - "edge/**"
+      - ".github/workflows/edge-worker-security.yml"
+  push:
+    branches: ["review/edge-*"]
+    paths:
+      - "edge/**"
+      - ".github/workflows/edge-worker-security.yml"
+permissions:
+  contents: read
+jobs:
+  verify-edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check Worker syntax
+        run: node --check edge/cloudflareWorker.js
+      - name: Verify edge guard without external accounts or vendor charges
+        run: node edge/verify-worker.mjs
