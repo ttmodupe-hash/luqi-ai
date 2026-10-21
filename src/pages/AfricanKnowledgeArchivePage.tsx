@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { BookOpen, LibraryBig, Search, ShieldAlert, Clock3, ArrowLeft } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 
@@ -55,6 +56,10 @@ export default function AfricanKnowledgeArchivePage() {
             and traditional knowledge. These are curated study references, not AI-generated
             answers or automatically verified historical facts.
           </p>
+          <Link to="/vocational-skills"
+            className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-sm text-amber-200 hover:bg-amber-500/10">
+            Explore vocational skills and career practice roadmaps →
+          </Link>
           <div className="rounded-xl border border-amber-800/50 bg-amber-950/20 px-4 py-3 text-xs leading-5 text-amber-100">
             Bibliographic references are preserved from the OMEGA Super AI repository,
             but they have not all been independently fact-checked for this LUQI release.
