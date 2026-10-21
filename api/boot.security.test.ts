@@ -73,6 +73,17 @@ describe("legacy HTTP security integration", () => {
     expect(res.status).toBe(401);
   });
 
+  it.each([
+    "/api/khoro/chat", "/api/khoro/multimodal", "/api/khoro/stream", "/api/khoro-legal",
+  ])("does not allow anonymous Khoro vendor spending: %s", async (path) => {
+    const response = await app.request(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ user_query: "Expensive request" }),
+    });
+    expect(response.status).toBe(401);
+  });
+
   it("requires administrator credentials before returning billing records", async () => {
     const res = await app.request("/api/v1/admin/billing-ledger");
     expect(res.status).toBe(401);
