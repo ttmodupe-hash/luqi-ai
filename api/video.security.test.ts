@@ -15,6 +15,7 @@ describe("video legacy endpoints fail closed", () => {
 
   const forbiddenCalls: Array<[string, () => Promise<unknown>]> = [
     ["getBalance", () => caller.getBalance({ userKey: "another-user" })],
+    ["getApiStatus", () => caller.getApiStatus()],
     ["topupCredits", () => caller.topupCredits({ userKey: "another-user", credits: 1000 })],
     ["create", () => caller.create({ title: "example", prompt: "example", userId: 123 })],
     ["list", () => caller.list({})],
@@ -31,5 +32,17 @@ describe("video legacy endpoints fail closed", () => {
 
   it.each(forbiddenCalls)("%s cannot be invoked by unauthenticated callers", async (_name, invoke) => {
     await expect(invoke()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("continues to deny legacy operations to logged-in users until ownership and payment checks exist", async () => {
+    const signedIn = videoRouter.createCaller({
+      req: new Request("https://luqi-ai.com/api/trpc/video"),
+      user: { id: 55, email: "learner@example.com", name: null, role: "user" },
+    });
+    await expect(signedIn.get({ id: 123 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.getBalance({ userKey: "another-user" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.topupCredits({ userKey: "another-user", credits: 1000 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.generate({ title: "test", prompt: "render", userKey: "another-user" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.getApiStatus()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });
