@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, eq, lt, gte, count } from "drizzle-orm";
-import { users, videoProjects, videoCreditWallets, videoCreditLedger, videoRenderRequests } from "../../db/schema";
+import { and, eq, lt, gte, count, sql } from "drizzle-orm";
+import { users, videoProjects, videoCreditWallets, videoCreditLedger, videoRenderRequests, videoGlobalDailyQuota } from "../../db/schema";
 import { getPrivateDb } from "../security/access";
 
 export const MIN_PAID_VIDEO_SECONDS = 2;
@@ -131,6 +131,20 @@ export async function reservePaidVideo(input: RenderInput): Promise<ReservedRend
       throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Daily paid-video limit reached." });
     }
 
+    // Independent global cap: a user can never escape the provider budget
+    // by creating more accounts. The UTC-day row serializes all workers.
+    const configuredGlobal = Number(process.env.LUQI_VIDEO_GLOBAL_DAILY_LIMIT);
+    const maxGlobalJobs = Number.isSafeInteger(configuredGlobal) &&
+      configuredGlobal >= 1 && configuredGlobal <= 100 ? configuredGlobal : 10;
+    const dayKey = new Date().toISOString().slice(0, 10);
+    await tx.execute(sql`INSERT INTO video_global_daily_quota (day_key, jobs)
+      VALUES (${dayKey}, 0) ON DUPLICATE KEY UPDATE day_key = day_key`);
+    const [globalQuota] = await tx.select().from(videoGlobalDailyQuota)
+      .where(eq(videoGlobalDailyQuota.dayKey, dayKey)).limit(1).for("update");
+    if (!globalQuota || globalQuota.jobs >= maxGlobalJobs) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Video rendering capacity reached for today." });
+    }
+
     const [wallet] = await tx.select().from(videoCreditWallets)
       .where(eq(videoCreditWallets.userKey, email)).limit(1).for("update");
     if (!wallet || wallet.credits < charge) {
@@ -145,6 +159,9 @@ export async function reservePaidVideo(input: RenderInput): Promise<ReservedRend
     const projectId = Number(project.insertId);
     const balance = wallet.credits - charge;
 
+    await tx.update(videoGlobalDailyQuota)
+      .set({ jobs: globalQuota.jobs + 1 })
+      .where(eq(videoGlobalDailyQuota.dayKey, dayKey));
     await tx.update(videoCreditWallets).set({ credits: balance })
       .where(eq(videoCreditWallets.userKey, email));
     await tx.insert(videoCreditLedger).values({
