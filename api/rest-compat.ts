@@ -2542,7 +2542,7 @@ restCompat.post("/api/ussd", async (c) => {
     phoneNumber = json.phoneNumber || phoneNumber;
     text = json.text || "";
   } else {
-    const body = await c.req.parseBody().catch(() => ({}));
+    const body: Record<string, string | File> = await c.req.parseBody().catch(() => ({}));
     sessionId = (body.sessionId as string) || sessionId;
     phoneNumber = (body.phoneNumber as string) || phoneNumber;
     text = (body.text as string) || "";
