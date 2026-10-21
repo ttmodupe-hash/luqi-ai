@@ -21,7 +21,7 @@
 - **Billing:** pending Paystack checkouts are bound to server-defined credit packs. The server validates webhook HMAC and rechecks the payment with Paystack; exact reference, account, amount and currency must match. Credits are never created by the browser or a failed transaction.
 - **Spending:** per-account daily caps, one render at a time, global daily provider cap, unique request ID, locked InnoDB debit/refund entries, and automatic/account/admin stale-request recovery.
 - **Privacy and security:** objects are served through logged-in, owner-scoped access; arbitrary URLs, storage keys and provider response redirects are rejected; remote media reads have size caps and timeouts.
-- **Risk limitations:** Narration is a provider voiceover—not character lip sync, automatic translation, or speech performed in the depicted character's own voice. No voice cloning is offered. Audio can be trimmed to the purchased video length.
+- **Risk limitations:** Narration is a provider voiceover—not character lip sync, automatic translation, or speech performed in the depicted character's own voice. No voice cloning is offered. Narration longer than the purchased clip is rejected and refunded, not silently truncated; the Studio also limits text based on requested duration.
 - **Financial truthfulness:** pricing/margins from old provider assumptions are not verified current vendor costs; do not advertise guaranteed margins.
 
 ## Staging infrastructure and operator tasks still required
