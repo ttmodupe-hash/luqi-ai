@@ -120,6 +120,20 @@ describe("legacy HTTP security integration", () => {
     expect(result).not.toHaveProperty("external_evaluator_clearance", true);
   });
 
+  it.each([
+    "/api/v1/workspace/upload-asset", "/workspace/upload-asset",
+  ])("does not invent an uploaded storage asset for %s", async (path) => {
+    const response = await app.request(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ filename: "private.pdf", content: "unverified" }),
+    });
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body).not.toHaveProperty("asset_url");
+    expect(body).not.toHaveProperty("success", true);
+  });
+
   it("requires administrator credentials before returning billing records", async () => {
     const res = await app.request("/api/v1/admin/billing-ledger");
     expect(res.status).toBe(401);
