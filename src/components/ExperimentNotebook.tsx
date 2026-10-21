@@ -6,7 +6,7 @@ const models = {
   "biology-enzyme": { title: "Enzyme kinetics", labels: ["Substrate", "Vmax", "Km"], defaults: [2, 10, 2], calculate: (v: number[]) => michaelisMentenRate(v[0], v[1], v[2]), unit: "rate" },
   "chemistry-titration": { title: "Titration equivalence", labels: ["Acid mol/L", "Acid volume L", "Base mol/L"], defaults: [0.1, 0.025, 0.1], calculate: (v: number[]) => monoproticEquivalenceVolume(v[0], v[1], v[2]), unit: "L" },
   "algebra-calculus": { title: "Derivative of x²", labels: ["x"], defaults: [3], calculate: (v: number[]) => centralDifference(x => x * x, v[0]), unit: "slope" },
-  "geometry-solids": { title: "Cylinder volume", labels: ["Radius (m)", "Height (m)"], defaults: [2, 3], calculate: (v: number[]) => cylinderVolume(v[0], v[1]), unit: "m³" },
+  "geometry-3d": { title: "Cylinder volume", labels: ["Radius (m)", "Height (m)"], defaults: [2, 3], calculate: (v: number[]) => cylinderVolume(v[0], v[1]), unit: "m³" },
 };
 
 export default function ExperimentNotebook({ labId }: { labId: string }) {
