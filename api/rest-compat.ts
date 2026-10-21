@@ -8,9 +8,10 @@
 
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "./queries/connection";
+import { getPrivateDb } from "./security/access";
+import { registerAccount, loginAccount, resolveSessionUser } from "./auth";
 import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
@@ -23,6 +24,35 @@ import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services
 import { streamSSE } from "hono/streaming";
 import { ussdAndBillingService } from "./services/ussdAndBillingService";
 export const restCompat = new Hono();
+
+/**
+ * Permanent REST access boundary: the old /v1 routes do not pass through
+ * tRPC and must use the same validated server session checks.
+ */
+const adminGate = async (c: any, next: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  if (user.role !== "admin") return c.json({ error: "Administrator access required." }, 403);
+  await next();
+};
+
+const userGate = async (c: any, next: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  await next();
+};
+
+restCompat.use("/api/v1/zta/*", adminGate);
+restCompat.use("/v1/zta/*", adminGate);
+restCompat.use("/api/v1/self-healing/*", adminGate);
+restCompat.use("/v1/self-healing/*", adminGate);
+restCompat.use("/api/billing/*", adminGate);
+restCompat.use("/api/system/*", adminGate);
+restCompat.use("/api/v1/jobs/*", userGate);
+restCompat.use("/v1/jobs/*", userGate);
+restCompat.use("/api/v1/billing/*", userGate);
+restCompat.use("/v1/billing/*", userGate);
+
 
 const LUQI_SYSTEM_PROMPT = `You are LUQI AI, an intelligent assistant for South Africa and the broader African continent.
 
@@ -53,14 +83,6 @@ function aiUnavailableResponse() {
     module: "unavailable",
     response_time_ms: 0,
   };
-}
-
-function jwtSecret(): string {
-  return process.env.JWT_SECRET || process.env.APP_SECRET || "luqi-dev-secret-change-me";
-}
-
-function signToken(userId: number): string {
-  return jwt.sign({ userId }, jwtSecret(), { expiresIn: "30d" });
 }
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
@@ -594,73 +616,48 @@ restCompat.get("/api/v25/payments/balance", async (c) => {
   }
 });
 
-// ─── AUTH ─────────────────────────────────────────────────────────────
+
+ // ─── COMPATIBLE AUTH: same hashed, expiring database sessions as /api/auth ───
+function setLegacyAuthCookie(c: any, token: string) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  c.header("Cache-Control", "no-store");
+  c.header("Set-Cookie", `luqi_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000${secure}`);
+}
 
 restCompat.post("/auth/signup", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const email = (body.email || "").toString().trim().toLowerCase();
-  const password = (body.password || "").toString();
-  const name = (body.name || "").toString().trim() || null;
-
-  if (!email || !email.includes("@")) return c.json({ detail: "Valid email is required" }, 400);
-  if (password.length < 6) return c.json({ detail: "Password must be at least 6 characters" }, 400);
-
   try {
-    const db = await getDb();
-    const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (existing) return c.json({ detail: "An account with this email already exists" }, 409);
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const [result] = await db.insert(users).values({ email, passwordHash, name });
-    const userId = Number(result.insertId);
-
-    return c.json({
-      token: signToken(userId),
-      user: { id: userId, email, name },
-    });
-  } catch (e: any) {
-    return c.json({ detail: "Signup unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+    const session = await registerAccount(
+      typeof body.email === "string" ? body.email : "",
+      typeof body.password === "string" ? body.password : "",
+      typeof body.name === "string" ? body.name : undefined,
+    );
+    setLegacyAuthCookie(c, session.token);
+    return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() }, 201);
+  } catch {
+    return c.json({ detail: "Unable to register. Verify your details or try again." }, 400);
   }
 });
 
 restCompat.post("/auth/login", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const email = (body.email || "").toString().trim().toLowerCase();
-  const password = (body.password || "").toString();
-
-  if (!email || !password) return c.json({ detail: "Email and password are required" }, 400);
-
   try {
-    const db = await getDb();
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (!user) return c.json({ detail: "Invalid credentials" }, 401);
-
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return c.json({ detail: "Invalid credentials" }, 401);
-
-    return c.json({
-      token: signToken(user.id),
-      user: { id: user.id, email: user.email, name: user.name },
-    });
-  } catch (e: any) {
-    return c.json({ detail: "Login unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+    const session = await loginAccount(
+      typeof body.email === "string" ? body.email : "",
+      typeof body.password === "string" ? body.password : "",
+    );
+    setLegacyAuthCookie(c, session.token);
+    return c.json({ user: session.user, expiresAt: session.expiresAt.toISOString() });
+  } catch {
+    return c.json({ detail: "Invalid email or password." }, 401);
   }
 });
 
 restCompat.get("/auth/me", async (c) => {
-  const auth = c.req.header("authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "");
-  if (!token) return c.json({ detail: "Missing token" }, 401);
-
-  try {
-    const payload = jwt.verify(token, jwtSecret()) as { userId: number };
-    const db = await getDb();
-    const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
-    if (!user) return c.json({ detail: "User not found" }, 404);
-    return c.json({ id: user.id, email: user.email, name: user.name });
-  } catch {
-    return c.json({ detail: "Invalid or expired token" }, 401);
-  }
+  c.header("Cache-Control", "no-store");
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Not signed in." }, 401);
+  return c.json(user);
 });
 
 // ─── High-Precision Data Extraction (Google AI Studio / GenAI Standard) ───
