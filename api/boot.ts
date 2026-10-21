@@ -653,7 +653,7 @@ app.get('/api/v1/grading/ledger/:user_id', (c) => {
     .map(b => ({
       session_id: b.currentBlockHash.substring(0, 12),
       track: b.action,
-      activity_summary: typeof b.payload === 'object' ? JSON.stringify(b.payload) : String(b.payload || 'Lab Exercise Verified'),
+      activity_summary: b.action,
       completion_date: new Date(b.timestamp).toISOString().replace('T', ' ').substring(0, 16)
     }));
 
