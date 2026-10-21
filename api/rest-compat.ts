@@ -499,125 +499,116 @@ restCompat.post("/api/v25/media/image", async (c) => {
 // credited only after HMAC-verified webhook + server-side re-verification.
 
 restCompat.post("/api/v25/payments/topup", async (c) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Please sign in to purchase credits." }, 401);
   const body = await c.req.json().catch(() => ({}));
-  const email = (body.email || "").toString().trim().toLowerCase();
+  const suppliedEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : undefined;
+  if (suppliedEmail && suppliedEmail !== user.email.toLowerCase()) {
+    return c.json({ detail: "You may only purchase credits for your own account." }, 403);
+  }
   const amountZar = Number(body.amountZar ?? body.amount ?? 0);
-
-  if (!email || !email.includes("@")) return c.json({ detail: "Valid email is required" }, 400);
   if (!Number.isFinite(amountZar) || amountZar < 5 || amountZar > 50000) {
-    return c.json({ detail: "Amount must be between R5 and R50,000" }, 400);
+    return c.json({ detail: "Amount must be between R5 and R50,000." }, 400);
   }
-
-  if (!paymentsConfigured()) {
-    return c.json(
-      { detail: "Payments are not configured yet — the server needs PAYSTACK_SECRET_KEY. Top-ups go live the moment it is set." },
-      503
-    );
-  }
-
-  const amountCents = Math.round(amountZar * 100);
+  if (!paymentsConfigured()) return c.json({ detail: "Payment provider is not configured." }, 503);
 
   try {
-    const db = await getDb();
-    const init = await initializeTopup(email, amountCents, "ZAR");
-    if (!init) return c.json({ detail: "Payment provider rejected the request — check amount and try again." }, 502);
-
+    const db = await getPrivateDb();
+    const amountCents = Math.round(amountZar * 100);
+    const init = await initializeTopup(user.email.toLowerCase(), amountCents, "ZAR");
+    if (!init) return c.json({ detail: "Payment provider could not start checkout." }, 502);
     await db.insert(paymentEvents).values({
       reference: init.reference,
-      userKey: email,
+      userKey: user.email.toLowerCase(),
       eventType: "topup_initialized",
       amountCents,
       currency: "ZAR",
       status: "pending",
     });
-
     return c.json({ authorizationUrl: init.authorizationUrl, reference: init.reference });
-  } catch (e: any) {
-    return c.json({ detail: "Payments unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+  } catch {
+    return c.json({ detail: "Secure payment processing is unavailable." }, 503);
   }
 });
 
 restCompat.post("/api/v25/payments/webhook", async (c) => {
-  // Raw body is required for HMAC verification — do NOT parse first
-  const rawBody = await c.req.text();
-  const signature = c.req.header("x-paystack-signature");
-
-  if (!paymentsConfigured()) return c.json({ detail: "payments not configured" }, 503);
-  if (!verifyWebhookSignature(rawBody, signature)) {
-    return c.json({ detail: "Invalid signature" }, 401);
+  // Webhook is authenticated using the provider's HMAC over the RAW body.
+  const raw = await c.req.text();
+  if (!paymentsConfigured()) return c.json({ detail: "Payment provider is not configured." }, 503);
+  if (!verifyWebhookSignature(raw, c.req.header("x-paystack-signature"))) {
+    return c.json({ detail: "Invalid payment signature." }, 401);
   }
-
-  const event = JSON.parse(rawBody || "{}");
-  if (event?.event !== "charge.success") {
-    return c.json({ received: true }); // acknowledge non-charge events
-  }
+  let event: any;
+  try { event = JSON.parse(raw); } catch { return c.json({ detail: "Malformed webhook." }, 400); }
+  if (event?.event !== "charge.success") return c.json({ received: true });
 
   const reference = event?.data?.reference;
-  if (!reference) return c.json({ received: true });
-
-  // Double-check with Paystack before crediting
+  if (typeof reference !== "string" || !/^luqi_[0-9a-f-]{36}$/.test(reference)) {
+    return c.json({ detail: "Unknown payment reference." }, 400);
+  }
   const verified = await verifyTransaction(reference);
-  if (!verified) return c.json({ detail: "Transaction verification failed" }, 400);
-
-  const userKey = (verified.email || "").toLowerCase() || "unknown";
+  if (!verified || !Number.isSafeInteger(verified.amountCents) ||
+      verified.amountCents < 500 || verified.amountCents > 5000000 ||
+      verified.currency !== "ZAR" || !verified.email) {
+    return c.json({ detail: "Payment verification failed." }, 400);
+  }
 
   try {
-    const db = await getDb();
+    const db = await getPrivateDb();
+    const result = await db.transaction(async (tx: any) => {
+      // Row lock + database transaction makes duplicate webhook handling
+      // atomic even when concurrent Cloud Run instances receive the event.
+      const [pending] = await tx.select().from(paymentEvents)
+        .where(eq(paymentEvents.reference, reference)).limit(1).for("update");
+      if (!pending) return "unknown";
+      if (pending.status === "credited") return "already_processed";
+      if (pending.status !== "pending" ||
+          pending.amountCents !== verified.amountCents ||
+          pending.currency !== verified.currency ||
+          pending.userKey?.toLowerCase() !== verified.email.trim().toLowerCase()) return "mismatch";
 
-    // Idempotency: duplicate webhook deliveries hit the unique reference key
-    const [existing] = await db.select().from(paymentEvents).where(eq(paymentEvents.reference, reference)).limit(1);
-    if (existing && existing.status === "credited") {
-      return c.json({ received: true, status: "already_processed" });
+      await tx.execute(sql`INSERT INTO credit_wallets (user_key, balance_cents, currency)
+          VALUES (${pending.userKey}, ${verified.amountCents}, 'ZAR')
+          ON DUPLICATE KEY UPDATE balance_cents = balance_cents + ${verified.amountCents}`);
+      await tx.update(paymentEvents)
+        .set({
+          status: "credited", eventType: "charge.success",
+          channel: verified.channel,
+          payloadJson: JSON.stringify({ provider: "paystack", reference }),
+        }).where(eq(paymentEvents.reference, reference));
+      return "credited";
+    });
+    if (result === "unknown" || result === "mismatch") {
+      return c.json({ detail: "Payment reference does not match an approved checkout." }, 400);
     }
-
-    if (existing) {
-      await db.update(paymentEvents)
-        .set({ status: "credited", eventType: "charge.success", channel: verified.channel, payloadJson: JSON.stringify(event.data).slice(0, 60000) })
-        .where(eq(paymentEvents.reference, reference));
-    } else {
-      await db.insert(paymentEvents).values({
-        reference,
-        userKey,
-        eventType: "charge.success",
-        amountCents: verified.amountCents,
-        currency: verified.currency,
-        channel: verified.channel,
-        status: "credited",
-        payloadJson: JSON.stringify(event.data).slice(0, 60000),
-      });
-    }
-
-    // Credit the wallet (upsert on user_key)
-    await db.execute(
-      sql`INSERT INTO credit_wallets (user_key, balance_cents, currency)
-          VALUES (${userKey}, ${verified.amountCents}, ${verified.currency})
-          ON DUPLICATE KEY UPDATE balance_cents = balance_cents + ${verified.amountCents}`
-    );
-
-    return c.json({ received: true, status: "credited" });
-  } catch (e: any) {
-    return c.json({ detail: "Database error during credit (" + (e?.code || "error") + ")" }, 503);
+    return c.json({ received: true, status: result });
+  } catch {
+    // Returning an error lets the provider safely retry the same reference.
+    return c.json({ detail: "Payment settlement unavailable; retry later." }, 503);
   }
 });
 
 restCompat.get("/api/v25/payments/balance", async (c) => {
-  const key = (c.req.query("key") || "").toString().trim().toLowerCase();
-  if (!key) return c.json({ detail: "key (email) is required" }, 400);
-
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Authentication required." }, 401);
+  const requested = c.req.query("key")?.trim().toLowerCase();
+  if (requested && requested !== user.email.toLowerCase()) {
+    return c.json({ detail: "Access denied." }, 403);
+  }
   try {
-    const db = await getDb();
-    const [wallet] = await db.select().from(creditWallets).where(eq(creditWallets.userKey, key)).limit(1);
+    const db = await getPrivateDb();
+    const [wallet] = await db.select().from(creditWallets)
+      .where(eq(creditWallets.userKey, user.email.toLowerCase())).limit(1);
     return c.json({
       balanceCents: wallet?.balanceCents ?? 0,
       currency: wallet?.currency ?? "ZAR",
     });
-  } catch (e: any) {
-    return c.json({ detail: "Balance unavailable — database not connected (" + (e?.code || "error") + ")" }, 503);
+  } catch {
+    return c.json({ detail: "Secure balance storage is unavailable." }, 503);
   }
 });
 
-
- // ─── COMPATIBLE AUTH: same hashed, expiring database sessions as /api/auth ───
+// ─── COMPATIBLE AUTH: same hashed, expiring database sessions as /api/auth ───
 function setLegacyAuthCookie(c: any, token: string) {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   c.header("Cache-Control", "no-store");
