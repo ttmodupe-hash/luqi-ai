@@ -1,0 +1,33 @@
+name: LUQI Omega Capability Recovery (offline)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "omega_ai/__init__.py"
+      - "omega_ai/loan_calculator.py"
+      - "omega_ai/solar_calculator.py"
+      - "omega_ai/community_events.py"
+      - "tests/test_omega_low_risk_recovery.py"
+      - ".github/workflows/omega-recovery-check.yml"
+  push:
+    branches: ["fix/recover-omega-low-risk-modules-*"]
+permissions:
+  contents: read
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile recovered capability modules and existing implementations
+        run: |
+          python -m compileall -q omega_ai/__init__.py omega_ai/loan_calculator.py omega_ai/solar_calculator.py omega_ai/community_events.py loan_calculator.py solar_calculator.py community_events.py
+      - name: Test recovered capabilities, no network or vendor credentials
+        run: python -m unittest discover -s tests -p test_omega_low_risk_recovery.py -v
