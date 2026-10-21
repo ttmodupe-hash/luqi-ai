@@ -1828,7 +1828,7 @@ app.onError((err, c) => {
   }
 
   if (err?.name === "AbortError") {
-    return c.json({ success: false, error: "Client closed request", requestId }, 499);
+    return c.json({ success: false, error: "Client closed request", requestId }, 400);
   }
 
   logger.error({ err: err?.message, stack: err?.stack?.slice(0, 500), requestId }, "unhandled error");
