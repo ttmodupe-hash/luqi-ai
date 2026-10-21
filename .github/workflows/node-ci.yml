@@ -15,9 +15,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # The repository lockfile omits dependencies declared by package.json.
-      # Reconcile it in CI so validation can proceed; regenerate and commit the lockfile separately.
-      - run: npm install --no-audit --no-fund
+      # Lockfile is committed and must be respected by every release validation.
+      - run: npm ci --no-audit --no-fund
       - name: TypeScript project check
         run: npm run check
       - name: Unit tests
