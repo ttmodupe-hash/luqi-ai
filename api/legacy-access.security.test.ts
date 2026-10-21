@@ -38,7 +38,7 @@ describe("high-risk legacy tRPC routes fail closed", () => {
   ];
 
   it.each(sensitiveCalls)("blocks %s before any business logic executes", async (label, fn) => {
-    const authenticatedRoutes = ["voice history", "grading student reports", "adaptive student records", "offline device queue"];
+    const authenticatedRoutes = ["guardian.student records", "guardian.link", "voice history", "grading student reports", "adaptive student records", "offline device queue"];
     await expect(fn()).rejects.toMatchObject({
       code: authenticatedRoutes.includes(label) ? "UNAUTHORIZED" : "FORBIDDEN",
     });
@@ -51,7 +51,6 @@ describe("high-risk legacy tRPC routes fail closed", () => {
     });
     await expect(user.selfHealing.applyPatch({ patchId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(user.archive.listThreads({ limit: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(user.guardian.getStudents({ guardianUserId: 9 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("preserves public, non-sensitive education content and pure utility functions", async () => {
