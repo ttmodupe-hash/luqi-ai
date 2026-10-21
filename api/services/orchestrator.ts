@@ -551,7 +551,7 @@ export async function* orchestrateStream(options: {
   context?: string;
   systemPrompt?: string;
 }): AsyncGenerator<{ delta?: string; provider?: string; model?: string; done?: boolean; error?: string }> {
-  const systemPrompt = options.systemPrompt || ANTI_HALLUCINATION_PROMPT;
+  const systemPrompt = options.systemPrompt || GENERAL_INTELLIGENCE_PROMPT;
   const intent = classifyIntent(options.query).intent;
   const candidates = selectProvider(intent);
 
