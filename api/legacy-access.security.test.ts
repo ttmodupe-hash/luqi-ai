@@ -38,7 +38,7 @@ describe("high-risk legacy tRPC routes fail closed", () => {
   ];
 
   it.each(sensitiveCalls)("blocks %s before any business logic executes", async (label, fn) => {
-    const authenticatedRoutes = sensitiveCalls.map(([name]) => name).filter(name => !["orchestrator model generation", "orchestrator logs"].includes(name));
+    const authenticatedRoutes = sensitiveCalls.map(([name]) => name);
     await expect(fn()).rejects.toMatchObject({
       code: authenticatedRoutes.includes(label) ? "UNAUTHORIZED" : "FORBIDDEN",
     });
