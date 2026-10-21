@@ -7,7 +7,7 @@ import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrat
 import { summarizeMetricSamples, countIncidentTrend } from "./services/reliabilityAnalytics";
 import { reserveAiRequest } from "./security/aiBudget";
 import { formatUntrustedDiagnosisEvidence } from "./security/diagnosisEvidence";
-import { createEvidenceProposal, transitionEvidenceProposal, readEvidenceProposalTrail } from "./services/agentProposalLedger";
+import { assertEvidenceLedgerReady, createEvidenceProposal, transitionEvidenceProposal, readEvidenceProposalTrail } from "./services/agentProposalLedger";
 
 export const selfHealingRouter = createRouter({
   logError: adminQuery
@@ -207,6 +207,7 @@ export const selfHealingRouter = createRouter({
       // Real external diagnosis is a PAID provider operation. Reserve the
       // authenticated admin's usage + cross-user global allowance first;
       // a DB outage or exhausted budget must fail closed, not bypass this guard.
+      await assertEvidenceLedgerReady();
       await reserveAiRequest(ctx.user.id, "admin_error_diagnosis");
       const result = await orchestrateRequest({
         query: formatUntrustedDiagnosisEvidence({
