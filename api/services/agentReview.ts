@@ -21,7 +21,7 @@ export function formatAgentReviewPrompt(input: AgentProposalInput): string {
     "Prepare a reviewable software-change proposal for LUQI AI.",
     "You cannot execute code, run tests, access secrets, or deploy.",
     "Return: risk assessment, root cause hypothesis, proposed minimal changes,",
-    "verification plan with negative/security tests, and rollback plan.",
+    "verification plan with negative/security tests, human review, and rollback plan.",
     "If repository files or test evidence are missing, state that clearly.",
     "Never claim that a code patch has been applied or tested.",
     `Task: ${input.taskName}`,
