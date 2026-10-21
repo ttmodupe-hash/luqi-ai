@@ -352,6 +352,23 @@ export default function VideoStudioPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {!balance.data?.videoRenderingEnabled && (
+          <p role="status" className="rounded-xl border border-amber-700 bg-amber-950/40 p-3 text-sm text-amber-200">
+            Paid rendering and video-credit checkout require a real provider and configured private object storage. No charge can be made until they are available.
+          </p>
+        )}
+        {generateVideo.error && (
+          <p role="alert" className="rounded-xl border border-red-700 p-3 text-sm text-red-200">
+            Render request: {generateVideo.error.message}
+            {" "}Check your project status before starting a different request.
+          </p>
+        )}
+        {topupMutation.error && (
+          <p role="alert" className="rounded-xl border border-red-700 p-3 text-sm text-red-200">
+            Checkout could not start: {topupMutation.error.message}. Your account was not credited by this failed request.
+          </p>
+        )}
+
         <ToonChatCreator />
         {/* Margin Guard Summary Banner */}
         <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-950 p-5 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
