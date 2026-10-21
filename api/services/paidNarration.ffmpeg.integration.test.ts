@@ -61,6 +61,18 @@ integration("real FFmpeg narration composition — no external paid vendor", () 
     expect(stdout).toContain("audio");
   }, 60000);
 
+  it("rejects and refunds instead of silently cutting off long speech", async () => {
+    const long = join(dir, "overlong.mp3");
+    await exec(ffmpeg, [
+      "-hide_banner", "-loglevel", "error", "-y",
+      "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
+      "-t", "4", "-c:a", "libmp3lame", long,
+    ]);
+    const overlongAudio = await readFile(long);
+    await expect(combineVideoAndNarration(picture, overlongAudio, 2))
+      .rejects.toThrow(/does not fit/);
+  });
+
   it("rejects MP4 bytes that contain only a fabricated header", async () => {
     await expect(combineVideoAndNarration(
       Buffer.from("not a real video"), voice, 2,
