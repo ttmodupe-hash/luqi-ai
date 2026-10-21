@@ -3,7 +3,7 @@
 // =====================================================================
 // Generative video and voiceover APIs carry heavy variable costs.
 // To safely commercialize and protect profitability, all API usage is
-// abstracted into Luqi Credits with a guaranteed 50%+ gross margin.
+// quoted in Luqi Credits; margins depend on verified live provider costs.
 //
 // 1 Luqi Credit = $0.05 USD (~R0.90 ZAR)
 //
@@ -155,7 +155,7 @@ export function calculateJobCost(durationSeconds: number, dialogue = ""): Credit
     userPriceUsd,
     userPriceZar,
     estimatedProviderCostUsd,
-    profitMarginPercent: Math.max(50, profitMarginPercent),
+    profitMarginPercent, // illustrative estimate, never inflate to a guaranteed floor
   };
 }
 
