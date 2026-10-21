@@ -20,6 +20,9 @@ Environment:
 """
 
 import argparse
+import hashlib
+import hmac
+import uuid
 import asyncio
 import logging
 import json
@@ -28,8 +31,9 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
