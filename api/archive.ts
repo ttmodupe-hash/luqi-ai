@@ -3,7 +3,7 @@
 // =====================================================================
 
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, legacyRestrictedProcedure } from "./middleware";
 import {
   listActiveThreads,
   getThreadCheckpoints,
@@ -20,19 +20,19 @@ import {
 
 export const archiveRouter = createRouter({
   // ── 1. Orchestration Flight Recorder (LangGraph Checkpointers) ───
-  listThreads: publicQuery
+  listThreads: legacyRestrictedProcedure
     .input(z.object({ limit: z.number().default(50) }).optional())
     .query(async ({ input }) => {
       return listActiveThreads(input?.limit ?? 50);
     }),
 
-  getThreadTimeline: publicQuery
+  getThreadTimeline: legacyRestrictedProcedure
     .input(z.object({ threadId: z.string() }))
     .query(async ({ input }) => {
       return getThreadCheckpoints(input.threadId);
     }),
 
-  recordCheckpoint: publicQuery
+  recordCheckpoint: legacyRestrictedProcedure
     .input(
       z.object({
         threadId: z.string(),
@@ -65,7 +65,7 @@ export const archiveRouter = createRouter({
     }),
 
   // ── 2. Cognitive Archiving (CrewAI Unified Memory) ───────────────
-  getCognitiveMemory: publicQuery
+  getCognitiveMemory: legacyRestrictedProcedure
     .input(
       z
         .object({
@@ -79,7 +79,7 @@ export const archiveRouter = createRouter({
       return queryCognitiveMemory(input);
     }),
 
-  storeCognitiveFact: publicQuery
+  storeCognitiveFact: legacyRestrictedProcedure
     .input(
       z.object({
         category: z.enum(["short_term", "long_term", "entity"]),
@@ -106,7 +106,7 @@ export const archiveRouter = createRouter({
     }),
 
   // ── 3. Custom Artifact Vault (Files & Paired JSON Metadata) ──────
-  listArtifacts: publicQuery
+  listArtifacts: legacyRestrictedProcedure
     .input(
       z
         .object({
@@ -120,7 +120,7 @@ export const archiveRouter = createRouter({
       return listArchivedArtifacts(input);
     }),
 
-  archiveArtifact: publicQuery
+  archiveArtifact: legacyRestrictedProcedure
     .input(
       z.object({
         fileName: z.string(),
@@ -164,7 +164,7 @@ export const archiveRouter = createRouter({
     }),
 
   // ── Archival System Status & Volume Statistics ───────────────────
-  getArchiveStatus: publicQuery.query(async () => {
+  getArchiveStatus: legacyRestrictedProcedure.query(async () => {
     const threads = await listActiveThreads(100);
     const cognitive = await queryCognitiveMemory({ limit: 100 });
     const artifacts = await listArchivedArtifacts({ limit: 100 });
