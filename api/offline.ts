@@ -31,7 +31,7 @@ export const offlineRouter = createRouter({
       return db
         .select()
         .from(offlineSyncQueue)
-        .where(and(eq(offlineSyncQueue.deviceId, input.deviceId), eq(offlineSyncQueue.synced, 0)))
+        .where(and(eq(offlineSyncQueue.deviceId, input.deviceId), eq(offlineSyncQueue.synced, false)))
         .orderBy(offlineSyncQueue.createdAt);
     }),
 
