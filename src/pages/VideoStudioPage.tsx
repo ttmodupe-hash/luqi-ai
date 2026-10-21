@@ -266,7 +266,8 @@ export default function VideoStudioPage() {
 
   const handleGenerate = () => {
     if (!formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled ||
-      (renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled)) return;
+      (renderMode === "narrated_mp4" && (!balance.data?.narratedVideoEnabled ||
+        !formDialogue.trim() || formDialogue.trim().length > formDuration * 15))) return;
     const durationSeconds = Math.min(10, Math.max(2, formDuration));
     const confirmedCredits = renderQuote.data?.creditsRequired;
     if (!confirmedCredits || (balance.data?.credits ?? 0) < confirmedCredits) return;
@@ -768,6 +769,11 @@ export default function VideoStudioPage() {
                   </label>
                   <span className="text-[10px] text-slate-500">{formDialogue.length} characters</span>
                 </div>
+                {renderMode === "narrated_mp4" && formDialogue.trim().length > formDuration * 15 && (
+                  <p role="alert" className="mb-2 text-xs text-amber-300">
+                    Narration is too long for this scene. Shorten it to about {formDuration * 15} characters or increase the scene duration.
+                  </p>
+                )}
                 <textarea
                   value={formDialogue}
                   onChange={(e) => setFormDialogue(e.target.value)}
@@ -853,7 +859,7 @@ export default function VideoStudioPage() {
             <div className="flex gap-2.5 pt-2">
               <button
                 onClick={handleGenerate}
-                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled || (renderMode === "narrated_mp4" && !balance.data?.narratedVideoEnabled) || (balance.data?.credits ?? 0) < (renderQuote.data?.creditsRequired ?? Infinity)}
+                disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim() || !balance.data?.videoRenderingEnabled || (renderMode === "narrated_mp4" && (!balance.data?.narratedVideoEnabled || !formDialogue.trim() || formDialogue.trim().length > formDuration * 15)) || (balance.data?.credits ?? 0) < (renderQuote.data?.creditsRequired ?? Infinity)}
                 className="flex-1 text-sm py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-600/20"
               >
                 {generateVideo.isPending ? (
