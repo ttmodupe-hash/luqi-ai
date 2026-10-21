@@ -7,7 +7,8 @@ describe("paid video safety contracts", () => {
     expect(quotePaidVideoCredits(2)).toBe(20);
     expect(quotePaidVideoCredits(10)).toBe(100);
     expect(quotePaidVideoCredits(2, "narrated_mp4", "Welcome to LUQI")).toBe(24);
-    expect(quotePaidVideoCredits(10, "narrated_mp4", "A".repeat(500))).toBe(104);
+    expect(quotePaidVideoCredits(10, "narrated_mp4", "A".repeat(150))).toBe(104);
+    expect(() => quotePaidVideoCredits(10, "narrated_mp4", "A".repeat(151))).toThrow();
     expect(() => quotePaidVideoCredits(5, "narrated_mp4", "")).toThrow();
     expect(() => quotePaidVideoCredits(5, "narrated_mp4", "A".repeat(501))).toThrow();
     expect(() => quotePaidVideoCredits(5, "silent_mp4", "unauthorised voice")).toThrow();
