@@ -2,12 +2,11 @@ import { describe, expect, it } from "vitest";
 import { videoRouter } from "./video";
 
 /**
- * Temporary release gate: legacy video routes accept caller-supplied user keys
- * and resource IDs without checking ownership or payment settlement.
- * Keep these routes closed until each route has verified authentication,
- * per-object authorisation and (for credits) verified payment accounting.
+ * Authenticated project CRUD is restored with per-user SQL ownership;
+ * account credits and expensive rendering remain blocked until server-side
+ * payment settlement and a durable credit ledger are implemented.
  */
-describe("video legacy endpoints fail closed", () => {
+describe("video route authentication and spending controls", () => {
   const caller = videoRouter.createCaller({
     req: new Request("https://luqi-ai.com/api/trpc/video"),
     user: null,
@@ -31,15 +30,16 @@ describe("video legacy endpoints fail closed", () => {
   ];
 
   it.each(forbiddenCalls)("%s cannot be invoked by unauthenticated callers", async (_name, invoke) => {
-    await expect(invoke()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(invoke()).rejects.toMatchObject({
+      code: ["getBalance", "topupCredits", "generate"].includes(_name) ? "FORBIDDEN" : "UNAUTHORIZED",
+    });
   });
 
-  it("continues to deny legacy operations to logged-in users until ownership and payment checks exist", async () => {
+  it("denies paid operations and provider configuration to normal users", async () => {
     const signedIn = videoRouter.createCaller({
       req: new Request("https://luqi-ai.com/api/trpc/video"),
       user: { id: 55, email: "learner@example.com", name: null, role: "user" },
     });
-    await expect(signedIn.get({ id: 123 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(signedIn.getBalance({ userKey: "another-user" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(signedIn.topupCredits({ userKey: "another-user", credits: 1000 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(signedIn.generate({ title: "test", prompt: "render", userKey: "another-user" })).rejects.toMatchObject({ code: "FORBIDDEN" });
