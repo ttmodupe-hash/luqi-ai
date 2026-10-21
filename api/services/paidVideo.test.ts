@@ -6,6 +6,11 @@ describe("paid video safety contracts", () => {
   it("quotes whole-second silent video from the explicit published price", () => {
     expect(quotePaidVideoCredits(2)).toBe(20);
     expect(quotePaidVideoCredits(10)).toBe(100);
+    expect(quotePaidVideoCredits(2, "narrated_mp4", "Welcome to LUQI")).toBe(24);
+    expect(quotePaidVideoCredits(10, "narrated_mp4", "A".repeat(500))).toBe(104);
+    expect(() => quotePaidVideoCredits(5, "narrated_mp4", "")).toThrow();
+    expect(() => quotePaidVideoCredits(5, "narrated_mp4", "A".repeat(501))).toThrow();
+    expect(() => quotePaidVideoCredits(5, "silent_mp4", "unauthorised voice")).toThrow();
     expect(() => quotePaidVideoCredits(60)).toThrow();
     expect(() => quotePaidVideoCredits(1.5)).toThrow();
   });
@@ -21,6 +26,9 @@ describe("paid video safety contracts", () => {
     expect(renderIntentDigest(input)).not.toBe(renderIntentDigest({ ...input, userId: 10 }));
     expect(renderIntentDigest(input)).not.toBe(renderIntentDigest({ ...input, durationSeconds: 5 }));
     expect(renderIntentDigest(input)).not.toBe(renderIntentDigest({ ...input, prompt: "new prompt" }));
+    expect(renderIntentDigest(input)).not.toBe(renderIntentDigest({ ...input, mode: "narrated_mp4", narration: "Hello" }));
+    expect(renderIntentDigest({ ...input, mode: "narrated_mp4", narration: "Hello" })).not.toBe(
+      renderIntentDigest({ ...input, mode: "narrated_mp4", narration: "Different narration" }));
   });
 
   it("never fetches local, HTTP, metadata or attacker-controlled download URLs", () => {
