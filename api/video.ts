@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery, protectedQuery, adminQuery } from "./middleware";
 import { getPrivateDb, assertOwnUserId } from "./security/access";
 import { getDb } from "./queries/connection";
-import { videoProjects, creditWallets, paymentEvents } from "../db/schema";
+import { videoProjects, creditWallets, paymentEvents, videoCreditWallets } from "../db/schema";
 import { initializeTopup, paymentsConfigured } from "./services/payments";
 import { eq, desc, and, sql } from "drizzle-orm";
 import {
@@ -48,14 +48,15 @@ export const videoRouter = createRouter({
       const db = await getPrivateDb();
       const [wallet] = await db.select().from(creditWallets)
         .where(eq(creditWallets.userKey, ctx.user.email.toLowerCase())).limit(1);
+      const [videoWallet] = await db.select().from(videoCreditWallets)
+        .where(eq(videoCreditWallets.userKey, ctx.user.email.toLowerCase())).limit(1);
       return {
         userKey: ctx.user.email.toLowerCase(),
         balanceCents: wallet?.balanceCents ?? 0,
         currency: wallet?.currency ?? "ZAR",
-        // Credits cannot be spent on rendering until a durable consumption
-        // ledger and provider-side cost controls have been verified.
-        credits: 0,
-        spendableVideoCredits: 0,
+        credits: videoWallet?.credits ?? 0,
+        spendableVideoCredits: videoWallet?.credits ?? 0,
+        // Will only be true after a secured rendering worker is activated.
         videoRenderingEnabled: false,
       };
     }),
@@ -103,6 +104,7 @@ export const videoRouter = createRouter({
         amountCents,
         currency: "ZAR",
         status: "pending",
+        payloadJson: JSON.stringify({ product: "video_credit_pack", packId: pack.id, credits: pack.credits }),
       });
       return {
         pending: true,
