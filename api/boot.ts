@@ -14,7 +14,7 @@ import { verifyStripeWebhook } from "./security/stripeWebhook";
 import { getPrivateDb } from "./security/access";
 import { getPaidVideoRequest } from "./services/paidVideoLedger";
 import { readPaidVideoAsset } from "./services/paidVideo";
-import { paymentEvents, healingPatches, errorLogs } from "../db/schema";
+import { paymentEvents, healingPatches, errorLogs, analyticsEvents } from "../db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { restCompat } from "./rest-compat";
 import { createContext } from "./context";
@@ -1838,18 +1838,42 @@ app.post('/api/v1/studio/synthesize-asset', async (c) => {
   return c.json(asset);
 });
 
+// Educational progress is stored against the actual authenticated user.
+// Self-reported completion is NOT assessor-verified grading or certification.
 app.post('/api/v1/analytics/log-progression', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({
-    success: true,
-    message: "Telemetry progression safely logged to relational tables.",
-    record: {
-      user_id: body.user_id || "anonymous",
-      lab_id: body.lab_id || "lab-01",
-      completion_status: body.completion_status || "PASSED",
-      timestamp: new Date().toISOString()
-    }
-  });
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Authentication required." }, 401);
+  const body: unknown = await c.req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "Invalid progress submission." }, 400);
+  }
+  const data = body as Record<string, unknown>;
+  const labId = data.lab_id;
+  if (typeof labId !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(labId)) {
+    return c.json({ error: "A valid lab_id is required." }, 400);
+  }
+  if (data.user_id != null && String(data.user_id) !== String(user.id)) {
+    return c.json({ error: "You cannot submit another user's progress." }, 403);
+  }
+  try {
+    const db = await getPrivateDb();
+    const [saved] = await db.insert(analyticsEvents).values({
+      userId: user.id,
+      eventType: "learning_self_report",
+      eventName: "lab_progress_submission",
+      properties: { labId, status: "self_reported_not_verified" },
+    });
+    return c.json({
+      success: true,
+      id: Number(saved.insertId),
+      userId: user.id,
+      labId,
+      assessmentStatus: "self_reported_not_verified",
+      message: "Learning activity recorded. No grade or certification was awarded.",
+    }, 201);
+  } catch {
+    return c.json({ error: "Secure progress storage unavailable." }, 503);
+  }
 });
 
 app.get('/api/v1/diagnostics/database-indexes', async (c) => {
