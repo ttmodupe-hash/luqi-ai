@@ -730,218 +730,88 @@ Return ONLY a valid JSON object with keys:
 restCompat.post("/v1/animation/storyboard", handleAnimationStoryboard);
 restCompat.post("/api/v1/animation/storyboard", handleAnimationStoryboard);
 
-// ─── ASYNC JOB QUEUE & TOKEN BILLING GATEWAY (Full-Stack Mirror) ──────────
+// Legacy public job queue used invented credit balances and unverified charging.
+// Remove these endpoints permanently rather than presenting simulated charging,
+// results or provider execution as genuine.
+const retiredJobEndpoint = (c: any) => c.json({
+  detail: "The old in-memory job API has been retired. Paid jobs require authenticated persistent billing and verified execution.",
+}, 410);
+restCompat.post("/api/v1/jobs/submit", retiredJobEndpoint);
+restCompat.post("/v1/jobs/submit", retiredJobEndpoint);
+restCompat.get("/api/v1/jobs/:taskId", retiredJobEndpoint);
+restCompat.get("/v1/jobs/:taskId", retiredJobEndpoint);
 
-interface JobRecord {
-  taskId: string;
-  userEmail: string;
-  taskType: string;
-  status: "QUEUED" | "PROCESSING" | "SUCCESS" | "FAILURE";
-  tokensDeducted: number;
-  result: any;
-  error: string | null;
-  createdAt: number;
-}
-
-const inMemoryJobs = new Map<string, JobRecord>();
-const inMemoryCredits = new Map<string, number>([["guest@luqi.ai", 150]]);
-
-// Helper: Get user credits
-function getUserCredits(email: string): number {
-  const clean = (email || "guest@luqi.ai").toLowerCase().trim();
-  if (!inMemoryCredits.has(clean)) {
-    inMemoryCredits.set(clean, 100);
+// Compatibility balance is read from the same verified Paystack wallet.
+const handleBalance = async (c: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Authentication required." }, 401);
+  const requested = c.req.query("user_email")?.trim().toLowerCase();
+  if (requested && requested !== user.email.toLowerCase()) {
+    return c.json({ detail: "Access denied." }, 403);
   }
-  return inMemoryCredits.get(clean)!;
-}
-
-// Helper: Deduct credits
-function deductUserCredits(email: string, amount: number): { success: boolean; remaining: number } {
-  const clean = (email || "guest@luqi.ai").toLowerCase().trim();
-  const current = getUserCredits(clean);
-  if (current < amount) {
-    return { success: false, remaining: current };
+  try {
+    const db = await getPrivateDb();
+    const [wallet] = await db.select().from(creditWallets)
+      .where(eq(creditWallets.userKey, user.email.toLowerCase())).limit(1);
+    const balanceCents = wallet?.balanceCents ?? 0;
+    return c.json({
+      user_email: user.email, balance_cents: balanceCents,
+      currency: wallet?.currency ?? "ZAR",
+      // Nominal internal credits are displayed for legacy UI compatibility.
+      // Only the settled ZAR wallet balance is authoritative.
+      credits: Math.floor(balanceCents / 90),
+      price_per_credit_zar: 0.9,
+      video_seconds_available: 0,
+      paid_rendering_enabled: false,
+    });
+  } catch {
+    return c.json({ detail: "Secure balance storage unavailable." }, 503);
   }
-  const remaining = current - amount;
-  inMemoryCredits.set(clean, remaining);
-  return { success: true, remaining };
-}
-
-// 1. Submit Async Job (with pre-deduction token guard)
-const handleJobSubmit = async (c: any) => {
-  const body = (await c.req.json().catch(() => ({}))) as {
-    prompt?: string;
-    task_type?: string;
-    user_email?: string;
-    required_tokens?: number;
-  };
-
-  const prompt = (body.prompt || "").trim();
-  if (!prompt) return c.json({ detail: "prompt field is required" }, 400);
-
-  const taskType = body.task_type || "data_reconciliation";
-  const userEmail = (body.user_email || "guest@luqi.ai").toLowerCase().trim();
-  const requiredTokens = Math.max(1, Number(body.required_tokens) || 5);
-
-  // Pre-execution token check & deduction
-  const deduction = deductUserCredits(userEmail, requiredTokens);
-  if (!deduction.success) {
-    return c.json(
-      {
-        detail: `Payment Required: Insufficient Luqi credits. Required: ${requiredTokens}, Available: ${deduction.remaining}.`,
-        current_balance: deduction.remaining,
-        required_tokens: requiredTokens,
-        action: "Please top up via /api/v1/billing/topup or the Pricing page.",
-      },
-      402
-    );
-  }
-
-  const taskId = "job_" + Math.random().toString(36).substring(2, 11);
-  const record: JobRecord = {
-    taskId,
-    userEmail,
-    taskType,
-    status: "PROCESSING",
-    tokensDeducted: requiredTokens,
-    result: null,
-    error: null,
-    createdAt: Date.now(),
-  };
-  inMemoryJobs.set(taskId, record);
-
-  // Execute asynchronously in background so client receives taskId immediately
-  setTimeout(async () => {
-    try {
-      const extResult = await executeHighPrecisionExtraction(
-        prompt,
-        `You are Luqi AI's data architect agent executing an asynchronous task (${taskType}). Output precise, structured results.`
-      );
-      record.status = "SUCCESS";
-      record.result = {
-        output: extResult.text,
-        framework: "Google-GenAI",
-        precision: extResult.precision,
-        model: extResult.model,
-      };
-    } catch (err: any) {
-      record.status = "FAILURE";
-      record.error = err?.message || "Execution failure";
-    }
-  }, 100);
-
-  return c.json({
-    status: "queued",
-    task_id: taskId,
-    queue: "async_worker",
-    tokens_deducted: requiredTokens,
-    remaining_balance: deduction.remaining,
-    poll_url: `/api/v1/jobs/${taskId}`,
-  });
 };
-
-restCompat.post("/api/v1/jobs/submit", handleJobSubmit);
-restCompat.post("/v1/jobs/submit", handleJobSubmit);
-
-// 2. Poll Job Status
-const handleJobPoll = (c: any) => {
-  const taskId = c.req.param("taskId");
-  const job = inMemoryJobs.get(taskId);
-  if (!job) {
-    return c.json({ task_id: taskId, status: "PENDING", result: null, error: null });
-  }
-  return c.json({
-    task_id: job.taskId,
-    status: job.status,
-    result: job.result,
-    error: job.error,
-    tokens_deducted: job.tokensDeducted,
-  });
-};
-
-restCompat.get("/api/v1/jobs/:taskId", handleJobPoll);
-restCompat.get("/v1/jobs/:taskId", handleJobPoll);
-
-// 3. Billing Balance
-const handleBalance = (c: any) => {
-  const email = (c.req.query("user_email") || "guest@luqi.ai").toLowerCase().trim();
-  const credits = getUserCredits(email);
-  return c.json({
-    user_email: email,
-    credits,
-    price_per_credit_usd: 0.05,
-    video_seconds_available: Math.floor(credits / 10),
-  });
-};
-
 restCompat.get("/api/v1/billing/balance", handleBalance);
 restCompat.get("/v1/billing/balance", handleBalance);
 
-// 4. Billing Top-up
+// Top-up requests now start verified hosted checkout; they never grant credits.
 const handleTopup = async (c: any) => {
-  const body = (await c.req.json().catch(() => ({}))) as { user_email?: string; credits?: number };
-  const email = (body.user_email || "guest@luqi.ai").toLowerCase().trim();
-  const addCredits = Math.max(1, Number(body.credits) || 100);
-  const current = getUserCredits(email);
-  const newBal = current + addCredits;
-  inMemoryCredits.set(email, newBal);
-  return c.json({
-    success: true,
-    credited: addCredits,
-    new_balance: newBal,
-    user_email: email,
-  });
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ detail: "Authentication required." }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const requestedEmail = String(body.user_email ?? "").trim().toLowerCase();
+  if (requestedEmail && requestedEmail !== user.email.toLowerCase()) {
+    return c.json({ detail: "Access denied." }, 403);
+  }
+  const amountZar = Number(body.amount_zar ?? body.amountZar ??
+    (Number.isFinite(Number(body.credits)) ? Number(body.credits) * 0.9 : 0));
+  if (!Number.isFinite(amountZar) || amountZar < 5 || amountZar > 50000) {
+    return c.json({ detail: "Top-up amount must be R5 to R50,000." }, 400);
+  }
+  if (!paymentsConfigured()) return c.json({ detail: "Payment provider not configured." }, 503);
+  try {
+    const db = await getPrivateDb();
+    const amountCents = Math.round(amountZar * 100);
+    const payment = await initializeTopup(user.email.toLowerCase(), amountCents, "ZAR");
+    if (!payment) return c.json({ detail: "Could not start checkout." }, 502);
+    await db.insert(paymentEvents).values({
+      reference: payment.reference, userKey: user.email.toLowerCase(),
+      eventType: "topup_initialized", amountCents, currency: "ZAR", status: "pending",
+    });
+    return c.json({ pending: true, authorizationUrl: payment.authorizationUrl, reference: payment.reference });
+  } catch {
+    return c.json({ detail: "Secure checkout unavailable." }, 503);
+  }
 };
-
 restCompat.post("/api/v1/billing/topup", handleTopup);
 restCompat.post("/v1/billing/topup", handleTopup);
 
-// 5. PayFast Webhook
-const handlePayfastWebhook = async (c: any) => {
-  const body = await c.req.parseBody().catch(async () => c.req.json().catch(() => ({})));
-  const data = body as Record<string, any>;
-  const mPaymentId = data.m_payment_id || `pf_${Date.now()}`;
-  const amountGross = Number(data.amount_gross) || 0;
-  const userEmail = (data.custom_str1 || data.email_address || "guest@luqi.ai").toLowerCase().trim();
-  const tokensToGrant = Math.max(50, Math.floor(amountGross * 20));
-
-  const current = getUserCredits(userEmail);
-  inMemoryCredits.set(userEmail, current + tokensToGrant);
-
-  return c.json({
-    status: "Acknowledged",
-    payment_id: mPaymentId,
-    credited: tokensToGrant,
-  });
-};
-
-restCompat.post("/api/v1/billing/payfast/webhook", handlePayfastWebhook);
-restCompat.post("/v1/billing/payfast/webhook", handlePayfastWebhook);
-
-// 6. Stripe Webhook
-const handleStripeWebhook = async (c: any) => {
-  const payload = (await c.req.json().catch(() => ({}))) as Record<string, any>;
-  const eventType = payload.type || "";
-  const dataObj = payload.data?.object || {};
-
-  if (eventType === "checkout.session.completed" || eventType === "payment_intent.succeeded") {
-    const userEmail = (
-      dataObj.customer_email ||
-      dataObj.customer_details?.email ||
-      dataObj.metadata?.user_email ||
-      "guest@luqi.ai"
-    ).toLowerCase().trim();
-    const amountTotal = Number(dataObj.amount_total || dataObj.amount || 500) / 100;
-    const tokens = Math.max(100, Math.floor(amountTotal * 20));
-    const current = getUserCredits(userEmail);
-    inMemoryCredits.set(userEmail, current + tokens);
-  }
-
-  return c.json({ status: "Acknowledged" });
-};
-
-restCompat.post("/api/v1/billing/stripe/webhook", handleStripeWebhook);
-restCompat.post("/v1/billing/stripe/webhook", handleStripeWebhook);
+// Unsigned webhook implementations are removed. Provider integrations must
+// prove signature, settlement, reference ownership and replay safety first.
+const retiredUnsignedWebhook = (c: any) => c.json({
+  detail: "Unsigned payment webhooks are not supported. Use the verified Paystack integration.",
+}, 410);
+restCompat.post("/api/v1/billing/payfast/webhook", retiredUnsignedWebhook);
+restCompat.post("/v1/billing/payfast/webhook", retiredUnsignedWebhook);
+restCompat.post("/api/v1/billing/stripe/webhook", retiredUnsignedWebhook);
+restCompat.post("/v1/billing/stripe/webhook", retiredUnsignedWebhook);
 
 // ─── 7. ZERO TRUST ARCHITECTURE (ZTA) & OWASP AST10 (2026) ─────────────
 
