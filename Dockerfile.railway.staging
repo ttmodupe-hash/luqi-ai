@@ -1,0 +1,26 @@
+# REVIEW-ONLY image for a Railway staging service.
+# This file is not selected by the current production railway.json/toml.
+# The legacy Python monolith is NOT installed in this Node.js image.
+FROM node:22-bookworm-slim AS builder
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY . .
+RUN npm run check && npm run build
+RUN test -s dist/boot.js && test -s dist/public/index.html
+
+FROM node:22-bookworm-slim AS runtime
+# FFmpeg is a local runtime dependency of the reviewed video mixing path.
+# Do not install unpinned legacy Python requirements with "|| true".
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg python3 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --chown=node:node --from=builder /app /app
+
+ENV NODE_ENV=production
+EXPOSE 3000
+USER node
+CMD ["node", "dist/boot.js"]

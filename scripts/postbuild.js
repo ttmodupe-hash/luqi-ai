@@ -30,6 +30,16 @@ fs.writeFileSync(path.join(distPath, "404.html"), html404);
 
 // Add SPA redirect handler to index.html
 const indexPath = path.join(distPath, "index.html");
+// Some Vite builds emit the canonical app entry under dist/public/app/index.html.
+// A clean Docker build has no previously generated root index, unlike some
+// local workspaces. Copy the ACTUAL compiled app entry; never fabricate HTML.
+if (!fs.existsSync(indexPath)) {
+  const builtAppIndex = path.join(distPath, "app", "index.html");
+  if (!fs.existsSync(builtAppIndex)) {
+    throw new Error("Front-end build produced no usable index.html");
+  }
+  fs.copyFileSync(builtAppIndex, indexPath);
+}
 let indexHtml = fs.readFileSync(indexPath, "utf-8");
 
 const spaScript = [
