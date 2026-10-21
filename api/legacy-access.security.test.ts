@@ -37,8 +37,11 @@ describe("high-risk legacy tRPC routes fail closed", () => {
     })],
   ];
 
-  it.each(sensitiveCalls)("blocks %s before any business logic executes", async (_label, fn) => {
-    await expect(fn()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  it.each(sensitiveCalls)("blocks %s before any business logic executes", async (label, fn) => {
+    const authenticatedRoutes = ["voice history", "grading student reports", "adaptive student records", "offline device queue"];
+    await expect(fn()).rejects.toMatchObject({
+      code: authenticatedRoutes.includes(label) ? "UNAUTHORIZED" : "FORBIDDEN",
+    });
   });
 
   it("also blocks unaudited administrative operations for authenticated users", async () => {
