@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { timingSafeEqual } from "node:crypto";
 dotenv.config({ override: true });
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -359,8 +360,11 @@ app.post('/api/v1/simulation/generate', async (c) => {
 // Helper for Zero-Trust Sovereign Admin Authorization
 const checkSovereignAdminAuth = (c: any): boolean => {
   const headerKey = c.req.header('x-luqi-admin-key') || c.req.header('X-LUQI-ADMIN-KEY') || c.req.header('x-api-key');
-  const expectedKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  return headerKey === expectedKey;
+  const expectedKey = process.env.LUQI_ADMIN_MASTER_KEY;
+  if (!expectedKey || !headerKey) return false;
+  const a = Buffer.from(headerKey);
+  const b = Buffer.from(expectedKey);
+  return a.length === b.length && timingSafeEqual(a, b);
 };
 
 // ============================================================================
@@ -1191,9 +1195,10 @@ app.get('/api/v1/exam-tutor/domains', (c) => {
 app.post('/api/v1/admin/verify', async (c) => {
   try {
     const { passkey } = await c.req.json();
-    const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-    if (passkey === masterKey) {
-      return c.json({ success: true, token: masterKey });
+    const masterKey = process.env.LUQI_ADMIN_MASTER_KEY;
+    if (masterKey && typeof passkey === 'string' && Buffer.byteLength(passkey) === Buffer.byteLength(masterKey) && timingSafeEqual(Buffer.from(passkey), Buffer.from(masterKey))) {
+      c.header('Cache-Control', 'no-store');
+      return c.json({ success: true });
     }
     return c.json({ success: false, error: 'Invalid admin passkey' }, 401);
   } catch (err: any) {
@@ -1203,9 +1208,7 @@ app.post('/api/v1/admin/verify', async (c) => {
 
 // 3. FinOps Cost & Self-Healing Health Dashboard Endpoint (Admin Protected)
 app.get('/api/v1/finops-dashboard', (c) => {
-  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  const providedKey = c.req.header('x-luqi-admin-key');
-  if (providedKey && providedKey !== masterKey) {
+  if (!checkSovereignAdminAuth(c)) {
     return c.json({ status: 'error', message: 'Unauthorized' }, 401);
   }
   return c.json({
@@ -1230,9 +1233,7 @@ app.post('/api/v1/billing/initiate-30-auth', async (c) => {
 
 // 5. Multi-Model API & FinOps Registry Health Scanner Matrix (Admin Protected)
 app.get('/api/v1/system-api-matrix', (c) => {
-  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  const providedKey = c.req.header('x-luqi-admin-key');
-  if (providedKey && providedKey !== masterKey) {
+  if (!checkSovereignAdminAuth(c)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
   // Evaluate real-time health and fund availability for each integrated model & gateway
