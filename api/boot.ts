@@ -136,7 +136,13 @@ const internalAdminPaths = new Set([
   "/workspace/critiques",
 ]);
 app.use("/*", async (c, next) => {
-  const adminPath = internalAdminPaths.has(c.req.path);
+  const adminPath = internalAdminPaths.has(c.req.path) ||
+    c.req.path.startsWith("/api/v1/intelligence/") ||
+    c.req.path === "/api/v1/finops-dashboard" ||
+    c.req.path === "/api/v1/system-api-matrix" ||
+    c.req.path === "/api/v1/admin/verify" ||
+    c.req.path === "/api/v1/consensus/execute" ||
+    c.req.path === "/api/v1/edge-cache/telemetry";
   const studentLedger = /^\/api\/v1\/grading\/ledger\/[^/]+$/.test(c.req.path);
   if (!adminPath && !studentLedger) return next();
 
