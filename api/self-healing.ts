@@ -223,38 +223,63 @@ export const selfHealingRouter = createRouter({
       };
     }),
 
+  // Approval is a workflow state transition, never executable code.
+  // Disallow skipped tests, nonexistent proposal IDs, and approving a
+  // proposal that was already revoked, rejected or promoted.
   applyPatch: adminQuery
-    .input(z.object({ patchId: z.number(), skipTests: z.boolean().default(false), abTestPercent: z.number().optional() }))
+    .input(z.object({
+      patchId: z.number().int().positive(),
+      skipTests: z.literal(false).default(false),
+      abTestPercent: z.number().min(0).max(100).optional(),
+    }))
     .mutation(async ({ input }) => {
       const db = await getPrivateDb();
-      await db
-        .update(healingPatches)
+      const [result] = await db.update(healingPatches)
         .set({ status: "approved_for_ci" })
-        .where(eq(healingPatches.id, input.patchId));
-      return { success: true, message: "Patch approved for external CI review. No code was modified or deployed." };
+        .where(and(
+          eq(healingPatches.id, input.patchId),
+          eq(healingPatches.status, "proposed"),
+        ));
+      if (Number(result.affectedRows ?? 0) !== 1) {
+        return {
+          success: false,
+          approved: false,
+          message: "Proposal not found or not in proposed state; no code was modified.",
+        };
+      }
+      return {
+        success: true, approved: true, deployed: false, testsPassed: false,
+        message: "Proposal approved for external CI review only. No code was modified or deployed.",
+      };
     }),
 
   rollbackPatch: adminQuery
-    .input(z.object({ patchId: z.number(), reason: z.string() }))
+    .input(z.object({
+      patchId: z.number().int().positive(),
+      reason: z.string().trim().min(5).max(1000),
+    }))
     .mutation(async ({ input }) => {
       const db = await getPrivateDb();
-      await db
-        .update(healingPatches)
+      const [result] = await db.update(healingPatches)
         .set({ status: "review_revoked", rolledBackAt: new Date(), rollbackReason: input.reason })
-        .where(eq(healingPatches.id, input.patchId));
-      return { success: true, message: "Patch proposal revoked. No production rollback was executed." };
+        .where(and(
+          eq(healingPatches.id, input.patchId),
+          eq(healingPatches.status, "approved_for_ci"),
+        ));
+      if (Number(result.affectedRows ?? 0) !== 1) {
+        return { success: false, revoked: false, message: "Only approved proposals can be revoked; no production rollback occurred." };
+      }
+      return { success: true, revoked: true, productionRollback: false,
+        message: "Approval revoked. No production rollback was executed." };
     }),
 
   promoteABTest: adminQuery
-    .input(z.object({ patchId: z.number() }))
-    .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
-      await db
-        .update(healingPatches)
-        .set({ status: "promotion_requested", abTestPercent: 100 })
-        .where(eq(healingPatches.id, input.patchId));
-      return { success: true, message: "Promotion requested for CI review. No deployment was performed." };
-    }),
+    .input(z.object({ patchId: z.number().int().positive() }))
+    .mutation(async () => ({
+      success: false,
+      deployed: false,
+      message: "Production promotion requires a reviewed release outside the application API.",
+    })),
 
   getPatches: adminQuery
     .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
