@@ -132,6 +132,8 @@ const internalAdminPaths = new Set([
   "/api/v1/audit/seal",
   "/api/v1/intelligence/self-optimize",
   "/intelligence/self-optimize",
+  "/api/v1/governance/generate-system-card",
+  "/api/v1/governance/system-cards",
   "/api/v1/workspace/critiques",
   "/workspace/critiques",
 ]);
@@ -1647,37 +1649,33 @@ const SYSTEM_CARDS_STORAGE: any[] = [
   }
 ];
 
+// A system card is a self-reported draft, not a compliance certification.
+// Do not invent evaluator clearance, security test results or FLOP thresholds.
 app.post('/api/v1/governance/generate-system-card', async (c) => {
-  try {
-    const body = await c.req.json().catch(() => ({}));
-    const patchId = body.patch_id || `PATCH-${Date.now()}`;
-    const targetModel = body.target_model_base || "luqitoons-v5-pro";
-    const flopEstimate = body.training_flop_estimate || "1.2e24 FLOP";
-    const featuresSummary = body.modified_features_summary || "Automated circuit breaker and resilience optimization";
-    const vulns = body.detected_vulnerabilities_fixed || ["SEC-PROMPT-INJECTION-V3"];
-
-    const docId = `SYS-CARD-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-
-    const card = {
-      document_id: docId,
-      generation_timestamp: timestamp,
-      model_identifier: targetModel,
-      flop_scale_compliance: `${flopEstimate} (Strictly below the 10^25 FLOP Covered Developer scope boundary)`,
-      risk_mitigation_posture: {
-        biological_defense: "PASS - Gene synthesis screening & biological hazard filters fully operational with zero dual-use capabilities.",
-        cyber_operations: "PASS - Defensive patch applied; hardened against prompt-injection and unauthorized autonomous code execution.",
-        control_loss_prevention: "PASS - Deception monitoring, speed-of-iteration governor, and kill-switch heartbeat telemetry active."
-      },
-      external_evaluator_clearance: true,
-      public_transparency_summary: `Autonomous release assessment for patch '${patchId}'. Modified capabilities: ${featuresSummary}. Verified mitigations for: ${vulns.join(', ')}.`
-    };
-
-    SYSTEM_CARDS_STORAGE.unshift(card);
-    return c.json(card);
-  } catch (err: any) {
-    return c.json({ error: err?.message || "Failed to generate system card" }, 500);
-  }
+  const body = await c.req.json().catch(() => ({}));
+  const text = (value: unknown, max = 400) =>
+    typeof value === "string" ? value.trim().slice(0, max) : "";
+  const card = {
+    document_id: `SYS-CARD-DRAFT-${crypto.randomUUID()}`,
+    generation_timestamp: new Date().toISOString(),
+    status: "DRAFT_UNVERIFIED",
+    model_identifier: text(body.target_model_base) || "unspecified",
+    patch_id: text(body.patch_id),
+    modified_features_summary: text(body.modified_features_summary, 1200),
+    training_flop_estimate: text(body.training_flop_estimate) || null,
+    risk_mitigation_posture: {
+      biological_defense: "NOT_VERIFIED",
+      cyber_operations: "NOT_VERIFIED",
+      control_loss_prevention: "NOT_VERIFIED",
+    },
+    external_evaluator_clearance: false,
+    independent_security_audit: false,
+    production_release_approved: false,
+    notice: "User-supplied draft only. No evaluator clearance, tests, legal compliance or production deployment verified.",
+  };
+  SYSTEM_CARDS_STORAGE.unshift(card);
+  if (SYSTEM_CARDS_STORAGE.length > 100) SYSTEM_CARDS_STORAGE.length = 100;
+  return c.json(card, 201);
 });
 
 app.get('/api/v1/governance/system-cards', async (c) => {
