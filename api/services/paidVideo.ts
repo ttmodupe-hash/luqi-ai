@@ -1,6 +1,8 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { hasMp4Header, readBoundedMedia } from "./privateMediaValidation";
+import { narratedVideoAvailable, synthesizePaidNarration, combineVideoAndNarration } from "./paidNarration";
 
-const MAX_MP4_BYTES = 40 * 1024 * 1024;
+const MAX_MP4_BYTES = 45 * 1024 * 1024;
 const MODEL_ENDPOINT = "https://api.replicate.com/v1/models/wan-video/wan-2.1-720p/predictions";
 
 export function isTrustedReplicateUrl(value: string): boolean {
@@ -43,9 +45,10 @@ function storageSettings() {
 }
 
 /** Real video must never be replaced with a fake MP4 or transient disk file. */
-export function paidVideoAvailable(): boolean {
+export function paidVideoAvailable(mode: "silent_mp4" | "narrated_mp4" = "silent_mp4"): boolean {
   const key = process.env.REPLICATE_API_TOKEN || "";
-  return Boolean(key.length > 10 && !key.includes("mock") && storageSettings());
+  return Boolean(key.length > 10 && !key.includes("mock") && storageSettings() &&
+    (mode === "silent_mp4" || narratedVideoAvailable()));
 }
 
 function videoClient() {
@@ -68,15 +71,24 @@ function extractOutputUrl(job: any): string {
 }
 
 export async function renderPaidVideo(
-  request: { userId: number; requestKey: string; prompt: string; durationSeconds: number },
+  request: { userId: number; requestKey: string; prompt: string; durationSeconds: number;
+    mode?: "silent_mp4" | "narrated_mp4"; narration?: string },
 ): Promise<{ objectKey: string; provider: string }> {
-  if (!paidVideoAvailable()) throw new Error("Paid video provider or permanent storage is not configured.");
+  const mode = request.mode ?? "silent_mp4";
+  if (!paidVideoAvailable(mode)) throw new Error("Paid video, narration provider, or permanent storage is not configured.");
+  if ((mode === "narrated_mp4" && (!request.narration?.trim() || request.narration.length > 500)) ||
+      (mode === "silent_mp4" && request.narration)) {
+    throw new Error("The requested video and narration mode do not match.");
+  }
   if (!Number.isSafeInteger(request.userId) || request.userId < 1 ||
       !/^[a-f0-9-]{36}$/i.test(request.requestKey) ||
       !Number.isSafeInteger(request.durationSeconds) ||
       request.durationSeconds < 2 || request.durationSeconds > 10) {
     throw new Error("Invalid video rendering request.");
   }
+  // Verify the voice provider first; no silent fallback when narration was paid for.
+  const narrationAudio = mode === "narrated_mp4"
+    ? await synthesizePaidNarration(request.narration!) : null;
   const token = process.env.REPLICATE_API_TOKEN!;
   const createResponse = await fetch(MODEL_ENDPOINT, {
     method: "POST",
@@ -120,28 +132,23 @@ export async function renderPaidVideo(
   const sourceUrl = extractOutputUrl(prediction);
   const download = await fetch(sourceUrl, { signal: AbortSignal.timeout(30000), redirect: "error" });
   if (!download.ok) throw new Error("Generated video could not be retrieved.");
-  const declaredLength = Number(download.headers.get("content-length") || "0");
-  if (declaredLength > MAX_MP4_BYTES) throw new Error("Generated video exceeds size limit.");
-  const bytes = Buffer.from(await download.arrayBuffer());
-  if (bytes.length < 1024 || bytes.length > MAX_MP4_BYTES) {
-    throw new Error("Generated video is empty, invalid, or too large.");
-  }
-  // A valid MP4 contains an ftyp brand box in the initial bytes.
-  if (bytes.subarray(4, 8).toString("ascii") !== "ftyp") {
-    throw new Error("Provider returned a non-MP4 asset.");
-  }
+  const sourceBytes = await readBoundedMedia(download, MAX_MP4_BYTES);
+  if (!hasMp4Header(sourceBytes)) throw new Error("Provider returned a non-MP4 asset.");
+  const bytes = narrationAudio
+    ? await combineVideoAndNarration(sourceBytes, narrationAudio, request.durationSeconds)
+    : sourceBytes;
   const { bucket, client } = videoClient();
   const objectKey = `video/${request.userId}/${request.requestKey}.mp4`;
   try {
     await client.send(new PutObjectCommand({
       Bucket: bucket, Key: objectKey, Body: bytes,
       ContentType: "video/mp4",
-      Metadata: { source: "replicate" },
+      Metadata: { source: "replicate", mode },
     }));
   } finally {
     client.destroy();
   }
-  return { objectKey, provider: "Replicate WAN 2.1" };
+  return { objectKey, provider: mode === "narrated_mp4" ? "Replicate WAN 2.1 + ElevenLabs + FFmpeg" : "Replicate WAN 2.1" };
 }
 
 /**
