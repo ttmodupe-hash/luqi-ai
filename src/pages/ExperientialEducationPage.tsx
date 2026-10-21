@@ -6,6 +6,7 @@ import { useState } from "react";
 import VisualNetworkingLab from "@/components/VisualNetworkingLab";
 import AfricaSkillsNavigator from "@/components/AfricaSkillsNavigator";
 import AfricaOpportunityFinder from "@/components/AfricaOpportunityFinder";
+import FundingApplicationGuide from "@/components/FundingApplicationGuide";
 import { Link } from "react-router";
 import {
   GraduationCap,
@@ -200,6 +201,7 @@ export default function ExperientialEducationPage() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <FundingApplicationGuide />
         <AfricaOpportunityFinder />
         <AfricaSkillsNavigator />
         <VisualNetworkingLab />
