@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createToonProductionPlan, type ToonProductionPlan, type ToonPurpose } from "@/lib/luqitoons/productionPlan";
+import { AFRICAN_VOICE_PROFILES, validateVoiceDirection, type AfricanVoiceProfileId, type ToonVoiceDirection } from "@/lib/luqitoons/voiceProfiles";
 
 type Recognition = { lang: string; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onerror: (() => void) | null; start: () => void };
 type SpeechWindow = Window & { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
@@ -19,6 +20,10 @@ export default function ToonChatCreator() {
   const [plan, setPlan] = useState<ToonProductionPlan | null>(null);
   const [error, setError] = useState("");
   const [voiceStatus, setVoiceStatus] = useState("");
+  const [voiceProfile, setVoiceProfile] = useState<AfricanVoiceProfileId>("en-ZA");
+  const [tone, setTone] = useState<ToonVoiceDirection["tone"]>("warm");
+  const [speakingRate, setSpeakingRate] = useState(1);
+  const [previewText, setPreviewText] = useState("Welcome to LUQIToons. Let us learn together.");
   const makePlan = () => {
     try {
       const topic = message.trim();
@@ -45,9 +50,24 @@ export default function ToonChatCreator() {
       setVoiceStatus("Listening…");
     } catch { setVoiceStatus("Microphone unavailable. You can type instead."); }
   };
+  const voiceDirection: ToonVoiceDirection = { profileId: voiceProfile, tone, speakingRate, voiceMode: "synthetic" };
+  const previewVoice = () => {
+    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") { setVoiceStatus("Speech preview is not supported in this browser."); return; }
+    const profile = AFRICAN_VOICE_PROFILES.find(p => p.id === voiceProfile)!;
+    const voices = window.speechSynthesis.getVoices();
+    const selected = voices.find(v => v.lang.toLowerCase() === profile.locale.toLowerCase());
+    if (!selected) { setVoiceStatus("No installed voice for " + profile.label + ". No substitute accent was played."); return; }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(previewText.slice(0, 350));
+    utterance.voice = selected;
+    utterance.lang = profile.locale;
+    utterance.rate = speakingRate;
+    window.speechSynthesis.speak(utterance);
+    setVoiceStatus("Previewing installed " + profile.label + " voice. Actual quality depends on your device.");
+  };
   const downloadPlan = () => {
     if (!plan) return;
-    const blob = new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ ...plan, voiceDirection }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -74,6 +94,27 @@ export default function ToonChatCreator() {
       <label className="text-xs text-slate-200">Audience<input value={audience} maxLength={200} onChange={e => { setAudience(e.target.value); setPlan(null); }} className="block mt-1 w-full rounded bg-slate-950 border border-slate-700 p-2" /></label>
     </div>
     {(purpose === "training" || purpose === "education") && <label className="block text-xs text-slate-200">Learning objective<input value={objective} maxLength={300} onChange={e => { setObjective(e.target.value); setPlan(null); }} className="block mt-1 w-full rounded bg-slate-950 border border-slate-700 p-2" /></label>}
+    <fieldset className="rounded-xl border border-slate-700 p-3 space-y-2">
+      <legend className="px-2 text-sm font-semibold text-orange-300">African narration voice</legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs text-slate-200">Language and regional voice
+          <select value={voiceProfile} onChange={e => { setVoiceProfile(e.target.value as AfricanVoiceProfileId); setPlan(null); }} className="block mt-1 w-full rounded bg-slate-950 border border-slate-700 p-2">{AFRICAN_VOICE_PROFILES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</select>
+        </label>
+        <label className="text-xs text-slate-200">Narration tone
+          <select value={tone} onChange={e => setTone(e.target.value as ToonVoiceDirection["tone"])} className="block mt-1 w-full rounded bg-slate-950 border border-slate-700 p-2">
+            <option value="warm">Warm and welcoming</option><option value="confident">Confident instructor</option><option value="calm">Calm explanation</option><option value="energetic">Energetic storytelling</option>
+          </select>
+        </label>
+      </div>
+      <label className="block text-xs text-slate-200">Speaking speed: {speakingRate.toFixed(2)}×
+        <input type="range" className="w-full" min="0.75" max="1.25" step="0.05" value={speakingRate} onChange={e => setSpeakingRate(Number(e.target.value))} />
+      </label>
+      <label className="block text-xs text-slate-200">Voice preview text
+        <input value={previewText} maxLength={350} onChange={e => setPreviewText(e.target.value)} className="block mt-1 w-full rounded bg-slate-950 border border-slate-700 p-2" />
+      </label>
+      <button type="button" disabled={!previewText.trim() || validateVoiceDirection(voiceDirection).length > 0} onClick={previewVoice} className="rounded border border-orange-500 px-3 py-2 text-xs text-orange-200 disabled:opacity-50">Listen to available local voice</button>
+      <p className="text-xs text-slate-400">A language selection does not guarantee an installed voice or native pronunciation. Tone is saved as production direction; browser preview supports rate only. Voice imitation of a real person requires verified consent and is not enabled here.</p>
+    </fieldset>
     {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
     {plan && <div className="rounded-xl border border-sky-500/30 bg-slate-950 p-4 space-y-2">
       <h3 className="font-semibold text-sky-300">Your 3D production outline</h3>
