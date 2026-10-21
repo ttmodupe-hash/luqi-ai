@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { evaluatePracticeEvidence } from "@/lib/labs/competencyRubric";
 import { pendulumSmallAnglePeriod, michaelisMentenRate, monoproticEquivalenceVolume, centralDifference, cylinderVolume } from "@/lib/labs/referenceModels";
 
 const models = {
@@ -16,8 +17,10 @@ export default function ExperimentNotebook({ labId }: { labId: string }) {
   const [reflection, setReflection] = useState("");
   const [result, setResult] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [changedByLab, setChangedByLab] = useState<Record<string, boolean>>({});
   if (!model) return null;
   const values = valuesByLab[labId] ?? model.defaults;
+  const feedback = evaluatePracticeEvidence({ prediction, reflection, resultCalculated: result !== null, parameterChanged: Boolean(changedByLab[labId]) });
   const calculate = () => {
     try {
       const answer = model.calculate(values);
@@ -36,6 +39,7 @@ export default function ExperimentNotebook({ labId }: { labId: string }) {
       referenceResult: result,
       unit: model.unit,
       reflection,
+      practiceFeedback: feedback,
       generatedAt: new Date().toISOString(),
       disclaimer: "Educational reference calculation, not a measurement from the embedded simulator.",
     };
@@ -51,7 +55,7 @@ export default function ExperimentNotebook({ labId }: { labId: string }) {
     <h4 className="text-sm font-bold text-sky-300">Experiment notebook: {model.title}</h4>
     <p className="text-xs text-slate-400 mt-1">Explore a reference calculation alongside the existing simulation. This is not a measurement from the simulation.</p>
     <div className="grid sm:grid-cols-3 gap-2 mt-3">{model.labels.map((label, index) => <label key={label} className="text-xs text-slate-200">{label}
-      <input type="number" step="any" value={Number.isNaN(values[index]) ? "" : values[index]} onChange={e => { const next = [...values]; next[index] = e.target.value === "" ? NaN : Number(e.target.value); setValuesByLab(prev => ({ ...prev, [labId]: next })); setResult(null); }} className="block mt-1 w-full bg-slate-950 border border-slate-600 rounded p-2 text-white" />
+      <input type="number" step="any" value={Number.isNaN(values[index]) ? "" : values[index]} onChange={e => { const next = [...values]; next[index] = e.target.value === "" ? NaN : Number(e.target.value); setValuesByLab(prev => ({ ...prev, [labId]: next })); setChangedByLab(prev => ({ ...prev, [labId]: true })); setResult(null); }} className="block mt-1 w-full bg-slate-950 border border-slate-600 rounded p-2 text-white" />
     </label>)}</div>
     <label className="block mt-3 text-xs text-slate-200">Prediction<textarea value={prediction} onChange={e => setPrediction(e.target.value)} rows={2} className="block mt-1 w-full bg-slate-950 border border-slate-600 rounded p-2 text-white" /></label>
     <button type="button" onClick={calculate} className="mt-3 bg-sky-600 text-white rounded px-3 py-2 text-xs font-bold">Calculate reference</button>
@@ -59,5 +63,6 @@ export default function ExperimentNotebook({ labId }: { labId: string }) {
     {error && <p role="alert" className="text-xs text-rose-300 mt-2">{error}</p>}
     {result !== null && <p aria-live="polite" className="mt-2 text-sm text-emerald-300">Reference result: {Number(result.toPrecision(8))} {model.unit}</p>}
     <label className="block mt-3 text-xs text-slate-200">What did you learn?<textarea value={reflection} onChange={e => setReflection(e.target.value)} rows={2} className="block mt-1 w-full bg-slate-950 border border-slate-600 rounded p-2 text-white" /></label>
+    <div className="mt-4 border-t border-slate-700 pt-3" aria-live="polite"><p className="text-xs font-bold text-sky-300">Learning practice checklist: {feedback.score}/{feedback.maximumScore} activities</p><ul className="mt-2 space-y-1">{feedback.criteria.map(item => <li key={item.id} className="text-xs text-slate-300">{item.met ? "✓" : "○"} {item.guidance}</li>)}</ul><p className="text-xs text-amber-300 mt-2">Completing activities does not certify scientific mastery. A teacher or validated assessment must evaluate understanding.</p></div>
   </section>;
 }
