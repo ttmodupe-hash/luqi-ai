@@ -101,6 +101,25 @@ describe("legacy HTTP security integration", () => {
     expect(result.status).toBe(401);
   });
 
+  it.each([
+    ["POST", "/api/v1/governance/generate-system-card"],
+    ["GET", "/api/v1/governance/system-cards"],
+  ])("prevents anonymous compliance certification via %s %s", async (method, path) => {
+    const response = await app.request(path, {
+      method,
+      headers: { "content-type": "application/json" },
+      ...(method === "POST" ? {
+        body: JSON.stringify({
+          external_evaluator_clearance: true,
+          target_model_base: "forged-approved-model",
+        }),
+      } : {}),
+    });
+    expect(response.status).toBe(401);
+    const result = await response.json();
+    expect(result).not.toHaveProperty("external_evaluator_clearance", true);
+  });
+
   it("requires administrator credentials before returning billing records", async () => {
     const res = await app.request("/api/v1/admin/billing-ledger");
     expect(res.status).toBe(401);
