@@ -20,7 +20,7 @@ jobs:
       - name: TypeScript
         run: npm run check
       - name: Unit tests
-        run: npm test -- --run
+        run: npm test
       - name: Production build
         run: npm run build
       - name: Confirm no deployment occurred
