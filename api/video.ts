@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, publicQuery, protectedQuery, adminQuery } from "./middleware";
+import { getPrivateDb, assertOwnUserId } from "./security/access";
 import { getDb } from "./queries/connection";
 import { videoProjects } from "../db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -48,7 +49,7 @@ export const videoRouter = createRouter({
 
   // Provider credential presence and configuration state are internal-only details.
   // Do not reveal infrastructure status to unauthenticated callers.
-  getApiStatus: disabledVideoProcedure.query(() => {
+  getApiStatus: adminQuery.query(() => {
     return getApiRequirementsStatus();
   }),
 
@@ -75,17 +76,19 @@ export const videoRouter = createRouter({
       return result;
     }),
 
-  // ── Project Management Endpoints ──────────────────────────────────
-  create: disabledVideoProcedure
+  // Personal video projects: all access is based on a validated session,
+  // not a caller-supplied user ID. Unowned historical records are not visible.
+  create: protectedQuery
     .input(z.object({
-      title: z.string().min(1).max(255),
+      title: z.string().trim().min(1).max(255),
       description: z.string().max(5000).optional(),
-      prompt: z.string().min(1).max(10000),
+      prompt: z.string().trim().min(1).max(10000),
       language: z.enum(VALID_LANGUAGES).default("en"),
-      userId: z.number().optional(),
+      userId: z.number().int().positive().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
+    .mutation(async ({ input, ctx }) => {
+      assertOwnUserId(input.userId, ctx.user.id);
+      const db = await getPrivateDb();
       const [result] = await db.insert(videoProjects).values({
         title: input.title,
         description: input.description ?? null,
@@ -93,86 +96,79 @@ export const videoRouter = createRouter({
         language: input.language,
         status: "PENDING",
         progress: 0,
-        userId: input.userId ?? null,
+        userId: ctx.user.id,
       });
       return { id: Number(result.insertId), created: true };
     }),
 
-  list: disabledVideoProcedure
+  list: protectedQuery
     .input(z.object({
       status: z.enum(VALID_STATUSES).optional(),
-      language: z.string().optional(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0),
+      language: z.string().min(2).max(10).optional(),
+      limit: z.number().int().min(1).max(100).default(50),
+      offset: z.number().int().min(0).max(10000).default(0),
     }).optional())
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const limit = input?.limit ?? 50;
-      const offset = input?.offset ?? 0;
-      let conditions = undefined;
-      if (input?.status) {
-        conditions = eq(videoProjects.status, input.status);
-      }
-      if (input?.language) {
-        conditions = conditions
-          ? and(conditions, eq(videoProjects.language, input.language))
-          : eq(videoProjects.language, input.language);
-      }
-      const rows = await db
-        .select()
-        .from(videoProjects)
-        .where(conditions)
+    .query(async ({ input, ctx }) => {
+      const db = await getPrivateDb();
+      const conditions = [
+        eq(videoProjects.userId, ctx.user.id),
+        input?.status ? eq(videoProjects.status, input.status) : undefined,
+        input?.language ? eq(videoProjects.language, input.language) : undefined,
+      ].filter((item): item is NonNullable<typeof item> => item !== undefined);
+      return db.select().from(videoProjects)
+        .where(and(...conditions))
         .orderBy(desc(videoProjects.createdAt))
-        .limit(limit)
-        .offset(offset);
-      return rows;
+        .limit(input?.limit ?? 50)
+        .offset(input?.offset ?? 0);
     }),
 
-  get: disabledVideoProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const [row] = await db
-        .select()
-        .from(videoProjects)
-        .where(eq(videoProjects.id, input.id))
+  get: protectedQuery
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getPrivateDb();
+      const [row] = await db.select().from(videoProjects)
+        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)))
         .limit(1);
       return row ?? null;
     }),
 
-  update: disabledVideoProcedure
+  update: protectedQuery
     .input(z.object({
-      id: z.number(),
-      title: z.string().min(1).max(255).optional(),
+      id: z.number().int().positive(),
+      title: z.string().trim().min(1).max(255).optional(),
       description: z.string().max(5000).optional(),
-      prompt: z.string().min(1).max(10000).optional(),
+      prompt: z.string().trim().min(1).max(10000).optional(),
       language: z.enum(VALID_LANGUAGES).optional(),
     }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
+    .mutation(async ({ input, ctx }) => {
+      const db = await getPrivateDb();
+      const [owned] = await db.select({ id: videoProjects.id }).from(videoProjects)
+        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)))
+        .limit(1);
+      if (!owned) return { updated: false };
       const { id, ...updates } = input;
-      await db
-        .update(videoProjects)
-        .set({
-          ...updates,
-          updatedAt: new Date(),
-        })
-        .where(eq(videoProjects.id, id));
+      await db.update(videoProjects).set({ ...updates, updatedAt: new Date() })
+        .where(and(eq(videoProjects.id, id), eq(videoProjects.userId, ctx.user.id)));
       return { updated: true };
     }),
 
-  delete: disabledVideoProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      await db.delete(videoProjects).where(eq(videoProjects.id, input.id));
+  delete: protectedQuery
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getPrivateDb();
+      const [owned] = await db.select({ id: videoProjects.id }).from(videoProjects)
+        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)))
+        .limit(1);
+      if (!owned) return { deleted: false };
+      await db.delete(videoProjects)
+        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)));
       return { deleted: true };
     }),
 
-  startProcessing: disabledVideoProcedure
+  startProcessing: adminQuery
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       await db
         .update(videoProjects)
         .set({
@@ -184,13 +180,13 @@ export const videoRouter = createRouter({
       return { status: "PROCESSING" };
     }),
 
-  updateProgress: disabledVideoProcedure
+  updateProgress: adminQuery
     .input(z.object({
       id: z.number(),
       progress: z.number().min(0).max(100),
     }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       await db
         .update(videoProjects)
         .set({
@@ -201,7 +197,7 @@ export const videoRouter = createRouter({
       return { progress: input.progress };
     }),
 
-  markSuccess: disabledVideoProcedure
+  markSuccess: adminQuery
     .input(z.object({
       id: z.number(),
       videoUrl: z.string(),
@@ -210,7 +206,7 @@ export const videoRouter = createRouter({
       modelUsed: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       await db
         .update(videoProjects)
         .set({
@@ -227,13 +223,13 @@ export const videoRouter = createRouter({
       return { status: "SUCCESS" };
     }),
 
-  markFailed: disabledVideoProcedure
+  markFailed: adminQuery
     .input(z.object({
       id: z.number(),
       errorMessage: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       await db
         .update(videoProjects)
         .set({
@@ -246,8 +242,8 @@ export const videoRouter = createRouter({
       return { status: "FAILED" };
     }),
 
-  stats: disabledVideoProcedure.query(async () => {
-    const db = await getDb();
+  stats: adminQuery.query(async () => {
+    const db = await getPrivateDb();
     const total = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(videoProjects)
@@ -283,7 +279,7 @@ export const videoRouter = createRouter({
       userKey: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      const db = await getPrivateDb();
       const userKey = input.userKey || "guest@luqi.ai";
       const duration = input.durationSeconds || 5;
 
