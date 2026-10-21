@@ -41,6 +41,8 @@ describe("legacy HTTP security integration", () => {
 
   it.each([
     ["GET", "/api/v1/security/diagnostics"],
+    ["POST", "/api/v1/security/shield-audit"],
+    ["POST", "/security/shield-audit"],
     ["GET", "/security/diagnostics"],
     ["GET", "/api/v1/diagnostics/database-indexes"],
     ["GET", "/api/v1/audit/ledger"],
