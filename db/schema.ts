@@ -503,6 +503,7 @@ export const videoRenderRequests = mysqlTable("video_render_requests", {
   chargeCredits: int("charge_credits").notNull(),
   status: varchar("status", { length: 30 }).notNull().default("PROCESSING"),
   errorMessage: text("error_message"),
+  assetKey: varchar("asset_key", { length: 400 }),
   createdAt: timestamp("created_at").defaultNow(),
   completedAt: timestamp("completed_at"),
 });
