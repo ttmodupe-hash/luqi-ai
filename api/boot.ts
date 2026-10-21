@@ -170,14 +170,40 @@ app.use("/api/gemini/*", async (c, next) => {
   return next();
 });
 
+// Khoro's text, voice, image and stream endpoints use the same persistent
+// account quota as direct Gemini APIs. A new browser IP cannot reset usage.
+const protectPaidKhoro = async (context: any, next: () => Promise<void>) => {
+  const user = await resolveSessionUser(context.req.raw);
+  if (!user) return context.json({ error: "Sign in to use the AI companion." }, 401);
+  if (context.req.method.toUpperCase() !== "POST") {
+    return context.json({ error: "Method not allowed." }, 405);
+  }
+  try {
+    await reserveAiRequest(user.id, `khoro:${context.req.path.slice(0, 80)}`);
+  } catch (error: any) {
+    if (error?.code === "TOO_MANY_REQUESTS") {
+      return context.json({ error: "Daily AI allowance reached." }, 429);
+    }
+    return context.json({ error: "Verified AI usage accounting is unavailable." }, 503);
+  }
+  context.header("Cache-Control", "no-store");
+  return next();
+};
+app.use("/api/khoro/*", protectPaidKhoro);
+app.use("/api/khoro-legal", protectPaidKhoro);
+
 // ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(async (c, next) => {
   const method = c.req.method.toUpperCase();
   const contentLength = c.req.header("content-length");
-  if (method === "GET" || method === "HEAD" || !contentLength || contentLength === "0") {
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return next();
   }
-  return bodyLimit({ maxSize: 50 * 1024 * 1024 })(c, next);
+  // Never skip the streaming body cap when Content-Length is omitted or
+  // chunked encoding is used. AI proxies have a smaller per-request budget.
+  const expensive = c.req.path.startsWith("/api/gemini/") ||
+    c.req.path.startsWith("/api/khoro");
+  return bodyLimit({ maxSize: expensive ? 8 * 1024 * 1024 : 50 * 1024 * 1024 })(c, next);
 });
 
 // Private video asset gateway: a browser cookie does not grant access to
@@ -1582,9 +1608,9 @@ OUTPUT DELIVERY & TONE:
   } catch (err: any) {
     logger.error({ err: err?.message }, "Error in /api/khoro/chat");
     return c.json({
-      success: true,
-      reply: "Eita! KHORO is here at the council courtyard. All cognitive reasoning matrices are primed and ready across all knowledge domains."
-    });
+      success: false,
+      error: "The AI provider could not complete the request. Please try again later."
+    }, 503);
   }
 });
 
