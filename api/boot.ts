@@ -150,6 +150,25 @@ app.use("/*", async (c, next) => {
   return next();
 });
 
+// Paid Gemini media generation uses a verified session and durable AI quota.
+// Anonymous callers cannot use LUQI's vendor keys or bypass daily budgets by
+// changing IP addresses or moving between Cloud Run instances.
+app.use("/api/gemini/*", async (c, next) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Sign in to use AI generation." }, 401);
+  if (c.req.method.toUpperCase() !== "POST") return c.json({ error: "Method not allowed." }, 405);
+  try {
+    await reserveAiRequest(user.id, `gemini:${c.req.path.slice(0, 80)}`);
+  } catch (error: any) {
+    const code = error?.code;
+    if (code === "TOO_MANY_REQUESTS") return c.json({ error: "Daily AI request limit reached." }, 429);
+    if (code === "UNAUTHORIZED") return c.json({ error: "Account is unavailable." }, 401);
+    return c.json({ error: "Verified AI usage accounting is unavailable." }, 503);
+  }
+  c.header("Cache-Control", "no-store");
+  return next();
+});
+
 // ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(async (c, next) => {
   const method = c.req.method.toUpperCase();
