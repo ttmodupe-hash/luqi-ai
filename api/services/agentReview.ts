@@ -1,10 +1,11 @@
-import { randomUUID, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { count, desc, eq } from "drizzle-orm";
-import { healingPatches, agentActivityLog } from "../../db/schema";
+import { healingPatches } from "../../db/schema";
 import { getPrivateDb } from "../security/access";
 import { reserveAiRequest } from "../security/aiBudget";
 import { orchestrateRequest, getOrchestratorStatus } from "./orchestrator";
+import { createEvidenceProposal } from "./agentProposalLedger";
 
 const MAX_PROPOSAL_LENGTH = 12000;
 
@@ -56,28 +57,18 @@ export async function proposeAgentImprovement(input: AgentProposalInput, userId:
     });
   }
 
-  // The durable proposal is intentionally inert. CI, a human reviewer and
-  // GitHub branch protection control all future code execution and release.
-  const [created] = await db.insert(healingPatches).values({
+  // The proposed code remains inert: persist its creation AND provenance
+  // together in one database transaction. Missing migration fails closed.
+  const created = await createEvidenceProposal({
+    actorUserId: userId,
     patchType: "ai_refinement_proposal",
     targetModule: "super-core",
     agentName: "LUQI-Review-Agent",
     description: `${input.taskName}: ${input.taskDescription}`.slice(0, 1800),
     codeDiff: suggestion,
-    status: "proposed",
+    logAgent: true,
   });
-  const patchId = Number(created.insertId);
-  await db.insert(agentActivityLog).values({
-    agentId: `admin:${userId}`,
-    agentName: "LUQI-Review-Agent",
-    action: "prepare_reviewable_proposal",
-    status: "proposed",
-    outputData: {
-      patchId, provider: result.provider, model: result.model,
-      verifiedByCI: false, codeExecuted: false, humanReviewRequired: true,
-    },
-    durationMs: Date.now() - start,
-  });
+  const patchId = created.patchId;
 
   const durationMs = Date.now() - start;
   const telemetry = {
