@@ -772,7 +772,7 @@ export default function VideoStudioPage() {
                   value={formDialogue}
                   onChange={(e) => setFormDialogue(e.target.value)}
                   maxLength={500}
-                  placeholder="Describe what the narrator says (maximum 500 characters)..."
+                  placeholder={`Narration: at most ${formDuration * 15} characters for ${formDuration} seconds`}
                   rows={2}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/50 resize-none"
                 />
