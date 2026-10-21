@@ -14,6 +14,7 @@ vi.mock("./services/orchestrator", () => ({
 }));
 
 import { selfHealingRouter } from "./self-healing";
+import { TRPCError } from "@trpc/server";
 
 const context = (role: string | null) => ({
   req: new Request("https://luqi-ai.com/api/trpc"),
@@ -90,7 +91,7 @@ describe("admin AI diagnosis provider budgeting and evidence", () => {
     const db = fakeDb();
     mocks.getPrivateDb.mockResolvedValue(db);
     mocks.reserveAiRequest.mockRejectedValue(
-      Object.assign(new Error("Global allowance exhausted"), { code: "TOO_MANY_REQUESTS" })
+      new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Global allowance exhausted" })
     );
     await expect(admin.aiDiagnoseError({ errorLogId: 7 })).rejects.toMatchObject({
       code: "TOO_MANY_REQUESTS",
