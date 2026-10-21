@@ -111,6 +111,42 @@ const CREATE_STATEMENTS: string[] = [
 	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT \`botanical_entries_id\` PRIMARY KEY(\`id\`)
 );`,
+  `CREATE TABLE IF NOT EXISTS \`video_credit_wallets\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`user_key\` varchar(255) NOT NULL,
+  \`credits\` int NOT NULL DEFAULT 0,
+  \`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`video_credit_wallets_user_key_unique\` (\`user_key\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`video_credit_ledger\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`reference\` varchar(100) NOT NULL,
+  \`user_key\` varchar(255) NOT NULL,
+  \`entry_type\` varchar(30) NOT NULL,
+  \`delta_credits\` int NOT NULL,
+  \`balance_after\` int NOT NULL,
+  \`created_at\` timestamp DEFAULT (now()),
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`video_credit_ledger_reference_unique\` (\`reference\`),
+  INDEX \`video_credit_ledger_user_key_idx\` (\`user_key\`)
+);`,
+  `CREATE TABLE IF NOT EXISTS \`video_render_requests\` (
+  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
+  \`request_key\` varchar(64) NOT NULL,
+  \`user_id\` int NOT NULL,
+  \`user_key\` varchar(255) NOT NULL,
+  \`project_id\` int NOT NULL,
+  \`request_digest\` varchar(64) NOT NULL,
+  \`charge_credits\` int NOT NULL,
+  \`status\` varchar(30) NOT NULL DEFAULT 'PROCESSING',
+  \`error_message\` text,
+  \`created_at\` timestamp DEFAULT (now()),
+  \`completed_at\` timestamp,
+  PRIMARY KEY (\`id\`),
+  UNIQUE KEY \`video_render_requests_request_key_unique\` (\`request_key\`),
+  INDEX \`video_render_requests_user_id_idx\` (\`user_id\`)
+);`,
   `CREATE TABLE IF NOT EXISTS \`credit_wallets\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
 	\`user_key\` varchar(255) NOT NULL,
