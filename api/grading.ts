@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "./middleware";
+import { createRouter, legacyRestrictedProcedure } from "./middleware";
 import { getDb } from "./queries/connection";
 import { labReports } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
 
 export const gradingRouter = createRouter({
-  submitReport: publicQuery
+  submitReport: legacyRestrictedProcedure
     .input(z.object({
       studentId: z.number(),
       labSlug: z.string(),
@@ -25,7 +25,7 @@ export const gradingRouter = createRouter({
       return { reportId: Number(result.insertId), submitted: true };
     }),
 
-  getReports: publicQuery
+  getReports: legacyRestrictedProcedure
     .input(z.object({ studentId: z.number(), limit: z.number().default(20) }))
     .query(async ({ input }) => {
       const db = await getDb();
@@ -37,7 +37,7 @@ export const gradingRouter = createRouter({
         .limit(input.limit);
     }),
 
-  getReport: publicQuery
+  getReport: legacyRestrictedProcedure
     .input(z.object({ reportId: z.number() }))
     .query(async ({ input }) => {
       const db = await getDb();
