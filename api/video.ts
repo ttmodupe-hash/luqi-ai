@@ -86,6 +86,12 @@ export const videoRouter = createRouter({
       if (!paymentsConfigured()) {
         throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Payment provider is not configured." });
       }
+      if (!paidVideoAvailable()) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message: "Video credit purchases cannot begin until the real renderer and durable storage are configured.",
+        });
+      }
       const db = await getPrivateDb();
       const amountCents = Math.round(pack.priceZar * 100);
       const checkout = await initializeTopup(ctx.user.email.toLowerCase(), amountCents, "ZAR");
