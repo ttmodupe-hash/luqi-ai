@@ -40,8 +40,8 @@ describe("video route authentication and spending controls", () => {
       req: new Request("https://luqi-ai.com/api/trpc/video"),
       user: { id: 55, email: "learner@example.com", name: null, role: "user" },
     });
-    await expect(signedIn.getBalance({ userKey: "another-user" })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(signedIn.topupCredits({ userKey: "another-user", credits: 1000 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.getBalance({ userKey: "another-user@example.com" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(signedIn.topupCredits({ userKey: "another-user@example.com", credits: 100, packId: "pack-100" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(signedIn.generate({ title: "test", prompt: "render", userKey: "another-user" })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(signedIn.getApiStatus()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
