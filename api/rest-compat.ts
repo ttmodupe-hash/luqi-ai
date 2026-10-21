@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "./queries/connection";
 import { getPrivateDb } from "./security/access";
+import { reserveAiRequest } from "./security/aiBudget";
 import { registerAccount, loginAccount, resolveSessionUser, type AuthenticatedUser } from "./auth";
 import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
@@ -42,8 +43,36 @@ const userGate = async (c: any, next: any) => {
   await next();
 };
 
-restCompat.use("/api/v25/ai-brain/*", userGate);
-restCompat.use("/api/v25/chat", userGate);
+const paidAiGate = async (c: any, next: any) => {
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ error: "Please sign in to use this AI capability." }, 401);
+  try {
+    await reserveAiRequest(user.id, c.req.path);
+  } catch (err: any) {
+    if (err?.code === "TOO_MANY_REQUESTS") {
+      return c.json({ error: "Daily AI allowance reached." }, 429);
+    }
+    return c.json({ error: "AI usage authorisation is unavailable." }, 503);
+  }
+  await next();
+};
+
+restCompat.use("/api/v25/ai-brain/*", paidAiGate);
+restCompat.use("/api/v25/chat", paidAiGate);
+restCompat.use("/api/v25/kb/ask", paidAiGate);
+restCompat.use("/api/v25/media/image", paidAiGate);
+restCompat.use("/api/v25/legal/analyze", paidAiGate);
+restCompat.use("/api/v25/insights/scan", paidAiGate);
+restCompat.use("/v1/extract", paidAiGate);
+restCompat.use("/api/v1/animation/*", paidAiGate);
+restCompat.use("/v1/animation/*", paidAiGate);
+restCompat.use("/api/v1/cert-academy/coach", paidAiGate);
+restCompat.use("/api/v1/cert-academy/cli-eval", paidAiGate);
+restCompat.use("/api/v1/sensing/draft-grant", paidAiGate);
+restCompat.use("/api/v1/sensing/generate-api-wrapper", paidAiGate);
+restCompat.use("/api/v1/sensing/agritech-predict", paidAiGate);
+restCompat.use("/api/v1/sensing/afcfta-corridor", paidAiGate);
+
 restCompat.use("/api/v1/zta/*", adminGate);
 restCompat.use("/v1/zta/*", adminGate);
 restCompat.use("/api/v1/self-healing/*", adminGate);
