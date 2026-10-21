@@ -24,6 +24,14 @@ function storageSettings() {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{2,62}$/.test(bucket)) return null;
   if (r2Account && !/^[a-z0-9]{32}$/.test(r2Account)) return null;
   if (r2Account && (!accessKey || !secretKey)) return null;
+  // On Cloud Run there is no implicit AWS instance role. Require explicit
+  // static credentials, verified web-identity, or container identity before
+  // charging for a render. Never spend API credits then discover S3 is blank.
+  const hasCredentials = Boolean((accessKey && secretKey) ||
+    (process.env.AWS_ROLE_ARN && process.env.AWS_WEB_IDENTITY_TOKEN_FILE) ||
+    process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI ||
+    process.env.AWS_CONTAINER_CREDENTIALS_FULL_URI);
+  if (!hasCredentials) return null;
   return {
     bucket, region,
     config: {
