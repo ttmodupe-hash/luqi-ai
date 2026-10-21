@@ -500,21 +500,24 @@ export async function bootstrapDatabase(): Promise<void> {
 
     console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
 
-    // Ensure the demo account exists (it is advertised on the login page)
-    try {
-      const bcrypt = (await import("bcryptjs")).default;
-      const [rows] = await connection.query("SELECT id FROM users WHERE email = ? LIMIT 1", ["demo@luqi.ai"]);
-      if ((rows as Array<unknown>).length === 0) {
-        const hash = await bcrypt.hash("demo123", 10);
-        await connection.execute(
-          "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)",
-          ["demo@luqi.ai", hash, "Demo User", "user"]
-        );
-        console.log("[Bootstrap] Demo account created: demo@luqi.ai");
+    // Never provision a known-password demo account. Deactivate the historical
+    // default only if its stored hash still matches the compromised password.
+    // Do not alter accounts whose passwords have already been changed.
+    if (process.env.NODE_ENV === "production") {
+      const [rows] = await connection.query(
+        "SELECT id, password_hash FROM users WHERE email = ? LIMIT 1",
+        ["demo@luqi.ai"],
+      );
+      const demo = (rows as Array<{ id: number; password_hash: string }>)[0];
+      if (demo?.password_hash) {
+        const bcrypt = (await import("bcryptjs")).default;
+        if (await bcrypt.compare("demo123", demo.password_hash)) {
+          await connection.execute("UPDATE users SET is_active = 0 WHERE id = ?", [demo.id]);
+          console.warn("[Bootstrap] Insecure default-password demonstration account disabled");
+        }
       }
-    } catch (seedError) {
-      console.error("[Bootstrap] Demo account seed failed (non-fatal):", seedError);
     }
+
   } catch (error) {
     console.error("[Bootstrap] Table creation failed (non-fatal):", error);
   } finally {
