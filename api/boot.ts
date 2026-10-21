@@ -366,17 +366,19 @@ app.post('/api/v1/luqi-core', async (c) => {
       language
     );
 
+    const output = typeof result?.output === "string" ? result.output.trim() : "";
+    if (!output) throw new Error("AI provider returned no usable response");
     return c.json({
       status: 'success',
       agent: SOVEREIGN_AGENT_NAME,
-      response: result.output
+      response: output
     });
-  } catch (err: any) {
+  } catch {
+    // Do not report fictional assistant output as a successful paid AI call.
     return c.json({
-      status: 'success',
-      agent: SOVEREIGN_AGENT_NAME,
-      response: `Eita! ${SOVEREIGN_AGENT_NAME} is here with you at the digital council. Tell me what question or challenge we are tackling today.`
-    });
+      status: 'unavailable',
+      error: 'LUQI AI is temporarily unavailable. Please try again shortly.'
+    }, 503);
   }
 });
 
