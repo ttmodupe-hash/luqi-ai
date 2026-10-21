@@ -3,7 +3,6 @@ import app from "./boot";
 
 describe("legacy HTTP security integration", () => {
   it.each([
-    ["/auth/login", "/api/auth/login"],
     ["/api/v1/auth/login", "/api/auth/login"],
     ["/auth/register", "/api/auth/register"],
     ["/api/v1/auth/register", "/api/auth/register"],
@@ -16,6 +15,16 @@ describe("legacy HTTP security integration", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe(destination);
     expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("does not issue a fabricated token on the existing direct legacy login route", async () => {
+    const res = await app.request("/auth/login", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "no-account@example.com", password: "invalid" }),
+    });
+    expect(res.status).toBe(401);
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect(await res.text()).not.toContain("LUQI-JWT-");
   });
 
   it("never accepts an unsigned Stripe event", async () => {
