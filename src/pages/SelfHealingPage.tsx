@@ -580,7 +580,7 @@ print("STATUS: Verification test passed with zero errors.")
               <StatCard title="Errors (24h)" value={errorStats.data?.total ?? "--"} sub={`${errorStats.data?.critical ?? 0} critical`} icon={<AlertTriangle className="w-5 h-5" />} tone="red" />
               <StatCard title="Resolved" value={errorStats.data?.resolved ?? "--"} sub={`${errorStats.data?.warning ?? 0} warnings`} icon={<CheckCircle className="w-5 h-5" />} tone="emerald" />
               <StatCard title="Patches" value={patchStats.data?.total ?? "--"} sub={`${patchStats.data?.applied ?? 0} applied`} icon={<Zap className="w-5 h-5" />} tone="sky" />
-              <StatCard title="A/B Tests" value={patchStats.data?.abTesting ?? 0} sub="Active" icon={<GitBranch className="w-5 h-5" />} tone="cyan" />
+              <StatCard title="Pending Patches" value={patchStats.data?.pending ?? 0} sub="Awaiting review" icon={<GitBranch className="w-5 h-5" />} tone="cyan" />
               <StatCard title="Benchmarks" value={benchmarkStats.data?.total ?? "--"} sub={`${benchmarkStats.data?.pending ?? 0} pending`} icon={<Layers className="w-5 h-5" />} tone="amber" />
             </div>
 
