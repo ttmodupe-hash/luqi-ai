@@ -12,6 +12,7 @@ import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
+import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
@@ -158,6 +159,7 @@ app.get("/v1/readiness", async (c) => {
 
 
 // ── REST COMPAT (legacy frontend endpoints → real services) ──────────
+app.route("/", legacyAdminUnavailable);
 app.route("/", restCompat);
 
 // 1. Unified Chat & KHORO Sovereign Companion Endpoint
@@ -1070,88 +1072,6 @@ app.post('/api/v1/billing/initiate-30-auth', async (c) => {
     amountZar: amountZar || 50,
     purpose: purpose || 'Token Top-Up / SARS Tax Submission Auth',
     securityNotice: 'AI execution halted at the 70% boundary. Human PIN / OTP required on secure out-of-band handset.'
-  });
-});
-
-// 5. Multi-Model API & FinOps Registry Health Scanner Matrix (Admin Protected)
-app.get('/api/v1/system-api-matrix', (c) => {
-  if (!checkSovereignAdminAuth(c)) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  }
-  // Evaluate real-time health and fund availability for each integrated model & gateway
-  const apiRegistry = [
-    {
-      provider: 'Google Gemini 2.5 Flash / 3.8 Flash',
-      role: 'Core Sovereign Orchestrator, Multimodal Reasoning, 3D WebGL Labs & High-Speed Chat',
-      sdkVersion: '@google/genai v1.0',
-      status: process.env.GEMINI_API_KEY ? 'ACTIVE_HEALTHY' : 'CRITICAL_NO_KEY',
-      latencyMs: 142,
-      estimatedFundsRemainingZar: 1500.00,
-      billingCycleAnchor: 'Google AI Studio Active Tier (Live Operational)'
-    },
-    {
-      provider: 'Kimi Moonshot AI (v1-8k / 32k / 128k)',
-      role: 'Long-Context Multilingual Synthesis, Academic Research & Deep Document Analysis',
-      sdkVersion: 'Moonshot OpenAI REST v1',
-      status: (process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY) ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
-      latencyMs: 165,
-      estimatedFundsRemainingZar: 0.00,
-      billingCycleAnchor: 'Moonshot AI Org org-6a2388b6536a4254959c4a6706e5ed79 (Top-up Required)'
-    },
-    {
-      provider: 'DeepSeek-V3 / V4 Pro',
-      role: 'Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing',
-      sdkVersion: 'DeepSeek REST v4',
-      status: process.env.DEEPSEEK_API_KEY ? 'AUTHENTICATED_BALANCE_TOPUP_REQUIRED' : 'CRITICAL_NO_KEY',
-      latencyMs: 95,
-      estimatedFundsRemainingZar: 0.00,
-      billingCycleAnchor: 'DeepSeek Prepaid Wallet (HTTP 402 - Top-up Required)'
-    },
-    {
-      provider: 'Anthropic Claude (Fable 5.1 / Sonnet)',
-      role: 'Master Software Architecture, Complex Code Refactoring & Autonomous Self-Healing Audits',
-      sdkVersion: '@anthropic-ai/sdk v0.32',
-      status: process.env.ANTHROPIC_API_KEY ? 'ACTIVE_HEALTHY' : 'STANDBY_CIRCUIT_BREAKER',
-      latencyMs: 285,
-      estimatedFundsRemainingZar: process.env.ANTHROPIC_API_KEY ? 420.50 : 0.00,
-      billingCycleAnchor: 'Anthropic Console (Auto-Cascading to Gemini)'
-    },
-    {
-      provider: 'OpenAI GPT-4o / GPT-6 Astra',
-      role: 'Enterprise Security Workflows, SARS Compliance & Advanced Threat Detection',
-      sdkVersion: 'openai node v4.8',
-      status: 'AUTHENTICATION_REQUIRED_NEW_KEY',
-      latencyMs: 310,
-      estimatedFundsRemainingZar: 0.00,
-      billingCycleAnchor: 'OpenAI Platform Console'
-    },
-    {
-      provider: 'MTN MoMo & PayFast Gateways',
-      role: '70/30 Human-in-the-Loop Payment Authentication & Token Tollbooth Collection Rails',
-      sdkVersion: 'Custom REST / Webhooks',
-      status: process.env.MTN_MOMO_SUBSCRIPTION_KEY ? 'ACTIVE_HEALTHY' : 'WARNING_CONFIG_PENDING',
-      latencyMs: 180,
-      estimatedFundsRemainingZar: 9999.00,
-      billingCycleAnchor: 'Live Settlement Integration'
-    },
-    {
-      provider: "Africa's Talking & Twilio",
-      role: 'Emergency WhatsApp Outpost Alerts & 2G USSD Feature Phone Network Messaging',
-      sdkVersion: 'africastalking-ts v0.5',
-      status: process.env.TWILIO_AUTH_TOKEN ? 'ACTIVE_HEALTHY' : 'STANDBY_BACKUP',
-      latencyMs: 215,
-      estimatedFundsRemainingZar: 310.00,
-      billingCycleAnchor: 'Prepaid Wallet Balance'
-    }
-  ];
-
-  const hasOutage = apiRegistry.some(api => api.status.includes('CRITICAL') || api.estimatedFundsRemainingZar <= 0);
-
-  return c.json({
-    success: true,
-    systemGlobalStatus: hasOutage ? 'DEGRADED_FUNDS_OR_KEYS_MISSING' : '100_PERCENT_OPERATIONAL',
-    timestamp: new Date().toISOString(),
-    apis: apiRegistry
   });
 });
 

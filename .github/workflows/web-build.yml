@@ -21,7 +21,7 @@ jobs:
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify persistent database configuration contracts
-        run: npx vitest run tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/user-token.test.ts tests/auth-input.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts tests/billing-dashboard-truth.test.ts tests/workspace-truth.test.ts tests/pilot-credential-check.test.ts tests/account-recovery.test.ts tests/private-conversations.test.ts tests/companion-client.test.ts tests/companion-page.test.tsx tests/dependency-audit.test.ts
+        run: npx vitest run tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/user-token.test.ts tests/auth-input.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts tests/billing-dashboard-truth.test.ts tests/workspace-truth.test.ts tests/pilot-credential-check.test.ts tests/account-recovery.test.ts tests/private-conversations.test.ts tests/companion-client.test.ts tests/companion-page.test.tsx tests/dependency-audit.test.ts tests/legacy-admin.test.ts tests/admin-status-ui.test.tsx
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
@@ -43,6 +43,14 @@ jobs:
             if curl --fail --silent --show-error http://127.0.0.1:8765/v1/health > /tmp/luqi-health.json; then
               cat /tmp/luqi-health.json
               grep -q '"status":"healthy"' /tmp/luqi-health.json
+              node --input-type=module -e '
+                for (const [path, code] of [["/api/v1/admin/verify", "ADMIN_SESSION_UNAVAILABLE"], ["/api/v1/system-api-matrix", "PROVIDER_TELEMETRY_UNAVAILABLE"]]) {
+                  const response = await fetch("http://127.0.0.1:8765" + path);
+                  const body = await response.json();
+                  if (response.status !== 503 || response.headers.get("cache-control") !== "no-store" || body.code !== code) throw new Error("Legacy admin boundary failed: " + path);
+                  console.log(path + " rejects unavailable admin/telemetry access");
+                }
+              '
               exit 0
             fi
             if ! kill -0 "$server_pid" 2>/dev/null; then
