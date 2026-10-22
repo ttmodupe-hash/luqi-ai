@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "package.json"
+      - "package-lock.json"
+      - "app/package.json"
       - "db/**"
       - "api/services/aiPilotBudget.ts"
       - "api/services/pilotAuth.ts"
@@ -56,7 +59,7 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Install Node dependencies
-        run: npm install --legacy-peer-deps --include=dev
+        run: npm ci --legacy-peer-deps --include=dev
       - name: Test real InnoDB schema, concurrent quotas and fail-closed rollback
         run: npx vitest run tests/mysql-live.integration.test.ts --no-file-parallelism
 
@@ -89,7 +92,7 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Install Node dependencies
-        run: npm install --legacy-peer-deps --include=dev
+        run: npm ci --legacy-peer-deps --include=dev
       - name: Seed isolated MySQL 8.4 account and reservation fixtures
         run: npx vitest run tests/mysql-backup-fixture.integration.test.ts
       - name: Export and restore real MySQL dump to isolated target

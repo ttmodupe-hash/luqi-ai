@@ -19,7 +19,7 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Install exactly as Railway web image
-        run: npm install --legacy-peer-deps --include=dev
+        run: npm ci --legacy-peer-deps --include=dev
       - name: Verify persistent database configuration contracts
         run: npx vitest run tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts
       - name: Run integrity gate

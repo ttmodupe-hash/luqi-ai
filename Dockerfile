@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache bash
 
 COPY package*.json ./
-RUN npm install --legacy-peer-deps --include=dev
+RUN npm ci --legacy-peer-deps --include=dev
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
 COPY . .
