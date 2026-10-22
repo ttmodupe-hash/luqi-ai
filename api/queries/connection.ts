@@ -10,29 +10,29 @@
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-
-const hasDbConfig = Boolean(process.env.DATABASE_URL || (process.env.DB_HOST && process.env.DB_HOST !== "localhost"));
+import { parseMySqlConnectionSettings } from "../lib/mysqlConfig";
 
 let pool: mysql.Pool | null = null;
 let realDrizzleDb: any = null;
+let dbConfigurationError = false;
 
-if (hasDbConfig) {
-  try {
+try {
+  const configuration = parseMySqlConnectionSettings(process.env);
+  if (configuration) {
     pool = mysql.createPool({
-      host: process.env.DB_HOST || "localhost",
-      user: process.env.DB_USER || "root",
-      password: process.env.DB_PASSWORD || "",
-      database: process.env.DB_NAME || "luqi_ai",
-      port: parseInt(process.env.DB_PORT || "3306", 10),
+      ...configuration,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
+      connectTimeout: 4000,
       enableKeepAlive: true,
     });
     realDrizzleDb = drizzle(pool);
-  } catch (err) {
-    console.warn("[DB] Pool creation failed, in-memory store active:", err);
   }
+} catch {
+  // Never reveal database URLs or credentials in logs.
+  dbConfigurationError = true;
+  console.error("[DB] Incompatible or incomplete database configuration. Persistent storage unavailable.");
 }
 
 // ── In-Memory Tables Store (Fallback) ────────────────────────────────
@@ -208,16 +208,39 @@ const memoryDb = {
 
 export const db = realDrizzleDb || memoryDb;
 
+/** Checks a live query, not just whether a DB variable exists. */
+export async function checkPersistentDatabase(): Promise<
+  { status: "connected" | "unconfigured" | "configuration_error" | "unreachable"; dialect: "mysql" }
+> {
+  if (dbConfigurationError) return { status: "configuration_error", dialect: "mysql" };
+  if (!pool) return { status: "unconfigured", dialect: "mysql" };
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query("SELECT 1");
+    } finally {
+      conn.release();
+    }
+    return { status: "connected", dialect: "mysql" };
+  } catch {
+    return { status: "unreachable", dialect: "mysql" };
+  }
+}
+
+/** Use for any user data or transaction requiring durable persistence. */
+export async function getPersistentDb() {
+  const health = await checkPersistentDatabase();
+  if (health.status !== "connected" || !realDrizzleDb) {
+    throw new Error("Persistent MySQL storage is unavailable");
+  }
+  return realDrizzleDb;
+}
+
+/** Backwards-compatible demo accessor. Never use for user/financial writes. */
 export async function getDb() {
   if (realDrizzleDb && pool) {
-    try {
-      const conn = await pool.getConnection();
-      conn.release();
-      return realDrizzleDb;
-    } catch {
-      // Database connection unreachable; return memoryDb fallback
-      return memoryDb;
-    }
+    const health = await checkPersistentDatabase();
+    if (health.status === "connected") return realDrizzleDb;
   }
   return memoryDb;
 }
