@@ -459,6 +459,24 @@ const CREATE_STATEMENTS: string[] = [
 	\`created_at\` timestamp DEFAULT (now()),
 	CONSTRAINT \`voice_commands_id\` PRIMARY KEY(\`id\`)
 );`
+  // Dedicated AI pilot budget reservations. InnoDB PKs enable row locking
+  // across web replicas. All paid calls remain disabled without explicit
+  // owner approval and a separate provider-side spending cap.
+  `CREATE TABLE IF NOT EXISTS ai_pilot_monthly_spend (
+    month_utc CHAR(7) NOT NULL,
+    provider VARCHAR(16) NOT NULL,
+    reserved_cents INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (month_utc, provider),
+    CHECK (provider IN ('gemini', 'openai'))
+  ) ENGINE=InnoDB;`,
+  `CREATE TABLE IF NOT EXISTS ai_pilot_daily_user_usage (
+    day_utc CHAR(10) NOT NULL,
+    user_id BIGINT NOT NULL,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (day_utc, user_id)
+  ) ENGINE=InnoDB;`,
 ];
 
 function resolveConnectionConfig(): mysql.ConnectionOptions | null {
@@ -500,23 +518,12 @@ export async function bootstrapDatabase(): Promise<void> {
 
     console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
 
-    // Ensure the demo account exists (it is advertised on the login page)
-    try {
-      const bcrypt = (await import("bcryptjs")).default;
-      const [rows] = await connection.query("SELECT id FROM users WHERE email = ? LIMIT 1", ["demo@luqi.ai"]);
-      if ((rows as Array<unknown>).length === 0) {
-        const hash = await bcrypt.hash("demo123", 10);
-        await connection.execute(
-          "INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)",
-          ["demo@luqi.ai", hash, "Demo User", "user"]
-        );
-        console.log("[Bootstrap] Demo account created: demo@luqi.ai");
-      }
-    } catch (seedError) {
-      console.error("[Bootstrap] Demo account seed failed (non-fatal):", seedError);
-    }
+    // SECURITY: Never auto-create a demo login or any account with a
+    // public fixed password. Every real account must go through signup.
+
   } catch (error) {
-    console.error("[Bootstrap] Table creation failed (non-fatal):", error);
+    console.error("[Bootstrap] Database schema initialization failed; check connection and migration.");
+    if (process.env.NODE_ENV === "production") throw new Error("PRODUCTION_DATABASE_BOOTSTRAP_FAILED");
   } finally {
     if (connection) {
       try {
