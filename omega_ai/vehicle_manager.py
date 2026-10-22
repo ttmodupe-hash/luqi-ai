@@ -69,11 +69,14 @@ class VehicleManager:
 
     def record_service(self, asset_id: str, *, when: date,
                        odometer_km: int, description: str = "") -> Vehicle:
-        current = self.record_odometer(asset_id, odometer_km)
+        current = self._fleet[asset_id]
         if when < current.last_service_date:
             raise ValueError("Service cannot precede previous service")
-        updated = replace(current, last_service_km=odometer_km,
-                          last_service_date=when)
+        if (isinstance(odometer_km, bool) or not isinstance(odometer_km, int)
+                or odometer_km < current.odometer_km):
+            raise ValueError("Odometer cannot decrease or be invalid")
+        updated = replace(current, odometer_km=odometer_km,
+                          last_service_km=odometer_km, last_service_date=when)
         self._fleet[asset_id] = updated
         self._history[asset_id].append((when, odometer_km, description[:200]))
         return updated
