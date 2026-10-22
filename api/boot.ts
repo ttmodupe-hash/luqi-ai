@@ -155,9 +155,14 @@ app.post('/api/v1/luqi-core', async (c) => {
   } catch {
     body = {};
   }
-  const query = (body.user_input || body.prompt || '').trim();
-  const language = body.language || 'Auto-Detect (Flexible Code-Switching)';
-  const history = body.history || [];
+  const rawQuery = body.user_input ?? body.prompt;
+  if (typeof rawQuery !== "string" || !rawQuery.trim() || rawQuery.length > 8000) {
+    return c.json({ status: "error", code: "INVALID_INPUT",
+      message: "Provide a nonempty question of at most 8000 characters." }, 400);
+  }
+  const query = rawQuery.trim();
+  const language = typeof body.language === "string" ? body.language.slice(0, 80) : "auto";
+  const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
 
   // Primary: 5-Layer Khoro Cognitive Reasoning Engine with Search Grounding
   try {
@@ -170,8 +175,8 @@ app.post('/api/v1/luqi-core', async (c) => {
         response: khoroResult.response
       });
     }
-  } catch (khoroErr) {
-    console.warn('[Khoro Brain Notice] Cascading to multi-model core:', khoroErr);
+  } catch {
+    console.warn('[Khoro Brain] Primary provider unavailable; trying configured models.');
   }
 
   // Fallback to MultiModelMasterOrchestrator
@@ -182,17 +187,19 @@ app.post('/api/v1/luqi-core', async (c) => {
       language
     );
 
+    if (!result.output?.trim()) throw new Error("Empty provider reply");
     return c.json({
       status: 'success',
       agent: SOVEREIGN_AGENT_NAME,
+      provider_model: result.model,
       response: result.output
     });
-  } catch (err: any) {
+  } catch {
     return c.json({
-      status: 'success',
-      agent: SOVEREIGN_AGENT_NAME,
-      response: `Eita! ${SOVEREIGN_AGENT_NAME} is here with you at the digital council. Tell me what question or challenge we are tackling today.`
-    });
+      status: "unavailable",
+      code: "AI_PROVIDER_UNAVAILABLE",
+      message: "Live AI responses are temporarily unavailable. Please try again after a provider is configured."
+    }, 503);
   }
 });
 
