@@ -69,3 +69,12 @@ jobs:
             http://127.0.0.1:18765/api/v1/luqi-core)
           test "$code" = "503"
           grep -q '"code":"AI_DISABLED"' /tmp/luqi-ai-unavailable.json
+
+          # Legacy AI endpoints must not bypass the pilot budget allocation.
+          legacy_code=$(curl --silent --show-error --max-time 8 \
+            --output /tmp/luqi-legacy-block.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"message":"Say hello"}' \
+            http://127.0.0.1:18765/api/v25/chat)
+          test "$legacy_code" = "503"
+          grep -q '"code":"AI_LEGACY_ROUTE_DISABLED"' /tmp/luqi-legacy-block.json
