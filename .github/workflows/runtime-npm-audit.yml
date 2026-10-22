@@ -1,0 +1,36 @@
+name: LUQI Production Dependency Audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/report-runtime-audit.mjs"
+      - ".github/workflows/runtime-npm-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  report-runtime-advisories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install exact LUQI dependencies
+        run: npm install --legacy-peer-deps --include=dev
+      - name: Audit production dependency tree
+        shell: bash
+        run: |
+          # npm audit returns 1 for vulnerabilities, not just transport errors.
+          # The parser fails if it cannot prove that npm returned a real report.
+          npm audit --omit=dev --json > /tmp/luqi-runtime-audit.json || true
+          node scripts/report-runtime-audit.mjs /tmp/luqi-runtime-audit.json
+      - name: Verify unchanged build and runtime entrypoints
+        run: npm run build
