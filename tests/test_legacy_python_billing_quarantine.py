@@ -141,6 +141,12 @@ class QuarantinedBillingTests(unittest.TestCase):
     def test_direct_main_stripe_and_admin_routes_are_also_quarantined(self):
         root = ast.parse((ROOT / "main.py").read_text())
         required = {
+            "/api/v1/auth/register",
+            "/auth/register",
+            "/api/v1/auth/login",
+            "/auth/login",
+            "/api/v1/media/compile-and-stream",
+            "/media/compile-and-stream",
             "/api/v1/billing/stripe-webhook",
             "/api/v1/admin/billing-ledger",
             "/admin/billing-ledger",
@@ -173,6 +179,43 @@ class QuarantinedBillingTests(unittest.TestCase):
                     for n in deps.elts
                 ), "Main route lost its billing/auth dependency: " + route)
         self.assertEqual(found, required)
+
+    def test_no_fabricated_login_payment_media_or_optimization_success(self):
+        source = (ROOT / "main.py").read_text()
+        for forbidden in (
+            "admin123",
+            "LUQI-JWT-",
+            "LUQI-ADMIN-2026",
+            "hashed_master_pass",
+            "TX-STRIPE-9901",
+            "TX-STRIPE-9902",
+            "AUDIO_SYNC_LOCKED",
+            '"code_optimization_patch": "APPLIED',
+        ):
+            with self.subTest(value=forbidden):
+                self.assertNotIn(forbidden, source)
+
+        parsed = ast.parse(source)
+        protected = {
+            "register_auth_user",
+            "login_auth_user",
+            "compile_and_stream_scene",
+            "stripe_webhook_receiver",
+            "admin_billing_ledger",
+            "execute_internal_self_optimization",
+        }
+        handlers = {
+            node.name: node for node in parsed.body
+            if isinstance(node, ast.AsyncFunctionDef) and node.name in protected
+        }
+        self.assertEqual(set(handlers), protected)
+        for name, fn in handlers.items():
+            self.assertEqual(len(fn.body), 1, name)
+            statement = fn.body[0]
+            self.assertIsInstance(statement, ast.Expr, name)
+            self.assertIsInstance(statement.value, ast.Call, name)
+            self.assertIsInstance(statement.value.func, ast.Name, name)
+            self.assertEqual(statement.value.func.id, "require_legacy_route_disabled")
 
 
 if __name__ == "__main__":
