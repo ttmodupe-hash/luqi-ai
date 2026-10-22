@@ -34,9 +34,27 @@ const legacyPaidPostPaths = new Set([
   "/api/v1/self-healing/pipeline/sandbox-exec",
 ]);
 
+// tRPC has independently callable paid-model/agent methods, including GET
+// queries and batched requests. Until metered, disable those namespaces as
+// a whole; do not disable ping or the low-risk information routers.
+const unmeteredTrpcNamespaces = new Set([
+  "companion", "orchestrator", "botanical", "selfhealing",
+  "video", "voice", "labs", "adaptive", "grading", "guardian", "supercore",
+]);
+
 // No wildcard that accidentally disables user login, help or static content.
 // This is a server-side protection; browser CORS alone cannot stop paid calls.
 export function isUnbudgetedAiRoute(method: string, path: string): boolean {
-  if (method.toUpperCase() !== "POST") return false;
-  return legacyPaidPostPaths.has(path.replace(/\/+$/, "").toLowerCase());
+  const verb = method.toUpperCase();
+  const normalized = path.replace(/\/+$/, "").toLowerCase();
+  if (normalized.startsWith("/api/trpc/")) {
+    if (verb !== "GET" && verb !== "POST") return false;
+    let raw = normalized.slice("/api/trpc/".length);
+    try { raw = decodeURIComponent(raw); }
+    catch { return true; } // Fail closed for ambiguous procedure paths.
+    return raw.split(",").some((procedure) =>
+      unmeteredTrpcNamespaces.has(procedure.split(".")[0]));
+  }
+  if (verb !== "POST") return false;
+  return legacyPaidPostPaths.has(normalized);
 }
