@@ -9,14 +9,18 @@ Provides endpoints for:
 import logging
 import os
 from typing import Optional
-from fastapi import APIRouter, Request, HTTPException, status
+from fastapi import APIRouter, Depends, Request, HTTPException, status
 from pydantic import BaseModel, Field
 
 from token_billing_gateway import TokenBillingGateway
 from worker import dispatch_heavy_job, query_task_status
+from backend.legacy_route_security import require_legacy_route_disabled
 
 logger = logging.getLogger("luqi.async_jobs")
-router = APIRouter(tags=["Async Jobs & Token Billing"])
+router = APIRouter(tags=["Async Jobs & Token Billing"], dependencies=[Depends(require_legacy_route_disabled)])
+# Every route under /api/v1 and /v1 is denied at the dependency layer.
+# This includes credit mutations, unsigned webhooks, self-healing controls,
+# unbudgeted AI calls, sensing and legacy chat. Do not selectively enable.
 
 
 class JobSubmitRequest(BaseModel):
