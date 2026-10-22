@@ -1825,12 +1825,18 @@ if (env.isProduction) {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     process.on("SIGINT", () => shutdown("SIGINT"));
 
-    // Provision database tables, then seed reference data (both non-fatal)
+    // Provision tables and pilot quotas before serving user data. On a
+    // configured production MySQL, a migration failure must be fatal rather
+    // than pretending that volatile memory is durable.
     try {
       const { bootstrapDatabase } = await import("../db/bootstrap");
       await bootstrapDatabase();
-    } catch (e) {
-      console.error("[Bootstrap] Database bootstrap failed:", e);
+    } catch {
+      console.error("[Bootstrap] Database migration failed (details redacted).");
+      if (process.env.NODE_ENV === "production" &&
+          (process.env.DATABASE_URL || process.env.DB_HOST)) {
+        process.exit(1);
+      }
     }
     try {
       const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
