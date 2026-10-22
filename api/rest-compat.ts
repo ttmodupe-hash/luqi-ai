@@ -56,7 +56,11 @@ function aiUnavailableResponse() {
 }
 
 function jwtSecret(): string {
-  return process.env.JWT_SECRET || process.env.APP_SECRET || "luqi-dev-secret-change-me";
+  const secret = process.env.JWT_SECRET || process.env.APP_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error("JWT_SECRET must be configured with at least 32 characters");
+  }
+  return secret;
 }
 
 function signToken(userId: number): string {
