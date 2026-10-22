@@ -1,0 +1,28 @@
+name: LUQI Web Build
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install exactly as Railway web image
+        run: npm install --legacy-peer-deps --include=dev
+      - name: Run integrity gate
+        run: node scripts/verify-build.mjs
+      - name: Build public UI and API bundle
+        run: npm run build
+      - name: Verify deployment entrypoints
+        run: test -s dist/boot.js && test -s dist/public/index.html
