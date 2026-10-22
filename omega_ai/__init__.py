@@ -19,12 +19,14 @@ Usage:
 __version__ = "1.0.0"
 __author__ = "Omega AI"
 
+from .engine import OmegaAI
 from .health_advisor import HealthAdvisor
 from .legal_assistant import LegalAssistant
 from .agriculture_advisor import AgricultureAdvisor
 from .real_estate_calculator import RealEstateCalculator
 
 __all__ = [
+    "OmegaAI",
     "HealthAdvisor",
     "LegalAssistant",
     "AgricultureAdvisor",

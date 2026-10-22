@@ -172,7 +172,8 @@ class EmailAssistant:
         issues = []
         for pattern, (replacement, explanation) in self.GRAMMAR_RULES.items():
             if re.search(pattern, text, re.IGNORECASE):
-                issues.append(f"'{pattern.replace('\\b', '')}' → {explanation}")
+                cleaned_pattern = pattern.replace(r"\b", "")
+                issues.append(f"'{cleaned_pattern}' → {explanation}")
         return issues
 
     def email_templates(self) -> list[str]:
