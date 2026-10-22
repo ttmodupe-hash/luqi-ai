@@ -42,9 +42,11 @@ export async function authenticatePilotUser(authHeader: string | undefined): Pro
   try { db = await getPersistentDb(); }
   catch { throw new PilotAuthError("AUTH_UNAVAILABLE"); }
   try {
-    const [user] = await db.select({ id: users.id }).from(users)
+    const [user] = await db.select({ id: users.id, isActive: users.isActive }).from(users)
       .where(eq(users.id, userId)).limit(1);
-    if (!user) throw new PilotAuthError("AUTH_REQUIRED");
+    if (!user || user.isActive === false) {
+      throw new PilotAuthError("AUTH_REQUIRED");
+    }
   } catch (e) {
     if (e instanceof PilotAuthError) throw e;
     throw new PilotAuthError("AUTH_UNAVAILABLE");
