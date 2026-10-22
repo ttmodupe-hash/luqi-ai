@@ -1,0 +1,65 @@
+name: LUQI Agent Evidence Integration (no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**", "security/**", "feat/agent-*"]
+    paths:
+      - "api/services/agentProposalLedger*"
+      - "api/services/agentImprovementEvaluation*"
+      - "api/self-healing.ts"
+      - "api/self-healing.review.security.test.ts"
+      - "db/migrations/20261022_agent_evaluation_evidence.sql"
+      - "db/schema.ts"
+      - ".github/workflows/agent-evidence-integration.yml"
+  push:
+    branches: ["feat/agent-evidence-link-*"]
+permissions:
+  contents: read
+jobs:
+  mysql-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+          MYSQL_DATABASE: luqi_integration
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      CI: "true"
+      DATABASE_URL: mysql://root:ci-only-password@127.0.0.1:3306/luqi_integration
+      RUN_MYSQL_INTEGRATION: "1"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned dependencies without hooks
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify review lineage and evaluation evidence in real MySQL
+        run: npx vitest run api/services/agentProposalLedger.mysql.integration.test.ts
+  node-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript
+        run: npm run check
+      - name: Full offline regression suite
+        run: npm test
+      - name: Verify application build without deployment
+        run: npm run build
