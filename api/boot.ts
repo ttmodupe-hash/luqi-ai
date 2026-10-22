@@ -36,6 +36,8 @@ import { DynamicRagExamEngine, DOMAIN_DIRECTIVES } from "./services/dynamicRagEx
 import { KhoroCognitiveBrain, SOVEREIGN_AGENT_NAME, SOVEREIGN_AGENT_TRANSLATION } from "./services/khoroCognitiveBrain";
 import { AfricanSovereigntyEngine } from "./services/africanSovereigntyEngine";
 
+import { workspaceUnavailable } from "./workspace-unavailable";
+
 const app = new Hono<{ Bindings: HttpBindings }>();
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────────
@@ -790,117 +792,8 @@ app.post('/intelligence/self-optimize', async (c) => {
   });
 });
 
-// Workspace Asset Upload
-app.post('/api/v1/workspace/upload-asset', async (c) => {
-  const filename = `workspace_${Date.now()}_document.pdf`;
-  return c.json({
-    success: true,
-    asset_url: `https://storage.googleapis.com/luqi-vault/workspace_assets/${filename}`,
-    filename
-  });
-});
-app.post('/workspace/upload-asset', async (c) => {
-  const filename = `workspace_${Date.now()}_document.pdf`;
-  return c.json({
-    success: true,
-    asset_url: `https://storage.googleapis.com/luqi-vault/workspace_assets/${filename}`,
-    filename
-  });
-});
-
-// Workspace AI Calendar Booking
-const calendarLedgerStore: any[] = [];
-app.post('/api/v1/workspace/calendar/book', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const appointment = {
-    id: `CAL-${calendarLedgerStore.length + 101}`,
-    title: body.title || "Collaborative Session",
-    start_time: body.start_time || new Date().toISOString(),
-    attendees: body.attendees || ["alex_mercer_prod"],
-    ai_assistance_required: true,
-    ai_assistant_assigned: "KHORO Cognitive Architecture Companion",
-    created_at: new Date().toISOString()
-  };
-  calendarLedgerStore.push(appointment);
-  
-  SovereignCryptoLedger.sealAction(
-    body.attendees?.[0] || 'alex_mercer_prod',
-    'CALENDAR_MEETING_BOOKED',
-    appointment
-  );
-  
-  return c.json({
-    success: true,
-    message: "Meeting successfully finalized. AI assistant synced to task session parameters.",
-    appointment
-  });
-});
-app.post('/workspace/calendar/book', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({
-    success: true,
-    message: "Meeting successfully finalized.",
-    appointment: {
-      id: `CAL-${Date.now()}`,
-      title: body.title || "Study Session",
-      start_time: body.start_time || new Date().toISOString(),
-      ai_assistant_assigned: "KHORO Companion"
-    }
-  });
-});
-
-// System Critiques & Flaw Ingestion Ledger
-const systemCritiquesStore: any[] = [
-  {
-    critique_id: 1,
-    user_id: "student_johannesburg@network.co.za",
-    critique_type: "UI_FLAW",
-    severity_rating: 3,
-    user_complaint_text: "Pendulum lab sliders require tactile feedback on smaller mobile displays.",
-    associated_page_url: "/pendulum-lab.html",
-    agent_remediation_status: "AUTO_PATCHED_LIVE",
-    submitted_at: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC"
-  }
-];
-
-app.post('/api/v1/workspace/submit-critique', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const critiqueRecord = {
-    critique_id: systemCritiquesStore.length + 1,
-    user_id: body.user_id || "anonymous_student",
-    critique_type: body.critique_type || "CRITIQUE",
-    severity_rating: Number(body.severity_rating) || 3,
-    user_complaint_text: body.user_complaint_text || "General feedback",
-    associated_page_url: body.associated_page_url || "",
-    agent_remediation_status: "QUEUED_AGENT_OPTIMIZATION",
-    submitted_at: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC"
-  };
-  systemCritiquesStore.unshift(critiqueRecord);
-
-  SovereignCryptoLedger.sealAction(
-    body.user_id || 'anonymous_student',
-    `CRITIQUE_SUBMITTED_${critiqueRecord.critique_type}`,
-    critiqueRecord
-  );
-
-  return c.json({
-    success: true,
-    message: "Critique logged successfully. The self-improving agent matrix has queued this item for optimization.",
-    record: critiqueRecord
-  });
-});
-
-app.post('/workspace/submit-critique', async (c) => {
-  return app.fetch(new Request(new URL('/api/v1/workspace/submit-critique', c.req.url), c.req.raw));
-});
-
-app.get('/api/v1/workspace/critiques', (c) => {
-  return c.json(systemCritiquesStore);
-});
-
-app.get('/workspace/critiques', (c) => {
-  return c.json(systemCritiquesStore);
-});
+// Workspace integrations require authenticated durable storage and real adapters.
+app.route("/", workspaceUnavailable);
 
 // ============================================================================
 // TRIUMVIRATE SECURITY AGENT GRID & DIAGNOSTICS
