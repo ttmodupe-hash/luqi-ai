@@ -23,7 +23,7 @@ def test_read_only_task_executes_with_idempotency():
 
 
 def test_side_effects_require_human_approval():
-    engine = WorkflowEngine()
+    engine = WorkflowEngine(approval_authorizer=lambda actor, task: actor == "reviewer-1")
     calls = []
     engine.register("send", lambda x: calls.append(x), side_effects=True)
     task = engine.submit("send", {"amount": 42})
@@ -38,7 +38,7 @@ def test_side_effects_require_human_approval():
 
 
 def test_rejected_tasks_never_run():
-    engine = WorkflowEngine()
+    engine = WorkflowEngine(approval_authorizer=lambda actor, task: actor == "human-1")
     engine.register("charge", lambda _: 1, side_effects=True)
     task = engine.submit("charge", {})
     engine.approve(task.id, "human-1", approved=False)
@@ -76,3 +76,12 @@ def test_runnable_batch_does_not_execute_approval_pending():
     engine.submit("read", {})
     engine.submit("write", {})
     assert [t.state for t in engine.run_due()] == [State.COMPLETED]
+
+
+def test_untrusted_approval_is_rejected_even_with_human_sounding_name():
+    engine = WorkflowEngine()
+    engine.register("pay", lambda _: True, side_effects=True)
+    task = engine.submit("pay", {})
+    with pytest.raises(PermissionError):
+        engine.approve(task.id, "reviewer-1", approved=True)
+    assert engine.get(task.id).state == State.APPROVAL_REQUIRED
