@@ -10,7 +10,7 @@ class ConstructionCalculator:
     def __init__(self):
         self.material_prices = {
             "cement_50kg": 110.0,
-            "bricks': 2.5,
+            "bricks": 2.5,
             "sand_m3": 450.0,
             "stone_m3": 550.0,
             "steel_rebar_kg": 28.0,

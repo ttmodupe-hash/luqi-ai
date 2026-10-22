@@ -1,0 +1,57 @@
+name: LUQI Python SDK Compatibility (offline)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "requirements.txt"
+      - ".github/workflows/python-sdk-smoke.yml"
+  push:
+    branches: ["fix/python-dependency-resolution-*"]
+permissions:
+  contents: read
+jobs:
+  sdk-clients:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pinned LUQI Python requirements
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Construct provider clients with dummy credentials (NO external calls)
+        env:
+          LUQI_OFFLINE_TEST_API_KEY: offline-test-not-a-real-token
+        run: |
+          python - <<'PY'
+          import os
+          from openai import OpenAI
+          from anthropic import Anthropic
+          from google import genai
+          from fastapi import FastAPI
+          from pydantic import BaseModel
+
+          token = os.environ["LUQI_OFFLINE_TEST_API_KEY"]
+          clients = [
+              OpenAI(api_key=token),
+              Anthropic(api_key=token),
+              genai.Client(api_key=token),
+          ]
+          app = FastAPI()
+          class Payload(BaseModel):
+              value: str
+          assert Payload(value="ok").value == "ok"
+          assert app is not None
+          for client in clients:
+              if callable(getattr(client, "close", None)):
+                  client.close()
+          print("Python provider SDK constructors work without network requests.")
+          PY

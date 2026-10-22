@@ -1,0 +1,24 @@
+name: LUQI Static Deployment Guard Check (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy.yml"
+      - "cloudbuild.yaml"
+      - "scripts/check-release-guard.mjs"
+      - ".github/workflows/release-guard-check.yml"
+  push:
+    branches: ["security/stop-main-autodeploy-*"]
+permissions:
+  contents: read
+jobs:
+  check-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify no workflow deploy and no Cloud Build traffic mutation
+        run: node scripts/check-release-guard.mjs

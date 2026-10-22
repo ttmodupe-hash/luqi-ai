@@ -1,0 +1,27 @@
+name: LUQI Railway Staging Docker Preflight (no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**"]
+    paths:
+      - "Dockerfile.railway.staging"
+      - "Dockerfile.railway.staging.dockerignore"
+      - "railway.staging.example.json"
+      - "scripts/check-railway-staging.mjs"
+      - ".github/workflows/railway-staging-preflight.yml"
+  push:
+    branches: ["review/railway-*"]
+permissions:
+  contents: read
+jobs:
+  review-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check staging config consistency and fail-closed policies
+        run: node scripts/check-railway-staging.mjs
+      - name: Build review-only staging image locally in Actions
+        run: docker build -f Dockerfile.railway.staging -t luqi-staging-preflight:${{ github.sha }} .

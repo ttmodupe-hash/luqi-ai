@@ -1,32 +1,36 @@
-"""
-Omega AI — Capability Modules
-==============================
-Domain-specific advisors and calculators for health, legal,
-agriculture, and real estate use cases.
+"""Omega AI domain package.
 
-Modules:
-    health_advisor      — BMI, BMR, medication reference, first aid, nutrition
-    legal_assistant     — SA laws, legal terms, contract clauses, rights, court procedures
-    agriculture_advisor — Crop/livestock guides, yield estimates, pest info, market prices
-    real_estate_calculator — Bond, rental yield, transfer duty, CGT, buy-vs-rent
+Import implemented capabilities lazily. The earlier package imported a
+placeholder health module and a non-existent legal module at import time,
+preventing even independent working calculators from being imported.
 
-Usage:
-    from omega_ai.health_advisor import HealthAdvisor
-    advisor = HealthAdvisor()
-    result = advisor.calculate_bmi(height_m=1.75, weight_kg=70)
+Only verified imports are exported here. Unrestored modules remain explicitly
+unavailable; no synthetic output or medical/legal advice is manufactured.
 """
 
-__version__ = "1.0.0"
+from importlib import import_module
+
+__version__ = "1.0.1"
 __author__ = "Omega AI"
 
-from .health_advisor import HealthAdvisor
-from .legal_assistant import LegalAssistant
-from .agriculture_advisor import AgricultureAdvisor
-from .real_estate_calculator import RealEstateCalculator
+_IMPLEMENTED = {
+    "AgricultureAdvisor": "agriculture_advisor",
+    "RealEstateCalculator": "real_estate_calculator",
+    "LoanCalculator": "loan_calculator",
+    "SolarCalculator": "solar_calculator",
+    "CommunityEvents": "community_events",
+}
 
-__all__ = [
-    "HealthAdvisor",
-    "LegalAssistant",
-    "AgricultureAdvisor",
-    "RealEstateCalculator",
-]
+__all__ = list(_IMPLEMENTED)
+
+
+def __getattr__(name):
+    module = _IMPLEMENTED.get(name)
+    if module is None:
+        raise AttributeError(
+            f"omega_ai.{name} is not an enabled capability; source recovery "
+            "and validation are required"
+        )
+    capability = getattr(import_module(f".{module}", __name__), name)
+    globals()[name] = capability
+    return capability

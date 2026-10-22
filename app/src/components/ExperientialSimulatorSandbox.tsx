@@ -4,7 +4,21 @@
 
 import React, { useState, useMemo } from "react";
 import { Sparkles, RefreshCw, Sliders, CheckCircle2, Code2, GraduationCap, Compass, HelpCircle } from "lucide-react";
-import { type GradeTier, type EducationalModuleRecord } from "@/api/services/experientialEducationOrchestrator";
+import { evaluateReviewedSimulation } from "../lib/reviewedSimulations";
+
+type GradeTier = "PRE_SCHOOL" | "PRIMARY" | "HIGH_SCHOOL" | "HIGHER_LEARNING";
+interface EducationalModuleRecord {
+  id: string;
+  conceptHash: string;
+  conceptName: string;
+  targetGradeTier: GradeTier;
+  compiledFrontend: string;
+  description?: string;
+  initialValue?: number;
+  min?: number;
+  max?: number;
+  unit?: string;
+}
 
 interface SandboxProps {
   module: EducationalModuleRecord;
@@ -15,31 +29,12 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
   const [localVariable, setLocalVariable] = useState<number>(module.initialValue || 10);
   const [showCode, setShowCode] = useState(false);
 
-  // Client-Side Execution Engine: Computes localized mathematics instantly without backend lag
-  const executionFeedback = useMemo(() => {
-    if (!module.compiledFrontend) {
-      return "Simulation compiled and ready.";
-    }
-
-    try {
-      // Safe execution function
-      const interactiveSolver = new Function(
-        "input",
-        `
-        "use strict";
-        ${module.compiledFrontend}
-        if (typeof executeCalculation === 'function') {
-          return executeCalculation(input);
-        }
-        return "Simulation compiled successfully.";
-      `
-      );
-      const result = interactiveSolver(localVariable);
-      return String(result);
-    } catch (err: any) {
-      return `Calculation Output: ${localVariable} ${module.unit || "units"}`;
-    }
-  }, [module.compiledFrontend, localVariable, module.unit]);
+  // Only built-in reviewed formulas are allowed in the browser.
+  // Server-generated JS source is inert data and is NEVER executable here.
+  const executionFeedback = useMemo(
+    () => evaluateReviewedSimulation(module.conceptHash, localVariable),
+    [module.conceptHash, localVariable]
+  );
 
   const minVal = module.min !== undefined ? module.min : 1;
   const maxVal = module.max !== undefined ? module.max : 100;
@@ -91,7 +86,7 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
       {showCode && (
         <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-purple-300 max-h-40 overflow-y-auto">
           <span className="text-[10px] text-slate-400 block mb-1 font-sans font-semibold">
-            Verified Sandboxed Logic:
+            Original Simulation Source (not executed):
           </span>
           <pre className="whitespace-pre-wrap">{module.compiledFrontend}</pre>
         </div>
