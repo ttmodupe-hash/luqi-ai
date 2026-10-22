@@ -18,6 +18,9 @@ import time
 import hashlib
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+from copy import deepcopy
+
+from checkpoint_store import LocalCheckpointStore, validate_thread_id
 
 # Environment-based paths
 CREWAI_STORAGE_DIR = os.getenv("CREWAI_STORAGE_DIR", "./data/crewai_memory")
@@ -29,13 +32,14 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/
 
 class LangGraphCheckpointer:
     """
-    Acts as the unalterable 'black box' flight recorder for the system.
-    Saves snapshot of graph state at each point in time with thread tracking.
+    Records local checkpoint snapshots with corruption checks and file locks.
+    Persistence across deployments requires a durable filesystem volume.
     """
 
-    def __init__(self, db_uri: Optional[str] = None):
+    def __init__(self, db_uri: Optional[str] = None, *, archive_path: Optional[str] = None):
         self.db_uri = db_uri or DATABASE_URL
         self.in_memory_checkpoints: Dict[str, List[Dict]] = {}
+        self._store = LocalCheckpointStore(os.path.join(archive_path or LUQI_ARCHIVE_PATH, "checkpoints"))
         self._setup_connection()
 
     def _setup_connection(self):
@@ -45,13 +49,13 @@ class LangGraphCheckpointer:
             import psycopg
             from psycopg.rows import dict_row
             # Required parameters per specification: autocommit=True and row_factory=dict_row
-            self.conn = psycopg.connect(self.db_uri, autocommit=True, row_factory=dict_row)
+            self.conn = psycopg.connect(self.db_uri, autocommit=True, row_factory=dict_row, connect_timeout=5)
             from langgraph.checkpoint.postgres import PostgresSaver
             self.saver = PostgresSaver(self.conn)
             self.saver.setup()
-            print("[Checkpointer] Connected to Postgres checkpointer with dict_row.")
+            print("[Checkpointer] Postgres saver available; this wrapper records snapshots in local files.")
         except Exception as e:
-            print(f"[Checkpointer] Postgres connection unavailable ({e}); active in durable file/memory mode.")
+            print(f"[Checkpointer] Postgres saver unavailable ({type(e).__name__}); using local checkpoint files.")
 
     def save_checkpoint(
         self,
@@ -61,43 +65,15 @@ class LangGraphCheckpointer:
         tool_calls: Optional[List[Dict]] = None,
         state_diff: Optional[Dict] = None
     ) -> Dict:
-        """Captures an atomic snapshot for the given session thread."""
-        if thread_id not in self.in_memory_checkpoints:
-            self.in_memory_checkpoints[thread_id] = []
-
-        step = len(self.in_memory_checkpoints[thread_id]) + 1
-        timestamp = datetime.utcnow().isoformat()
-        
-        snapshot = {
-            "checkpoint_id": f"chk_{thread_id}_step_{step}",
-            "thread_id": thread_id,
-            "step": step,
-            "node_name": node_name,
-            "channel_values": channel_values,
-            "tool_calls": tool_calls or [],
-            "state_diff": state_diff or {},
-            "timestamp": timestamp,
-        }
-        
-        checksum = hashlib.sha256(json.dumps(snapshot, default=str).encode()).hexdigest()[:16]
-        snapshot["checksum"] = checksum
-        
-        self.in_memory_checkpoints[thread_id].append(snapshot)
-        
-        # Write to durable flight recorder directory
-        log_dir = os.path.join(LUQI_ARCHIVE_PATH, "checkpoints")
-        os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, f"{thread_id}.jsonl")
-        try:
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(snapshot, default=str) + "\n")
-        except Exception as err:
-            print(f"[Checkpointer] File write warning: {err}")
-
-        return snapshot
+        """Return a snapshot only after its local file has been flushed to disk."""
+        snapshot = self._store.save(thread_id, node_name, channel_values, tool_calls, state_diff)
+        self.in_memory_checkpoints[thread_id] = self._store.history(thread_id)
+        return deepcopy(snapshot)
 
     def get_thread_history(self, thread_id: str) -> List[Dict]:
-        return self.in_memory_checkpoints.get(thread_id, [])
+        history = self._store.history(thread_id)
+        self.in_memory_checkpoints[thread_id] = deepcopy(history)
+        return history
 
 
 # ── 2. COGNITIVE ARCHIVING: CrewAI Unified Memory ────────────────────
@@ -247,6 +223,7 @@ class MemoryManager:
         self.unified_memory = CrewAIUnifiedMemory()
 
     def create_session(self, session_id: str) -> Dict:
+        validate_thread_id(session_id)
         self.sessions[session_id] = {
             "turns": [],
             "context": {},
