@@ -31,4 +31,4 @@ describe("authenticated AI pilot gate", () => {
     const token = jwt.sign({ userId: 1 }, key, { algorithm: "HS384" });
     expect(() => parsePilotUserId(bearer(token), key)).toThrow("AUTH_REQUIRED");
   });
-};
+});
