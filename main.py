@@ -20,6 +20,9 @@ Environment:
 """
 
 import argparse
+import hashlib
+import hmac
+import uuid
 import asyncio
 import logging
 import json
@@ -28,8 +31,9 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -1294,18 +1298,22 @@ async def process_external_evaluator_probe(
     request: Request,
     evaluator_signature: Optional[str] = Header(None, alias="X-Evaluator-Signature")
 ):
-    EVALUATOR_PUBLIC_SECRET = os.environ.get("EVALUATOR_SIGNING_SECRET", "eval_secret_key_prod")
+    evaluator_secret = os.environ.get("EVALUATOR_SIGNING_SECRET")
+    if not evaluator_secret or len(evaluator_secret) < 32:
+        raise HTTPException(status_code=503, detail="Evaluator signing not configured.")
+    if not evaluator_signature:
+        raise HTTPException(status_code=401, detail="Evaluator signature required.")
     body_bytes = await request.body()
 
     # Cryptographic verification of accredited third-party evaluators
     computed_signature = hmac.new(
-        EVALUATOR_PUBLIC_SECRET.encode(),
+        evaluator_secret.encode(),
         body_bytes,
         hashlib.sha256
     ).hexdigest()
 
-    # In production enforce comparison; allow benchmark test if header absent in local dev
-    if evaluator_signature and not hmac.compare_digest(computed_signature, evaluator_signature):
+    # Always verify signed requests, including development and staging.
+    if not hmac.compare_digest(computed_signature, evaluator_signature):
         raise HTTPException(status_code=401, detail="Unauthorized Evaluator: Invalid cryptographic handshake.")
 
     try:

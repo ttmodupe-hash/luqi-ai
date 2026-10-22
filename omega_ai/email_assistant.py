@@ -84,7 +84,8 @@ class EmailAssistant:
             if re.search(pattern, corrected, re.IGNORECASE):
                 if replacement:
                     corrected = re.sub(pattern, replacement, corrected, flags=re.IGNORECASE)
-                suggestions.append(f"  • '{pattern.replace('\\b', '')}' → {explanation}")
+                cleaned_pattern = pattern.replace(r"\b", "")
+                suggestions.append(f"  • '{cleaned_pattern}' → {explanation}")
 
         # Check tone
         tone_analysis = self.analyze_tone(corrected)
