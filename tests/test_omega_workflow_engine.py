@@ -155,3 +155,24 @@ def test_authorizer_failure_preserves_pending_approval():
         engine.approve(task.id, "reviewer", approved=True)
     assert engine.get(task.id) == task
     assert engine.run_due() == []
+
+
+@pytest.mark.parametrize("count", [True, False, 2.5, "3", None])
+def test_attempt_and_batch_limits_require_integers(count):
+    engine = WorkflowEngine()
+    engine.register("read", lambda _: "ok", side_effects=False)
+    with pytest.raises(ValueError):
+        engine.submit("read", {}, max_attempts=count)
+    task = engine.submit("read", {})
+    with pytest.raises(ValueError):
+        engine.run_due(limit=count)
+    assert engine.get(task.id).attempts == 0
+
+
+@pytest.mark.parametrize("key", [123, [], {}, True, "   "])
+def test_invalid_idempotency_key_is_rejected_before_task_creation(key):
+    engine = WorkflowEngine()
+    engine.register("read", lambda _: "ok", side_effects=False)
+    with pytest.raises(ValueError):
+        engine.submit("read", {}, idempotency_key=key)
+    assert engine.run_due() == []

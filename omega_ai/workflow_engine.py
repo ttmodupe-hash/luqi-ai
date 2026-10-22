@@ -79,10 +79,11 @@ class WorkflowEngine:
             raise ValueError("Unregistered task handler")
         if not isinstance(payload, dict):
             raise TypeError("Task payload must be a dictionary")
-        if not 1 <= max_attempts <= 5:
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 5:
             raise ValueError("max_attempts must be 1 through 5")
-        if idempotency_key is not None and not idempotency_key.strip():
-            raise ValueError("Empty idempotency key")
+        if idempotency_key is not None and (not isinstance(idempotency_key, str) or
+                                            not idempotency_key.strip()):
+            raise ValueError("Idempotency key must be a nonempty string")
         if idempotency_key in self._keys:
             previous = self._tasks[self._keys[idempotency_key]]
             if previous.handler != handler or previous.payload != payload:
@@ -169,7 +170,7 @@ class WorkflowEngine:
 
     def run_due(self, *, now: datetime | None = None, limit: int = 10) -> list[Task]:
         """Explicitly execute a bounded batch; never schedules its own timer."""
-        if not 1 <= limit <= 100:
+        if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Invalid batch limit")
         instant = now or _now()
         ready = [t.id for t in self._tasks.values()
