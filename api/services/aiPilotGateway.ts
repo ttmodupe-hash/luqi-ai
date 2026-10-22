@@ -2,7 +2,7 @@
  * Uses new LUQI_PILOT_* key names: old unguarded code never sees these keys.
  * All external calls must reserve durable budget BEFORE a provider request.
  */
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import {
   assertPilotEnabled, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS,
   PilotBlocked, reservePilotAttempt
@@ -22,6 +22,13 @@ Preserve African linguistic and historical specificity, rather than treating Afr
 Do not assert unverified legal, medical, financial, travel or current facts.
 Say when information is uncertain and recommend authoritative sources for consequential questions.
 No tools, searches, browsing, audio, image or file processing are enabled for this pilot.`;
+
+// Export the request contract for offline tests. No provider is invoked by this.
+export const GEMINI_PILOT_CONFIG = Object.freeze({
+  systemInstruction: PLAIN_TEXT_POLICY,
+  maxOutputTokens: MAX_OUTPUT_TOKENS,
+  thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+});
 
 export async function runBudgetedPilotChat(
   prompt: string, userId: number, language: string = "auto",
@@ -51,12 +58,8 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
       const result = await client.models.generateContent({
         model: "gemini-3.8-flash",
         contents: input,
-        config: {
-          systemInstruction: PLAIN_TEXT_POLICY,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-          temperature: 0.3,
-          // No grounding/search/tools; those can incur additional charges.
-        },
+        // No grounding/search/tools; those can incur additional charges.
+        config: GEMINI_PILOT_CONFIG,
       });
       if (result.text?.trim()) {
         return { response: result.text.trim(), provider: "gemini", model: "gemini-3.8-flash" };
