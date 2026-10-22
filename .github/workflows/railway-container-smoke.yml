@@ -91,3 +91,16 @@ jobs:
             ! grep -q '"access_token"' /tmp/luqi-auth-response.json
             ! grep -q '"success":true' /tmp/luqi-auth-response.json
           done
+          # Workspace integrations must never fabricate successful side effects.
+          for prefix in /api/v1/workspace /workspace; do
+            for action in upload-asset calendar/book submit-critique critiques; do
+              code=$(curl --silent --show-error --max-time 8 \
+                --output /tmp/luqi-workspace.json --write-out '%{http_code}' \
+                --request POST --header 'Content-Type: application/json' \
+                --data '{"user_id":"forged-owner"}' \
+                "http://127.0.0.1:18765$prefix/$action")
+              test "$code" = "503"
+              grep -q '"code":"WORKSPACE_INTEGRATION_NOT_CONFIGURED"' /tmp/luqi-workspace.json
+              ! grep -q '"success":true' /tmp/luqi-workspace.json
+            done
+          done
