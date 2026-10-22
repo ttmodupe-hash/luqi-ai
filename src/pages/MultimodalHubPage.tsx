@@ -67,11 +67,11 @@ export const MultimodalHubPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Hero Studio Banner */}
-      <div className="relative border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 py-8 px-4 sm:px-6">
+      <div className="relative border-b border-slate-800 bg-linear-to-b from-slate-900 via-slate-950 to-slate-950 py-8 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex flex-col gap-2 max-w-2xl">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
+              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-linear-to-r from-sky-500/20 to-indigo-500/20 text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-sky-400" />
                 Sovereign Multimodal Architecture
               </span>

@@ -690,7 +690,7 @@ export default function BilingualPage() {
             </div>
 
             {/* REAL CONTRACT ANALYZER — user-pasted text, server lexicon */}
-            <Card className="bg-gradient-to-br from-purple-500/10 to-neutral-900 border-purple-500/30 mb-4">
+            <Card className="bg-linear-to-br from-purple-500/10 to-neutral-900 border-purple-500/30 mb-4">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Shield className="h-5 w-5 text-purple-400" />
@@ -832,7 +832,7 @@ export default function BilingualPage() {
                         : "bg-yellow-500/10 border border-yellow-500/20"
                     }`}>
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                        <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${
                           clause.risk_level === "predatory" ? "text-red-400" : "text-yellow-400"
                         }`} />
                         <div>
@@ -1039,7 +1039,7 @@ export default function BilingualPage() {
                         <p className="font-medium text-white">{item.right}</p>
                         <p className="text-sm text-neutral-400 mt-1">{item.desc}</p>
                       </div>
-                      <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 ml-4 flex-shrink-0">
+                      <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 ml-4 shrink-0">
                         {item.contact}
                       </Badge>
                     </div>

@@ -281,7 +281,7 @@ export default function MoreMenuPage() {
   return (
     <div className="h-full overflow-y-auto bg-background select-none">
       {/* Sticky Header with Back Button */}
-      <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border">
+      <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xs border-b border-border">
         <div className="flex items-center gap-3 px-4 py-3">
           <button
             onClick={() => navigate(-1)}
@@ -307,7 +307,7 @@ export default function MoreMenuPage() {
               placeholder="Search features..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-input border border-border text-foreground rounded-xl pl-10 pr-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors min-h-[44px]"
+              className="w-full bg-input border border-border text-foreground rounded-xl pl-10 pr-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors min-h-[44px]"
             />
             {searchQuery && (
               <button

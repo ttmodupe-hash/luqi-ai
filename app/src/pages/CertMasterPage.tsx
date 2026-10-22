@@ -751,12 +751,12 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
       {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-white shadow-md shadow-orange-500/20"
+              className="w-9 h-9 rounded-xl bg-linear-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-white shadow-md shadow-orange-500/20"
             >
               L
             </Link>
@@ -1336,7 +1336,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                         if (e.key === "Enter") handleExecuteCli();
                       }}
                       placeholder="Type Cisco command (e.g. show ip route, conf t, ping 10.1.10.2)..."
-                      className="flex-1 bg-transparent text-slate-100 outline-none font-mono placeholder:text-slate-600 text-xs"
+                      className="flex-1 bg-transparent text-slate-100 outline-hidden font-mono placeholder:text-slate-600 text-xs"
                       autoFocus
                     />
                     <Button size="sm" onClick={() => handleExecuteCli()}>
@@ -1500,7 +1500,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                           type="text"
                           value={subnetIp}
                           onChange={(e) => setSubnetIp(e.target.value)}
-                          className="w-full mt-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm font-mono text-amber-300 outline-none focus:border-amber-500"
+                          className="w-full mt-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm font-mono text-amber-300 outline-hidden focus:border-amber-500"
                         />
                       </div>
                       <div>
@@ -1609,7 +1609,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                           value={drillAnswer}
                           onChange={(e) => setDrillAnswer(e.target.value)}
                           placeholder="e.g. 172.16.50.127"
-                          className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-slate-100 outline-none"
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-slate-100 outline-hidden"
                         />
                         <Button
                           size="sm"
@@ -1677,7 +1677,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             {/* Flashcard Component */}
             <div
               onClick={() => setIsFlipped(!isFlipped)}
-              className="w-full min-h-[320px] p-8 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-2xl flex flex-col justify-between cursor-pointer transition-all hover:border-amber-500/40 relative overflow-hidden"
+              className="w-full min-h-[320px] p-8 rounded-2xl bg-linear-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-2xl flex flex-col justify-between cursor-pointer transition-all hover:border-amber-500/40 relative overflow-hidden"
             >
               <div className="flex items-center justify-between">
                 <Badge variant="outline" className="text-xs text-amber-400 border-amber-500/30">
@@ -1823,7 +1823,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     if (e.key === "Enter") handleSendCoach();
                   }}
                   placeholder="Ask a technical or certification question..."
-                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-100 outline-none focus:border-amber-500"
+                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-100 outline-hidden focus:border-amber-500"
                 />
                 <Button size="sm" onClick={() => handleSendCoach()} disabled={coachLoading}>
                   <Send className="w-3.5 h-3.5" />

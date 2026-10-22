@@ -1078,7 +1078,7 @@ export default function PendulumLabPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -1114,7 +1114,7 @@ export default function PendulumLabPage() {
                 }}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                   simMode === "simple"
-                    ? "bg-sky-500 text-white shadow-sm"
+                    ? "bg-sky-500 text-white shadow-xs"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -1127,7 +1127,7 @@ export default function PendulumLabPage() {
                 }}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                   simMode === "double"
-                    ? "bg-purple-600 text-white shadow-sm"
+                    ? "bg-purple-600 text-white shadow-xs"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -1140,7 +1140,7 @@ export default function PendulumLabPage() {
                 }}
                 className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                   simMode === "driven"
-                    ? "bg-amber-500 text-slate-950 shadow-sm"
+                    ? "bg-amber-500 text-slate-950 shadow-xs"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
@@ -1315,13 +1315,13 @@ export default function PendulumLabPage() {
 
               {/* Bottom Quick Controls Bar */}
               <div className="absolute bottom-3 inset-x-3 flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800/80 px-3 py-1.5 rounded-xl backdrop-blur">
+                <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800/80 px-3 py-1.5 rounded-xl backdrop-blur-sm">
                   <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
                     <input
                       type="checkbox"
                       checked={showVectors}
                       onChange={(e) => setShowVectors(e.target.checked)}
-                      className="rounded accent-sky-500"
+                      className="rounded-sm accent-sky-500"
                     />
                     <span>Force Vectors</span>
                   </label>
@@ -1330,7 +1330,7 @@ export default function PendulumLabPage() {
                       type="checkbox"
                       checked={showTrace}
                       onChange={(e) => setShowTrace(e.target.checked)}
-                      className="rounded accent-sky-500"
+                      className="rounded-sm accent-sky-500"
                     />
                     <span>Motion Trail</span>
                   </label>
@@ -1338,7 +1338,7 @@ export default function PendulumLabPage() {
 
                 <button
                   onClick={handleLogDataPoint}
-                  className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 text-amber-300 font-semibold transition-all backdrop-blur shadow-md flex items-center gap-1.5 text-xs"
+                  className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-amber-500/50 text-amber-300 font-semibold transition-all backdrop-blur-sm shadow-md flex items-center gap-1.5 text-xs"
                 >
                   <Table className="w-3.5 h-3.5" />
                   <span>Log Data Point</span>
@@ -1355,7 +1355,7 @@ export default function PendulumLabPage() {
                 <button
                   onClick={() => setGraphMode("energy")}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    graphMode === "energy" ? "bg-slate-800 text-slate-100 shadow-sm" : "text-slate-400"
+                    graphMode === "energy" ? "bg-slate-800 text-slate-100 shadow-xs" : "text-slate-400"
                   }`}
                 >
                   Energy Waves
@@ -1363,7 +1363,7 @@ export default function PendulumLabPage() {
                 <button
                   onClick={() => setGraphMode("phase")}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    graphMode === "phase" ? "bg-slate-800 text-purple-300 shadow-sm" : "text-slate-400"
+                    graphMode === "phase" ? "bg-slate-800 text-purple-300 shadow-xs" : "text-slate-400"
                   }`}
                 >
                   Phase Space (θ vs ω)
@@ -1371,7 +1371,7 @@ export default function PendulumLabPage() {
                 <button
                   onClick={() => setGraphMode("waveform")}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    graphMode === "waveform" ? "bg-slate-800 text-sky-300 shadow-sm" : "text-slate-400"
+                    graphMode === "waveform" ? "bg-slate-800 text-sky-300 shadow-xs" : "text-slate-400"
                   }`}
                 >
                   θ(t) Waveform
@@ -1393,15 +1393,15 @@ export default function PendulumLabPage() {
               {graphMode === "energy" && (
                 <div className="absolute top-2.5 right-2.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[10px] font-mono space-y-1 shadow-md">
                   <div className="flex items-center gap-2 text-rose-400">
-                    <span className="w-2.5 h-0.5 bg-rose-500 rounded" />
+                    <span className="w-2.5 h-0.5 bg-rose-500 rounded-sm" />
                     <span>Kinetic Ek ({telemetry.ke} J)</span>
                   </div>
                   <div className="flex items-center gap-2 text-sky-400">
-                    <span className="w-2.5 h-0.5 bg-sky-500 rounded" />
+                    <span className="w-2.5 h-0.5 bg-sky-500 rounded-sm" />
                     <span>Potential Ep ({telemetry.pe} J)</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-400">
-                    <span className="w-2.5 h-0.5 bg-emerald-500 rounded border-dashed" />
+                    <span className="w-2.5 h-0.5 bg-emerald-500 rounded-sm border-dashed" />
                     <span>Mechanical Etotal</span>
                   </div>
                 </div>
@@ -1410,7 +1410,7 @@ export default function PendulumLabPage() {
               {graphMode === "phase" && (
                 <div className="absolute top-2.5 right-2.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[10px] font-mono space-y-1 shadow-md">
                   <div className="flex items-center gap-2 text-purple-400">
-                    <span className="w-2.5 h-0.5 bg-purple-500 rounded" />
+                    <span className="w-2.5 h-0.5 bg-purple-500 rounded-sm" />
                     <span>Phase Portrait Orbit</span>
                   </div>
                   <div className="flex items-center gap-2 text-amber-400">
@@ -1543,7 +1543,7 @@ export default function PendulumLabPage() {
           <div className="lg:col-span-7 rounded-3xl border border-slate-800 bg-slate-900/70 shadow-xl p-5 flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-md">
+                <div className="w-8 h-8 rounded-xl bg-linear-to-br from-sky-500 to-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-md">
                   K
                 </div>
                 <div>
@@ -1616,7 +1616,7 @@ export default function PendulumLabPage() {
                 value={copilotQuery}
                 onChange={(e) => setCopilotQuery(e.target.value)}
                 placeholder="Ask Dr. Kwame any question about this physics lab..."
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500"
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-sky-500"
               />
               <button
                 type="submit"

@@ -278,7 +278,7 @@ export default function WaterPage() {
           <Card className="bg-yellow-500/10 border-yellow-500/30 mb-6">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-6 w-6 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-6 w-6 text-yellow-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-yellow-400">{activeRestriction.title}</p>
                   <p className="text-sm text-neutral-300 mt-1">{activeRestriction.description}</p>
@@ -426,7 +426,7 @@ export default function WaterPage() {
                   <div className="space-y-3">
                     {BURST_ALERTS.filter((a) => a.zone === currentZone.name && a.status !== "resolved").map((alert) => (
                       <div key={alert.alert_id} className="flex items-start gap-3 p-4 bg-neutral-800 rounded-lg border-l-4 border-orange-500">
-                        <AlertTriangle className="h-5 w-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <p className="font-medium text-white">{alert.location}</p>
                           <div className="flex items-center gap-4 mt-2 text-sm text-neutral-400">
@@ -559,7 +559,7 @@ export default function WaterPage() {
                     <ul className="space-y-1">
                       {r.rules.map((rule, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-neutral-300">
-                          <CheckCircle2 className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle2 className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
                           {rule}
                         </li>
                       ))}

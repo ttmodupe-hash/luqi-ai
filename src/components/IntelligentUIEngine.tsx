@@ -45,7 +45,7 @@ export const InteractiveCalculator: React.FC<CalculatorProps> = ({
   }, [inputValue, baseFormula]);
 
   return (
-    <div className="my-3 p-4 rounded-2xl border border-amber-500/30 bg-slate-900/90 text-slate-100 shadow-xl max-w-sm backdrop-blur-sm">
+    <div className="my-3 p-4 rounded-2xl border border-amber-500/30 bg-slate-900/90 text-slate-100 shadow-xl max-w-sm backdrop-blur-xs">
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -55,7 +55,7 @@ export const InteractiveCalculator: React.FC<CalculatorProps> = ({
             {label}
           </span>
         </div>
-        <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded">
+        <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-sm">
           {baseFormula}
         </span>
       </div>
@@ -80,20 +80,20 @@ export const InteractiveCalculator: React.FC<CalculatorProps> = ({
               type="number"
               value={inputValue}
               onChange={(e) => setInputValue(Number(e.target.value))}
-              className="w-28 px-2.5 py-1 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500"
+              className="w-28 px-2.5 py-1 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-slate-100 focus:outline-hidden focus:border-amber-500"
             />
             <div className="flex gap-1">
               <button
                 type="button"
                 onClick={() => setInputValue((v) => Math.round(v * 0.5))}
-                className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300"
               >
                 0.5x
               </button>
               <button
                 type="button"
                 onClick={() => setInputValue((v) => Math.round(v * 2))}
-                className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300"
               >
                 2x
               </button>
@@ -103,7 +103,7 @@ export const InteractiveCalculator: React.FC<CalculatorProps> = ({
 
         <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
           <span className="font-semibold text-slate-300">Computed Output:</span>
-          <span className="text-sm font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <span className="text-sm font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-sm border border-emerald-500/20">
             {result} {unit}
           </span>
         </div>
@@ -142,12 +142,12 @@ export const IntelligentChart: React.FC<{ data: ChartData; label: string; unit?:
           const heightPercent = Math.max(8, (val / maxVal) * 100);
           return (
             <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group relative">
-              <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 text-teal-300 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-slate-700 shadow-md pointer-events-none whitespace-nowrap z-10">
+              <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 text-teal-300 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm border border-slate-700 shadow-md pointer-events-none whitespace-nowrap z-10">
                 {val} {unit}
               </div>
               <div
                 style={{ height: `${heightPercent}%` }}
-                className="w-full bg-gradient-to-t from-teal-600 via-teal-400 to-cyan-300 rounded-t-lg transition-all duration-300 group-hover:brightness-125 shadow-sm"
+                className="w-full bg-linear-to-t from-teal-600 via-teal-400 to-cyan-300 rounded-t-lg transition-all duration-300 group-hover:brightness-125 shadow-xs"
               />
               <span className="text-[10px] text-slate-400 font-medium truncate max-w-full text-center">
                 {data.labels[idx] || `#${idx + 1}`}
@@ -183,14 +183,14 @@ export const IntelligentMap: React.FC<{ config: MapConfig; label: string }> = ({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setCurrentZoom((z) => Math.min(19, z + 1))}
-            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+            className="p-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300"
             title="Zoom In"
           >
             <ZoomIn className="w-3 h-3" />
           </button>
           <button
             onClick={() => setCurrentZoom((z) => Math.max(3, z - 1))}
-            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+            className="p-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300"
             title="Zoom Out"
           >
             <ZoomOut className="w-3 h-3" />
@@ -199,7 +199,7 @@ export const IntelligentMap: React.FC<{ config: MapConfig; label: string }> = ({
             href={`https://www.google.com/maps?q=${config.latitude},${config.longitude}`}
             target="_blank"
             rel="noreferrer"
-            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400"
+            className="p-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-sky-400"
             title="Open in Google Maps"
           >
             <ExternalLink className="w-3 h-3" />
@@ -216,7 +216,7 @@ export const IntelligentMap: React.FC<{ config: MapConfig; label: string }> = ({
           className="grayscale contrast-125 brightness-90 hover:grayscale-0 transition-all duration-500"
           loading="lazy"
         />
-        <div className="absolute bottom-2 left-2 bg-slate-950/80 backdrop-blur text-[10px] font-mono px-2 py-0.5 rounded border border-slate-800 text-slate-300">
+        <div className="absolute bottom-2 left-2 bg-slate-950/80 backdrop-blur-sm text-[10px] font-mono px-2 py-0.5 rounded-sm border border-slate-800 text-slate-300">
           {config.latitude.toFixed(4)}, {config.longitude.toFixed(4)}
         </div>
       </div>

@@ -105,7 +105,7 @@ export default function CompanionPage() {
           </form>
           <h2 className="text-xl">Saved conversations</h2>
           <p className="text-sm text-slate-400">Save or clear your draft before changing conversations.</p>
-          <ul className="space-y-2">{conversations.map(item => <li key={item.id}><button className={`${control} w-full break-words text-left`} aria-pressed={selected === item.id} disabled={busy || !!draft || uncertain} onClick={() => {
+          <ul className="space-y-2">{conversations.map(item => <li key={item.id}><button className={`${control} w-full wrap-break-word text-left`} aria-pressed={selected === item.id} disabled={busy || !!draft || uncertain} onClick={() => {
             setSelected(item.id); setMessages([]); setMoreMessages(false);
             void run(async current => {
               const result = await conversationClient(session.token).messages(item.id);
@@ -121,7 +121,7 @@ export default function CompanionPage() {
               const result = await conversationClient(session.token).messages(selected, messages[0]?.id);
               if (current()) { setMessages(previous => [...result.messages].reverse().concat(previous)); setMoreMessages(result.messages.length === 50); }
             })}>Older messages</button>}
-            <ol className="space-y-3">{messages.map(message => <li key={message.id} className="rounded-lg border border-slate-700 p-4"><span className="text-sm text-slate-400">{message.role} · saved #{message.id}</span><p className="whitespace-pre-wrap break-words">{message.content}</p></li>)}</ol>
+            <ol className="space-y-3">{messages.map(message => <li key={message.id} className="rounded-lg border border-slate-700 p-4"><span className="text-sm text-slate-400">{message.role} · saved #{message.id}</span><p className="whitespace-pre-wrap wrap-break-word">{message.content}</p></li>)}</ol>
             <form className="space-y-3" onSubmit={event => {
               event.preventDefault();
               const content = draft.trim();

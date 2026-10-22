@@ -311,7 +311,7 @@ export const LiveVoiceFloatingCopilot: React.FC = () => {
                   <button
                     key={persona}
                     onClick={() => setActivePersona(persona)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                    className={`px-2 py-0.5 rounded-sm text-[10px] font-semibold transition-colors ${
                       activePersona === persona ? "bg-sky-500 text-white" : "bg-slate-800 text-slate-400 hover:text-white"
                     }`}
                   >
@@ -350,7 +350,7 @@ export const LiveVoiceFloatingCopilot: React.FC = () => {
               className={`flex-1 py-3 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
                 isRecording
                   ? "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/25 animate-pulse"
-                  : "bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-lg shadow-sky-500/25"
+                  : "bg-linear-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white shadow-lg shadow-sky-500/25"
               }`}
             >
               {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}

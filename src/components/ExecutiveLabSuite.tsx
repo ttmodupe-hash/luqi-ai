@@ -148,7 +148,7 @@ export default function ExecutiveLabSuite() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/60 border border-amber-500/30 shadow-2xl shadow-black/50">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-slate-900 via-slate-900 to-indigo-950/60 border border-amber-500/30 shadow-2xl shadow-black/50">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[11px] font-mono uppercase tracking-wider font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -193,7 +193,7 @@ export default function ExecutiveLabSuite() {
           return (
             <div
               key={lab.id}
-              className={`group relative rounded-3xl bg-slate-900/60 border ${lab.colorScheme.border} p-6 flex flex-col justify-between hover:bg-slate-900/95 transition-all duration-300 shadow-xl ${lab.colorScheme.glow} backdrop-blur-sm`}
+              className={`group relative rounded-3xl bg-slate-900/60 border ${lab.colorScheme.border} p-6 flex flex-col justify-between hover:bg-slate-900/95 transition-all duration-300 shadow-xl ${lab.colorScheme.glow} backdrop-blur-xs`}
             >
               <div>
                 <div className="flex items-center justify-between mb-4">

@@ -32,10 +32,11 @@ jobs:
           # The parser fails if it cannot prove that npm returned a real report.
           npm audit --omit=dev --json > /tmp/luqi-runtime-audit.json || true
           node scripts/report-runtime-audit.mjs /tmp/luqi-runtime-audit.json
-      - name: Block critical advisories in build and test dependencies
+      - name: Block high and critical advisories in build and test dependencies
         env:
           LUQI_AUDIT_SCOPE: all
           LUQI_AUDIT_FAIL_ON_CRITICAL: "true"
+          LUQI_AUDIT_FAIL_ON_HIGH: "true"
         shell: bash
         run: |
           npm audit --include=dev --json > /tmp/luqi-full-audit.json || true

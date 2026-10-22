@@ -9,7 +9,7 @@ function audit(data: unknown) {
   const dir = mkdtempSync(join(tmpdir(), "luqi-audit-")); directories.push(dir);
   const path = join(dir, "report.json"); writeFileSync(path, JSON.stringify(data));
   return spawnSync(process.execPath, [resolve("scripts/report-runtime-audit.mjs"), path], {
-    encoding: "utf8", env: { ...process.env, GITHUB_STEP_SUMMARY: "", LUQI_AUDIT_SCOPE: "all", LUQI_AUDIT_FAIL_ON_CRITICAL: "true" },
+    encoding: "utf8", env: { ...process.env, GITHUB_STEP_SUMMARY: "", LUQI_AUDIT_SCOPE: "all", LUQI_AUDIT_FAIL_ON_CRITICAL: "true", LUQI_AUDIT_FAIL_ON_HIGH: "true" },
   });
 }
 const counts = { critical: 0, high: 0, moderate: 0, low: 0, info: 0, total: 0 };
@@ -21,6 +21,10 @@ describe("dependency audit gate", () => {
   it("fails on critical advisories", () => {
     const result = audit({ metadata: { vulnerabilities: { ...counts, critical: 1, total: 1 } }, vulnerabilities: { example: { severity: "critical", range: "<2", fixAvailable: true } } });
     expect(result.status).not.toBe(0); expect(result.stderr).toContain("Critical advisories remain");
+  });
+  it("fails on high advisories", () => {
+    const result = audit({ metadata: { vulnerabilities: { ...counts, high: 1, total: 1 } }, vulnerabilities: { example: { severity: "high" } } });
+    expect(result.status).not.toBe(0); expect(result.stderr).toContain("High or critical advisories remain");
   });
   it.each([{ error: { code: "ENETUNREACH" } }, { metadata: { vulnerabilities: { ...counts, critical: "0" } }, vulnerabilities: {} }])("fails closed when scan results cannot be verified %#", data => {
     expect(audit(data).status).not.toBe(0);

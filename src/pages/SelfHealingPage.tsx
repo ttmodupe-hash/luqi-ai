@@ -202,7 +202,7 @@ const StatCard = ({ title, value, sub, icon, tone }: { title: string; value: str
     cyan: "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 text-cyan-400",
   };
   return (
-    <div className={`rounded-xl border bg-gradient-to-br ${toneMap[tone]} p-5`}>
+    <div className={`rounded-xl border bg-linear-to-br ${toneMap[tone]} p-5`}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium uppercase tracking-wider opacity-70">{title}</span>
         <div className="opacity-60">{icon}</div>
@@ -217,7 +217,7 @@ const TabButton = ({ active, onClick, icon, label, count }: { active: boolean; o
   <button
     onClick={onClick}
     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-      active ? "bg-slate-800 text-white border border-slate-700 shadow-sm" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+      active ? "bg-slate-800 text-white border border-slate-700 shadow-xs" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
     }`}
   >
     {icon}
@@ -443,10 +443,10 @@ print("STATUS: Verification test passed with zero errors.")
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-emerald-500 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <HeartPulse className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -480,7 +480,7 @@ print("STATUS: Verification test passed with zero errors.")
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Health Score Banner */}
-        <div className={`rounded-2xl border bg-gradient-to-r p-6 flex items-center justify-between ${
+        <div className={`rounded-2xl border bg-linear-to-r p-6 flex items-center justify-between ${
           healthTone === "emerald" ? "from-emerald-950/50 to-slate-900 border-emerald-500/20" :
           healthTone === "amber" ? "from-amber-950/50 to-slate-900 border-amber-500/20" :
           healthTone === "red" ? "from-red-950/50 to-slate-900 border-red-500/20" : "from-slate-900 to-slate-900 border-slate-700"
@@ -623,7 +623,7 @@ print("STATUS: Verification test passed with zero errors.")
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <label className="text-xs text-slate-400 flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={useAI} onChange={(e) => setUseAI(e.target.checked)} className="rounded bg-slate-800 border-slate-700" />
+                    <input type="checkbox" checked={useAI} onChange={(e) => setUseAI(e.target.checked)} className="rounded-sm bg-slate-800 border-slate-700" />
                     <Wand2 className="w-3 h-3" /> AI Patch Generation
                   </label>
                 </div>
@@ -712,7 +712,7 @@ print("STATUS: Verification test passed with zero errors.")
                           <button
                             onClick={() => proposePatch.mutate({ errorLogId: e.id, useAI })}
                             disabled={proposePatch.isPending}
-                            className="text-[10px] px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1"
+                            className="text-[10px] px-2 py-1 rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1"
                           >
                             {proposePatch.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : useAI ? <Wand2 className="w-3 h-3" /> : <Hammer className="w-3 h-3" />}
                             {useAI ? "AI Patch" : "Propose Patch"}
@@ -763,35 +763,35 @@ print("STATUS: Verification test passed with zero errors.")
                         {p.executionLog && (
                           <div>
                             <div className="text-xs font-medium text-slate-400 mb-1">Execution Log</div>
-                            <pre className="text-[10px] text-slate-500 bg-slate-900 rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">{p.executionLog}</pre>
+                            <pre className="text-[10px] text-slate-500 bg-slate-900 rounded-sm p-2 overflow-x-auto max-h-40 overflow-y-auto">{p.executionLog}</pre>
                           </div>
                         )}
                         <div className="flex items-center gap-2 pt-2">
                           {p.status === "pending" && (
                             <>
-                              <button onClick={() => applyPatch.mutate({ patchId: p.id })} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
+                              <button onClick={() => applyPatch.mutate({ patchId: p.id })} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
                                 Apply Patch
                               </button>
-                              <button onClick={() => applyPatch.mutate({ patchId: p.id, abTestPercent: 10 })} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors">
+                              <button onClick={() => applyPatch.mutate({ patchId: p.id, abTestPercent: 10 })} disabled={applyPatch.isPending} className="text-xs px-3 py-1.5 rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors">
                                 A/B Test (10%)
                               </button>
-                              <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "User rejected" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                              <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "User rejected" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded-sm bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
                                 Reject
                               </button>
                             </>
                           )}
                           {p.status === "ab_testing" && (
                             <>
-                              <button onClick={() => promoteABTest.mutate({ patchId: p.id })} disabled={promoteABTest.isPending} className="text-xs px-3 py-1.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1">
+                              <button onClick={() => promoteABTest.mutate({ patchId: p.id })} disabled={promoteABTest.isPending} className="text-xs px-3 py-1.5 rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors flex items-center gap-1">
                                 <ArrowRight className="w-3 h-3" /> Promote to 100%
                               </button>
-                              <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "A/B test rollback" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors flex items-center gap-1">
+                              <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "A/B test rollback" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded-sm bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors flex items-center gap-1">
                                 <Undo2 className="w-3 h-3" /> Rollback
                               </button>
                             </>
                           )}
                           {p.status === "applied" && (
-                            <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "User rollback" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors flex items-center gap-1">
+                            <button onClick={() => rollbackPatch.mutate({ patchId: p.id, reason: "User rollback" })} disabled={rollbackPatch.isPending} className="text-xs px-3 py-1.5 rounded-sm bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors flex items-center gap-1">
                               <Undo2 className="w-3 h-3" /> Rollback
                             </button>
                           )}
@@ -920,7 +920,7 @@ print("STATUS: Verification test passed with zero errors.")
               {activity.data && activity.data.length > 0 ? (
                 activity.data.map((a: AgentActivity) => (
                   <div key={a.id} className="relative">
-                    <div className={`absolute -left-[29px] w-3 h-3 rounded-full border-2 ${a.status === "success" ? "bg-emerald-500 border-emerald-500" : a.status === "failed" ? "bg-red-500 border-red-500" : "bg-amber-500 border-amber-500"}`} />
+                    <div className={`absolute left-[-29px] w-3 h-3 rounded-full border-2 ${a.status === "success" ? "bg-emerald-500 border-emerald-500" : a.status === "failed" ? "bg-red-500 border-red-500" : "bg-amber-500 border-amber-500"}`} />
                     <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`${agentColor(a.agentName)}`}>{agentIcon(a.agentName)}</span>
@@ -1021,7 +1021,7 @@ print("STATUS: Verification test passed with zero errors.")
             )}
 
             {/* Architecture Banner */}
-            <div className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/20 p-6 shadow-xl">
+            <div className="rounded-2xl border border-slate-800 bg-linear-to-r from-slate-900 via-slate-900/90 to-emerald-950/20 p-6 shadow-xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
@@ -1114,7 +1114,7 @@ print("STATUS: Verification test passed with zero errors.")
                       value={newBugReport}
                       onChange={(e) => setNewBugReport(e.target.value)}
                       placeholder="e.g. PayFast webhook signature validation mismatch on valid test payloads."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -1124,7 +1124,7 @@ print("STATUS: Verification test passed with zero errors.")
                       value={newTargetFile}
                       onChange={(e) => setNewTargetFile(e.target.value)}
                       placeholder="e.g. token_billing_gateway.py"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                 </div>
@@ -1137,7 +1137,7 @@ print("STATUS: Verification test passed with zero errors.")
                       setNewBugReport("PayFast webhook signature validation mismatch on valid test payloads.");
                       setNewTargetFile("token_billing_gateway.py");
                     }}
-                    className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    className="text-[11px] px-2.5 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
                   >
                     PayFast ITN Webhook Signature
                   </button>
@@ -1146,7 +1146,7 @@ print("STATUS: Verification test passed with zero errors.")
                       setNewBugReport("Cyclic tool invocation loop detected in agent executor (AST05 recursion trap).");
                       setNewTargetFile("backend/zta_security.py");
                     }}
-                    className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    className="text-[11px] px-2.5 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
                   >
                     Agent Recursion Loop
                   </button>
@@ -1155,7 +1155,7 @@ print("STATUS: Verification test passed with zero errors.")
                       setNewBugReport("Database connection pool exhaust during concurrent job submissions.");
                       setNewTargetFile("api/queries/connection.ts");
                     }}
-                    className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    className="text-[11px] px-2.5 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
                   >
                     DB Pool Exhaustion
                   </button>
@@ -1258,7 +1258,7 @@ print("STATUS: Verification test passed with zero errors.")
                             {job.execution_trace?.map((step: any, idx: number) => (
                               <div
                                 key={idx}
-                                className={`rounded p-2 text-xs border ${
+                                className={`rounded-sm p-2 text-xs border ${
                                   step.status === "INTERRUPTED"
                                     ? "bg-amber-950/20 border-amber-500/30 text-amber-300"
                                     : step.status === "APPROVED" || step.status === "COMPLETED"
@@ -1288,7 +1288,7 @@ print("STATUS: Verification test passed with zero errors.")
                               </span>
                               <span className="text-[10px] text-emerald-400 font-semibold">SWE-ReX Isolated</span>
                             </div>
-                            <pre className="font-mono text-[11px] text-slate-300 overflow-x-auto p-2 bg-slate-900/60 rounded border border-slate-800/80 whitespace-pre-wrap max-h-36">
+                            <pre className="font-mono text-[11px] text-slate-300 overflow-x-auto p-2 bg-slate-900/60 rounded-sm border border-slate-800/80 whitespace-pre-wrap max-h-36">
                               {job.sandbox_output || "No sandbox logs available."}
                             </pre>
                           </div>
@@ -1310,7 +1310,7 @@ print("STATUS: Verification test passed with zero errors.")
                                 </a>
                               )}
                             </div>
-                            <pre className="font-mono text-[11px] text-emerald-400 overflow-x-auto p-2 bg-slate-900/60 rounded border border-slate-800/80 whitespace-pre-wrap max-h-36">
+                            <pre className="font-mono text-[11px] text-emerald-400 overflow-x-auto p-2 bg-slate-900/60 rounded-sm border border-slate-800/80 whitespace-pre-wrap max-h-36">
                               {job.fix_diff || "Diff generated on branch " + job.branch_name}
                             </pre>
                           </div>
@@ -1389,7 +1389,7 @@ print(f"Computed MD5 Signature: {test_hash}")
 print("STATUS: Verification test passed with zero errors.")
 `)
                     }
-                    className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    className="text-[11px] px-2.5 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
                   >
                     Signature Test
                   </button>
@@ -1404,7 +1404,7 @@ os.system("rm -rf /")
 print("Host test completed: Host files protected by Docker isolated sandbox barrier.")
 `)
                     }
-                    className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    className="text-[11px] px-2.5 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
                   >
                     Destructive Host Attack (<code className="text-red-400">rm -rf /</code>)
                   </button>
@@ -1422,7 +1422,7 @@ while True:
         print(f"Step {step} still looping...")
 `)
                     }
-                    className="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    className="text-[11px] px-2.5 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
                   >
                     Infinite Loop Test
                   </button>
@@ -1435,7 +1435,7 @@ while True:
                   rows={8}
                   value={sandboxCode}
                   onChange={(e) => setSandboxCode(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-sky-300 focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-sky-300 focus:outline-hidden focus:border-sky-500"
                 />
 
                 <div className="flex items-center justify-between">
@@ -1462,7 +1462,7 @@ while True:
               {sandboxResult && (
                 <div className="rounded-lg bg-slate-950 border border-slate-800 p-3 space-y-1">
                   <div className="text-[11px] font-semibold text-slate-400 font-mono">Sandbox Execution Console</div>
-                  <pre className="font-mono text-xs text-slate-200 whitespace-pre-wrap p-2 bg-slate-900/60 rounded border border-slate-800/80">
+                  <pre className="font-mono text-xs text-slate-200 whitespace-pre-wrap p-2 bg-slate-900/60 rounded-sm border border-slate-800/80">
                     {sandboxResult}
                   </pre>
                 </div>

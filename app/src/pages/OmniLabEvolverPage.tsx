@@ -392,7 +392,7 @@ export default function OmniLabEvolverPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-card text-foreground shadow-sm"
+                    ? "bg-card text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -465,7 +465,7 @@ export default function OmniLabEvolverPage() {
                 className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card"
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                     entry.action === "seed"
                       ? "bg-green-500/10"
                       : entry.action === "evolve"
@@ -493,7 +493,7 @@ export default function OmniLabEvolverPage() {
                   </p>
                 </div>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
                     entry.action === "seed"
                       ? "bg-green-500/10 text-green-600"
                       : entry.action === "evolve"
@@ -576,7 +576,7 @@ function LabCard({
         onClick={onToggle}
         className="w-full flex items-start gap-3 p-4 text-left hover:bg-accent/50 transition-colors"
       >
-        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
           {subjectIcon(lab.subject)}
         </div>
         <div className="flex-1 min-w-0">
@@ -597,7 +597,7 @@ function LabCard({
             {lab.source}
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {isSelected ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           ) : (

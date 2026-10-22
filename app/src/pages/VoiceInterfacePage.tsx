@@ -83,7 +83,7 @@ export default function VoiceInterfacePage() {
         <select
           value={lang}
           onChange={(e) => setLang(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white focus:outline-none focus:border-cyan-500"
+          className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white focus:outline-hidden focus:border-cyan-500"
         >
           {LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>{l.name}</option>

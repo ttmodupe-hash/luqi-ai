@@ -345,10 +345,10 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-emerald-500 via-teal-500 to-sky-500 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-emerald-500/20">
               <Compass className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -398,7 +398,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
           {/* Main Left Column (Ecosystem & Tools) */}
           <div className="xl:col-span-8 space-y-8">
             {/* Hero Banner */}
-            <div className="rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+            <div className="rounded-3xl border border-slate-800 bg-linear-to-r from-slate-900 via-slate-900/90 to-emerald-950/30 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
           <div className="max-w-3xl space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5" /> 2026 African Tech Ecosystem Loop
@@ -510,7 +510,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="text-xs font-semibold text-emerald-400 px-2 py-0.5 rounded-sm bg-emerald-500/10 border border-emerald-500/20">
                         {vert.growth_rate_yoy} YoY
                       </span>
                       <span className="text-xs font-mono text-slate-400">Est. {vert.market_size_2026}</span>
@@ -589,7 +589,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                        <span className="text-xs font-semibold text-amber-400 px-2 py-0.5 rounded-sm bg-amber-500/10 border border-amber-500/20">
                           {grant.funding_amount}
                         </span>
                         <span className="text-[10px] text-slate-500">Deadline: {grant.deadline}</span>
@@ -766,7 +766,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">{generatedWrapper.description}</p>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                  <span className="text-[10px] font-mono px-2 py-1 rounded-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
                     Sandbox Verified
                   </span>
                 </div>
@@ -824,7 +824,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                       setAgriRegion(e.target.value);
                       handleRunAgritech(e.target.value, agriCrop);
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-hidden focus:border-emerald-500"
                   >
                     <option value="Free State, South Africa">Free State, South Africa (Grain Belt)</option>
                     <option value="Rift Valley, Kenya">Rift Valley, Kenya (Highlands)</option>
@@ -842,7 +842,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                       setAgriCrop(e.target.value);
                       handleRunAgritech(agriRegion, e.target.value);
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-hidden focus:border-emerald-500"
                   >
                     <option value="Maize">Maize (White/Yellow Corn)</option>
                     <option value="Cassava">Cassava (Drought-Resistant Tuber)</option>
@@ -952,7 +952,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                       setCorridorOrigin(e.target.value);
                       handleCalculateCorridor(e.target.value, corridorDest, cargoValue);
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="Durban, South Africa">Durban, South Africa (Port Terminal)</option>
                     <option value="Lagos, Nigeria">Lagos, Nigeria (Apapa Port)</option>
@@ -969,7 +969,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                       setCorridorDest(e.target.value);
                       handleCalculateCorridor(corridorOrigin, e.target.value, cargoValue);
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-hidden focus:border-amber-500"
                   >
                     <option value="Harare, Zimbabwe">Harare, Zimbabwe</option>
                     <option value="Abidjan, Côte d'Ivoire">Abidjan, Côte d'Ivoire</option>
@@ -988,7 +988,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
                       setCargoValue(v);
                       handleCalculateCorridor(corridorOrigin, corridorDest, v);
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-hidden focus:border-amber-500"
                   />
                 </div>
               </div>
@@ -1075,7 +1075,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
       <aside className="xl:col-span-4 space-y-6 xl:sticky xl:top-24">
         {/* Live Ticker Card */}
         <div
-          className={`rounded-2xl border border-slate-800 bg-slate-900/90 backdrop-blur p-5 shadow-xl transition-all duration-300 ${
+          className={`rounded-2xl border border-slate-800 bg-slate-900/90 backdrop-blur-sm p-5 shadow-xl transition-all duration-300 ${
             tickerFlash ? "ring-2 ring-emerald-500/50 bg-slate-900" : ""
           }`}
         >
@@ -1157,13 +1157,13 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
               filteredTickerItems.map((item) => (
                 <div
                   key={item.id}
-                  className="group rounded-xl border border-slate-800/90 bg-slate-950/60 hover:bg-slate-950 hover:border-slate-700 p-3.5 transition-all shadow-sm space-y-2 relative"
+                  className="group rounded-xl border border-slate-800/90 bg-slate-950/60 hover:bg-slate-950 hover:border-slate-700 p-3.5 transition-all shadow-xs space-y-2 relative"
                 >
                   {/* Top Bar: Urgency badge & Time */}
                   <div className="flex items-center justify-between text-[10px]">
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider text-[9px] ${
+                        className={`px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider text-[9px] ${
                           item.urgency === "URGENT"
                             ? "bg-red-500/20 text-red-300 border border-red-500/30"
                             : item.urgency === "NEW"
@@ -1222,7 +1222,7 @@ ${draftedProposal.proposed_milestones?.map((m: any) => `- **${m.milestone}**: ${
         </div>
 
         {/* Ecosystem Intelligence Card */}
-        <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-5 shadow-lg space-y-3">
+        <div className="rounded-2xl border border-slate-800 bg-linear-to-br from-slate-900 via-slate-900 to-slate-950 p-5 shadow-lg space-y-3">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-emerald-400" />
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">

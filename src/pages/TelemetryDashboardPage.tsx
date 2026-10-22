@@ -118,12 +118,12 @@ export default function TelemetryDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top Navigation */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-600 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-teal-500/20"
+              className="w-10 h-10 rounded-xl bg-linear-to-br from-teal-500 via-cyan-500 to-blue-600 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-teal-500/20"
             >
               ⚡
             </Link>
@@ -222,7 +222,7 @@ export default function TelemetryDashboardPage() {
                   type="text"
                   value={taskName}
                   onChange={(e) => setTaskName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-hidden"
                   required
                 />
               </div>
@@ -235,7 +235,7 @@ export default function TelemetryDashboardPage() {
                   value={taskDescription}
                   onChange={(e) => setTaskDescription(e.target.value)}
                   rows={3}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl p-3 text-xs text-slate-100 focus:outline-none font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden font-mono"
                   required
                 />
               </div>
@@ -248,7 +248,7 @@ export default function TelemetryDashboardPage() {
                   value={assertions}
                   onChange={(e) => setAssertions(e.target.value)}
                   rows={2}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl p-3 text-xs text-teal-300 focus:outline-none font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl p-3 text-xs text-teal-300 focus:outline-hidden font-mono"
                   required
                 />
               </div>
@@ -256,7 +256,7 @@ export default function TelemetryDashboardPage() {
               <button
                 type="submit"
                 disabled={isRunning}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20"
+                className="w-full py-3 rounded-xl bg-linear-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20"
               >
                 {isRunning ? (
                   <>
@@ -371,7 +371,7 @@ export default function TelemetryDashboardPage() {
                   <span>⏱️ {r.executionTimeMs}ms</span>
                   <span>🔄 {r.attemptsBeforeSuccess} Loops</span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                       r.status === "SUCCESS"
                         ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                         : "bg-rose-500/10 text-rose-400 border border-rose-500/20"

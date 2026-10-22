@@ -74,7 +74,7 @@ export default function Home() {
           {/* Card: Grade 10 Simple Pendulum & Energy Conservation Lab */}
           <Link
             to="/pendulum-lab"
-            className="group rounded-3xl border border-sky-500/50 bg-gradient-to-br from-sky-500/15 via-slate-900/70 to-slate-900/95 p-6 hover:border-sky-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-xl shadow-sky-500/10 md:col-span-2 lg:col-span-1 ring-1 ring-sky-500/20"
+            className="group rounded-3xl border border-sky-500/50 bg-linear-to-br from-sky-500/15 via-slate-900/70 to-slate-900/95 p-6 hover:border-sky-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-xl shadow-sky-500/10 md:col-span-2 lg:col-span-1 ring-1 ring-sky-500/20"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-4 group-hover:scale-105 transition-transform">
@@ -101,7 +101,7 @@ export default function Home() {
           {/* Card: Luqi AI Self-Improving Companion */}
           <Link
             to="/companion"
-            className="group rounded-3xl border border-purple-500/40 bg-gradient-to-br from-purple-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-purple-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-purple-500/5 md:col-span-2 lg:col-span-1"
+            className="group rounded-3xl border border-purple-500/40 bg-linear-to-br from-purple-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-purple-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-purple-500/5 md:col-span-2 lg:col-span-1"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-105 transition-transform">
@@ -128,7 +128,7 @@ export default function Home() {
           {/* Card 0: CertMaster Academy (ITIL AI Governance & Cisco CCNA/CCNP/CCIP) */}
           <Link
             to="/cert-academy"
-            className="group rounded-3xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-amber-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-amber-500/5 md:col-span-2 lg:col-span-1"
+            className="group rounded-3xl border border-amber-500/40 bg-linear-to-br from-amber-500/10 via-slate-900/60 to-slate-900/90 p-6 hover:border-amber-400 hover:bg-slate-900/90 transition-all flex flex-col justify-between shadow-lg shadow-amber-500/5 md:col-span-2 lg:col-span-1"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform">

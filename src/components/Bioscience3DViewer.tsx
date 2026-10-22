@@ -378,7 +378,7 @@ export const Bioscience3DViewer: React.FC = () => {
               placeholder="Search gene, UniProt or drug (e.g. KRAS, Insulin)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500"
             />
           </div>
           <button
@@ -401,7 +401,7 @@ export const Bioscience3DViewer: React.FC = () => {
 
             {/* Viewport Top Floating Controls */}
             <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-              <div className="bg-slate-900/90 backdrop-blur border border-slate-800 px-3.5 py-1.5 rounded-xl pointer-events-auto flex items-center gap-2 text-xs">
+              <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-800 px-3.5 py-1.5 rounded-xl pointer-events-auto flex items-center gap-2 text-xs">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="font-bold text-white tracking-wide">{targetData?.gene || selectedTarget}</span>
                 <span className="text-slate-400">|</span>
@@ -411,7 +411,7 @@ export const Bioscience3DViewer: React.FC = () => {
                 </span>
               </div>
 
-              <div className="bg-slate-900/90 backdrop-blur border border-slate-800 p-1.5 rounded-xl pointer-events-auto flex items-center gap-1.5 text-xs">
+              <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-800 p-1.5 rounded-xl pointer-events-auto flex items-center gap-1.5 text-xs">
                 <button
                   onClick={() => setRenderMode("ribbon")}
                   className={`px-2.5 py-1 rounded-lg transition-all ${
@@ -440,25 +440,25 @@ export const Bioscience3DViewer: React.FC = () => {
             </div>
 
             {/* Viewport Bottom Floating Legend (AlphaFold pLDDT 4-Band Scale) */}
-            <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur border border-slate-800 p-2.5 rounded-2xl pointer-events-auto max-w-sm">
+            <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-sm border border-slate-800 p-2.5 rounded-2xl pointer-events-auto max-w-sm">
               <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
                 <span>AlphaFold pLDDT Confidence</span>
                 <span className="text-sky-400 font-mono">Mean: {targetData?.meanPlddt || 82.4}%</span>
               </div>
               <div className="grid grid-cols-4 gap-1.5 text-[9px] font-mono text-center">
-                <div className="bg-[#0053D6]/20 border border-[#0053D6] text-blue-200 py-1 rounded">
+                <div className="bg-[#0053D6]/20 border border-[#0053D6] text-blue-200 py-1 rounded-sm">
                   <div className="w-2 h-2 rounded-full bg-[#0053D6] mx-auto mb-0.5" />
                   &gt;90 (Very High)
                 </div>
-                <div className="bg-[#65CBF3]/20 border border-[#65CBF3] text-cyan-200 py-1 rounded">
+                <div className="bg-[#65CBF3]/20 border border-[#65CBF3] text-cyan-200 py-1 rounded-sm">
                   <div className="w-2 h-2 rounded-full bg-[#65CBF3] mx-auto mb-0.5" />
                   70-90 (Confident)
                 </div>
-                <div className="bg-[#FFDB13]/20 border border-[#FFDB13] text-yellow-200 py-1 rounded">
+                <div className="bg-[#FFDB13]/20 border border-[#FFDB13] text-yellow-200 py-1 rounded-sm">
                   <div className="w-2 h-2 rounded-full bg-[#FFDB13] mx-auto mb-0.5" />
                   50-70 (Low)
                 </div>
-                <div className="bg-[#FF7D45]/20 border border-[#FF7D45] text-orange-200 py-1 rounded">
+                <div className="bg-[#FF7D45]/20 border border-[#FF7D45] text-orange-200 py-1 rounded-sm">
                   <div className="w-2 h-2 rounded-full bg-[#FF7D45] mx-auto mb-0.5" />
                   &lt;50 (Very Low)
                 </div>
@@ -469,7 +469,7 @@ export const Bioscience3DViewer: React.FC = () => {
             <div className="absolute bottom-3 right-3 flex items-center gap-2 pointer-events-auto">
               <button
                 onClick={() => setShowLigandPocket(!showLigandPocket)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur border transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-sm border transition-all flex items-center gap-1.5 ${
                   showLigandPocket
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                     : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white"
@@ -481,7 +481,7 @@ export const Bioscience3DViewer: React.FC = () => {
 
               <button
                 onClick={() => setAutorotate(!autorotate)}
-                className={`p-2 rounded-xl backdrop-blur border transition-all ${
+                className={`p-2 rounded-xl backdrop-blur-sm border transition-all ${
                   autorotate
                     ? "bg-sky-500/20 text-sky-300 border-sky-500/40"
                     : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-white"

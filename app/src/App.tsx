@@ -64,12 +64,12 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <FloatingAiChat />
 
       {/* Global Navigation Header with 22-Language Selection Dropdown */}
-      <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur sticky top-0 z-40">
+      <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-sm text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-sm text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
                 L
               </div>
               <div className="flex flex-col">
@@ -166,7 +166,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Omni-Query Search Trigger */}
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
-              className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-amber-500/40 transition-all flex items-center gap-1.5 font-medium shadow-sm"
+              className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-amber-500/40 transition-all flex items-center gap-1.5 font-medium shadow-xs"
               title="Global Omni-Query & Capabilities Palette (Cmd+K)"
             >
               <Search className="w-3.5 h-3.5 text-amber-400" />

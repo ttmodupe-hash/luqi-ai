@@ -252,7 +252,7 @@ export default function LabSimulatorPage() {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
         {/* Lab Header */}
-        <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-30">
+        <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
@@ -503,10 +503,10 @@ export default function LabSimulatorPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
               <FlaskConical className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -581,7 +581,7 @@ export default function LabSimulatorPage() {
         </div>
 
         {/* Featured Grade 10 Simulation Banner */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-500/15 via-indigo-500/10 to-slate-900 border border-sky-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-sky-500/5">
+        <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-r from-sky-500/15 via-indigo-500/10 to-slate-900 border border-sky-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-sky-500/5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">

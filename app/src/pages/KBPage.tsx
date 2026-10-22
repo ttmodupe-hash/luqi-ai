@@ -272,7 +272,7 @@ export default function KBPage() {
                   onChange={(e) => setDocText(e.target.value)}
                   placeholder="Document text content..."
                   rows={4}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-white placeholder:text-neutral-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
+                  className="w-full bg-neutral-800 border border-neutral-700 text-white placeholder:text-neutral-600 rounded-md px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
                 />
                 <div className="flex items-center justify-between">
                   <Button
@@ -412,14 +412,14 @@ export default function KBPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <FileText size={12} className="text-neutral-500 flex-shrink-0" />
+                            <FileText size={12} className="text-neutral-500 shrink-0" />
                             <span className="text-xs font-mono text-neutral-500 truncate">
                               {doc.id}
                             </span>
                             {doc.metadata && typeof doc.metadata.category === "string" && (
                               <Badge
                                 variant="outline"
-                                className="bg-neutral-800 border-neutral-700 text-neutral-400 text-[10px] flex-shrink-0"
+                                className="bg-neutral-800 border-neutral-700 text-neutral-400 text-[10px] shrink-0"
                               >
                                 {doc.metadata.category as string}
                               </Badge>

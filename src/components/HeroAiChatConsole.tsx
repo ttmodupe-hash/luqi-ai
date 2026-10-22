@@ -466,7 +466,7 @@ For Department of Basic Education (DBE), IEB, and TVET exam preparation:
             value={inputPrompt}
             onChange={e => setInputPrompt(e.target.value)}
             placeholder="Type your question in English, Sepitori, isiZulu, Sesotho, or mix them..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-emerald-500 transition"
           />
           <button
             type="submit"

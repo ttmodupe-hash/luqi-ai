@@ -37,7 +37,7 @@ export default function LiveUpdates({ topic }: { topic: "water" | "load-shedding
           {headlines.map((h, i) => (
             <li key={i}>
               <a href={h.link} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-sm text-neutral-300 hover:text-cyan-400 transition-colors">
-                <ExternalLink className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-neutral-500" />
+                <ExternalLink className="h-3.5 w-3.5 mt-0.5 shrink-0 text-neutral-500" />
                 <span>{h.title} <span className="text-neutral-600 text-xs">{h.source ? `— ${h.source}` : ""}{h.date ? ` · ${h.date}` : ""}</span></span>
               </a>
             </li>

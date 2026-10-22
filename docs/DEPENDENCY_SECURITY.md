@@ -22,12 +22,33 @@ of exploitation.
   that rejects critical findings or incomplete/malformed audit output.
   High and moderate findings remain visible; they are not suppressed.
 
-## Remaining work
+## Tailwind 4 remediation
 
-Tailwind 3 still depends on the vulnerable braces/glob/watcher chain. The
-available recommended fix requires a Tailwind 4 migration. That needs its own
-stylesheet and visual regression review across the application's pages;
-this change does not claim to resolve those high-severity findings.
+The deployed root npm tree now uses Tailwind 4.3.3, its PostCSS plugin and
+Tailwind Merge 3.7.0. The old braces/glob/watcher dependency chain is removed.
+The full local npm audit reports zero findings, including development tools.
+CI now rejects high as well as critical advisories and incomplete audit data.
+
+Both source trees use the new utilities and retain their existing JavaScript
+Tailwind theme via `@config`. Compatibility CSS preserves border, placeholder,
+button cursor and ring defaults. CSS source scanning is limited to each source
+folder. The alternative app manifest is aligned for styling; it is not covered
+by the root dependency audit or release build.
+
+Tailwind 4 raises browser requirements to Safari 16.4+, Chrome 111+ and Firefox
+128+. Older browsers are not validated. See the official upgrade guide:
+https://tailwindcss.com/docs/upgrade-guide
+
+The browser suite exercises Home, Admin, Pricing and Companion at 1440px and
+390px widths, checks horizontal overflow/JavaScript exceptions and styled form
+controls, and tests failed-save draft retention and sign-out. It uses synthetic
+HTTP fixtures, not production accounts. Before/after screenshots were reviewed;
+this is a sampled visual review, not complete coverage of every page or browser.
+Local Chromium was supplied from a temporary @sparticuz/chromium installation
+because the Playwright CDN download returned invalid archives. CI installs the
+Playwright-managed Chromium version. No browser binary is a project dependency.
+
+## Scope and outstanding verification
 
 The root package-lock.json is the npm/CI/Railway installation source. Other
 lockfiles and the alternate app's standalone dependency manifest are outside

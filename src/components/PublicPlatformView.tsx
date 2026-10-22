@@ -761,7 +761,7 @@ export const PublicPlatformView: React.FC = () => {
                     value={ussdReply}
                     onChange={e => setUssdReply(e.target.value)}
                     placeholder="Enter choice (1, 2, 3, 4, 0)..."
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-hidden focus:border-amber-500"
                   />
                   <button
                     type="submit"
@@ -964,7 +964,7 @@ export const PublicPlatformView: React.FC = () => {
               </div>
 
               {/* Professional Tier (Recommended) */}
-              <div className="rounded-3xl border-2 border-amber-500/80 bg-gradient-to-b from-amber-500/10 via-slate-900/90 to-slate-900 p-6 flex flex-col justify-between relative shadow-xl shadow-amber-500/10 space-y-6">
+              <div className="rounded-3xl border-2 border-amber-500/80 bg-linear-to-b from-amber-500/10 via-slate-900/90 to-slate-900 p-6 flex flex-col justify-between relative shadow-xl shadow-amber-500/10 space-y-6">
                 <div className="space-y-3">
                   <div className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold">
                     MOST POPULAR · PROFESSIONAL
