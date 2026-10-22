@@ -49,3 +49,16 @@ jobs:
           done
           cat /tmp/luqi-health.log
           exit 1
+      - name: Verify shared frontend helpers in both source trees
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            for (const name of ["api.ts", "utils.ts", "languages.ts"]) {
+              const a = fs.readFileSync("src/lib/" + name, "utf8");
+              const b = fs.readFileSync("app/src/lib/" + name, "utf8");
+              if (a !== b) {
+                throw new Error("Frontend shared helper diverged: " + name);
+              }
+            }
+            console.log("Both frontend source trees have the same API, styling and language helpers.");
+          '
