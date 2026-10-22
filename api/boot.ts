@@ -13,6 +13,7 @@ import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
+import { legacyOperationsUnavailable } from "./lib/legacyOperations";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
@@ -34,7 +35,6 @@ import { UniversalTopicMasteryEngine } from "./services/universalTopicEngine";
 import { SovereignCryptoLedger } from "./security/cryptoLedger";
 import { MultiAgentConsensusEngine } from "./services/consensusEngine";
 import { EdgeCacheEngine } from "./services/edgeCacheEngine";
-import { OfflineSolarSyncDaemon } from "./sync/offlineSyncDaemon";
 import { DynamicRagExamEngine, DOMAIN_DIRECTIVES } from "./services/dynamicRagExamEngine";
 import { KhoroCognitiveBrain, SOVEREIGN_AGENT_NAME, SOVEREIGN_AGENT_TRANSLATION } from "./services/khoroCognitiveBrain";
 import { AfricanSovereigntyEngine } from "./services/africanSovereigntyEngine";
@@ -160,6 +160,7 @@ app.get("/v1/readiness", async (c) => {
 
 // ── REST COMPAT (legacy frontend endpoints → real services) ──────────
 app.route("/", legacyAdminUnavailable);
+app.route("/", legacyOperationsUnavailable);
 app.route("/", restCompat);
 
 // 1. Unified Chat & KHORO Sovereign Companion Endpoint
@@ -615,29 +616,6 @@ app.post('/api/v1/simulation/verify-terminal', async (c) => {
   }
 });
 
-// 6. Student & Teacher Automated Grading Ledger Endpoint
-app.get('/api/v1/grading/ledger/:user_id', (c) => {
-  const userId = c.req.param('user_id');
-  const chain = SovereignCryptoLedger.getLedgerChain();
-  const entries = chain
-    .filter(b => b.actor === userId || b.action.includes('GRADED') || b.action.includes('TERMINAL') || b.action.includes('SIMULATION'))
-    .map(b => ({
-      session_id: b.currentBlockHash.substring(0, 12),
-      track: b.action,
-      activity_summary: typeof b.payload === 'object' ? JSON.stringify(b.payload) : String(b.payload || 'Lab Exercise Verified'),
-      completion_date: new Date(b.timestamp).toISOString().replace('T', ' ').substring(0, 16)
-    }));
-
-  return c.json(entries.length > 0 ? entries : [
-    {
-      session_id: 'SES-INIT-01',
-      track: 'AWS_CLOUD_SANDBOX',
-      activity_summary: 'AWS EC2 High Availability Auto-Scaling Lab Verified',
-      completion_date: new Date().toISOString().replace('T', ' ').substring(0, 16)
-    }
-  ]);
-});
-
 // ============================================================================
 // LUQITOONS MULTI-AGENT STORYBOARD, STRIPE LEDGER & SELF-IMPROVEMENT
 // ============================================================================
@@ -801,164 +779,6 @@ app.post('/intelligence/self-optimize', async (c) => {
 // Workspace integrations require authenticated durable storage and real adapters.
 app.route("/", workspaceUnavailable);
 
-// ============================================================================
-// TRIUMVIRATE SECURITY AGENT GRID & DIAGNOSTICS
-// ============================================================================
-
-app.post('/api/v1/security/shield-audit', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const logData = body.log_buffer_stream || '';
-  if (!logData) {
-    return c.json({ error: "Empty transaction streaming logs." }, 400);
-  }
-
-  const logUpper = logData.toUpperCase();
-  const isSqlInjection = logUpper.includes("SELECT") && (logUpper.includes("OR '1'='1'") || logUpper.includes("1=1") || logData.includes("--"));
-  const isXss = logUpper.includes("<SCRIPT>") || logUpper.includes("DOCUMENT.COOKIE") || logUpper.includes("JAVASCRIPT:");
-  const isRce = logUpper.includes("RM -RF") || logUpper.includes("; ECHO") || logUpper.includes("SYSTEM COMPROMISED") || logUpper.includes("/APP/CORE");
-  const isPii = logUpper.includes("BILLING CREDENTIALS WITHOUT JWT") || logUpper.includes("CUSTOMER PROFILES") || logUpper.includes("LEAKED TOKEN");
-
-  let verdict: any;
-  if (isSqlInjection) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 95,
-      threat_vector_type: "SQL Injection Attack",
-      exploit_analysis_details: "Unescaped boolean injection detected. Potential unauthorized dump of customer/users schema tables.",
-      remediation_patch_code: "APPLIED: Enforced parameterized SQLAlchemy queries (:user_id) with strict whitelist regex validation."
-    };
-  } else if (isXss) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 90,
-      threat_vector_type: "Cross-Site Scripting (XSS) Token Hijack",
-      exploit_analysis_details: "Malicious script tag attempting client cookie/JWT extraction. CSP and DOM sanitization triggered.",
-      remediation_patch_code: "APPLIED: Enabled DOMPurify and strict Content-Security-Policy (script-src 'self')."
-    };
-  } else if (isRce) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 99,
-      threat_vector_type: "Unauthorized Remote Code Execution (RCE)",
-      exploit_analysis_details: "Shell meta-characters (;) with destructive system commands detected. Subprocess sandbox isolated.",
-      remediation_patch_code: "APPLIED: Restricted subprocess exec commands to non-root whitelist containers with read-only root filesystems."
-    };
-  } else if (isPii) {
-    verdict = {
-      vulnerability_detected: true,
-      risk_score: 85,
-      threat_vector_type: "PII Leakage & Account Harvest",
-      exploit_analysis_details: "Unauthenticated harvesting request attempting bypass of OAuth2/JWT session gates.",
-      remediation_patch_code: "APPLIED: Activated Zero-Trust JWT bearer enforcement on all tenant records with rate limiting."
-    };
-  } else {
-    verdict = {
-      vulnerability_detected: false,
-      risk_score: 10,
-      threat_vector_type: "Standard Traffic",
-      exploit_analysis_details: "Transaction matches expected enterprise request pattern. Zero vulnerability vectors identified.",
-      remediation_patch_code: ""
-    };
-  }
-
-  if (verdict.vulnerability_detected && verdict.risk_score >= 70) {
-    SovereignCryptoLedger.sealAction(
-      'SECURITY_SHIELD_AGENT',
-      `THREAT_INTERCEPTED_${verdict.threat_vector_type.replace(/\s+/g, '_')}`,
-      verdict
-    );
-  }
-
-  return c.json(verdict);
-});
-
-app.post('/security/shield-audit', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const logData = body.log_buffer_stream || '';
-  const logUpper = logData.toUpperCase();
-  const isThreat = logUpper.includes("SELECT") || logUpper.includes("<SCRIPT>") || logUpper.includes("RM -RF") || logUpper.includes("JWT");
-  return c.json({
-    vulnerability_detected: isThreat,
-    risk_score: isThreat ? 95 : 10,
-    threat_vector_type: isThreat ? "Automated Probe Caught" : "Standard Traffic",
-    exploit_analysis_details: isThreat ? "Isolated by Triumvirate Shield" : "Nominal",
-    remediation_patch_code: isThreat ? "APPLIED: Whitelist active" : ""
-  });
-});
-
-app.get('/api/v1/security/diagnostics', (c) => {
-  const jwtKey = process.env.JWT_SECRET_KEY || "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123";
-  const jwtStatus = jwtKey.length >= 32 && jwtKey !== "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123" ? "PASS" : "WARNING";
-  const dbUrl = process.env.DATABASE_URL || "";
-  const dbStatus = !dbUrl || dbUrl.includes("sqlite") || dbUrl.includes("10.") || dbUrl.includes("172.") ? "PASS" : "WARNING";
-  const bucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET || "luqi-vault";
-  const gcsStatus = bucket && !bucket.includes("mock") ? "PASS" : "WARNING";
-
-  const tests = [
-    {
-      component: "JWT Cryptography Layer",
-      status: jwtStatus,
-      details: jwtStatus === "PASS" ? "High-entropy key profile confirmed. Session tokens securely protected." : "Default development signature key active. Ensure production rotation in Secret Manager."
-    },
-    {
-      component: "Database Access Vector",
-      status: dbStatus,
-      details: dbStatus === "PASS" ? "Database engine completely isolated within private network parameters." : "Database IP appears public. Verify VPC network peering."
-    },
-    {
-      component: "Cloud Storage Vault",
-      status: gcsStatus,
-      details: gcsStatus === "PASS" ? `Cloud storage vault configured for bucket '${bucket}'. Asset objects inherit strict identity parameters.` : "GCS storage target utilizing mock parameters."
-    },
-    {
-      component: "Zero-Trust SHA-256 Ledger",
-      status: "PASS",
-      details: "Consensus chain verification integrity 100% nominal. Immutable append-only audit active."
-    }
-  ];
-
-  return c.json({
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + " UTC",
-    total_tests: tests.length,
-    system_status: "SECURE_HARDENED",
-    tests
-  });
-});
-
-app.get('/security/diagnostics', (c) => {
-  return c.redirect('/api/v1/security/diagnostics');
-});
-
-
-// ZERO-TRUST SOVEREIGN ENCLAVE (ZTSE) 4-PILLAR ENDPOINTS
-// ============================================================================
-
-// 1. Cryptographic Append-Only SHA-256 Ledger
-app.get('/api/v1/audit/ledger', (c) => {
-  const chain = SovereignCryptoLedger.getLedgerChain();
-  const integrity = SovereignCryptoLedger.verifyChainIntegrity();
-  return c.json({
-    status: 'success',
-    integrity,
-    chainLength: chain.length,
-    chain,
-  });
-});
-
-app.post('/api/v1/audit/seal', async (c) => {
-  try {
-    const { actor, action, payload } = await c.req.json();
-    const block = SovereignCryptoLedger.sealAction(
-      actor || 'System Administrator',
-      action || 'ADMIN_ACTION',
-      payload || {}
-    );
-    return c.json({ status: 'success', block });
-  } catch (err: any) {
-    return c.json({ status: 'error', error: err.message }, 500);
-  }
-});
-
 // 2. Multi-Agent Consensus Ring Execution
 app.post('/api/v1/consensus/execute', async (c) => {
   try {
@@ -982,22 +802,6 @@ app.post('/api/v1/edge-cache/query', async (c) => {
   } catch (err: any) {
     return c.json({ status: 'error', error: err.message }, 500);
   }
-});
-
-app.get('/api/v1/edge-cache/telemetry', (c) => {
-  const telemetry = EdgeCacheEngine.getEdgeTelemetry();
-  return c.json({ status: 'success', telemetry });
-});
-
-// 4. Local-First Solar/Mini-PC Offline Sync Daemon
-app.get('/api/v1/offline-sync/status', (c) => {
-  const status = OfflineSolarSyncDaemon.getDaemonStatus();
-  return c.json({ status: 'success', ...status });
-});
-
-app.get('/api/v1/offline-sync/bundle', (c) => {
-  const bundle = OfflineSolarSyncDaemon.generateOfflineBundle();
-  return c.json({ status: 'success', bundle });
 });
 
 // ============================================================================
@@ -1355,15 +1159,6 @@ app.post('/api/v1/governance/generate-system-card', async (c) => {
   }
 });
 
-app.get('/api/v1/governance/system-cards', async (c) => {
-  return c.json({
-    success: true,
-    framework: "Anthropic Advanced AI Governance Framework (June 2026)",
-    count: SYSTEM_CARDS_STORAGE.length,
-    cards: SYSTEM_CARDS_STORAGE
-  });
-});
-
 app.post('/api/v1/governance/evaluator-benchmark', async (c) => {
   const secret = process.env.EVALUATOR_SIGNING_SECRET;
   if (!secret || secret.length < 32) return c.json({ error: "Evaluator not configured" }, 503);
@@ -1460,33 +1255,6 @@ app.post('/api/v1/studio/synthesize-asset', async (c) => {
   };
 
   return c.json(asset);
-});
-
-app.post('/api/v1/analytics/log-progression', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({
-    success: true,
-    message: "Telemetry progression safely logged to relational tables.",
-    record: {
-      user_id: body.user_id || "anonymous",
-      lab_id: body.lab_id || "lab-01",
-      completion_status: body.completion_status || "PASSED",
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-app.get('/api/v1/diagnostics/database-indexes', async (c) => {
-  return c.json({
-    status: "OPERATIONAL",
-    active_catalog_timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-    index_telemetry: [
-      { index_identifier: "idx_chat_user_id", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_analytics_user_domain", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_critique_status", status: "HEALTHY", remediation_action: "NONE REQUIRED" },
-      { index_identifier: "idx_c2pa_provenance_hash", status: "HEALTHY", remediation_action: "NONE REQUIRED" }
-    ]
-  });
 });
 
 // ── GEMINI MULTIMODAL SERVER-SIDE PROXY ROUTES ─────────────────────
