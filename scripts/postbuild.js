@@ -30,6 +30,16 @@ fs.writeFileSync(path.join(distPath, "404.html"), html404);
 
 // Add SPA redirect handler to index.html
 const indexPath = path.join(distPath, "index.html");
+if (!fs.existsSync(indexPath)) {
+  // Some Vite entry configurations emit app/index.html while assets already
+  // live at dist/public/assets. Put that entry at the public document root.
+  const nestedIndex = path.join(distPath, "app", "index.html");
+  if (!fs.existsSync(nestedIndex)) {
+    throw new Error("No frontend HTML entry found at either public/index.html or public/app/index.html");
+  }
+  fs.copyFileSync(nestedIndex, indexPath);
+  console.info("Post-build: normalized app/index.html to public/index.html");
+}
 let indexHtml = fs.readFileSync(indexPath, "utf-8");
 
 const spaScript = [
