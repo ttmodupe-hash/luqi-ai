@@ -897,41 +897,18 @@ class SelfImprovementReport(BaseModel):
     capability_expansion_score: int
     recommended_system_prompt_update: str
 
-_registered_users = {"admin@luqi-ai.com": "hashed_master_pass"}
-_corporate_billing_ledger = [
-    {
-        "id": "TX-STRIPE-9901",
-        "customer": "enterprise-client@luqi-ai.com",
-        "transaction_reference": "cs_live_990184712049",
-        "payout_details": "$499.00 USD (Unlimited Multi-Scene Storyboard)",
-        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-    },
-    {
-        "id": "TX-STRIPE-9902",
-        "customer": "academy@pan-africa.edu",
-        "transaction_reference": "cs_live_990284712050",
-        "payout_details": "$249.00 USD (Grade 10 STEM Simulation Engine)",
-        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-    }
-]
-
-@app.post("/api/v1/auth/register")
-@app.post("/auth/register")
+# The original in-memory auth handler accepted arbitrary credentials and made
+# up bearer tokens. The secure Node/MySQL session system is separate; no
+# unverified Python identity may be upgraded to an authenticated account.
+@app.post("/api/v1/auth/register", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/auth/register", dependencies=[Depends(require_legacy_route_disabled)])
 async def register_auth_user(payload: UserAuthPayload):
-    if payload.email in _registered_users:
-        raise HTTPException(status_code=400, detail="Account already registered.")
-    _registered_users[payload.email] = payload.password
-    return {"success": True, "message": "Admin profile registered successfully."}
+    require_legacy_route_disabled()
 
-@app.post("/api/v1/auth/login")
-@app.post("/auth/login")
+@app.post("/api/v1/auth/login", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/auth/login", dependencies=[Depends(require_legacy_route_disabled)])
 async def login_auth_user(payload: dict):
-    email = payload.get("email") or payload.get("username", "")
-    password = payload.get("password", "")
-    if email in _registered_users or email == "admin@luqi-ai.com" or password == "admin123" or not _registered_users:
-        token = f"LUQI-JWT-{datetime.utcnow().timestamp()}"
-        return {"access_token": token, "token_type": "bearer", "status": "authenticated"}
-    return {"access_token": "LUQI-ADMIN-2026", "token_type": "bearer", "status": "authenticated"}
+    require_legacy_route_disabled()
 
 @app.post("/api/v1/media/orchestrate")
 @app.post("/media/orchestrate")
@@ -966,59 +943,30 @@ async def generate_production_storyboard(payload: dict):
     }
     return storyboard
 
-@app.post("/api/v1/media/compile-and-stream")
-@app.post("/media/compile-and-stream")
+# This legacy media route never rendered a video: it returned a made-up
+# storage URL. It is retired until authenticated, billed and verified media
+# jobs with durable artifact proofs are implemented.
+@app.post("/api/v1/media/compile-and-stream", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/media/compile-and-stream", dependencies=[Depends(require_legacy_route_disabled)])
 async def compile_and_stream_scene(payload: CompilationPayload):
-    scene_id = payload.scene_id
-    output_url = f"https://storage.googleapis.com/luqi-toons-vault/renders/{scene_id}.mp4"
-    return {
-        "success": True,
-        "video_url": output_url,
-        "scene_id": scene_id,
-        "status": "AUDIO_SYNC_LOCKED",
-        "message": "FFmpeg audio-first context-locked container rendered and dispatched to Google Cloud Storage."
-    }
+    require_legacy_route_disabled()
 
+# Unsigned Stripe payloads are never treated as settled payments. No sample
+# ledger entries are seeded, no financial records are created from requests.
 @app.post("/api/v1/billing/stripe-webhook", dependencies=[Depends(require_legacy_route_disabled)])
 async def stripe_webhook_receiver(request: Request):
-    try:
-        body = await request.json()
-        event_type = body.get("type", "checkout.session.completed")
-        data_object = body.get("data", {}).get("object", {})
-        customer = data_object.get("customer_details", {}).get("email") or "customer@corporate-network.co.za"
-        amount = data_object.get("amount_total", 5000) / 100
-        
-        record = {
-            "id": f"TX-STRIPE-{len(_corporate_billing_ledger) + 1000}",
-            "customer": customer,
-            "transaction_reference": data_object.get("id", f"cs_live_{datetime.utcnow().timestamp()}"),
-            "payout_details": f"${amount:.2f} USD ({event_type})",
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-        }
-        _corporate_billing_ledger.insert(0, record)
-        return {"status": "success", "processed_record": record}
-    except Exception as e:
-        return {"status": "success", "logged": str(e)}
+    require_legacy_route_disabled()
 
 @app.get("/api/v1/admin/billing-ledger", dependencies=[Depends(require_legacy_route_disabled)])
 @app.get("/admin/billing-ledger", dependencies=[Depends(require_legacy_route_disabled)])
 async def admin_billing_ledger():
-    return _corporate_billing_ledger
+    require_legacy_route_disabled()
 
+# No software or model parameter was ever optimized by this legacy response.
 @app.post("/api/v1/intelligence/self-optimize", dependencies=[Depends(require_legacy_route_disabled)])
 @app.post("/intelligence/self-optimize", dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_internal_self_optimization():
-    report = {
-        "detected_bottlenecks": [
-            "FFmpeg audio-visual frame drift on mobile web viewports",
-            "Slight token latency during recursive Pinecone namespace queries",
-            "Zero-trust SHA-256 block consensus verification queue backlog"
-        ],
-        "code_optimization_patch": "APPLIED: Replaced polling threads with asynchronous event hooks; updated model routing to gemini-2.5-flash with cached token contexts.",
-        "capability_expansion_score": 28,
-        "recommended_system_prompt_update": "Reinforce audio-first timing constraints and automated parameter validation on all CLI sandboxes."
-    }
-    return report
+    require_legacy_route_disabled()
 
 
 # ── Real-Time Status & Presence Connection Manager (RTC Hub) ───────────────
