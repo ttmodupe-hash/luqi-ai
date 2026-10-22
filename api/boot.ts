@@ -19,6 +19,7 @@ import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { runBudgetedPilotChat } from "./services/aiPilotGateway";
+import { checkPilotCredentials } from "./services/pilotCredentialCheck";
 import { MAX_INPUT_CHARS, PilotBlocked, assertPilotEnabled, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
 import { isUnbudgetedAiRoute } from "./lib/legacyAiRoutes";
@@ -1684,6 +1685,14 @@ if (env.isProduction) {
     const port = parseInt(process.env.PORT || "3000");
     const server = serve({ fetch: app.fetch, port }, () => {
       logger.info({ port }, "Server running");
+      // One bounded metadata check per startup, only when explicitly enabled.
+      // No public endpoint, generation requests, credentials or raw errors.
+      void checkPilotCredentials().then(results => {
+        for (const result of results) {
+          logger.info({ ...result, generation: "not_tested", billing: "not_verified" },
+            "Pilot provider metadata check");
+        }
+      }).catch(() => logger.warn("Pilot provider metadata check failed (details redacted)"));
     });
 
     // Graceful shutdown — Railway sends SIGTERM on every redeploy.
