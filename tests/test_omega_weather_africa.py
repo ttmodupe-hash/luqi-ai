@@ -18,7 +18,7 @@ def test_alerts_are_derived_not_official():
     result = WeatherAfrica(provider).assess(-25.7479, 28.2293, now=NOW)
     assert result.screening_flags == (
         "HEAT_SCREENING", "WIND_SCREENING", "HEAVY_RAIN_SCREENING")
-    assert result.verified_official_alerts == ()
+    assert result.provider_reported_official_alerts == ()
 
 
 def test_stale_weather_is_rejected():
