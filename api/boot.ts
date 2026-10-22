@@ -11,6 +11,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
+import { privateConversations } from "./private-conversations";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
@@ -113,6 +114,8 @@ app.use("*", async (c, next) => {
   }
   return next();
 });
+
+app.route("/api/v1/companion/conversations", privateConversations);
 
 // ── tRPC ───────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c) => {

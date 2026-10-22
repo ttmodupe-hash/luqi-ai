@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { signUserToken } from "../api/lib/userToken";
 import { resetAccountPassword } from "../api/services/accountRecovery";
 import { LUQI_JWT_AUDIENCE, LUQI_JWT_ISSUER } from "../api/lib/userToken";
+import { privateConversations } from "../api/private-conversations";
 import { restCompat } from "../api/rest-compat";
 import { authenticatePilotUser } from "../api/services/pilotAuth";
 import { bootstrapDatabase, CREATE_STATEMENTS } from "../db/bootstrap";
@@ -159,6 +160,64 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     } finally {
       await pool.query("DROP TRIGGER reject_session_delete");
     }
+  }, 70_000);
+
+  it("persists private conversations and isolates owners across requests", async () => {
+    const hash = await bcrypt.hash("Private-Conversation-Fixture!", 12);
+    const tokens: string[] = [];
+    for (const email of ["private-owner@example.invalid", "private-other@example.invalid"]) {
+      const [result] = await pool.execute<mysql.ResultSetHeader>(
+        "INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", [email, hash]);
+      tokens.push(signUserToken(result.insertId, hash));
+    }
+    const request = (token: string, path: string, body?: object) => privateConversations.request(path, {
+      method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const created = await request(tokens[0], "/", { personalityId: 1, title: "Private fixture" });
+    expect(created.status).toBe(201);
+    const id = (await created.json()).id;
+    expect((await privateConversations.request(`/${id}/messages`)).status).toBe(401);
+    expect((await request(tokens[1], `/${id}/messages`)).status).toBe(404);
+    expect((await request(tokens[1], `/${id}/messages`, { content: "injected" })).status).toBe(404);
+    expect((await request(tokens[1], "/99999999/messages")).status).toBe(404);
+    expect((await (await request(tokens[1], "/")).json()).conversations).toEqual([]);
+    const writes = await Promise.all(Array.from({ length: 10 }, (_, i) =>
+      request(tokens[0], `/${id}/messages`, { content: `Private turn ${i}` })));
+    expect(writes.map(r => r.status)).toEqual(Array(10).fill(201));
+    expect(await singleNumber("SELECT message_count FROM companion_conversations WHERE id=?", [id])).toBe(10);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [id])).toBe(10);
+    const latest = await request(tokens[0], `/${id}/messages?limit=4`);
+    expect(latest.headers.get("Cache-Control")).toBe("no-store");
+    const messages = (await latest.json()).messages;
+    expect(messages).toHaveLength(4);
+    expect(messages.every((m: any) => m.role === "user")).toBe(true);
+    const older = (await (await request(tokens[0], `/${id}/messages?before=${messages[3].id}&limit=10`)).json()).messages;
+    expect(older).toHaveLength(6);
+    expect(older.every((m: any) => m.id < messages[3].id)).toBe(true);
+    // Prove a fresh request reads MySQL, rather than a process-local chat cache.
+    await pool.execute("UPDATE companion_messages SET content='Persisted database update' WHERE id=?", [messages[0].id]);
+    expect((await (await request(tokens[0], `/${id}/messages?limit=1`)).json()).messages[0].content)
+      .toBe("Persisted database update");
+  }, 70_000);
+
+  it("rolls back a message when its conversation counter update fails", async () => {
+    const hash = await bcrypt.hash("Rollback-Conversation-Fixture!", 12);
+    const [user] = await pool.execute<mysql.ResultSetHeader>(
+      "INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", ["chat-rollback@example.invalid", hash]);
+    const token = signUserToken(user.insertId, hash);
+    const [conversation] = await pool.execute<mysql.ResultSetHeader>(
+      "INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)", [user.insertId, "Rollback fixture"]);
+    const id = conversation.insertId;
+    await pool.query("CREATE TRIGGER reject_conversation_update BEFORE UPDATE ON companion_conversations FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CI forced failure'");
+    try {
+      const response = await privateConversations.request(`/${id}/messages`, { method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ content: "Must roll back" }) });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ code: "CONVERSATION_STORAGE_UNAVAILABLE" });
+      expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [id])).toBe(0);
+      expect(await singleNumber("SELECT message_count FROM companion_conversations WHERE id=?", [id])).toBe(0);
+    } finally { await pool.query("DROP TRIGGER reject_conversation_update"); }
   }, 70_000);
 
   it("atomically enforces 20 daily attempts from concurrent Gemini/OpenAI requests", async () => {
