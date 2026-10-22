@@ -18,7 +18,9 @@ import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { runBudgetedPilotChat } from "./services/aiPilotGateway";
-import { MAX_INPUT_CHARS, PilotBlocked, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
+import { MAX_INPUT_CHARS, PilotBlocked, assertPilotEnabled, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
+import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
+import { isUnbudgetedAiRoute } from "./lib/legacyAiRoutes";
 import { GoogleGenAI } from "@google/genai";
 import { GeminiService } from "./geminiService";
 import { ScienceService } from "./scienceService";
@@ -107,6 +109,16 @@ app.use(async (c, next) => {
   return bodyLimit({ maxSize: 50 * 1024 * 1024 })(c, next);
 });
 
+// Central prelaunch stopgap: historical routes bypass the $100 provider ledger.
+// This protects the wallet even if someone accidentally adds old provider keys.
+app.use("*", async (c, next) => {
+  if (isUnbudgetedAiRoute(c.req.method, c.req.path)) {
+    return c.json({ status: "unavailable", code: "AI_LEGACY_ROUTE_DISABLED",
+      message: "This legacy AI capability is not yet connected to the budgeted gateway." }, 503);
+  }
+  return next();
+});
+
 // ── tRPC ───────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
@@ -162,14 +174,24 @@ app.post('/api/v1/luqi-core', async (c) => {
   const history = Array.isArray(body.history) ? body.history : [];
   const language = typeof body.language === "string" ? body.language : "auto";
   try {
-    const result = await runBudgetedPilotChat(rawQuery.trim(), language, history);
+    // Avoid even attempting login/DB auth while billing remains disabled.
+    assertPilotEnabled();
+    const userId = await authenticatePilotUser(c.req.header("authorization"));
+    const result = await runBudgetedPilotChat(rawQuery.trim(), userId, language, history);
     return c.json({
       status: "success", agent: SOVEREIGN_AGENT_NAME,
       provider: result.provider, provider_model: result.model, response: result.response
     });
   } catch (error) {
+    if (error instanceof PilotAuthError) {
+      return c.json({ status: "unavailable", code: error.code,
+        message: error.code === "AUTH_REQUIRED" ? "Please sign in to use the AI pilot." :
+          "Secure account verification is temporarily unavailable." },
+        error.code === "AUTH_REQUIRED" ? 401 : 503);
+    }
     if (error instanceof PilotBlocked) {
-      if (error.reason === "AI_PROVIDER_BUDGET_EXHAUSTED") {
+      if (error.reason === "AI_PROVIDER_BUDGET_EXHAUSTED" ||
+          error.reason === "AI_USER_DAILY_QUOTA_EXHAUSTED") {
         return c.json({ status: "unavailable", code: error.reason,
           message: "Monthly pilot provider budget exhausted." }, 429);
       }
