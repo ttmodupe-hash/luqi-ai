@@ -50,3 +50,7 @@ if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMM
 if (process.env.LUQI_AUDIT_FAIL_ON_CRITICAL === "true" && Number(stats.critical) > 0) {
   throw new Error("Critical advisories remain unremediated");
 }
+
+if (process.env.LUQI_AUDIT_FAIL_ON_HIGH === "true" && (stats.high > 0 || stats.critical > 0)) {
+  throw new Error("High or critical advisories remain unremediated");
+}

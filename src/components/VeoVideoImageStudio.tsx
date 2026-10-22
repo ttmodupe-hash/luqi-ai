@@ -123,7 +123,7 @@ export const VeoVideoImageStudio: React.FC = () => {
             }}
             className={`px-4 py-1.5 rounded-lg transition-all font-semibold flex items-center gap-1.5 ${
               activeTab === "image"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20"
+                ? "bg-linear-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -137,7 +137,7 @@ export const VeoVideoImageStudio: React.FC = () => {
             }}
             className={`px-4 py-1.5 rounded-lg transition-all font-semibold flex items-center gap-1.5 ${
               activeTab === "video"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20"
+                ? "bg-linear-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/20"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -161,7 +161,7 @@ export const VeoVideoImageStudio: React.FC = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe your scientific diagram, molecular scene, or robotic demonstration..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500 leading-relaxed resize-none"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3.5 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-orange-500 leading-relaxed resize-none"
               />
             </div>
 
@@ -215,7 +215,7 @@ export const VeoVideoImageStudio: React.FC = () => {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs bg-gradient-to-r from-orange-500 via-amber-500 to-red-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-xl shadow-orange-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+              className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs bg-linear-to-r from-orange-500 via-amber-500 to-red-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-xl shadow-orange-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60"
             >
               {loading ? (
                 <>

@@ -85,7 +85,7 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
             <Sliders className="w-3.5 h-3.5 text-purple-400" />
             Adjust Parameter Variable
           </span>
-          <span className="font-mono text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded border border-purple-500/20 font-bold">
+          <span className="font-mono text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-sm border border-purple-500/20 font-bold">
             {localVariable} {module.unit || ""}
           </span>
         </div>
@@ -105,19 +105,19 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
           <div className="flex gap-1.5">
             <button
               onClick={() => setLocalVariable((v) => Math.max(minVal, Number((v * 0.5).toFixed(1))))}
-              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300"
+              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded-sm text-slate-300"
             >
               0.5x
             </button>
             <button
               onClick={() => setLocalVariable(module.initialValue || 10)}
-              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300"
+              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded-sm text-slate-300"
             >
               Reset
             </button>
             <button
               onClick={() => setLocalVariable((v) => Math.min(maxVal, Number((v * 2).toFixed(1))))}
-              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-slate-300"
+              className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded-sm text-slate-300"
             >
               2x
             </button>

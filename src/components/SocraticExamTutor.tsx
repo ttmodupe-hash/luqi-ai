@@ -164,7 +164,7 @@ export const SocraticExamTutor: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-6 rounded-3xl border border-amber-500/30 bg-linear-to-r from-amber-500/10 via-slate-900 to-slate-900 flex flex-wrap items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
             DYNAMIC DOMAIN-DRIVEN RAG
@@ -272,7 +272,7 @@ export const SocraticExamTutor: React.FC = () => {
                   <span className="text-xs font-black uppercase tracking-wider text-amber-400">
                     Question {currentIdx + 1} of {questions.length}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                  <span className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-800 text-slate-300 font-mono">
                     {currentQ.domain} {currentQ.domainPercentage ? `(${currentQ.domainPercentage}%)` : ""}
                   </span>
                 </div>
@@ -520,7 +520,7 @@ export const SocraticExamTutor: React.FC = () => {
               rows={3}
               value={chatPrompt}
               onChange={(e) => setChatPrompt(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-white focus:outline-hidden focus:border-amber-500"
               placeholder="Ask an exam question (e.g. AWS VPC routing tables, PMP scope creep, OSPF neighbor states)..."
             />
             <div className="flex flex-wrap items-center justify-between gap-2">

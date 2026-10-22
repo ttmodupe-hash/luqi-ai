@@ -124,7 +124,7 @@ export default function FloatingCritiqueWidget() {
                 id="critique-type-select"
                 value={critiqueType}
                 onChange={(e) => setCritiqueType(e.target.value as any)}
-                className="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg p-2.5 outline-none focus:border-red-500"
+                className="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg p-2.5 outline-hidden focus:border-red-500"
               >
                 <option value="CRITIQUE">General Criticism / Feedback</option>
                 <option value="BUG">System Bug / Error Code</option>
@@ -141,7 +141,7 @@ export default function FloatingCritiqueWidget() {
                 id="critique-severity-select"
                 value={severityRating}
                 onChange={(e) => setSeverityRating(parseInt(e.target.value, 10))}
-                className="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg p-2.5 outline-none focus:border-red-500"
+                className="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg p-2.5 outline-hidden focus:border-red-500"
               >
                 <option value="1">1 - Minor annoyance / suggestion</option>
                 <option value="3">3 - Definite flaw / impacts learning</option>
@@ -159,14 +159,14 @@ export default function FloatingCritiqueWidget() {
                 value={complaintText}
                 onChange={(e) => setComplaintText(e.target.value)}
                 placeholder="Explain the exact technical issue, wrong answer, or frustrating UI experience..."
-                className="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg p-2.5 outline-none focus:border-red-500 resize-none font-mono text-xs"
+                className="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg p-2.5 outline-hidden focus:border-red-500 resize-none font-mono text-xs"
                 required
               />
             </div>
 
             {submittedStatus && (
               <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-950/80 border border-emerald-600/50 text-emerald-300 text-[11px]">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{submittedStatus}</span>
               </div>
             )}

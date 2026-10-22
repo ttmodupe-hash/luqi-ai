@@ -90,7 +90,7 @@ export default function LanguageSelectorDropdown({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-amber-500/50 transition-all text-xs font-medium shadow-sm hover:shadow-amber-500/10 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-amber-500/50 transition-all text-xs font-medium shadow-xs hover:shadow-amber-500/10 focus:outline-hidden focus:ring-2 focus:ring-amber-500/40"
         aria-haspopup="true"
         aria-expanded={isOpen}
         title={`Active Language: ${currentLang.nativeName} (${currentLang.name}) — 22 Languages Supported`}
@@ -137,7 +137,7 @@ export default function LanguageSelectorDropdown({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search languages (e.g. Zulu, French, Swahili)..."
-                className="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-amber-500 focus:outline-none text-slate-200 placeholder:text-slate-500"
+                className="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-amber-500 focus:outline-hidden text-slate-200 placeholder:text-slate-500"
               />
             </div>
           </div>

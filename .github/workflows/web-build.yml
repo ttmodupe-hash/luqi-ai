@@ -26,6 +26,15 @@ jobs:
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
         run: npm run build
+      - name: Install Chromium for browser checks
+        run: npx playwright install --with-deps chromium --only-shell
+      - name: Verify desktop and mobile browser flows with synthetic API fixtures
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-evidence
+          path: test-results/
       - name: Verify deployment entrypoints
         run: test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js
       - name: Verify recovery terminal safety

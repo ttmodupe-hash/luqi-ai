@@ -202,7 +202,7 @@ const StatCard = ({ title, value, sub, icon, tone }: { title: string; value: str
     cyan: "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20 text-cyan-400",
   };
   return (
-    <div className={`rounded-xl border bg-gradient-to-br ${toneMap[tone]} p-5`}>
+    <div className={`rounded-xl border bg-linear-to-br ${toneMap[tone]} p-5`}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium uppercase tracking-wider opacity-70">{title}</span>
         <div className="opacity-60">{icon}</div>
@@ -217,7 +217,7 @@ const TabButton = ({ active, onClick, icon, label, count }: { active: boolean; o
   <button
     onClick={onClick}
     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-      active ? "bg-slate-800 text-white border border-slate-700 shadow-sm" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+      active ? "bg-slate-800 text-white border border-slate-700 shadow-xs" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
     }`}
   >
     {icon}
@@ -443,10 +443,10 @@ print("STATUS: Verification test passed with zero errors.")
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-emerald-500 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <HeartPulse className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -480,7 +480,7 @@ print("STATUS: Verification test passed with zero errors.")
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Health Score Banner */}
-        <div className={`rounded-2xl border bg-gradient-to-r p-6 flex items-center justify-between ${
+        <div className={`rounded-2xl border bg-linear-to-r p-6 flex items-center justify-between ${
           healthTone === "emerald" ? "from-emerald-950/50 to-slate-900 border-emerald-500/20" :
           healthTone === "amber" ? "from-amber-950/50 to-slate-900 border-amber-500/20" :
           healthTone === "red" ? "from-red-950/50 to-slate-900 border-red-500/20" : "from-slate-900 to-slate-900 border-slate-700"
@@ -920,7 +920,7 @@ print("STATUS: Verification test passed with zero errors.")
               {activity.data && activity.data.length > 0 ? (
                 activity.data.map((a: AgentActivity) => (
                   <div key={a.id} className="relative">
-                    <div className={`absolute -left-[29px] w-3 h-3 rounded-full border-2 ${a.status === "success" ? "bg-emerald-500 border-emerald-500" : a.status === "failed" ? "bg-red-500 border-red-500" : "bg-amber-500 border-amber-500"}`} />
+                    <div className={`absolute left-[-29px] w-3 h-3 rounded-full border-2 ${a.status === "success" ? "bg-emerald-500 border-emerald-500" : a.status === "failed" ? "bg-red-500 border-red-500" : "bg-amber-500 border-amber-500"}`} />
                     <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`${agentColor(a.agentName)}`}>{agentIcon(a.agentName)}</span>
@@ -1021,7 +1021,7 @@ print("STATUS: Verification test passed with zero errors.")
             )}
 
             {/* Architecture Banner */}
-            <div className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/20 p-6 shadow-xl">
+            <div className="rounded-2xl border border-slate-800 bg-linear-to-r from-slate-900 via-slate-900/90 to-emerald-950/20 p-6 shadow-xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
@@ -1114,7 +1114,7 @@ print("STATUS: Verification test passed with zero errors.")
                       value={newBugReport}
                       onChange={(e) => setNewBugReport(e.target.value)}
                       placeholder="e.g. PayFast webhook signature validation mismatch on valid test payloads."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -1124,7 +1124,7 @@ print("STATUS: Verification test passed with zero errors.")
                       value={newTargetFile}
                       onChange={(e) => setNewTargetFile(e.target.value)}
                       placeholder="e.g. token_billing_gateway.py"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-hidden focus:border-emerald-500"
                     />
                   </div>
                 </div>
@@ -1435,7 +1435,7 @@ while True:
                   rows={8}
                   value={sandboxCode}
                   onChange={(e) => setSandboxCode(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-sky-300 focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-sky-300 focus:outline-hidden focus:border-sky-500"
                 />
 
                 <div className="flex items-center justify-between">

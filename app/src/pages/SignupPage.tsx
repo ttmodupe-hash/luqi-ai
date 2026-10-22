@@ -65,7 +65,7 @@ export default function SignupPage() {
     <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 mb-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-linear-to-br from-cyan-500 to-blue-600 mb-3">
             <Sparkles className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Create Account</h1>
@@ -75,7 +75,7 @@ export default function SignupPage() {
         <div className="bg-neutral-800 border border-neutral-700 rounded-2xl p-6 shadow-xl">
           {error && (
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4 text-sm text-red-400">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />{error}
+              <AlertTriangle className="w-4 h-4 shrink-0" />{error}
             </div>
           )}
 
@@ -163,7 +163,7 @@ export default function SignupPage() {
             </label>
 
             <Button type="submit" disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-medium h-11">
+              className="w-full bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-medium h-11">
               {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <><UserPlus className="w-4 h-4 mr-2" />Create Account</>}
             </Button>

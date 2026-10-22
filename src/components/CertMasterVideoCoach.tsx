@@ -868,7 +868,7 @@ export const CertMasterVideoCoach: React.FC = () => {
             value={questionInput}
             onChange={e => setQuestionInput(e.target.value)}
             placeholder="Ask any CCNA, CCNP, CCIP, or ITIL 5 question to generate a live video walkthrough..."
-            className="flex-1 bg-transparent px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-hidden"
           />
           <button
             type="submit"

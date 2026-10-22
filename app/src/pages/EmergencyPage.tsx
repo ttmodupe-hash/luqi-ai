@@ -296,7 +296,7 @@ export default function EmergencyPage() {
         <Card className="bg-blue-500/10 border-blue-500/30">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-sm text-neutral-300">
                 This page works fully offline once loaded. <span className="text-white font-medium">112 works with zero airtime and even without a SIM card.</span> During network outages, an SMS often goes through when mobile data does not.
               </p>
@@ -317,13 +317,13 @@ export default function EmergencyPage() {
                   <Card className="bg-neutral-900 border-neutral-800 hover:border-red-500/40 transition-colors h-full">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-xl ${svc.bgColor} flex items-center justify-center flex-shrink-0`}>
+                        <div className={`w-11 h-11 rounded-xl ${svc.bgColor} flex items-center justify-center shrink-0`}>
                           <Icon className={`h-5 w-5 ${svc.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-white text-sm truncate">{svc.name}</p>
-                            <span className="text-red-400 font-bold text-lg flex-shrink-0">{svc.number}</span>
+                            <span className="text-red-400 font-bold text-lg shrink-0">{svc.number}</span>
                           </div>
                           <p className="text-xs text-neutral-400 mt-0.5">{svc.scope}</p>
                           {svc.note && <p className="text-xs text-cyan-400 mt-1">{svc.note}</p>}
@@ -375,7 +375,7 @@ export default function EmergencyPage() {
                           <ul className="space-y-2">
                             {guide.steps.map((step, i) => (
                               <li key={i} className="flex items-start gap-2 text-sm text-neutral-300">
-                                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold shrink-0">
                                   {i + 1}
                                 </span>
                                 {step}
@@ -388,7 +388,7 @@ export default function EmergencyPage() {
                           <ul className="space-y-2">
                             {guide.donts.map((dont, i) => (
                               <li key={i} className="flex items-start gap-2 text-sm text-neutral-300">
-                                <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                                <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
                                 {dont}
                               </li>
                             ))}
@@ -457,7 +457,7 @@ export default function EmergencyPage() {
         <Card className="bg-neutral-900 border-neutral-800">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
               <p className="text-xs text-neutral-500">
                 Numbers shown are South African national services. This hub guides first response — it does not dispatch services, and your contacts stay on your device. In any life-threatening emergency, call 112 first.
               </p>

@@ -201,7 +201,7 @@ export const AdaptiveVisualizer: React.FC<AdaptiveVisualizerProps> = ({
         ) : currentMode === "ULTRA_FIDELITY_3D" ? (
           // Mode 4: 5G/6G Spatial 3D WebGL
           <div className="w-full space-y-3 text-center">
-            <div className="relative w-full h-44 rounded-xl bg-gradient-to-br from-purple-950/40 to-slate-950 border border-purple-500/30 flex flex-col items-center justify-center p-4">
+            <div className="relative w-full h-44 rounded-xl bg-linear-to-br from-purple-950/40 to-slate-950 border border-purple-500/30 flex flex-col items-center justify-center p-4">
               <div className="w-16 h-16 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 mb-2 shadow-lg shadow-purple-500/20 animate-pulse">
                 <Box className="w-8 h-8" />
               </div>
@@ -227,7 +227,7 @@ export const AdaptiveVisualizer: React.FC<AdaptiveVisualizerProps> = ({
       </div>
 
       {/* Cross-Subsidization Business Strategy Banner */}
-      <div className="p-3.5 bg-gradient-to-r from-purple-950/40 via-slate-950 to-emerald-950/40 rounded-2xl border border-slate-800 text-[11px] text-slate-300 flex items-start gap-2.5">
+      <div className="p-3.5 bg-linear-to-r from-purple-950/40 via-slate-950 to-emerald-950/40 rounded-2xl border border-slate-800 text-[11px] text-slate-300 flex items-start gap-2.5">
         <Globe className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
         <div className="leading-snug">
           <span className="font-bold text-white">Cross-Subsidized Sustainable Equity:</span> Premium 5G/6G institutional subscriptions cross-subsidize 100% free zero-rated 2G SMS packets and lightweight vector models for students in off-grid rural communities.

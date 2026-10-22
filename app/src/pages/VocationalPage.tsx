@@ -235,7 +235,7 @@ function LogicLab() {
       <Card className="bg-neutral-900 border-neutral-800">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+            <Info className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
             <p className="text-sm text-neutral-400">
               These gates are the exact logic inside every electrical control panel, PLC, and microcontroller you will meet in trade work. NAND and NOR are called "universal gates" because any circuit can be built from just one of them.
             </p>
@@ -425,7 +425,7 @@ function TradeTracks() {
                         onClick={() => toggleCheckpoint(key)}
                         className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors ${checked ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-neutral-900 border border-transparent hover:border-neutral-700"}`}
                       >
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${checked ? "bg-emerald-500 border-emerald-500" : "border-neutral-600"}`}>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${checked ? "bg-emerald-500 border-emerald-500" : "border-neutral-600"}`}>
                           {checked && <CheckCircle2 className="h-3 w-3 text-white" />}
                         </div>
                         <span className={`text-sm ${checked ? "text-emerald-300 line-through" : "text-neutral-300"}`}>{cp}</span>

@@ -277,10 +277,10 @@ export default function VideoStudioPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header with Virtual Credit Margin Protector Bar */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
               <Film className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -299,7 +299,7 @@ export default function VideoStudioPage() {
 
           {/* Wallet Balance & Cost Shield Pill */}
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 shadow-xs">
               <Coins className="w-4 h-4 text-amber-400" />
               <div className="text-left">
                 <div className="text-xs font-bold text-slate-200">
@@ -328,7 +328,7 @@ export default function VideoStudioPage() {
 
             <button
               onClick={() => setShowCreateModal(true)}
-              className="text-xs px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-lg shadow-orange-600/20 transition-all flex items-center gap-1.5 font-semibold"
+              className="text-xs px-4 py-2 rounded-xl bg-linear-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-lg shadow-orange-600/20 transition-all flex items-center gap-1.5 font-semibold"
             >
               <Plus className="w-3.5 h-3.5" /> Render New Scene
             </button>
@@ -345,7 +345,7 @@ export default function VideoStudioPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Margin Guard Summary Banner */}
-        <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-950 p-5 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-linear-to-r from-slate-900 via-slate-900/80 to-slate-950 p-5 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -378,7 +378,7 @@ export default function VideoStudioPage() {
         </div>
 
         {/* LUQITOONS QUICK ANIMATION LAUNCHER */}
-        <div className="rounded-2xl border border-orange-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-orange-950/20 p-5 shadow-xl space-y-4">
+        <div className="rounded-2xl border border-orange-500/40 bg-linear-to-br from-slate-900 via-slate-900 to-orange-950/20 p-5 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export default function VideoStudioPage() {
                 value={formPrompt}
                 onChange={(e) => setFormPrompt(e.target.value)}
                 rows={2}
-                className="w-full text-xs px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none text-slate-200 resize-none"
+                className="w-full text-xs px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-hidden text-slate-200 resize-none"
                 placeholder="Describe your 3D cartoon character, action, and lighting..."
               />
             </div>
@@ -445,7 +445,7 @@ export default function VideoStudioPage() {
                 value={formDialogue}
                 onChange={(e) => setFormDialogue(e.target.value)}
                 rows={2}
-                className="w-full text-xs px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none text-slate-200 resize-none"
+                className="w-full text-xs px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-hidden text-slate-200 resize-none"
                 placeholder="What should the character speak in the scene?"
               />
             </div>
@@ -488,7 +488,7 @@ export default function VideoStudioPage() {
               <button
                 onClick={handleGenerate}
                 disabled={generateVideo.isPending}
-                className="text-xs px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
+                className="text-xs px-4 py-2 rounded-xl bg-linear-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
               >
                 {generateVideo.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
                 <span>Render Animation Now ({formDuration * 10} credits)</span>
@@ -586,7 +586,7 @@ export default function VideoStudioPage() {
                   <div className="flex items-start justify-between mb-3">
                     <StatusBadge status={project.status} />
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                      <span className="text-xs px-2 py-0.5 rounded-sm bg-slate-800 text-slate-300">
                         {LANGUAGE_MAP[project.language]?.flag} {LANGUAGE_MAP[project.language]?.name}
                       </span>
                       <button
@@ -654,7 +654,7 @@ export default function VideoStudioPage() {
 
       {/* RENDER NEW SCENE MODAL (With Live Margin & Credit Calculator) */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div className="flex items-center gap-2">
@@ -677,7 +677,7 @@ export default function VideoStudioPage() {
                     type="button"
                     onClick={handleAutoStoryboard}
                     disabled={isGeneratingStoryboard}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/30 text-amber-300 flex items-center gap-1.5 transition-all font-medium disabled:opacity-50"
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-linear-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/30 text-amber-300 flex items-center gap-1.5 transition-all font-medium disabled:opacity-50"
                     title="Generate script and visual prompt via Google AI Studio GenAI (temperature=0.0 deterministic)"
                   >
                     {isGeneratingStoryboard ? (
@@ -692,7 +692,7 @@ export default function VideoStudioPage() {
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   placeholder="e.g. Robot in Lab Explaining Acid-Base Titration"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500/50"
                 />
               </div>
 
@@ -705,7 +705,7 @@ export default function VideoStudioPage() {
                   onChange={(e) => setFormPrompt(e.target.value)}
                   placeholder="Describe lighting, character action, 3D style..."
                   rows={2}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 resize-none"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500/50 resize-none"
                 />
               </div>
 
@@ -721,7 +721,7 @@ export default function VideoStudioPage() {
                   onChange={(e) => setFormDialogue(e.target.value)}
                   placeholder="Enter the speech narration for the character..."
                   rows={2}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-sky-500/50 resize-none"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-hidden focus:border-sky-500/50 resize-none"
                 />
               </div>
 
@@ -801,7 +801,7 @@ export default function VideoStudioPage() {
               <button
                 onClick={handleGenerate}
                 disabled={generateVideo.isPending || !formTitle.trim() || !formPrompt.trim()}
-                className="flex-1 text-sm py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-600/20"
+                className="flex-1 text-sm py-2.5 rounded-xl bg-linear-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-600/20"
               >
                 {generateVideo.isPending ? (
                   <>
@@ -826,7 +826,7 @@ export default function VideoStudioPage() {
 
       {/* PROJECT DETAIL & ASSET INSPECTION MODAL */}
       {showProjectDetail && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <StatusBadge status={showProjectDetail.status} />
@@ -887,7 +887,7 @@ export default function VideoStudioPage() {
 
       {/* PRICING & SUBSCRIPTION TIERS MODAL */}
       {showPricingModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl p-6 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
@@ -992,7 +992,7 @@ export default function VideoStudioPage() {
 
       {/* 2026 UNDERLYING API UNIT COST & COMMERCIAL DETAILS MODAL */}
       {showApiStatusModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl p-6 space-y-5 max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
@@ -1020,7 +1020,7 @@ export default function VideoStudioPage() {
                   <div className="space-y-0.5 max-w-lg">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-slate-200">{provider.name}</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-slate-800 text-slate-400">
                         {provider.envVar}
                       </span>
                     </div>

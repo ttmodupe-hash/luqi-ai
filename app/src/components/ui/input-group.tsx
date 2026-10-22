@@ -11,7 +11,7 @@ function InputGroup({ children, className }: InputGroupProps) {
     <div
       data-slot="input-group"
       className={cn(
-        "relative flex w-full items-center overflow-hidden rounded-md border border-input bg-transparent text-sm shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring",
+        "relative flex w-full items-center overflow-hidden rounded-md border border-input bg-transparent text-sm shadow-xs transition-colors focus-within:ring-1 focus-within:ring-ring",
         className
       )}
     >
@@ -51,7 +51,7 @@ const InputGroupInput = React.forwardRef<HTMLInputElement, InputGroupInputProps>
         ref={ref}
         data-slot="input-group-input"
         className={cn(
-          "flex-1 bg-transparent px-3 py-2 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          "flex-1 bg-transparent px-3 py-2 outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         {...props}

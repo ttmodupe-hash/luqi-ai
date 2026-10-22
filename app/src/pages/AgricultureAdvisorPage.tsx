@@ -647,7 +647,7 @@ export default function AgricultureAdvisorPage() {
                     key={pest.pest_id}
                     className="flex items-start gap-4 p-4 bg-neutral-800 rounded-lg border-l-4 border-orange-500"
                   >
-                    <AlertTriangle className="h-6 w-6 text-orange-400 flex-shrink-0 mt-1" />
+                    <AlertTriangle className="h-6 w-6 text-orange-400 shrink-0 mt-1" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-white">{pest.name}</span>
@@ -733,7 +733,7 @@ export default function AgricultureAdvisorPage() {
                     <ul className="space-y-1">
                       {crop.tips.map((tip, i) => (
                         <li key={i} className="text-sm text-neutral-400 flex items-start gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0 mt-0.5" />
                           {tip}
                         </li>
                       ))}
@@ -858,7 +858,7 @@ export default function AgricultureAdvisorPage() {
                       key={index}
                       className="flex items-start gap-3 p-3 bg-neutral-800 rounded-lg"
                     >
-                      <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-5 w-5 text-green-400 shrink-0 mt-0.5" />
                       <p className="text-sm text-neutral-300">{rec}</p>
                     </div>
                   ))}
@@ -915,7 +915,7 @@ export default function AgricultureAdvisorPage() {
                     <ul className="space-y-1">
                       {pest.prevention.map((prev, i) => (
                         <li key={i} className="text-sm text-neutral-400 flex items-start gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0 mt-0.5" />
                           {prev}
                         </li>
                       ))}

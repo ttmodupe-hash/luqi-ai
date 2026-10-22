@@ -316,7 +316,7 @@ function StepWelcomeProfile({
           placeholder="Enter your name"
           value={data.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          className="w-full px-4 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+          className="w-full px-4 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-sm text-white placeholder:text-neutral-500 focus:outline-hidden focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
         />
       </div>
 

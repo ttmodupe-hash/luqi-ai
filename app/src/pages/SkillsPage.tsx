@@ -189,7 +189,7 @@ export default function SkillsPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {selectedTrade.tools_needed.map((tool, i) => (
                     <div key={i} className="flex items-center gap-2 bg-neutral-800 rounded-lg p-2 border border-neutral-700">
-                      <CheckCircle2 size={12} className="text-cyan-400 flex-shrink-0" />
+                      <CheckCircle2 size={12} className="text-cyan-400 shrink-0" />
                       <span className="text-xs text-neutral-300">{tool}</span>
                     </div>
                   ))}
@@ -208,7 +208,7 @@ export default function SkillsPage() {
               <CardContent className="space-y-2">
                 {selectedTrade.steps.map((step, i) => (
                   <div key={i} className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-xs text-emerald-400 font-bold flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center text-xs text-emerald-400 font-bold shrink-0 mt-0.5">
                       {i + 1}
                     </div>
                     <p className="text-sm text-neutral-300">{step}</p>
@@ -228,7 +228,7 @@ export default function SkillsPage() {
               <CardContent className="space-y-2">
                 {selectedTrade.safety_tips.map((tip, i) => (
                   <div key={i} className="flex items-start gap-2 bg-red-500/5 rounded-lg p-2 border border-red-500/10">
-                    <AlertTriangle size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle size={12} className="text-red-400 shrink-0 mt-0.5" />
                     <p className="text-xs text-neutral-300">{tip}</p>
                   </div>
                 ))}

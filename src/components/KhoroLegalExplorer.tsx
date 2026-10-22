@@ -93,7 +93,7 @@ export default function KhoroLegalExplorer() {
           value={userQuery}
           onChange={(e) => setUserQuery(e.target.value)}
           placeholder="Ask Khoro about CRW1501, South African law, case law citations, or consumer rights..."
-          className="flex-1 bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-amber-500/50"
+          className="flex-1 bg-slate-950 text-slate-200 border border-slate-800 rounded-xl px-4 py-2.5 text-xs outline-hidden focus:border-amber-500/50"
           onKeyDown={(e) => e.key === 'Enter' && executeKhoroQuery()}
         />
         <button

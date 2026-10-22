@@ -494,7 +494,7 @@ export const HeroAiChatConsole: React.FC = () => {
               value={inputPrompt}
               onChange={e => setInputPrompt(e.target.value)}
               placeholder="Ask Luqi-AI anything in English, Sepitori, Zulu, or request code / tax / lab generation..."
-              className="flex-1 bg-transparent px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
+              className="flex-1 bg-transparent px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-hidden"
             />
             <button
               type="submit"

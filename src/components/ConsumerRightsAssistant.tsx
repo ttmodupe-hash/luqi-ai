@@ -104,7 +104,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
             <select
               value={issueType}
               onChange={e => setIssueType(e.target.value as DisputeType)}
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400"
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-hidden focus:border-amber-400"
             >
               <option value="DEFECTIVE_GOODS">🛒 Defective Goods / 6-Month Warranty (CPA 55/56)</option>
               <option value="UNFAIR_CANCELLATION">🚫 Unreasonable Cancellation Penalties (CPA 17)</option>
@@ -126,7 +126,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
               value={businessName}
               onChange={e => setBusinessName(e.target.value)}
               placeholder="e.g. Takealot, Vodacom, Bank, Store"
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-amber-400"
               required
             />
           </div>
@@ -140,7 +140,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
               value={amountZar}
               onChange={e => setAmountZar(e.target.value)}
               placeholder="e.g. 1500"
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-amber-400"
             />
           </div>
         </div>
@@ -154,7 +154,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
             value={description}
             onChange={e => setDescription(e.target.value)}
             placeholder="E.g., I bought an appliance 3 months ago and it stopped working. The store refused to give me a refund and says their policy is strictly store credit within 7 days. Can you help me enforce my 6-month CPA warranty?"
-            className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 leading-relaxed"
+            className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-amber-400 leading-relaxed"
             required
           />
         </div>
@@ -162,7 +162,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-black py-3.5 rounded-2xl text-xs sm:text-sm transition disabled:opacity-50 shadow-md shadow-orange-500/20"
+          className="w-full bg-linear-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-black py-3.5 rounded-2xl text-xs sm:text-sm transition disabled:opacity-50 shadow-md shadow-orange-500/20"
         >
           {loading ? '⚖️ Analyzing South African Law & Drafting Demand Letter...' : '⚖️ Generate Legal Rights & Demand Letter'}
         </button>

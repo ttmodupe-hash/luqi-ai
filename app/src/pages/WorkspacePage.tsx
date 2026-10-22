@@ -523,7 +523,7 @@ export default function WorkspacePage() {
                           <div className="space-y-2">
                             {toneResult.suggestions.map((s: string, i: number) => (
                               <div key={i} className="flex items-start gap-2 text-xs text-neutral-300">
-                                <CheckCircle2 size={12} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+                                <CheckCircle2 size={12} className="text-emerald-400 shrink-0 mt-0.5" />
                                 {s}
                               </div>
                             ))}

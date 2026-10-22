@@ -119,10 +119,10 @@ export default function ArchiveVaultPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
               <Archive className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -142,7 +142,7 @@ export default function ArchiveVaultPage() {
             <button
               onClick={handleSimulateExcelReconciliation}
               disabled={testArtifactMutation.isPending}
-              className="text-xs px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-teal-500/20"
+              className="text-xs px-3.5 py-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition-all flex items-center gap-1.5 shadow-lg shadow-teal-500/20"
             >
               {testArtifactMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -354,7 +354,7 @@ export default function ArchiveVaultPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search facts (VAT, serial numbers, margin protector)..."
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 w-72 focus:outline-none focus:border-purple-500/50"
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 w-72 focus:outline-hidden focus:border-purple-500/50"
                 />
                 <select
                   value={memoryFilter}

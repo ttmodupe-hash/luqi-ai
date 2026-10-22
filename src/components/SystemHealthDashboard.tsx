@@ -70,7 +70,7 @@ export const SystemHealthDashboard: React.FC = () => {
               <div className="flex justify-between items-center text-xs">
                 <span className="font-mono text-purple-400 font-bold">📍 Component: {log.faultComponent}</span>
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                     log.resolvedStatus
                       ? 'bg-emerald-500/10 text-emerald-400'
                       : 'bg-amber-500/10 text-amber-400'

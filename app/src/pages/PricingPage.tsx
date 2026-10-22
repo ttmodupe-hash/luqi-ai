@@ -161,7 +161,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
@@ -189,7 +189,7 @@ export default function PricingPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
         {/* Banner */}
-        <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-slate-900 p-8 space-y-3">
+        <div className="rounded-3xl border border-amber-500/30 bg-linear-to-r from-amber-500/10 via-orange-500/5 to-slate-900 p-8 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
             <ShieldCheck className="w-4 h-4" /> Margin Protected Architecture
           </div>
@@ -312,7 +312,7 @@ export default function PricingPage() {
                   value={jobPrompt}
                   onChange={(e) => setJobPrompt(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
                   placeholder="Describe multi-tab workbook, general ledger reconciliation, or video batch..."
                 />
               </div>
@@ -325,7 +325,7 @@ export default function PricingPage() {
                   <select
                     value={taskType}
                     onChange={(e) => setTaskType(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
                   >
                     <option value="data_reconciliation">Financial Ledger Reconciliation (CrewAI / GenAI)</option>
                     <option value="workbook_audit">Multi-Tab Workbook Forensic Audit</option>

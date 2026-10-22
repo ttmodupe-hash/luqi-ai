@@ -147,7 +147,7 @@ export const GroundedGeminiChat: React.FC = () => {
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold text-white">Gemini Multimodal Chat</span>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+              <span className="px-1.5 py-0.2 rounded-sm text-[9px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
                 PRO TIER
               </span>
             </div>
@@ -173,7 +173,7 @@ export const GroundedGeminiChat: React.FC = () => {
           <select
             value={rolePreset}
             onChange={(e) => setRolePreset(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
+            className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-hidden focus:border-amber-500"
           >
             {Object.entries(rolePrompts).map(([k, v]) => (
               <option key={k} value={k}>
@@ -222,7 +222,7 @@ export const GroundedGeminiChat: React.FC = () => {
         {messages.map((m) => (
           <div key={m.id} className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             {m.role === "model" && (
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-md">
+              <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-md">
                 <Bot className="w-4 h-4" />
               </div>
             )}
@@ -281,7 +281,7 @@ export const GroundedGeminiChat: React.FC = () => {
 
         {loading && (
           <div className="flex gap-3 items-center text-xs text-slate-400">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 animate-pulse">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 animate-pulse">
               <Bot className="w-4 h-4" />
             </div>
             <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl flex items-center gap-2">
@@ -299,12 +299,12 @@ export const GroundedGeminiChat: React.FC = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={`Inquire as ${rolePrompts[rolePreset].label}... (Press Enter)`}
-          className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+          className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-amber-500"
         />
         <button
           type="submit"
           disabled={!input.trim() || loading}
-          className="p-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-2xl font-bold transition-all disabled:opacity-40 shadow-lg shadow-amber-500/20"
+          className="p-3 bg-linear-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-2xl font-bold transition-all disabled:opacity-40 shadow-lg shadow-amber-500/20"
         >
           <Send className="w-4 h-4" />
         </button>

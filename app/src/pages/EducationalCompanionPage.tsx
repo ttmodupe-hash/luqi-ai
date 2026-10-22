@@ -52,7 +52,7 @@ export default function EducationalCompanionPage() {
 
         {/* Tip of the Day */}
         <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-xl p-4 flex items-start gap-3">
-          <Lightbulb size={18} className="text-cyan-500 flex-shrink-0 mt-0.5" />
+          <Lightbulb size={18} className="text-cyan-500 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-neutral-300">{TIPS[activeTip]}</p>
             <button
@@ -72,7 +72,7 @@ export default function EducationalCompanionPage() {
             placeholder="Search resources..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:border-cyan-500"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-hidden focus:border-cyan-500"
           />
         </div>
 
