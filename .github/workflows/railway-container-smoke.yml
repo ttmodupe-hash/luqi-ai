@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build exact Railway Dockerfile
         run: docker build --progress=plain --file Dockerfile --tag luqi-railway-smoke:ci .
+      - name: Verify recovery CLI is included in the production image
+        run: docker run --rm --entrypoint /bin/sh luqi-railway-smoke:ci -c 'test -s /app/dist/reset-account-password.js'
       - name: Start production container without privileged credentials
         run: |
           docker run --detach --name luqi-smoke \
