@@ -2330,22 +2330,16 @@ restCompat.get("/api/ussd", async (c) => {
   });
 });
 
-restCompat.get("/api/billing/dashboard", async (c) => {
-  const breakdown = [
-    { provider: "GOOGLE", totalCost: 1.45 },
-    { provider: "ANTHROPIC", totalCost: 3.20 },
-    { provider: "DEEPSEEK", totalCost: 0.65 },
-    { provider: "ELEVENLABS", totalCost: 2.10 },
-    { provider: "AFRICAS_TALKING", totalCost: 0.85 },
-  ];
-  const standardTotalCost = breakdown.reduce((acc, curr) => acc + curr.totalCost, 0);
-
+// No provider invoice reconciliation is connected. Reservations in the pilot
+// budget ledger are allocations, not settled charges; never present them as spend.
+restCompat.get("/api/billing/dashboard", (c) => {
+  c.header("Cache-Control", "no-store");
   return c.json({
-    success: true,
-    billingCycleAnchorDate: "1st of the month (Synchronized Platform Term)",
-    totalAccumulatedSpendUsd: Number(standardTotalCost.toFixed(4)),
-    breakdown,
-  });
+    success: false,
+    status: "unavailable",
+    code: "BILLING_METRICS_UNAVAILABLE",
+    message: "Verified provider billing data is not connected. Actual spending is unavailable.",
+  }, 503);
 });
 
 // ── AUTONOMIC DIAGNOSTICS & HEALTH LEDGER ────────────────────────────
