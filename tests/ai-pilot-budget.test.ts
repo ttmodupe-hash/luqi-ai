@@ -9,18 +9,18 @@ afterEach(() => vi.unstubAllEnvs());
 const approvals = {
   LUQI_AI_PROVIDER_ENABLED: "true",
   LUQI_AI_BILLING_APPROVED: "true",
-  LUQI_AI_MONTHLY_USD: "50",
-  LUQI_GEMINI_MONTHLY_USD: "30",
-  LUQI_OPENAI_MONTHLY_USD: "20",
+  LUQI_AI_MONTHLY_USD: "100",
+  LUQI_GEMINI_MONTHLY_USD: "60",
+  LUQI_OPENAI_MONTHLY_USD: "40",
 } as const;
 
-describe("LUQI $50 monthly AI pilot allocation", () => {
-  it("divides the cap into $30 Gemini and $20 OpenAI", () => {
-    expect(PILOT_CENTS).toEqual({ gemini: 3000, openai: 2000 });
-    expect(PILOT_TOTAL_CENTS).toBe(5000);
+describe("LUQI $100 monthly AI pilot allocation", () => {
+  it("divides the cap into $60 Gemini and $40 OpenAI", () => {
+    expect(PILOT_CENTS).toEqual({ gemini: 6000, openai: 4000 });
+    expect(PILOT_TOTAL_CENTS).toBe(10000);
     expect(RESERVE_PER_ATTEMPT_CENTS).toBe(10);
-    expect(budgetSnapshot(3000, "gemini")).toEqual({
-      provider: "gemini", monthlyUsd: 30, reservedUsd: 30, remainingUsd: 0
+    expect(budgetSnapshot(6000, "gemini")).toEqual({
+      provider: "gemini", monthlyUsd: 60, reservedUsd: 60, remainingUsd: 0
     });
   });
   it("blocks by default even with an API key supplied", () => {
