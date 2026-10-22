@@ -8,7 +8,7 @@
 
 import mysql from "mysql2/promise";
 
-const CREATE_STATEMENTS: string[] = [
+export const CREATE_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS \`ab_test_results\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
 	\`test_id\` int NOT NULL,
