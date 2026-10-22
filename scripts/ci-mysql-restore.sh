@@ -14,17 +14,26 @@ mysql_cmd() {
   docker run --rm --interactive --network host -e MYSQL_PWD=ci-ephemeral-only-password \
     "$client_image" mysql --host=127.0.0.1 --port=3306 --user=root "$@"
 }
-dump_cmd() {
-  docker run --rm --network host -e MYSQL_PWD=ci-ephemeral-only-password \
-    "$client_image" mysqldump --host=127.0.0.1 --port=3306 --user=root \
-    --single-transaction --quick --routines --triggers --no-tablespaces luqi_ci
-}
+umask 077
 temporary_dir="$(mktemp -d)"
 trap 'rm -rf "$temporary_dir"' EXIT
-umask 077
 
+# Exercise the same export script an operator will invoke. Only the transport
+# is wrapped: this isolated runner uses the MySQL 8.4 client in Docker.
+mkdir "$temporary_dir/bin"
+cat > "$temporary_dir/bin/mysqldump" <<'CLIENT'
+#!/usr/bin/env bash
+exec docker run --rm --network host -e MYSQL_PWD mysql:8.4 mysqldump "$@"
+CLIENT
+chmod 700 "$temporary_dir/bin/mysqldump"
 echo "CI restore: exporting disposable MySQL source"
-dump_cmd > "$temporary_dir/luqi-backup.sql"
+PATH="$temporary_dir/bin:$PATH" DB_ENGINE=mysql BACKUP_REDIS=false \
+  BACKUP_DIR="$temporary_dir/backups" DB_HOST=127.0.0.1 DB_PORT=3306 \
+  DB_USER=root DB_PASSWORD=ci-ephemeral-only-password DB_NAME=luqi_ci \
+  S3_BUCKET= bash scripts/backup.sh
+backups=("$temporary_dir/backups/"mysql_luqi_ci_*.sql.gz)
+test "${#backups[@]}" = 1
+gzip -cd "${backups[0]}" > "$temporary_dir/luqi-backup.sql"
 test -s "$temporary_dir/luqi-backup.sql"
 
 # IMPORTANT: never restore into the source or an existing database.

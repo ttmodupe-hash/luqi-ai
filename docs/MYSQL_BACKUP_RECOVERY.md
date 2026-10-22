@@ -54,3 +54,46 @@ other services, encryption policy, or live cross-version migration.
 Before inviting customers, complete GitHub issue #144: set Railway backup
 retention, least-privilege DB credentials, hosting spend notifications,
 a production-like restore rehearsal and documented incident ownership.
+
+## Explicit logical export command (not scheduled)
+
+`scripts/backup.sh` supports `DB_ENGINE=mysql` using a MySQL 8 client.
+The legacy default remains `postgres`; always set the engine explicitly for
+Railway MySQL. Set `BACKUP_REDIS=false` when no Redis snapshot is required.
+Supply `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` through the
+operator's protected environment. Do not paste production credentials into
+commands, workflow files, or chat. Use a dedicated backup account with the
+privileges needed to export tables, triggers and routines.
+
+```sh
+DB_ENGINE=mysql BACKUP_REDIS=false BACKUP_DIR=/var/backups/luqi-ai bash scripts/backup.sh
+```
+
+The output directory must belong to the invoking user and exclude group/other
+access. Exports use private temporary files and publish only after successful
+database export and, if requested, actual Redis RDB download and remote upload.
+Passwords are passed through client environment variables, never command-line
+arguments; client diagnostics are discarded to avoid leaking credentials.
+Use a trusted isolated host: same-user/root processes may inspect environments.
+
+MySQL exports use `--single-transaction` for InnoDB and exclude database-selection
+statements so restore tooling can choose a separate target. Avoid concurrent DDL
+during export; this is not a consistent backup of nontransactional tables.
+The CI restore job now exercises this exact script with a disposable MySQL 8.4
+server and checks the restored application data and spending ledgers.
+
+The script checks command failures, nonempty SQL, gzip integrity and the Redis
+RDB header. Only a successful isolated restore proves recoverability. Local
+exports are compressed, **not encrypted**. Use encrypted storage and restrict
+access before processing production data. `S3_BUCKET` optionally uploads both
+requested exports to an existing destination using the configured AWS CLI;
+this neither creates storage nor proves its encryption or retention policy.
+An upload failure may leave a partial remote set, but never reports success or
+runs retention cleanup. No schedule, cloud storage, paid service, or production
+backup is enabled by this code change.
+
+`RETENTION_DAYS` defaults to 30 and must be positive. Cleanup runs only after
+all requested exports/uploads succeed, and affects only matching local files
+for the selected engine/database (plus Redis when requested). Configure remote
+retention separately. Failed exports clean private temporary files and preserve
+existing published backups.
