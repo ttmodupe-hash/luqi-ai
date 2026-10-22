@@ -67,4 +67,4 @@ jobs:
             --data '{"user_input":"Explain photosynthesis in one sentence"}' \
             http://127.0.0.1:18765/api/v1/luqi-core)
           test "$code" = "503"
-          grep -q '"code":"AI_PROVIDER_UNAVAILABLE"' /tmp/luqi-ai-unavailable.json
+          grep -q '"code":"AI_DISABLED"' /tmp/luqi-ai-unavailable.json
