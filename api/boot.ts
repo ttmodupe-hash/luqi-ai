@@ -18,7 +18,7 @@ import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { runBudgetedPilotChat } from "./services/aiPilotGateway";
-import { MAX_INPUT_CHARS, PilotBlocked } from "./services/aiPilotBudget";
+import { MAX_INPUT_CHARS, PilotBlocked, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { GoogleGenAI } from "@google/genai";
 import { GeminiService } from "./geminiService";
 import { ScienceService } from "./scienceService";
@@ -127,21 +127,22 @@ app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(),
  * assertion. Never expose secret values on diagnostics.
  */
 app.get("/v1/readiness", async (c) => {
-  const aiConfigured = [
-    "GEMINI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY",
-    "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
-  ].some((name) => Boolean(process.env[name]?.trim()));
-  const persistence = await checkPersistentDatabase();
-  const ready = aiConfigured && persistence.status === "connected";
+  const [persistence, pilot] = await Promise.all([
+    checkPersistentDatabase(),
+    checkPilotGatewayReadiness(),
+  ]);
+  // AI model credentials and provider billing are never considered verified
+  // solely because these fields exist. A real monitored roundtrip is separate.
+  const ready = persistence.status === "connected" && pilot === "configured_not_verified";
   return c.json({
-    status: ready ? "ready" : "degraded",
+    status: ready ? "configured_not_verified" : "degraded",
     checks: {
       runtime: "up",
-      model_provider: aiConfigured ? "configured_not_validated" : "unconfigured",
       persistence: persistence.status,
       expected_database_driver: "mysql",
+      ai_pilot: pilot,
     },
-    note: "Model provider is configuration-only; no external AI response is guaranteed by this check.",
+    note: "Provider/model entitlement and live inference are not verified by readiness.",
   }, ready ? 200 : 503);
 });
 
