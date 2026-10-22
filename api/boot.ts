@@ -20,6 +20,7 @@ import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { runBudgetedPilotChat } from "./services/aiPilotGateway";
 import { MAX_INPUT_CHARS, PilotBlocked, assertPilotEnabled, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
+import { isUnbudgetedAiRoute } from "./lib/legacyAiRoutes";
 import { GoogleGenAI } from "@google/genai";
 import { GeminiService } from "./geminiService";
 import { ScienceService } from "./scienceService";
@@ -106,6 +107,16 @@ app.use(async (c, next) => {
     return next();
   }
   return bodyLimit({ maxSize: 50 * 1024 * 1024 })(c, next);
+});
+
+// Central prelaunch stopgap: historical routes bypass the $100 provider ledger.
+// This protects the wallet even if someone accidentally adds old provider keys.
+app.use("*", async (c, next) => {
+  if (isUnbudgetedAiRoute(c.req.method, c.req.path)) {
+    return c.json({ status: "unavailable", code: "AI_LEGACY_ROUTE_DISABLED",
+      message: "This legacy AI capability is not yet connected to the budgeted gateway." }, 503);
+  }
+  return next();
 });
 
 // ── tRPC ───────────────────────────────────────────────────────────
