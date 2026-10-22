@@ -26,7 +26,7 @@ def test_side_effects_require_human_approval():
     engine = WorkflowEngine(approval_authorizer=lambda actor, task: actor == "reviewer-1")
     calls = []
     engine.register("send", lambda x: calls.append(x), side_effects=True)
-    task = engine.submit("send", {"amount": 42})
+    task = engine.submit("send", {"amount": 42}, idempotency_key="send-42")
     assert task.state == State.APPROVAL_REQUIRED
     with pytest.raises(PermissionError):
         engine.run(task.id)
@@ -40,7 +40,7 @@ def test_side_effects_require_human_approval():
 def test_rejected_tasks_never_run():
     engine = WorkflowEngine(approval_authorizer=lambda actor, task: actor == "human-1")
     engine.register("charge", lambda _: 1, side_effects=True)
-    task = engine.submit("charge", {})
+    task = engine.submit("charge", {}, idempotency_key="charge-1")
     engine.approve(task.id, "human-1", approved=False)
     with pytest.raises(PermissionError):
         engine.run(task.id)
@@ -74,14 +74,37 @@ def test_runnable_batch_does_not_execute_approval_pending():
     engine.register("read", lambda _: "ok", side_effects=False)
     engine.register("write", lambda _: "blocked", side_effects=True)
     engine.submit("read", {})
-    engine.submit("write", {})
+    engine.submit("write", {}, idempotency_key="write-1")
     assert [t.state for t in engine.run_due()] == [State.COMPLETED]
 
 
 def test_untrusted_approval_is_rejected_even_with_human_sounding_name():
     engine = WorkflowEngine()
     engine.register("pay", lambda _: True, side_effects=True)
-    task = engine.submit("pay", {})
+    task = engine.submit("pay", {}, idempotency_key="pay-1")
     with pytest.raises(PermissionError):
         engine.approve(task.id, "reviewer-1", approved=True)
     assert engine.get(task.id).state == State.APPROVAL_REQUIRED
+
+
+def test_ambiguous_external_side_effect_never_retried():
+    engine = WorkflowEngine(approval_authorizer=lambda actor, _: actor == "human-1")
+    effects = []
+    def might_have_charged(payload):
+        effects.append(payload["amount"])
+        raise TimeoutError("Remote charge may already be accepted")
+    engine.register("charge", might_have_charged, side_effects=True)
+    task = engine.submit("charge", {"amount": 100}, idempotency_key="p-100", max_attempts=5)
+    engine.approve(task.id, "human-1", approved=True)
+    result = engine.run(task.id)
+    assert result.state == State.FAILED and result.attempts == 1
+    assert "manual_reconciliation_required" in [event["action"] for event in result.audit]
+    assert len(effects) == 1
+    assert engine.run_due() == []
+
+
+def test_side_effects_need_idempotency_key():
+    engine = WorkflowEngine()
+    engine.register("mail", lambda _: None, side_effects=True)
+    with pytest.raises(ValueError, match="idempotency"):
+        engine.submit("mail", {})
