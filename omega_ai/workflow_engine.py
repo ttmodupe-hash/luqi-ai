@@ -51,7 +51,10 @@ class WorkflowEngine:
     cross-process execution or claiming exactly-once guarantees.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, approval_authorizer: Callable[[str, str], bool] | None = None) -> None:
+        # Authenticated user identity must be verified by the hosting app;
+        # a caller-supplied string is never enough to approve sensitive tasks.
+        self._approval_authorizer = approval_authorizer
         self._handlers: dict[str, tuple[Callable[[dict[str, Any]], Any], bool]] = {}
         self._tasks: dict[str, Task] = {}
         self._keys: dict[str, str] = {}
@@ -107,6 +110,8 @@ class WorkflowEngine:
             raise ValueError("Task is not awaiting human approval")
         if not actor or actor.strip().lower() in ("system", "agent", "automation"):
             raise ValueError("A human approver identifier is required")
+        if self._approval_authorizer is None or not self._approval_authorizer(actor, task_id):
+            raise PermissionError("Approval requires a host-authenticated human authorization")
         instant = now or _now()
         task.state = State.PENDING if approved else State.CANCELLED
         task.approved_by = actor if approved else None
