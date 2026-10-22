@@ -4,6 +4,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
+import jwt from "jsonwebtoken";
+import { restCompat } from "../api/rest-compat";
+import { authenticatePilotUser } from "../api/services/pilotAuth";
 import { bootstrapDatabase, CREATE_STATEMENTS } from "../db/bootstrap";
 import {
   PilotBlocked, reservePilotAttempt, PILOT_CENTS,
@@ -25,6 +28,7 @@ beforeAll(async () => {
       !process.env.DATABASE_URL?.includes("127.0.0.1")) {
     throw new Error("Refusing to run destructive integration checks outside local CI MySQL");
   }
+  process.env.JWT_SECRET = "ci-local-only-signed-account-test-secret-32-chars";
   await bootstrapDatabase();
   pool = mysql.createPool(process.env.DATABASE_URL);
 }, 60_000);
@@ -41,6 +45,52 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     await bootstrapDatabase();
     const [again] = await pool.query<RowDataPacket[]>("SHOW TABLES");
     expect(again.length).toBe(37);
+  }, 70_000);
+
+  it("registers real users, checks JWT login and blocks disabled users", async () => {
+    const email = "ci-auth-fixture@example.invalid";
+    const password = "Strong-Unique-CI-Password-2026!";
+    const jsonRequest = (path: string, body: object) => restCompat.request(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const weak = await jsonRequest("/api/v1/auth/register", { email, password: "short" });
+    expect(weak.status).toBe(400);
+    expect(await singleNumber("SELECT COUNT(*) AS n FROM users")).toBe(0);
+
+    const register = await jsonRequest("/api/v1/auth/register", { email, password, name: "CI User" });
+    expect(register.status).toBe(201);
+    const created = await register.json();
+    expect(created.user.email).toBe(email);
+    expect(typeof created.token).toBe("string");
+    expect(created.token).not.toMatch(/^LUQI-JWT-/);
+    expect(jwt.verify(created.token, process.env.JWT_SECRET!)).toMatchObject({ userId: created.user.id });
+    expect(await singleNumber("SELECT COUNT(*) AS n FROM users")).toBe(1);
+    const duplicate = await jsonRequest("/auth/signup", { email, password });
+    expect(duplicate.status).toBe(409);
+
+    const badLogin = await jsonRequest("/auth/login", { email, password: "wrong-password" });
+    expect(badLogin.status).toBe(401);
+    const login = await jsonRequest("/api/v1/auth/login", { email, password });
+    expect(login.status).toBe(200);
+    const signedIn = await login.json();
+    expect(jwt.verify(signedIn.token, process.env.JWT_SECRET!)).toMatchObject({ userId: created.user.id });
+
+    const account = await restCompat.request("/auth/me", {
+      headers: { Authorization: `Bearer ${signedIn.token}` },
+    });
+    expect(account.status).toBe(200);
+    expect((await account.json()).email).toBe(email);
+    expect(await authenticatePilotUser(`Bearer ${signedIn.token}`)).toBe(created.user.id);
+
+    // Disabling account revokes its ability to log in or spend on AI.
+    await pool.execute("UPDATE users SET is_active=0 WHERE id=?", [created.user.id]);
+    const disabled = await jsonRequest("/auth/login", { email, password });
+    expect(disabled.status).toBe(401);
+    await expect(authenticatePilotUser(`Bearer ${signedIn.token}`))
+      .rejects.toMatchObject({ code: "AUTH_REQUIRED" });
   }, 70_000);
 
   it("atomically enforces 20 daily attempts from concurrent Gemini/OpenAI requests", async () => {

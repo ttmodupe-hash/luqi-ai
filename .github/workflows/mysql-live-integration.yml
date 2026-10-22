@@ -6,6 +6,9 @@ on:
     paths:
       - "db/**"
       - "api/services/aiPilotBudget.ts"
+      - "api/services/pilotAuth.ts"
+      - "api/rest-compat.ts"
+      - "api/boot.ts"
       - "api/lib/mysqlConfig.ts"
       - "tests/mysql-live.integration.test.ts"
       - ".github/workflows/mysql-live-integration.yml"
