@@ -45,9 +45,10 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
 - The migration now creates both `ai_pilot_monthly_spend` and
   `ai_pilot_daily_user_usage`. The entire reservation transaction fails
   closed if either table is missing/unreachable.
-- Legacy model endpoints return 503 `AI_LEGACY_ROUTE_DISABLED` during this
-  pilot; they must be reviewed for authentication and metering before
-  re-enabling. Ordinary login/status/health routes are unaffected.
+- Legacy model endpoints, including unmetered companion/voice/video/agent
+  tRPC namespaces, return 503 `AI_LEGACY_ROUTE_DISABLED` during this pilot;
+  they must be reviewed for authentication and metering before re-enabling.
+  Ordinary login/status/health and selected informational routes are unaffected.
 - Users must obtain a valid account JWT through existing secure login before
   using the pilot chat. No shared browser secret or frontend API key is allowed.
 
