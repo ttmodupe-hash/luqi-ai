@@ -97,3 +97,12 @@ all requested exports/uploads succeed, and affects only matching local files
 for the selected engine/database (plus Redis when requested). Configure remote
 retention separately. Failed exports clean private temporary files and preserve
 existing published backups.
+
+## Complete fixture comparison
+
+The isolated CI drill also compares deterministic logical dumps of the source
+and recovered database, including all tables, password hashes, rows, indexes,
+constraints, routines and triggers. Both fixtures remain quiescent during this
+comparison. SQL stays in a private temporary directory and is removed on exit;
+a mismatch fails the job without printing records. This expands fixture
+coverage, but is still not evidence of a production backup schedule or restore.

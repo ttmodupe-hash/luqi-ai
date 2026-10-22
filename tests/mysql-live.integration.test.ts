@@ -87,6 +87,11 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
 
     // Disabling account revokes its ability to log in or spend on AI.
     await pool.execute("UPDATE users SET is_active=0 WHERE id=?", [created.user.id]);
+    // Re-running schema bootstrap must preserve credentials and account state.
+    const [beforeBootstrap] = await pool.query<RowDataPacket[]>("SELECT * FROM users ORDER BY id");
+    await bootstrapDatabase();
+    const [afterBootstrap] = await pool.query<RowDataPacket[]>("SELECT * FROM users ORDER BY id");
+    expect(afterBootstrap).toEqual(beforeBootstrap);
     const disabled = await jsonRequest("/auth/login", { email, password });
     expect(disabled.status).toBe(401);
     await expect(authenticatePilotUser(`Bearer ${signedIn.token}`))
@@ -137,6 +142,40 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
       "SELECT reserved_cents AS n FROM ai_pilot_monthly_spend WHERE month_utc=? AND provider='openai'",
       [MONTH])).toBe(4000);
   });
+
+  it("prevents concurrent accounts from overrunning either monthly provider limit", async () => {
+    const clock = new Date("2026-12-07T12:00:00Z");
+    const month = utcMonth(clock);
+    const day = utcDay(clock);
+    for (const provider of ["gemini", "openai"] as const) {
+      await pool.execute(
+        "INSERT INTO ai_pilot_monthly_spend (month_utc, provider, reserved_cents) VALUES (?, ?, ?)",
+        [month, provider, PILOT_CENTS[provider] - 20]);
+    }
+    // Only two reservations remain per provider; different accounts contend
+    // for the same monthly rows so daily per-user limits cannot mask an overrun.
+    const results = await Promise.allSettled(Array.from({ length: 24 }, (_, i) =>
+      reservePilotAttempt(i % 2 === 0 ? "gemini" : "openai", 600 + i, clock)));
+    expect(results.filter(x => x.status === "fulfilled")).toHaveLength(4);
+    const blocked = results.filter(x => x.status === "rejected");
+    expect(blocked).toHaveLength(20);
+    for (const item of blocked) {
+      if (item.status === "rejected") {
+        expect(item.reason).toBeInstanceOf(PilotBlocked);
+        expect(item.reason.reason).toBe("AI_PROVIDER_BUDGET_EXHAUSTED");
+      }
+    }
+    for (const provider of ["gemini", "openai"] as const) {
+      expect(await singleNumber(
+        "SELECT reserved_cents AS n FROM ai_pilot_monthly_spend WHERE month_utc=? AND provider=?",
+        [month, provider])).toBe(PILOT_CENTS[provider]);
+    }
+    // Rejected attempts roll back their user counter and don't consume quota.
+    expect(await singleNumber(
+      "SELECT SUM(attempts) AS n FROM ai_pilot_daily_user_usage WHERE day_utc=?", [day])).toBe(4);
+    expect(await singleNumber(
+      "SELECT COUNT(*) AS n FROM ai_pilot_daily_user_usage WHERE day_utc=?", [day])).toBe(4);
+  }, 70_000);
 
   it("rolls back all spend reservations if the quota ledger is missing", async () => {
     // Only this isolated CI database is modified; never execute against Railway.
