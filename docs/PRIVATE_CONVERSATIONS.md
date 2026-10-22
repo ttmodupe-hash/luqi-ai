@@ -28,9 +28,16 @@ No schema migration or production fixture inserts are performed.
 
 This API stores user-authored messages only. It does not generate assistant
 responses, summarize memories, claim learned capabilities or activate providers.
-The legacy companion tRPC namespace remains blocked. The Companion page is not
-connected to this API yet. Its UI integration and budgeted assistant-response
-persistence require separate work before claiming complete companion memory.
+The legacy companion tRPC namespace remains blocked. Both Companion frontend copies now use this API. The page signs into an existing
+account and keeps its token only in component memory. Leaving/reloading the page
+requires signing in again. Sign-out clears private UI state and invalidates pending
+callbacks. Conversation and message lists page backward in batches of 50.
+Only a validated persisted response marks a message saved. Failed writes retain
+the draft and block another write until history is refreshed; users must check
+for duplicates because transport failure can follow a committed transaction.
+There are no seeded memories, fabricated fallback replies or learning scores.
+Budgeted assistant-response persistence still requires separate work before
+claiming complete companion memory.
 
 Retries of a successful POST can create duplicates: this API does not yet offer
 idempotency keys, so clients must not automatically retry ambiguous writes.
