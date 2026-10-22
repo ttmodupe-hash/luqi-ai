@@ -1,0 +1,56 @@
+name: LUQI MySQL Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "db/**"
+      - "api/services/aiPilotBudget.ts"
+      - "api/lib/mysqlConfig.ts"
+      - "tests/mysql-live.integration.test.ts"
+      - ".github/workflows/mysql-live-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-real-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # ONLY for an isolated disposable GitHub Actions fixture. These flags
+      # exercise the reservation library directly and cannot make AI API calls:
+      # no AI provider keys are present and the production Railway service is
+      # unchanged. Never use this CI flag or fixture URL outside the job.
+      LUQI_MYSQL_CI_FIXTURE: "true"
+      DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci"
+      LUQI_AI_PROVIDER_ENABLED: "true"
+      LUQI_AI_BILLING_APPROVED: "true"
+      LUQI_AI_MONTHLY_USD: "100"
+      LUQI_GEMINI_MONTHLY_USD: "60"
+      LUQI_OPENAI_MONTHLY_USD: "40"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install Node dependencies
+        run: npm install --legacy-peer-deps --include=dev
+      - name: Test real InnoDB schema, concurrent quotas and fail-closed rollback
+        run: npx vitest run tests/mysql-live.integration.test.ts --no-file-parallelism
