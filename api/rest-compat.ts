@@ -9,14 +9,14 @@
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
-import { users, knowledgeArticles, creditWallets, paymentEvents } from "../db/schema";
+import { users, knowledgeArticles, creditWallets } from "../db/schema";
 import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
 import { appendTurn, getHistory, historyToContext } from "./services/session";
 import { generateImage, imageProviderAvailable } from "./services/media";
-import { paymentsConfigured, initializeTopup, verifyWebhookSignature, verifyTransaction } from "./services/payments";
+import { paymentsConfigured } from "./services/payments";
 import { analyzeContractText } from "./services/legal";
 import { getRadar, RADAR_DISCLAIMER } from "./services/insights";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
