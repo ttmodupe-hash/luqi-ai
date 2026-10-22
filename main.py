@@ -33,13 +33,14 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, HTTPException, Header
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import settings
+from backend.legacy_route_security import require_legacy_route_disabled
 
 # ── Logging ──────────────────────────────────────────────────────────────
 logger = logging.getLogger("luqi")
@@ -978,7 +979,7 @@ async def compile_and_stream_scene(payload: CompilationPayload):
         "message": "FFmpeg audio-first context-locked container rendered and dispatched to Google Cloud Storage."
     }
 
-@app.post("/api/v1/billing/stripe-webhook")
+@app.post("/api/v1/billing/stripe-webhook", dependencies=[Depends(require_legacy_route_disabled)])
 async def stripe_webhook_receiver(request: Request):
     try:
         body = await request.json()
@@ -999,13 +1000,13 @@ async def stripe_webhook_receiver(request: Request):
     except Exception as e:
         return {"status": "success", "logged": str(e)}
 
-@app.get("/api/v1/admin/billing-ledger")
-@app.get("/admin/billing-ledger")
+@app.get("/api/v1/admin/billing-ledger", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/admin/billing-ledger", dependencies=[Depends(require_legacy_route_disabled)])
 async def admin_billing_ledger():
     return _corporate_billing_ledger
 
-@app.post("/api/v1/intelligence/self-optimize")
-@app.post("/intelligence/self-optimize")
+@app.post("/api/v1/intelligence/self-optimize", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/intelligence/self-optimize", dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_internal_self_optimization():
     report = {
         "detected_bottlenecks": [
