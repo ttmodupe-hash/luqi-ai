@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   LANGUAGES,
-  LanguageInfo,
+  type LanguageInfo,
   getStoredLanguage,
   setStoredLanguage,
 } from "@/lib/languages";

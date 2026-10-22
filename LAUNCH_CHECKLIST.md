@@ -1,76 +1,81 @@
-# LAUNCH_CHECKLIST.md - LUQI AI v29.3.0 "Launch-Grade" runbook
+# LUQI-AI production launch gates
 
-Human launch runbook for omega.py v29.3.0. Every step is CLI-only,
-stdlib-only, and safe to re-run. ASCII document.
+A passing engine self-test or HTTP liveness check is not production launch approval.
+Record evidence for the exact candidate commit and deployed release. An unchecked
+item is outstanding; do not label the full product launch-ready until all applicable
+gates pass. Offline modules must be described as offline until their user journeys
+are integrated and verified.
 
-## 1. Engine selftest (blocker)
+## Release and rollback
 
-    cd <clean workdir>
-    python3 omega.py --selftest        # Windows: py -3.11 omega.py --selftest
+- [ ] Candidate SHA identified; Python CI, web contract tests, production container
+  smoke test, MySQL integration/isolated restore and production dependency audit pass.
+- [ ] Railway web release for that SHA reaches terminal `SUCCESS` (queued, building,
+  and an older successful deployment do not qualify).
+- [ ] Public `/`, `/v1/health`, and intended user routes respond correctly over HTTPS.
+- [ ] `/v1/readiness` is inspected separately: connected persistence does not prove
+  provider entitlement, inference, backup retention or memory durability.
+- [ ] Prior successful deployment identified and rollback procedure reviewed.
+  Preserve the database; never restore production data merely to roll back code.
 
-- Expected: ALL checks PASS (48+ legacy checks plus the v29.3.0
-  process-isolation, bridge, language-pack, and launch checks), exit code 0.
-- Run twice; results must be identical (idempotent).
-- DO NOT LAUNCH if any check prints FAIL.
+## Authentication and data protection
 
-## 2. .env keys (optional - WARN, not blockers)
+- [ ] Registration/login/logout and expired/invalid-token rejection verified with
+  disposable test accounts; cross-account data access and privileged routes denied.
+- [ ] Open security PRs reviewed, including JWT issuer/audience and expiry hardening.
+- [ ] No credentials in source, logs, browser bundles or API error responses.
+- [ ] Production backup schedule, encrypted destination, retention and failure
+  alerting documented; a recent backup artifact exists and restores in isolation.
+  The disposable CI restore proves the export code, not production backup coverage.
+- [ ] Durable conversation memory is verified across a restart/deployment. Local
+  checkpoint files on an unmounted container filesystem do not meet this gate.
+- [ ] Account deletion, retention and privacy disclosures match actual behavior.
 
-Create `.env` next to omega.py with any of:
+## Agents and product journeys
 
-    OPENAI_API_KEY=sk-...            # LLM-enhanced tax guidance + bridge primary
-    ANTHROPIC_API_KEY=sk-ant-...     # bridge fallback provider (optional)
-    OMEGA_LLM_MODEL=gpt-4o-mini      # bridge primary model (optional)
-    SERPER_API_KEY=...               # live web research
-    OPENROUTER_API_KEY=...           # 'evolve run online' proposals
-    OPENROUTER_MODEL=openai/gpt-4o-mini
-    GITHUB_REPO=owner/repo           # 'sync github' push target
-    GITHUB_TOKEN=ghp_...             # git push credentials (always masked)
+- [ ] Side effects require a boolean approval decision and literal `True` from the
+  host authorization callback; malformed decisions never change task state.
+- [ ] Failed external side effects require reconciliation; no automatic duplicate
+  payment, submission or deletion. No fabricated self-healing/deployment outcomes.
+- [ ] Persistent task state, worker ownership and crash recovery verified before
+  claiming durable or exactly-once agent execution. The offline workflow runner
+  currently uses process-local state.
+- [ ] Six Omega modules tested through each advertised user journey before those
+  integrations are marketed as live. Unit tests alone establish offline contracts.
+- [ ] African-language selection, fallback, translated UI and representative answer
+  quality checked per advertised language with suitable fluent reviewers.
+- [ ] Mobile layout, keyboard navigation, loading/error states and critical browser
+  journeys verified; performance and concurrency tested against an agreed target.
+- [ ] Operational dashboards distinguish measured data from demos and unavailable
+  telemetry. No simulated balance, health, remediation or success is presented as real.
 
-Optional claude_engine bridge: clone the claude_engine repo and run
-`pip install -e .` inside it. The engine works fully without it - check
-status any time with the `bridge` command.
+## Paid AI and payments: separate approval required
 
-## 3. Launch pre-flight (blocker)
+- [ ] Owner explicitly approves activation independently of launch preparation.
+- [ ] Keep provider and billing flags disabled until that approval. Preserve the
+  agreed monthly allocation: $100 total, $60 Gemini / $40 OpenAI.
+- [ ] After approval, verify configured model entitlement and bounded real inference,
+  persistent budget enforcement, rate limits and error handling before an AI launch.
+- [ ] Payments require their own approval and verified gateway/webhook flows.
 
-    python3 omega.py
-    [OMEGA] > launch
+## Evidence snapshot: 22 October 2026
 
-- Expected final line: `LAUNCH READY`.
-- Blockers are ONLY: pillars integrity failure, memory not writable,
-  selftest-core failure. Fix and re-run until `LAUNCH READY`.
-- Missing optional keys print WARN and never block.
+This is a dated observation, not a live status dashboard:
 
-## 4. Push to GitHub
-
-    [OMEGA] > sync status     # confirm git + GITHUB_REPO configured
-    [OMEGA] > sync github     # git add + commit + push
-
-- Confirm the push line reports `ok`. The token is masked in all output.
-
-## 5. Website publish
-
-- Publish the website via the platform publish button (the Chinese-labelled
-  "fa bu" button) on the deployment platform.
-- Wait for the deploy to report success before smoke testing.
-
-## 6. Post-publish smoke
-
-- Visit the live site.
-- Confirm the version badge reads v29.3.0.
-- Click through the main panels once; confirm no error banners.
-
-## 7. Rollback note
-
-- Website: re-publish the previous website version from the platform's
-  version history.
-- Engine: every prior state is recoverable - `git log` / `git checkout`
-  for omega.py, `evolve rollback` inside the CLI for the strategy module,
-  and `omega_memory.json.bak` for a corrupted memory file.
+- Main at `95dbf31b76c57ef9c204b4674862c4b41f006fbb` includes checkpoint hardening.
+- Railway deployment `7fe6501e-7538-4458-8a7d-c83d03f4cbdb` for that commit failed
+  at `BUILD_IMAGE`. Logs show app compilation and image export; no runtime logs were
+  returned. Exact infrastructure failure cause remains unconfirmed.
+- Prior billing-fix release `a6ee906d164b26cd903ee024e6f173be0772c742` has terminal
+  `SUCCESS` in deployment `a8fb75a3-af54-4ba4-b596-4a30505604ad`.
+- Public readiness returned HTTP 503: runtime up, persistence connected, AI disabled.
+- MySQL has a mounted volume. The web service has no mounted persistent volume.
+- Production backup scheduling/retention, full product acceptance, durable agent
+  execution and language quality remain unverified. No paid service was activated.
 
 ## Sign-off
 
-- [ ] selftest ALL PASS, exit 0, run twice
-- [ ] `launch` prints LAUNCH READY
-- [ ] `sync github` pushed
-- [ ] site published, badge shows v29.3.0
-- [ ] rollback path confirmed (site version history + git history)
+Record candidate SHA, deployed SHA, CI run URLs, smoke-test results, backup/restore
+artifact date, rollback target, outstanding limitations, and owner launch decision.
+A limited offline preview may have a narrower declared scope; never describe it as
+an enabled paid-AI launch while the provider is disabled.
