@@ -1,0 +1,27 @@
+name: LUQI Drizzle Lock Refresh (temporary)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "app/package.json"
+      - "package-lock.json"
+      - "scripts/ci-lock-delta.mjs"
+      - ".github/workflows/drizzle-lock-delta.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regenerate-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Resolve patched dependency lock using npm
+        run: npm install --legacy-peer-deps --package-lock-only
+      - name: Emit machine-readable lock delta for reviewed commit
+        run: node scripts/ci-lock-delta.mjs
