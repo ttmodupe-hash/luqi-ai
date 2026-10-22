@@ -108,3 +108,60 @@ def test_side_effects_need_idempotency_key():
     engine.register("mail", lambda _: None, side_effects=True)
     with pytest.raises(ValueError, match="idempotency"):
         engine.submit("mail", {})
+
+
+@pytest.mark.parametrize("decision", ["false", "true", "", 0, 1, None, [], {}])
+def test_malformed_approval_cannot_authorize_side_effects(decision):
+    authorizations = []
+    engine = WorkflowEngine(approval_authorizer=lambda *args: authorizations.append(args) or True)
+    effects = []
+    engine.register("send", lambda payload: effects.append(payload), side_effects=True)
+    task = engine.submit("send", {"message": "test"}, idempotency_key="send-once")
+    with pytest.raises(ValueError, match="boolean"):
+        engine.approve(task.id, "human-1", approved=decision)
+    assert engine.get(task.id) == task
+    assert authorizations == []
+    assert engine.run_due() == []
+    assert effects == []
+
+
+@pytest.mark.parametrize("authorization", ["false", "true", 1, {"authorized": False}, [True], None, False])
+def test_host_authorization_requires_literal_true(authorization):
+    engine = WorkflowEngine(approval_authorizer=lambda *_: authorization)
+    engine.register("pay", lambda _: "must not execute", side_effects=True)
+    task = engine.submit("pay", {}, idempotency_key="pay-once")
+    with pytest.raises(PermissionError):
+        engine.approve(task.id, "human-1", approved=True)
+    assert engine.get(task.id) == task
+    assert engine.run_due() == []
+
+
+@pytest.mark.parametrize("actor", ["   ", None, 123, {}, " AGENT "])
+def test_invalid_actor_cannot_authorize_task(actor):
+    engine = WorkflowEngine(approval_authorizer=lambda *_: True)
+    engine.register("send", lambda _: True, side_effects=True)
+    task = engine.submit("send", {}, idempotency_key="send-once")
+    with pytest.raises(ValueError):
+        engine.approve(task.id, actor, approved=True)
+    assert engine.get(task.id) == task
+
+
+@pytest.mark.parametrize("count", [True, False, 2.5, "3", None])
+def test_attempt_and_batch_limits_require_integers(count):
+    engine = WorkflowEngine()
+    engine.register("read", lambda _: "ok", side_effects=False)
+    with pytest.raises(ValueError):
+        engine.submit("read", {}, max_attempts=count)
+    task = engine.submit("read", {})
+    with pytest.raises(ValueError):
+        engine.run_due(limit=count)
+    assert engine.get(task.id).attempts == 0
+
+
+@pytest.mark.parametrize("key", [123, [], {}, True, "   "])
+def test_invalid_idempotency_key_is_rejected_before_task_creation(key):
+    engine = WorkflowEngine()
+    engine.register("read", lambda _: "ok", side_effects=False)
+    with pytest.raises(ValueError):
+        engine.submit("read", {}, idempotency_key=key)
+    assert engine.run_due() == []

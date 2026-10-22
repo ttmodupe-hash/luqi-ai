@@ -79,10 +79,11 @@ class WorkflowEngine:
             raise ValueError("Unregistered task handler")
         if not isinstance(payload, dict):
             raise TypeError("Task payload must be a dictionary")
-        if not 1 <= max_attempts <= 5:
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 5:
             raise ValueError("max_attempts must be 1 through 5")
-        if idempotency_key is not None and not idempotency_key.strip():
-            raise ValueError("Empty idempotency key")
+        if idempotency_key is not None and (not isinstance(idempotency_key, str) or
+                                            not idempotency_key.strip()):
+            raise ValueError("Idempotency key must be a nonempty string")
         if idempotency_key in self._keys:
             previous = self._tasks[self._keys[idempotency_key]]
             if previous.handler != handler or previous.payload != payload:
@@ -107,12 +108,16 @@ class WorkflowEngine:
 
     def approve(self, task_id: str, actor: str, *, approved: bool,
                 now: datetime | None = None) -> Task:
+        if type(approved) is not bool:
+            raise ValueError("Approval decision must be a boolean")
         task = self._tasks[task_id]
         if task.state != State.APPROVAL_REQUIRED:
             raise ValueError("Task is not awaiting human approval")
-        if not actor or actor.strip().lower() in ("system", "agent", "automation"):
+        if (not isinstance(actor, str) or not actor.strip() or
+                actor.strip().lower() in ("system", "agent", "automation")):
             raise ValueError("A human approver identifier is required")
-        if self._approval_authorizer is None or not self._approval_authorizer(actor, task_id):
+        if (self._approval_authorizer is None or
+                self._approval_authorizer(actor, task_id) is not True):
             raise PermissionError("Approval requires a host-authenticated human authorization")
         instant = now or _now()
         task.state = State.PENDING if approved else State.CANCELLED
@@ -167,7 +172,7 @@ class WorkflowEngine:
 
     def run_due(self, *, now: datetime | None = None, limit: int = 10) -> list[Task]:
         """Explicitly execute a bounded batch; never schedules its own timer."""
-        if not 1 <= limit <= 100:
+        if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Invalid batch limit")
         instant = now or _now()
         ready = [t.id for t in self._tasks.values()
