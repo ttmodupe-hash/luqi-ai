@@ -119,6 +119,31 @@ app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), ser
 app.get("/v1/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
 app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
 
+/**
+ * Liveness (/v1/health) means the process serves HTTP; it is not an AI readiness
+ * assertion. Never expose secret values on diagnostics.
+ */
+app.get("/v1/readiness", (c) => {
+  const aiConfigured = [
+    "GEMINI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY",
+    "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+  ].some((name) => Boolean(process.env[name]?.trim()));
+  const persistenceConfigured = [
+    "DATABASE_URL", "MYSQL_URL", "MYSQLHOST",
+  ].some((name) => Boolean(process.env[name]?.trim()));
+  const ready = aiConfigured && persistenceConfigured;
+  return c.json({
+    status: ready ? "ready" : "degraded",
+    checks: {
+      runtime: "up",
+      model_provider: aiConfigured ? "configured_not_validated" : "unconfigured",
+      persistence: persistenceConfigured ? "configured_not_validated" : "unconfigured",
+    },
+    note: "Configuration checks do not guarantee remote model or database reachability.",
+  }, ready ? 200 : 503);
+});
+
+
 // ── REST COMPAT (legacy frontend endpoints → real services) ──────────
 app.route("/", restCompat);
 
