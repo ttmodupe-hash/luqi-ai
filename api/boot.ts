@@ -651,22 +651,10 @@ const corporateBillingLedgerStore = [
   }
 ];
 
-// Authentication Gateways
-app.post('/api/v1/auth/register', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "User registered successfully.", email: body.email });
-});
-app.post('/auth/register', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "User registered successfully.", email: body.email });
-});
-
-app.post('/api/v1/auth/login', async (c) => {
-  return c.json({ access_token: `LUQI-JWT-${Date.now()}`, token_type: "bearer" });
-});
-app.post('/auth/login', async (c) => {
-  return c.json({ access_token: `LUQI-JWT-${Date.now()}`, token_type: "bearer" });
-});
+// Authentication is implemented by the persistent REST-compat router
+// mounted above. Never return fake success or timestamp-based pseudo-JWTs.
+// Real /auth/signup, /auth/register, /auth/login and /api/v1/auth/* aliases
+// live together in api/rest-compat.ts.
 
 // Creative Storyboard Creation Router
 app.post('/api/v1/media/orchestrate', async (c) => {
