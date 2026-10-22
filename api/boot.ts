@@ -17,6 +17,8 @@ import { closeDb } from "./queries/connection";
 import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
+import { runBudgetedPilotChat } from "./services/aiPilotGateway";
+import { MAX_INPUT_CHARS, PilotBlocked, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { GoogleGenAI } from "@google/genai";
 import { GeminiService } from "./geminiService";
 import { ScienceService } from "./scienceService";
@@ -125,21 +127,22 @@ app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(),
  * assertion. Never expose secret values on diagnostics.
  */
 app.get("/v1/readiness", async (c) => {
-  const aiConfigured = [
-    "GEMINI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY",
-    "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
-  ].some((name) => Boolean(process.env[name]?.trim()));
-  const persistence = await checkPersistentDatabase();
-  const ready = aiConfigured && persistence.status === "connected";
+  const [persistence, pilot] = await Promise.all([
+    checkPersistentDatabase(),
+    checkPilotGatewayReadiness(),
+  ]);
+  // AI model credentials and provider billing are never considered verified
+  // solely because these fields exist. A real monitored roundtrip is separate.
+  const ready = persistence.status === "connected" && pilot === "configured_not_verified";
   return c.json({
-    status: ready ? "ready" : "degraded",
+    status: ready ? "configured_not_verified" : "degraded",
     checks: {
       runtime: "up",
-      model_provider: aiConfigured ? "configured_not_validated" : "unconfigured",
       persistence: persistence.status,
       expected_database_driver: "mysql",
+      ai_pilot: pilot,
     },
-    note: "Model provider is configuration-only; no external AI response is guaranteed by this check.",
+    note: "Provider/model entitlement and live inference are not verified by readiness.",
   }, ready ? 200 : 503);
 });
 
@@ -150,56 +153,31 @@ app.route("/", restCompat);
 // 1. Unified Chat & KHORO Sovereign Companion Endpoint
 app.post('/api/v1/luqi-core', async (c) => {
   let body: any = {};
-  try {
-    body = await c.req.json();
-  } catch {
-    body = {};
-  }
-  const rawQuery = body.user_input ?? body.prompt;
-  if (typeof rawQuery !== "string" || !rawQuery.trim() || rawQuery.length > 8000) {
+  try { body = await c.req.json(); } catch { /* invalid body below */ }
+  const rawQuery = body?.user_input ?? body?.prompt;
+  if (typeof rawQuery !== "string" || !rawQuery.trim() || rawQuery.length > MAX_INPUT_CHARS) {
     return c.json({ status: "error", code: "INVALID_INPUT",
-      message: "Provide a nonempty question of at most 8000 characters." }, 400);
+      message: "Provide a question of at most 6000 characters." }, 400);
   }
-  const query = rawQuery.trim();
-  const language = typeof body.language === "string" ? body.language.slice(0, 80) : "auto";
-  const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
-
-  // Primary: 5-Layer Khoro Cognitive Reasoning Engine with Search Grounding
+  const history = Array.isArray(body.history) ? body.history : [];
+  const language = typeof body.language === "string" ? body.language : "auto";
   try {
-    const khoroResult = await KhoroCognitiveBrain.reasonAndRespond(query, history, language);
-    if (khoroResult && khoroResult.response) {
-      return c.json({
-        status: 'success',
-        agent: SOVEREIGN_AGENT_NAME,
-        translation: SOVEREIGN_AGENT_TRANSLATION,
-        response: khoroResult.response
-      });
-    }
-  } catch {
-    console.warn('[Khoro Brain] Primary provider unavailable; trying configured models.');
-  }
-
-  // Fallback to MultiModelMasterOrchestrator
-  try {
-    const result = await MultiModelMasterOrchestrator.executeDominantModel(
-      query,
-      body.roleHint,
-      language
-    );
-
-    if (!result.output?.trim()) throw new Error("Empty provider reply");
+    const result = await runBudgetedPilotChat(rawQuery.trim(), language, history);
     return c.json({
-      status: 'success',
-      agent: SOVEREIGN_AGENT_NAME,
-      provider_model: result.model,
-      response: result.output
+      status: "success", agent: SOVEREIGN_AGENT_NAME,
+      provider: result.provider, provider_model: result.model, response: result.response
     });
-  } catch {
-    return c.json({
-      status: "unavailable",
-      code: "AI_PROVIDER_UNAVAILABLE",
-      message: "Live AI responses are temporarily unavailable. Please try again after a provider is configured."
-    }, 503);
+  } catch (error) {
+    if (error instanceof PilotBlocked) {
+      if (error.reason === "AI_PROVIDER_BUDGET_EXHAUSTED") {
+        return c.json({ status: "unavailable", code: error.reason,
+          message: "Monthly pilot provider budget exhausted." }, 429);
+      }
+      return c.json({ status: "unavailable", code: error.reason,
+        message: "AI pilot billing remains disabled or its budget ledger is unavailable." }, 503);
+    }
+    return c.json({ status: "unavailable", code: "AI_PROVIDER_UNAVAILABLE",
+      message: "AI provider unavailable or not configured." }, 503);
   }
 });
 
