@@ -11,7 +11,7 @@ fi
 
 client_image="mysql:8.4"
 mysql_cmd() {
-  docker run --rm --network host -e MYSQL_PWD=ci-ephemeral-only-password \
+  docker run --rm --interactive --network host -e MYSQL_PWD=ci-ephemeral-only-password \
     "$client_image" mysql --host=127.0.0.1 --port=3306 --user=root "$@"
 }
 dump_cmd() {
