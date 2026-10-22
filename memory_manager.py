@@ -16,11 +16,14 @@ import os
 import json
 import time
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from copy import deepcopy
+from uuid import uuid4
+import math
+import stat
 
-from checkpoint_store import LocalCheckpointStore, validate_thread_id
+from checkpoint_store import LocalCheckpointStore, validate_thread_id, CheckpointPersistenceError
 
 # Environment-based paths
 CREWAI_STORAGE_DIR = os.getenv("CREWAI_STORAGE_DIR", "./data/crewai_memory")
@@ -86,18 +89,53 @@ class CrewAIUnifiedMemory:
 
     def __init__(self, storage_dir: Optional[str] = None):
         self.storage_dir = storage_dir or CREWAI_STORAGE_DIR
-        os.makedirs(self.storage_dir, exist_ok=True)
         self.facts_file = os.path.join(self.storage_dir, "unified_memory.json")
-        self.facts: List[Dict] = self._load_facts()
+        self._store = LocalCheckpointStore(os.path.join(self.storage_dir, "fact_journal"))
+        self._load_facts()  # Reject damaged legacy storage before accepting writes.
+
+    @staticmethod
+    def _validate_fact(fact):
+        if not isinstance(fact, dict) or not all(
+            isinstance(fact.get(key), str)
+            for key in ("fact_id", "category", "subject", "predicate", "object",
+                        "source_task", "agent_role", "timestamp")
+        ):
+            raise ValueError("Invalid learned fact")
+        confidence = fact.get("confidence")
+        if (fact["category"] not in ("short_term", "long_term", "entity") or
+                type(confidence) not in (int, float) or
+                not 0 <= confidence <= 1 or not math.isfinite(confidence) or
+                (fact.get("context") is not None and not isinstance(fact["context"], str))):
+            raise ValueError("Invalid learned fact")
 
     def _load_facts(self) -> List[Dict]:
-        if os.path.exists(self.facts_file):
+        # Legacy JSON is read-only: never replace or silently discard old facts.
+        # Stop old writers before rolling out this journal implementation.
+        try:
             try:
-                with open(self.facts_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                return []
-        return []
+                fd = os.open(self.facts_file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            except FileNotFoundError:
+                legacy = []
+            else:
+                with os.fdopen(fd, "r", encoding="utf-8") as stream:
+                    info = os.fstat(stream.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077:
+                        raise ValueError("Legacy memory must be a private regular file")
+                    legacy = json.load(stream)
+            if not isinstance(legacy, list):
+                raise ValueError("Invalid legacy memory")
+            records = self._store.history("learned_facts")
+            facts = legacy + [record["channel_values"] for record in records]
+            for fact in facts:
+                self._validate_fact(fact)
+            return deepcopy(facts)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            raise CheckpointPersistenceError("Learned memory could not be safely recovered") from None
+
+    @property
+    def facts(self) -> List[Dict]:
+        """Fresh detached view; mutating it never changes persisted memory."""
+        return self._load_facts()
 
     def record_learned_fact(
         self,
@@ -112,7 +150,7 @@ class CrewAIUnifiedMemory:
     ) -> Dict:
         """Stores a discrete fact deduced during agent task execution."""
         fact = {
-            "fact_id": f"fact_{int(time.time()*1000)}",
+            "fact_id": f"fact_{uuid4().hex}",
             "category": category,
             "subject": subject,
             "predicate": predicate,
@@ -121,16 +159,12 @@ class CrewAIUnifiedMemory:
             "source_task": source_task,
             "agent_role": agent_role,
             "confidence": confidence,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        self.facts.append(fact)
-        try:
-            with open(self.facts_file, "w", encoding="utf-8") as f:
-                json.dump(self.facts, f, indent=2, default=str)
-        except Exception as e:
-            print(f"[CrewAIMemory] Persist warning: {e}")
-
-        return fact
+        self._validate_fact(fact)
+        self._load_facts()
+        snapshot = self._store.save("learned_facts", "learned_fact", fact)
+        return deepcopy(snapshot["channel_values"])
 
     def query_facts(self, search_term: Optional[str] = None, category: Optional[str] = None) -> List[Dict]:
         results = self.facts
