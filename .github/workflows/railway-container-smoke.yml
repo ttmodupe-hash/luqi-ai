@@ -60,6 +60,7 @@ jobs:
             --write-out '%{http_code}' http://127.0.0.1:18765/v1/readiness)
           test "$code" = "503"
           grep -q '"status":"degraded"' /tmp/luqi-readiness.json
+          grep -q '"ai_pilot":"disabled"' /tmp/luqi-readiness.json
           # No external key means no false-success AI conversation.
           code=$(curl --silent --show-error --max-time 8 --output /tmp/luqi-ai-unavailable.json \
             --write-out '%{http_code}' \
