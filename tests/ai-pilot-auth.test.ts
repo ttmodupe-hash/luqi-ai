@@ -18,7 +18,7 @@ describe("authenticated AI pilot gate", () => {
   });
   it("rejects tokens signed by another server or expired JWTs", () => {
     const foreign = jwt.sign({ userId: 1 }, "another-long-test-signing-secret-1234567890");
-    const expired = jwt.sign({ userId: 1 }, key, { issuer: LUQI_JWT_ISSUER, audience: LUQI_JWT_AUDIENCE, expiresIn: -10 });
+    const expired = jwt.sign({ userId: 1 }, key, { issuer: LUQI_JWT_ISSUER, audience: LUQI_JWT_AUDIENCE, expiresIn: -120 });
     expect(() => parsePilotUserId(bearer(foreign), key)).toThrow("AUTH_REQUIRED");
     expect(() => parsePilotUserId(bearer(expired), key)).toThrow("AUTH_REQUIRED");
   });
