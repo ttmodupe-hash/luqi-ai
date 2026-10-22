@@ -24,7 +24,7 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Install exact LUQI dependencies
-        run: npm install --legacy-peer-deps --include=dev
+        run: npm ci --legacy-peer-deps --include=dev
       - name: Audit production dependency tree
         shell: bash
         run: |
