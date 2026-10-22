@@ -5,6 +5,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
 import jwt from "jsonwebtoken";
+import { LUQI_JWT_AUDIENCE, LUQI_JWT_ISSUER } from "../api/lib/userToken";
 import { restCompat } from "../api/rest-compat";
 import { authenticatePilotUser } from "../api/services/pilotAuth";
 import { bootstrapDatabase, CREATE_STATEMENTS } from "../db/bootstrap";
@@ -66,7 +67,7 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     expect(created.user.email).toBe(email);
     expect(typeof created.token).toBe("string");
     expect(created.token).not.toMatch(/^LUQI-JWT-/);
-    expect(jwt.verify(created.token, process.env.JWT_SECRET!)).toMatchObject({ userId: created.user.id });
+    expect(jwt.verify(created.token, process.env.JWT_SECRET!, { issuer: LUQI_JWT_ISSUER, audience: LUQI_JWT_AUDIENCE })).toMatchObject({ userId: created.user.id });
     expect(await singleNumber("SELECT COUNT(*) AS n FROM users")).toBe(1);
     const duplicate = await jsonRequest("/auth/signup", { email, password });
     expect(duplicate.status).toBe(409);
@@ -76,7 +77,7 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     const login = await jsonRequest("/api/v1/auth/login", { email, password });
     expect(login.status).toBe(200);
     const signedIn = await login.json();
-    expect(jwt.verify(signedIn.token, process.env.JWT_SECRET!)).toMatchObject({ userId: created.user.id });
+    expect(jwt.verify(signedIn.token, process.env.JWT_SECRET!, { issuer: LUQI_JWT_ISSUER, audience: LUQI_JWT_AUDIENCE })).toMatchObject({ userId: created.user.id });
 
     const account = await restCompat.request("/auth/me", {
       headers: { Authorization: `Bearer ${signedIn.token}` },
