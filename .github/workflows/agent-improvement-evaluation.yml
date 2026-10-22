@@ -1,0 +1,47 @@
+name: LUQI Agent Improvement Evaluation (offline; no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**", "security/**", "feat/agent-review-ledger-*"]
+    paths:
+      - "api/services/agentImprovementEvaluation*"
+      - "api/services/deployment-evaluation*"
+      - "evals/**"
+      - ".github/workflows/agent-improvement-evaluation.yml"
+  push:
+    branches: ["feat/agent-improvement-evaluation-*"]
+permissions:
+  contents: read
+jobs:
+  offline-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify evaluation TypeScript
+        run: npm run check
+      - name: Exercise full offline regression suite
+        run: npm test
+      - name: Verify production build without publishing
+        run: npm run build
+      - name: Ensure seeded fixtures never masquerade as measured evaluation
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from "node:fs";
+          const data = JSON.parse(fs.readFileSync("evals/africa-learning.seed.json", "utf8"));
+          if (data.status !== "seed-fixtures-only") {
+            throw new Error("Seed data must never be presented as measured evaluation scores");
+          }
+          const source = fs.readFileSync("api/services/agentImprovementEvaluation.ts", "utf8");
+          for (const token of ["releaseAuthorized: false", "ciAttested: false", "humanReviewed: false"]) {
+            if (!source.includes(token)) throw new Error("Review-only invariant missing: " + token);
+          }
+          console.log("Only review eligibility may be computed; no model or production release authorization.");
+          NODE
