@@ -2,7 +2,7 @@
  * Uses new LUQI_PILOT_* key names: old unguarded code never sees these keys.
  * All external calls must reserve durable budget BEFORE a provider request.
  */
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import {
   assertPilotEnabled, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS,
   PilotBlocked, reservePilotAttempt
@@ -54,7 +54,9 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
         config: {
           systemInstruction: PLAIN_TEXT_POLICY,
           maxOutputTokens: MAX_OUTPUT_TOKENS,
-          temperature: 0.3,
+          // Gemini 3.8 requires thinkingLevel instead of deprecated sampling options.
+          // Lower reasoning level constrains unnecessary pilot token usage.
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           // No grounding/search/tools; those can incur additional charges.
         },
       });
