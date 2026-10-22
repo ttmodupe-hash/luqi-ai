@@ -1,0 +1,56 @@
+name: LUQI Railway Container Smoke Test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "railway.json"
+      - "start.sh"
+      - "package.json"
+      - "package-lock.json"
+      - "app/**"
+      - "api/**"
+      - "src/**"
+      - ".github/workflows/railway-container-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container-build-and-start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact Railway Dockerfile
+        run: docker build --progress=plain --file Dockerfile --tag luqi-railway-smoke:ci .
+      - name: Start production container without privileged credentials
+        run: |
+          docker run --detach --name luqi-smoke \
+            --publish 127.0.0.1:18765:3000 \
+            --env NODE_ENV=production \
+            --env PORT=3000 \
+            --env JWT_SECRET=ci-only-not-a-real-key-1234567890123456789012 \
+            luqi-railway-smoke:ci
+      - name: Verify actual HTTP health and frontend
+        run: |
+          trap 'docker logs luqi-smoke; docker rm -f luqi-smoke >/dev/null 2>&1 || true' EXIT
+          healthy=0
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --max-time 3 http://127.0.0.1:18765/v1/health > /tmp/luqi-health.json; then
+              healthy=1
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' luqi-smoke)" != "true" ]; then
+              echo "LUQI container exited before becoming healthy"
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$healthy" -eq 1 || { echo "Health never became ready"; exit 1; }
+          cat /tmp/luqi-health.json
+          grep -q '"status":"healthy"' /tmp/luqi-health.json
+          curl --fail --silent --max-time 5 http://127.0.0.1:18765/ -o /tmp/luqi-index.html
+          grep -qi '<html' /tmp/luqi-index.html
