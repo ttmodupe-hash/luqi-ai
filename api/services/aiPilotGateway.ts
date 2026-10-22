@@ -23,6 +23,13 @@ Do not assert unverified legal, medical, financial, travel or current facts.
 Say when information is uncertain and recommend authoritative sources for consequential questions.
 No tools, searches, browsing, audio, image or file processing are enabled for this pilot.`;
 
+// Export the request contract for offline tests. No provider is invoked by this.
+export const GEMINI_PILOT_CONFIG = Object.freeze({
+  systemInstruction: PLAIN_TEXT_POLICY,
+  maxOutputTokens: MAX_OUTPUT_TOKENS,
+  thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+});
+
 export async function runBudgetedPilotChat(
   prompt: string, userId: number, language: string = "auto",
   history: Array<{ sender: string; text: string }> = []
@@ -51,14 +58,8 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
       const result = await client.models.generateContent({
         model: "gemini-3.8-flash",
         contents: input,
-        config: {
-          systemInstruction: PLAIN_TEXT_POLICY,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
-          // Gemini 3.8 requires thinkingLevel instead of deprecated sampling options.
-          // Lower reasoning level constrains unnecessary pilot token usage.
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-          // No grounding/search/tools; those can incur additional charges.
-        },
+        // No grounding/search/tools; those can incur additional charges.
+        config: GEMINI_PILOT_CONFIG,
       });
       if (result.text?.trim()) {
         return { response: result.text.trim(), provider: "gemini", model: "gemini-3.8-flash" };
