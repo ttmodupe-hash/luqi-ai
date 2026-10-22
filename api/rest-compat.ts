@@ -8,7 +8,7 @@
 
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { getSigningSecret, signUserToken, verifyUserToken } from "./lib/userToken";
 import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
 import { users, knowledgeArticles, creditWallets } from "../db/schema";
@@ -53,18 +53,6 @@ function aiUnavailableResponse() {
     module: "unavailable",
     response_time_ms: 0,
   };
-}
-
-function jwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("JWT_SECRET must be configured with at least 32 characters");
-  }
-  return secret;
-}
-
-function signToken(userId: number): string {
-  return jwt.sign({ userId }, jwtSecret(), { expiresIn: "30d" });
 }
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
@@ -504,7 +492,8 @@ restCompat.get("/api/v25/payments/balance", legacyPaymentsUnavailable);
 // All public aliases share the same durable, signed-in account handlers.
 // A failed database call is an error: never pretend a user was registered.
 const handleSignup = async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
+  c.header("Cache-Control", "no-store");
+  const body = (await c.req.json().catch(() => null)) ?? {};
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) || null : null;
@@ -512,14 +501,14 @@ const handleSignup = async (c: any) => {
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return c.json({ detail: "Valid email is required" }, 400);
   }
-  if (password.length < 12 || password.length > 128) {
-    return c.json({ detail: "Password must be 12 to 128 characters" }, 400);
+  if (password.length < 12 || Buffer.byteLength(password, "utf8") > 72) {
+    return c.json({ detail: "Password must be at least 12 characters and at most 72 UTF-8 bytes" }, 400);
   }
 
   try {
     // Verify signing capability BEFORE creating an account. This avoids an
     // unusable newly-created user when JWT config is missing.
-    jwtSecret();
+    getSigningSecret();
     const db = await getPersistentDb();
     const [existing] = await db.select({ id: users.id }).from(users)
       .where(eq(users.email, email)).limit(1);
@@ -532,7 +521,7 @@ const handleSignup = async (c: any) => {
       throw new Error("Invalid persisted account identifier");
     }
     return c.json({
-      token: signToken(userId),
+      token: signUserToken(userId),
       token_type: "bearer",
       user: { id: userId, email, name },
     }, 201);
@@ -543,10 +532,11 @@ const handleSignup = async (c: any) => {
 };
 
 const handleLogin = async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
+  c.header("Cache-Control", "no-store");
+  const body = (await c.req.json().catch(() => null)) ?? {};
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
-  if (!email || !password || email.length > 254 || password.length > 128) {
+  if (!email || !password || email.length > 254 || Buffer.byteLength(password, "utf8") > 72) {
     return c.json({ detail: "Email and password are required" }, 400);
   }
   try {
@@ -564,7 +554,7 @@ const handleLogin = async (c: any) => {
       return c.json({ detail: "Invalid credentials" }, 401);
     }
     return c.json({
-      token: signToken(userId),
+      token: signUserToken(userId),
       token_type: "bearer",
       user: { id: userId, email: user.email, name: user.name },
     });
@@ -580,17 +570,15 @@ restCompat.post("/auth/login", handleLogin);
 restCompat.post("/api/v1/auth/login", handleLogin);
 
 restCompat.get("/auth/me", async (c) => {
+  c.header("Cache-Control", "no-store");
   const auth = c.req.header("authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "");
+  const token = /^Bearer ([^\s]+)$/i.exec(auth)?.[1];
   if (!token) return c.json({ detail: "Missing token" }, 401);
 
   try {
-    const payload = jwt.verify(token, jwtSecret(), { algorithms: ["HS256"] }) as { userId: number };
-    if (!Number.isSafeInteger(payload.userId) || payload.userId <= 0) {
-      return c.json({ detail: "Invalid or expired token" }, 401);
-    }
+    const userId = verifyUserToken(token);
     const db = await getPersistentDb();
-    const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user || user.isActive === false) {
       return c.json({ detail: "Invalid or expired token" }, 401);
     }

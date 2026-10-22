@@ -108,3 +108,50 @@ def test_side_effects_need_idempotency_key():
     engine.register("mail", lambda _: None, side_effects=True)
     with pytest.raises(ValueError, match="idempotency"):
         engine.submit("mail", {})
+
+
+@pytest.mark.parametrize("decision", ["false", "true", "", 0, 1, None, [], {}, [True]])
+def test_malformed_decisions_cannot_authorize_side_effects(decision):
+    authorizations = []
+    engine = WorkflowEngine(approval_authorizer=lambda *args: authorizations.append(args) or True)
+    effects = []
+    engine.register("send", lambda data: effects.append(data), side_effects=True)
+    task = engine.submit("send", {}, idempotency_key="send")
+    with pytest.raises(ValueError, match="boolean"):
+        engine.approve(task.id, "reviewer", approved=decision)
+    assert engine.get(task.id) == task
+    assert engine.run_due() == []
+    assert authorizations == effects == []
+
+
+@pytest.mark.parametrize("authorization", ["false", "true", 1, 0, None, [], {}, [True], False])
+def test_host_authorization_requires_literal_true(authorization):
+    engine = WorkflowEngine(approval_authorizer=lambda *_: authorization)
+    engine.register("send", lambda _: pytest.fail("Unauthorized side effect"), side_effects=True)
+    task = engine.submit("send", {}, idempotency_key="send")
+    with pytest.raises(PermissionError):
+        engine.approve(task.id, "reviewer", approved=True)
+    assert engine.get(task.id) == task
+    assert engine.run_due() == []
+
+
+@pytest.mark.parametrize("actor", [None, 1, [], {}, "", "   ", "system", " Agent ", "automation"])
+def test_invalid_approver_is_rejected_without_state_change(actor):
+    engine = WorkflowEngine(approval_authorizer=lambda *_: True)
+    engine.register("send", lambda _: None, side_effects=True)
+    task = engine.submit("send", {}, idempotency_key="send")
+    with pytest.raises(ValueError):
+        engine.approve(task.id, actor, approved=True)
+    assert engine.get(task.id) == task
+
+
+def test_authorizer_failure_preserves_pending_approval():
+    def unavailable(*_):
+        raise RuntimeError("Authorization service unavailable")
+    engine = WorkflowEngine(approval_authorizer=unavailable)
+    engine.register("send", lambda _: None, side_effects=True)
+    task = engine.submit("send", {}, idempotency_key="send")
+    with pytest.raises(RuntimeError):
+        engine.approve(task.id, "reviewer", approved=True)
+    assert engine.get(task.id) == task
+    assert engine.run_due() == []

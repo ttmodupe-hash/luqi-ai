@@ -110,9 +110,11 @@ class WorkflowEngine:
         task = self._tasks[task_id]
         if task.state != State.APPROVAL_REQUIRED:
             raise ValueError("Task is not awaiting human approval")
-        if not actor or actor.strip().lower() in ("system", "agent", "automation"):
+        if type(approved) is not bool:
+            raise ValueError("Approval decision must be a boolean")
+        if not isinstance(actor, str) or not actor.strip() or actor.strip().lower() in ("system", "agent", "automation"):
             raise ValueError("A human approver identifier is required")
-        if self._approval_authorizer is None or not self._approval_authorizer(actor, task_id):
+        if self._approval_authorizer is None or self._approval_authorizer(actor, task_id) is not True:
             raise PermissionError("Approval requires a host-authenticated human authorization")
         instant = now or _now()
         task.state = State.PENDING if approved else State.CANCELLED

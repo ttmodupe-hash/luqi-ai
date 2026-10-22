@@ -3,7 +3,7 @@
  * A signed token is not sufficient: the user must still exist in persistent
  * MySQL, preventing deleted accounts or volatile demo users from spending.
  */
-import jwt from "jsonwebtoken";
+import { verifyUserToken } from "../lib/userToken";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
 import { getPersistentDb } from "../queries/connection";
@@ -25,12 +25,7 @@ export function parsePilotUserId(authHeader: string | undefined,
   const token = authHeader.slice(7).trim();
   if (!token) throw new PilotAuthError("AUTH_REQUIRED");
   try {
-    const payload = jwt.verify(token, signingSecret, { algorithms: ["HS256"] });
-    if (typeof payload === "string" || typeof payload.userId !== "number" ||
-        !Number.isSafeInteger(payload.userId) || payload.userId <= 0) {
-      throw new PilotAuthError("AUTH_REQUIRED");
-    }
-    return payload.userId;
+    return verifyUserToken(token, signingSecret);
   } catch {
     throw new PilotAuthError("AUTH_REQUIRED");
   }

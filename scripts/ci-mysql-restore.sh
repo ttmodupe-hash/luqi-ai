@@ -74,4 +74,19 @@ test "$restored_daily" = "$source_daily"
 engine="$(mysql_cmd --skip-column-names --batch --execute="SELECT ENGINE FROM information_schema.tables WHERE table_schema='luqi_restore_ci' AND table_name='ai_pilot_monthly_spend'")"
 echo "CI restore: budget ledger engine=$engine"
 test "$engine" = "InnoDB"
-echo "PASS: restored 37 tables, account fixture and both atomic budget ledgers in isolated MySQL."
+# Compare the complete logical contents, including credential hashes, schema,
+# indexes and constraints. Keep private SQL out of logs and uploaded artifacts.
+# Both databases are disposable, quiescent fixtures on the same MySQL server.
+for database in luqi_ci luqi_restore_ci; do
+  docker run --rm --network host -e MYSQL_PWD=ci-ephemeral-only-password \
+    "$client_image" mysqldump --host=127.0.0.1 --port=3306 --user=root \
+    --single-transaction --skip-comments --skip-dump-date --order-by-primary \
+    --hex-blob --routines --triggers --no-tablespaces --set-gtid-purged=OFF \
+    -- "$database" > "$temporary_dir/$database.sql"
+  test -s "$temporary_dir/$database.sql"
+done
+if ! cmp -s "$temporary_dir/luqi_ci.sql" "$temporary_dir/luqi_restore_ci.sql"; then
+  echo "FAIL: restored schema or data differs from source; SQL withheld." >&2
+  exit 1
+fi
+echo "PASS: complete restored schema and data match the isolated MySQL source."
