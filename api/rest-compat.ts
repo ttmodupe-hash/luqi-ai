@@ -1513,198 +1513,30 @@ restCompat.post("/api/v1/zta/langgraph/execute", async (c: any) => {
   });
 });
 
-// ─── 8. SUPER INTELLIGENCE 70/30 CODE DEPLOYMENT PIPELINE ─────────────
+// ─── 8. SELF-HEALING PIPELINE: PRODUCTION SAFETY GATE ────────────────
+//
+// The former implementation invented PRs, successful sandbox tests and
+// deployment outcomes. No real GitHub or Railway integration was performed.
+// Never report such simulations as completed security/reliability work.
+//
+// Re-enable only with server-verified human authorization, real disposable
+// sandbox testing, durable evidence, and verified remote deployment status.
+const selfHealingUnavailable = (c: any) => {
+  c.header("Cache-Control", "no-store");
+  return c.json({
+    status: "unavailable",
+    code: "SELF_HEALING_PIPELINE_NOT_CONFIGURED",
+    message: "Self-healing execution and deployment authorization are unavailable until real integrations are verified.",
+  }, 503);
+};
 
-interface PipelineJobNode {
-  job_id: string;
-  bug_report: string;
-  target_file: string;
-  status: "DIAGNOSING" | "SANDBOX_TESTING" | "PR_GENERATED" | "AWAITING_HUMAN_AUTH" | "DEPLOYED_TO_PROD" | "REJECTED";
-  sandbox_output: string;
-  pr_url: string;
-  pr_number: number;
-  branch_name: string;
-  fix_diff: string;
-  created_at: string;
-  resolved_at?: string;
-  reviewer?: string;
-  execution_trace: Array<{ step: string; phase: string; status: string; detail: string }>;
+for (const prefix of ["/api/v1", "/v1"]) {
+  restCompat.get(`${prefix}/self-healing/pipeline/jobs`, selfHealingUnavailable);
+  restCompat.post(`${prefix}/self-healing/pipeline/run`, selfHealingUnavailable);
+  restCompat.post(`${prefix}/self-healing/pipeline/sandbox-exec`, selfHealingUnavailable);
+  restCompat.post(`${prefix}/self-healing/pipeline/jobs/:jobId/authorize`, selfHealingUnavailable);
+  restCompat.post(`${prefix}/self-healing/pipeline/jobs/:jobId/reject`, selfHealingUnavailable);
 }
-
-const inMemoryPipelineJobs: PipelineJobNode[] = [
-  {
-    job_id: "sh_job_918",
-    bug_report: "PayFast webhook signature validation mismatch on valid test payloads.",
-    target_file: "token_billing_gateway.py",
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: "Execution Output:\nTest Suite: test_payfast_itn_signature()\nPassed: 4/4\nCircuit Breaker: OK (1.2s runtime)\nErrors:\nNone",
-    pr_url: "https://github.com/LimitlessTelecoms/luqi-ai/pull/142",
-    pr_number: 142,
-    branch_name: "agent-fix/payfast-signature-canonicalization",
-    fix_diff: `--- a/token_billing_gateway.py\n+++ b/token_billing_gateway.py\n@@ -108,3 +108,5 @@\n-    param_str = urlencode(cleaned_dict)\n+    # RFC 3986 parameter sorting & URL encoding fix\n+    sorted_params = dict(sorted(cleaned_dict.items()))\n+    param_str = urlencode(sorted_params)`,
-    created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    execution_trace: [
-      { step: "Telemetry Ingestion", phase: "70% Autonomous", status: "COMPLETED", detail: "Intercepted recurring 400 Bad Request on PayFast ITN webhook." },
-      { step: "Docker Sandbox Isolation", phase: "70% Autonomous", status: "COMPLETED", detail: "Executed reproduction test in isolated Python 3.11 sandbox (SWE-ReX guard)." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: "Opened PR #142 against LimitlessTelecoms/luqi-ai." },
-      { step: "LangGraph HITL Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Halted before deploy_to_production. Requires explicit human authorization." },
-    ],
-  },
-];
-
-restCompat.get("/api/v1/self-healing/pipeline/jobs", (c: any) => {
-  return c.json({ jobs: inMemoryPipelineJobs });
-});
-restCompat.get("/v1/self-healing/pipeline/jobs", (c: any) => {
-  return c.json({ jobs: inMemoryPipelineJobs });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/run", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const bugReport = String(body.bug_report || "Intermittent timeout on database session pool.");
-  const targetFile = String(body.target_file || "db/queries/connection.ts");
-  const branchName = "agent-fix/" + Math.random().toString(36).substring(2, 8);
-  const prNum = Math.floor(150 + Math.random() * 800);
-  const prUrl = `https://github.com/LimitlessTelecoms/luqi-ai/pull/${prNum}`;
-  const jobId = "sh_" + Math.random().toString(36).substring(2, 10);
-
-  const newJob: PipelineJobNode = {
-    job_id: jobId,
-    bug_report: bugReport,
-    target_file: targetFile,
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: `[Docker Container python:3.11-slim]
-Isolated Workspace: /workspace/test_${jobId.substring(3, 7)}.py
-Test Matrix:
-  - Unit assertion test: PASSED (0.42s)
-  - Memory leak scan: CLEAN (0 bytes leaked)
-  - Circuit Breaker guard: OK (30s limit respected)
-Output:
-  OK: 1 passed in 0.45s
-Errors: None`,
-    pr_url: prUrl,
-    pr_number: prNum,
-    branch_name: branchName,
-    fix_diff: `--- a/${targetFile}\n+++ b/${targetFile}\n@@ -45,3 +45,5 @@\n-    // Unprotected call\n+    // Zero-trust isolated wrapper with retry\n+    return await executeWithSanitizedPool(req);`,
-    created_at: new Date().toISOString(),
-    execution_trace: [
-      { step: "Bug Ingestion & Diagnostic", phase: "70% Autonomous", status: "COMPLETED", detail: `Agent analyzed report: "${bugReport.slice(0, 70)}..."` },
-      { step: "Docker Sandbox Isolation", phase: "70% Autonomous", status: "COMPLETED", detail: "Executed code inside isolated Docker container; 0 errors." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: `Opened PR #${prNum} on branch ${branchName}.` },
-      { step: "LangGraph Security Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Mathematically halted before deploy_to_production. Awaiting human click." },
-    ],
-  };
-
-  inMemoryPipelineJobs.unshift(newJob);
-
-  return c.json({
-    success: true,
-    job_id: jobId,
-    status: "AWAITING_HUMAN_AUTH",
-    pr_url: prUrl,
-    branch_name: branchName,
-    execution_trace: newJob.execution_trace,
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/sandbox-exec", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const code = String(body.code || "");
-
-  // Safe container simulation / execution
-  const hasDestructive = /rm\s+-rf|dd\s+if=|mkfs/i.test(code);
-  const hasInfiniteLoop = /while\s+True|for\s+.*\s+in\s+iter\(int/i.test(code);
-
-  if (hasDestructive) {
-    return c.json({
-      output: "[Sandbox Guard: Docker Isolation Active]\nNotice: Attempted dangerous host system deletion command.\nAction: Contained inside disposable container. Host filesystem remains intact and untouched.\nExecution Output:\nPermission denied inside read-only guest mount.",
-      duration_seconds: 0.12,
-      circuit_breaker_timeout: 30,
-      isolated: true,
-    });
-  }
-
-  if (hasInfiniteLoop) {
-    return c.json({
-      output: "Error: Code execution timed out (30s circuit breaker reached). Infinite loop terminated by Docker sandbox supervisor.",
-      duration_seconds: 30.0,
-      circuit_breaker_timeout: 30,
-      isolated: true,
-    });
-  }
-
-  return c.json({
-    output: `[Docker python:3.11-slim Isolated Container]
-Executed snippet:
-${code.slice(0, 150)}${code.length > 150 ? "..." : ""}
-
-STDOUT:
->> Hello from isolated sandbox environment!
->> Invariant assertions passed.
-STDERR: None
-Exit Code: 0`,
-    duration_seconds: 0.48,
-    circuit_breaker_timeout: 30,
-    isolated: true,
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/authorize", async (c: any) => {
-  const jobId = c.req.param("jobId");
-  const body = await c.req.json().catch(() => ({}));
-  const reviewer = body.reviewer || "Lead SRE Operator";
-
-  const job = inMemoryPipelineJobs.find(j => j.job_id === jobId);
-  if (!job) {
-    return c.json({ success: false, message: "Job not found" }, 404);
-  }
-
-  job.status = "DEPLOYED_TO_PROD";
-  job.reviewer = reviewer;
-  job.resolved_at = new Date().toISOString();
-  job.execution_trace.push({
-    step: "Human Authorization & Production Merge",
-    phase: "30% Gated Phase",
-    status: "APPROVED",
-    detail: `Human operator (${reviewer}) clicked Approve. PR merged to main and CI/CD deployed to production.`,
-  });
-
-  return c.json({
-    success: true,
-    message: "Human authorization approved. PR merged to main and production deployment initiated.",
-    job_id: jobId,
-    status: "DEPLOYED_TO_PROD",
-  });
-});
-
-restCompat.post("/api/v1/self-healing/pipeline/jobs/:jobId/reject", async (c: any) => {
-  const jobId = c.req.param("jobId");
-  const body = await c.req.json().catch(() => ({}));
-  const reviewer = body.reviewer || "Lead SRE Operator";
-  const reason = body.reason || "Rejected during manual review";
-
-  const job = inMemoryPipelineJobs.find(j => j.job_id === jobId);
-  if (!job) {
-    return c.json({ success: false, message: "Job not found" }, 404);
-  }
-
-  job.status = "REJECTED";
-  job.reviewer = reviewer;
-  job.resolved_at = new Date().toISOString();
-  job.execution_trace.push({
-    step: "Human Authorization",
-    phase: "30% Gated Phase",
-    status: "REJECTED",
-    detail: `Deployment rejected by ${reviewer}. Reason: ${reason}.`,
-  });
-
-  return c.json({
-    success: true,
-    message: "Deployment rejected. Pipeline halted.",
-    job_id: jobId,
-    status: "REJECTED",
-  });
-});
 
 // ─── 9. AUTONOMOUS AFRICAN MARKET & TECHNOLOGY SENSING LOOP ─────────────
 
@@ -2196,49 +2028,8 @@ restCompat.post("/api/v1/sensing/afcfta-corridor", async (c: any) => {
   });
 });
 
-restCompat.post("/api/v1/sensing/dispatch-to-pipeline", async (c: any) => {
-  const body = await c.req.json().catch(() => ({}));
-  const title = body.opportunity_title || "PAPSS Local Currency Net Settlement Router";
-  const vertical = body.target_vertical || "Fintech";
-  const spec = body.feature_specification || "Multi-currency router";
-
-  const newPrNum = Math.floor(160 + Math.random() * 800);
-  const prUrl = `https://github.com/LimitlessTelecoms/luqi-ai/pull/${newPrNum}`;
-  const jobId = "sh_opp_" + Math.random().toString(36).substring(2, 8);
-
-  inMemoryPipelineJobs.unshift({
-    job_id: jobId,
-    bug_report: `African Opportunity Prototype: ${title} (${vertical}) - ${spec}`,
-    target_file: `backend/integrations/${vertical.toLowerCase().replace(/\s+/g, '_')}.py`,
-    status: "AWAITING_HUMAN_AUTH",
-    sandbox_output: `[Docker Container python:3.11-slim]
-Prototyping African Opportunity: ${title}
-Tested Invariant Contracts:
-  - Currency exchange rate cache: PASSED
-  - Multi-currency ledger integrity: PASSED
-  - Network timeout breaker: OK
-Output: Sandbox verification PASSED (0.38s).`,
-    pr_url: prUrl,
-    pr_number: newPrNum,
-    branch_name: `feature/african-opp-${jobId.substring(7)}`,
-    fix_diff: `--- /dev/null\n+++ b/backend/integrations/${vertical.toLowerCase().replace(/\s+/g, '_')}.py\n@@ -0,0 +1,15 @@\n+# Autonomously generated by African Market Intelligence Loop\n+# Aligned with AfCFTA & PAPSS 2026 specs`,
-    created_at: new Date().toISOString(),
-    execution_trace: [
-      { step: "Opportunity Sensed", phase: "70% Autonomous", status: "COMPLETED", detail: `Market Intelligence Agent extracted opportunity: ${title}` },
-      { step: "Docker Sandbox Prototyping", phase: "70% Autonomous", status: "COMPLETED", detail: "Generated integration code and executed regression suite in Docker sandbox." },
-      { step: "GitHub Pull Request", phase: "70% Autonomous", status: "COMPLETED", detail: `Opened PR #${newPrNum} on LimitlessTelecoms/luqi-ai.` },
-      { step: "LangGraph Security Gate", phase: "30% Gated Phase", status: "INTERRUPTED", detail: "Paused at human authorization node. Awaiting operator click." },
-    ]
-  });
-
-  return c.json({
-    success: true,
-    message: "Opportunity specifications passed to CrewAI Senior Reliability Engineer for sandbox prototyping.",
-    job_id: jobId,
-    pr_url: prUrl,
-    status: "AWAITING_HUMAN_AUTH"
-  });
-});
+// A sensing opportunity is not evidence that an agent created or tested a PR.
+restCompat.post("/api/v1/sensing/dispatch-to-pipeline", selfHealingUnavailable);
 
 // =====================================================================
 // CERTMASTER ACADEMY: ITIL® AI GOVERNANCE (v5) & CISCO CCNA / CCNP / CCIP
