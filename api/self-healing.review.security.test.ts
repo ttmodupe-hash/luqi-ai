@@ -93,9 +93,12 @@ describe("review ledger routes only trust validated administrator context", () =
     };
     await expect(caller("user").submitProposalEvaluationEvidence({ patchId: 99, report }))
       .rejects.toMatchObject({ code: "FORBIDDEN" });
-    const result = await caller("admin", 63).submitProposalEvaluationEvidence({
+    await expect(caller("admin", 63).submitProposalEvaluationEvidence({
       patchId: 99, report, actorUserId: 9999,
-    } as any);
+    } as any)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const result = await caller("admin", 63).submitProposalEvaluationEvidence({
+      patchId: 99, report,
+    });
     expect(fake.submitAgentEvaluationEvidence).toHaveBeenCalledWith({
       actorUserId: 63, patchId: 99, report,
     });
