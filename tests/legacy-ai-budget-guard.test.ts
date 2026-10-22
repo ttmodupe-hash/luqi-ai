@@ -27,4 +27,20 @@ describe("budgeted pilot route isolation", () => {
     expect(isUnbudgetedAiRoute("GET", "/api/v25/chat")).toBe(false);
     expect(isUnbudgetedAiRoute("POST", "/api/GEMINI/GENERATE/")).toBe(true);
   });
+  it("prevents direct and batched tRPC agent calls without disabling ping", () => {
+    for (const method of ["GET", "POST"]) {
+      for (const path of [
+        "/api/trpc/companion.chat", "/api/trpc/orchestrator.execute",
+        "/api/trpc/botanical.analyze", "/api/trpc/voice.synthesize",
+        "/api/trpc/selfHealing.runDiagnosis", "/api/trpc/video.generate",
+        "/api/trpc/companion.chat,content.list",
+        "/api/trpc/companion.chat%2Ccontent.list",
+      ]) {
+        expect(isUnbudgetedAiRoute(method, path)).toBe(true);
+      }
+      expect(isUnbudgetedAiRoute(method, "/api/trpc/ping")).toBe(false);
+      expect(isUnbudgetedAiRoute(method, "/api/trpc/content.list")).toBe(false);
+    }
+  });
+
 });
