@@ -242,6 +242,10 @@ export async function getDb() {
     const health = await checkPersistentDatabase();
     if (health.status === "connected") return realDrizzleDb;
   }
+  if (process.env.NODE_ENV === "production") {
+    // Never silently acknowledge production writes in volatile demo memory.
+    throw new Error("Persistent database required in production");
+  }
   return memoryDb;
 }
 
