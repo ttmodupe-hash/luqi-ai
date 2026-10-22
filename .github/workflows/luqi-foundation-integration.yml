@@ -1,0 +1,131 @@
+name: LUQI Integrated Foundation Release Gates (NO DEPLOY)
+on:
+  push:
+    branches: ["integration/luqi-foundation-*"]
+  pull_request:
+    branches: ["integration/luqi-foundation-*"]
+permissions:
+  contents: read
+concurrency:
+  group: luqi-foundation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  node-build-and-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install frozen Node dependencies
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript checking
+        run: npm run check
+      - name: Complete Node regression suite
+        run: npm test
+      - name: Compile actual Node server and Vite frontend
+        run: npm run build
+      - name: Assert that CI cannot deploy to Google Cloud
+        run: node scripts/check-release-guard.mjs
+      - name: Enforce staging-only Docker and browser/provider boundaries
+        run: node scripts/check-railway-staging.mjs
+      - name: Verify Cloudflare Worker offline (NO deployment)
+        run: node edge/verify-worker.mjs
+      - name: Build Docker staging image locally only
+        run: docker build -f Dockerfile.railway.staging -t luqi-foundation:ci .
+  python-safety-and-omega:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile integrated Python application and reviewed recovery modules
+        run: |
+          python -m compileall -q main.py construction_calc.py backend/async_job_routes.py backend/self_healing_pipeline.py omega_ai/__init__.py omega_ai/loan_calculator.py omega_ai/solar_calculator.py omega_ai/community_events.py
+      - name: Python agent host-execution safety regression
+        run: python -m unittest discover -s tests -p test_self_healing_safety.py -v
+      - name: Reviewed OMEGA utilities regression
+        run: python -m unittest discover -s tests -p test_omega_low_risk_recovery.py -v
+      - name: Python fatal lint in recovered core modules
+        run: |
+          python -m pip install flake8==7.4.1
+          python -m flake8 main.py construction_calc.py backend/async_job_routes.py backend/self_healing_pipeline.py omega_ai/__init__.py omega_ai/loan_calculator.py omega_ai/solar_calculator.py omega_ai/community_events.py --count --select=E9,F63,F7,F82 --show-source --statistics
+  python-sdk-dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install exact reviewed Python provider dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Instantiate provider clients with fake test credentials only
+        env:
+          LUQI_OFFLINE_TEST_API_KEY: offline-fake-test-token
+        run: |
+          python - <<'PY'
+          import os
+          from google import genai
+          from openai import OpenAI
+          from anthropic import Anthropic
+          from fastapi import FastAPI
+          from pydantic import BaseModel
+          token = os.environ["LUQI_OFFLINE_TEST_API_KEY"]
+          clients = [OpenAI(api_key=token), Anthropic(api_key=token), genai.Client(api_key=token)]
+          assert FastAPI() is not None
+          class Verify(BaseModel):
+              value: str
+          assert Verify(value="offline").value == "offline"
+          for client in clients:
+              if callable(getattr(client, "close", None)):
+                  client.close()
+          print("SDK constructors verified without requests or paid inference")
+          PY
+  mysql-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+          MYSQL_DATABASE: luqi_integration
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      CI: "true"
+      DATABASE_URL: mysql://root:ci-only-password@127.0.0.1:3306/luqi_integration
+      RUN_MYSQL_INTEGRATION: "1"
+      NODE_ENV: test
+      LUQI_VIDEO_DAILY_JOB_LIMIT: "3"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Real InnoDB video ledger, shared rate limiter and reviewed proposal chains
+        run: npx vitest run api/services/paidVideo.mysql.integration.test.ts api/security/rateLimit.mysql.integration.test.ts api/services/agentProposalLedger.mysql.integration.test.ts
