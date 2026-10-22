@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPilotEnabled, budgetSnapshot, PILOT_CENTS, PILOT_TOTAL_CENTS,
-  RESERVE_PER_ATTEMPT_CENTS, utcMonth, PilotBlocked
+  RESERVE_PER_ATTEMPT_CENTS, PILOT_USER_DAILY_MAX_ATTEMPTS, utcDay, utcMonth, PilotBlocked
 } from "../api/services/aiPilotBudget";
 import { runBudgetedPilotChat } from "../api/services/aiPilotGateway";
 
@@ -38,13 +38,18 @@ describe("LUQI $100 monthly AI pilot allocation", () => {
     })).toThrowError("AI_BUDGET_CONFIGURATION_INVALID");
     expect(() => assertPilotEnabled(approvals)).not.toThrow();
   });
+  it("limits every authenticated user to 20 reserved attempts daily", () => {
+    expect(PILOT_USER_DAILY_MAX_ATTEMPTS).toBe(20);
+    expect(utcDay(new Date("2026-10-22T23:59:59Z"))).toBe("2026-10-22");
+    expect(utcDay(new Date("2026-10-23T00:00:00Z"))).toBe("2026-10-23");
+  });
   it("resets UTC month only at calendar boundary", () => {
     expect(utcMonth(new Date("2026-10-31T23:59:59Z"))).toBe("2026-10");
     expect(utcMonth(new Date("2026-11-01T00:00:00Z"))).toBe("2026-11");
   });
   it("returns no response without activation and never calls a provider", async () => {
     vi.stubEnv("LUQI_AI_PROVIDER_ENABLED", "false");
-    await expect(runBudgetedPilotChat("hello")).rejects.toMatchObject({
+    await expect(runBudgetedPilotChat("hello", 1)).rejects.toMatchObject({
       reason: "AI_DISABLED"
     } satisfies Partial<PilotBlocked>);
   });
@@ -52,7 +57,7 @@ describe("LUQI $100 monthly AI pilot allocation", () => {
     vi.stubEnv("LUQI_AI_PROVIDER_ENABLED", "false");
     vi.stubEnv("LUQI_AI_BILLING_APPROVED", "false");
     vi.stubEnv("LUQI_PILOT_GEMINI_API_KEY", "test-not-live");
-    await expect(runBudgetedPilotChat("Give me a greeting")).rejects.toMatchObject({
+    await expect(runBudgetedPilotChat("Give me a greeting", 1)).rejects.toMatchObject({
       reason: "AI_DISABLED",
     });
   });
@@ -62,7 +67,7 @@ describe("LUQI $100 monthly AI pilot allocation", () => {
     vi.stubEnv("LUQI_PILOT_OPENAI_API_KEY", "");
     vi.stubEnv("DATABASE_URL", "");
     vi.stubEnv("DB_HOST", "");
-    await expect(runBudgetedPilotChat("How are you?")).rejects.toMatchObject({
+    await expect(runBudgetedPilotChat("How are you?", 1)).rejects.toMatchObject({
       reason: "AI_BUDGET_STORE_UNAVAILABLE",
     });
   });
