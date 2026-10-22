@@ -18,8 +18,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { IntelligentUIStreamRenderer } from "./IntelligentUIEngine";
-import { GoogleGenAI } from "@google/genai";
-import { getAuthHeaders } from "../lib/api";
+import { getAuthHeaders } from "@/lib/api";
 
 export default function FloatingAiChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,106 +58,47 @@ export default function FloatingAiChat() {
 
     setQuery("");
     const userMsg = { id: "user-" + Date.now(), role: "user" as const, content: text, timestamp: Date.now() };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
+    setMessages((previous) => [...previous, userMsg]);
     setIsLoading(true);
 
-    const systemInstruction = `You are Luqi-AI (powered by Jarvis), a super-intelligent Pan-African and Global AI platform created in South Africa.
-- Answer every question directly, naturally, and intelligently. Never repeat a static template.
-- If someone asks casual or identity questions (e.g., 'how old are you', 'who are you'), answer naturally with warmth and personality as Luqi-AI, explaining your mission, architecture, and capabilities.
-- Dialect Track: Blend natural Pretoria Sepitori warmth ("eita", "tlatsa", "ska wara", "daai ding", "chommie") with clear English without forcing awkward phrases when not needed; support isiZulu, Sesotho, Kiswahili, and Yoruba fluently.
-- For technical, software engineering, SARS tax, or telecom audit questions (strictly using Device Serial Numbers, never IMEIs), answer with 100% factual precision.
-- Enforce the 70% autonomous execution and 30% human authorization boundary for financial payments / SARS submissions.
-- Wealth vs Income Grounding: South Africa has ~37,400 to 48,200 dollar millionaires (investable liquid assets >= $1M USD, excluding primary home, per Henley & Partners/New World Wealth 2024-2026). Regional breakdown: Jhb ~12k, Cape Town ~7.4k, Winelands ~3.6k, Garden Route ~3.2k, Durban/Umhlanga ~3.5k, Pretoria ~2.1k, Whale Coast ~1.2k, Rest of SA ~14.9k. SARS income earners with >= R1M taxable income are ~320,000 individuals (income, not asset millionaires).`;
-
+    // Provider keys, model selection, and spending quotas belong on the server.
+    // Never call a provider SDK in the browser or invent an assistant answer on failure.
     try {
-      // 1. First attempt /api/v1/luqi-core
       const res = await fetch("/api/v1/luqi-core", {
         method: "POST",
+        credentials: "same-origin",
         headers: getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ user_input: text, language: "SEPITORI_ENGLISH" }),
       });
-
-      let content = "";
-      let model = "Gemini 2.5 Flash";
-      if (res.ok) {
-        const data = await res.json();
-        content = data?.response || "";
-        if (data?.meta?.model) {
-          model = data.meta.model;
-        }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const status = res.status;
+        throw new Error(
+          status === 401 ? "Please sign in to use LUQI AI."
+          : status === 429 ? "Daily AI allowance reached. Please try again tomorrow."
+          : "LUQI AI is temporarily unavailable. Please try again shortly."
+        );
       }
-
-      // 2. If backend response is empty or non-200, execute direct Gemini SDK call
-      if (!content || content.length < 5) {
-        const apiKey =
-          process.env.GEMINI_API_KEY ||
-          (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-          "";
-        const ai = new GoogleGenAI({ apiKey });
-        const contents = [
-          ...updatedMessages.slice(-6).map((m) => ({
-            role: m.role === "user" ? "user" : "model",
-            parts: [{ text: m.content }],
-          })),
-        ];
-
-        try {
-          const directRes = await ai.models.generateContent({
-            model: "gemini-3.8-flash",
-            contents,
-            config: { systemInstruction, temperature: 0.6 },
-          });
-          content = directRes.text || "";
-          model = "Gemini 2.5 Flash (Direct)";
-        } catch {
-          const fallbackRes = await ai.models.generateContent({
-            model: "gemini-flash-latest",
-            contents,
-            config: { systemInstruction, temperature: 0.6 },
-          });
-          content = fallbackRes.text || "";
-          model = "Gemini 2.5 Flash (Fallback)";
-        }
-      }
-
-      if (!content) {
-        content = `I am Luqi-AI (powered by Jarvis), an advanced Pan-African super-intelligence platform created in South Africa. I'm ready to answer questions, guide your STEM simulations, analyze data, and build with you. How can I assist you right now?`;
-      }
-
-      setMessages((prev) => [
-        ...prev,
+      const content = typeof data?.response === "string" ? data.response.trim() : "";
+      if (!content) throw new Error("LUQI AI did not return a usable answer. Please try again.");
+      const model = typeof data?.meta?.model === "string" ? data.meta.model : "LUQI AI (server)";
+      setMessages((previous) => [
+        ...previous,
         { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model },
       ]);
-    } catch (err) {
-      try {
-        const apiKey =
-          process.env.GEMINI_API_KEY ||
-          (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-          "";
-        const ai = new GoogleGenAI({ apiKey });
-        const directRes = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: text,
-          config: { systemInstruction, temperature: 0.6 },
-        });
-        const content = directRes.text || "Hello! I am Luqi-AI, online and ready to assist you.";
-        setMessages((prev) => [
-          ...prev,
-          { id: "ai-" + Date.now(), role: "assistant", content, timestamp: Date.now(), model: "Gemini 2.5 Flash (Direct)" },
-        ]);
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: "ai-" + Date.now(),
-            role: "assistant",
-            content: `Hello! I am Luqi-AI (powered by Jarvis). I am operational across all classical mechanics simulations, code refactoring, and enterprise auditing. What would you like to explore?`,
-            timestamp: Date.now(),
-            model: "Gemini 2.5 Flash (Local Sovereign)",
-          },
-        ]);
-      }
+    } catch (error) {
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: "error-" + Date.now(),
+          role: "assistant",
+          content: error instanceof Error
+            ? error.message
+            : "LUQI AI is temporarily unavailable. Please try again shortly.",
+          timestamp: Date.now(),
+          model: "Unavailable",
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }

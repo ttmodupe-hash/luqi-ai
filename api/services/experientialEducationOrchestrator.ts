@@ -8,11 +8,9 @@
 // - HIGHER_LEARNING: Multi-variable financial calculators, calculus derivations, relativistic physics
 // =====================================================================
 
-import { execSync } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import { getGeminiClient, orchestrateRequest } from "./orchestrator";
 
 export type GradeTier = "PRE_SCHOOL" | "PRIMARY" | "HIGH_SCHOOL" | "HIGHER_LEARNING";
 
@@ -199,47 +197,16 @@ function executeCalculation(massMultiplier) {
   }
 
   /**
-   * Programmatic Sandboxed Node VM Evaluation
-   */
-  private verifySimulationLogic(compiledJS: string, testingAssertions: string): { viable: boolean; log: string } {
-    const tempFile = path.join(this.sandboxDir, `edu_sim_${crypto.randomBytes(4).toString("hex")}.js`);
-
-    const environmentWrapper = `
-      try {
-        ${compiledJS}
-        ${testingAssertions}
-        console.log("SIMULATION_VERIFIED_AND_STABLE");
-      } catch (err) {
-        console.error("SIMULATION_EXCEPTION: " + (err.stack || err.message));
-        process.exit(1);
-      }
-    `;
-
-    try {
-      fs.writeFileSync(tempFile, environmentWrapper, "utf8");
-      const runLog = execSync(`node ${tempFile}`, { timeout: 4000, encoding: "utf8" });
-      const viable = runLog.includes("SIMULATION_VERIFIED_AND_STABLE");
-      return { viable, log: runLog.trim() };
-    } catch (e: any) {
-      const log = e.stderr?.toString() || e.stdout?.toString() || e.message;
-      return { viable: false, log: log.trim() };
-    } finally {
-      try {
-        if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-      } catch {
-        // cleanup
-      }
-    }
-  }
-
-  /**
-   * Autonomous Simulation Generation & Compilation
+   * Dynamic model-generated JavaScript is not trusted code. This runtime must
+   * NEVER execute it in-process, via child_process, or in a browser. An
+   * isolated, human-reviewed CI sandbox will be required before re-enabling
+   * dynamic simulations.
    */
   public async generateInteractiveSimulation(
     conceptName: string,
-    theoreticalText: string,
+    _theoreticalText: string,
     gradeTier: GradeTier,
-    verificationSuite: string
+    _verificationSuite: string
   ): Promise<{
     compiledFrontend: string;
     conceptHash: string;
@@ -248,168 +215,29 @@ function executeCalculation(massMultiplier) {
     status: "ACTIVE" | "FAILED";
   }> {
     const clockStart = Date.now();
-    const conceptHash = crypto.createHash("sha256").update(conceptName + gradeTier).digest("hex").slice(0, 16);
+    const conceptHash = crypto.createHash("sha256")
+      .update(conceptName + gradeTier).digest("hex").slice(0, 16);
+    const reason =
+      "Dynamic simulation generation is disabled pending isolated code validation and human review.";
 
-    const historical = this.modulesLedger.get(conceptHash);
-
-    const systemInstruction = `You are an Advanced Autonomous Experiential Learning Engine.
-Transform theoretical descriptions into complete, standalone, production-grade interactive simulation scripts written in JavaScript.
-
-CRITICAL PEDAGOGICAL DESIGN MATRICES:
-1. PRE_SCHOOL: Focus entirely on visual storytelling, animal/folklore counting arrays, and high-contrast click events.
-2. PRIMARY: Focus on basic interactive visual puzzles, arithmetic sliders, and responsive feedback indicators.
-3. HIGH_SCHOOL: Provide functional vector experiments (e.g., adjustable friction matrices, electrical current toggles).
-4. HIGHER_LEARNING: Provide high-fidelity simulation engines (e.g., multi-variable financial calculators, calculus visualizations).
-
-TECHNICAL SPECIFICATION:
-Your script MUST export a function named "executeCalculation(input)" that returns an informative string or numeric result.
-Return ONLY clean, executable JavaScript code without markdown tags or explanations.
-${historical?.failureLog ? `\n⚠️ PREVIOUS FAILURE ANOMALY TO AVOID: ${historical.failureLog}` : ""}`;
-
-    let liveCode = "";
-    let usedModel = "gemini-4-argon";
-
-    try {
-      const gemini = await getGeminiClient();
-      if (gemini) {
-        try {
-          const res = await gemini.models.generateContent({
-            model: "gemini-4-argon",
-            contents: `Build an interactive simulation for: ${conceptName}. Theory: ${theoreticalText}`,
-            config: { systemInstruction },
-          });
-          liveCode = res.text?.replace(/```[a-z]*\n?/gi, "").trim() || "";
-        } catch {
-          usedModel = "gemini-3.8-flash";
-          const res2 = await gemini.models.generateContent({
-            model: "gemini-3.8-flash",
-            contents: `Build an interactive simulation for: ${conceptName}. Theory: ${theoreticalText}`,
-            config: { systemInstruction },
-          });
-          liveCode = res2.text?.replace(/```[a-z]*\n?/gi, "").trim() || "";
-        }
-      }
-    } catch {
-      const res = await orchestrateRequest({
-        query: `Write executeCalculation function for: ${conceptName}. ${theoreticalText}`,
-        systemPrompt: systemInstruction,
-      });
-      liveCode = res.content.replace(/```[a-z]*\n?/gi, "").trim();
-    }
-
-    let loopCycle = 1;
-    let anomalyLog = "Compilation passed without system exceptions.";
-
-    while (loopCycle <= 3) {
-      const audit = this.verifySimulationLogic(liveCode, verificationSuite);
-
-      if (audit.viable) {
-        const duration = Date.now() - clockStart;
-        const moduleRecord: EducationalModuleRecord = {
-          id: `mod-${crypto.randomUUID().slice(0, 8)}`,
-          conceptHash,
-          conceptName,
-          targetGradeTier: gradeTier,
-          compiledFrontend: liveCode,
-          optimizationsCount: (historical?.optimizationsCount || 0) + 1,
-          failureLog: null,
-          timestamp: new Date().toISOString(),
-          description: theoreticalText.slice(0, 150),
-          initialValue: 10,
-          min: 1,
-          max: 100,
-        };
-
-        this.modulesLedger.set(conceptHash, moduleRecord);
-        this.persistModules();
-
-        const telRecord: LearningTelemetryRecord = {
-          id: `tel-${crypto.randomUUID().slice(0, 8)}`,
-          moduleId: conceptHash,
-          conceptName,
-          latencyMs: duration,
-          compilationLoops: loopCycle,
-          resolvedBugs: anomalyLog,
-          status: "ACTIVE",
-          timestamp: new Date().toISOString(),
-        };
-
-        this.telemetryLedger.unshift(telRecord);
-        this.persistTelemetry();
-
-        return {
-          compiledFrontend: liveCode,
-          conceptHash,
-          latencyMs: duration,
-          loops: loopCycle,
-          status: "ACTIVE",
-        };
-      }
-
-      // Auto-correct loop via Gemini 3.8 Flash
-      const patchPrompt = `The simulation failed the verification assertions.
-Fix the JavaScript code so function executeCalculation(input) works properly.
-Return ONLY raw JavaScript code, no markdown.
-
-[Defective Code]:
-${liveCode}
-
-[Error Trace Output]:
-${audit.log}
-
-[Target Theory]:
-${theoreticalText}`;
-
-      try {
-        const gemini = await getGeminiClient();
-        if (gemini) {
-          const fixRes = await gemini.models.generateContent({
-            model: "gemini-3.8-flash",
-            contents: patchPrompt,
-            config: {
-              systemInstruction: "You are an automated self-correcting pedagogical logic kernel. Return raw executable code.",
-              temperature: 0.1,
-            },
-          });
-          const candidate = fixRes.text?.replace(/```[a-z]*\n?/gi, "").trim() || "";
-          if (candidate.length > 20) {
-            liveCode = candidate;
-            anomalyLog = `Assertion failure on loop ${loopCycle}: ${audit.log.slice(0, 100)}`;
-          }
-        }
-      } catch {
-        // continue loop
-      }
-
-      loopCycle++;
-    }
-
-    // Fallback if loop exceeded
-    const fallbackDuration = Date.now() - clockStart;
-    const finalRecord: EducationalModuleRecord = {
-      id: `mod-${crypto.randomUUID().slice(0, 8)}`,
-      conceptHash,
+    this.telemetryLedger.unshift({
+      id: `tel-${crypto.randomUUID().slice(0, 8)}`,
+      moduleId: conceptHash,
       conceptName,
-      targetGradeTier: gradeTier,
-      compiledFrontend: `function executeCalculation(input) { return "Simulated Output for ${conceptName}: Value = " + input; }`,
-      optimizationsCount: (historical?.optimizationsCount || 0) + 1,
-      failureLog: "Compiled with fallback execution envelope.",
+      latencyMs: Date.now() - clockStart,
+      compilationLoops: 0,
+      resolvedBugs: reason,
+      status: "FAILED",
       timestamp: new Date().toISOString(),
-      description: theoreticalText.slice(0, 150),
-      initialValue: 10,
-      min: 1,
-      max: 100,
-    };
-
-    this.modulesLedger.set(conceptHash, finalRecord);
-    this.persistModules();
+    });
+    this.persistTelemetry();
 
     return {
-      compiledFrontend: finalRecord.compiledFrontend,
+      compiledFrontend: "",
       conceptHash,
-      latencyMs: fallbackDuration,
-      loops: loopCycle,
-      status: "ACTIVE",
+      latencyMs: Date.now() - clockStart,
+      loops: 0,
+      status: "FAILED",
     };
   }
 
