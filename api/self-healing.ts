@@ -7,7 +7,8 @@ import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrat
 import { summarizeMetricSamples, countIncidentTrend } from "./services/reliabilityAnalytics";
 import { reserveAiRequest } from "./security/aiBudget";
 import { formatUntrustedDiagnosisEvidence } from "./security/diagnosisEvidence";
-import { assertEvidenceLedgerReady, createEvidenceProposal, transitionEvidenceProposal, readEvidenceProposalTrail } from "./services/agentProposalLedger";
+import { assertEvidenceLedgerReady, createEvidenceProposal, transitionEvidenceProposal, readEvidenceProposalTrail, submitAgentEvaluationEvidence, listAgentEvaluationEvidence } from "./services/agentProposalLedger";
+import { EVAL_DIMENSIONS } from "./services/agentImprovementEvaluation";
 
 export const selfHealingRouter = createRouter({
   logError: adminQuery
@@ -310,6 +311,48 @@ export const selfHealingRouter = createRouter({
   getProposalReviewTrail: adminQuery
     .input(z.object({ patchId: z.number().int().positive() }))
     .query(async ({ input }) => readEvidenceProposalTrail(input.patchId)),
+
+  // Store only bounded per-case measurements as a digest + summary.
+  // These are UNATTESTED inputs; the endpoint cannot certify CI, model
+  // correctness, evaluator provenance or authorize a deployment.
+  submitProposalEvaluationEvidence: adminQuery
+    .input(z.object({
+      patchId: z.number().int().positive(),
+      report: z.object({
+        suiteVersion: z.string().min(3).max(100),
+        datasetSha256: z.string().regex(/^[a-f0-9]{64}$/),
+        baselineRevision: z.string().regex(/^[a-f0-9]{40}$/),
+        candidateRevision: z.string().regex(/^[a-f0-9]{40}$/),
+        measurementMethod: z.enum(["offline_replay", "reviewed_human_scoring"]),
+        observations: z.array(z.object({
+          caseId: z.string().min(1).max(80),
+          dimension: z.enum(EVAL_DIMENSIONS),
+          locale: z.string().min(2).max(12),
+          baseline: z.object({
+            passed: z.boolean(),
+            criticalSafetyFailure: z.boolean(),
+            latencyMs: z.number().finite().min(0).max(300000),
+            costMicroUsd: z.number().int().nonnegative().max(10000000),
+          }).strict(),
+          candidate: z.object({
+            passed: z.boolean(),
+            criticalSafetyFailure: z.boolean(),
+            latencyMs: z.number().finite().min(0).max(300000),
+            costMicroUsd: z.number().int().nonnegative().max(10000000),
+          }).strict(),
+        }).strict()).min(120).max(1000),
+      }).strict(),
+    }).strict())
+    .mutation(async ({ ctx, input }) => submitAgentEvaluationEvidence({
+      actorUserId: ctx.user.id,
+      patchId: input.patchId,
+      report: input.report,
+    })),
+
+  listProposalEvaluationEvidence: adminQuery
+    .input(z.object({ patchId: z.number().int().positive() }))
+    .query(async ({ input }) => listAgentEvaluationEvidence(input.patchId)),
+
 
   promoteABTest: adminQuery
     .input(z.object({ patchId: z.number().int().positive() }))
