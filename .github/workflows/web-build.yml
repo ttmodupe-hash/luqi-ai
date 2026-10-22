@@ -21,13 +21,15 @@ jobs:
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify persistent database configuration contracts
-        run: npx vitest run tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/user-token.test.ts tests/auth-input.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts tests/billing-dashboard-truth.test.ts tests/workspace-truth.test.ts tests/pilot-credential-check.test.ts
+        run: npx vitest run tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/user-token.test.ts tests/auth-input.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts tests/billing-dashboard-truth.test.ts tests/workspace-truth.test.ts tests/pilot-credential-check.test.ts tests/account-recovery.test.ts
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
         run: npm run build
       - name: Verify deployment entrypoints
-        run: test -s dist/boot.js && test -s dist/public/index.html
+        run: test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js
+      - name: Verify recovery terminal safety
+        run: python scripts/ci-recovery-cli.py
       - name: Smoke-test production HTTP health endpoint
         env:
           NODE_ENV: production

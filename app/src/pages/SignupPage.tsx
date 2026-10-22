@@ -26,7 +26,7 @@ export default function SignupPage() {
     setForm((f) => ({ ...f, [field]: value }));
     if (field === "password") {
       let s = 0;
-      if (value.length >= 8) s++;
+      if (value.length >= 12) s++;
       if (/[A-Z]/.test(value)) s++;
       if (/[0-9]/.test(value)) s++;
       if (/[^A-Za-z0-9]/.test(value)) s++;
@@ -39,12 +39,12 @@ export default function SignupPage() {
     setError("");
     if (!form.fullName || !form.email || !form.password) { setError("Please fill in all required fields"); return; }
     if (form.password !== form.confirmPassword) { setError("Passwords do not match"); return; }
-    if (form.password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (form.password.length < 12 || new TextEncoder().encode(form.password).length > 72) { setError("Password must have at least 12 characters and at most 72 UTF-8 bytes"); return; }
     if (!agreed) { setError("Please agree to the terms and conditions"); return; }
     try {
       const result = await post("/auth/register", {
         email: form.email, password: form.password,
-        full_name: form.fullName, province: form.province, industry: form.industry
+        name: form.fullName, province: form.province, industry: form.industry
       }) as any;
       if (result?.token) {
         localStorage.setItem("token", result.token);

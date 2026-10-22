@@ -7,13 +7,16 @@ const key = "test-signing-secret-at-least-thirty-two-chars";
 const bearer = (token: string) => "Bearer " + token;
 
 describe("authenticated AI pilot gate", () => {
-  it("accepts a valid existing-format signed user JWT", () => {
-    const token = jwt.sign({ userId: 42 }, key, { issuer: LUQI_JWT_ISSUER, audience: LUQI_JWT_AUDIENCE, expiresIn: "24h" });
+  it("accepts a scoped signed user JWT with a credential-version claim", () => {
+    const token = jwt.sign({ userId: 42, cv: "a".repeat(64) }, key, { issuer: LUQI_JWT_ISSUER, audience: LUQI_JWT_AUDIENCE, expiresIn: "24h" });
     expect(parsePilotUserId(bearer(token), key)).toBe(42);
   });
   it("rejects anonymous callers and missing signing key", () => {
     expect(() => parsePilotUserId(undefined, key)).toThrow("AUTH_REQUIRED");
     expect(() => parsePilotUserId("Bearer bogus", key)).toThrow("AUTH_REQUIRED");
+    for (const header of ["Bearer  a.b.c", "Bearer a.b.c ", "Basic a.b.c"]) {
+      expect(() => parsePilotUserId(header, key)).toThrow("AUTH_REQUIRED");
+    }
     expect(() => parsePilotUserId(bearer("a.b.c"), undefined)).toThrow("AUTH_UNAVAILABLE");
   });
   it("rejects tokens signed by another server or expired JWTs", () => {

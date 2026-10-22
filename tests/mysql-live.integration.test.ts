@@ -5,6 +5,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { signUserToken } from "../api/lib/userToken";
+import { resetAccountPassword } from "../api/services/accountRecovery";
 import { LUQI_JWT_AUDIENCE, LUQI_JWT_ISSUER } from "../api/lib/userToken";
 import { restCompat } from "../api/rest-compat";
 import { authenticatePilotUser } from "../api/services/pilotAuth";
@@ -97,6 +100,65 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     expect(disabled.status).toBe(401);
     await expect(authenticatePilotUser(`Bearer ${signedIn.token}`))
       .rejects.toMatchObject({ code: "AUTH_REQUIRED" });
+  }, 70_000);
+
+  it("recovers legacy passwords, revokes old tokens and preserves account data", async () => {
+    const email = "ci-recovery@example.invalid";
+    const oldPassword = "Legacy-Long-Password-".repeat(5);
+    const oldHash = await bcrypt.hash(oldPassword, 12);
+    const [insert] = await pool.execute<mysql.ResultSetHeader>(
+      "INSERT INTO users (email,password_hash,name,is_active) VALUES (?,?,?,1)",
+      [email, oldHash, "Recovery Fixture"]);
+    const id = insert.insertId;
+    const oldToken = signUserToken(id, oldHash);
+    expect(await authenticatePilotUser(`Bearer ${oldToken}`)).toBe(id);
+    await pool.execute("INSERT INTO sessions (user_id,token,expires_at) VALUES (?, ?, DATE_ADD(NOW(),INTERVAL 1 DAY)), (1, ?, DATE_ADD(NOW(),INTERVAL 1 DAY))",
+      [id, "fixture-recovery-session", "fixture-other-account-session"]);
+    const [before] = await pool.query<RowDataPacket[]>("SELECT * FROM users WHERE id=?", [id]);
+    const newPassword = "New-Unique-Recovered-Password!";
+    await expect(resetAccountPassword(pool, id, "wrong@example.invalid", newPassword))
+      .rejects.toMatchObject({ code: "ACCOUNT_UNAVAILABLE" });
+    const result = await resetAccountPassword(pool, id, email, newPassword);
+    expect(result).toEqual({ userId: id, sessionsRevoked: 1 });
+    const [after] = await pool.query<RowDataPacket[]>("SELECT * FROM users WHERE id=?", [id]);
+    const { password_hash: beforeHash, updated_at: _beforeTime, ...beforeData } = before[0];
+    const { password_hash: afterHash, updated_at: _afterTime, ...afterData } = after[0];
+    expect(afterData).toEqual(beforeData);
+    expect(afterHash).not.toBe(beforeHash);
+    expect(await bcrypt.compare(newPassword, afterHash)).toBe(true);
+    expect(await singleNumber("SELECT COUNT(*) AS n FROM sessions WHERE user_id=?", [id])).toBe(0);
+    expect(await singleNumber("SELECT COUNT(*) AS n FROM sessions WHERE user_id=1")).toBe(1);
+    await expect(authenticatePilotUser(`Bearer ${oldToken}`)).rejects.toMatchObject({ code: "AUTH_REQUIRED" });
+    expect((await restCompat.request("/auth/me", { headers: { Authorization: `Bearer ${oldToken}` } })).status).toBe(401);
+    const login = await restCompat.request("/auth/login", { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: newPassword }) });
+    expect(login.status).toBe(200);
+    expect(await authenticatePilotUser(`Bearer ${(await login.json()).token}`)).toBe(id);
+    await expect(resetAccountPassword(pool, id, email, newPassword)).rejects.toMatchObject({ code: "PASSWORD_REUSED" });
+    await pool.execute("UPDATE users SET is_active=0 WHERE id=?", [id]);
+    await expect(resetAccountPassword(pool, id, email, "Another-Unique-Password!"))
+      .rejects.toMatchObject({ code: "ACCOUNT_UNAVAILABLE" });
+  }, 70_000);
+
+  it("rolls back the password update if stored-session revocation fails", async () => {
+    const email = "ci-recovery-rollback@example.invalid";
+    const hash = await bcrypt.hash("Original-Password-For-Rollback!", 12);
+    const [insert] = await pool.execute<mysql.ResultSetHeader>(
+      "INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", [email, hash]);
+    const id = insert.insertId;
+    await pool.execute("INSERT INTO sessions (user_id,token,expires_at) VALUES (?, ?, DATE_ADD(NOW(),INTERVAL 1 DAY))",
+      [id, "fixture-failed-revocation"]);
+    // Disposable local CI only: force a failure after the password UPDATE.
+    await pool.query("CREATE TRIGGER reject_session_delete BEFORE DELETE ON sessions FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CI revocation failure'");
+    try {
+      await expect(resetAccountPassword(pool, id, email, "Different-Rollback-Password!"))
+        .rejects.toMatchObject({ code: "RECOVERY_UNAVAILABLE" });
+      const [rows] = await pool.query<RowDataPacket[]>("SELECT password_hash FROM users WHERE id=?", [id]);
+      expect(rows[0].password_hash).toBe(hash);
+      expect(await singleNumber("SELECT COUNT(*) AS n FROM sessions WHERE user_id=?", [id])).toBe(1);
+    } finally {
+      await pool.query("DROP TRIGGER reject_session_delete");
+    }
   }, 70_000);
 
   it("atomically enforces 20 daily attempts from concurrent Gemini/OpenAI requests", async () => {

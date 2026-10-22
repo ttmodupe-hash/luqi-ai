@@ -8,7 +8,8 @@
 
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
-import { getSigningSecret, signUserToken, verifyUserToken } from "./lib/userToken";
+import { validNewPassword } from "./lib/passwordPolicy";
+import { getSigningSecret, signUserToken, verifyUserToken, verifyUserCredential } from "./lib/userToken";
 import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
 import { users, knowledgeArticles, creditWallets } from "../db/schema";
@@ -489,6 +490,14 @@ restCompat.get("/api/v25/payments/balance", legacyPaymentsUnavailable);
 
 // ─── AUTH ─────────────────────────────────────────────────────────────
 
+for (const path of ["/auth/forgot-password", "/api/v1/auth/forgot-password"]) {
+  restCompat.all(path, (c) => {
+    c.header("Cache-Control", "no-store");
+    return c.json({ code: "ACCOUNT_RECOVERY_ASSISTED_ONLY",
+      detail: "Automated reset emails are unavailable. Contact your LUQI administrator through a verified support channel." }, 503);
+  });
+}
+
 // All public aliases share the same durable, signed-in account handlers.
 // A failed database call is an error: never pretend a user was registered.
 const handleSignup = async (c: any) => {
@@ -501,7 +510,7 @@ const handleSignup = async (c: any) => {
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return c.json({ detail: "Valid email is required" }, 400);
   }
-  if (password.length < 12 || Buffer.byteLength(password, "utf8") > 72) {
+  if (!validNewPassword(password)) {
     return c.json({ detail: "Password must be at least 12 characters and at most 72 UTF-8 bytes" }, 400);
   }
 
@@ -521,7 +530,7 @@ const handleSignup = async (c: any) => {
       throw new Error("Invalid persisted account identifier");
     }
     return c.json({
-      token: signUserToken(userId),
+      token: signUserToken(userId, passwordHash),
       token_type: "bearer",
       user: { id: userId, email, name },
     }, 201);
@@ -554,7 +563,7 @@ const handleLogin = async (c: any) => {
       return c.json({ detail: "Invalid credentials" }, 401);
     }
     return c.json({
-      token: signUserToken(userId),
+      token: signUserToken(userId, user.passwordHash),
       token_type: "bearer",
       user: { id: userId, email: user.email, name: user.name },
     });
@@ -582,6 +591,7 @@ restCompat.get("/auth/me", async (c) => {
     if (!user || user.isActive === false) {
       return c.json({ detail: "Invalid or expired token" }, 401);
     }
+    verifyUserCredential(token, userId, user.passwordHash);
     return c.json({ id: user.id, email: user.email, name: user.name });
   } catch {
     return c.json({ detail: "Invalid or expired token" }, 401);
