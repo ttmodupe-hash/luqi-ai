@@ -68,25 +68,49 @@ function budgetPool(): Pool {
  * Never fallback to demo/in-memory storage. Budget exhaustion for Gemini
  * may allow OpenAI fallback only after a SEPARATE OpenAI reservation.
  */
-export async function reservePilotAttempt(provider: PilotProvider,
-  userId: number, now: Date = new Date()): Promise<void> {
-  assertPilotEnabled();
-  if (provider !== "gemini" && provider !== "openai") {
-    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
-  }
-  if (!Number.isSafeInteger(userId) || userId <= 0) {
-    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
-  }
-  const period = utcMonth(now);
-  const day = utcDay(now);
+/** A DB deadlock is safely retryable because no provider request starts
+ * until this durable reservation has committed. Other failures remain closed.
+ */
+class TransientReservationConflict extends Error {}
+
+function isTransientSqlConflict(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: unknown }).code;
+  const errno = (error as { errno?: unknown }).errno;
+  return code === "ER_LOCK_DEADLOCK" || code === "ER_LOCK_WAIT_TIMEOUT" ||
+    errno === 1213 || errno === 1205;
+}
+
+async function reserveOnce(
+  provider: PilotProvider, userId: number, period: string, day: string
+): Promise<void> {
   let conn: Awaited<ReturnType<Pool["getConnection"]>> | undefined;
   let begun = false;
   try {
     conn = await budgetPool().getConnection();
     await conn.beginTransaction();
     begun = true;
+
+    // IMPORTANT: every worker locks the *user* counter before the provider
+    // counter. Consistent ordering prevents cross-provider deadlocks when a
+    // single account sends simultaneous requests. Upsert safely creates rows
+    // on an empty database, unlike racing INSERT IGNORE transactions.
     await conn.execute(
-      "INSERT IGNORE INTO ai_pilot_monthly_spend (month_utc, provider, reserved_cents) VALUES (?, ?, 0)",
+      "INSERT INTO ai_pilot_daily_user_usage (day_utc, user_id, attempts) VALUES (?, ?, 0) ON DUPLICATE KEY UPDATE attempts=attempts",
+      [day, userId]);
+    const [userRows] = await conn.execute<import("mysql2/promise").RowDataPacket[]>(
+      "SELECT attempts FROM ai_pilot_daily_user_usage WHERE day_utc=? AND user_id=? FOR UPDATE",
+      [day, userId]);
+    const attempts = Number(userRows[0]?.attempts);
+    if (!Number.isSafeInteger(attempts) || attempts < 0) {
+      throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
+    }
+    if (attempts >= PILOT_USER_DAILY_MAX_ATTEMPTS) {
+      throw new PilotBlocked("AI_USER_DAILY_QUOTA_EXHAUSTED");
+    }
+
+    await conn.execute(
+      "INSERT INTO ai_pilot_monthly_spend (month_utc, provider, reserved_cents) VALUES (?, ?, 0) ON DUPLICATE KEY UPDATE reserved_cents=reserved_cents",
       [period, provider]);
     const [rows] = await conn.execute<import("mysql2/promise").RowDataPacket[]>(
       "SELECT reserved_cents FROM ai_pilot_monthly_spend WHERE month_utc=? AND provider=? FOR UPDATE",
@@ -99,39 +123,56 @@ export async function reservePilotAttempt(provider: PilotProvider,
     if (spent + RESERVE_PER_ATTEMPT_CENTS > PILOT_CENTS[provider]) {
       throw new PilotBlocked("AI_PROVIDER_BUDGET_EXHAUSTED");
     }
-    // Second durable gate: protect the shared wallet from a single user.
-    // All replicas apply the same row lock and every provider shares this quota.
-    await conn.execute(
-      "INSERT IGNORE INTO ai_pilot_daily_user_usage (day_utc, user_id, attempts) VALUES (?, ?, 0)",
-      [day, userId]);
-    const [userRows] = await conn.execute<import("mysql2/promise").RowDataPacket[]>(
-      "SELECT attempts FROM ai_pilot_daily_user_usage WHERE day_utc=? AND user_id=? FOR UPDATE",
-      [day, userId]);
-    const attempts = Number(userRows[0]?.attempts);
-    if (!Number.isSafeInteger(attempts) || attempts < 0) {
-      throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
-    }
-    if (attempts >= PILOT_USER_DAILY_MAX_ATTEMPTS) {
-      throw new PilotBlocked("AI_USER_DAILY_QUOTA_EXHAUSTED");
-    }
+
     await conn.execute(
       "UPDATE ai_pilot_daily_user_usage SET attempts=attempts+1 WHERE day_utc=? AND user_id=?",
       [day, userId]);
     await conn.execute(
-      "UPDATE ai_pilot_monthly_spend SET reserved_cents = reserved_cents + ? WHERE month_utc=? AND provider=?",
+      "UPDATE ai_pilot_monthly_spend SET reserved_cents=reserved_cents+? WHERE month_utc=? AND provider=?",
       [RESERVE_PER_ATTEMPT_CENTS, period, provider]);
     await conn.commit();
     begun = false;
   } catch (error) {
     if (begun && conn) {
-      try { await conn.rollback(); } catch { /* safely deny request */ }
+      try {
+        await conn.rollback();
+      } catch {
+        throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
+      }
     }
     if (error instanceof PilotBlocked) throw error;
-    // Avoid database/connection error messages: they can disclose credentials.
+    if (isTransientSqlConflict(error)) throw new TransientReservationConflict();
+    // Never disclose MySQL connection errors or secrets.
     throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
   } finally {
     conn?.release();
   }
+}
+
+/** Reserve before any external AI invocation; never refund a possible spend. */
+export async function reservePilotAttempt(
+  provider: PilotProvider, userId: number, now: Date = new Date()
+): Promise<void> {
+  assertPilotEnabled();
+  if (provider !== "gemini" && provider !== "openai") {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
+  const period = utcMonth(now);
+  const day = utcDay(now);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await reserveOnce(provider, userId, period, day);
+      return;
+    } catch (error) {
+      if (!(error instanceof TransientReservationConflict)) throw error;
+      if (attempt === 4) break;
+      await new Promise<void>(resolve => setTimeout(resolve, 15 * 2 ** attempt));
+    }
+  }
+  throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
 }
 
 
