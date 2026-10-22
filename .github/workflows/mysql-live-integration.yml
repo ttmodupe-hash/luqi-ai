@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "package.json"
+      - "package-lock.json"
+      - "app/package.json"
       - "db/**"
       - "api/services/aiPilotBudget.ts"
       - "api/services/pilotAuth.ts"
