@@ -8,7 +8,7 @@
 
 import { Hono } from "hono";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { getSigningSecret, signUserToken, verifyUserToken } from "./lib/userToken";
 import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
 import { users, knowledgeArticles, creditWallets } from "../db/schema";
@@ -53,18 +53,6 @@ function aiUnavailableResponse() {
     module: "unavailable",
     response_time_ms: 0,
   };
-}
-
-function jwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("JWT_SECRET must be configured with at least 32 characters");
-  }
-  return secret;
-}
-
-function signToken(userId: number): string {
-  return jwt.sign({ userId }, jwtSecret(), { expiresIn: "30d" });
 }
 
 // ─── AI BRAIN / CHAT ──────────────────────────────────────────────────
@@ -519,7 +507,7 @@ const handleSignup = async (c: any) => {
   try {
     // Verify signing capability BEFORE creating an account. This avoids an
     // unusable newly-created user when JWT config is missing.
-    jwtSecret();
+    getSigningSecret();
     const db = await getPersistentDb();
     const [existing] = await db.select({ id: users.id }).from(users)
       .where(eq(users.email, email)).limit(1);
@@ -532,7 +520,7 @@ const handleSignup = async (c: any) => {
       throw new Error("Invalid persisted account identifier");
     }
     return c.json({
-      token: signToken(userId),
+      token: signUserToken(userId),
       token_type: "bearer",
       user: { id: userId, email, name },
     }, 201);
@@ -564,7 +552,7 @@ const handleLogin = async (c: any) => {
       return c.json({ detail: "Invalid credentials" }, 401);
     }
     return c.json({
-      token: signToken(userId),
+      token: signUserToken(userId),
       token_type: "bearer",
       user: { id: userId, email: user.email, name: user.name },
     });
@@ -585,12 +573,9 @@ restCompat.get("/auth/me", async (c) => {
   if (!token) return c.json({ detail: "Missing token" }, 401);
 
   try {
-    const payload = jwt.verify(token, jwtSecret(), { algorithms: ["HS256"] }) as { userId: number };
-    if (!Number.isSafeInteger(payload.userId) || payload.userId <= 0) {
-      return c.json({ detail: "Invalid or expired token" }, 401);
-    }
+    const userId = verifyUserToken(token);
     const db = await getPersistentDb();
-    const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user || user.isActive === false) {
       return c.json({ detail: "Invalid or expired token" }, 401);
     }
