@@ -5,6 +5,7 @@ dotenv.config({ override: false });
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
+import { allowedBrowserOrigin, BoundedRateLimiter } from "./lib/httpGuard";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { ZodError } from "zod";
@@ -41,12 +42,13 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 // CORS — allow frontend origin
 app.use("/*", cors({
-  origin: process.env.FRONTEND_URL || "*",
+  origin: (origin) => allowedBrowserOrigin(origin, process.env),
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-KEY", "X-API-Key", "x-api-key"],
   exposeHeaders: ["Content-Length", "X-Request-Id"],
   maxAge: 86400,
-  credentials: true,
+  // Pilot uses Bearer JWTs, not cross-site credentialed cookies.
+  credentials: false,
 }));
 
 // Security headers
@@ -62,25 +64,15 @@ app.use("/*", async (c, next) => {
   }
 });
 
-// Rate limiting (simple in-memory)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100; // requests per minute
-const RATE_WINDOW = 60 * 1000;
-
+// In-process abuse throttle, intentionally bounded in memory. Paid chat is
+// separately protected by durable per-user and per-provider MySQL quotas.
+const requestThrottle = new BoundedRateLimiter(100, 60_000, 5000);
 app.use("/api/*", async (c, next) => {
-  const ip = c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
-  const now = Date.now();
-  const data = rateLimitMap.get(ip);
-  
-  if (data && now < data.resetAt) {
-    if (data.count >= RATE_LIMIT) {
-      return c.json({ error: "Rate limit exceeded" }, 429);
-    }
-    data.count++;
-  } else {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+  const identity = c.req.header("x-real-ip") ||
+    c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!requestThrottle.permit(identity)) {
+    return c.json({ error: "Rate limit exceeded" }, 429);
   }
-  
   return next();
 });
 
