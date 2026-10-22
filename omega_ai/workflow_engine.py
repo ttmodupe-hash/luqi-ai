@@ -90,6 +90,8 @@ class WorkflowEngine:
             return deepcopy(previous)
         instant = now or _now()
         _, side_effects = self._handlers[handler]
+        if side_effects and idempotency_key is None:
+            raise ValueError("Side-effecting tasks require an idempotency key")
         state = State.APPROVAL_REQUIRED if side_effects else State.PENDING
         task = Task(id=str(uuid4()), handler=handler, payload=deepcopy(payload),
                     state=state, max_attempts=max_attempts,
@@ -149,7 +151,12 @@ class WorkflowEngine:
         except Exception as exc:
             # Never expose exception messages: may contain credentials or PII.
             task.error = type(exc).__name__
-            if task.attempts < task.max_attempts:
+            # A side effect may have succeeded remotely before its handler raised.
+            # Automatic retries risk a duplicate payment/submission/deletion.
+            if side_effects:
+                task.state = State.FAILED
+                self._event(task, "manual_reconciliation_required", instant)
+            elif task.attempts < task.max_attempts:
                 task.state = State.RETRY_WAIT
                 task.next_run_at = instant + timedelta(seconds=2 ** (task.attempts - 1))
                 self._event(task, "retry_scheduled", instant)
