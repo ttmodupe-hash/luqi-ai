@@ -73,7 +73,7 @@ export async function recordSecuritySignal(signal: RadarSignal): Promise<boolean
   const subjectDigest = signal.accountEmail === undefined ? null :
     digestAccountEmail(signal.accountEmail, process.env.LUQI_SECURITY_HMAC_KEY || "");
   if (signal.accountEmail !== undefined && !subjectDigest) {
-    logger.warn({ category: signal.category }, "intrusion_radar_degraded_missing_hmac_key");
+    logger.warn({ signal: signal.category }, "intrusion_radar_degraded_missing_hmac_key");
     return false;
   }
   try {
@@ -86,13 +86,13 @@ export async function recordSecuritySignal(signal: RadarSignal): Promise<boolean
     });
     // Emit a redacted event for SIEM collection: fixed category, no user data.
     if (signal.severity !== "medium") {
-      logger.warn({ category: signal.category, severity: signal.severity }, "intrusion_radar_signal");
+      logger.warn({ signal: signal.category }, "intrusion_radar_signal");
     }
     return true;
   } catch {
     // If telemetry fails, decoy paths still return 404; core login controls
     // retain their own database-backed rate limits and authentication checks.
-    logger.warn({ category: signal.category }, "intrusion_radar_storage_unavailable");
+    logger.warn({ signal: signal.category }, "intrusion_radar_storage_unavailable");
     return false;
   }
 }
@@ -140,12 +140,12 @@ export async function countRecentLoginFailures(accountEmail: string): Promise<nu
       )).limit(1);
     const total = Number(item?.total ?? 0);
     if (Number.isSafeInteger(total) && total >= 10) {
-      logger.warn({ category: "repeated_login_failures", threshold: 10 },
+      logger.warn({ signal: "repeated_login_failures_threshold_10" },
         "intrusion_radar_auth_anomaly");
     }
     return Number.isSafeInteger(total) ? total : null;
   } catch {
-    logger.warn({ category: "auth_anomaly" }, "intrusion_radar_correlation_unavailable");
+    logger.warn({ signal: "auth_anomaly" }, "intrusion_radar_correlation_unavailable");
     return null;
   }
 }
