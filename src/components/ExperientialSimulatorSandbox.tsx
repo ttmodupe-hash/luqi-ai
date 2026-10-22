@@ -4,7 +4,8 @@
 
 import React, { useState, useMemo } from "react";
 import { Sparkles, RefreshCw, Sliders, CheckCircle2, Code2, GraduationCap, Compass, HelpCircle } from "lucide-react";
-import { type GradeTier, type EducationalModuleRecord } from "@/api/services/experientialEducationOrchestrator";
+import { type GradeTier, type EducationalModuleRecord } from "@/lib/educationTypes";
+import { calculateEducationSample } from "@/lib/educationCalculations";
 
 interface SandboxProps {
   module: EducationalModuleRecord;
@@ -16,30 +17,10 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
   const [showCode, setShowCode] = useState(false);
 
   // Client-Side Execution Engine: Computes localized mathematics instantly without backend lag
-  const executionFeedback = useMemo(() => {
-    if (!module.compiledFrontend) {
-      return "Simulation compiled and ready.";
-    }
-
-    try {
-      // Safe execution function
-      const interactiveSolver = new Function(
-        "input",
-        `
-        "use strict";
-        ${module.compiledFrontend}
-        if (typeof executeCalculation === 'function') {
-          return executeCalculation(input);
-        }
-        return "Simulation compiled successfully.";
-      `
-      );
-      const result = interactiveSolver(localVariable);
-      return String(result);
-    } catch (err: any) {
-      return `Calculation Output: ${localVariable} ${module.unit || "units"}`;
-    }
-  }, [module.compiledFrontend, localVariable, module.unit]);
+  const executionFeedback = useMemo(
+    () => calculateEducationSample(module.conceptHash, localVariable, module.unit),
+    [module.conceptHash, localVariable, module.unit],
+  );
 
   const minVal = module.min !== undefined ? module.min : 1;
   const maxVal = module.max !== undefined ? module.max : 100;
@@ -80,7 +61,7 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
           <button
             onClick={() => setShowCode(!showCode)}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
-            title="Inspect Verified JS Code"
+            title="Inspect generated source (never executed)"
           >
             <Code2 className="w-4 h-4" />
           </button>
@@ -91,7 +72,7 @@ export const ExperientialSimulatorSandbox: React.FC<SandboxProps> = ({ module, o
       {showCode && (
         <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-purple-300 max-h-40 overflow-y-auto">
           <span className="text-[10px] text-slate-400 block mb-1 font-sans font-semibold">
-            Verified Sandboxed Logic:
+            Generated source for inspection only — not executed:
           </span>
           <pre className="whitespace-pre-wrap">{module.compiledFrontend}</pre>
         </div>
