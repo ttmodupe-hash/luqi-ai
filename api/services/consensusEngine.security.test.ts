@@ -23,7 +23,7 @@ vi.mock("../lib/apiKeyResolver", () => ({ resolveGeminiApiKey: mocks.resolveGemi
 import { MultiAgentConsensusEngine, parseModelAudit } from "./consensusEngine";
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.stubEnv("ANTHROPIC_API_KEY", "");
   vi.stubEnv("GEMINI_API_KEY", "");
   mocks.resolveGeminiApiKey.mockReturnValue("fake-test-key");
@@ -78,7 +78,8 @@ describe("paid model consensus is advisory, never certified", () => {
       { text: '{"passed":true,"issues":["missed critical issue"],"notes":"okay"}' },
     ]) {
       vi.clearAllMocks();
-      mocks.reserveAiRequest.mockResolvedValue(undefined);
+      mocks.generateContent.mockReset();
+      mocks.reserveAiRequest.mockReset().mockResolvedValue(undefined);
       mocks.generateContent.mockResolvedValueOnce({ text: "Draft" }).mockResolvedValueOnce(audit);
       await expect(MultiAgentConsensusEngine.executeConsensusTask("Example", 42))
         .rejects.toMatchObject({ code: "BAD_GATEWAY" });
