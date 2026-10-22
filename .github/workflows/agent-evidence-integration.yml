@@ -63,3 +63,19 @@ jobs:
         run: npm test
       - name: Verify application build without deployment
         run: npm run build
+  python-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify fail-closed Python healing pipeline
+        run: python -m compileall -q backend/self_healing_pipeline.py tests/test_self_healing_safety.py
+      - name: Ensure no arbitrary code execution, fabricated PR or deployment
+        run: python -m unittest discover -s tests -p test_self_healing_safety.py -v
