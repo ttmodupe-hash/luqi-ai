@@ -249,6 +249,16 @@ export const healingPatches = mysqlTable("healing_patches", {
 /** Append-only, admin-attributed proposal review transitions.
  * A local hash chain is evidence of inconsistent rows, not immutable forensic proof.
  */
+/** Pseudonymous intrusion signals. No IPs, headers, bodies, tokens or raw emails. */
+export const intrusionRadarEvents = mysqlTable("intrusion_radar_events", {
+  id: serial("id").primaryKey(),
+  category: varchar("category", { length: 40 }).notNull(),
+  severity: varchar("severity", { length: 16 }).notNull(),
+  method: varchar("method", { length: 8 }).notNull(),
+  subjectDigest: varchar("subject_digest", { length: 64 }),
+  createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
+});
+
 export const agentReviewEvents = mysqlTable("agent_review_events", {
   id: serial("id").primaryKey(),
   patchId: bigint("patch_id", { mode: "number", unsigned: true }).notNull(),
