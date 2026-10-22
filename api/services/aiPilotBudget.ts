@@ -106,6 +106,32 @@ export async function reservePilotAttempt(provider: PilotProvider,
   }
 }
 
+
+/** Read-only startup gate; does not spend credits or contact providers. */
+export async function checkPilotGatewayReadiness(): Promise<
+  "disabled" | "billing_unapproved" | "budget_misconfigured" |
+  "keys_missing" | "ledger_unavailable" | "configured_not_verified"
+> {
+  try {
+    assertPilotEnabled();
+  } catch (error) {
+    if (!(error instanceof PilotBlocked)) return "ledger_unavailable";
+    if (error.reason === "AI_DISABLED") return "disabled";
+    if (error.reason === "BILLING_NOT_APPROVED") return "billing_unapproved";
+    return "budget_misconfigured";
+  }
+  if (!process.env.LUQI_PILOT_GEMINI_API_KEY ||
+      !process.env.LUQI_PILOT_OPENAI_API_KEY) return "keys_missing";
+  try {
+    const [rows] = await budgetPool().query(
+      "SELECT provider FROM ai_pilot_monthly_spend LIMIT 1");
+    void rows;
+    return "configured_not_verified";
+  } catch {
+    return "ledger_unavailable";
+  }
+}
+
 /** For offline tests and account dashboards; provider billing is authoritative. */
 export function budgetSnapshot(reservedCents: number, provider: PilotProvider) {
   if (!Number.isSafeInteger(reservedCents) || reservedCents < 0) {
