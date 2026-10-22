@@ -3,6 +3,7 @@
  * All external calls must reserve durable budget BEFORE a provider request.
  */
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { PILOT_MODELS } from "./pilotModels";
 import {
   assertPilotEnabled, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS,
   PilotBlocked, reservePilotAttempt
@@ -56,13 +57,13 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
       await reservePilotAttempt("gemini", userId);
       const client = new GoogleGenAI({ apiKey: geminiKey });
       const result = await client.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: PILOT_MODELS.gemini,
         contents: input,
         // No grounding/search/tools; those can incur additional charges.
         config: GEMINI_PILOT_CONFIG,
       });
       if (result.text?.trim()) {
-        return { response: result.text.trim(), provider: "gemini", model: "gemini-3.8-flash" };
+        return { response: result.text.trim(), provider: "gemini", model: PILOT_MODELS.gemini };
       }
     } catch (error) {
       if (error instanceof PilotBlocked &&
@@ -79,7 +80,7 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
         headers: { "Content-Type": "application/json",
           Authorization: `Bearer ${openaiKey}` },
         body: JSON.stringify({
-          model: "gpt-6-luna", instructions: PLAIN_TEXT_POLICY,
+          model: PILOT_MODELS.openai, instructions: PLAIN_TEXT_POLICY,
           input, max_output_tokens: MAX_OUTPUT_TOKENS,
           reasoning: { effort: "none" },
           store: false,
@@ -92,7 +93,7 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
         .flatMap((item: any) => Array.isArray(item.content) ? item.content : [])
         .filter((item: any) => item.type === "output_text" && typeof item.text === "string")
         .map((item: any) => item.text).join("\n").trim();
-      if (response) return { response, provider: "openai", model: "gpt-6-luna" };
+      if (response) return { response, provider: "openai", model: PILOT_MODELS.openai };
     } catch (error) {
       if (error instanceof PilotBlocked) throw error;
     }
