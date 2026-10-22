@@ -14,8 +14,7 @@ Set these non-secret variables (already prepared with `skipDeploys`):
 
 DO NOT set legacy `GEMINI_API_KEY` or `OPENAI_API_KEY` in this service:
 other legacy endpoints may call them outside of the pilot gate.
-Only after payment confirmation, provider-side limits, migration and separate
-approval, add the service-only secret names
+Credentials may be saved with both activation flags OFF. Add the service-only secret names
 `LUQI_PILOT_GEMINI_API_KEY` and `LUQI_PILOT_OPENAI_API_KEY` through
 Railway's secure Variables UI (never GitHub, screenshots or chat).
 
@@ -87,3 +86,30 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
 
 **No provider payment, purchase, top-up, or API credential creation is
 initiated by this plan.**
+
+## Read-only credential preflight
+
+Set `LUQI_AI_CREDENTIAL_CHECK_ENABLED=true` on the web service to opt in to
+one metadata check per provider per process startup. Keep both
+`LUQI_AI_PROVIDER_ENABLED=false` and `LUQI_AI_BILLING_APPROVED=false`.
+The check sends only authenticated GET requests for the pilot's configured
+models; it never calls generation APIs, reserves budget, changes provider
+settings, or activates billing. It has no public HTTP trigger.
+
+In Railway runtime logs, filter for `Pilot provider metadata check`. Only the
+provider, reviewed model, fixed status, and explicit unverified generation and
+billing markers are logged. Key values, raw errors, provider response bodies
+and headers are never logged. Redirects are rejected and each request is bounded
+to ten seconds and 16 KiB of response data. There are no automatic retries.
+
+`metadata_accessible` means the supplied credential can retrieve the expected
+model's metadata. It does not prove generation entitlement, paid balance,
+provider spend caps, pricing, or successful inference. A restricted key can
+return `permission_denied` even when it has other API permissions; do not widen
+permissions automatically. Diagnose other statuses without turning on the pilot.
+After observing the result, set the check flag to `false` with no immediate
+redeployment; subsequent starts will skip the check.
+
+References:
+- https://ai.google.dev/api/models#method:-models.get
+- https://developers.openai.com/api/reference/resources/models/methods/retrieve/
