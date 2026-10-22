@@ -22,7 +22,7 @@ class WeatherResult:
     wind_kmh: float | None
     rain_24h_mm: float | None
     screening_flags: tuple[str, ...]
-    verified_official_alerts: tuple[str, ...]
+    provider_reported_official_alerts: tuple[str, ...]
     note: str = "Derived screening flags are not official forecasts or warnings."
 
 
