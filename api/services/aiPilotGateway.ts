@@ -24,7 +24,7 @@ Say when information is uncertain and recommend authoritative sources for conseq
 No tools, searches, browsing, audio, image or file processing are enabled for this pilot.`;
 
 export async function runBudgetedPilotChat(
-  prompt: string, language: string = "auto",
+  prompt: string, userId: number, language: string = "auto",
   history: Array<{ sender: string; text: string }> = []
 ): Promise<PilotReply> {
   assertPilotEnabled();
@@ -46,7 +46,7 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
 
   if (geminiKey) {
     try {
-      await reservePilotAttempt("gemini");
+      await reservePilotAttempt("gemini", userId);
       const client = new GoogleGenAI({ apiKey: geminiKey });
       const result = await client.models.generateContent({
         model: "gemini-3.8-flash",
@@ -70,7 +70,7 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
 
   if (openaiKey) {
     try {
-      await reservePilotAttempt("openai");
+      await reservePilotAttempt("openai", userId);
       const result = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: { "Content-Type": "application/json",
