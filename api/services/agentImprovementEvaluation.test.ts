@@ -109,7 +109,7 @@ describe("agent improvement evaluation — advisory evidence, never production a
     copy.candidateRevision = copy.baselineRevision;
     const result = evaluateAgentImprovement(copy);
     expect(result.reviewEligible).toBe(false);
-    expect(result.reasons).toHaveLength(4); // includes missing material improvement? no; cost gains count
+    expect(result.reasons).toHaveLength(3); // suite ID, dataset digest, revision proof
   });
 
   it("rejects invalid, duplicated, unpaired or NaN measurement entries", () => {
