@@ -18,8 +18,8 @@ export class PilotBlocked extends Error {
     this.name = "PilotBlocked";
   }
 }
-export const PILOT_CENTS = Object.freeze({ gemini: 3000, openai: 2000 });
-export const PILOT_TOTAL_CENTS = 5000;
+export const PILOT_CENTS = Object.freeze({ gemini: 6000, openai: 4000 });
+export const PILOT_TOTAL_CENTS = 10000;
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
 export const MAX_INPUT_CHARS = 6000;
 export const MAX_OUTPUT_TOKENS = 512;
@@ -35,9 +35,9 @@ export function assertPilotEnabled(env: NodeJS.ProcessEnv = process.env): void {
   if (env.LUQI_AI_BILLING_APPROVED !== "true") {
     throw new PilotBlocked("BILLING_NOT_APPROVED");
   }
-  if (env.LUQI_AI_MONTHLY_USD !== "50" ||
-      env.LUQI_GEMINI_MONTHLY_USD !== "30" ||
-      env.LUQI_OPENAI_MONTHLY_USD !== "20") {
+  if (env.LUQI_AI_MONTHLY_USD !== "100" ||
+      env.LUQI_GEMINI_MONTHLY_USD !== "60" ||
+      env.LUQI_OPENAI_MONTHLY_USD !== "40") {
     throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
   }
 }
@@ -58,7 +58,7 @@ function budgetPool(): Pool {
 }
 
 /**
- * Requires migration db/migrations/20261022_pilot_spend.sql.
+ * Requires migration db/migrations/20261022_ai_pilot_budget.sql.
  * Never fallback to demo/in-memory storage. Budget exhaustion for Gemini
  * may allow OpenAI fallback only after a SEPARATE OpenAI reservation.
  */
