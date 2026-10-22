@@ -10,7 +10,7 @@ import { parseMySqlConnectionSettings } from "../lib/mysqlConfig";
 export type PilotProvider = "gemini" | "openai";
 export type PilotBlockReason = "AI_DISABLED" | "BILLING_NOT_APPROVED" |
   "AI_BUDGET_CONFIGURATION_INVALID" | "AI_BUDGET_STORE_UNAVAILABLE" |
-  "AI_PROVIDER_BUDGET_EXHAUSTED";
+  "AI_PROVIDER_BUDGET_EXHAUSTED" | "AI_USER_DAILY_QUOTA_EXHAUSTED";
 
 export class PilotBlocked extends Error {
   constructor(public readonly reason: PilotBlockReason) {
@@ -22,7 +22,13 @@ export const PILOT_CENTS = Object.freeze({ gemini: 6000, openai: 4000 });
 export const PILOT_TOTAL_CENTS = 10000;
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
 export const MAX_INPUT_CHARS = 6000;
+export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
 export const MAX_OUTPUT_TOKENS = 512;
+
+export function utcDay(now: Date = new Date()): string {
+  if (Number.isNaN(now.getTime())) throw new Error("Invalid clock");
+  return now.toISOString().slice(0, 10);
+}
 
 export function utcMonth(now: Date = new Date()): string {
   if (Number.isNaN(now.getTime())) throw new Error("Invalid clock");
@@ -63,12 +69,16 @@ function budgetPool(): Pool {
  * may allow OpenAI fallback only after a SEPARATE OpenAI reservation.
  */
 export async function reservePilotAttempt(provider: PilotProvider,
-  now: Date = new Date()): Promise<void> {
+  userId: number, now: Date = new Date()): Promise<void> {
   assertPilotEnabled();
   if (provider !== "gemini" && provider !== "openai") {
     throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
   }
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
   const period = utcMonth(now);
+  const day = utcDay(now);
   let conn: Awaited<ReturnType<Pool["getConnection"]>> | undefined;
   let begun = false;
   try {
@@ -89,6 +99,24 @@ export async function reservePilotAttempt(provider: PilotProvider,
     if (spent + RESERVE_PER_ATTEMPT_CENTS > PILOT_CENTS[provider]) {
       throw new PilotBlocked("AI_PROVIDER_BUDGET_EXHAUSTED");
     }
+    // Second durable gate: protect the shared wallet from a single user.
+    // All replicas apply the same row lock and every provider shares this quota.
+    await conn.execute(
+      "INSERT IGNORE INTO ai_pilot_daily_user_usage (day_utc, user_id, attempts) VALUES (?, ?, 0)",
+      [day, userId]);
+    const [userRows] = await conn.execute<import("mysql2/promise").RowDataPacket[]>(
+      "SELECT attempts FROM ai_pilot_daily_user_usage WHERE day_utc=? AND user_id=? FOR UPDATE",
+      [day, userId]);
+    const attempts = Number(userRows[0]?.attempts);
+    if (!Number.isSafeInteger(attempts) || attempts < 0) {
+      throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
+    }
+    if (attempts >= PILOT_USER_DAILY_MAX_ATTEMPTS) {
+      throw new PilotBlocked("AI_USER_DAILY_QUOTA_EXHAUSTED");
+    }
+    await conn.execute(
+      "UPDATE ai_pilot_daily_user_usage SET attempts=attempts+1 WHERE day_utc=? AND user_id=?",
+      [day, userId]);
     await conn.execute(
       "UPDATE ai_pilot_monthly_spend SET reserved_cents = reserved_cents + ? WHERE month_utc=? AND provider=?",
       [RESERVE_PER_ATTEMPT_CENTS, period, provider]);
