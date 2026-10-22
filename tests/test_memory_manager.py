@@ -1,7 +1,15 @@
 """Tests for memory manager."""
 
 import pytest
+import memory_manager
 from memory_manager import MemoryManager
+
+
+@pytest.fixture(autouse=True)
+def isolated_memory(tmp_path, monkeypatch):
+    monkeypatch.setattr(memory_manager, "CREWAI_STORAGE_DIR", str(tmp_path / "facts"))
+    monkeypatch.setattr(memory_manager, "LUQI_ARCHIVE_PATH", str(tmp_path / "archive"))
+    monkeypatch.setattr(memory_manager.LangGraphCheckpointer, "_setup_connection", lambda self: None)
 
 
 def test_add_turn():
