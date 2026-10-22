@@ -13,11 +13,9 @@ RUN chmod +x ./start.sh
 
 # Do not suppress errors: every build must pass integrity and bundling checks.
 RUN node scripts/verify-build.mjs \
-    && npx vite build \
-    && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" \
-    && node scripts/postbuild.js
+    && npm run build
 
-RUN test -f dist/boot.js && test -f dist/public/index.html
+RUN test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js
 
 ENV NODE_ENV=production
 ENV PORT=3000
