@@ -8,7 +8,7 @@ import { summarizeMetricSamples, countIncidentTrend } from "./services/reliabili
 import { reserveAiRequest } from "./security/aiBudget";
 import { formatUntrustedDiagnosisEvidence } from "./security/diagnosisEvidence";
 import { assertEvidenceLedgerReady, createEvidenceProposal, transitionEvidenceProposal, readEvidenceProposalTrail, submitAgentEvaluationEvidence, listAgentEvaluationEvidence } from "./services/agentProposalLedger";
-import { EVAL_DIMENSIONS } from "./services/agentImprovementEvaluation";
+import { EVAL_DIMENSIONS, type CandidateEvaluation } from "./services/agentImprovementEvaluation";
 
 export const selfHealingRouter = createRouter({
   logError: adminQuery
@@ -346,7 +346,9 @@ export const selfHealingRouter = createRouter({
     .mutation(async ({ ctx, input }) => submitAgentEvaluationEvidence({
       actorUserId: ctx.user.id,
       patchId: input.patchId,
-      report: input.report,
+      // Runtime Zod validation happens before mutation; local TS emits
+      // optional fields for the parsed object under this tsconfig.
+      report: input.report as CandidateEvaluation,
     })),
 
   listProposalEvaluationEvidence: adminQuery
