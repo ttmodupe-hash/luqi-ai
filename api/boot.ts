@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
-dotenv.config({ override: true });
+import { timingSafeEqual } from "node:crypto";
+dotenv.config({ override: false });
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
@@ -291,11 +292,15 @@ app.post('/api/v1/simulation/generate', async (c) => {
 });
 
 // Helper for Zero-Trust Sovereign Admin Authorization
-const checkSovereignAdminAuth = (c: any): boolean => {
-  const headerKey = c.req.header('x-luqi-admin-key') || c.req.header('X-LUQI-ADMIN-KEY') || c.req.header('x-api-key');
-  const expectedKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  return headerKey === expectedKey;
+const adminKeyMatches = (supplied: unknown): boolean => {
+  const configured = process.env.LUQI_ADMIN_MASTER_KEY;
+  if (typeof supplied !== "string" || !configured || configured.length < 32) return false;
+  const actual = Buffer.from(supplied);
+  const expected = Buffer.from(configured);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 };
+const checkSovereignAdminAuth = (c: any): boolean =>
+  adminKeyMatches(c.req.header('x-luqi-admin-key') || c.req.header('x-api-key'));
 
 // ============================================================================
 // SELF-OPTIMIZING KNOWLEDGE COMPILER, AUTO-SCRAPER & CORPORATE GRADING SUITE
@@ -1125,9 +1130,8 @@ app.get('/api/v1/exam-tutor/domains', (c) => {
 app.post('/api/v1/admin/verify', async (c) => {
   try {
     const { passkey } = await c.req.json();
-    const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-    if (passkey === masterKey) {
-      return c.json({ success: true, token: masterKey });
+    if (adminKeyMatches(passkey)) {
+      return c.json({ success: true, token: passkey });
     }
     return c.json({ success: false, error: 'Invalid admin passkey' }, 401);
   } catch (err: any) {
@@ -1137,9 +1141,7 @@ app.post('/api/v1/admin/verify', async (c) => {
 
 // 3. FinOps Cost & Self-Healing Health Dashboard Endpoint (Admin Protected)
 app.get('/api/v1/finops-dashboard', (c) => {
-  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  const providedKey = c.req.header('x-luqi-admin-key');
-  if (providedKey && providedKey !== masterKey) {
+  if (!checkSovereignAdminAuth(c)) {
     return c.json({ status: 'error', message: 'Unauthorized' }, 401);
   }
   return c.json({
@@ -1164,9 +1166,7 @@ app.post('/api/v1/billing/initiate-30-auth', async (c) => {
 
 // 5. Multi-Model API & FinOps Registry Health Scanner Matrix (Admin Protected)
 app.get('/api/v1/system-api-matrix', (c) => {
-  const masterKey = process.env.LUQI_ADMIN_MASTER_KEY || 'LUQI-ADMIN-2026';
-  const providedKey = c.req.header('x-luqi-admin-key');
-  if (providedKey && providedKey !== masterKey) {
+  if (!checkSovereignAdminAuth(c)) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
   // Evaluate real-time health and fund availability for each integrated model & gateway
@@ -1536,14 +1536,17 @@ app.get('/api/v1/governance/system-cards', async (c) => {
 });
 
 app.post('/api/v1/governance/evaluator-benchmark', async (c) => {
-  const secret = process.env.EVALUATOR_SIGNING_SECRET || "eval_secret_key_prod";
+  const secret = process.env.EVALUATOR_SIGNING_SECRET;
+  if (!secret || secret.length < 32) return c.json({ error: "Evaluator not configured" }, 503);
   const bodyText = await c.req.text();
   const signature = c.req.header('X-Evaluator-Signature') || '';
 
   const crypto = await import('crypto');
   const computed = crypto.createHmac('sha256', secret).update(bodyText).digest('hex');
 
-  if (signature && signature !== computed) {
+  const actual = Buffer.from(signature);
+  const expected = Buffer.from(computed);
+  if (!signature || actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
     return c.json({ error: "Unauthorized Evaluator: Invalid cryptographic handshake" }, 401);
   }
 

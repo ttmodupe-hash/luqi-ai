@@ -9,12 +9,20 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
   SERVICE_NAME: luqi-ai-backend
-  GAR_LOCATION: us-central1-docker.pkg.dev/YOUR_PROJECT_ID/luqi-toons-repo/engine-image
+  GAR_LOCATION: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/luqi-toons-repo/engine-image
 
 jobs:
   build-and-deploy:
+    # GCP is a separate, explicitly enabled release target; Railway is primary.
+    if: ${{ vars.GCP_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Confirm GCP deploy credentials are available
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          test -n "$GCP_PROJECT_ID" && test -n "$GCP_SA_KEY"
       - name: Checkout Code Repository Layer
         uses: actions/checkout@v4
 
@@ -45,5 +53,5 @@ jobs:
             --image ${{ env.GAR_LOCATION }}:${{ github.sha }} \
             --platform managed \
             --region ${{ env.REGION }} \
-            --clear-env-vars \
-            --set-env-vars OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}",DATABASE_URL="${{ secrets.DATABASE_URL }}",ELEVENLABS_API_KEY="${{ secrets.ELEVENLABS_API_KEY }}",GOOGLE_CLOUD_STORAGE_BUCKET="${{ secrets.GCS_BUCKET }}",STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}",STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}",JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
+
+
