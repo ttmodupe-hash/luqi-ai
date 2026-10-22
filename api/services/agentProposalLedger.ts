@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
-import { healingPatches, agentReviewEvents, agentActivityLog } from "../../db/schema";
+import { and, desc, eq } from "drizzle-orm";
+import { healingPatches, agentReviewEvents, agentActivityLog, agentEvaluationEvidence } from "../../db/schema";
+import { evaluateAgentImprovement, type CandidateEvaluation } from "./agentImprovementEvaluation";
 import { getPrivateDb } from "../security/access";
 
 const GENESIS = "0".repeat(64);
@@ -261,5 +262,187 @@ export async function readEvidenceProposalTrail(patchId: number) {
   return {
     patchId, status: patch.status, tracked: true, chainValid: true,
     events, warning: "Local checksum chain only; not an immutable externally anchored audit.",
+  };
+}
+
+
+/**
+ * Attach an evaluation summary to a *specific reviewed proposal*. All
+ * measurements and claimed commit SHAs are UNTRUSTED, even if format-valid.
+ *
+ * Store no raw prompts, per-case inputs/outputs, personal data or vendor keys.
+ * Only an authenticated independent CI attestor may later verify execution,
+ * which is deliberately NOT implemented here.
+ */
+export async function submitAgentEvaluationEvidence(input: {
+  actorUserId: number;
+  patchId: number;
+  report: CandidateEvaluation;
+}): Promise<{
+  evidenceId: number;
+  heuristicReviewEligible: boolean;
+  sourceAttested: false;
+  ciAttested: false;
+  releaseAuthorized: false;
+  measurementDigest: string;
+  duplicate: boolean;
+  reasons: string[];
+}> {
+  validActor(input.actorUserId);
+  if (!Number.isSafeInteger(input.patchId) || input.patchId < 1) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid agent proposal ID." });
+  }
+  const report = input.report;
+  const verdict = evaluateAgentImprovement(report);
+  // A failed actual benchmark (including regressions) is important and may
+  // be recorded. Malformed or unverifiable *structure*, however, is rejected.
+  if (!verdict.evidenceDigest || !/^[a-f0-9]{64}$/.test(verdict.evidenceDigest) ||
+      !report || !Array.isArray(report.observations) ||
+      report.observations.length < 120 || report.observations.length > 1000 ||
+      !/^[a-f0-9]{64}$/.test(report.datasetSha256) ||
+      !/^[a-f0-9]{40}$/.test(report.baselineRevision) ||
+      !/^[a-f0-9]{40}$/.test(report.candidateRevision) ||
+      report.baselineRevision === report.candidateRevision ||
+      !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,99}$/.test(report.suiteVersion) ||
+      /seed|fixture|demo|placeholder/i.test(report.suiteVersion) ||
+      (report.measurementMethod !== "offline_replay" &&
+       report.measurementMethod !== "reviewed_human_scoring")) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Malformed or untraceable evaluation measurements." });
+  }
+  const summary = {
+    suiteVersion: verdict.suiteVersion,
+    observationCount: verdict.observationCount,
+    candidateAccuracy: verdict.candidateAccuracy,
+    baselineAccuracy: verdict.baselineAccuracy,
+    baselineAvgCostMicroUsd: verdict.baselineAvgCostMicroUsd,
+    candidateAvgCostMicroUsd: verdict.candidateAvgCostMicroUsd,
+    baselineP95LatencyMs: verdict.baselineP95LatencyMs,
+    candidateP95LatencyMs: verdict.candidateP95LatencyMs,
+    perDimension: verdict.perDimension,
+    reasons: verdict.reasons.slice(0, 30),
+    measurementMethod: report.measurementMethod,
+    warning: "Unattested submission; NOT an authenticated CI result or release approval.",
+  };
+  const db = await getPrivateDb();
+  return db.transaction(async (tx: any) => {
+    // Prevent revocation/submission races and concurrent duplicate entries.
+    const [patch] = await tx.select().from(healingPatches)
+      .where(eq(healingPatches.id, input.patchId)).limit(1).for("update");
+    if (!patch) throw new TRPCError({ code: "NOT_FOUND", message: "Agent proposal does not exist." });
+    const events = await tx.select().from(agentReviewEvents)
+      .where(eq(agentReviewEvents.patchId, input.patchId))
+      .orderBy(agentReviewEvents.id);
+    if (!events.length) badLineage();
+    verifyEventChain(events);
+    const first = events[0];
+    const last = events[events.length - 1];
+    if (first.actorUserId === input.actorUserId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Independent evaluation submitter required." });
+    }
+    if (events.some((e: any) => e.proposalDigest !== first.proposalDigest) ||
+        proposalDigest(patch) !== first.proposalDigest ||
+        patch.status !== "approved_for_ci" || last.nextStatus !== "approved_for_ci") {
+      badLineage();
+    }
+    const [existing] = await tx.select().from(agentEvaluationEvidence)
+      .where(and(
+        eq(agentEvaluationEvidence.patchId, input.patchId),
+        eq(agentEvaluationEvidence.measurementDigest, verdict.evidenceDigest),
+      )).limit(1);
+    if (existing) {
+      return {
+        evidenceId: Number(existing.id),
+        heuristicReviewEligible: !!existing.reviewEligible,
+        sourceAttested: false as const,
+        ciAttested: false as const,
+        releaseAuthorized: false as const,
+        measurementDigest: verdict.evidenceDigest,
+        duplicate: true,
+        reasons: (existing.summaryJson as { reasons?: string[] })?.reasons ?? [],
+      };
+    }
+    const [insert] = await tx.insert(agentEvaluationEvidence).values({
+      patchId: input.patchId,
+      submittedByUserId: input.actorUserId,
+      proposalDigest: first.proposalDigest,
+      reviewEventHash: last.eventHash,
+      measurementDigest: verdict.evidenceDigest,
+      datasetDigest: report.datasetSha256,
+      baselineRevision: report.baselineRevision,
+      candidateRevision: report.candidateRevision,
+      suiteVersion: report.suiteVersion,
+      observationCount: verdict.observationCount,
+      reviewEligible: verdict.reviewEligible,
+      sourceAttested: false,
+      releaseAuthorized: false,
+      summaryJson: summary,
+    });
+    const evidenceId = Number(insert?.insertId);
+    if (!Number.isSafeInteger(evidenceId) || evidenceId < 1) {
+      throw new Error("Could not persist evaluation evidence.");
+    }
+    return {
+      evidenceId,
+      heuristicReviewEligible: verdict.reviewEligible,
+      sourceAttested: false as const,
+      ciAttested: false as const,
+      releaseAuthorized: false as const,
+      measurementDigest: verdict.evidenceDigest,
+      duplicate: false,
+      reasons: verdict.reasons,
+    };
+  });
+}
+
+/** Administrator-visible results remain marked as unverified assertions.
+ * In particular this read method does not verify CI artifacts or Git signatures.
+ */
+export async function listAgentEvaluationEvidence(patchId: number) {
+  if (!Number.isSafeInteger(patchId) || patchId < 1) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid agent proposal ID." });
+  }
+  const db = await getPrivateDb();
+  const [patch] = await db.select({ id: healingPatches.id, status: healingPatches.status })
+    .from(healingPatches).where(eq(healingPatches.id, patchId)).limit(1);
+  if (!patch) throw new TRPCError({ code: "NOT_FOUND", message: "Agent proposal does not exist." });
+  const entries = await db.select({
+    id: agentEvaluationEvidence.id,
+    submittedByUserId: agentEvaluationEvidence.submittedByUserId,
+    measurementDigest: agentEvaluationEvidence.measurementDigest,
+    proposalDigest: agentEvaluationEvidence.proposalDigest,
+    reviewEventHash: agentEvaluationEvidence.reviewEventHash,
+    suiteVersion: agentEvaluationEvidence.suiteVersion,
+    observationCount: agentEvaluationEvidence.observationCount,
+    reviewEligible: agentEvaluationEvidence.reviewEligible,
+    sourceAttested: agentEvaluationEvidence.sourceAttested,
+    releaseAuthorized: agentEvaluationEvidence.releaseAuthorized,
+    summaryJson: agentEvaluationEvidence.summaryJson,
+    createdAt: agentEvaluationEvidence.createdAt,
+  }).from(agentEvaluationEvidence)
+    .where(eq(agentEvaluationEvidence.patchId, patchId))
+    .orderBy(desc(agentEvaluationEvidence.id)).limit(25);
+  return {
+    patchId,
+    currentProposalStatus: patch.status,
+    // No self-reported evidence is granted privileged operational semantics.
+    sourceAttested: false as const,
+    ciAttested: false as const,
+    releaseAuthorized: false as const,
+    evidence: entries.map(entry => ({
+      id: entry.id,
+      submittedByUserId: entry.submittedByUserId,
+      measurementDigest: entry.measurementDigest,
+      proposalDigest: entry.proposalDigest,
+      reviewEventHash: entry.reviewEventHash,
+      suiteVersion: entry.suiteVersion,
+      observationCount: entry.observationCount,
+      heuristicReviewEligible: entry.reviewEligible,
+      sourceAttested: false as const,
+      ciAttested: false as const,
+      releaseAuthorized: false as const,
+      summary: entry.summaryJson,
+      createdAt: entry.createdAt,
+    })),
+    warning: "These are hash-linked, user-submitted measurements only. No independent CI or model evaluation has been verified.",
   };
 }

@@ -8,7 +8,10 @@ import {
   readEvidenceProposalTrail,
   calculateReviewEventHash,
   proposalDigest,
+  submitAgentEvaluationEvidence,
+  listAgentEvaluationEvidence,
 } from "./agentProposalLedger";
+import { EVAL_DIMENSIONS, type CandidateEvaluation } from "./agentImprovementEvaluation";
 
 const integration = process.env.RUN_MYSQL_INTEGRATION === "1" ? describe : describe.skip;
 
@@ -58,11 +61,15 @@ integration("agent proposal history in a real transactional MySQL database", () 
     ) ENGINE=InnoDB`);
     const migration = fs.readFileSync("db/migrations/20261021_agent_review_events.sql", "utf8");
     await connection.query(migration);
+    await connection.query(fs.readFileSync(
+      "db/migrations/20261022_agent_evaluation_evidence.sql", "utf8"
+    ));
   });
 
   afterAll(async () => {
     if (connection) {
       for (const id of inserted) {
+        await connection.execute("DELETE FROM agent_evaluation_evidence WHERE patch_id = ?", [id]);
         await connection.execute("DELETE FROM agent_review_events WHERE patch_id = ?", [id]);
         await connection.execute("DELETE FROM healing_patches WHERE id = ?", [id]);
       }
@@ -170,6 +177,120 @@ integration("agent proposal history in a real transactional MySQL database", () 
       patchId: id, actorUserId: 73502, action: "review_requested",
       reason: "Unsafe legacy migration must not be approved",
     })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+  function measuredReport(): CandidateEvaluation {
+    return {
+      suiteVersion: "african-language-heldout-v1",
+      datasetSha256: "a".repeat(64),
+      baselineRevision: "b".repeat(40),
+      candidateRevision: "c".repeat(40),
+      measurementMethod: "offline_replay",
+      observations: EVAL_DIMENSIONS.flatMap(dimension =>
+        Array.from({ length: 20 }, (_, i) => ({
+          caseId: `${dimension}-${i}`,
+          dimension,
+          locale: dimension === "africanLanguageQuality"
+            ? i % 2 ? "zu-ZA" : "xh-ZA" : "en-ZA",
+          baseline: { passed: true, criticalSafetyFailure: false, latencyMs: 1000, costMicroUsd: 100 },
+          candidate: { passed: true, criticalSafetyFailure: false, latencyMs: 800, costMicroUsd: 80 },
+        }))
+      ),
+    };
+  }
+
+  it("binds review-only evaluation evidence to an independently reviewed proposal", async () => {
+    const patchId = await makeProposal();
+    await transitionEvidenceProposal({
+      patchId, actorUserId: 73502, action: "review_requested",
+      reason: "Independently reviewed plan and awaiting evaluation",
+    });
+    const evidence = await submitAgentEvaluationEvidence({
+      actorUserId: 73503, patchId, report: measuredReport(),
+    });
+    expect(evidence).toMatchObject({
+      heuristicReviewEligible: true, releaseAuthorized: false,
+      ciAttested: false, sourceAttested: false, duplicate: false,
+    });
+    const listed = await listAgentEvaluationEvidence(patchId);
+    expect(listed.evidence).toHaveLength(1);
+    expect(listed.evidence[0].id).toBe(evidence.evidenceId);
+    expect(listed.evidence[0].sourceAttested).toBe(false);
+    expect(listed.evidence[0].releaseAuthorized).toBe(false);
+    expect(listed.currentProposalStatus).toBe("approved_for_ci");
+    expect(JSON.stringify(listed)).not.toContain("accuracy-0");
+    const [dbRows] = await connection.execute<mysql.RowDataPacket[]>(
+      "SELECT source_attested, release_authorized, measurement_digest FROM agent_evaluation_evidence WHERE patch_id = ?",
+      [patchId],
+    );
+    expect(Number(dbRows[0].source_attested)).toBe(0);
+    expect(Number(dbRows[0].release_authorized)).toBe(0);
+    expect(dbRows[0].measurement_digest).toBe(evidence.measurementDigest);
+  });
+
+  it("deduplicates repeated measurements and refuses the proposal creator", async () => {
+    const patchId = await makeProposal();
+    await transitionEvidenceProposal({
+      patchId, actorUserId: 73502, action: "review_requested",
+      reason: "Independent administrator review requested",
+    });
+    const report = measuredReport();
+    await expect(submitAgentEvaluationEvidence({
+      patchId, actorUserId: 73501, report,
+    })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const first = await submitAgentEvaluationEvidence({ patchId, actorUserId: 73503, report });
+    const second = await submitAgentEvaluationEvidence({ patchId, actorUserId: 73503, report });
+    expect(second.duplicate).toBe(true);
+    expect(second.evidenceId).toBe(first.evidenceId);
+    expect((await listAgentEvaluationEvidence(patchId)).evidence).toHaveLength(1);
+  });
+
+  it("stores failing measured regressions as blocked evidence, never green", async () => {
+    const patchId = await makeProposal();
+    await transitionEvidenceProposal({
+      patchId, actorUserId: 73502, action: "review_requested",
+      reason: "Independent review before negative scenario",
+    });
+    const report = measuredReport();
+    report.observations.find(x => x.dimension === "safety")!.candidate = {
+      passed: false, criticalSafetyFailure: true,
+      latencyMs: 800, costMicroUsd: 70,
+    };
+    const result = await submitAgentEvaluationEvidence({ patchId, actorUserId: 73503, report });
+    expect(result.heuristicReviewEligible).toBe(false);
+    expect(result.reasons.join(" ")).toMatch(/safety|Critical/);
+    expect(result.releaseAuthorized).toBe(false);
+  });
+
+  it("will not submit a measurement for unreviewed, revoked or manipulated proposals", async () => {
+    const patchId = await makeProposal();
+    await expect(submitAgentEvaluationEvidence({
+      patchId, actorUserId: 73503, report: measuredReport(),
+    })).rejects.toMatchObject({ code: "CONFLICT" });
+    await transitionEvidenceProposal({
+      patchId, actorUserId: 73502, action: "review_requested",
+      reason: "Independent review checked the draft",
+    });
+    await transitionEvidenceProposal({
+      patchId, actorUserId: 73502, action: "review_revoked",
+      reason: "Validation not yet approved by CI",
+    });
+    await expect(submitAgentEvaluationEvidence({
+      patchId, actorUserId: 73503, report: measuredReport(),
+    })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("refuses malformed reports without inserting records or touching vendor APIs", async () => {
+    const patchId = await makeProposal();
+    await transitionEvidenceProposal({
+      patchId, actorUserId: 73502, action: "review_requested",
+      reason: "Independent review checked the proposal",
+    });
+    const report = measuredReport();
+    report.observations[1].caseId = report.observations[0].caseId;
+    await expect(submitAgentEvaluationEvidence({
+      patchId, actorUserId: 73503, report,
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect((await listAgentEvaluationEvidence(patchId)).evidence).toHaveLength(0);
   });
 });
 

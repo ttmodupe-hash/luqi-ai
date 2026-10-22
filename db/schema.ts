@@ -249,6 +249,28 @@ export const healingPatches = mysqlTable("healing_patches", {
 /** Append-only, admin-attributed proposal review transitions.
  * A local hash chain is evidence of inconsistent rows, not immutable forensic proof.
  */
+/** Unattested measurement summaries (not CI proof / release authorization).
+ * Unique (patch_id, measurement_digest) is enforced in reviewed MySQL DDL.
+ */
+export const agentEvaluationEvidence = mysqlTable("agent_evaluation_evidence", {
+  id: serial("id").primaryKey(),
+  patchId: bigint("patch_id", { mode: "number", unsigned: true }).notNull(),
+  submittedByUserId: bigint("submitted_by_user_id", { mode: "number", unsigned: true }).notNull(),
+  proposalDigest: varchar("proposal_digest", { length: 64 }).notNull(),
+  reviewEventHash: varchar("review_event_hash", { length: 64 }).notNull(),
+  measurementDigest: varchar("measurement_digest", { length: 64 }).notNull(),
+  datasetDigest: varchar("dataset_digest", { length: 64 }).notNull(),
+  baselineRevision: varchar("baseline_revision", { length: 40 }).notNull(),
+  candidateRevision: varchar("candidate_revision", { length: 40 }).notNull(),
+  suiteVersion: varchar("suite_version", { length: 100 }).notNull(),
+  observationCount: int("observation_count").notNull(),
+  reviewEligible: boolean("review_eligible").notNull().default(false),
+  sourceAttested: boolean("source_attested").notNull().default(false),
+  releaseAuthorized: boolean("release_authorized").notNull().default(false),
+  summaryJson: json("summary_json").notNull(),
+  createdAt: timestamp("created_at", { fsp: 3 }).defaultNow().notNull(),
+});
+
 export const agentReviewEvents = mysqlTable("agent_review_events", {
   id: serial("id").primaryKey(),
   patchId: bigint("patch_id", { mode: "number", unsigned: true }).notNull(),
