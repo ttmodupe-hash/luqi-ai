@@ -34,6 +34,23 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
 - Assign separate project-scoped API keys, restricted model access and spending
   permissions where supported. Billing/payment is user-controlled, not automated.
 
+## Authenticated-user and legacy-route protections
+- Paid pilot chat requires a valid, unexpired LUQI account JWT using the
+  server's `JWT_SECRET` plus a lookup of that user in persistent MySQL.
+  Anonymous or deleted users cannot spend pilot credits.
+- Every authenticated account is limited to **20 provider attempts per UTC
+  day**, shared across Gemini and OpenAI, using a locked MySQL counter.
+  Attempts that fail are still counted. This complements but does not replace
+  global rate limits, abuse detection, provider-side spending caps or billing audits.
+- The migration now creates both `ai_pilot_monthly_spend` and
+  `ai_pilot_daily_user_usage`. The entire reservation transaction fails
+  closed if either table is missing/unreachable.
+- Legacy model endpoints return 503 `AI_LEGACY_ROUTE_DISABLED` during this
+  pilot; they must be reviewed for authentication and metering before
+  re-enabling. Ordinary login/status/health routes are unaffected.
+- Users must obtain a valid account JWT through existing secure login before
+  using the pilot chat. No shared browser secret or frontend API key is allowed.
+
 ## Technical safeguards
 - Every `POST /api/v1/luqi-core` request routes exclusively via
   `api/services/aiPilotGateway.ts` (Gemini 3.8 Flash then OpenAI GPT-6 Luna).
