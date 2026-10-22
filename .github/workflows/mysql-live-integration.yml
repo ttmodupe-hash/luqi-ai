@@ -16,6 +16,8 @@ on:
       - "tests/mysql-live.integration.test.ts"
       - "tests/mysql-backup-fixture.integration.test.ts"
       - "scripts/ci-mysql-restore.sh"
+      - "scripts/backup.sh"
+      - "tests/test_backup_script.py"
       - ".github/workflows/mysql-live-integration.yml"
   workflow_dispatch:
 
