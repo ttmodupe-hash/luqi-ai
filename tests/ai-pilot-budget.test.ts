@@ -48,4 +48,23 @@ describe("LUQI $100 monthly AI pilot allocation", () => {
       reason: "AI_DISABLED"
     } satisfies Partial<PilotBlocked>);
   });
+  it("keeps the gateway disabled even if payment is merely planned", async () => {
+    vi.stubEnv("LUQI_AI_PROVIDER_ENABLED", "false");
+    vi.stubEnv("LUQI_AI_BILLING_APPROVED", "false");
+    vi.stubEnv("LUQI_PILOT_GEMINI_API_KEY", "test-not-live");
+    await expect(runBudgetedPilotChat("Give me a greeting")).rejects.toMatchObject({
+      reason: "AI_DISABLED",
+    });
+  });
+  it("denies the pilot if configured keys cannot use a durable MySQL ledger", async () => {
+    for (const [name,value] of Object.entries(approvals)) vi.stubEnv(name, value);
+    vi.stubEnv("LUQI_PILOT_GEMINI_API_KEY", "test-not-live");
+    vi.stubEnv("LUQI_PILOT_OPENAI_API_KEY", "");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DB_HOST", "");
+    await expect(runBudgetedPilotChat("How are you?")).rejects.toMatchObject({
+      reason: "AI_BUDGET_STORE_UNAVAILABLE",
+    });
+  });
+
 });
