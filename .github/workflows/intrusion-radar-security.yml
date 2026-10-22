@@ -1,0 +1,57 @@
+name: LUQI Intrusion Radar Incident Defense (NO DEPLOY)
+on:
+  push:
+    branches: ["security/intrusion-radar-railway-incident-*"]
+  pull_request:
+    branches: ["security/quarantine-legacy-python-billing-*"]
+permissions:
+  contents: read
+jobs:
+  detector-unit-and-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install reviewed dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Static type check
+        run: npm run check
+      - name: Threat simulation without network or real secrets
+        run: npx vitest run api/security/intrusionRadar.test.ts
+      - name: Confirm no production release command in this CI
+        run: node scripts/check-release-guard.mjs
+  radar-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+          MYSQL_DATABASE: luqi_integration
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-only-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      CI: "true"
+      NODE_ENV: test
+      DATABASE_URL: mysql://root:ci-only-password@127.0.0.1:3306/luqi_integration
+      RUN_MYSQL_INTEGRATION: "1"
+      LUQI_SECURITY_HMAC_KEY: offline-ci-observation-key-not-for-production-2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify real anonymous decoy and hashed-account evidence
+        run: npx vitest run api/security/intrusionRadar.mysql.integration.test.ts
