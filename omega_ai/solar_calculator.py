@@ -1,1 +1,13 @@
-PASTE_FROM_PYTHON_2
+"""Compatibility alias for canonical solar_calculator Python module."""
+from importlib import import_module as _import_module
+
+_TARGET = "solar_calculator"
+
+def __getattr__(name: str):
+    impl = _import_module(_TARGET)
+    if name == "__all__":
+        return getattr(impl, "__all__", [n for n in vars(impl) if not n.startswith("_")])
+    return getattr(impl, name)
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(dir(_import_module(_TARGET))))
