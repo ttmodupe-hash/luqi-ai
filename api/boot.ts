@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { checkPersistentDatabase } from "./queries/connection";
 import { timingSafeEqual } from "node:crypto";
 dotenv.config({ override: false });
 import { Hono } from "hono";
@@ -123,23 +124,22 @@ app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(),
  * Liveness (/v1/health) means the process serves HTTP; it is not an AI readiness
  * assertion. Never expose secret values on diagnostics.
  */
-app.get("/v1/readiness", (c) => {
+app.get("/v1/readiness", async (c) => {
   const aiConfigured = [
     "GEMINI_API_KEY", "GOOGLE_GENAI_API_KEY", "GOOGLE_API_KEY",
     "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
   ].some((name) => Boolean(process.env[name]?.trim()));
-  const persistenceConfigured = [
-    "DATABASE_URL", "MYSQL_URL", "MYSQLHOST",
-  ].some((name) => Boolean(process.env[name]?.trim()));
-  const ready = aiConfigured && persistenceConfigured;
+  const persistence = await checkPersistentDatabase();
+  const ready = aiConfigured && persistence.status === "connected";
   return c.json({
     status: ready ? "ready" : "degraded",
     checks: {
       runtime: "up",
       model_provider: aiConfigured ? "configured_not_validated" : "unconfigured",
-      persistence: persistenceConfigured ? "configured_not_validated" : "unconfigured",
+      persistence: persistence.status,
+      expected_database_driver: "mysql",
     },
-    note: "Configuration checks do not guarantee remote model or database reachability.",
+    note: "Model provider is configuration-only; no external AI response is guaranteed by this check.",
   }, ready ? 200 : 503);
 });
 
