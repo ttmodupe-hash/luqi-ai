@@ -19,7 +19,7 @@ export function setApiKey(value: string): void {
   if (!key) return clearApiKey();
   try {
     window.sessionStorage.setItem(STORAGE_KEY, key);
-    window.dispatchEvent(new CustomEvent("luqi:api-key-updated", { detail: { key: "[UPDATED]" } }));
+    window.dispatchEvent(new CustomEvent("luqi:api-key-updated"));
   } catch { /* unavailable storage: auth remains server-enforced */ }
 }
 
