@@ -458,7 +458,7 @@ export const CREATE_STATEMENTS: string[] = [
 	\`executed_at\` timestamp,
 	\`created_at\` timestamp DEFAULT (now()),
 	CONSTRAINT \`voice_commands_id\` PRIMARY KEY(\`id\`)
-);`
+);`,
   // Dedicated AI pilot budget reservations. InnoDB PKs enable row locking
   // across web replicas. All paid calls remain disabled without explicit
   // owner approval and a separate provider-side spending cap.
