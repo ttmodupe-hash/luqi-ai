@@ -1,27 +1,46 @@
 # LUQI-AI $100/month text-chat pilot — release runbook
 
 **Plan (USD, UTC calendar month):** Gemini $60 (60%), OpenAI $40 (40%).
-**Provider-spend approval:** explicitly GRANTED by the owner on 2026-10-23 for
-Gemini and OpenAI within this allocation. This does not authorize LUQI customer
-subscriptions, legacy payment endpoints, new infrastructure or Omega workers.
-The budgeted authenticated text trial was enabled, then paused on 2026-10-23
-in response to Railway's October 21 security disclosure. The owner approval
-and $60/$40 limits remain valid. Replacing the active web JWT/admin secrets
-and pausing the gateway do not revoke provider or historical database credentials.
-See RAILWAY_SECURITY_RESPONSE_2026_10_23.md and issue #144 before reopening.
-A successful paid reply has not yet been verified with a designated LUQI
-account; configuration and metadata access are not inference proof. Do not
-ask the owner to approve this same allocation again.
+**Provider-spend approval:** explicitly GRANTED by the owner for Gemini and
+OpenAI within this allocation. On 2026-10-23, following the earlier incident
+pause, the owner explicitly requested activation of all usable services and
+commercial launch work. The existing authenticated, metered text trial is
+reopened within the unchanged $100 allocation; new paid media/worker providers
+have no separate defined allocation or verified integration.
 
-## In Railway (new `kind-spontaneity` project)
-Current containment keeps `LUQI_AI_PROVIDER_ENABLED=false`; the other approval
-and budget values are preserved. After the incident gate is cleared, production
-activation uses these non-secret variables:
+Two bounded metadata preflights passed for both reviewed models with matched
+masked identifiers on deployment `36993dd9-b21f-4c7a-aaa0-4a4f28da6794`.
+The dashboard key listings show creation after the October 21 disclosure date;
+this does not prove that every historical secret was revoked or that LUQI's
+incident review is complete. The owner-requested limited reopening does not
+constitute broad security, account-acceptance or commercial-launch clearance.
+See RAILWAY_SECURITY_RESPONSE_2026_10_23.md and issue #144.
+
+The activation flags were applied and deployment
+`65317c83-f9f2-4610-9d23-fd79f457733e` reached SUCCESS at source revision
+`81f30c9de11bded26a23b05653328dd96eb3ffa9`. Both providers again returned
+`metadata_accessible` and `key_identifier=matched`. Public readiness and
+anonymous-denial probes are recorded separately in #144. A designated-account
+paid reply and billing reconciliation are not yet verified. Do not infer a
+successful reply from configuration, metadata or readiness.
+
+The owner's commercial activation instruction is recorded. Customer checkout
+still lacks a confirmed merchant account, seller country, price/catalogue,
+verified support and delivery/refund terms. It cannot be made real by reopening
+the closed legacy wallet routes. No customer charge, subscription, payment-method
+change, automatic provider reload or new paid infrastructure is authorized by
+this runbook's technical steps. Existing budget approval does not need to be
+requested again.
+
+## Current Railway configuration (`kind-spontaneity`)
+
+The existing service-only activation configuration is:
 - `LUQI_AI_MONTHLY_USD=100`
 - `LUQI_GEMINI_MONTHLY_USD=60`
 - `LUQI_OPENAI_MONTHLY_USD=40`
 - `LUQI_AI_PROVIDER_ENABLED=true`
 - `LUQI_AI_BILLING_APPROVED=true`
+- `LUQI_AI_CREDENTIAL_CHECK_ENABLED=true`
 
 `LUQI_AI_BILLING_APPROVED` records owner consent to provider spending. It does
 not attest to the provider's account balance, payment setup or spending caps,
@@ -29,10 +48,10 @@ and it cannot enable customer billing. Set `LUQI_AI_PROVIDER_ENABLED=false`
 to stop new pilot requests; preserve the approval record and durable counters.
 
 DO NOT set legacy `GEMINI_API_KEY` or `OPENAI_API_KEY` in this service:
-other legacy endpoints may call them outside of the pilot gate.
-Credentials may be saved with both activation flags OFF. Add the service-only secret names
-`LUQI_PILOT_GEMINI_API_KEY` and `LUQI_PILOT_OPENAI_API_KEY` through
-Railway's secure Variables UI (never GitHub, screenshots or chat).
+other legacy endpoints may call them outside of the pilot gate. Credentials
+may be saved with activation OFF. Use Railway's protected service variables
+`LUQI_PILOT_GEMINI_API_KEY` and `LUQI_PILOT_OPENAI_API_KEY`; never GitHub,
+screenshots or chat. Credential creation/rotation remains an owner operation.
 
 ## Provider-side controls (verify before operational activation)
 On 2026-10-23 the operator inspected the provider dashboards, saved a $60 cap

@@ -59,4 +59,10 @@ test('lost registration responses are not retried and public plans make no billi
   await expect(page.getByRole('button', { name: /Purchase|Activate|Simulate/ })).toHaveCount(0);
   await expect(page.getByText(/Paid plans, credit purchases and checkout are not available/)).toBeVisible();
   expect(calls).toEqual([]);
+  await expect(page.getByRole('link', { name: 'Open the content studio', exact: true })).toHaveAttribute('href', '#/content-studio');
+  await expect(page.getByRole('link', { name: 'Check the AI text trial', exact: true })).toHaveAttribute('href', '#/ai-trial');
+  await expect(page.getByRole('link', { name: 'Explore the physics lab', exact: true })).toHaveAttribute('href', '#/pendulum-lab');
+  await expect(page.getByRole('link', { name: 'Open your private notes', exact: true })).toHaveAttribute('href', '#/companion');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('plans-availability.png'), fullPage: true });
 });
