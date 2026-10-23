@@ -112,6 +112,7 @@ test('a user changes a known password, signs in again and keeps saved notes', as
   await expect(page.getByRole('button', { name: 'Preserved after password change', exact: true })).toBeVisible();
   await fill(password);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: test.info().outputPath('password-settings.png'), fullPage: true });
   await page.getByRole('button', { name: 'Change password and sign out' }).click();
   await expect(page.getByRole('status')).toContainText('Password changed. Older sign-ins');

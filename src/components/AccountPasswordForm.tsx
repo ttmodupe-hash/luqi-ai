@@ -48,7 +48,7 @@ export default function AccountPasswordForm({ token, email, disabled, onBusyChan
     }
   }
   return <section className="rounded-lg border border-slate-700 p-4 space-y-3" aria-label="Account password settings">
-    <button type="button" className="luqi-secondary" disabled={disabled || busy} aria-expanded={open}
+    <button type="button" className="rounded-lg border border-slate-500 bg-slate-900 p-3 text-white disabled:opacity-50" disabled={disabled || busy} aria-expanded={open}
       aria-controls="account-password-form" onClick={() => { clearPasswords(); setNotice(''); setOpen(!open); }}>
       {open ? 'Close password settings' : 'Change password'}
     </button>
