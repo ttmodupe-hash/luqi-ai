@@ -81,7 +81,9 @@ bytes are refused rather than truncated; legacy overlong passwords require the
 operator-assisted procedure. The new password must differ from the old one.
 
 Durable MySQL admission permits 20 changes/attempts globally per minute and five
-per authenticated account per 15 minutes, separate from login/signup limits.
+per authenticated account per 15 minutes, separate from login/signup limits. The existing scope ENUM is unchanged:
+password changes use its login scopes with a reserved global key and a separate
+HMAC namespace for account keys. They do not share login counters.
 Every valid attempt, including a success or wrong current password, counts.
 Missing throttle storage fails closed; no caller IP header can reset a counter.
 Shared global limits can temporarily deny other users under abuse.

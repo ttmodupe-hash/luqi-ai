@@ -9,7 +9,7 @@ import { restCompat } from '../api/rest-compat';
 import { privateConversations } from '../api/private-conversations';
 import { signUserToken } from '../api/lib/userToken';
 import { changeAccountPassword } from '../api/services/passwordChange';
-import { AUTH_LIMITS, closeAuthThrottle, reservePasswordChangeAttempt } from '../api/services/authThrottle';
+import { AUTH_LIMITS, closeAuthThrottle, reservePasswordChangeAttempt, reserveAuthenticationAttempt } from '../api/services/authThrottle';
 import { closeDb } from '../api/queries/connection';
 const fixtureUrl = 'mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci';
 const OLD = 'Synthetic-CI-Previous-Password!', NEW = 'Synthetic-CI-New-Password!';
@@ -112,7 +112,14 @@ describe.sequential('real MySQL current-password changes', () => {
       const response = await post(owner.token); expect(response.status).toBe(429);
       expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0);
       const [rows] = await pool.query<RowDataPacket[]>('SELECT scope, attempts FROM auth_attempt_windows ORDER BY scope');
-      expect(rows).toEqual([{ scope: 'change_password_global', attempts: 20 }, { scope: 'change_password_subject', attempts: 5 }]);
+      expect(rows).toEqual([{ scope: 'login_global', attempts: 20 }, { scope: 'login_subject', attempts: 5 }]);
+      // The existing ENUM is unchanged. Different reserved/HMAC keys mean
+      // these saturated counters cannot consume login's admission windows.
+      await expect(reserveAuthenticationAttempt('login', owner.email, otherPool)).resolves.toBeUndefined();
+      const [independent] = await pool.query<RowDataPacket[]>('SELECT scope, subject_key, attempts FROM auth_attempt_windows ORDER BY scope, subject_key');
+      expect(independent).toHaveLength(4);
+      expect(independent.find(r => r.scope === 'login_global' && r.subject_key === '0'.repeat(64))?.attempts).toBe(1);
+      expect(independent.find(r => r.scope === 'login_global' && r.subject_key === 'f'.repeat(64))?.attempts).toBe(20);
       expect((await user(owner.id)).password_hash).toBe(owner.hash);
     } finally { await otherPool.end(); }
   }, 30_000);

@@ -15,6 +15,7 @@ export const AUTH_LIMITS = Object.freeze({
   change_password: { global: 20, globalSeconds: 60, subject: 5, subjectSeconds: 900 },
 });
 const GLOBAL_KEY = '0'.repeat(64);
+const PASSWORD_GLOBAL_KEY = 'f'.repeat(64);
 
 export class AuthThrottleError extends Error {
   constructor(public readonly code: 'AUTH_RATE_LIMITED' | 'AUTH_THROTTLE_UNAVAILABLE',
@@ -97,7 +98,12 @@ async function reserveAttempt(action: LimitedAction, subject: string | number, t
     begun = true;
     // Every request takes its action's global lock before its subject lock.
     // The global admission cap also bounds attacker-created subject rows.
-    const global = await reserveBucket(conn, `${action}_global`, GLOBAL_KEY, limits.global, limits.globalSeconds);
+    // The deployed ENUM has login/signup scopes only. A reserved global key
+    // and domain-separated subject HMAC give password changes independent
+    // counters without a migration or additional runtime permissions.
+    const scope = action === 'change_password' ? 'login' : action;
+    const globalKey = action === 'change_password' ? PASSWORD_GLOBAL_KEY : GLOBAL_KEY;
+    const global = await reserveBucket(conn, `${scope}_global`, globalKey, limits.global, limits.globalSeconds);
     if (!global.allowed) throw new AuthThrottleError('AUTH_RATE_LIMITED', global.retryAfter);
 
     let identity: string;
@@ -110,8 +116,9 @@ async function reserveAttempt(action: LimitedAction, subject: string | number, t
       if (id !== undefined && (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)) throw new Error('Invalid account ID');
       identity = id === undefined ? `email:${email.trim().toLowerCase()}` : `account:${Number(id)}`;
     }
-    const key = createHmac('sha256', secret).update(`luqi-auth-throttle-v1\0${identity}`).digest('hex');
-    const admission = await reserveBucket(conn, `${action}_subject`, key, limits.subject, limits.subjectSeconds);
+    const domain = action === 'change_password' ? 'luqi-password-change-throttle-v1' : 'luqi-auth-throttle-v1';
+    const key = createHmac('sha256', secret).update(`${domain}\0${identity}`).digest('hex');
+    const admission = await reserveBucket(conn, `${scope}_subject`, key, limits.subject, limits.subjectSeconds);
     // A subject denial still spends global admission; otherwise a blocked
     // account could be hammered indefinitely without exhausting that cap.
     await conn.commit();
