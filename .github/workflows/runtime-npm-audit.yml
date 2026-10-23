@@ -9,6 +9,7 @@ on:
       - "package-lock.json"
       - "bun.lock"
       - "app/**"
+      - "edge/**"
       - "requirements.txt"
       - "pyproject.toml"
       - "tests/test_dependency_compatibility.py"
@@ -21,6 +22,26 @@ permissions:
   contents: read
 
 jobs:
+  validate-edge-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: edge
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install isolated edge tooling from lockfile
+        run: npm ci --include=dev
+      - name: Audit complete edge tooling tree
+        run: npm audit --include=dev --audit-level=low
+      - name: Validate Worker bundle without credentials or deployment
+        run: npm run validate
+
   report-runtime-advisories:
     runs-on: ubuntu-latest
     timeout-minutes: 15

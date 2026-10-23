@@ -1,0 +1,14 @@
+{
+  "name": "luqi-edge-worker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "check": "node --check cloudflareWorker.js",
+    "validate": "npm run check && wrangler deploy --dry-run --outdir /tmp/luqi-edge-bundle",
+    "deploy": "wrangler deploy --keep-vars"
+  },
+  "devDependencies": {
+    "wrangler": "4.152.0"
+  }
+}
