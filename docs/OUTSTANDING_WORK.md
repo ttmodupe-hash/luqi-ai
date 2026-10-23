@@ -3,15 +3,17 @@
 This is an evidence-based checkpoint, not a claim that all features are complete.
 The owner explicitly approved provider activation on 2026-10-23 within
 $100/month ($60 Gemini / $40 OpenAI). Production records that consent and both
-reviewed model credentials passed metadata access checks. Paid generation is
-still paused pending provider-account spending controls, deployed key/project
-mapping and a monitored budgeted roundtrip. Customer billing remains disabled.
+reviewed model credentials passed metadata access checks. The budgeted authenticated
+text trial is enabled, provider project caps are configured at $60/$40 and both
+deployed masked key identifiers matched the intended dashboard listings. A
+designated-account paid roundtrip and billing reconciliation are not yet verified.
+Customer billing remains disabled.
 See AI_PILOT_100_USD.md; approval and verified operational activation are separate.
 
 The separate signed-in AI trial now has explicit provider-processing acknowledgement,
 bounded requests, no automatic paid retry and no automatic private-note context.
-It remains configuration-gated; actual production inference, provider-account
-binding and billing reconciliation need direct evidence before a broad AI launch.
+It remains configuration-gated; actual production inference, account acceptance
+and billing reconciliation need direct evidence before a broad AI launch.
 
 | Priority | Work | Current evidence / next completion criterion |
 |---|---|---|

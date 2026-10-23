@@ -4,22 +4,23 @@
 **Provider-spend approval:** explicitly GRANTED by the owner on 2026-10-23 for
 Gemini and OpenAI within this allocation. This does not authorize LUQI customer
 subscriptions, legacy payment endpoints, new infrastructure or Omega workers.
-Approval is recorded separately from operational activation: paid generation
-remains paused pending provider-account control verification and a monitored,
-budgeted live roundtrip. Do not ask the owner to approve this same allocation again.
+The budgeted authenticated text trial is now enabled in production. A successful
+paid reply has not yet been verified with a designated LUQI account; configuration
+and metadata access are not inference proof. Do not ask the owner to approve
+this same allocation again.
 
 ## In Railway (new `kind-spontaneity` project)
-Set these non-secret variables (already prepared with `skipDeploys`):
+Production activation uses these non-secret variables:
 - `LUQI_AI_MONTHLY_USD=100`
 - `LUQI_GEMINI_MONTHLY_USD=60`
 - `LUQI_OPENAI_MONTHLY_USD=40`
-- `LUQI_AI_PROVIDER_ENABLED=false`
+- `LUQI_AI_PROVIDER_ENABLED=true`
 - `LUQI_AI_BILLING_APPROVED=true`
 
 `LUQI_AI_BILLING_APPROVED` records owner consent to provider spending. It does
 not attest to the provider's account balance, payment setup or spending caps,
-and it cannot enable customer billing. Keep `LUQI_AI_PROVIDER_ENABLED=false`
-until the operational checks below pass.
+and it cannot enable customer billing. Set `LUQI_AI_PROVIDER_ENABLED=false`
+to stop new pilot requests; preserve the approval record and durable counters.
 
 DO NOT set legacy `GEMINI_API_KEY` or `OPENAI_API_KEY` in this service:
 other legacy endpoints may call them outside of the pilot gate.
@@ -28,6 +29,15 @@ Credentials may be saved with both activation flags OFF. Add the service-only se
 Railway's secure Variables UI (never GitHub, screenshots or chat).
 
 ## Provider-side controls (verify before operational activation)
+On 2026-10-23 the operator inspected the provider dashboards, saved a $60 cap
+on the Gemini project containing the deployed LUQI key, and saved an enforced
+$40 OpenAI project limit plus $32/$36 warnings. Both prepaid accounts had credit
+and auto-reload was OFF. The older Gemini project's existing lower cap was
+preserved. No credits were bought, keys created or payment methods changed.
+The corrected startup check matched both deployed keys' masked identifiers and
+retrieved both reviewed models' metadata. See the diagnostic's limits below;
+these observations do not prove successful generation or exact billed cost.
+
 - Google AI Studio: dedicated LUQI Gemini project with **$60/month** project
   spend cap at **Spend > Monthly spend cap > Edit spend cap** when available.
   Experimental project cap may overrun due to ~10 minute billing delay.
@@ -96,6 +106,15 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
   pilot chat, manual console calls or other projects are NOT covered.
 - Strict provider-side limits are still essential. Neither these reservations
   nor delayed provider billing meters guarantee a mathematical $100 ceiling.
+
+## Stop and rollback
+
+Disable `LUQI_AI_PROVIDER_ENABLED` on the web service and verify its next
+deployment/readiness before considering new requests stopped. A request already
+sent to a provider may still be billed. Keep MySQL, spend/quota rows, account
+records and backups intact; never clear the ledger to work around a failure.
+Customer payment routes and Omega workers are independent and remain disabled.
+Record the production result in issue #144 and reconcile provider usage privately.
 
 ## Before turning anything on
 1. Verify Railway can deploy the exact Docker image and secure production service.
