@@ -8,6 +8,27 @@ This records verified changes and open acceptance gates. It is not an unrestrict
 - #192: fixed global HTTP errors, route-pattern telemetry, private no-store responses and bounded authenticated AI request validation.
 - #193: explicit private database role provisioning. CI exercised the real operator and production was moved to the dedicated web identity, with its one-time variable cleared. The root/operator credential was preserved; historical revocation is still open.
 - #194: local six-scene, 90-second studio with 3D projection, camera/physical controls, time scrubbing, original graphics, storyboard/subtitle/script exports and explicit native video recording. No microphone, paid video provider, social connection or professional submission is enabled.
+- #195: removed unverified active science/media claims and closed both legacy science endpoints. #196: the exact production container runs as the existing unprivileged node user; actual production startup reports runtime UID 1000.
+
+The final #196 head passed 419 offline tests and 46 browser checks, all five
+Actions workflows and all ten reported check runs. Production deployment
+`9e432994-91d0-48ed-8a39-9ca3fa035328` reached SUCCESS at main
+`22abfa4f2ed5a3f35884e1e2bc6fb7b5f5654886`. Read-only production schema
+verification validated eight runtime tables. Public job `120452930472` passed
+all 20 probes; two additional live science GET checks returned the expected
+503/no-store denial. All three Railway services were online and MySQL's
+deployment was unchanged.
+
+## Subsequent security-disclosure gate
+
+Railway's October 21 disclosure recommends rotating stored credentials and
+reviewing usage. This does not establish whether LUQI was affected. On October
+23 the operator replaced the active web session-signing/admin secrets and
+paused `LUQI_AI_PROVIDER_ENABLED`; the existing $100 text approval and $60/$40
+limits remain valid. This is partial containment, not completed incident
+response. Provider keys and the historical database/operator credential were
+not revoked here. See RAILWAY_SECURITY_RESPONSE_2026_10_23.md and issue #144
+for the live deployment evidence, safe rotation sequence and remaining gates.
 
 The studio head passed five workflows: 396 configuration/security/content tests, 20 transport/client/page tests, 44 browser checks, real MySQL integration/restore, container smoke, dependency audits and Python CI. Scope-specific strict checks passed; the legacy whole-repository TypeScript debt remains outside that evidence.
 
@@ -21,7 +42,7 @@ studio/physics tools and the separate text trial, without mounting those
 unreviewed clients. The legacy science endpoints are closed for all methods
 before their old synthetic-data/provider handlers. Native video timing is
 explicitly approximate until media inspection/normalization. These changes
-require their own final CI/deployment verification.
+passed CI and live deployment/browser verification as recorded above.
 
 ## PR reconciliation
 

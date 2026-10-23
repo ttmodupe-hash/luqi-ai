@@ -4,13 +4,19 @@
 **Provider-spend approval:** explicitly GRANTED by the owner on 2026-10-23 for
 Gemini and OpenAI within this allocation. This does not authorize LUQI customer
 subscriptions, legacy payment endpoints, new infrastructure or Omega workers.
-The budgeted authenticated text trial is now enabled in production. A successful
-paid reply has not yet been verified with a designated LUQI account; configuration
-and metadata access are not inference proof. Do not ask the owner to approve
-this same allocation again.
+The budgeted authenticated text trial was enabled, then paused on 2026-10-23
+in response to Railway's October 21 security disclosure. The owner approval
+and $60/$40 limits remain valid. Replacing the active web JWT/admin secrets
+and pausing the gateway do not revoke provider or historical database credentials.
+See RAILWAY_SECURITY_RESPONSE_2026_10_23.md and issue #144 before reopening.
+A successful paid reply has not yet been verified with a designated LUQI
+account; configuration and metadata access are not inference proof. Do not
+ask the owner to approve this same allocation again.
 
 ## In Railway (new `kind-spontaneity` project)
-Production activation uses these non-secret variables:
+Current containment keeps `LUQI_AI_PROVIDER_ENABLED=false`; the other approval
+and budget values are preserved. After the incident gate is cleared, production
+activation uses these non-secret variables:
 - `LUQI_AI_MONTHLY_USD=100`
 - `LUQI_GEMINI_MONTHLY_USD=60`
 - `LUQI_OPENAI_MONTHLY_USD=40`
