@@ -26,6 +26,24 @@ The dedicated table-restricted MySQL web account was newly created on October
 23. That improves privileges but does not revoke the older root/operator
 credential, establish an exposure window or prove no unauthorized access.
 
+## Limited reopening at the owner's instruction
+
+The owner subsequently explicitly requested activation and monetisation on
+October 23. The operator enabled the existing authenticated text trial within
+its unchanged $100/$60/$40 allocation after both model metadata checks passed
+with matched masked key identifiers. Provider listings show the reviewed keys
+were created after the October 21 disclosure date. Current provider caps were
+inspected; automatic reload was not changed. See AI_PILOT_100_USD.md and #144
+for exact deployment and public-check evidence.
+
+This is an owner-requested limited reopening while the response remains open.
+It does not prove an exposure window, historical credential revocation, a clean
+usage history or production recovery. Database/operator rotation, audit review
+and the other steps below remain required for broad launch acceptance. No paid
+media provider, Omega worker, customer checkout or unsafe legacy wallet route
+was activated. The remaining steps describe full response completion; the
+limited text trial no longer satisfies their suggested paused-state sequence.
+
 ## Complete and verify the response
 
 1. Preserve account-specific incident notifications and relevant usage/audit

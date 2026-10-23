@@ -4,11 +4,13 @@ This is an evidence-based checkpoint, not a claim that all features are complete
 The owner explicitly approved provider activation on 2026-10-23 within
 $100/month ($60 Gemini / $40 OpenAI). Production records that consent and both
 reviewed model credentials passed metadata access checks. The budgeted authenticated
-text trial was enabled and is now paused for the Railway security-disclosure
-response. Provider project caps are configured at $60/$40 and both
+text trial was enabled, paused for the Railway security-disclosure response,
+and reopened on the owner’s subsequent explicit activation instruction within
+the same allocation. Credential incident review remains open; limited text
+configuration is not broad launch clearance. Provider project caps are configured at $60/$40 and both
 deployed masked key identifiers matched the intended dashboard listings. A
 designated-account paid roundtrip and billing reconciliation are not yet verified.
-Customer billing remains disabled.
+Customer billing is now requested by the owner but remains technically unavailable: no merchant account, seller country, price catalogue or verified fulfilment/support terms are configured.
 See AI_PILOT_100_USD.md; approval and verified operational activation are separate.
 
 The separate signed-in AI trial now has explicit provider-processing acknowledgement,
@@ -18,7 +20,7 @@ and billing reconciliation need direct evidence before a broad AI launch.
 
 | Priority | Work | Current evidence / next completion criterion |
 |---|---|---|
-| P0 | Railway security disclosure | Paid text requests are paused and active web JWT/admin secrets have been replaced. Historical database/operator credentials and provider key revocation, usage/audit review and owner notification review remain open. Follow RAILWAY_SECURITY_RESPONSE_2026_10_23.md and issue #144; passing CI/HTTP probes does not establish that credentials were unaffected. Approval of the existing $100 text allocation persists. |
+| P0 | Railway security disclosure | Active web JWT/admin secrets have been replaced. The owner subsequently requested reopening of the bounded text trial, which has been applied without increasing the $100 allocation; this does not clear the incident response. Historical database/operator credentials and provider key revocation, usage/audit review and owner notification review remain open. Follow RAILWAY_SECURITY_RESPONSE_2026_10_23.md and issue #144; passing CI/HTTP probes does not establish that credentials were unaffected. Approval of the existing $100 text allocation persists. |
 | P0 | Dependency advisories | Root npm, standalone app, desktop, Bun and resolved Python scans now have zero known findings locally; CI coverage exists for those trees; the isolated edge tooling tree now has an additional audit and bundle gate. See DEPENDENCY_AUTH_HARDENING.md for scope and upgrade checks. Continue scan review and platform release acceptance; zero known advisories is not a complete security audit. |
 | P0 | Database recovery | Isolated MySQL migration, concurrency and fixture restore CI exists. After explicit backup approval, daily Railway volume backups with 6-day retention are enabled and the initial 941 MB backup is listed. MySQL stayed online; PITR remains off. Verify subsequent scheduled backups, retention/cost and a production-derived isolated restore drill; a listed snapshot or fixture restore is not proof of production recoverability. |
 | P0 | Authorization | PRs 170–171 closed unsafe admin/legacy operations. Node auth requires an explicitly active account and bounded request bodies. All login/signup aliases now reserve durable MySQL global and account/identifier limits before password work; the guard denies requests if storage fails, and handles collation-equivalent accounts consistently. See AUTH_THROTTLING.md for limits, tests and denial-of-service tradeoffs. Legacy Python auth removes its fallback key/default admin and adds salted hashes plus revocable scoped tokens, but is outside the new Node throttle. tRPC denies unreviewed procedures; offline queue operations enforce ownership and persistent MySQL. Legacy archive/shared knowledge and REST billing/job/approval/USSD bypasses are closed. Signed-in users can now change a known password with current-password reauthentication, durable attempt limits and credential-bound revocation; forgotten-password recovery still requires verified operator assistance. Trusted-ingress controls, MFA, reviewed admin sessions/RBAC and the remaining-route audit are still required. |

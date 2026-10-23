@@ -60,7 +60,9 @@ jobs:
         if: always()
         with:
           name: public-pilot-layouts
-          path: test-results/**/getting-started.png
+          path: |
+            test-results/**/getting-started.png
+            test-results/**/plans-availability.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: failure()
