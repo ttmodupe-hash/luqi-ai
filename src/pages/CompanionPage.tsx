@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { conversationClient, ConversationError, downloadConversationExport, type AccountSession, type Conversation, type SavedMessage } from "../lib/private-conversations";
+import { conversationClient, ConversationError, downloadConversationExport, downloadPrivateNotesExport, type AccountSession, type Conversation, type SavedMessage } from "../lib/private-conversations";
 import AccountAccessForm from '../components/AccountAccessForm';
 
 const modes = ["Luqi Prime — General", "Dr. Kwame — STEM", "Amina — Trade", "Chidi — Networks"];
@@ -23,9 +23,11 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
   const [deletePrompt, setDeletePrompt] = useState(false);
   const epoch = useRef(0);
   const locked = useRef(false);
-  useEffect(() => () => { epoch.current++; }, []);
+  const notesExport = useRef<AbortController | null>(null);
+  useEffect(() => () => { epoch.current++; notesExport.current?.abort(); }, []);
 
   function clearSession() {
+    notesExport.current?.abort(); notesExport.current = null;
     epoch.current++; locked.current = false;
     setSession(null); setConversations([]); setSelected(null);
     setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false);
@@ -69,6 +71,7 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
     <header><h1 className="text-3xl font-bold">Companion conversations</h1>
       <p className="mt-2 text-slate-300">Save private conversation notes to your account. AI replies and automatic learning are currently disabled.</p>
       <p className="mt-2 text-sm text-slate-400">Saved notes are accessible to storage administrators; this is not end-to-end encryption. Signing out clears this page, but does not delete saved notes.</p>
+      <p className="mt-2 text-sm text-slate-400">After signing in, you can download all your saved conversations, their messages and your saved memories together. This notes archive excludes account credentials, other modules, unsaved drafts and backups.</p>
     </header>
     {notice && <p role="status" className="rounded-lg border border-amber-500 p-3">{notice}</p>}
     {!session ? <AccountAccessForm initialMode={accessMode} onAuthenticated={result => {
@@ -82,6 +85,28 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
         <button className={control} onClick={clearSession}>Sign out</button>
         <button className={control} disabled={busy} onClick={() => loadConversations()}>Refresh saved history</button>
       </div>
+      <section className="space-y-2 rounded-lg border border-slate-700 p-4" aria-label="Download all private notes">
+        <p className="text-sm text-slate-300">Download every saved conversation and your memories, including older history beyond the visible list. Keep the JSON file private. Limits: 500 conversations, 5,000 messages, 5,000 memories and 4 MiB of saved text. Larger archives are refused without truncation; export individual conversations instead.</p>
+        <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => {
+          void run(async current => {
+            const controller = new AbortController(); notesExport.current = controller;
+            try {
+              const data = await conversationClient(session.token).exportAll(controller.signal);
+              if (!current()) return;
+              downloadPrivateNotesExport(data);
+              setNotice('All saved notes download started. Keep the downloaded file private.');
+            } catch (error) {
+              if (current() && error instanceof ConversationError && [422, 429].includes(error.status)) {
+                setNotice(error.status === 422
+                  ? 'Your saved notes exceed the archive limits. No partial export was downloaded. Export individual conversations instead; saved notes are unchanged.'
+                  : 'The notes exporter is busy. No file was downloaded. Try again later; we will not retry automatically.');
+                return;
+              }
+              throw error;
+            } finally { if (notesExport.current === controller) notesExport.current = null; }
+          }, false, undefined, 'All-notes export could not be completed. No file was downloaded. Your saved notes are unchanged.');
+        }}>Download all saved notes</button>
+      </section>
       <div className="grid gap-6 md:grid-cols-[18rem_1fr]">
         <aside className="space-y-4">
           <form className="space-y-3" onSubmit={event => {

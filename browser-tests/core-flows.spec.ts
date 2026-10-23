@@ -123,7 +123,7 @@ test('conversation deletion requires confirmation and clears only confirmed hist
   await expect(page.getByText('Private deletion fixture', { exact: true })).toHaveCount(0);
 });
 
-test('exports all saved private notes as JSON after an explicit keyboard action', async ({ page }) => {
+test('exports the selected conversation as JSON after an explicit keyboard action', async ({ page }) => {
   const data = { format: 'luqi.conversation.v1', exportedAt: '2026-10-23T06:00:00Z',
     conversation: { id: 4, title: 'Export fixture', personalityId: 1, createdAt: null },
     messages: Array.from({ length: 60 }, (_, i) => ({ id: i + 1, role: 'user', content: `Sawubona ${i} <script>plain text</script>`, createdAt: null })),
@@ -167,4 +167,53 @@ test('exports all saved private notes as JSON after an explicit keyboard action'
   expect(exports).toBe(1);
   await expect(page.getByRole('status')).toContainText('Export download started');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+for (const fail of [false, true]) test(`complete notes archive ${fail ? 'refuses a partial file' : 'includes history beyond the visible page'}`, async ({ page }) => {
+  const conversations = Array.from({ length: 61 }, (_, i) => ({ id: i + 1, title: `Archive topic ${i}`, personalityId: 1, createdAt: null }));
+  const data = { format: 'luqi.private-notes.v1', scope: 'saved_notes_only', exportedAt: '2026-10-23T12:00:00Z', conversations,
+    messages: [{ id: 1, conversationId: 61, role: 'user', content: 'Old private fixture outside the visible list', createdAt: null }],
+    memories: [{ id: 1, conversationId: null, memoryType: null, category: null, content: 'Owned unlinked memory', importance: null, createdAt: null }] };
+  let requests = 0, downloaded = 0;
+  page.on('download', () => downloaded++);
+  await page.route('**/api/v1/auth/login', route => route.fulfill({ json: { token: 'archive-fixture-token', user: { email: 'browser@example.invalid' } } }));
+  await page.route('**/api/v1/companion/conversations**', route => {
+    const request = route.request(), url = new URL(request.url());
+    expect(request.method()).toBe('GET');
+    if (url.pathname === '/api/v1/companion/conversations/export') {
+      requests++;
+      expect(url.search).toBe('');
+      expect(request.headers().authorization).toBe('Bearer archive-fixture-token');
+      return route.fulfill(fail ? { status: 422, json: { code: 'PRIVATE_NOTES_EXPORT_TOO_LARGE' } } : { json: data });
+    }
+    return route.fulfill({ json: { conversations: conversations.slice(0, 50) } });
+  });
+  await page.setViewportSize({ width: 320, height: 820 });
+  await page.goto('/#/companion');
+  await page.getByLabel('Email', { exact: true }).fill('browser@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('fixture-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  const control = page.getByRole('button', { name: 'Download all saved notes', exact: true });
+  await expect(control).toBeEnabled();
+  expect(requests).toBe(0);
+  await expect(page.getByRole('button', { name: 'Archive topic 60', exact: true })).toHaveCount(0);
+  await control.focus();
+  if (fail) {
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('status')).toContainText('No partial export was downloaded');
+    expect(downloaded).toBe(0);
+  } else {
+    const downloading = page.waitForEvent('download');
+    await page.keyboard.press('Enter');
+    const download = await downloading;
+    expect(download.suggestedFilename()).toBe('luqi-private-notes.json');
+    const chunks: Buffer[] = [], stream = await download.createReadStream();
+    for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+    expect(JSON.parse(Buffer.concat(chunks).toString('utf8'))).toEqual(data);
+    await expect(page.getByRole('status')).toContainText('All saved notes download started');
+    expect(downloaded).toBe(1);
+  }
+  expect(requests).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('all-notes-export.png'), fullPage: true });
 });

@@ -7,7 +7,7 @@ import { privateConversations as app } from '../api/private-conversations';
 import { PilotAuthError } from '../api/services/pilotAuth';
 const post = (path: string, body: object) => app.request(path, { method: 'POST',
   headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue(7); });
+beforeEach(() => { vi.clearAllMocks(); mocks.db.mockReset(); mocks.auth.mockReset().mockResolvedValue(7); });
 describe('private durable conversation boundary', () => {
   it('rejects unauthenticated requests before reading storage', async () => {
     mocks.auth.mockRejectedValue(new PilotAuthError('AUTH_REQUIRED'));
@@ -69,4 +69,87 @@ it('bounds authenticated note bodies even without Content-Length', async () => {
   expect(response.status).toBe(413);
   expect(response.headers.get('Cache-Control')).toBe('no-store');
   expect(mocks.db).not.toHaveBeenCalled();
+});
+
+describe('complete private notes export boundary', () => {
+  it('authenticates before storage and refuses all caller-selected filters or identities', async () => {
+    mocks.auth.mockRejectedValueOnce(new PilotAuthError('AUTH_REQUIRED'));
+    expect((await app.request('/export')).status).toBe(401);
+    mocks.auth.mockRejectedValueOnce(new PilotAuthError('AUTH_UNAVAILABLE'));
+    expect((await app.request('/export')).status).toBe(503);
+    for (const query of ['userId=8', 'limit=1', 'before=9', 'include=credentials']) {
+      const response = await app.request(`/export?${query}`);
+      expect(response.status).toBe(400);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+    }
+    expect(mocks.db).not.toHaveBeenCalled();
+  });
+
+  function database(results: unknown[][]) {
+    const tx = { execute: vi.fn().mockResolvedValue([[{ engine: 'InnoDB' }, { engine: 'InnoDB' }, { engine: 'InnoDB' }]]), select: vi.fn(() => {
+      const result = results.shift();
+      const builder: Record<string, unknown> = {};
+      for (const method of ['from', 'where', 'innerJoin', 'leftJoin', 'orderBy', 'limit']) builder[method] = () => builder;
+      builder.then = (resolve: (rows: unknown) => unknown) => Promise.resolve(result).then(resolve);
+      return builder;
+    }) };
+    return { transaction: vi.fn((work: (tx: unknown) => unknown) => work(tx)), tx };
+  }
+  it('uses a read-only consistent snapshot and permits an empty notes archive', async () => {
+    const db = database([[{ rows: 0, bytes: 0 }], [{ rows: 0, bytes: 0 }], [{ rows: 0, bytes: 0 }], [], [], []]);
+    mocks.db.mockResolvedValue(db);
+    const response = await app.request('/export');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="luqi-private-notes.json"');
+    expect(await response.json()).toMatchObject({ format: 'luqi.private-notes.v1', scope: 'saved_notes_only',
+      conversations: [], messages: [], memories: [] });
+    expect(db.transaction.mock.calls[0][1]).toEqual({ isolationLevel: 'repeatable read', accessMode: 'read only' });
+  });
+  it.each([
+    [{ rows: 501, bytes: 0 }, { rows: 0, bytes: 0 }, { rows: 0, bytes: 0 }],
+    [{ rows: 0, bytes: 0 }, { rows: 5001, bytes: 0 }, { rows: 0, bytes: 0 }],
+    [{ rows: 0, bytes: 0 }, { rows: 0, bytes: 0 }, { rows: 5001, bytes: 0 }],
+    [{ rows: 0, bytes: 0 }, { rows: 1, bytes: 4 * 1024 * 1024 + 1 }, { rows: 0, bytes: 0 }],
+  ])('rejects oversized archives before loading content %#', async (...sizes) => {
+    const db = database(sizes.map(s => [s]));
+    mocks.db.mockResolvedValue(db);
+    const response = await app.request('/export');
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ code: 'PRIVATE_NOTES_EXPORT_TOO_LARGE' });
+    expect(db.tx.select).toHaveBeenCalledTimes(3);
+  });
+  it('refuses an incomplete snapshot instead of returning a partial success', async () => {
+    mocks.db.mockResolvedValue(database([[{ rows: 1, bytes: 5 }], [{ rows: 0, bytes: 0 }], [{ rows: 0, bytes: 0 }], [], [], []]));
+    const response = await app.request('/export');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'CONVERSATION_STORAGE_UNAVAILABLE' });
+  });
+  it('refuses an export if its tables cannot provide an InnoDB snapshot', async () => {
+    const db = database([]);
+    db.tx.execute.mockResolvedValue([[{ engine: 'MyISAM' }, { engine: 'InnoDB' }, { engine: 'InnoDB' }]]);
+    mocks.db.mockResolvedValue(db);
+    const response = await app.request('/export');
+    expect(response.status).toBe(503);
+    expect(db.tx.select).not.toHaveBeenCalled();
+  });
+  it('bounds simultaneous exports and releases capacity after storage failures', async () => {
+    let release!: () => void;
+    const waiting = new Promise<never>((_, reject) => { release = () => reject(new Error('private SQL diagnostic')); });
+    mocks.db.mockReturnValue(waiting);
+    const first = app.request('/export'), second = app.request('/export');
+    await vi.waitFor(() => expect(mocks.db).toHaveBeenCalledTimes(2));
+    const busy = await app.request('/export');
+    expect(busy.status).toBe(429);
+    expect(busy.headers.get('Retry-After')).toBe('15');
+    expect(busy.headers.get('Cache-Control')).toBe('no-store');
+    expect(mocks.db).toHaveBeenCalledTimes(2);
+    release();
+    for (const response of await Promise.all([first, second])) {
+      expect(response.status).toBe(503);
+      expect(await response.text()).not.toContain('private SQL');
+    }
+    mocks.db.mockRejectedValue(new Error('unavailable'));
+    expect((await app.request('/export')).status).toBe(503);
+  });
 });
