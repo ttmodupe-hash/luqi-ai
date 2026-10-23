@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { checkPilotCredentials } from "../api/services/pilotCredentialCheck";
+import { checkKeyIdentifier, checkPilotCredentials } from "../api/services/pilotCredentialCheck";
 import { PILOT_MODELS } from "../api/services/pilotModels";
 
 const env = {
@@ -13,6 +13,22 @@ const modelResponse = (url: string) => Response.json(url.includes("googleapis")
   : { id: PILOT_MODELS.openai, object: "model" });
 
 describe("opt-in pilot credential metadata check", () => {
+  it("compares only explicitly configured masked identifiers without returning key fragments", async () => {
+    const configured = { ...env, LUQI_PILOT_GEMINI_API_KEY: "fixture-secret-ABcd",
+      LUQI_PILOT_GEMINI_KEY_IDENTIFIERS: "XY12,ABcd",
+      LUQI_PILOT_OPENAI_KEY_IDENTIFIERS: "Z123" };
+    const results = await checkPilotCredentials(configured, vi.fn(async (url: string) => modelResponse(url)) as typeof fetch);
+    expect(results.map(x => x.key_identifier)).toEqual(["matched", "mismatched"]);
+    expect(JSON.stringify(results)).not.toMatch(/ABcd|XY12|Z123|secret/);
+    expect(checkKeyIdentifier("gemini", { ...configured, LUQI_PILOT_GEMINI_KEY_IDENTIFIERS: undefined })).toBe("not_checked");
+    expect(checkKeyIdentifier("gemini", { ...configured, LUQI_PILOT_GEMINI_API_KEY: "" })).toBe("unavailable");
+  });
+
+  it.each(["", "*", "ABC", "ABCDE", "ABcd,", "ABcd, XY12", Array(21).fill("ABcd").join(",")])(
+    "rejects invalid identifier configuration without repairing it", configured => {
+      expect(checkKeyIdentifier("gemini", { ...env, LUQI_PILOT_GEMINI_KEY_IDENTIFIERS: configured })).toBe("invalid_configuration");
+    });
+
   it.each([undefined, "false", "1", "TRUE"])("does not contact providers with flag %s", async flag => {
     const fetcher = vi.fn();
     expect(await checkPilotCredentials({ ...env, LUQI_AI_CREDENTIAL_CHECK_ENABLED: flag }, fetcher)).toEqual([]);

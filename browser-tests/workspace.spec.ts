@@ -24,7 +24,7 @@ test("workspace filters distinguish usable tools from previews without making AI
   });
   await page.goto("/#/");
   await expect(
-    page.getByText("AI replies & voice are unavailable"),
+    page.getByText("Check AI trial availability"),
   ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(6);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();

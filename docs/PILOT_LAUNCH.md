@@ -3,6 +3,9 @@
 The pilot entry route is `/#/start`. It introduces two usable paths: the
 browser-based physics lab without an account, and account-owned conversation
 notes with registration/sign-in. It is not a full AI product launch.
+An optional `/#/ai-trial` page provides a separate, signed-in text request
+with explicit provider processing acknowledgement and configuration checks.
+The page can remain paused; its presence is not proof of a successful AI reply.
 
 ## First-user acceptance
 
@@ -19,6 +22,11 @@ notes with registration/sign-in. It is not a full AI product launch.
    deletion and check that the active records disappear. Delete the downloaded
    file separately if it is no longer needed.
 6. Sign out and check that the page clears the email and private history.
+7. For the owner-approved AI trial, check its current configuration status,
+   sign in and acknowledge provider processing before one ordinary test question.
+   Verify the real reply and provider, attempt counters and actual billing
+   separately. Do not send sensitive notes or use a synthetic browser reply as
+   production inference evidence. A failed/lost reply must not be retried automatically.
 
 The session token remains in page memory. Navigation/reload ends the session;
 no persistent browser login or draft recovery is promised. Registration has no
@@ -38,6 +46,8 @@ The latter refuses a caller-selected public URL and requires the exact
 loopback CI fixture and GitHub Actions flag. It never runs against production
 or makes paid provider calls. Browser fixtures are not designated human-account
 acceptance, legal review, a penetration test or a production restore drill.
+The separate AI page browser fixture also uses synthetic provider HTTP. It
+checks explicit submission, mobile layout and session clearing without a paid call.
 
 ## Wider release gates still open
 

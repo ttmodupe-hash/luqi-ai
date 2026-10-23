@@ -225,9 +225,9 @@ export default function Home() {
         <div className="luqi-home-note">
           <ShieldCheck size={20} aria-hidden="true" />
           <p>
-            <strong>Clear about what’s ready.</strong> AI replies, voice,
-            payments and autonomous agents remain unavailable. Service health
-            alone does not verify these features.
+            <strong>Clear about what’s ready.</strong> AI text has a separate,
+            limited trial. Voice, payments and autonomous agents remain unavailable.
+            Service health alone does not verify these features.
           </p>
           <Link to="/service-status">
             Check service status <ArrowUpRight size={17} aria-hidden="true" />

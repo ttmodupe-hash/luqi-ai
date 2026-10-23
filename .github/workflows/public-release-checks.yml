@@ -22,7 +22,7 @@ jobs:
           node-version: "22"
       - name: Check probe syntax
         run: node --check scripts/verify-public-release.mjs
-      - name: Verify fixed public Railway origin without writes or credentials
+      - name: Verify fixed public Railway origin with no spending or credentials
         env:
           LUQI_VERIFY_PUBLIC: "true"
         run: node scripts/verify-public-release.mjs
