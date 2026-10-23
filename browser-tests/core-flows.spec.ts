@@ -62,3 +62,42 @@ test('public pages render without horizontal overflow or JavaScript exceptions',
   }
   expect(errors).toEqual([]);
 });
+
+test('conversation deletion requires confirmation and clears only confirmed history', async ({ page }) => {
+  let deletions = 0;
+  await page.route('**/api/v1/auth/login', route => route.fulfill({ json: {
+    token: 'browser-fixture-token', user: { email: 'browser@example.invalid' },
+  } }));
+  await page.route('**/api/v1/companion/conversations**', route => {
+    const request = route.request();
+    if (request.method() === 'DELETE') {
+      expect(request.headers().authorization).toBe('Bearer browser-fixture-token');
+      expect(request.postDataJSON()).toEqual({ confirm: true });
+      deletions++;
+      return route.fulfill({ json: { id: 4, deleted: true } });
+    }
+    return route.fulfill({ json: new URL(request.url()).pathname.endsWith('/messages') ? {
+      messages: [{ id: 2, role: 'user', content: 'Private deletion fixture', createdAt: null }],
+    } : { conversations: [{ id: 4, title: 'Delete fixture', personalityId: 1 }] } });
+  });
+  await page.goto('/#/companion');
+  await expect(page.getByRole('button', { name: 'Open Floating AI Chat' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Live Voice Copilot/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Critique Platform/ })).toHaveCount(0);
+  await page.getByLabel('Email', { exact: true }).fill('browser@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('fixture-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete fixture', exact: true }).click();
+  await expect(page.getByText('Private deletion fixture', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Delete selected conversation' }).click();
+  await expect(page.getByRole('button', { name: 'Cancel deletion' })).toBeFocused();
+  await page.getByRole('button', { name: 'Cancel deletion' }).click();
+  expect(deletions).toBe(0);
+  await page.getByRole('button', { name: 'Delete selected conversation' }).click();
+  await page.screenshot({ path: test.info().outputPath('delete-confirmation.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Confirm deletion' }).click();
+  await expect(page.getByRole('status')).toContainText('deleted from active storage');
+  expect(deletions).toBe(1);
+  await expect(page.getByRole('button', { name: 'Delete fixture', exact: true })).toHaveCount(0);
+  await expect(page.getByText('Private deletion fixture', { exact: true })).toHaveCount(0);
+});

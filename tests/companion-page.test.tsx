@@ -94,3 +94,52 @@ describe("Companion account interactions (mock HTTP, no production account)", ()
     expect(screen.queryByText("private database error")).toBeNull();
   });
 });
+
+describe("private conversation deletion", () => {
+  it("requires confirmation, permits cancellation, and removes history only after confirmation", async () => {
+    await login(); await selectConversation();
+    const calls = request.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected conversation" }));
+    expect(request).toHaveBeenCalledTimes(calls);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel deletion" }));
+    expect(request).toHaveBeenCalledTimes(calls);
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected conversation" }));
+    let resolve!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(r => { resolve = r; }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm deletion" }));
+    expect(screen.getByRole("button", { name: "Private notes" })).toBeTruthy();
+    expect(screen.queryByText(/deleted from active storage/)).toBeNull();
+    await act(async () => resolve(reply({ id: 4, deleted: true })));
+    await screen.findByText(/deleted from active storage/);
+    expect(screen.queryByRole("button", { name: "Private notes" })).toBeNull();
+    expect(screen.queryByText("Previously saved")).toBeNull();
+  });
+  it("blocks deletion while a draft is present and recovers from a lost deletion response by refreshing", async () => {
+    await login(); await selectConversation(); draft();
+    expect((screen.getByRole("button", { name: "Delete selected conversation" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Clear draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected conversation" }));
+    request.mockRejectedValueOnce(new TypeError("Lost delete acknowledgement"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm deletion" }));
+    await screen.findByText(/Deletion could not be confirmed/);
+    expect((screen.getByRole("button", { name: "Private notes" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(request).toHaveBeenCalledTimes(4);
+    request.mockResolvedValueOnce(reply({ conversations: [] }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh saved history" }));
+    await screen.findByText(/Saved history refreshed/);
+    expect(screen.queryByRole("button", { name: "Private notes" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Conversation title"), { target: { value: "After refresh" } });
+    expect((screen.getByRole("button", { name: "Create conversation" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+  it("ignores a deletion response received after sign-out", async () => {
+    await login(); await selectConversation();
+    fireEvent.click(screen.getByRole("button", { name: "Delete selected conversation" }));
+    let resolve!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(r => { resolve = r; }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm deletion" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await act(async () => resolve(reply({ id: 4, deleted: true })));
+    expect(screen.queryByText(/deleted from active storage/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+  });
+});

@@ -38,3 +38,15 @@ describe('private durable conversation boundary', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
   });
 });
+
+it('requires authentication and explicit deletion confirmation before storage access', async () => {
+  mocks.auth.mockRejectedValueOnce(new PilotAuthError('AUTH_REQUIRED'));
+  expect((await app.request('/1', { method: 'DELETE', body: JSON.stringify({ confirm: true }) })).status).toBe(401);
+  for (const [path, body] of [['/1', {}], ['/1', { confirm: false }], ['/0', { confirm: true }],
+    ['/1', { confirm: true, userId: 8 }]] as const) {
+    const response = await app.request(path, { method: 'DELETE', body: JSON.stringify(body) });
+    expect(response.status).toBe(400);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+  }
+  expect(mocks.db).not.toHaveBeenCalled();
+});

@@ -220,6 +220,71 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     } finally { await pool.query("DROP TRIGGER reject_conversation_update"); }
   }, 70_000);
 
+  it("deletes only an owned conversation and its messages and owned linked memories", async () => {
+    const hash = await bcrypt.hash("Deletion-Fixture-Password!", 12);
+    const [owner] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", ["delete-owner@example.invalid", hash]);
+    const [other] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", ["delete-other@example.invalid", hash]);
+    const [conversation] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)", [owner.insertId, "Delete fixture"]);
+    const id = conversation.insertId;
+    const [untouched] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)", [owner.insertId, "Keep separate conversation"]);
+    await pool.execute("INSERT INTO companion_messages (conversation_id,role,content) VALUES (?,'user','keep separate message')", [untouched.insertId]);
+    await pool.execute("INSERT INTO companion_messages (conversation_id,role,content) VALUES (?,'user','delete fixture')", [id]);
+    await pool.execute("INSERT INTO companion_memories (conversation_id,user_id,content) VALUES (?,?,'owned linked'),(?,?,'other account'),(NULL,?,'unlinked')", [id, owner.insertId, id, other.insertId, owner.insertId]);
+    const remove = (userId: number, target = id) => privateConversations.request(`/${target}`, { method: "DELETE", headers: { Authorization: `Bearer ${signUserToken(userId, hash)}`, "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+    expect((await remove(other.insertId)).status).toBe(404);
+    expect((await remove(other.insertId, 99999999)).status).toBe(404);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [id])).toBe(1);
+    const deleted = await remove(owner.insertId);
+    expect(deleted.status).toBe(200);
+    expect(deleted.headers.get("Cache-Control")).toBe("no-store");
+    expect(await deleted.json()).toEqual({ id, deleted: true });
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_conversations WHERE id=?", [id])).toBe(0);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [id])).toBe(0);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_memories WHERE conversation_id=? AND user_id=?", [id, owner.insertId])).toBe(0);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_memories WHERE user_id=?", [other.insertId])).toBe(1);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_memories WHERE user_id=?", [owner.insertId])).toBe(1);
+    expect((await remove(owner.insertId)).status).toBe(404);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_conversations WHERE id=?", [untouched.insertId])).toBe(1);
+    expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [untouched.insertId])).toBe(1);
+  }, 70_000);
+
+  it("rolls back deleted messages and memories when parent deletion fails", async () => {
+    const hash = await bcrypt.hash("Delete-Rollback-Password!", 12);
+    const [user] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", ["delete-rollback@example.invalid", hash]);
+    const [conversation] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO companion_conversations (personality_id,user_id,title,message_count) VALUES (1,?,?,1)", [user.insertId, "Keep everything"]);
+    const id = conversation.insertId;
+    await pool.execute("INSERT INTO companion_messages (conversation_id,role,content) VALUES (?,'user','retained')", [id]);
+    await pool.execute("INSERT INTO companion_memories (conversation_id,user_id,content) VALUES (?,?,'retained')", [id, user.insertId]);
+    await pool.query("CREATE TRIGGER reject_conversation_delete BEFORE DELETE ON companion_conversations FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CI forced deletion failure'");
+    try {
+      const response = await privateConversations.request(`/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${signUserToken(user.insertId, hash)}`, "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ code: "CONVERSATION_STORAGE_UNAVAILABLE" });
+      expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [id])).toBe(1);
+      expect(await singleNumber("SELECT COUNT(*) FROM companion_memories WHERE conversation_id=?", [id])).toBe(1);
+      expect(await singleNumber("SELECT message_count FROM companion_conversations WHERE id=?", [id])).toBe(1);
+    } finally { await pool.query("DROP TRIGGER reject_conversation_delete"); }
+  }, 70_000);
+
+  it("serializes concurrent deletion and message writes without orphan messages", async () => {
+    const hash = await bcrypt.hash("Concurrent-Delete-Password!", 12);
+    const [user] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)", ["delete-concurrent@example.invalid", hash]);
+    const token = signUserToken(user.insertId, hash);
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    for (let round = 0; round < 3; round++) {
+      const [conversation] = await pool.execute<mysql.ResultSetHeader>("INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)", [user.insertId, "Concurrent deletion"]);
+      const id = conversation.insertId;
+      const [deleted, ...writes] = await Promise.all([
+        privateConversations.request(`/${id}`, { method: "DELETE", headers, body: JSON.stringify({ confirm: true }) }),
+        ...Array.from({ length: 5 }, () => privateConversations.request(`/${id}/messages`, { method: "POST", headers, body: JSON.stringify({ content: "Concurrent note" }) })),
+      ]);
+      expect(deleted.status).toBe(200);
+      expect(writes.every(response => [201, 404].includes(response.status))).toBe(true);
+      expect(await singleNumber("SELECT COUNT(*) FROM companion_conversations WHERE id=?", [id])).toBe(0);
+      expect(await singleNumber("SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?", [id])).toBe(0);
+    }
+  }, 70_000);
+
   it("atomically enforces 20 daily attempts from concurrent Gemini/OpenAI requests", async () => {
     expect(PILOT_USER_DAILY_MAX_ATTEMPTS).toBe(20);
     const results = await Promise.allSettled(Array.from({ length: 25 }, (_, i) =>
