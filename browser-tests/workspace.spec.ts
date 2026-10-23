@@ -28,12 +28,12 @@ test("workspace filters distinguish usable tools from previews without making AI
   ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(6);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(4);
-  await expect(page.getByRole("article").getByRole("link")).toHaveCount(4);
+  await expect(page.getByRole("article")).toHaveCount(5);
+  await expect(page.getByRole("article").getByRole("link")).toHaveCount(5);
   await page
     .getByRole("button", { name: "In development", exact: true })
     .click();
-  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(page.getByRole("article")).toHaveCount(1);
   await expect(page.getByRole("article").getByRole("link")).toHaveCount(0);
   await page.getByLabel("Filter workspace tools").fill("unmatched-example");
   await expect(
