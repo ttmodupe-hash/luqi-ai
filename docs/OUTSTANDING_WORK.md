@@ -15,8 +15,8 @@ Do not infer activation approval from an instruction to fix the app.
 | P1 | Six Omega modules | Review each adapter's authorization, durable state, cancellation, retry/idempotency and truthful failure results. Demonstrate outcomes with tests before enabling orchestration. |
 | P1 | Private memory | Account-owned MySQL notes and in-memory browser sessions exist. Owner-confirmed transactional conversation deletion is implemented, including owned linked memories. Export, backup retention/erasure policy, idempotent writes and separately approved metered AI replies remain. |
 | P1 | African languages | Build source-grounded knowledge and language-quality evaluations with native-speaker review; a translated menu is not evidence of answer quality. |
-| P1 | Product truthfulness | Remove remaining unverified capability/comparison and home-page marketing claims; backend guardrails alone do not make those claims accurate. |
-| P2 | Usability/accessibility | Browser checks cover selected desktop/mobile flows. Floating controls are hidden on Companion routes; other pages still need overlap fixes; complete keyboard, screen-reader, contrast and all-page responsive review. |
+| P1 | Product truthfulness | The workspace entry page now separates usable tools from previews, replaces canned chat/browser-provider fallback with an unavailable panel, and labels unverified language capabilities. The Physics lab tutor is explicitly unavailable; its simulation remains usable. Audit remaining legacy module pages, unused browser-key components and comparison claims; backend guardrails alone do not make their UI accurate. |
+| P2 | Usability/accessibility | The shared workspace shell removes floating chat/voice/critique controls and adds responsive navigation, search, keyboard focus and tool filters. Browser checks cover desktop, mobile and 320px entry-page navigation plus private-note flows. Complete screen-reader, contrast, zoom and responsive review across remaining module pages. |
 
 Preserve infrastructure and data. Record failures and limits alongside results.
 Do not reopen legacy billing, admin or AI routes merely to remove unavailable UI.

@@ -1,0 +1,1058 @@
+/* Workspace shell: no external fonts, trackers, provider clients or animation loops. */
+.luqi-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #101a17;
+  color: #f3f6ee;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+.luqi-shell * {
+  box-sizing: border-box;
+}
+.luqi-shell a {
+  text-decoration: none;
+}
+.luqi-shell button,
+.luqi-shell input {
+  font: inherit;
+}
+.luqi-shell button {
+  cursor: pointer;
+}
+.luqi-shell button:disabled {
+  cursor: not-allowed;
+}
+.luqi-shell :focus-visible {
+  outline: 3px solid #8cba55;
+  outline-offset: 4px;
+}
+.luqi-page-content:focus {
+  outline: none;
+}
+.luqi-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.luqi-skip {
+  position: fixed;
+  left: 16px;
+  top: -80px;
+  background: #d2f4a3;
+  color: #15271e;
+  padding: 14px 20px;
+  border-radius: 8px;
+  z-index: 200;
+}
+.luqi-skip:focus {
+  top: 12px;
+}
+.luqi-header {
+  background: #111e19;
+  border-bottom: 1px solid #2c3b33;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.luqi-header-inner {
+  max-width: 1360px;
+  margin: auto;
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 0 40px;
+}
+.luqi-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -1.3px;
+  color: #f7f8ee;
+  flex-shrink: 0;
+}
+.luqi-brand-ai {
+  color: #bde393;
+  margin-left: 5px;
+  font-weight: 450;
+}
+.luqi-brand-symbol {
+  display: grid;
+  grid-template-columns: 13px 13px;
+  gap: 3px;
+  transform: rotate(-10deg);
+}
+.luqi-brand-symbol i {
+  width: 13px;
+  height: 13px;
+  background: #d0eeaa;
+  border-radius: 3px;
+}
+.luqi-brand-symbol i:nth-child(2) {
+  border-radius: 8px 8px 3px 3px;
+  background: #e2b66c;
+}
+.luqi-brand-symbol i:nth-child(3) {
+  background: #759a68;
+}
+.luqi-brand-symbol i:nth-child(4) {
+  border-radius: 3px 3px 8px 3px;
+}
+.luqi-desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.luqi-desktop-nav a {
+  padding: 13px 15px;
+  color: #bcc9bf;
+  font-size: 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.luqi-desktop-nav a:hover,
+.luqi-desktop-nav a.active {
+  background: #293a2e;
+  color: #e5f7cb;
+}
+.luqi-header-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.luqi-search-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 11px;
+  background: transparent;
+  color: #c3cfc6;
+  border: 0;
+  font-size: 13px !important;
+}
+.luqi-search-button kbd {
+  font-family: inherit;
+  font-size: 10px;
+  border: 1px solid #435348;
+  padding: 3px 5px;
+  border-radius: 4px;
+}
+.luqi-account-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #61734e;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 13px;
+  color: #d4e9bb;
+  white-space: nowrap;
+}
+.luqi-menu-button {
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #425248;
+  background: transparent;
+  color: #e3eddc;
+  border-radius: 8px;
+}
+.luqi-mobile-nav {
+  padding: 8px 24px 20px;
+  display: grid;
+  gap: 4px;
+}
+.luqi-mobile-nav a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #d0dacf;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 7px;
+}
+.luqi-mobile-nav a.active {
+  background: #2a3c30;
+  color: #d9f0bc;
+}
+.luqi-page-content {
+  flex: 1;
+  min-width: 0;
+}
+.luqi-home {
+  background: #f5f5ee;
+  color: #1f3027;
+}
+.luqi-home-inner {
+  max-width: 1360px;
+  margin: auto;
+  padding: 64px 40px 42px;
+}
+.luqi-hero {
+  display: grid;
+  grid-template-columns: 1.27fr 1fr;
+  gap: 70px;
+  align-items: center;
+  padding-bottom: 66px;
+}
+.luqi-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.9px;
+  color: #51634d;
+  margin: 0 0 22px;
+}
+.luqi-eyebrow > span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #668c40;
+  border-radius: 50%;
+}
+.luqi-hero h1 {
+  font-size: clamp(36px, 4.2vw, 59px);
+  letter-spacing: -2.6px;
+  line-height: 1.1;
+  font-weight: 650;
+  margin: 0;
+}
+.luqi-hero h1 em {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  color: #496c40;
+  letter-spacing: -2px;
+}
+.luqi-hero-description {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #61705f;
+  margin: 24px 0;
+}
+.luqi-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.luqi-primary,
+.luqi-secondary {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  transition: background 0.15s;
+}
+.luqi-primary {
+  background: #253f2b;
+  color: #f2f7e9;
+  border: 1px solid #253f2b;
+}
+.luqi-primary:hover {
+  background: #36583b;
+}
+.luqi-secondary {
+  color: #344a32;
+  background: transparent;
+  border: 1px solid #ced5c6;
+}
+.luqi-secondary:hover {
+  background: #e8eddf;
+}
+.luqi-hero-footnote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #63725e;
+  margin: 20px 0 0;
+  line-height: 1.5;
+}
+.luqi-chat-card {
+  border-radius: 20px;
+  background: #1a3026;
+  color: #f1f6e8;
+  padding: 28px 30px 22px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 14px 35px -24px #1b302a77;
+}
+.luqi-chat-card:before {
+  content: "";
+  position: absolute;
+  right: -70px;
+  top: 60px;
+  width: 225px;
+  height: 225px;
+  border: 1px solid #718c5a44;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 35px #76935f0b,
+    0 0 0 70px #76935f07;
+  pointer-events: none;
+}
+.luqi-chat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+.luqi-mini-label {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 2px;
+  color: #adbf9f;
+}
+.luqi-paused {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #667546;
+  border-radius: 20px;
+  padding: 4px 8px;
+  color: #d4dfa5;
+  font-size: 10px;
+}
+.luqi-assistant-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  border: 1px solid #73885c;
+  border-radius: 20px;
+  color: #d0ebad;
+  background: #344a32;
+  margin: 28px 0 22px;
+  transform: rotate(-7deg);
+}
+.luqi-assistant-symbol svg {
+  transform: rotate(7deg);
+}
+.luqi-chat-card h2 {
+  font-size: 27px;
+  font-weight: 500;
+  letter-spacing: -0.7px;
+  line-height: 1.22;
+  margin: 0 0 15px;
+  position: relative;
+}
+.luqi-chat-card > p {
+  font-size: 12px;
+  color: #b6c7b2;
+  line-height: 1.75;
+  max-width: 340px;
+  margin: 0;
+  position: relative;
+}
+.luqi-chat-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #48604477;
+  margin-top: 26px;
+  padding-top: 16px;
+  gap: 12px;
+}
+.luqi-chat-bottom > span {
+  font-size: 10px;
+  color: #bacaad;
+}
+.luqi-chat-bottom a {
+  width: 36px;
+  height: 36px;
+  background: #cfe8a8;
+  color: #20351f;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.luqi-tools-section {
+  border-top: 1px solid #dbe0d2;
+  padding-top: 38px;
+  scroll-margin-top: 105px;
+}
+.luqi-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+.luqi-section-heading .luqi-eyebrow {
+  margin-bottom: 10px;
+}
+.luqi-section-heading h2 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  margin: 0;
+}
+.luqi-section-heading > p {
+  font-size: 12px;
+  color: #66745e;
+  line-height: 1.7;
+  margin: 0;
+}
+.luqi-tools-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.luqi-filters {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.luqi-filters button {
+  background: transparent;
+  color: #62705d;
+  border: 1px solid transparent;
+  padding: 10px 15px;
+  min-height: 44px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.luqi-filters button[aria-pressed="true"] {
+  background: #e3e9da;
+  border-color: #c8d1bb;
+  color: #30452d;
+  font-weight: 650;
+}
+.luqi-tool-search {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-height: 44px;
+  width: 250px;
+  padding: 0 13px;
+  border: 1px solid #d2d9c8;
+  border-radius: 8px;
+  color: #6d7a64;
+  background: #fbfcf7;
+}
+.luqi-tool-search input {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: #263d2b;
+  font-size: 12px;
+  min-height: 42px;
+  outline-offset: 0 !important;
+}
+.luqi-tool-search button {
+  width: 28px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: #56624d;
+}
+.luqi-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.luqi-tool-card {
+  border: 1px solid #dbe0d2;
+  border-radius: 12px;
+  background: #fdfef9;
+  padding: 24px 23px 17px;
+  display: flex;
+  flex-direction: column;
+  min-height: 285px;
+}
+.luqi-tool-preview {
+  background: #f1f3e9;
+}
+.luqi-tool-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+.luqi-tool-icon {
+  width: 46px;
+  height: 46px;
+  background: #e5ecdb;
+  border: 1px solid #d3dcc9;
+  color: #42583b;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.luqi-icon-physics {
+  background: #f1e7d4;
+  border-color: #e5d7be;
+  color: #896c3f;
+}
+.luqi-icon-status {
+  background: #e0ebe7;
+  border-color: #c9ded5;
+  color: #3d6d60;
+}
+.luqi-status-pill {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border: 1px solid #d4d9cb;
+  background: #ebeee4;
+  color: #5c674f;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.luqi-status-ready {
+  background: #edf3e3;
+  border-color: #cad8b8;
+  color: #486438;
+}
+.luqi-card-kicker {
+  font-size: 10px;
+  color: #65745d;
+  margin: 0 0 7px;
+}
+.luqi-tool-card h3 {
+  font-size: 21px;
+  letter-spacing: -0.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  margin: 0 0 11px;
+}
+.luqi-card-description {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #65715f;
+  margin: 0 0 22px;
+}
+.luqi-card-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #e1e5d8;
+  padding-top: 12px;
+  gap: 10px;
+}
+.luqi-card-number {
+  font-family: ui-monospace, monospace;
+  color: #8b9681;
+  font-size: 10px;
+}
+.luqi-card-bottom a {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 12px;
+  min-height: 36px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #3c5735;
+}
+.luqi-preview-note {
+  font-size: 10px;
+  color: #5f6e54;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+.luqi-tool-empty {
+  padding: 55px 20px;
+  text-align: center;
+  color: #5d6e54;
+}
+.luqi-tool-empty > svg {
+  margin: 0 auto 16px;
+}
+.luqi-tool-empty h3 {
+  font-size: 22px;
+  margin: 0 0 10px;
+}
+.luqi-tool-empty p {
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+.luqi-progress-panel {
+  margin-top: 44px;
+  padding: 32px 36px;
+  background: #e8eddf;
+  border: 1px solid #d2dac7;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+.luqi-progress-panel .luqi-eyebrow {
+  margin-bottom: 12px;
+}
+.luqi-progress-panel h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  color: #3c5a35;
+  margin: 0 0 16px;
+}
+.luqi-progress-panel p:not(.luqi-eyebrow) {
+  font-size: 12px;
+  color: #58694b;
+  line-height: 1.8;
+  max-width: 430px;
+  margin: 0;
+}
+.luqi-language-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.luqi-language-plan > span {
+  border: 1px solid #c5d0b7;
+  border-radius: 30px;
+  font-size: 14px;
+  padding: 10px 18px;
+  color: #49643d;
+  background: #f0f4e9;
+}
+.luqi-language-plan > p {
+  margin-top: 7px !important;
+  font-size: 10px !important;
+  width: 100%;
+}
+.luqi-home-note {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 27px;
+  color: #63725d;
+}
+.luqi-home-note > svg {
+  flex-shrink: 0;
+}
+.luqi-home-note p {
+  font-size: 11px;
+  line-height: 1.8;
+  max-width: 670px;
+  margin: 0;
+}
+.luqi-home-note strong {
+  color: #3f5436;
+}
+.luqi-home-note a {
+  font-size: 11px;
+  white-space: nowrap;
+  color: #395330;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  min-height: 44px;
+}
+.luqi-footer {
+  max-width: 1360px;
+  width: 100%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 35px 40px;
+  color: #a5b5a4;
+  font-size: 10px;
+}
+.luqi-footer-brand {
+  font-size: 17px;
+  color: #dce7d2;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+.luqi-footer p {
+  margin: 6px 0 0;
+  font-size: 11px;
+}
+.luqi-footer nav {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.luqi-footer nav a {
+  display: flex;
+  align-items: center;
+  color: #b7c7b0;
+  min-height: 44px;
+}
+.luqi-footer nav a:hover {
+  color: #e8f4d4;
+}
+.luqi-search-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(620px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  border: 1px solid #ccdac0;
+  border-radius: 16px;
+  padding: 25px;
+  background: #f6f8ef;
+  color: #243c2b;
+  box-shadow: 0 20px 80px #00130988;
+}
+.luqi-search-dialog::backdrop {
+  background: #031109b8;
+  backdrop-filter: blur(3px);
+}
+.luqi-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.luqi-dialog-heading h2 {
+  font-size: 24px;
+  letter-spacing: -0.7px;
+  font-weight: 600;
+  margin: 0;
+}
+.luqi-dialog-heading button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5c1;
+  border-radius: 7px;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  color: #405a36;
+  flex-shrink: 0;
+}
+.luqi-dialog-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #a5b997;
+  background: white;
+  border-radius: 8px;
+  padding: 0 13px;
+}
+.luqi-dialog-input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: #25412c;
+  font-size: 14px;
+}
+.luqi-search-results {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+  max-height: 50dvh;
+  overflow-y: auto;
+}
+.luqi-search-result {
+  border: 1px solid #d6dfcc;
+  background: #fdfef8;
+  padding: 13px 16px;
+  border-radius: 8px;
+}
+.luqi-search-result a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 38px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #2e502e;
+}
+.luqi-search-result h3 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0 0 8px;
+}
+.luqi-search-result > span {
+  font-size: 10px;
+  color: #587048;
+}
+.luqi-search-result p {
+  font-size: 12px;
+  color: #65715c;
+  line-height: 1.7;
+  margin: 5px 0 0;
+}
+.luqi-dialog-note {
+  font-size: 11px;
+  color: #5f6b55;
+  line-height: 1.7;
+  margin: 18px 0 0;
+}
+.luqi-empty {
+  padding: 25px 10px;
+  font-size: 14px;
+}
+@media (min-width: 1101px) {
+  .luqi-mobile-nav {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .luqi-desktop-nav {
+    display: none;
+  }
+  .luqi-menu-button {
+    display: flex;
+  }
+  .luqi-header-inner {
+    min-height: 76px;
+  }
+  .luqi-hero {
+    gap: 35px;
+  }
+  .luqi-hero h1 {
+    font-size: 43px;
+  }
+  .luqi-tool-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .luqi-home-note {
+    align-items: start;
+  }
+  .luqi-home-note a {
+    white-space: normal;
+    min-width: 125px;
+  }
+  .luqi-footer {
+    justify-content: flex-start;
+  }
+  .luqi-footer > span {
+    margin-left: auto;
+  }
+}
+@media (max-width: 700px) {
+  .luqi-header-inner {
+    padding: 0 20px;
+    min-height: 72px;
+    gap: 12px;
+  }
+  .luqi-brand {
+    font-size: 22px;
+    gap: 10px;
+  }
+  .luqi-header-actions {
+    gap: 7px;
+  }
+  .luqi-search-button {
+    width: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+  .luqi-search-button span,
+  .luqi-search-button kbd,
+  .luqi-account-link {
+    display: none;
+  }
+  .luqi-home-inner {
+    padding: 37px 22px 30px;
+  }
+  .luqi-hero {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-bottom: 35px;
+  }
+  .luqi-eyebrow {
+    font-size: 9px;
+    letter-spacing: 1.6px;
+    margin-bottom: 19px;
+  }
+  .luqi-hero h1 {
+    font-size: clamp(33px, 9.5vw, 46px);
+    letter-spacing: -1.5px;
+  }
+  .luqi-hero h1 em {
+    letter-spacing: -1.5px;
+  }
+  .luqi-hero-description {
+    font-size: 14px;
+    line-height: 1.75;
+    margin: 20px 0;
+  }
+  .luqi-desktop-break {
+    display: none;
+  }
+  .luqi-primary,
+  .luqi-secondary {
+    font-size: 12px;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  .luqi-hero-footnote {
+    font-size: 10px;
+    align-items: start;
+  }
+  .luqi-hero-footnote svg {
+    flex-shrink: 0;
+  }
+  .luqi-chat-card {
+    padding: 23px;
+    border-radius: 14px;
+  }
+  .luqi-assistant-symbol {
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+    margin: 20px 0 17px;
+  }
+  .luqi-chat-card h2 {
+    font-size: 25px;
+  }
+  .luqi-chat-card h2 br {
+    display: none;
+  }
+  .luqi-chat-card > p {
+    font-size: 12px;
+  }
+  .luqi-chat-bottom {
+    margin-top: 20px;
+    padding-top: 13px;
+  }
+  .luqi-section-heading {
+    align-items: start;
+  }
+  .luqi-section-heading h2 {
+    font-size: 26px;
+  }
+  .luqi-section-heading > p {
+    display: none;
+  }
+  .luqi-tools-section {
+    padding-top: 30px;
+  }
+  .luqi-tools-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  .luqi-filters {
+    gap: 3px;
+  }
+  .luqi-filters button {
+    font-size: 11px;
+    padding: 9px 11px;
+  }
+  .luqi-tool-search {
+    width: 100%;
+  }
+  .luqi-tool-grid {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+  .luqi-tool-card {
+    min-height: 245px;
+    padding: 22px;
+  }
+  .luqi-tool-card-top {
+    margin-bottom: 20px;
+  }
+  .luqi-card-description {
+    font-size: 13px;
+    line-height: 1.75;
+  }
+  .luqi-card-bottom a {
+    font-size: 12px;
+  }
+  .luqi-status-pill {
+    font-size: 10px;
+  }
+  .luqi-progress-panel {
+    margin-top: 30px;
+    padding: 25px;
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  .luqi-progress-panel h2 {
+    font-size: 30px;
+  }
+  .luqi-language-plan > span {
+    font-size: 13px;
+    padding: 9px 15px;
+  }
+  .luqi-home-note {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .luqi-home-note p {
+    flex: 1;
+    min-width: 200px;
+  }
+  .luqi-home-note a {
+    margin-left: 32px;
+  }
+  .luqi-footer {
+    padding: 29px 22px;
+    gap: 19px;
+  }
+  .luqi-footer nav {
+    gap: 8px 22px;
+  }
+  .luqi-footer > span {
+    margin-left: 0;
+    width: 100%;
+  }
+  .luqi-dialog-heading h2 {
+    font-size: 21px;
+  }
+  .luqi-search-dialog {
+    padding: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .luqi-shell *,
+  .luqi-shell *:before,
+  .luqi-shell *:after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
