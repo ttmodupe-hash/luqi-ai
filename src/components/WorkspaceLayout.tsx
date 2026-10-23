@@ -10,7 +10,7 @@ const navigation = [
   ["/companion", "Private notes"],
   ["/omega-tasks", "Omega tasks"],
   ["/pendulum-lab", "Physics lab"],
-  ["/pricing", "Plans"],
+  ["/start", "Start here"],
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -156,7 +156,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <Link to="/service-status">Service status</Link>
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>
-          <Link to="/contact">Contact</Link>
+          <Link to="/contact">Help and feedback</Link>
+          <Link to="/pricing">Plans</Link>
           <Link to="/admin">Administration</Link>
         </nav>
         <span>© {new Date().getFullYear()} LUQI AI</span>

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { conversationClient, ConversationError, downloadConversationExport, signIn, type Conversation, type SavedMessage } from "../lib/private-conversations";
+import { conversationClient, ConversationError, downloadConversationExport, type AccountSession, type Conversation, type SavedMessage } from "../lib/private-conversations";
+import AccountAccessForm from '../components/AccountAccessForm';
 
 const modes = ["Luqi Prime — General", "Dr. Kwame — STEM", "Amina — Trade", "Chidi — Networks"];
 const control = "rounded-lg border border-slate-500 bg-slate-900 p-3 text-white disabled:opacity-50";
 
-export default function CompanionPage() {
+export default function CompanionPage({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
   // The session is deliberately held in memory; leaving this page requires signing in again.
-  const [session, setSession] = useState<{ token: string; user: { email: string } } | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [session, setSession] = useState<AccountSession | null>(null);
+  const [accessMode, setAccessMode] = useState(initialMode);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
@@ -27,7 +27,7 @@ export default function CompanionPage() {
 
   function clearSession() {
     epoch.current++; locked.current = false;
-    setSession(null); setPassword(""); setEmail(""); setConversations([]); setSelected(null);
+    setSession(null); setConversations([]); setSelected(null);
     setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false);
     setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false); setNotice("");
   }
@@ -42,7 +42,6 @@ export default function CompanionPage() {
       if (error instanceof ConversationError && error.status === 401) {
         clearSession(); setNotice("Sign-in failed or your session expired. Please sign in again.");
       } else if (error instanceof ConversationError && error.status === 429 && error.retryAfter) {
-        setPassword("");
         setNotice(`Too many sign-in attempts. Wait ${error.retryAfter} seconds before trying again. We will not retry automatically.`);
       } else {
         if (write) setUncertain(true);
@@ -72,22 +71,13 @@ export default function CompanionPage() {
       <p className="mt-2 text-sm text-slate-400">Saved notes are accessible to storage administrators; this is not end-to-end encryption. Signing out clears this page, but does not delete saved notes.</p>
     </header>
     {notice && <p role="status" className="rounded-lg border border-amber-500 p-3">{notice}</p>}
-    {!session ? <form className="max-w-md space-y-4" onSubmit={event => {
-      event.preventDefault();
+    {!session ? <AccountAccessForm initialMode={accessMode} onAuthenticated={result => {
       void run(async current => {
-        const result = await signIn(email, password);
-        if (!current()) return;
-        setPassword(""); setSession(result);
+        setAccessMode('signin'); setSession(result);
         const data = await conversationClient(result.token).list();
         if (current()) { setConversations(data.conversations); setMoreConversations(data.conversations.length === 50); }
-      });
-    }}>
-      <h2 className="text-xl">Sign in to your existing LUQI account</h2>
-      <label className="block">Email<input className={`${control} mt-1 w-full`} type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
-      <label className="block">Password<input className={`${control} mt-1 w-full`} type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
-      <button className={control} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-      <p className="text-sm text-slate-400">This session lasts until you leave or reload this page. Account recovery requires your LUQI administrator.</p>
-    </form> : <>
+      }, false, undefined, 'You are signed in, but saved history could not be loaded. Use Refresh saved history to try again.');
+    }} /> : <>
       <div className="flex flex-wrap items-center gap-3"><span className="break-all">{session.user.email}</span>
         <button className={control} onClick={clearSession}>Sign out</button>
         <button className={control} disabled={busy} onClick={() => loadConversations()}>Refresh saved history</button>

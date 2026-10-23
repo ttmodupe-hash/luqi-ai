@@ -25,6 +25,13 @@ on:
       - "api/trpc-http.ts"
       - "tests/private-conversations.test.ts"
       - "api/boot.ts"
+      - "src/App.tsx"
+      - "src/components/AccountAccessForm.tsx"
+      - "src/pages/CompanionPage.tsx"
+      - "src/pages/StartPage.tsx"
+      - "src/lib/private-conversations.ts"
+      - "playwright.mysql.config.ts"
+      - "mysql-browser-tests/**"
       - "api/lib/mysqlConfig.ts"
       - "api/lib/userToken.ts"
       - "tests/mysql-live.integration.test.ts"
@@ -153,3 +160,19 @@ jobs:
         run: npm run build
       - name: Verify restricted MySQL role, restart persistence and pre-listener schema refusal
         run: npx vitest run tests/mysql-runtime-role.integration.test.ts --no-file-parallelism
+      - name: Prepare Chromium for real MySQL browser acceptance
+        timeout-minutes: 4
+        run: |
+          luqi_browser_path="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$luqi_browser_path" ]; then
+            echo "LUQI_CHROMIUM_PATH=$luqi_browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium --only-shell
+          fi
+      - name: Verify first-user browser flow against real restricted MySQL
+        run: npx playwright test --config playwright.mysql.config.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: mysql-browser-failure-evidence
+          path: test-results/

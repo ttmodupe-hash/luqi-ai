@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { conversationClient, ConversationError, signIn } from "../src/lib/private-conversations";
 import { readFileSync } from "node:fs";
+import { Hono } from 'hono';
 
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 afterEach(() => vi.unstubAllGlobals());
@@ -11,6 +12,18 @@ it.each([['117', 117], ['0', 30], ['999999', 30], ['private diagnostic', 30]])('
   expect(request).toHaveBeenCalledTimes(1);
 });
 describe("private conversation browser client", () => {
+  it('uses the canonical Hono-mounted collection route for both listing and creation', async () => {
+    const router = new Hono();
+    router.get('/', c => c.json({ conversations: [] }));
+    router.post('/', c => c.json({ id: 7, persisted: true }, 201));
+    const app = new Hono(); app.route('/api/v1/companion/conversations', router);
+    const request = vi.fn((path: string | URL | Request, init?: RequestInit) => app.request(String(path), init));
+    const api = conversationClient('synthetic-token', request);
+    await expect(api.list()).resolves.toEqual({ conversations: [] });
+    await expect(api.create('Test title', 1)).resolves.toEqual({ id: 7, persisted: true });
+    expect(request.mock.calls.map(call => new URL(String(call[0]), 'http://localhost').pathname))
+      .toEqual(['/api/v1/companion/conversations', '/api/v1/companion/conversations']);
+  });
   it("sends only the account token and allowed user content to the same origin", async () => {
     const request = vi.fn().mockResolvedValue(response({ id: 7, role: "user", persisted: true }, 201));
     await expect(conversationClient("account-token", request).save(3, "My note")).resolves.toEqual({ id: 7, role: "user", persisted: true });

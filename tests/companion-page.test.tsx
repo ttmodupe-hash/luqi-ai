@@ -107,7 +107,7 @@ describe("Companion account interactions (mock HTTP, no production account)", ()
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "test@example.invalid" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Unable to load data"));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Sign-in is temporarily unavailable"));
     expect(screen.queryByText("private database error")).toBeNull();
   });
 });

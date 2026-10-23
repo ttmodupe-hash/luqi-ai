@@ -1,28 +1,11 @@
-import { Link } from "react-router";
-import { ArrowLeft, Mail, Phone, MapPin } from "lucide-react";
-
+import { Link } from 'react-router';
 export default function ContactPage() {
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 max-w-4xl mx-auto space-y-6">
-      <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200">
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
-      </Link>
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Mail className="w-6 h-6 text-sky-400" /> Contact & Enterprise Inquiries
-        </h1>
-        <p className="text-xs text-slate-400">Luqi AI Commercial Licensing & Custom Deployments</p>
-      </div>
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          <Mail className="w-4 h-4 text-sky-400" />
-          <span>hello@luqi-ai.com / enterprise@luqi-ai.com</span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-slate-300">
-          <MapPin className="w-4 h-4 text-amber-400" />
-          <span>Johannesburg &middot; Cape Town &middot; South Africa</span>
-        </div>
-      </div>
-    </div>
-  );
+  return <main className="luqi-info"><p className="luqi-eyebrow">HELP US IMPROVE LUQI</p>
+    <h1>Help and feedback</h1>
+    <p>Describe what you tried, what you expected and what happened. Include the page name and device type; keep personal data out of technical reports.</p>
+    <section><h2>Report a technical problem</h2><p>Technical issues can be reported on the project’s GitHub repository. Reports there are public. Do not include passwords, account tokens, email addresses, private notes or screenshots containing them.</p><a className="luqi-primary" href="https://github.com/ttmodupe-hash/luqi-ai/issues/new" target="_blank" rel="noopener noreferrer">Open a public technical issue</a></section>
+    <section><h2>Account recovery or private questions</h2><p>A verified private support address has not yet been published here. If you received a pilot invitation, reply privately through that existing conversation. Automatic password-reset emails are unavailable; do not post an account-recovery request in a public issue.</p></section>
+    <section><h2>Check availability first</h2><p>The status page reports runtime, database and AI readiness separately. It does not confirm that every product feature is available.</p><Link to="/service-status">Check service status</Link></section>
+    <Link to="/start">Back to getting started</Link>
+  </main>;
 }
