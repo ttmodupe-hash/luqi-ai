@@ -85,3 +85,45 @@ test('first user registers, saves, reloads, signs in, exports and deletes owned 
     .some(value => value.includes(secret)), password)).toBe(false);
   expect(external).toEqual([]);
 });
+
+test('a user changes a known password, signs in again and keeps saved notes', async ({ page, baseURL }) => {
+  await page.route('**/*', route => new URL(route.request().url()).origin === new URL(baseURL!).origin ? route.continue() : route.abort());
+  const email = `ci-password-browser-${randomUUID()}@example.invalid`;
+  const password = 'Synthetic-Browser-Old-Password!', replacement = 'Synthetic-Browser-New-Password!';
+  await page.goto('/#/join');
+  await page.getByLabel('Email', { exact: true }).fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByLabel('Confirm password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+  await page.getByLabel('Conversation title').fill('Preserved after password change');
+  await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Conversation saved');
+  await page.getByRole('button', { name: 'Change password', exact: true }).click();
+  const fill = async (current: string) => {
+    await page.getByLabel('Current password', { exact: true }).fill(current);
+    await page.getByLabel('New password', { exact: true }).fill(replacement);
+    await page.getByLabel('Confirm new password', { exact: true }).fill(replacement);
+  };
+  await fill('incorrect-current-password');
+  await page.getByRole('button', { name: 'Change password and sign out' }).click();
+  await expect(page.getByText('Your current password was not accepted. No password was changed.')).toBeVisible();
+  await expect(page.getByLabel('Current password', { exact: true })).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Preserved after password change', exact: true })).toBeVisible();
+  await fill(password);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: test.info().outputPath('password-settings.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Change password and sign out' }).click();
+  await expect(page.getByRole('status')).toContainText('Password changed. Older sign-ins');
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  await page.getByLabel('Email', { exact: true }).fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('Email or password was not accepted. Please try again.')).toBeVisible();
+  await page.getByLabel('Password', { exact: true }).fill(replacement);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Preserved after password change', exact: true })).toBeVisible();
+  for (const value of [password, replacement]) expect(await page.evaluate(secret => [...Object.values(localStorage), ...Object.values(sessionStorage)]
+    .some(item => item.includes(secret)), value)).toBe(false);
+});

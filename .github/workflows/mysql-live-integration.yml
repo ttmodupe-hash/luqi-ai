@@ -11,6 +11,11 @@ on:
       - "api/services/aiPilotBudget.ts"
       - "api/services/pilotAuth.ts"
       - "api/services/accountRecovery.ts"
+      - "api/services/passwordChange.ts"
+      - "api/account-security.ts"
+      - "src/components/AccountPasswordForm.tsx"
+      - "src/lib/account-security.ts"
+      - "tests/password-change-mysql.integration.test.ts"
       - "api/services/authThrottle.ts"
       - "tests/auth-throttle-mysql.integration.test.ts"
       - "api/lib/passwordPolicy.ts"
@@ -88,6 +93,7 @@ jobs:
         run: |
           npx vitest run tests/mysql-live.integration.test.ts --no-file-parallelism
           npx vitest run tests/auth-throttle-mysql.integration.test.ts --no-file-parallelism
+          npx vitest run tests/password-change-mysql.integration.test.ts --no-file-parallelism
 
   test-logical-backup-restore:
     runs-on: ubuntu-latest
@@ -171,6 +177,12 @@ jobs:
           fi
       - name: Verify first-user browser flow against real restricted MySQL
         run: npx playwright test --config playwright.mysql.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: password-settings-layouts
+          path: test-results/**/password-settings.png
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

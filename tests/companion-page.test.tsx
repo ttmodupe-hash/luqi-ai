@@ -256,3 +256,86 @@ describe('complete saved-notes archive interaction', () => {
     expect(allDownloads).not.toHaveBeenCalled();
   });
 });
+
+describe('self-service password settings', () => {
+  async function passwords() {
+    fireEvent.click(screen.getByRole('button', { name: 'Change password', exact: true }));
+    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'Old-Synthetic-Password!' } });
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'New-Synthetic-Password!' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'New-Synthetic-Password!' } });
+  }
+  const response = (data: unknown, status = 200, extra = {}) => new Response(JSON.stringify(data), {
+    status, headers: { 'Content-Type': 'application/json', ...extra },
+  });
+  it('clears credentials immediately, prevents other writes, then clears account data after confirmed change', async () => {
+    await login(); await selectConversation(); await passwords();
+    let complete!: (r: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(resolve => { complete = resolve; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+    expect((screen.getByLabelText('Current password') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('New password') as HTMLInputElement).value).toBe('');
+    expect((screen.getByRole('button', { name: 'Sign out', exact: true }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Refresh saved history' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Create conversation', exact: true }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => complete(response({ changed: true, signInRequired: true })));
+    await screen.findByText(/Password changed. Older sign-ins/);
+    expect(screen.queryByText('Previously saved')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Private notes' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Sign in', exact: true })).toBeTruthy();
+    expect(request).toHaveBeenCalledTimes(4);
+  });
+  it('keeps the account on a reviewed wrong-current-password denial and exposes no diagnostics', async () => {
+    await login(); await passwords();
+    request.mockResolvedValueOnce(response({ code: 'CURRENT_PASSWORD_INVALID', diagnostic: 'private SQL secret' }, 401));
+    fireEvent.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+    await screen.findByText(/Your current password was not accepted/);
+    expect(screen.getByRole('button', { name: 'Sign out', exact: true })).toBeTruthy();
+    expect(screen.queryByText(/private SQL secret/)).toBeNull(); expect(request).toHaveBeenCalledTimes(3);
+  });
+  it('requires sign-in after an uncertain response without retries or a false failure claim', async () => {
+    await login(); await passwords(); request.mockRejectedValueOnce(new Error('lost possible commit'));
+    fireEvent.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+    await screen.findByText(/Password change could not be confirmed/);
+    expect(screen.getByRole('status').textContent).toContain('new password first');
+    expect(screen.queryByRole('button', { name: 'Private notes' })).toBeNull(); expect(request).toHaveBeenCalledTimes(3);
+  });
+  it('blocks a new password change until unsaved notes and conversation titles are resolved', async () => {
+    await login(); await selectConversation(); draft();
+    expect((screen.getByRole('button', { name: 'Change password', exact: true }) as HTMLButtonElement).disabled).toBe(true);
+    draft(''); fireEvent.change(screen.getByLabelText('Conversation title'), { target: { value: 'Unsaved title' } });
+    expect((screen.getByRole('button', { name: 'Change password', exact: true }) as HTMLButtonElement).disabled).toBe(true);
+  });
+  it('checks confirmation before sending and respects the server cooldown', async () => {
+    await login(); await passwords();
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'Different-Synthetic-Password!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+    await screen.findByText('The new passwords do not match.'); expect(request).toHaveBeenCalledTimes(2);
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'New-Synthetic-Password!' } });
+    request.mockResolvedValueOnce(response({ code: 'AUTH_RATE_LIMITED' }, 429, { 'Retry-After': '891' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+    await screen.findByText(/Wait 891 seconds/); expect(request).toHaveBeenCalledTimes(3);
+    expect((screen.getByRole('button', { name: 'Change password and sign out' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('password change lifecycle', () => {
+  it('aborts on sign-in page unmount and never renders a late completion', async () => {
+    await login();
+    fireEvent.click(screen.getByRole('button', { name: 'Change password', exact: true }));
+    for (const [label, value] of [['Current password', 'Old-Synthetic-Password!'], ['New password', 'New-Synthetic-Password!'], ['Confirm new password', 'New-Synthetic-Password!']]) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+    let complete!: (r: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(resolve => { complete = resolve; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+    const signal = request.mock.calls.at(-1)?.[1].signal as AbortSignal;
+    cleanup(); expect(signal.aborted).toBe(true);
+    render(<CompanionPage />);
+    await act(async () => complete(new Response(JSON.stringify({ changed: true, signInRequired: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    })));
+    expect(screen.queryByText(/Password changed. Older sign-ins/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Sign in', exact: true })).toBeTruthy();
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+});

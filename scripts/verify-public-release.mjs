@@ -53,7 +53,7 @@ const checks = [
   ...[
     "/api/v1/companion/conversations", "/api/v1/companion/conversations/1/export",
     "/api/v1/companion/conversations/export",
-    "/api/v1/omega/tasks", "/api/v1/omega/tasks/status",
+    "/api/v1/omega/tasks", "/api/v1/omega/tasks/status", "/api/v1/account/password",
   ].map(path => ({ name: "Anonymous account boundary " + path, path, status: 401, code: "AUTH_REQUIRED", private: true })),
   ...[
     ["/api/v1/billing/balance", "LEGACY_PAYMENTS_DISABLED"],
