@@ -34,6 +34,18 @@ function draft(text = "New private note") {
 }
 
 describe("Companion account interactions (mock HTTP, no production account)", () => {
+  it('explains login throttling, clears the password and sends no automatic retries', async () => {
+    request.mockResolvedValueOnce(new Response('private diagnostics', { status: 429, headers: { 'Retry-After': '117' } }));
+    render(<CompanionPage />);
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'fixture@example.invalid' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'synthetic-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await screen.findByText(/Wait 117 seconds/);
+    expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('fixture@example.invalid');
+    expect(screen.queryByText('private diagnostics')).toBeNull();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
   it("signs in, reloads persisted history, and displays a message only after a confirmed save", async () => {
     await login(); await selectConversation(); draft();
     let resolve!: (response: Response) => void;

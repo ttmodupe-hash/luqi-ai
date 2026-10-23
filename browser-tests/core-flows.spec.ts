@@ -13,6 +13,26 @@ test.beforeEach(async ({ page, baseURL }) => {
   });
 });
 
+test('login throttling gives an accessible retry time at 320px without repeating credentials', async ({ page }) => {
+  let attempts = 0;
+  await page.route('**/api/v1/auth/login', route => {
+    attempts++;
+    return route.fulfill({ status: 429, headers: { 'Retry-After': '117' }, json: { detail: 'must not expose server diagnostics' } });
+  });
+  await page.setViewportSize({ width: 320, height: 780 });
+  await page.goto('/#/companion');
+  await page.getByLabel('Email', { exact: true }).fill('browser@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('synthetic-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('status')).toContainText('Wait 117 seconds');
+  await expect(page.getByRole('status')).toContainText('not retry automatically');
+  await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');
+  await expect(page.getByText('must not expose server diagnostics')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(attempts).toBe(1);
+});
+
 test('Companion controls remain styled, visible and usable after a failed save', async ({ page }) => {
   let saving = false;
   await page.route('**/api/v1/auth/login', route => route.fulfill({ json: {

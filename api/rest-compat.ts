@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import bcrypt from "bcryptjs";
 import { validNewPassword } from "./lib/passwordPolicy";
+import { AuthThrottleError, reserveAuthenticationAttempt } from "./services/authThrottle";
 import { getSigningSecret, signUserToken, verifyUserToken, verifyUserCredential } from "./lib/userToken";
 import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
@@ -511,6 +512,14 @@ for (const path of ["/auth/forgot-password", "/api/v1/auth/forgot-password"]) {
 
 // All public aliases share the same durable, signed-in account handlers.
 // A failed database call is an error: never pretend a user was registered.
+function authThrottleResponse(c: any, error: AuthThrottleError) {
+  c.header("Retry-After", String(error.retryAfter));
+  return c.json({ code: error.code, detail: error.code === "AUTH_RATE_LIMITED"
+    ? "Too many authentication attempts. Please try again later."
+    : "Authentication protection is temporarily unavailable." },
+    error.code === "AUTH_RATE_LIMITED" ? 429 : 503);
+}
+
 const handleSignup = async (c: any) => {
   c.header("Cache-Control", "no-store");
   const body = (await c.req.json().catch(() => null)) ?? {};
@@ -529,6 +538,7 @@ const handleSignup = async (c: any) => {
     // Verify signing capability BEFORE creating an account. This avoids an
     // unusable newly-created user when JWT config is missing.
     getSigningSecret();
+    await reserveAuthenticationAttempt("signup", email);
     const db = await getPersistentDb();
     const [existing] = await db.select({ id: users.id }).from(users)
       .where(eq(users.email, email)).limit(1);
@@ -545,12 +555,16 @@ const handleSignup = async (c: any) => {
       token_type: "bearer",
       user: { id: userId, email, name },
     }, 201);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthThrottleError) return authThrottleResponse(c, error);
     // Avoid echoing raw MySQL errors or private identifiers.
     return c.json({ detail: "Registration temporarily unavailable" }, 503);
   }
 };
 
+// A synthetic non-account hash keeps unknown/disabled account denials from
+// skipping password work. Its comparison result can never authorize a user.
+const DUMMY_LOGIN_HASH = "$2b$12$zfjKKga9OGRJtq.1Nn.2BuUuc8UEQsjAq6/dT/IJt7RQzAsPp5yGO";
 const handleLogin = async (c: any) => {
   c.header("Cache-Control", "no-store");
   const body = (await c.req.json().catch(() => null)) ?? {};
@@ -560,15 +574,17 @@ const handleLogin = async (c: any) => {
     return c.json({ detail: "Email and password are required" }, 400);
   }
   try {
+    await reserveAuthenticationAttempt("login", email);
     const db = await getPersistentDb();
     const [user] = await db.select().from(users)
       .where(eq(users.email, email)).limit(1);
     // Do not reveal whether this email has an account.
-    if (!user || user.isActive !== true) {
+    const hash = typeof user?.passwordHash === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(user.passwordHash)
+      ? user.passwordHash : DUMMY_LOGIN_HASH;
+    const ok = await bcrypt.compare(password, hash);
+    if (!user || user.isActive !== true || !ok || hash === DUMMY_LOGIN_HASH) {
       return c.json({ detail: "Invalid credentials" }, 401);
     }
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return c.json({ detail: "Invalid credentials" }, 401);
     const userId = Number(user.id);
     if (!Number.isSafeInteger(userId) || userId <= 0) {
       return c.json({ detail: "Invalid credentials" }, 401);
@@ -578,7 +594,8 @@ const handleLogin = async (c: any) => {
       token_type: "bearer",
       user: { id: userId, email: user.email, name: user.name },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthThrottleError) return authThrottleResponse(c, error);
     return c.json({ detail: "Login temporarily unavailable" }, 503);
   }
 };

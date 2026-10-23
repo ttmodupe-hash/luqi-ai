@@ -41,6 +41,9 @@ export default function CompanionPage() {
       if (!current()) return;
       if (error instanceof ConversationError && error.status === 401) {
         clearSession(); setNotice("Sign-in failed or your session expired. Please sign in again.");
+      } else if (error instanceof ConversationError && error.status === 429 && error.retryAfter) {
+        setPassword("");
+        setNotice(`Too many sign-in attempts. Wait ${error.retryAfter} seconds before trying again. We will not retry automatically.`);
       } else {
         if (write) setUncertain(true);
         setNotice(write

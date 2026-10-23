@@ -50,7 +50,7 @@ original_query() {
 
 tables="$(query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='luqi_restore_ci' AND table_type='BASE TABLE'")"
 echo "CI restore: restored table count=$tables"
-test "$tables" = "37"
+test "$tables" = "38"
 
 source_accounts="$(original_query "SELECT COUNT(*) FROM users WHERE email='ci-restore@example.invalid'")"
 restored_accounts="$(query "SELECT COUNT(*) FROM users WHERE email='ci-restore@example.invalid'")"
@@ -69,6 +69,12 @@ restored_daily="$(query "SELECT attempts FROM ai_pilot_daily_user_usage WHERE da
 test "$source_daily" = "7"
 echo "CI restore: daily quota attempts=$restored_daily"
 test "$restored_daily" = "$source_daily"
+
+source_auth="$(original_query "SELECT attempts FROM auth_attempt_windows WHERE scope='login_subject'")"
+restored_auth="$(query "SELECT attempts FROM auth_attempt_windows WHERE scope='login_subject'")"
+test "$source_auth" = "7"
+test "$restored_auth" = "$source_auth"
+echo "CI restore: authentication throttle counter preserved"
 
 # Check that transaction-safe ledger semantics still exist in the restored copy.
 engine="$(mysql_cmd --skip-column-names --batch --execute="SELECT ENGINE FROM information_schema.tables WHERE table_schema='luqi_restore_ci' AND table_name='ai_pilot_monthly_spend'")"

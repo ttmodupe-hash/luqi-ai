@@ -18,6 +18,7 @@ import { legacyOperationsUnavailable } from "./lib/legacyOperations";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
+import { closeAuthThrottle } from "./services/authThrottle";
 import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
@@ -1322,6 +1323,7 @@ if (env.isProduction) {
       logger.info({ signal }, "Shutdown signal received — draining");
       server.close(() => {
         void (async () => {
+          try { await closeAuthThrottle(); } catch { /* non-fatal */ }
           try { await closeDb(); } catch { /* non-fatal */ }
           try { await closeCache(); } catch { /* non-fatal */ }
           logger.info("Cleanup complete — exiting");
