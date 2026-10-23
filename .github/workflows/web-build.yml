@@ -106,7 +106,7 @@ jobs:
                 throw new Error("Frontend shared helper diverged: " + name);
               }
             }
-            for (const name of ["components/WorkspaceLayout.tsx", "components/HeroAiChatConsole.tsx", "components/workspace-catalog.ts", "pages/Home.tsx", "pages/ServiceStatusPage.tsx", "pages/PendulumLabPage.tsx", "workspace.css", "omega-tasks.css", "pages/OmegaTasksPage.tsx", "lib/omega-tasks.ts", "pages/ArchiveVaultPage.tsx"]) {
+            for (const name of ["components/WorkspaceLayout.tsx", "components/HeroAiChatConsole.tsx", "components/workspace-catalog.ts", "pages/Home.tsx", "pages/ServiceStatusPage.tsx", "pages/PendulumLabPage.tsx", "workspace.css", "omega-tasks.css", "pages/OmegaTasksPage.tsx", "lib/omega-tasks.ts", "components/OmegaSubmissionForm.tsx", "pages/ArchiveVaultPage.tsx"]) {
               if (fs.readFileSync("src/" + name, "utf8") !== fs.readFileSync("app/src/" + name, "utf8")) throw new Error("Workspace frontend diverged: " + name);
             }
             console.log("Both frontend source trees have the same shared helpers and workspace UI.");

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
+import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
 import { ConversationError, signIn } from "../lib/private-conversations";
 import {
   omegaClient,
@@ -8,6 +9,8 @@ import {
   taskTitle,
   type OmegaStatus,
   type OmegaTask,
+  type OmegaDraft,
+  type OmegaSubmission,
 } from "../lib/omega-tasks";
 import "../omega-tasks.css";
 
@@ -66,6 +69,9 @@ export default function OmegaTasksPage() {
   const [notice, setNotice] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [submission, setSubmission] = useState<OmegaSubmission | null>(null);
+  const [submissionUncertain, setSubmissionUncertain] = useState(false);
+  const [formVersion, setFormVersion] = useState(0);
   const epoch = useRef(0),
     locked = useRef(false);
   const detailHeading = useRef<HTMLHeadingElement>(null);
@@ -93,11 +99,13 @@ export default function OmegaTasksPage() {
     setBusy(false);
     setConfirm(false);
     setUncertain(false);
+    setSubmission(null);
+    setSubmissionUncertain(false);
     setNotice("");
   }
   async function run(
     action: (current: () => boolean) => Promise<void>,
-    cancellation = false,
+    mutation?: "cancel" | "submit",
   ) {
     if (locked.current) return;
     locked.current = true;
@@ -117,7 +125,14 @@ export default function OmegaTasksPage() {
         setNotice(
           "Sign-in failed or your session expired. Please sign in again.",
         );
-      } else if (cancellation) {
+      } else if (error instanceof ConversationError && error.status === 429 && error.retryAfter) {
+        setNotice("Too many sign-in attempts. Wait " + error.retryAfter + " seconds before trying again. We will not retry automatically.");
+      } else if (mutation === "submit") {
+        setSubmissionUncertain(true);
+        setNotice(error instanceof OmegaError && error.status === 429
+          ? "The task limit was reached. No new task was confirmed. Review saved tasks or contact your operator. No automatic retry was made."
+          : "Submission could not be confirmed. Check saved tasks or retry this same submission. No automatic retry was made.");
+      } else if (mutation === "cancel") {
         setSelected(null);
         setConfirm(false);
         setUncertain(true);
@@ -161,6 +176,35 @@ export default function OmegaTasksPage() {
     setNotice(
       "Task information refreshed. Status changes appear when you refresh.",
     );
+  }
+  function prepareSubmission(draft: OmegaDraft) {
+    if (busy || locked.current || uncertain || submission || status?.intake !== "configured" ||
+        !status.handlers.includes(draft.handler)) return;
+    try {
+      setSubmission({ ...draft, idempotencyKey: crypto.randomUUID() });
+      setSubmissionUncertain(false);
+      setNotice("");
+    } catch {
+      setNotice("Unable to prepare a protected submission. No request was sent.");
+    }
+  }
+  function confirmSubmission() {
+    if (!session || !submission || uncertain || status?.intake !== "configured" ||
+        !status.handlers.includes(submission.handler)) return;
+    const input = submission;
+    void run(async current => {
+      const result = await omegaClient(session.token).submit(input);
+      if (!current()) return;
+      setSubmission(null);
+      setSubmissionUncertain(false);
+      setFormVersion(value => value + 1);
+      setSelected(result.task);
+      setConfirm(false);
+      setTasks(previous => previous.map(saved => saved.id === result.task.id ? result.task : saved));
+      setNotice(result.created
+        ? "Task saved to the queue. It has not run. An operator must run a worker. Refresh tasks to update history."
+        : "This submission already exists. Its saved status is shown.");
+    }, "submit");
   }
   function openTask(id: string) {
     if (!session) return;
@@ -315,6 +359,16 @@ export default function OmegaTasksPage() {
                   : "Saved tasks require an operator to run a worker. A queued task is not a promise of execution. There is no automatic refresh."}
             </p>
           </section>
+          {((status?.intake === "configured" && status.handlers.length > 0) || submission) && (
+            <OmegaSubmissionForm key={formVersion}
+              handlers={status?.intake === "configured" ? status.handlers : submission ? [submission.handler] : []}
+              disabled={busy || uncertain || status?.intake !== "configured"}
+              submission={submission} ambiguous={submissionUncertain}
+              onReview={prepareSubmission}
+              onEdit={() => { if (!busy && !submissionUncertain) setSubmission(null); }}
+              onConfirm={confirmSubmission}
+            />
+          )}
           {status?.intake === "configured" && (
             <div className="omega-workbench">
               <section
@@ -515,7 +569,7 @@ export default function OmegaTasksPage() {
                               setNotice(
                                 "Task cancellation confirmed. The saved record has been retained.",
                               );
-                            }, true);
+                            }, "cancel");
                           }}
                         >
                           Confirm cancellation
@@ -529,8 +583,7 @@ export default function OmegaTasksPage() {
           )}
           <p className="omega-muted omega-privacy">
             Signing out clears this page; it does not delete saved tasks.
-            Storage administrators can access task records. Task deletion and
-            submission forms are not available in this dashboard.
+            Storage administrators can access task records. Task deletion is not available in this dashboard. Unconfirmed submission inputs stay only in page memory; check saved tasks before starting another after leaving or reloading.
           </p>
         </>
       )}

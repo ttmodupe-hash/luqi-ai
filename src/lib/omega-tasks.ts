@@ -8,6 +8,24 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(`${value}T00:00:00Z`);
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 });
+const budgetPayload = z.object({ currency, amounts: z.array(amount).min(1).max(50) }).strict();
+const inputDate = date.refine(value => /^(19|20)/.test(value));
+const schedulePayload = z.object({
+  odometerKm: z.number().int().min(0).max(10_000_000),
+  lastServiceKm: z.number().int().min(0).max(10_000_000),
+  lastServiceDate: inputDate, today: inputDate,
+  intervalKm: z.number().int().min(1).max(1_000_000),
+  intervalDays: z.number().int().min(1).max(3650),
+}).strict().refine(p => p.lastServiceKm <= p.odometerKm && p.lastServiceDate <= p.today);
+const budgetDraft = z.object({ handler: z.literal("travel.budget"), payload: budgetPayload }).strict();
+const scheduleDraft = z.object({ handler: z.literal("vehicle.schedule"), payload: schedulePayload }).strict();
+export const omegaDraftSchema = z.discriminatedUnion("handler", [budgetDraft, scheduleDraft]);
+const key = z.string().regex(/^[A-Za-z0-9_-]{8,128}$/);
+const submissionSchema = z.discriminatedUnion("handler", [
+  budgetDraft.extend({ idempotencyKey: key }), scheduleDraft.extend({ idempotencyKey: key }),
+]);
+export type OmegaDraft = z.infer<typeof omegaDraftSchema>;
+export type OmegaSubmission = z.infer<typeof submissionSchema>;
 const base = {
   id: taskId, version: z.literal("web-v1"),
   state: z.enum(["pending", "approval_required", "retry_wait", "running", "completed", "failed", "reconciliation_required", "cancelled"]),
@@ -17,14 +35,12 @@ const base = {
 };
 const taskSchema = z.discriminatedUnion("handler", [
   z.object({ ...base, handler: z.literal("travel.budget"),
-    payload: z.object({ currency, amounts: z.array(amount).min(1).max(50) }),
+    payload: budgetPayload,
     result: z.object({ total: z.string().regex(/^[0-9]{1,11}\.[0-9]{2}$/), currency,
       basis: z.literal("user_supplied"), notice: z.literal("Arithmetic from supplied amounts; no live prices or FX rates.") }).nullable(),
   }),
   z.object({ ...base, handler: z.literal("vehicle.schedule"),
-    payload: z.object({ odometerKm: z.number().int().min(0).max(10_000_000),
-      lastServiceKm: z.number().int().min(0).max(10_000_000), lastServiceDate: date, today: date,
-      intervalKm: z.number().int().min(1).max(1_000_000), intervalDays: z.number().int().min(1).max(3650) }),
+    payload: schedulePayload,
     result: z.object({ kmRemaining: z.number().int().min(-10_000_000).max(1_000_000), serviceDueDate: date,
       overdueByKm: z.boolean(), overdueByDate: z.boolean(), needsService: z.boolean(),
       basis: z.literal("user_supplied"),
@@ -53,14 +69,14 @@ export function taskTitle(task: OmegaTask) { return task.handler === "travel.bud
 
 // Same-origin, memory-only credentials. No polling, execution calls, automatic retries or provider access.
 export function omegaClient(token: string, request: typeof fetch = fetch) {
-  async function call<T>(path: string, schema: z.ZodType<T>, cancel = false): Promise<T> {
+  async function call<T>(path: string, schema: z.ZodType<T>, body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15_000);
     try {
       const response = await request(`/api/v1/omega/tasks${path}`, {
-        method: cancel ? "POST" : "GET", cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
+        method: body === undefined ? "GET" : "POST", cache: "no-store", credentials: "omit", redirect: "error", signal: controller.signal,
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        ...(cancel ? { body: JSON.stringify({ confirm: true }) } : {}),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       if (!response.ok) throw new OmegaError(response.status);
       return schema.parse(await response.json());
@@ -71,6 +87,17 @@ export function omegaClient(token: string, request: typeof fetch = fetch) {
     status: () => call("/status", statusSchema),
     list: (before?: string) => call(`/?limit=20${before ? `&before=${taskId.parse(before)}` : ""}`, z.object({ tasks: z.array(taskSchema).max(20) })),
     get: (id: string) => call(`/${taskId.parse(id)}`, one(id)),
-    cancel: (id: string) => call(`/${taskId.parse(id)}/cancel`, one(id, true), true),
+    cancel: (id: string) => call(`/${taskId.parse(id)}/cancel`, one(id, true), { confirm: true }),
+    submit: (submitted: OmegaSubmission) => {
+      const input = submissionSchema.parse(submitted);
+      const saved = z.object({ created: z.boolean(), task: taskSchema }).superRefine((response, context) => {
+        if (response.task.handler !== input.handler ||
+            JSON.stringify(response.task.payload) !== JSON.stringify(input.payload) ||
+            (response.created && (response.task.state !== "pending" || response.task.attempts !== 0))) {
+          context.addIssue({ code: "custom", message: "Submission was not confirmed" });
+        }
+      });
+      return call("", saved, input);
+    },
   };
 }

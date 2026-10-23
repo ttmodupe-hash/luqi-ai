@@ -260,3 +260,76 @@ test("session revocation clears task records and failed reads never show fabrica
   await expect(page.getByText(task.id, { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Email", { exact: true })).toHaveValue("");
 });
+
+test("review and retry a queued budget without duplicate intent at 320px", async ({ page }) => {
+  const bodies: string[] = [], calls: string[] = [];
+  await page.route("**/api/v1/omega/tasks**", route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    calls.push(path);
+    if (path.endsWith("/status")) return route.fulfill({ json: configured });
+    if (request.method() === "POST" && path === "/api/v1/omega/tasks") {
+      bodies.push(request.postData()!);
+      if (bodies.length === 1) return route.abort("failed");
+      return route.fulfill({ json: { created: false, task } });
+    }
+    return route.fulfill({ json: { tasks: [] } });
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await signIn(page);
+  await page.getByLabel("Amounts, one per line", { exact: true }).fill("100.25\n40\n0.10");
+  await noOverflow(page);
+  await page.getByRole("button", { name: "Review task", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review before queuing" })).toBeFocused();
+  expect(bodies).toHaveLength(0);
+  const queue = page.getByRole("button", { name: "Queue task", exact: true });
+  await expect(queue).toBeDisabled();
+  const checkbox = page.getByRole("checkbox", { name: "I understand this only queues the task." });
+  await checkbox.focus(); await page.keyboard.press("Space");
+  await queue.focus(); await page.keyboard.press("Enter");
+  await expect(page.getByRole("status")).toContainText("Submission could not be confirmed");
+  expect(bodies).toHaveLength(1);
+  await expect(page.getByRole("button", { name: "Edit inputs", exact: true })).toHaveCount(0);
+  await noOverflow(page);
+  const retry = page.getByRole("button", { name: "Retry same submission", exact: true });
+  await retry.focus(); await page.keyboard.press("Enter");
+  await expect(page.getByRole("status")).toContainText("This submission already exists");
+  expect(bodies).toHaveLength(2); expect(bodies[0]).toBe(bodies[1]);
+  const sent = JSON.parse(bodies[0]);
+  expect(sent).toMatchObject({ handler: "travel.budget", payload: task.payload });
+  expect(sent.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/);
+  expect(calls.some(path => /run|approve|recover/.test(path))).toBe(false);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+  await expect(page.getByText("ZAR 140.35", { exact: true })).toHaveCount(0);
+  await noOverflow(page);
+});
+test("queue a reviewed vehicle schedule without inventing service advice", async ({ page }) => {
+  let submitted: Record<string, unknown> | undefined;
+  const vehicle = contracts.find(item => item.name === "service schedule")!;
+  await page.route("**/api/v1/omega/tasks**", route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (path.endsWith("/status")) return route.fulfill({ json: configured });
+    if (request.method() === "POST") {
+      submitted = request.postDataJSON();
+      return route.fulfill({ status: 201, json: { created: true,
+        task: { ...task, handler: vehicle.handler, payload: vehicle.payload } } });
+    }
+    return route.fulfill({ json: { tasks: [] } });
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await signIn(page);
+  await page.getByLabel("Calculation type", { exact: true }).selectOption("vehicle.schedule");
+  for (const [label, value] of [
+    ["Current odometer (km)", "24500"], ["Odometer at last service (km)", "16000"],
+    ["Manufacturer service interval (km)", "10000"], ["Manufacturer service interval (days)", "365"],
+    ["Last service date", "2026-01-01"], ["Assessment date", "2026-10-23"],
+  ]) await page.getByLabel(label, { exact: true }).fill(value);
+  await noOverflow(page);
+  await page.getByRole("button", { name: "Review task", exact: true }).click();
+  expect(submitted).toBeUndefined();
+  await page.getByRole("checkbox", { name: "I understand this only queues the task." }).check();
+  await page.getByRole("button", { name: "Queue task", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Task saved to the queue. It has not run.");
+  expect(submitted).toMatchObject({ handler: vehicle.handler, payload: vehicle.payload });
+  await expect(page.getByText("Service is due", { exact: true })).toHaveCount(0);
+  await noOverflow(page);
+});

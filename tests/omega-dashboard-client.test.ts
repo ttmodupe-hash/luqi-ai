@@ -152,3 +152,67 @@ describe("Omega dashboard HTTP boundary", () => {
     }
   });
 });
+
+describe("reviewed Omega submissions", () => {
+  const input = { handler: "travel.budget" as const, payload: task.payload, idempotencyKey: "synthetic-request-0001" };
+  it("sends only allowlisted inputs to the owned queue with private HTTP settings", async () => {
+    const request = vi.fn().mockResolvedValue(reply({ created: true, task }, 201));
+    expect(await omegaClient("fixture-token", request).submit(input)).toEqual({ created: true, task });
+    expect(request).toHaveBeenCalledExactlyOnceWith("/api/v1/omega/tasks", expect.objectContaining({
+      method: "POST", cache: "no-store", credentials: "omit", redirect: "error",
+      headers: { Authorization: "Bearer fixture-token", "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }));
+  });
+  for (const fixture of contracts.filter(item => item.valid)) {
+    it("accepts supported submission inputs: " + fixture.name, async () => {
+      const request = vi.fn().mockResolvedValue(reply({ created: true,
+        task: { ...task, handler: fixture.handler, payload: fixture.payload } }));
+      await expect(omegaClient("token", request).submit({
+        handler: fixture.handler, payload: fixture.payload, idempotencyKey: "synthetic-request-0001",
+      } as never)).resolves.toMatchObject({ created: true });
+    });
+  }
+  it.each([
+    { ...input, handler: "shell.exec" },
+    { ...input, idempotencyKey: "short" },
+    { ...input, ownerId: 99 },
+    ...["1e2", "-1", "01", "1.234", ""].map(value => ({ ...input, payload: { currency: "ZAR", amounts: [value] } })),
+    { ...input, payload: { currency: "ZAR", amounts: Array(51).fill("1") } },
+    { ...input, payload: { currency: "ZAR", amounts: ["1"], command: "run" } },
+    { ...input, payload: { currency: "TOOLONG", amounts: ["1"] } },
+  ])("rejects unsupported/unbounded submissions before HTTP %#", input => {
+    const request = vi.fn();
+    expect(() => omegaClient("token", request).submit(input as never)).toThrow();
+    expect(request).not.toHaveBeenCalled();
+  });
+  it("rejects contradictory schedule input before HTTP", () => {
+    const fixture = contracts.find(item => item.name === "service schedule")!;
+    const request = vi.fn(), api = omegaClient("token", request);
+    for (const patch of [
+      { odometerKm: -1 }, { odometerKm: 1 }, { intervalKm: 0 }, { intervalDays: 3651 },
+      { today: "2100-01-01" }, { lastServiceDate: "2026-02-30" }, { lastServiceDate: "2026-12-01" },
+    ]) expect(() => api.submit({ handler: "vehicle.schedule", payload: { ...fixture.payload, ...patch },
+      idempotencyKey: "synthetic-request-0001" } as never)).toThrow();
+    expect(request).not.toHaveBeenCalled();
+  });
+  it.each([
+    { created: true, task: { ...task, payload: { currency: "USD", amounts: ["1"] } } },
+    { created: true, task: { ...task, state: "completed", attempts: 1, result: budgetResult } },
+    { created: true, task: { ...task, attempts: 1 } },
+    { task },
+  ])("never confirms a mismatched or contradictory submission response %#", async response => {
+    const request = vi.fn().mockResolvedValue(reply(response));
+    await expect(omegaClient("token", request).submit(input)).rejects.toThrow();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it("does not retry automatically and reuses exactly the same body when explicitly called again", async () => {
+    const request = vi.fn().mockRejectedValueOnce(new TypeError("Lost response"))
+      .mockResolvedValueOnce(reply({ created: false, task: { ...task, state: "completed", attempts: 1, result: budgetResult } }));
+    const api = omegaClient("token", request);
+    await expect(api.submit(input)).rejects.toThrow();
+    expect(request).toHaveBeenCalledTimes(1);
+    await expect(api.submit(input)).resolves.toMatchObject({ created: false, task: { state: "completed" } });
+    expect(request.mock.calls[0][1].body).toBe(request.mock.calls[1][1].body);
+  });
+});
