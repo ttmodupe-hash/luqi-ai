@@ -15,7 +15,7 @@ RUN chmod +x ./start.sh
 RUN node scripts/verify-build.mjs \
     && npm run build
 
-RUN test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js
+RUN test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js && test -s dist/prepare-mysql-schema.js
 
 ENV NODE_ENV=production
 ENV PORT=3000

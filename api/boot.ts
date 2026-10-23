@@ -1300,6 +1300,11 @@ export default app;
 
 if (env.isProduction) {
   (async () => {
+    // Never create tables or seed data from the web identity. A configured
+    // database must pass read-only validation before any port accepts traffic.
+    const { checkRuntimeSchema } = await import('../db/runtimeSchema');
+    const schema = await checkRuntimeSchema();
+    logger.info(schema, 'Database runtime schema preflight');
     const { serve } = await import("@hono/node-server");
     const { serveStaticFiles } = await import("./lib/vite");
     serveStaticFiles(app);
@@ -1338,26 +1343,8 @@ if (env.isProduction) {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     process.on("SIGINT", () => shutdown("SIGINT"));
 
-    // Provision tables and pilot quotas before serving user data. On a
-    // configured production MySQL, a migration failure must be fatal rather
-    // than pretending that volatile memory is durable.
-    try {
-      const { bootstrapDatabase } = await import("../db/bootstrap");
-      await bootstrapDatabase();
-    } catch {
-      console.error("[Bootstrap] Database migration failed (details redacted).");
-      if (process.env.NODE_ENV === "production" &&
-          (process.env.DATABASE_URL || process.env.DB_HOST)) {
-        process.exit(1);
-      }
-    }
-    try {
-      const { seedTraditionalMedicine } = await import("../db/seed-traditional-medicine");
-      await seedTraditionalMedicine();
-    } catch (e) {
-      console.error("[Seed] Traditional medicine seed failed:", e);
-    }
-  })().catch((e) => {
-    console.error("[Boot Error]", e);
+  })().catch(() => {
+    console.error('[Boot] Startup preflight failed (details redacted).');
+    process.exit(1);
   });
 }
