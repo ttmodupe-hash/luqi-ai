@@ -342,3 +342,17 @@ describe("reviewed task intake", () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 });
+
+it("disables retry if refreshed authenticated status withdraws the reviewed handler", async () => {
+  await login(configured, []);
+  await reviewBudget(); acknowledge();
+  request.mockRejectedValueOnce(new TypeError("Lost response"));
+  fireEvent.click(screen.getByRole("button", { name: "Queue task" }));
+  await screen.findByText(/Submission could not be confirmed/);
+  request.mockResolvedValueOnce(reply({ ...configured, handlers: ["vehicle.schedule"] }))
+    .mockResolvedValueOnce(reply({ tasks: [] }));
+  fireEvent.click(screen.getByRole("button", { name: "Refresh tasks" }));
+  await screen.findByText(/Task information refreshed/);
+  expect((screen.getByRole("button", { name: "Retry same submission" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(submissions()).toHaveLength(1);
+});

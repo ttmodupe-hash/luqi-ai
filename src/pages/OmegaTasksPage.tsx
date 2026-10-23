@@ -362,7 +362,7 @@ export default function OmegaTasksPage() {
           {((status?.intake === "configured" && status.handlers.length > 0) || submission) && (
             <OmegaSubmissionForm key={formVersion}
               handlers={status?.intake === "configured" ? status.handlers : submission ? [submission.handler] : []}
-              disabled={busy || uncertain || status?.intake !== "configured"}
+              disabled={busy || uncertain || status?.intake !== "configured" || (submission !== null && !status.handlers.includes(submission.handler))}
               submission={submission} ambiguous={submissionUncertain}
               onReview={prepareSubmission}
               onEdit={() => { if (!busy && !submissionUncertain) setSubmission(null); }}
