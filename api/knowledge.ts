@@ -6,7 +6,7 @@ import { eq, desc, sql } from "drizzle-orm";
 
 export const knowledgeRouter = createRouter({
   getArticles: publicQuery
-    .input(z.object({ category: z.string().optional(), limit: z.number().default(50) }).optional())
+    .input(z.object({ category: z.string().max(255).optional(), limit: z.number().int().min(1).max(100).default(50) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       let query = db.select().from(knowledgeArticles).orderBy(desc(knowledgeArticles.createdAt));
@@ -30,7 +30,7 @@ export const knowledgeRouter = createRouter({
     }),
 
   searchLearning: publicQuery
-    .input(z.object({ query: z.string(), limit: z.number().default(20) }))
+    .input(z.object({ query: z.string().trim().min(1).max(500), limit: z.number().int().min(1).max(100).default(20) }))
     .query(async ({ input }) => {
       const db = await getDb();
       const results = await db

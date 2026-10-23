@@ -6,7 +6,7 @@ import { eq, desc } from "drizzle-orm";
 
 export const contentRouter = createRouter({
   getHealthTips: publicQuery
-    .input(z.object({ limit: z.number().default(10) }).optional())
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(10) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       return db
@@ -18,7 +18,7 @@ export const contentRouter = createRouter({
     }),
 
   getAgricultureNews: publicQuery
-    .input(z.object({ limit: z.number().default(10) }).optional())
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(10) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       return db
@@ -30,7 +30,7 @@ export const contentRouter = createRouter({
     }),
 
   getSportsNews: publicQuery
-    .input(z.object({ limit: z.number().default(10) }).optional())
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(10) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       return db
@@ -42,7 +42,7 @@ export const contentRouter = createRouter({
     }),
 
   getBusinessTips: publicQuery
-    .input(z.object({ limit: z.number().default(10) }).optional())
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(10) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       return db
@@ -54,7 +54,7 @@ export const contentRouter = createRouter({
     }),
 
   getGovernmentInfo: publicQuery
-    .input(z.object({ limit: z.number().default(10) }).optional())
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(10) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       return db
@@ -66,7 +66,7 @@ export const contentRouter = createRouter({
     }),
 
   getTourismInfo: publicQuery
-    .input(z.object({ limit: z.number().default(10) }).optional())
+    .input(z.object({ limit: z.number().int().min(1).max(100).default(10) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       return db
