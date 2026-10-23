@@ -28,7 +28,7 @@ export function downloadConversationExport(data: ConversationExport) {
 export type Conversation = z.infer<typeof conversation>;
 export type SavedMessage = z.infer<typeof message>;
 export class ConversationError extends Error {
-  constructor(public status: number) { super("Conversation request failed"); }
+  constructor(public status: number, public retryAfter?: number) { super("Conversation request failed"); }
 }
 
 // Same-origin only; never persist credentials or conversation content in browser storage.
@@ -58,6 +58,10 @@ export async function signIn(email: string, password: string) {
     method: "POST", cache: "no-store", credentials: "omit", redirect: "error",
     headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }),
   });
-  if (!response.ok) throw new ConversationError(response.status);
+  if (!response.ok) {
+    const raw = response.headers.get('Retry-After') ?? '';
+    const seconds = /^\d{1,4}$/.test(raw) && Number(raw) >= 1 && Number(raw) <= 3600 ? Number(raw) : 30;
+    throw new ConversationError(response.status, response.status === 429 ? seconds : undefined);
+  }
   return z.object({ token: z.string().min(1), user: z.object({ email: z.string() }) }).parse(await response.json());
 }

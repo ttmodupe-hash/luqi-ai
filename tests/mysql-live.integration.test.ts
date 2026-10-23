@@ -44,14 +44,14 @@ afterAll(async () => {
 });
 
 describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
-  it("creates all 37 tables without inserting a publicly known demo user", async () => {
+  it("creates all 38 tables without inserting a publicly known demo user", async () => {
     const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES");
     expect(tables.length).toBe(CREATE_STATEMENTS.length);
     expect(await singleNumber("SELECT COUNT(*) AS n FROM users")).toBe(0);
     // Migrations are idempotent against an already provisioned MySQL.
     await bootstrapDatabase();
     const [again] = await pool.query<RowDataPacket[]>("SHOW TABLES");
-    expect(again.length).toBe(37);
+    expect(again.length).toBe(38);
   }, 70_000);
 
   it("registers real users, checks JWT login and blocks disabled users", async () => {

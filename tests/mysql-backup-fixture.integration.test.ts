@@ -22,7 +22,7 @@ afterAll(async () => {
 
 describe("ephemeral backup seed fixture", () => {
   it("stores a sample account and both quota ledgers before dump", async () => {
-    expect(CREATE_STATEMENTS).toHaveLength(37);
+    expect(CREATE_STATEMENTS).toHaveLength(38);
     const [result] = await pool.execute<import("mysql2/promise").ResultSetHeader>(
       "INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)",
       ["ci-restore@example.invalid", "nonlogin-fixture-not-a-real-password-hash", "CI Restore"]);
@@ -34,9 +34,12 @@ describe("ephemeral backup seed fixture", () => {
     await pool.execute(
       "INSERT INTO ai_pilot_daily_user_usage (day_utc, user_id, attempts) VALUES (?, ?, ?)",
       ["2026-10-22", userId, 7]);
+    await pool.execute(
+      "INSERT INTO auth_attempt_windows (scope, subject_key, attempts, reset_at) VALUES (?, ?, ?, ?)",
+      ["login_subject", "a".repeat(64), 7, 1792747200]);
 
     const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES");
-    expect(tables).toHaveLength(37);
+    expect(tables).toHaveLength(38);
     const [user] = await pool.execute<RowDataPacket[]>(
       "SELECT email, is_active FROM users WHERE id=?", [userId]);
     expect(user[0].email).toBe("ci-restore@example.invalid");
