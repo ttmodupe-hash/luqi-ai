@@ -23,6 +23,7 @@ const reply = (data: unknown, status = 200) =>
 beforeEach(() => {
   request.mockReset();
   vi.stubGlobal("fetch", request);
+  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "b234fee0-6495-4b44-80dc-b736b3ecfbdd") });
   localStorage.clear();
   sessionStorage.clear();
 });
@@ -222,4 +223,136 @@ describe("Omega task dashboard (synthetic account only)", () => {
     );
     expect(screen.queryByRole("button", { name: "More tasks" })).toBeNull();
   });
+});
+
+async function reviewBudget() {
+  fireEvent.change(screen.getByLabelText("Amounts, one per line"), { target: { value: "100.25\n40\n0.10" } });
+  fireEvent.click(screen.getByRole("button", { name: "Review task" }));
+  await screen.findByRole("heading", { name: "Review before queuing" });
+}
+function acknowledge() {
+  fireEvent.click(screen.getByRole("checkbox", { name: "I understand this only queues the task." }));
+}
+const submissions = () => request.mock.calls.filter(([url, options]) =>
+  url === "/api/v1/omega/tasks" && options.method === "POST");
+describe("reviewed task intake", () => {
+  it("reviews exact figures, requires confirmation and does not claim execution or send duplicate clicks", async () => {
+    await login(configured, []);
+    await reviewBudget();
+    expect(request).toHaveBeenCalledTimes(3);
+    const queue = screen.getByRole("button", { name: "Queue task" }) as HTMLButtonElement;
+    expect(queue.disabled).toBe(true);
+    acknowledge();
+    let resolve!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(r => { resolve = r; }));
+    fireEvent.click(queue); fireEvent.click(queue);
+    expect(submissions()).toHaveLength(1);
+    expect(screen.queryByText(/Task saved to the queue/)).toBeNull();
+    await act(async () => resolve(reply({ created: true, task }, 201)));
+    await screen.findByText(/Task saved to the queue. It has not run/);
+    expect(screen.queryByText("ZAR 140.35")).toBeNull();
+    expect((screen.getByLabelText("Amounts, one per line") as HTMLTextAreaElement).value).toBe("");
+    expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+  });
+  it("keeps an ambiguous submission immutable across refresh and retries only its original request", async () => {
+    await login(configured, []);
+    await reviewBudget(); acknowledge();
+    request.mockRejectedValueOnce(new TypeError("Lost private SQL response"));
+    fireEvent.click(screen.getByRole("button", { name: "Queue task" }));
+    await screen.findByText(/Submission could not be confirmed/);
+    expect(screen.queryByRole("button", { name: "Edit inputs" })).toBeNull();
+    expect(screen.queryByLabelText("Amounts, one per line")).toBeNull();
+    expect(screen.queryByText("Lost private SQL response")).toBeNull();
+    expect(submissions()).toHaveLength(1);
+    request.mockResolvedValueOnce(reply(configured)).mockResolvedValueOnce(reply({ tasks: [task] }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh tasks" }));
+    await screen.findByText(/Task information refreshed/);
+    expect(screen.getByRole("button", { name: "Retry same submission" })).toBeTruthy();
+    request.mockResolvedValueOnce(reply({ created: false, task }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry same submission" }));
+    await screen.findByText(/This submission already exists/);
+    expect(submissions()).toHaveLength(2);
+    expect(submissions()[0][1].body).toBe(submissions()[1][1].body);
+  });
+  it("rejects invalid decimal amounts before review or HTTP", async () => {
+    await login();
+    fireEvent.change(screen.getByLabelText("Amounts, one per line"), { target: { value: "1.234" } });
+    fireEvent.submit(screen.getByRole("form", { name: "New calculation" }));
+    await screen.findByRole("alert");
+    expect(request).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole("button", { name: "Queue task" })).toBeNull();
+  });
+  it("reviews vehicle intervals and dates without inventing a completed result", async () => {
+    await login(configured, []);
+    fireEvent.change(screen.getByLabelText("Calculation type"), { target: { value: "vehicle.schedule" } });
+    for (const [label, value] of [
+      ["Current odometer (km)", "24500"], ["Odometer at last service (km)", "16000"],
+      ["Manufacturer service interval (km)", "10000"], ["Manufacturer service interval (days)", "365"],
+      ["Last service date", "2026-01-01"], ["Assessment date", "2026-10-23"],
+    ]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(screen.getByRole("button", { name: "Review task" }));
+    await screen.findByRole("heading", { name: "Review before queuing" });
+    expect(screen.getByText("2026-01-01")).toBeTruthy();
+    acknowledge();
+    const payload = { odometerKm: 24500, lastServiceKm: 16000, intervalKm: 10000, intervalDays: 365,
+      lastServiceDate: "2026-01-01", today: "2026-10-23" };
+    request.mockResolvedValueOnce(reply({ created: true, task: { ...task, handler: "vehicle.schedule", payload } }, 201));
+    fireEvent.click(screen.getByRole("button", { name: "Queue task" }));
+    await screen.findByText(/Task saved to the queue/);
+    expect(screen.queryByText("Service is due")).toBeNull();
+    expect(JSON.parse(submissions()[0][1].body)).toMatchObject({ handler: "vehicle.schedule", payload });
+  });
+  it("shows only handlers confirmed by authenticated status", async () => {
+    await login({ ...configured, handlers: ["vehicle.schedule"] });
+    expect(screen.queryByRole("option", { name: "Travel budget" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Vehicle service schedule" })).toBeTruthy();
+  });
+  it("discards late submission responses after signing out", async () => {
+    await login(configured, []);
+    await reviewBudget(); acknowledge();
+    let resolve!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(r => { resolve = r; }));
+    fireEvent.click(screen.getByRole("button", { name: "Queue task" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await act(async () => resolve(reply({ created: true, task }, 201)));
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(screen.queryByText(taskId)).toBeNull();
+    expect(screen.queryByText(/Task saved to the queue/)).toBeNull();
+  });
+  it("does not confirm contradictory responses or silently replace the request reference", async () => {
+    await login(configured, []);
+    await reviewBudget(); acknowledge();
+    request.mockResolvedValueOnce(reply({ created: true, task: { ...task, payload: { currency: "USD", amounts: ["1"] } } }));
+    fireEvent.click(screen.getByRole("button", { name: "Queue task" }));
+    await screen.findByText(/Submission could not be confirmed/);
+    expect(screen.queryByText(/Task saved to the queue/)).toBeNull();
+    expect(submissions()).toHaveLength(1);
+  });
+  it("shows login retry advice without echoing diagnostics or persisting a password", async () => {
+    request.mockResolvedValueOnce(new Response(JSON.stringify({ detail: "private diagnostic" }), {
+      status: 429, headers: { "Retry-After": "117" },
+    }));
+    render(<OmegaTasksPage />);
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "test@example.invalid" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await screen.findByText(/Wait 117 seconds/);
+    expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
+    expect(screen.queryByText("private diagnostic")).toBeNull();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+});
+
+it("disables retry if refreshed authenticated status withdraws the reviewed handler", async () => {
+  await login(configured, []);
+  await reviewBudget(); acknowledge();
+  request.mockRejectedValueOnce(new TypeError("Lost response"));
+  fireEvent.click(screen.getByRole("button", { name: "Queue task" }));
+  await screen.findByText(/Submission could not be confirmed/);
+  request.mockResolvedValueOnce(reply({ ...configured, handlers: ["vehicle.schedule"] }))
+    .mockResolvedValueOnce(reply({ tasks: [] }));
+  fireEvent.click(screen.getByRole("button", { name: "Refresh tasks" }));
+  await screen.findByText(/Task information refreshed/);
+  expect((screen.getByRole("button", { name: "Retry same submission" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(submissions()).toHaveLength(1);
 });

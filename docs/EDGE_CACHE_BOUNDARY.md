@@ -92,3 +92,19 @@ at 08:43:29 UTC on 2026-10-23. Startup verified/created 38 tables; public
 checks verified the new sign-in retry UI, MySQL connectivity, synthetic invalid
 login denials and the existing private/legacy/provider boundaries. No positive
 production-account acceptance or production-derived restore is claimed.
+
+## Verified Cloudflare build repair
+
+PR #182 merged as 7906b81c0f3d87bd075d33dc50cde498260db0a4 after all
+GitHub Actions and Cloudflare preview validation passed. Production build
+e4fa3949-51aa-44d5-a867-3806088ca39b then completed successfully using
+the isolated /edge target. Its logs confirm upload of Worker version
+65be0fed-50e1-44d9-9778-1fc4dccc91c4 and "No targets deployed".
+Subsequent API reads still show workers.dev and preview URLs disabled, no
+custom domains and no matching zone routes. The build blocker is fixed;
+public edge traffic remains unverified and is not activated.
+
+Railway deployment c8dae3a7-3f69-44cf-845b-529531d78abe also reached SUCCESS
+on this commit. Web, MySQL and the existing public test page remained online,
+with no reported issues or pending operations. No database image, volume,
+backup schedule, provider activation or billing flag was changed.
