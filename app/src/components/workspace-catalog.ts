@@ -45,13 +45,13 @@ export const workspaceTools = [
   },
   {
     id: "academy",
-    title: "Learning & media",
-    category: "A wider learning toolkit",
+    title: "Content studio",
+    category: "Create, explain and learn",
     description:
-      "AI tutoring, generated video and voice need further integration and review before they are available.",
-    status: "Preview",
-    ready: false,
-    path: null,
+      "Edit a six-scene story, explore a 3D pendulum and export a silent 90-second animation, script and subtitles locally.",
+    status: "Local creation · no paid call",
+    ready: true,
+    path: "/content-studio",
     icon: "academy",
   },
   {

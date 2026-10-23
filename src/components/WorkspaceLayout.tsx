@@ -10,6 +10,7 @@ const navigation = [
   ["/companion", "Private notes"],
   ["/omega-tasks", "Omega tasks"],
   ["/pendulum-lab", "Physics lab"],
+  ["/content-studio", "Create"],
   ["/start", "Start here"],
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {

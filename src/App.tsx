@@ -54,6 +54,7 @@ export default function App() {
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
+        <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
