@@ -1,13 +1,13 @@
 {
   "id": "/",
-  "name": "Luqi AI — Pan-African and Global AI Education Platform",
+  "name": "LUQI AI \u2014 Your everyday workspace",
   "short_name": "Luqi AI",
-  "description": "Pan-African and Global AI Education Platform with interactive STEM labs, ITIL AI Governance & Cisco CertMaster Academy, and autonomous market intelligence.",
+  "description": "Account-owned notes and interactive physics tools. AI chat is not enabled.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#020617",
+  "background_color": "#111e19",
+  "theme_color": "#111e19",
   "orientation": "any",
   "icons": [
     {

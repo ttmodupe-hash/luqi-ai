@@ -35,6 +35,8 @@ self.addEventListener('fetch', (event) => {
 
   // Bypass service worker caching for all API and server routes
   if (
+    url.pathname.startsWith('/v1/') ||
+    url.pathname === '/health' ||
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/trpc/') ||
     url.pathname.startsWith('/auth/') ||

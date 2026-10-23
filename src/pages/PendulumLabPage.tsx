@@ -3,7 +3,7 @@
 // Grade 10 to AP / University Classical & Chaotic Dynamics
 // Modes: Simple Harmonic & Damped, Coupled Chaotic Double Pendulum, Driven Resonance
 // Real-time RK4 Integrator, Dual Oscilloscope, Laser Photogates, Tension Gauge,
-// Dr. Kwame AI Physics Copilot, and CSV Lab Report Export
+// In-browser simulation and CSV Lab Report Export
 // =====================================================================
 
 import { useState, useEffect, useRef } from "react";
@@ -15,7 +15,6 @@ import {
   Play,
   Pause,
   Download,
-  Sparkles,
   CheckCircle,
   HelpCircle,
   Gauge,
@@ -25,9 +24,6 @@ import {
   VolumeX,
   Compass,
   Cpu,
-  Brain,
-  Send,
-  RefreshCw,
   Table,
   Layers,
   ChevronRight,
@@ -148,19 +144,6 @@ export default function PendulumLabPage() {
 
   // Data Logger for Lab Reports
   const [dataLogs, setDataLogs] = useState<DataLogPoint[]>([]);
-
-  // In-Lab AI Copilot (Dr. Kwame)
-  const [copilotQuery, setCopilotQuery] = useState("");
-  const [copilotLoading, setCopilotLoading] = useState(false);
-  const [copilotMessages, setCopilotMessages] = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >([
-    {
-      role: "assistant",
-      content:
-        "Greetings, scholar! I am **Dr. Kwame**, your STEM physics mentor. Ask me about mechanical energy conservation, large-angle elliptic corrections, tension forces, or chaotic Lagrangian double pendulum equations.",
-    },
-  ]);
 
   // Quiz state
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
@@ -1034,52 +1017,11 @@ export default function PendulumLabPage() {
     }
   };
 
-  // AI Tutor Copilot Query Handler
-  const handleCopilotSend = async (customPrompt?: string) => {
-    const q = (customPrompt || copilotQuery).trim();
-    if (!q || copilotLoading) return;
-
-    setCopilotQuery("");
-    setCopilotMessages((prev) => [...prev, { role: "user", content: q }]);
-    setCopilotLoading(true);
-
-    try {
-      const res = await fetch("/api/trpc/companion.sendMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId: 2, // Dr. Kwame conversation
-          content: `[Physics Lab Context: Mode=${simMode}, L=${lengthMeters}m, m=${massKg}kg, g=${gravity}m/s², theta=${(
-            physicsRef.current.theta *
-            (180 / Math.PI)
-          ).toFixed(1)}°]\n${q}`,
-        }),
-      });
-
-      let content = "";
-      if (res.ok) {
-        const data = await res.json();
-        content = data?.result?.data?.content || data?.result?.data?.json?.content || "";
-      }
-
-      if (!content || content.length < 20) {
-        content = generateDrKwamePhysicsAnswer(q, lengthMeters, massKg, gravity, simMode);
-      }
-
-      setCopilotMessages((prev) => [...prev, { role: "assistant", content }]);
-    } catch {
-      const fallback = generateDrKwamePhysicsAnswer(q, lengthMeters, massKg, gravity, simMode);
-      setCopilotMessages((prev) => [...prev, { role: "assistant", content: fallback }]);
-    } finally {
-      setCopilotLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               to="/"
@@ -1090,7 +1032,7 @@ export default function PendulumLabPage() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
                   <Activity className="w-5 h-5 text-sky-400" />
                   Experiential STEM Physics Laboratory
                 </h1>
@@ -1106,7 +1048,7 @@ export default function PendulumLabPage() {
 
           <div className="flex items-center gap-2">
             {/* Mode Switcher */}
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+            <div className="flex flex-wrap items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
               <button
                 onClick={() => {
                   setSimMode("simple");
@@ -1241,6 +1183,7 @@ export default function PendulumLabPage() {
                     isPaused ? "bg-emerald-600 hover:bg-emerald-500" : "bg-slate-800 hover:bg-slate-700"
                   }`}
                   title={isPaused ? "Resume Simulation" : "Pause Simulation"}
+                  aria-label={isPaused ? "Resume Simulation" : "Pause Simulation"}
                 >
                   {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                 </button>
@@ -1456,6 +1399,7 @@ export default function PendulumLabPage() {
               min="0.3"
               max="3.0"
               step="0.05"
+              aria-label="String length"
               value={lengthMeters}
               onChange={(e) => setLengthMeters(parseFloat(e.target.value))}
               className="w-full accent-sky-500 cursor-pointer"
@@ -1478,6 +1422,7 @@ export default function PendulumLabPage() {
               min="0.1"
               max="5.0"
               step="0.1"
+              aria-label="Bob mass"
               value={massKg}
               onChange={(e) => setMassKg(parseFloat(e.target.value))}
               className="w-full accent-amber-500 cursor-pointer"
@@ -1500,6 +1445,7 @@ export default function PendulumLabPage() {
               min="0.5"
               max="30.0"
               step="0.1"
+              aria-label="Gravitational acceleration"
               value={gravity}
               onChange={(e) => {
                 setActivePreset("Custom");
@@ -1525,6 +1471,7 @@ export default function PendulumLabPage() {
               min="0.0"
               max="0.25"
               step="0.005"
+              aria-label="Air damping"
               value={damping}
               onChange={(e) => setDamping(parseFloat(e.target.value))}
               className="w-full accent-purple-500 cursor-pointer"
@@ -1537,97 +1484,13 @@ export default function PendulumLabPage() {
           </div>
         </div>
 
-        {/* Bottom Section: In-Lab AI Copilot (Dr. Kwame) & Lab Telemetry Logger */}
+        {/* Tutor availability and simulation data logger */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* In-Lab AI Copilot (7 Columns) */}
-          <div className="lg:col-span-7 rounded-3xl border border-slate-800 bg-slate-900/70 shadow-xl p-5 flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-linear-to-br from-sky-500 to-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-md">
-                  K
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
-                    <span>Dr. Kwame — AI Physics Copilot</span>
-                    <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/30 text-[10px]">
-                      LIVE TUTOR
-                    </Badge>
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Socratic physics derivations, CAPS Grade 10-12 exam mastery, and non-linear chaos analysis.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Copilot Chat Stream */}
-            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1 text-xs">
-              {copilotMessages.map((m, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3.5 rounded-2xl ${
-                    m.role === "user"
-                      ? "bg-amber-500/15 border border-amber-500/30 text-amber-100 ml-8"
-                      : "bg-slate-950/70 border border-slate-800 text-slate-200 mr-4"
-                  }`}
-                >
-                  <div className="font-semibold text-[10px] text-slate-400 mb-1">
-                    {m.role === "user" ? "You" : "Dr. Kwame (STEM Mentor)"}
-                  </div>
-                  <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
-                </div>
-              ))}
-              {copilotLoading && (
-                <div className="flex items-center gap-2 text-slate-400 text-xs pl-2">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-400" />
-                  <span>Dr. Kwame is formulating derivation...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Inquiry Buttons */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
-              {[
-                "Why doesn't mass affect the oscillation period?",
-                "Derive the tension equation T = m(g + v²/L)",
-                "Explain the large-angle elliptic integral correction",
-                "What makes the double pendulum chaotic?",
-              ].map((chip, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleCopilotSend(chip)}
-                  className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 whitespace-nowrap transition-colors"
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
-
-            {/* Copilot Input */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCopilotSend();
-              }}
-              className="flex items-center gap-2 pt-2 border-t border-slate-800/80"
-            >
-              <input
-                type="text"
-                value={copilotQuery}
-                onChange={(e) => setCopilotQuery(e.target.value)}
-                placeholder="Ask Dr. Kwame any question about this physics lab..."
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-slate-100 placeholder-slate-400 focus:outline-hidden focus:border-sky-500"
-              />
-              <button
-                type="submit"
-                disabled={!copilotQuery.trim() || copilotLoading}
-                className="px-3.5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs disabled:opacity-50 transition-all flex items-center gap-1.5"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Ask</span>
-              </button>
-            </form>
-          </div>
+          <section className="lg:col-span-7 rounded-3xl border border-slate-800 bg-slate-900/70 p-6 space-y-3" aria-labelledby="physics-tutor-status">
+            <h2 id="physics-tutor-status" className="text-lg font-semibold">AI physics tutor is unavailable</h2>
+            <p className="text-sm text-slate-300">The pendulum simulation runs in your browser. You can change its settings, pause motion and record simulation data without an AI provider.</p>
+            <p className="text-sm text-slate-400">AI explanations are not enabled. This lab does not send questions to a provider or substitute canned answers for an AI reply.</p>
+          </section>
 
           {/* Telemetry Logger Table (5 Columns) */}
           <div className="lg:col-span-5 rounded-3xl border border-slate-800 bg-slate-900/70 shadow-xl p-5 flex flex-col justify-between space-y-3">
@@ -1689,94 +1552,4 @@ export default function PendulumLabPage() {
       </main>
     </div>
   );
-}
-
-// ─── DR. KWAME PHYSICS AI KNOWLEDGE GENERATOR ───
-function generateDrKwamePhysicsAnswer(
-  query: string,
-  L: number,
-  m: number,
-  g: number,
-  mode: string
-): string {
-  const q = query.toLowerCase();
-
-  if (q.includes("mass") || q.includes("affect")) {
-    return `### Why Oscillation Period is Independent of Mass
-**Dr. Kwame's Socratic Proof:**
-
-In simple harmonic motion, the restoring force is:
-$$F_{\\text{restoring}} = -m g \\sin\\theta \\approx -m g \\left(\\frac{x}{L}\\right)$$
-
-By Newton's Second Law ($F = m a$):
-$$m a = -m g \\left(\\frac{x}{L}\\right) \\implies a = -\\left(\\frac{g}{L}\\right) x$$
-
-Notice that the **mass $m$ cancels completely from both sides** of the equation! The acceleration depends solely on local gravity ($g$) and string length ($L$). Thus, whether a bob has mass 0.1 kg or 100 kg, it accelerates identically along the circular arc:
-$$T_0 = 2\\pi \\sqrt{\\frac{L}{g}} = 2\\pi \\sqrt{\\frac{${L.toFixed(2)}}{${g.toFixed(2)}}} = ${(
-      2 *
-      Math.PI *
-      Math.sqrt(L / g)
-    ).toFixed(2)}\\text{ s}$$`;
-  }
-
-  if (q.includes("tension") || q.includes("bottom")) {
-    return `### String Tension Derivation at Equilibrium
-**Dr. Kwame's Mechanics Breakdown:**
-
-At any arbitrary angle $\\theta$, the forces acting radially along the string are the string tension $T$ pointing toward the pivot and the radial component of gravity $mg\\cos\\theta$ pointing away.
-
-By centripetal acceleration ($a_c = v^2 / L$):
-$$T - m g \\cos\\theta = m \\frac{v^2}{L} \\implies T(\\theta) = m\\left(g\\cos\\theta + \\frac{v^2}{L}\\right)$$
-
-At the **bottom of the swing** ($\\theta = 0^\\circ$):
-- $\\cos(0) = 1$
-- Velocity $v$ reaches its theoretical maximum $v_{\\max} = \\sqrt{2 g h} = \\sqrt{2 g L(1 - \\cos\\theta_0)}$
-
-Substituting into tension gives:
-$$T_{\\max} = m\\left(g + \\frac{2 g L(1 - \\cos\\theta_0)}{L}\\right) = m g (3 - 2\\cos\\theta_0)$$
-For a $60^\\circ$ swing, the tension at the bottom is exactly **double the bob's resting weight ($2 mg$)**!`;
-  }
-
-  if (q.includes("elliptic") || q.includes("large angle") || q.includes("correction")) {
-    return `### Large-Angle Elliptic Integral Correction
-**Dr. Kwame's Mathematical Physics Note:**
-
-The standard formula $T_0 = 2\\pi\\sqrt{L/g}$ relies on the linear approximation $\\sin\\theta \\approx \\theta$, which introduces significant error beyond $15^\\circ$.
-
-The exact period is given by the complete elliptic integral of the first kind $K(k)$:
-$$T = 4\\sqrt{\\frac{L}{g}} \\int_0^{\\pi/2} \\frac{d\\phi}{\\sqrt{1 - k^2 \\sin^2\\phi}} = 4\\sqrt{\\frac{L}{g}} K\\left(\\sin\\frac{\\theta_0}{2}\\right)$$
-
-Expanding in series:
-$$T = T_0 \\left[1 + \\frac{1}{4}\\sin^2\\left(\\frac{\\theta_0}{2}\\right) + \\frac{9}{64}\\sin^4\\left(\\frac{\\theta_0}{2}\\right) + \\dots\\right]$$
-
-For your current setup with $L = ${L.toFixed(2)}$m and $g = ${g.toFixed(2)}$m/s²:
-- Small-Angle Theoretical: **${(2 * Math.PI * Math.sqrt(L / g)).toFixed(2)}s**
-- Notice how our virtual laser photogate confirms this exact expansion!`;
-  }
-
-  if (q.includes("double") || q.includes("chaos") || q.includes("butterfly")) {
-    return `### Chaos in the Coupled Double Pendulum
-**Dr. Kwame's Non-Linear Dynamics Insight:**
-
-The double pendulum is the classic archetype of a deterministic, non-integrable Hamiltonian dynamical system. While its governing equations (derived from the Euler-Lagrange equations) are completely deterministic without any randomness, its trajectory exhibits **extreme sensitivity to initial conditions**:
-
-$$\\Delta x(t) \\approx \\Delta x_0 e^{\\lambda t}$$
-
-where $\\lambda > 0$ is the **positive Lyapunov exponent**. Two double pendula starting with initial angles differing by only $0.0001^\\circ$ will diverge entirely within a few swings! The glowing rainbow trail in our simulator visually maps this deterministic chaos in real time.`;
-  }
-
-  return `### Classical Mechanics Guidance
-**Dr. Kwame's Synthesis:**
-
-Regarding: **"${query}"**
-
-In our current laboratory configuration:
-- Mode: **${mode.toUpperCase()}**
-- String Length: **${L.toFixed(2)} m**
-- Mass: **${m.toFixed(2)} kg**
-- Gravitational Field: **${g.toFixed(2)} m/s²**
-
-All mechanical motion adheres strictly to the conservation of total mechanical energy ($E_{total} = E_k + E_p$). When damping is present ($b > 0$), mechanical energy dissipates into thermal energy at rate $\\frac{dE}{dt} = -b v^2$.
-
-Feel free to log data points or export the complete CSV file for your physics laboratory report!`;
 }

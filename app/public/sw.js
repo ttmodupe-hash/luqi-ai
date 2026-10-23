@@ -49,7 +49,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // API: network only
-  if (url.pathname.startsWith("/api/")) return;
+  if (["/api/", "/v1/", "/auth/", "/trpc/"].some(prefix => url.pathname.startsWith(prefix)) || url.pathname === "/health") return;
 
   // Hashed assets: cache-first (immutable by design)
   if (url.pathname.startsWith("/assets/")) {

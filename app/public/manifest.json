@@ -1,12 +1,12 @@
 {
-  "name": "Luqi-AI",
+  "name": "LUQI AI \u2014 Your everyday workspace",
   "short_name": "Luqi-AI",
-  "description": "Intelligent assistant with 48 capability modules — research, invest, tax, wisdom, and more.",
+  "description": "Account-owned notes and interactive physics tools. AI chat is not enabled.",
   "version": "3.6.0",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#111e19",
+  "theme_color": "#111e19",
   "orientation": "any",
   "scope": "/",
   "icons": [
@@ -22,7 +22,10 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "lang": "en",
   "dir": "ltr",
   "screenshots": [
