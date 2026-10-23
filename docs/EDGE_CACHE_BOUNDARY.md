@@ -30,20 +30,51 @@ they do not emulate every Cloudflare runtime or dashboard rule.
 
 ## Deployment gate
 
-Cloudflare Workers Builds reports failure on main `54ceed32` and the preceding
-`77545885`; GitHub exposes no error text. The dashboard build page requires a
-separate Cloudflare sign-in. Automated sign-in was rejected by approval review
-pending explicit authorization for that account. The cause remains unknown.
+Authenticated API inspection on 2026-10-23 established the failure, replacing
+previous speculation based on GitHub's empty annotations. Build
+`8cefaaca-276b-447f-b22c-54f4a97269eb` starts at `/`, automatically installs the
+root Python dependencies and fails before the build command:
+`Error: pg_config executable not found` while building `psycopg2-binary`.
+The configured commands were `bun run build` followed by Wrangler. The
+Railway Node/Python application is not the edge Worker's build target.
 
-Before changing Cloudflare deployment configuration, inspect its build log,
-entrypoint/build command, compatibility date, production routes/custom domains,
-origin mapping and cache rules. Do not introduce a guessed Wrangler config or
-enable another service just to clear the check. This legacy same-URL forwarding
-handler assumes a Worker route with an existing origin; it does not configure a
-workers.dev or custom-domain origin. Review and purge any affected old cache
-entries through the account's normal cache controls if deployment evidence
-shows the previous handler was serving traffic. Repository changes alone do
-not purge existing caches or verify the live Cloudflare boundary.
+The edge Worker now has its own `package.json`, npm lockfile and Wrangler
+configuration. Wrangler 4.152.0 is pinned; the compatibility date preserves
+the existing 2026-10-22 setting. Local `npm run validate` checks syntax and
+bundles with `wrangler deploy --dry-run`; it does not publish a preview or
+contact an AI provider. Dependency CI also audits this complete tooling tree.
+
+Cloudflare build settings for this repository should be:
+
+| Setting | Production | Pull-request validation |
+|---|---|---|
+| Root directory | `/edge` | `/edge` |
+| Build command | `npm ci --include=dev && npm run check` | same |
+| Deploy command | `npm run deploy` | `npm run validate` |
+| `SKIP_DEPENDENCY_INSTALL` | `true` | `true` |
+| `WRANGLER_SEND_METRICS` | `false` | `false` |
+
+Skipping automatic dependency installation prevents the root Python install;
+the explicit npm command installs only edge tooling from its lockfile. Preview
+checks intentionally validate the bundle without publishing an unreviewed
+branch. Production deploys preserve dashboard variables with `--keep-vars`.
+
+Before changing public routing, verify origin mapping and cache rules. API
+inspection found no custom Worker domains, no matching zone route, and
+workers.dev plus preview URLs disabled. The sole zone `luqi-ai.com` is pending.
+The committed configuration preserves that routing state and adds no AI,
+storage or other service binding. No DNS/nameserver change, public edge
+activation or cache purge is included. A successful private Worker deployment
+is not proof that this handler serves public production traffic.
+
+This same-URL forwarding handler requires a Worker route with an existing
+origin. Review and purge affected old cache entries only if deployment
+inspection establishes that the previous handler served traffic. No such
+exposure has been established. Repository changes cannot purge old caches.
+
+References checked on 2026-10-23:
+- [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)
+- [Workers build image and dependency installation](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/)
 
 ## Verified Railway release
 
@@ -54,3 +85,10 @@ MySQL connected, AI pilot disabled, 10 legacy/export denials, 8 tRPC checks,
 five oversized auth alias rejections and authenticated Omega boundaries.
 All private/status responses checked were uncacheable. These tests created no
 production accounts or data. Positive owned-account export acceptance remains.
+
+PR #183 subsequently merged as `fa7c37e730b703e872df26d3d0ae96d2b6c6ade5`.
+Railway deployment `8fad0fe7-a412-4b1f-8f39-7e602aa8117e` reached SUCCESS
+at 08:43:29 UTC on 2026-10-23. Startup verified/created 38 tables; public
+checks verified the new sign-in retry UI, MySQL connectivity, synthetic invalid
+login denials and the existing private/legacy/provider boundaries. No positive
+production-account acceptance or production-derived restore is claimed.
