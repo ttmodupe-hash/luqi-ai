@@ -60,4 +60,7 @@ backup; the user controls the downloaded file after it leaves the app.
 No migration, production data write, new infrastructure, provider activation or
 billing change is needed. Prefer a forward fix or preserve the closure guards
 when rolling back; the preceding release exposes the additional legacy aliases.
-See MYSQL_BACKUP_RECOVERY.md for the separate backup access/verification blocker.
+After separate user approval, daily MySQL volume backups (6-day retention) and
+an initial 941 MB snapshot were created through Railway. See
+MYSQL_BACKUP_RECOVERY.md for verified metadata, costs and the remaining isolated
+restore drill; AI/provider activation remains disabled.

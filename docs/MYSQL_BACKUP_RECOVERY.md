@@ -120,22 +120,43 @@ Production scope: project `kind-spontaneity`
 This volume ID is not a volume-instance ID.
 
 The connected Railway tools expose service/volume status but no backup-list or
-schedule-list operation. No local CLI credentials or Railway token are available;
-the read-only dashboard fallback presents sign-in. Therefore backup existence,
-last successful creation, expiration, retention schedule and restore readiness
-are **unknown**, not verified absent and not verified configured. No backup,
-restore, volume, service, credential or billing setting was changed.
+schedule-list operation. The user completed dashboard sign-in, allowing a
+read-only check against this exact production service. Before the approved
+change, the dashboard showed no volume backups, no schedule and PITR off.
 
-Railway's [volume API documentation](https://docs.railway.com/integrations/api/manage-volumes)
+After the user's separate backup approval on 2026-10-23:
+
+- Enabled **Daily** volume backups: every 24 hours, retained for **6 days**.
+  Weekly and monthly schedules remain off. The dashboard confirmed the next
+  backup in 13 hours at verification time.
+- Created the initial on-demand backup. At approximately 07:19 UTC the dashboard
+  listed the backup labelled `2026-10-23 09:18` (dashboard local time), **941 MB**,
+  with a Restore action. This establishes backup availability, not a tested restore.
+- MySQL remained online; no production restore, image change, service
+  redeployment, volume replacement or data mutation was performed.
+- PITR remains off. Railway requires the current `mysql:8` image to be pinned to
+  the running major.minor before enabling PITR; do not guess that version or
+  change the database image as part of this snapshot approval.
+- The approval covers database backups only. Paid AI/provider activation and
+  application billing remain disabled.
+
+[Railway backup documentation](https://docs.railway.com/volumes/backups) says
+only incremental backup-exclusive data is billed, at the volume-storage rate.
+The [published price](https://docs.railway.com/pricing/plans) checked on this date
+is **$0.15 per GB-month**. Displayed snapshot size is not a forecast of total
+incremental billing. Monitor actual storage consumption; no fixed-cost guarantee
+or new plan was established by this change. The manual backup's expiration was
+not exposed in the inspected view; review retention separately without deleting
+it before a newer verified recovery point exists.
+
+The [volume API documentation](https://docs.railway.com/integrations/api/manage-volumes)
 provides read-only `volumeInstanceBackupList` and
-`volumeInstanceBackupScheduleList` queries. Once authenticated access is available,
-verify the volume-instance identity against the exact service/environment above,
-then record backup creation/expiry metadata and the schedule's cron/retention.
-Never put credentials or database contents into this evidence.
+`volumeInstanceBackupScheduleList` queries when suitable API access exists.
+Never put credentials or database contents into recovery evidence.
 
-The [backup documentation](https://docs.railway.com/volumes/backups) states that
-snapshots incur incremental storage charges and that restore stages a replacement
-volume and service redeployment within the same project/environment. Inspecting
-metadata does not authorize paid activation or applying a production restore.
-An isolated logical restore with approved access/cost remains the next recovery
-proof; the existing disposable CI fixture is not a substitute.
+Restoring a Railway snapshot stages a replacement volume and service deployment
+within the same project/environment. Do not use the production Restore button
+for a drill. A production-derived, isolated logical restore with approved access
+and cost remains the next recovery proof; the existing disposable CI fixture is
+not a substitute. Daily backups also leave a potential interval of up to about
+24 hours between scheduled recovery points; this is not point-in-time recovery.
