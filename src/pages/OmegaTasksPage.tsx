@@ -1,0 +1,539 @@
+import { useEffect, useRef, useState } from "react";
+import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
+import { ConversationError, signIn } from "../lib/private-conversations";
+import {
+  omegaClient,
+  OmegaError,
+  taskLabels,
+  taskTitle,
+  type OmegaStatus,
+  type OmegaTask,
+} from "../lib/omega-tasks";
+import "../omega-tasks.css";
+
+function TaskResult({ task }: { task: OmegaTask }) {
+  if (task.state !== "completed" || !task.result)
+    return <p>No completed result is available for this task.</p>;
+  return (
+    <div className="omega-result">
+      {task.handler === "travel.budget" ? (
+        <>
+          <p className="omega-result-number">
+            {task.result.currency} {task.result.total}
+          </p>
+          <p>Total of the supplied amounts</p>
+        </>
+      ) : (
+        <>
+          <p className="omega-result-number">
+            {task.result.needsService
+              ? "Service is due"
+              : "Service is not yet due"}
+          </p>
+          <dl>
+            <dt>
+              {task.result.kmRemaining < 0
+                ? "Distance overdue"
+                : "Distance remaining"}
+            </dt>
+            <dd>{Math.abs(task.result.kmRemaining).toLocaleString()} km</dd>
+            <dt>Service due date</dt>
+            <dd>{task.result.serviceDueDate}</dd>
+            <dt>Distance threshold reached</dt>
+            <dd>{task.result.overdueByKm ? "Yes" : "No"}</dd>
+            <dt>Date threshold reached</dt>
+            <dd>{task.result.overdueByDate ? "Yes" : "No"}</dd>
+          </dl>
+        </>
+      )}
+      <p>{task.result.notice}</p>
+    </div>
+  );
+}
+const formatTime = (value: string) => new Date(value).toLocaleString();
+
+export default function OmegaTasksPage() {
+  const [session, setSession] = useState<Awaited<
+    ReturnType<typeof signIn>
+  > | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<OmegaStatus | null>(null);
+  const [tasks, setTasks] = useState<OmegaTask[]>([]);
+  const [selected, setSelected] = useState<OmegaTask | null>(null);
+  const [more, setMore] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
+  const epoch = useRef(0),
+    locked = useRef(false);
+  const detailHeading = useRef<HTMLHeadingElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (selected) detailHeading.current?.focus();
+  }, [selected]);
+  useEffect(
+    () => () => {
+      epoch.current++;
+    },
+    [],
+  );
+
+  function clearSession() {
+    epoch.current++;
+    locked.current = false;
+    setSession(null);
+    setEmail("");
+    setPassword("");
+    setStatus(null);
+    setTasks([]);
+    setSelected(null);
+    setMore(false);
+    setBusy(false);
+    setConfirm(false);
+    setUncertain(false);
+    setNotice("");
+  }
+  async function run(
+    action: (current: () => boolean) => Promise<void>,
+    cancellation = false,
+  ) {
+    if (locked.current) return;
+    locked.current = true;
+    setBusy(true);
+    setNotice("");
+    const version = epoch.current,
+      current = () => epoch.current === version;
+    try {
+      await action(current);
+    } catch (error) {
+      if (!current()) return;
+      if (
+        (error instanceof OmegaError || error instanceof ConversationError) &&
+        error.status === 401
+      ) {
+        clearSession();
+        setNotice(
+          "Sign-in failed or your session expired. Please sign in again.",
+        );
+      } else if (cancellation) {
+        setSelected(null);
+        setConfirm(false);
+        setUncertain(true);
+        setNotice(
+          "Cancellation could not be confirmed. Refresh tasks before taking another action. No automatic retry was made.",
+        );
+      } else {
+        setNotice(
+          error instanceof OmegaError && error.status === 404
+            ? "This task is no longer available to this account. Refresh tasks."
+            : "Unable to verify task information. Please try again. No task outcome has been confirmed.",
+        );
+      }
+    } finally {
+      if (current()) {
+        locked.current = false;
+        setBusy(false);
+        setPassword("");
+      }
+    }
+  }
+  async function refresh(token: string, current: () => boolean) {
+    setStatus(null);
+    setTasks([]);
+    setSelected(null);
+    setMore(false);
+    setConfirm(false);
+    const api = omegaClient(token),
+      fresh = await api.status();
+    if (!current()) return;
+    setStatus(fresh);
+    if (fresh.intake === "disabled") {
+      setUncertain(false);
+      return;
+    }
+    const result = await api.list();
+    if (!current()) return;
+    setTasks(result.tasks);
+    setMore(result.tasks.length === 20);
+    setUncertain(false);
+    setNotice(
+      "Task information refreshed. Status changes appear when you refresh.",
+    );
+  }
+  function openTask(id: string) {
+    if (!session) return;
+    setSelected(null);
+    setConfirm(false);
+    void run(async (current) => {
+      const result = await omegaClient(session.token).get(id);
+      if (current()) {
+        setSelected(result.task);
+        setTasks((previous) =>
+          previous.map((task) => (task.id === id ? result.task : task)),
+        );
+      }
+    });
+  }
+
+  return (
+    <main className="omega-page">
+      <header className="omega-heading">
+        <p className="luqi-eyebrow">
+          <Layers3 size={16} aria-hidden="true" /> YOUR OMEGA WORKSPACE
+        </p>
+        <h1>Tasks, with a clear record.</h1>
+        <p>Review your saved calculations, their status and their results.</p>
+        <p className="omega-muted">
+          This dashboard does not start workers or generate AI responses.
+        </p>
+      </header>
+      {notice && (
+        <p role="status" className="omega-notice">
+          {notice}
+        </p>
+      )}
+      {!session ? (
+        <div className="omega-entry">
+          <form
+            className="omega-panel omega-signin"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(async (current) => {
+                const account = await signIn(email, password);
+                if (!current()) return;
+                setPassword("");
+                setSession(account);
+                await refresh(account.token, current);
+              });
+            }}
+          >
+            <LockKeyhole size={24} aria-hidden="true" />
+            <h2>Sign in to your task history</h2>
+            <p>Use your existing LUQI account.</p>
+            <label>
+              Email
+              <input
+                type="email"
+                autoComplete="username"
+                maxLength={254}
+                required
+                disabled={busy}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+            <label>
+              Password
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                disabled={busy}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+            <button className="luqi-primary" disabled={busy}>
+              {busy ? "Signing in…" : "Sign in"}
+            </button>
+            <p className="omega-muted">
+              Your session stays in memory until you leave or reload this page.
+              Account recovery requires your LUQI administrator.
+            </p>
+          </form>
+          <section
+            className="omega-explainer"
+            aria-label="Available calculation types"
+          >
+            <p className="luqi-eyebrow">TWO FOCUSED CALCULATIONS</p>
+            <h2>
+              Useful numbers.
+              <br />
+              Visible progress.
+            </h2>
+            <h3>Travel budget</h3>
+            <p>
+              Add supplied amounts in a single currency. No live prices or
+              exchange rates.
+            </p>
+            <h3>Vehicle service schedule</h3>
+            <p>
+              Review dates and distance against your supplied service intervals.
+              Follow manufacturer instructions and a mechanic’s advice.
+            </p>
+            <p className="omega-muted">
+              Availability is checked after sign-in. Autonomous agents and the
+              other Omega modules are still in development.
+            </p>
+          </section>
+        </div>
+      ) : (
+        <>
+          <div className="omega-toolbar">
+            <span>{session.user.email}</span>
+            <button className="luqi-secondary" onClick={clearSession}>
+              Sign out
+            </button>
+            <button
+              className="luqi-secondary"
+              disabled={busy}
+              onClick={() =>
+                void run((current) => refresh(session.token, current))
+              }
+            >
+              <RefreshCw size={16} aria-hidden="true" /> Refresh tasks
+            </button>
+          </div>
+          <section
+            className="omega-availability omega-panel"
+            aria-label="Task availability"
+            aria-busy={busy}
+          >
+            <span className="omega-badge">
+              {!status
+                ? "Not verified"
+                : status.intake === "disabled"
+                  ? "Intake disabled"
+                  : "Intake configured"}
+            </span>
+            <h2>
+              {!status
+                ? busy
+                  ? "Checking task availability"
+                  : "Task availability is not verified"
+                : status.intake === "disabled"
+                  ? "Tasks are not enabled yet"
+                  : "Worker activity is not verified"}
+            </h2>
+            <p>
+              {!status
+                ? "Use Refresh tasks to check again if the request fails."
+                : status.intake === "disabled"
+                  ? "Task history and new submissions are unavailable while intake is disabled. No worker execution is enabled by this page."
+                  : "Saved tasks require an operator to run a worker. A queued task is not a promise of execution. There is no automatic refresh."}
+            </p>
+          </section>
+          {status?.intake === "configured" && (
+            <div className="omega-workbench">
+              <section
+                className="omega-panel"
+                aria-label="Saved tasks"
+                aria-busy={busy}
+              >
+                <h2>Saved tasks</h2>
+                <p className="omega-muted">
+                  Ordered by task reference, not creation time. Only your
+                  account’s tasks are shown.
+                </p>
+                {!tasks.length && (
+                  <p>
+                    {busy
+                      ? "Loading tasks…"
+                      : notice.startsWith("Unable")
+                        ? "Task history could not be loaded."
+                        : "No saved tasks to show."}
+                  </p>
+                )}
+                <ul className="omega-task-list">
+                  {tasks.map((task) => (
+                    <li key={task.id}>
+                      <button
+                        disabled={busy || uncertain}
+                        aria-pressed={selected?.id === task.id}
+                        onClick={() => openTask(task.id)}
+                      >
+                        <span>{taskTitle(task)}</span>
+                        <span className="omega-badge">
+                          {taskLabels[task.state]}
+                        </span>
+                        <small>{formatTime(task.createdAt)}</small>
+                        <small className="omega-reference">{task.id}</small>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {more && (
+                  <button
+                    className="luqi-secondary"
+                    disabled={busy || uncertain}
+                    onClick={() =>
+                      void run(async (current) => {
+                        const result = await omegaClient(session.token).list(
+                          tasks.at(-1)?.id,
+                        );
+                        if (!current()) return;
+                        setTasks((previous) => [
+                          ...previous,
+                          ...result.tasks.filter(
+                            (task) =>
+                              !previous.some((saved) => saved.id === task.id),
+                          ),
+                        ]);
+                        setMore(result.tasks.length === 20);
+                      })
+                    }
+                  >
+                    More tasks
+                  </button>
+                )}
+              </section>
+              <section
+                className="omega-panel omega-detail"
+                aria-label="Task details"
+                aria-busy={busy}
+              >
+                {!selected ? (
+                  <>
+                    <h2>A closer look</h2>
+                    <p>
+                      Select a task to see its latest stored status and result.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <span className="omega-badge">
+                      {taskLabels[selected.state]}
+                    </span>
+                    <h2 ref={detailHeading} tabIndex={-1}>
+                      {taskTitle(selected)}
+                    </h2>
+                    <p className="omega-reference">{selected.id}</p>
+                    <dl>
+                      <dt>Created</dt>
+                      <dd>{formatTime(selected.createdAt)}</dd>
+                      <dt>Last saved update</dt>
+                      <dd>{formatTime(selected.updatedAt)}</dd>
+                      <dt>Attempts</dt>
+                      <dd>
+                        {selected.attempts} of {selected.maxAttempts}
+                      </dd>
+                    </dl>
+                    <h3>Saved result</h3>
+                    <TaskResult task={selected} />
+                    {selected.nextRunAt && (
+                      <p>
+                        Eligible to retry after {formatTime(selected.nextRunAt)}
+                        . Execution still requires an operator.
+                      </p>
+                    )}
+                    {selected.error && (
+                      <p>
+                        A worker attempt did not finish successfully. No
+                        successful result is confirmed here.
+                      </p>
+                    )}
+                    <details>
+                      <summary>Supplied inputs</summary>
+                      {selected.handler === "travel.budget" ? (
+                        <p>
+                          {selected.payload.currency}:{" "}
+                          {selected.payload.amounts.join(" + ")}
+                        </p>
+                      ) : (
+                        <dl>
+                          <dt>Current distance</dt>
+                          <dd>{selected.payload.odometerKm} km</dd>
+                          <dt>Last service distance</dt>
+                          <dd>{selected.payload.lastServiceKm} km</dd>
+                          <dt>Last service date</dt>
+                          <dd>{selected.payload.lastServiceDate}</dd>
+                          <dt>Assessment date</dt>
+                          <dd>{selected.payload.today}</dd>
+                          <dt>Service interval</dt>
+                          <dd>
+                            {selected.payload.intervalKm} km or{" "}
+                            {selected.payload.intervalDays} days
+                          </dd>
+                        </dl>
+                      )}
+                    </details>
+                    <button
+                      className="luqi-secondary"
+                      disabled={busy}
+                      onClick={() => openTask(selected.id)}
+                    >
+                      Refresh selected task
+                    </button>
+                    {["pending", "retry_wait"].includes(selected.state) &&
+                      !confirm && (
+                        <button
+                          ref={cancelButton}
+                          className="luqi-secondary"
+                          disabled={busy || uncertain}
+                          onClick={() => setConfirm(true)}
+                        >
+                          Cancel task
+                        </button>
+                      )}
+                    {selected.state === "running" && (
+                      <p>
+                        A running task cannot be cancelled from this dashboard.
+                      </p>
+                    )}
+                    {confirm && (
+                      <section
+                        className="omega-confirm"
+                        aria-label="Confirm task cancellation"
+                      >
+                        <h3>Cancel this queued task?</h3>
+                        <p>
+                          The saved record will remain. Cancellation may fail if
+                          a worker has already claimed it.
+                        </p>
+                        <button
+                          autoFocus
+                          className="luqi-secondary"
+                          disabled={busy}
+                          onClick={() => {
+                            setConfirm(false);
+                            requestAnimationFrame(() =>
+                              cancelButton.current?.focus(),
+                            );
+                          }}
+                        >
+                          Keep task
+                        </button>
+                        <button
+                          className="luqi-primary"
+                          disabled={busy || uncertain}
+                          onClick={() => {
+                            const id = selected.id;
+                            void run(async (current) => {
+                              const result = await omegaClient(
+                                session.token,
+                              ).cancel(id);
+                              if (!current()) return;
+                              setSelected(result.task);
+                              setTasks((previous) =>
+                                previous.map((task) =>
+                                  task.id === id ? result.task : task,
+                                ),
+                              );
+                              setConfirm(false);
+                              setNotice(
+                                "Task cancellation confirmed. The saved record has been retained.",
+                              );
+                            }, true);
+                          }}
+                        >
+                          Confirm cancellation
+                        </button>
+                      </section>
+                    )}
+                  </>
+                )}
+              </section>
+            </div>
+          )}
+          <p className="omega-muted omega-privacy">
+            Signing out clears this page; it does not delete saved tasks.
+            Storage administrators can access task records. Task deletion and
+            submission forms are not available in this dashboard.
+          </p>
+        </>
+      )}
+    </main>
+  );
+}

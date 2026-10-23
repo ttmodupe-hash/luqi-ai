@@ -8,6 +8,7 @@ import "../workspace.css";
 const navigation = [
   ["/", "Workspace"],
   ["/companion", "Private notes"],
+  ["/omega-tasks", "Omega tasks"],
   ["/pendulum-lab", "Physics lab"],
   ["/pricing", "Plans"],
 ] as const;

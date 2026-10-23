@@ -3,8 +3,8 @@
 The Node API and Python worker now share the versioned MySQL task store. This
 adds a tested integration path, not an activated production agent service.
 Both intake and worker execution default to disabled. No migration, new service,
-provider request, billing activation, background loop or frontend task dashboard
-is introduced automatically.
+provider request, billing activation or background loop is introduced automatically.
+The task dashboard is documented in [OMEGA_TASK_DASHBOARD.md](OMEGA_TASK_DASHBOARD.md).
 
 ## Supported calculations
 

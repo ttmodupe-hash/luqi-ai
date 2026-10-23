@@ -56,13 +56,13 @@ export const workspaceTools = [
   },
   {
     id: "agents",
-    title: "Omega agents",
+    title: "Omega tasks",
     category: "Reliable help, carefully built",
     description:
-      "Six adapters are being developed. Autonomous execution and self-improvement are not enabled in this workspace.",
-    status: "In development",
-    ready: false,
-    path: null,
+      "Review saved task status and calculation results after signing in. Intake may be disabled; worker activity is not verified by this dashboard.",
+    status: "Dashboard · sign-in required",
+    ready: true,
+    path: "/omega-tasks",
     icon: "agents",
   },
 ] as const;

@@ -10,6 +10,8 @@ describe.each(["public/service-worker.js", "app/public/sw.js"])(
       "/v1/health",
       "/health",
       "/api/v1/companion/conversations",
+      "/api/v1/omega/tasks",
+      "/api/v1/omega/tasks/status",
     ])("does not intercept or cache %s", (path) => {
       const listeners: Record<string, (event: unknown) => void> = {};
       const fetch = vi.fn(),
