@@ -258,3 +258,11 @@ export async function closeDb() {
     }
   }
 }
+
+/** Raw transaction access for the versioned Python/Node Omega queue contract.
+ * Never falls back to the demo store, creates tables or exposes credentials.
+ */
+export function getPersistentMySqlPool(): mysql.Pool {
+  if (!pool || dbConfigurationError) throw new Error("Persistent MySQL required");
+  return pool;
+}

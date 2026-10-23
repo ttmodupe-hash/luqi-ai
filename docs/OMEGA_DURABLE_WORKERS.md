@@ -2,7 +2,9 @@
 
 `omega_ai.mysql_workflow.MySQLWorkflowEngine` is an opt-in Python library for
 MySQL 8.4/InnoDB. The Node web service does not import it, apply its migration or
-start workers. This change does not establish live authenticated Omega access.
+start workers. An opt-in [authenticated queue bridge](OMEGA_WEB_BRIDGE.md) now
+shares its storage contract for two bounded calculations; production activation
+and user-facing task controls remain outstanding.
 Provider activation and billing stay disabled.
 
 ## Storage and claims
@@ -69,7 +71,9 @@ Never mark a handler read-only simply to bypass approval or allow retries.
 - Supply `authorizer(actor, action)` tied to a verified request/session or a
   separately reviewed delegated worker identity. Every public task operation
   defaults to deny. A string or hardcoded account allowlist is not authentication.
-  Delegated worker RBAC and authenticated web endpoints are still outstanding.
+  The web bridge implements active-account authentication and a narrow delegated
+  worker policy for its two handlers. General operator RBAC and other domain
+  APIs remain outstanding.
 - Register trusted handlers with `side_effects=...` and a stable `version=...`.
   Workers must match the stored version and effects classification. Version
   changes require a new registration name or an explicitly reviewed migration;
