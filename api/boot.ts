@@ -12,6 +12,7 @@ import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
+import { omegaTasks } from "./omega-tasks";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
 import { createContext } from "./context";
@@ -117,6 +118,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/api/v1/companion/conversations", privateConversations);
+app.route("/api/v1/omega/tasks", omegaTasks);
 
 // ── tRPC ───────────────────────────────────────────────────────────
 app.use("/api/trpc/*", async (c) => {

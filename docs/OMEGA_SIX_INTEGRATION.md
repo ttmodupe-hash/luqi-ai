@@ -1,12 +1,14 @@
 # Omega Six — integrated offline domain cores
 
 These six Python modules are available as importable, deterministic domain
-adapters. They are **not** yet user-facing LUQI web features, connected data
-feeds, or continuously running agents. This avoids fabricated live outputs.
+adapters. An opt-in [authenticated queue bridge](OMEGA_WEB_BRIDGE.md) now covers
+travel arithmetic and vehicle service scheduling, with a one-task Python worker.
+Production intake/workers remain disabled. These are **not** live data feeds or
+continuously running agents. This avoids fabricated live outputs.
 
 | Module | Actual capability | Must still be integrated |
 |---|---|---|
-| `omega_ai.workflow_engine` | Owner-scoped tasks and idempotency, fail-closed host authorization, atomic in-process claims plus an opt-in MySQL engine with durable claims, leases and crash recovery, explicit handler context, human approval and reconciliation states | Production persistence rollout, authenticated web/worker integration, operator RBAC, monitoring and an authorized reconciliation workflow |
+| `omega_ai.workflow_engine` | Owner-scoped tasks and idempotency, fail-closed host authorization, opt-in MySQL claims/leases/recovery, and an authenticated Node/Python queue bridge for two bounded calculations | Production persistence/worker rollout, remaining domain integration, operator RBAC, monitoring and an authorized reconciliation workflow |
 | `omega_ai.weather_africa` | Validate time-stamped injected weather readings and derive screening flags | Authoritative African weather-service feeds and verified alerts |
 | `omega_ai.travel_africa` | Ordered travel dates, money budgeting with explicit FX rates, sourced and age-checked visa evidence | Official visas/entry rules, live FX and routing sources |
 | `omega_ai.university_guide` | Search verified-timestamp programme records; identify **potential** scholarships | Verified university records, deadlines, accreditation, eligibility confirmation |

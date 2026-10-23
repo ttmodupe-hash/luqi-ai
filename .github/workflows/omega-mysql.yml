@@ -8,6 +8,16 @@ on:
       - "tests/test_omega_*.py"
       - "tests/conftest.py"
       - "requirements.txt"
+      - "api/omega-tasks.ts"
+      - "api/services/omegaTask*.ts"
+      - "api/services/pilotAuth.ts"
+      - "api/lib/userToken.ts"
+      - "api/queries/connection.ts"
+      - "api/boot.ts"
+      - "tests/omega-*.test.ts"
+      - "tests/fixtures/omega-web-contracts.json"
+      - "package.json"
+      - "package-lock.json"
       - "db/migrations/20261023_omega_tasks.sql"
       - ".github/workflows/omega-mysql.yml"
   workflow_dispatch:
@@ -38,8 +48,14 @@ jobs:
       LUQI_OMEGA_MYSQL_CI_FIXTURE: "true"
       LUQI_AI_PROVIDER_ENABLED: "false"
       LUQI_AI_BILLING_APPROVED: "false"
+      DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_omega_ci"
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -49,4 +65,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install "PyMySQL[rsa]==1.2.3" pytest
       - name: Test real MySQL migrations, independent processes and crash recovery
-        run: python -m pytest -o addopts='' -v tests/test_omega_mysql_contract.py tests/test_omega_mysql_integration.py
+        run: python -m pytest -o addopts='' -v tests/test_omega_mysql_contract.py tests/test_omega_mysql_integration.py tests/test_omega_web_worker.py
+      - name: Install Node bridge dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Test signed accounts, durable quota and Node to Python round trips
+        run: npx vitest run tests/omega-tasks.test.ts tests/omega-web-mysql.integration.test.ts --no-file-parallelism
