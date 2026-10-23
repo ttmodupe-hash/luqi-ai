@@ -15,6 +15,8 @@ on:
       - "tests/auth-throttle-mysql.integration.test.ts"
       - "api/lib/passwordPolicy.ts"
       - "scripts/reset-account-password.ts"
+      - "scripts/prepare-mysql-schema.ts"
+      - "tests/mysql-runtime-role.integration.test.ts"
       - "api/rest-compat.ts"
       - "api/private-conversations.ts"
       - "api/offline.ts"
@@ -115,3 +117,39 @@ jobs:
         run: npx vitest run tests/mysql-backup-fixture.integration.test.ts
       - name: Export and restore real MySQL dump to isolated target
         run: bash scripts/ci-mysql-restore.sh
+
+  test-restricted-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: "true"
+      DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci"
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: "false"
+      LUQI_AI_BILLING_APPROVED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      # Avoid the optional npm cache: storage egress failures stalled setup
+      # for 10 minutes. npm ci installs from the committed lockfile below.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Build actual production web and operator bundles
+        run: npm run build
+      - name: Verify restricted MySQL role, restart persistence and pre-listener schema refusal
+        run: npx vitest run tests/mysql-runtime-role.integration.test.ts --no-file-parallelism

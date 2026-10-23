@@ -1,11 +1,12 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
 // Creates application tables and dedicated guard ledgers when absent.
-// Idempotent (IF NOT EXISTS), without seeding accounts. Production startup
-// fails if required schema creation is unavailable.
+// Explicit operator/CI operation only; never run by the web runtime.
+// Idempotent CREATE IF NOT EXISTS, without seeds or existing-table ALTERs.
 // =====================================================================
 
 import mysql from "mysql2/promise";
+import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 
 export const CREATE_STATEMENTS: string[] = [
   `CREATE TABLE IF NOT EXISTS auth_attempt_windows (
@@ -486,41 +487,17 @@ export const CREATE_STATEMENTS: string[] = [
   ) ENGINE=InnoDB;`,
 ];
 
-function resolveConnectionConfig(): mysql.ConnectionOptions | null {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl) {
-    return { uri: databaseUrl };
-  }
-
-  const host = process.env.DB_HOST;
-  if (!host) {
-    return null;
-  }
-
-  return {
-    host,
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "luqi_ai",
-    port: parseInt(process.env.DB_PORT || "3306", 10),
-  };
-}
-
-export async function bootstrapDatabase(): Promise<void> {
-  const config = resolveConnectionConfig();
-
-  if (!config) {
-    console.log("[Bootstrap] No database configuration found (DATABASE_URL or DB_HOST) — skipping table creation");
-    return;
-  }
-
+export async function bootstrapDatabase(environment: Record<string, string | undefined> = process.env): Promise<void> {
   let connection: mysql.Connection | null = null;
-
+  let deadline: ReturnType<typeof setTimeout> | undefined;
   try {
-    connection = await mysql.createConnection(config);
-
+    const config = parseMySqlConnectionSettings(environment);
+    if (!config) throw new Error('DATABASE_REQUIRED');
+    connection = await mysql.createConnection({ ...config, connectTimeout: 4_000 });
+    const activeConnection = connection;
+    deadline = setTimeout(() => activeConnection.destroy(), 120_000);
     for (const statement of CREATE_STATEMENTS) {
-      await connection.execute(statement);
+      await connection.query({ sql: statement, timeout: 10_000 });
     }
 
     console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
@@ -528,16 +505,10 @@ export async function bootstrapDatabase(): Promise<void> {
     // SECURITY: Never auto-create a demo login or any account with a
     // public fixed password. Every real account must go through signup.
 
-  } catch (error) {
-    console.error("[Bootstrap] Database schema initialization failed; check connection and migration.");
-    if (process.env.NODE_ENV === "production") throw new Error("PRODUCTION_DATABASE_BOOTSTRAP_FAILED");
+  } catch {
+    throw new Error("MYSQL_SCHEMA_APPLY_FAILED");
   } finally {
-    if (connection) {
-      try {
-        await connection.end();
-      } catch {
-        // Connection cleanup failure is non-fatal
-      }
-    }
+    if (deadline) clearTimeout(deadline);
+    connection?.destroy();
   }
 }

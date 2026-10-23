@@ -26,7 +26,7 @@ describe("production MySQL schema bootstrap integrity", () => {
     expect(source).not.toContain("demo@luqi.ai");
     expect(source).not.toContain("password_hash, name, role) VALUES");
   });
-  it('keeps the additive authentication migration identical to startup DDL', async () => {
+  it('keeps the additive authentication migration identical to operator schema DDL', async () => {
     const { readFileSync } = await import('node:fs');
     const normalize = (sql: string) => sql.replace(/^--.*$/gm, '').replace(/\s+/g, ' ').trim();
     expect(normalize(readFileSync('db/migrations/20261023_auth_attempt_windows.sql', 'utf8')))

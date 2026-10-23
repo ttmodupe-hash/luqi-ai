@@ -48,7 +48,7 @@ rendered. Both frontend source trees stay identical.
 ## Migration and operations
 
 `db/migrations/20261023_auth_attempt_windows.sql` adds one table without
-rewriting accounts. The identical DDL is in startup bootstrap, making 38 tables
+rewriting accounts. The identical DDL is in the explicit operator bootstrap, making 38 tables
 in the current Node schema. Rollback can leave this unused table intact; do not
 delete it or roll back to older unsafe payment/auth handlers merely to clear
 an auth error. Deployments should validate storage before accepting login.
