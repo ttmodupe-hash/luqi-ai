@@ -73,12 +73,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       >
         <div className="luqi-header-inner">
           <Link to="/" className="luqi-brand" aria-label="LUQI workspace home">
-            <span className="luqi-brand-symbol" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
+            <img className="luqi-brand-symbol" src="/luqi-mark.svg" alt="" aria-hidden="true" width="36" height="36" />
             <span>
               LUQI<span className="luqi-brand-ai">AI</span>
             </span>
