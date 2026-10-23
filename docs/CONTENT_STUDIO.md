@@ -26,6 +26,8 @@ memory at 100 MiB and offers a preview/download only after normal completion.
 Editing is locked during export; Escape, cancellation, leaving the page or
 hiding the tab stops/discards a partial recording. Keeping this draft requires
 an explicit download; it is not stored on LUQI or in browser local storage.
+Native container timing can differ slightly from the nominal timeline. Inspect
+the resulting media duration and normalize it for exact delivery when needed.
 Codec support and rendering performance vary; failures are reported rather than
 presented as completed videos. Review/convert an exported file as necessary for
 each platform's current encoding rules. A 9:16 layout alone is not acceptance.
@@ -67,3 +69,14 @@ Official references checked 2026-10-23:
 Platform account authorization, developer review and acceptance are still open.
 Paid video/voice services and extra infrastructure require separate budget
 approval; the existing $100 Gemini/OpenAI text ceiling is not a video budget.
+
+## First complete live export
+
+On 2026-10-23 the live studio at deployment
+`cf244169-d4ad-4d2c-820b-5485d887b5b1` completed a full native MP4 export. The
+source decoded as H.264 1280×720, 89.558767 seconds, 5,403,538 bytes and no audio.
+Native encoder timing was not silently treated as an exact 90.000-second file.
+The delivered MP4 was normalized to 24 fps/yuv420p and padded with its final
+frame to exactly 90.000000 seconds: 2,160 frames, 3,517,678 bytes, silent H.264.
+A complete decode and six-scene visual review passed. No private notes, paid
+video service, third-party asset, voice clone or social upload was used.
