@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { and, asc, count, desc, eq, lt, sql } from "drizzle-orm";
+import type { MySql2Database } from 'drizzle-orm/mysql2';
 import { companionConversations, companionMessages, companionMemories } from "../db/schema";
 import { getPersistentDb } from "./queries/connection";
 import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
@@ -20,8 +21,15 @@ const page = z.object({
 }).strict();
 class MissingConversation extends Error {}
 class ExportTooLarge extends Error {}
+class NotesExportTooLarge extends Error {}
 export const MAX_EXPORT_ROWS = 1000;
 export const MAX_EXPORT_TEXT_BYTES = 1024 * 1024;
+export const NOTES_EXPORT_LIMITS = { conversations: 500, messages: 5000, memories: 5000,
+  textBytes: 4 * 1024 * 1024, jsonBytes: 32 * 1024 * 1024 } as const;
+// Limit simultaneous archive builds per process; not a distributed quota or
+// a cap on slow response sockets. Each archive also has explicit size limits.
+let activeNotesExports = 0;
+const MAX_ACTIVE_NOTES_EXPORTS = 2;
 
 privateConversations.use('*', async (c, next) => {
   c.header('Cache-Control', 'no-store');
@@ -37,6 +45,7 @@ privateConversations.use('*', bodyLimit({ maxSize: 32 * 1024,
   onError: c => c.json({ code: 'CONVERSATION_BODY_TOO_LARGE' }, 413),
 }));
 privateConversations.onError((error, c) => {
+  if (error instanceof NotesExportTooLarge) return c.json({ code: 'PRIVATE_NOTES_EXPORT_TOO_LARGE' }, 422);
   if (error instanceof ExportTooLarge) return c.json({ code: 'CONVERSATION_EXPORT_TOO_LARGE' }, 422);
   if (error instanceof MissingConversation) return c.json({ code: 'CONVERSATION_NOT_FOUND' }, 404);
   // Raw SQL, credentials and conversation content must not escape in errors.
@@ -64,6 +73,78 @@ privateConversations.get('/', async c => {
     parsed.data.before ? lt(companionConversations.id, parsed.data.before) : undefined,
   )).orderBy(desc(companionConversations.id)).limit(parsed.data.limit);
   return c.json({ conversations: rows });
+});
+
+// Export the complete saved-notes workspace, rather than just the visible list
+// page. Authentication precedes this handler. Every query binds ownership and
+// one read-only snapshot includes counts and content without blocking writers.
+privateConversations.get('/export', async c => {
+  if (Object.keys(c.req.query()).length) return c.json({ code: 'INVALID_INPUT' }, 400);
+  if (activeNotesExports >= MAX_ACTIVE_NOTES_EXPORTS) {
+    c.header('Retry-After', '15');
+    return c.json({ code: 'PRIVATE_NOTES_EXPORT_BUSY' }, 429);
+  }
+  activeNotesExports++;
+  try {
+    const ownerId = c.get('userId');
+    const db = await getPersistentDb() as MySql2Database;
+    const serialized = await db.transaction(async tx => {
+      const [engines] = await tx.execute(sql`SELECT ENGINE AS engine FROM information_schema.tables
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN
+        ('companion_conversations', 'companion_messages', 'companion_memories')`);
+      if (!Array.isArray(engines) || engines.length !== 3 || engines.some(row =>
+          (row as { engine?: unknown }).engine !== 'InnoDB')) throw new Error('Snapshot storage unavailable');
+      const owned = eq(companionConversations.userId, ownerId);
+      const ownMemories = eq(companionMemories.userId, ownerId);
+      const [conversationSize] = await tx.select({ rows: count(),
+        bytes: sql`COALESCE(SUM(OCTET_LENGTH(${companionConversations.title})), 0)` })
+        .from(companionConversations).where(owned);
+      const [messageSize] = await tx.select({ rows: count(),
+        bytes: sql`COALESCE(SUM(OCTET_LENGTH(${companionMessages.content})), 0)` })
+        .from(companionMessages).innerJoin(companionConversations,
+          eq(companionMessages.conversationId, companionConversations.id)).where(owned);
+      const [memorySize] = await tx.select({ rows: count(),
+        bytes: sql`COALESCE(SUM(OCTET_LENGTH(${companionMemories.content})), 0)` })
+        .from(companionMemories).where(ownMemories);
+      const sizes = [conversationSize, messageSize, memorySize];
+      const limits = [NOTES_EXPORT_LIMITS.conversations, NOTES_EXPORT_LIMITS.messages, NOTES_EXPORT_LIMITS.memories];
+      if (sizes.some((s, i) => !s || !Number.isSafeInteger(Number(s.rows)) || Number(s.rows) < 0 ||
+          Number(s.rows) > limits[i] || !Number.isSafeInteger(Number(s.bytes)) || Number(s.bytes) < 0) ||
+          sizes.reduce((total, s) => total + Number(s.bytes), 0) > NOTES_EXPORT_LIMITS.textBytes) {
+        throw new NotesExportTooLarge();
+      }
+      const conversations = await tx.select({ id: companionConversations.id, title: companionConversations.title,
+        personalityId: companionConversations.personalityId, createdAt: companionConversations.createdAt })
+        .from(companionConversations).where(owned).orderBy(asc(companionConversations.id))
+        .limit(NOTES_EXPORT_LIMITS.conversations + 1);
+      const messages = await tx.select({ id: companionMessages.id, conversationId: companionMessages.conversationId,
+        role: companionMessages.role, content: companionMessages.content, createdAt: companionMessages.createdAt })
+        .from(companionMessages).innerJoin(companionConversations,
+          eq(companionMessages.conversationId, companionConversations.id)).where(owned)
+        .orderBy(asc(companionMessages.id)).limit(NOTES_EXPORT_LIMITS.messages + 1);
+      const memories = await tx.select({ id: companionMemories.id,
+        // An owned memory may have a legacy foreign/orphan association. Preserve
+        // its own content but never reveal another account's conversation ID.
+        conversationId: companionConversations.id, memoryType: companionMemories.memoryType,
+        category: companionMemories.category, content: companionMemories.content,
+        importance: companionMemories.importance, createdAt: companionMemories.createdAt })
+        .from(companionMemories).leftJoin(companionConversations, and(
+          eq(companionMemories.conversationId, companionConversations.id), owned))
+        .where(ownMemories).orderBy(asc(companionMemories.id)).limit(NOTES_EXPORT_LIMITS.memories + 1);
+      if ([conversations, messages, memories].some((rows, i) => rows.length !== Number(sizes[i].rows))) {
+        throw new Error('Incomplete notes snapshot');
+      }
+      const text = JSON.stringify({ format: 'luqi.private-notes.v1', scope: 'saved_notes_only',
+        exportedAt: new Date().toISOString(), conversations, messages, memories });
+      if (Buffer.byteLength(text, 'utf8') > NOTES_EXPORT_LIMITS.jsonBytes) throw new NotesExportTooLarge();
+      return text;
+    // The first aggregate opens the repeatable-read snapshot. The installed
+    // Drizzle version joins multiple START characteristics without a comma;
+    // READ ONLY alone is valid and avoids that unsupported combination.
+    }, { isolationLevel: 'repeatable read', accessMode: 'read only' });
+    c.header('Content-Disposition', 'attachment; filename="luqi-private-notes.json"');
+    return c.body(serialized, 200, { 'Content-Type': 'application/json; charset=utf-8' });
+  } finally { activeNotesExports--; }
 });
 
 privateConversations.get('/:id/messages', async c => {

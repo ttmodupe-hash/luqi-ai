@@ -52,6 +52,7 @@ const checks = [
     } },
   ...[
     "/api/v1/companion/conversations", "/api/v1/companion/conversations/1/export",
+    "/api/v1/companion/conversations/export",
     "/api/v1/omega/tasks", "/api/v1/omega/tasks/status",
   ].map(path => ({ name: "Anonymous account boundary " + path, path, status: 401, code: "AUTH_REQUIRED", private: true })),
   ...[
@@ -61,6 +62,8 @@ const checks = [
     ["/api/v1/zta/status", "LEGACY_APPROVALS_UNAVAILABLE"],
     ["/api/v1/jobs/denial-probe", "LEGACY_JOBS_UNAVAILABLE"],
     ["/api/ussd", "USSD_INTEGRATION_UNAVAILABLE"],
+    ["/api/science/curated-targets", "LEGACY_OPERATION_UNAVAILABLE"],
+    ["/api/science/bio-query", "LEGACY_OPERATION_UNAVAILABLE"],
   ].map(([path, code]) => ({ name: "Retired surface " + path, path, status: 503, code, private: true })),
   ...[
     ["/api/trpc/ping", 200, '"ok":true'],

@@ -183,6 +183,13 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
       const exported = await request(`${path}/export`, 'GET', undefined, owner.token);
       expect(exported.status).toBe(200);
       expect((await exported.json()).format).toBe('luqi.conversation.v1');
+      const allNotes = await request('/api/v1/companion/conversations/export', 'GET', undefined, owner.token);
+      expect(allNotes.status).toBe(200);
+      expect(await allNotes.json()).toMatchObject({ format: 'luqi.private-notes.v1', scope: 'saved_notes_only',
+        conversations: [{ id: conversation.id }], messages: [{ conversationId: conversation.id, content: 'Synthetic private message' }] });
+      const foreignNotes = await request('/api/v1/companion/conversations/export', 'GET', undefined, foreign.token);
+      expect(foreignNotes.status).toBe(200);
+      expect(await foreignNotes.json()).toMatchObject({ conversations: [], messages: [], memories: [] });
       expect((await request(path, 'DELETE', { confirm: true }, foreign.token)).status).toBe(404);
       expect((await request(path, 'DELETE', { confirm: true }, owner.token)).status).toBe(200);
       expect((await request(`${path}/messages`, 'GET', undefined, owner.token)).status).toBe(404);

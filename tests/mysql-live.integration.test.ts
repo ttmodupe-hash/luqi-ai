@@ -11,7 +11,7 @@ import { resetAccountPassword } from "../api/services/accountRecovery";
 import { LUQI_JWT_AUDIENCE, LUQI_JWT_ISSUER } from "../api/lib/userToken";
 import { createRouter } from "../api/middleware";
 import { offlineRouter, OFFLINE_MAX_STORED } from "../api/offline";
-import { privateConversations } from "../api/private-conversations";
+import { privateConversations, NOTES_EXPORT_LIMITS } from "../api/private-conversations";
 import { restCompat } from "../api/rest-compat";
 import { authenticatePilotUser } from "../api/services/pilotAuth";
 import { bootstrapDatabase, CREATE_STATEMENTS } from "../db/bootstrap";
@@ -540,6 +540,137 @@ describe.sequential('private conversation exports on real MySQL', () => {
       await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [cid]);
       await pool.execute('DELETE FROM companion_conversations WHERE id=?', [cid]);
       await pool.execute('DELETE FROM users WHERE id=?', [user.insertId]);
+    }
+  }, 30_000);
+});
+
+// Disposable CI data only: bulk export never touches production or providers.
+describe.sequential('complete saved-notes snapshots on real MySQL', () => {
+  it('includes older history and all owned memories while excluding foreign relationships, credentials and mutations', async () => {
+    const hash = await bcrypt.hash('Notes-Archive-CI-Password-2026!', 12);
+    const ownerIds: number[] = [];
+    const extraConversations: number[] = [];
+    for (const suffix of ['owner', 'foreign']) {
+      const [user] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)', [`notes-archive-${suffix}@example.invalid`, hash]);
+      ownerIds.push(user.insertId);
+    }
+    const request = (owner = ownerIds[0], path = '/export', token = signUserToken(owner, hash)) => privateConversations.request(path, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    try {
+      const empty = await request();
+      expect(empty.status).toBe(200);
+      expect(await empty.json()).toMatchObject({ conversations: [], messages: [], memories: [] });
+      await pool.query('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES ?',
+        [Array.from({ length: 61 }, (_, i) => [1, ownerIds[0], `Owned topic ${i}`])]);
+      const [owned] = await pool.query<RowDataPacket[]>('SELECT id,title FROM companion_conversations WHERE user_id=? ORDER BY id', [ownerIds[0]]);
+      for (const userId of [ownerIds[1], null]) {
+        const [row] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)', [userId, 'Unexported topic']);
+        extraConversations.push(row.insertId);
+      }
+      const messages = Array.from({ length: 65 }, (_, i) => [owned[i % owned.length].id, 'user', `Sawubona ${i} <script>plain text</script>`, '{"internal":"never-export"}']);
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content,metadata) VALUES ?', [messages]);
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content) VALUES ?',
+        [extraConversations.map(cid => [cid, 'user', 'FOREIGN_OR_UNOWNED_PAYLOAD'])]);
+      await pool.execute(`INSERT INTO companion_memories (conversation_id,user_id,content) VALUES
+        (?,?,?), (NULL,?,?), (?,?,?), (?,?,?), (?,NULL,?)`,
+        [owned[0].id, ownerIds[0], 'Owned linked memory', ownerIds[0], 'Owned unlinked memory',
+          extraConversations[0], ownerIds[0], 'Owned legacy association', owned[0].id, ownerIds[1], 'FOREIGN_MEMORY', owned[0].id, 'UNOWNED_MEMORY']);
+      const before = await singleNumber('SELECT COUNT(*) AS n FROM companion_messages');
+      const response = await request();
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="luqi-private-notes.json"');
+      const data = await response.json();
+      expect(data.format).toBe('luqi.private-notes.v1');
+      expect(data.scope).toBe('saved_notes_only');
+      expect(data.conversations.map((c: { id: number }) => c.id)).toEqual(owned.map(c => c.id));
+      expect(data.messages.map((m: { content: string }) => m.content)).toEqual(messages.map(m => m[2]));
+      expect(data.memories.map((m: { content: string }) => m.content)).toEqual(['Owned linked memory', 'Owned unlinked memory', 'Owned legacy association']);
+      expect(data.memories.map((m: { conversationId: number | null }) => m.conversationId)).toEqual([owned[0].id, null, null]);
+      expect(JSON.stringify(data)).not.toMatch(/FOREIGN_|UNOWNED_|never-export|password|token|email|userId|tokensUsed/);
+      expect(data.messages.every((m: { conversationId: number }) => owned.some(c => c.id === m.conversationId))).toBe(true);
+      expect(await singleNumber('SELECT COUNT(*) AS n FROM companion_messages')).toBe(before);
+      expect((await request(ownerIds[1])).status).toBe(200);
+      expect((await request(ownerIds[0], '/export?userId=' + ownerIds[1])).status).toBe(400);
+      await pool.execute('UPDATE users SET password_hash=? WHERE id=?', [await bcrypt.hash('Rotated-Notes-Archive-CI-Password!', 12), ownerIds[0]]);
+      expect((await request()).status).toBe(401);
+    } finally {
+      await pool.execute('DELETE FROM companion_memories WHERE user_id IN (?,?) OR conversation_id IN (SELECT id FROM companion_conversations WHERE user_id IN (?,?))', [...ownerIds, ...ownerIds]);
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id IN (SELECT id FROM companion_conversations WHERE user_id IN (?,?))', ownerIds);
+      await pool.execute('DELETE FROM companion_conversations WHERE user_id IN (?,?)', ownerIds);
+      for (const cid of extraConversations) {
+        await pool.execute('DELETE FROM companion_memories WHERE conversation_id=?', [cid]);
+        await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [cid]);
+        await pool.execute('DELETE FROM companion_conversations WHERE id=?', [cid]);
+      }
+      await pool.execute('DELETE FROM users WHERE id IN (?,?)', ownerIds);
+    }
+  }, 30_000);
+
+  it('refuses all row/text overflows without truncating or changing stored notes', async () => {
+    const hash = await bcrypt.hash('Archive-Limits-CI-Password-2026!', 12);
+    const [owner] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)', ['notes-limits@example.invalid', hash]);
+    const userId = owner.insertId;
+    const request = () => privateConversations.request('/export', { headers: { Authorization: `Bearer ${signUserToken(userId, hash)}` } });
+    const denied = async () => {
+      const response = await request();
+      expect(response.status).toBe(422);
+      expect(await response.json()).toEqual({ code: 'PRIVATE_NOTES_EXPORT_TOO_LARGE' });
+    };
+    try {
+      await pool.query('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES ?',
+        [Array.from({ length: NOTES_EXPORT_LIMITS.conversations + 1 }, () => [1, userId, 'Row limit'])]);
+      await denied();
+      expect(await singleNumber('SELECT COUNT(*) AS n FROM companion_conversations WHERE user_id=?', [userId])).toBe(NOTES_EXPORT_LIMITS.conversations + 1);
+      await pool.execute('DELETE FROM companion_conversations WHERE user_id=?', [userId]);
+      const [conv] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)', [userId, 'Content limits']);
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content) VALUES ?',
+        [Array.from({ length: NOTES_EXPORT_LIMITS.messages + 1 }, () => [conv.insertId, 'user', 'fixture'])]);
+      await denied();
+      expect(await singleNumber('SELECT COUNT(*) AS n FROM companion_messages WHERE conversation_id=?', [conv.insertId])).toBe(NOTES_EXPORT_LIMITS.messages + 1);
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [conv.insertId]);
+      await pool.query('INSERT INTO companion_memories (user_id,content) VALUES ?',
+        [Array.from({ length: NOTES_EXPORT_LIMITS.memories + 1 }, () => [userId, 'fixture'])]);
+      await denied();
+      expect(await singleNumber('SELECT COUNT(*) AS n FROM companion_memories WHERE user_id=?', [userId])).toBe(NOTES_EXPORT_LIMITS.memories + 1);
+      await pool.execute('DELETE FROM companion_memories WHERE user_id=?', [userId]);
+      // Bytes, not JavaScript characters: each UTF-8 code point uses four bytes.
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content) VALUES ?',
+        [Array.from({ length: 72 }, () => [conv.insertId, 'user', '🧠'.repeat(15000)])]);
+      await denied();
+      expect(await singleNumber('SELECT COUNT(*) AS n FROM companion_messages WHERE conversation_id=?', [conv.insertId])).toBe(72);
+    } finally {
+      await pool.execute('DELETE FROM companion_memories WHERE user_id=?', [userId]);
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id IN (SELECT id FROM companion_conversations WHERE user_id=?)', [userId]);
+      await pool.execute('DELETE FROM companion_conversations WHERE user_id=?', [userId]);
+      await pool.execute('DELETE FROM users WHERE id=?', [userId]);
+    }
+  }, 30_000);
+
+  it('reads a coherent snapshot without waiting for an uncommitted writer', async () => {
+    const hash = await bcrypt.hash('Snapshot-Writer-CI-Password-2026!', 12);
+    const [user] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)', ['notes-snapshot@example.invalid', hash]);
+    const userId = user.insertId;
+    const [conv] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)', [userId, 'Before writer']);
+    const connection = await pool.getConnection();
+    const request = () => privateConversations.request('/export', { headers: { Authorization: `Bearer ${signUserToken(userId, hash)}` } });
+    try {
+      await connection.beginTransaction();
+      await connection.execute('UPDATE companion_conversations SET title=? WHERE id=?', ['After writer', conv.insertId]);
+      await connection.execute("INSERT INTO companion_messages (conversation_id,role,content) VALUES (?,'user','After writer')", [conv.insertId]);
+      const before = await request(); // Must complete while the write is uncommitted.
+      expect(before.status).toBe(200);
+      expect(await before.json()).toMatchObject({ conversations: [{ title: 'Before writer' }], messages: [] });
+      await connection.commit();
+      const after = await request();
+      expect(after.status).toBe(200);
+      expect(await after.json()).toMatchObject({ conversations: [{ title: 'After writer' }], messages: [{ content: 'After writer' }] });
+    } finally {
+      await connection.rollback(); connection.release();
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [conv.insertId]);
+      await pool.execute('DELETE FROM companion_conversations WHERE id=?', [conv.insertId]);
+      await pool.execute('DELETE FROM users WHERE id=?', [userId]);
     }
   }, 30_000);
 });

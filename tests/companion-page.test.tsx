@@ -5,15 +5,17 @@ import { cleanup, fireEvent, render, screen, waitFor, act } from "@testing-libra
 import CompanionPage from "../src/pages/CompanionPage";
 
 const downloads = vi.hoisted(() => vi.fn());
+const allDownloads = vi.hoisted(() => vi.fn());
 vi.mock('../src/lib/private-conversations', async importOriginal => ({
   ...await importOriginal<typeof import('../src/lib/private-conversations')>(),
   downloadConversationExport: downloads,
+  downloadPrivateNotesExport: allDownloads,
 }));
 const request = vi.fn();
 const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 const list = { conversations: [{ id: 4, title: "Private notes", personalityId: 1 }] };
 const history = { messages: [{ id: 2, role: "user", content: "Previously saved", createdAt: "2026-10-22T12:00:00Z" }] };
-beforeEach(() => { downloads.mockReset(); request.mockReset(); vi.stubGlobal("fetch", request); });
+beforeEach(() => { downloads.mockReset(); allDownloads.mockReset(); request.mockReset(); vi.stubGlobal("fetch", request); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 async function login() {
   request.mockResolvedValueOnce(reply({ token: "fixture-token", user: { email: "test@example.invalid" } }))
@@ -202,5 +204,55 @@ describe('private conversation download', () => {
     await act(async () => resolve(reply(exportFixture)));
     expect(downloads).not.toHaveBeenCalled();
     expect(screen.queryByText(/Export download started/)).toBeNull();
+  });
+});
+
+const allNotesFixture = { format: 'luqi.private-notes.v1', scope: 'saved_notes_only', exportedAt: '2026-10-23T06:00:00Z',
+  conversations: [{ id: 4, title: 'Private notes', personalityId: 1, createdAt: null }],
+  messages: history.messages.map(m => ({ ...m, conversationId: 4 })), memories: [] };
+const allNotesReply = () => new Response(JSON.stringify(allNotesFixture), { headers: { 'Content-Type': 'application/json' } });
+describe('complete saved-notes archive interaction', () => {
+  it('requires an explicit action and exports even without a selected conversation', async () => {
+    await login();
+    expect(allDownloads).not.toHaveBeenCalled();
+    request.mockResolvedValueOnce(allNotesReply());
+    fireEvent.click(screen.getByRole('button', { name: 'Download all saved notes' }));
+    await screen.findByText(/All saved notes download started/);
+    expect(allDownloads).toHaveBeenCalledExactlyOnceWith(allNotesFixture);
+    expect(downloads).not.toHaveBeenCalled();
+    expect(request.mock.calls.at(-1)?.[0]).toBe('/api/v1/companion/conversations/export');
+  });
+  it('keeps unsaved drafts out of the export flow', async () => {
+    await login(); await selectConversation(); draft();
+    expect((screen.getByRole('button', { name: 'Download all saved notes' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(allDownloads).not.toHaveBeenCalled();
+  });
+  it.each([422, 429, 503])('keeps saved history and downloads nothing on HTTP %s', async status => {
+    await login(); await selectConversation();
+    request.mockResolvedValueOnce(reply({ code: 'PRIVATE_FAILURE' }, status));
+    fireEvent.click(screen.getByRole('button', { name: 'Download all saved notes' }));
+    await screen.findByText(status === 422 ? /No partial export was downloaded/ : status === 429 ? /exporter is busy/ : /All-notes export could not be completed/);
+    expect(allDownloads).not.toHaveBeenCalled();
+    expect(screen.getByText('Previously saved')).toBeTruthy();
+  });
+  it('cancels a pending archive and ignores late private data after sign-out', async () => {
+    await login();
+    let resolve!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(r => { resolve = r; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download all saved notes' }));
+    const signal = request.mock.calls.at(-1)?.[1].signal as AbortSignal;
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(signal.aborted).toBe(true);
+    await act(async () => resolve(allNotesReply()));
+    expect(allDownloads).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
+  });
+  it('clears the account view when export authentication is revoked', async () => {
+    await login(); await selectConversation();
+    request.mockResolvedValueOnce(reply({}, 401));
+    fireEvent.click(screen.getByRole('button', { name: 'Download all saved notes' }));
+    await screen.findByRole('button', { name: 'Sign in' });
+    expect(screen.queryByText('Previously saved')).toBeNull();
+    expect(allDownloads).not.toHaveBeenCalled();
   });
 });

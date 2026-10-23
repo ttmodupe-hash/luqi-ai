@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { conversationClient, ConversationError, signIn } from "../src/lib/private-conversations";
+import { conversationClient, ConversationError, signIn, MAX_NOTES_DOWNLOAD_BYTES } from "../src/lib/private-conversations";
 import { readFileSync } from "node:fs";
 import { Hono } from 'hono';
 
@@ -89,4 +89,71 @@ it('validates the exact requested conversation before exposing an export and nev
     await expect(conversationClient('token', request).export(3)).rejects.toEqual(new ConversationError(status));
   }
   expect(request).toHaveBeenCalledTimes(6);
+});
+
+const notesFixture = { format: 'luqi.private-notes.v1', scope: 'saved_notes_only', exportedAt: '2026-10-23T06:00:00Z',
+  conversations: [{ id: 4, title: 'Private notes', personalityId: 1, createdAt: null }],
+  messages: [{ id: 1, conversationId: 4, role: 'user', content: 'Sawubona <script>plain text</script>', createdAt: null }],
+  memories: [{ id: 1, conversationId: null, memoryType: null, category: null, content: 'Unlinked owned memory', importance: null, createdAt: null }] };
+const notesResponse = (data: unknown = notesFixture) => new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+describe('bounded complete-notes browser client', () => {
+  it('fetches one authenticated private snapshot without filters, persistence or automatic retries', async () => {
+    const request = vi.fn().mockResolvedValue(notesResponse());
+    await expect(conversationClient('private-token', request).exportAll()).resolves.toEqual(notesFixture);
+    expect(request).toHaveBeenCalledExactlyOnceWith('/api/v1/companion/conversations/export', {
+      method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: expect.any(AbortSignal),
+      headers: { Authorization: 'Bearer private-token', Accept: 'application/json' },
+    });
+  });
+  it.each([401, 422, 429, 503])('rejects HTTP %s without consuming private diagnostics', async status => {
+    const request = vi.fn().mockResolvedValue(response({ privateDetails: 'never display' }, status));
+    await expect(conversationClient('token', request).exportAll()).rejects.toEqual(new ConversationError(status));
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    { ...notesFixture, scope: 'whole_account' },
+    { ...notesFixture, token: 'unexpected credential' },
+    { ...notesFixture, conversations: [] },
+    { ...notesFixture, conversations: [...notesFixture.conversations, ...notesFixture.conversations] },
+    { ...notesFixture, memories: [{ ...notesFixture.memories[0], conversationId: 99 }] },
+    { ...notesFixture, messages: [{ ...notesFixture.messages[0], role: 'tool' }] },
+  ])('rejects invalid scope, unexpected fields and inconsistent ownership relationships %#', async data => {
+    const request = vi.fn().mockResolvedValue(notesResponse(data));
+    await expect(conversationClient('token', request).exportAll()).rejects.toThrow();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it('bounds declared and streamed bytes before parsing a downloaded document', async () => {
+    const request = vi.fn().mockResolvedValueOnce(new Response('{}', { headers: {
+      'Content-Type': 'application/json', 'Content-Length': String(MAX_NOTES_DOWNLOAD_BYTES + 1),
+    } }));
+    await expect(conversationClient('token', request).exportAll()).rejects.toThrow();
+    const cancelled = vi.fn();
+    request.mockResolvedValueOnce(new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new Uint8Array(MAX_NOTES_DOWNLOAD_BYTES + 1)); }, cancel: cancelled,
+    }), { headers: { 'Content-Type': 'application/json' } }));
+    await expect(conversationClient('token', request).exportAll()).rejects.toThrow(/limit/);
+    expect(cancelled).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it('cancels a stalled response body on explicit cancellation', async () => {
+    const cancelled = vi.fn(), controller = new AbortController();
+    const request = vi.fn().mockResolvedValue(new Response(new ReadableStream({ cancel: cancelled }), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const pending = conversationClient('token', request).exportAll(controller.signal);
+    const failed = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    controller.abort(); await failed;
+    expect(request.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(cancelled).toHaveBeenCalledTimes(1);
+  });
+  it('times out a stalled body without another request', async () => {
+    vi.useFakeTimers();
+    try {
+      const request = vi.fn().mockResolvedValue(new Response(new ReadableStream(), { headers: { 'Content-Type': 'application/json' } }));
+      const failed = expect(conversationClient('token', request).exportAll()).rejects.toMatchObject({ name: 'AbortError' });
+      await vi.advanceTimersByTimeAsync(30_001); await failed;
+      expect(request).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+  });
 });
