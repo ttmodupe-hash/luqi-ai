@@ -3,7 +3,8 @@ from decimal import Decimal
 import pytest
 import pymysql
 
-from omega_ai.mysql_workflow import MySQLWorkflowEngine, StorageUnavailable, _json
+from omega_ai.mysql_workflow import MySQLWorkflowEngine, StorageUnavailable, _json, _document
+from omega_ai.workflow_engine import Task, State
 
 
 def no_connection():
@@ -26,6 +27,19 @@ def test_bounded_json_preserves_types_and_unicode():
     nested.append(nested)
     with pytest.raises(ValueError, match="deeply nested"):
         _json(nested)
+
+
+def test_storage_envelope_accepts_the_documented_payload_depth_boundary():
+    payload = {}
+    child = payload
+    for _ in range(32):
+        child["x"] = {}
+        child = child["x"]
+    assert _json(payload)
+    assert _document(Task("id", "alice", "read", payload, State.COMPLETED, result=payload))
+    child["too_deep"] = True
+    with pytest.raises(ValueError, match="deeply nested"):
+        _json(payload)
 
 
 @pytest.mark.parametrize("authorization", [None, False, "true", 1, [True]])

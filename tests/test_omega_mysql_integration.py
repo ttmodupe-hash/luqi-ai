@@ -393,3 +393,16 @@ def test_revocation_prevents_new_claims_and_durable_state_remains_inspectable_by
     with pytest.raises(PermissionError):
         revoked.run(task.id, actor="alice")
     assert read_engine().get(task.id, actor="alice").state == State.PENDING
+
+
+def test_maximum_json_depth_round_trips_through_mysql():
+    engine = runner()
+    engine.register("echo", lambda _, data: data, side_effects=False, version="v1")
+    payload = {}
+    child = payload
+    for _ in range(32):
+        child["x"] = {}
+        child = child["x"]
+    task = engine.submit("echo", payload, actor="alice")
+    assert engine.run(task.id, actor="alice").result == payload
+    assert runner().get(task.id, actor="alice").result == payload

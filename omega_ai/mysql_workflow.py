@@ -27,10 +27,10 @@ class LeaseLost(RuntimeError):
     """An expired or replaced claim cannot publish a result or renew itself."""
 
 
-def _json(value: Any, *, limit: int = 65536) -> str:
+def _json(value: Any, *, limit: int = 65536, max_depth: int = 32) -> str:
     """Strict bounded JSON, with no pickle, repr, dataclass or Decimal coercion."""
     def validate(item, depth=0):
-        if depth > 32:
+        if depth > max_depth:
             raise ValueError("Task JSON is too deeply nested")
         if type(item) is dict:
             for key, child in item.items():
@@ -93,7 +93,8 @@ def _task(row) -> Task:
 def _document(task: Task) -> str:
     return _json({key: getattr(task, key) for key in (
         "payload", "max_attempts", "attempts", "approved_by", "result", "error", "audit"
-    )}, limit=131072)
+    # The storage envelope adds one level above a validated payload/result.
+    )}, limit=131072, max_depth=33)
 
 
 class MySQLWorkflowEngine(WorkflowEngine):
