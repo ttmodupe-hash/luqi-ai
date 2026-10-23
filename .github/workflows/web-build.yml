@@ -14,10 +14,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # Install from lockfiles without the optional, egress-limited npm cache.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify persistent database configuration contracts

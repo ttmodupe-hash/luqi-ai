@@ -26,10 +26,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # Install from lockfiles without the optional, egress-limited npm cache.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
       - name: Install exact LUQI dependencies
         run: npm ci --legacy-peer-deps --include=dev
       - name: Audit production dependency tree
@@ -94,13 +94,10 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+      # Install from lockfiles without the optional, egress-limited npm cache.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: |
-            app/package-lock.json
-            app/electron/package-lock.json
       - name: Install and audit standalone frontend
         run: |
           npm ci --legacy-peer-deps --include=dev
