@@ -1,8 +1,12 @@
 # LUQI-AI $100/month text-chat pilot — release runbook
 
 **Plan (USD, UTC calendar month):** Gemini $60 (60%), OpenAI $40 (40%).
-**Billing approval:** NOT GRANTED. Provider calls disabled until a separate explicit
-user authorization. A planned payment is not authorization.
+**Provider-spend approval:** explicitly GRANTED by the owner on 2026-10-23 for
+Gemini and OpenAI within this allocation. This does not authorize LUQI customer
+subscriptions, legacy payment endpoints, new infrastructure or Omega workers.
+Approval is recorded separately from operational activation: paid generation
+remains paused pending provider-account control verification and a monitored,
+budgeted live roundtrip. Do not ask the owner to approve this same allocation again.
 
 ## In Railway (new `kind-spontaneity` project)
 Set these non-secret variables (already prepared with `skipDeploys`):
@@ -10,7 +14,12 @@ Set these non-secret variables (already prepared with `skipDeploys`):
 - `LUQI_GEMINI_MONTHLY_USD=60`
 - `LUQI_OPENAI_MONTHLY_USD=40`
 - `LUQI_AI_PROVIDER_ENABLED=false`
-- `LUQI_AI_BILLING_APPROVED=false`
+- `LUQI_AI_BILLING_APPROVED=true`
+
+`LUQI_AI_BILLING_APPROVED` records owner consent to provider spending. It does
+not attest to the provider's account balance, payment setup or spending caps,
+and it cannot enable customer billing. Keep `LUQI_AI_PROVIDER_ENABLED=false`
+until the operational checks below pass.
 
 DO NOT set legacy `GEMINI_API_KEY` or `OPENAI_API_KEY` in this service:
 other legacy endpoints may call them outside of the pilot gate.
@@ -18,7 +27,7 @@ Credentials may be saved with both activation flags OFF. Add the service-only se
 `LUQI_PILOT_GEMINI_API_KEY` and `LUQI_PILOT_OPENAI_API_KEY` through
 Railway's secure Variables UI (never GitHub, screenshots or chat).
 
-## Provider-side controls (to be configured by the account owner later)
+## Provider-side controls (verify before operational activation)
 - Google AI Studio: dedicated LUQI Gemini project with **$60/month** project
   spend cap at **Spend > Monthly spend cap > Edit spend cap** when available.
   Experimental project cap may overrun due to ~10 minute billing delay.
@@ -32,6 +41,9 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
   Docs: https://help.openai.com/en/articles/8304786-keeping-your-openai-account-secure
 - Assign separate project-scoped API keys, restricted model access and spending
   permissions where supported. Billing/payment is user-controlled, not automated.
+- Match each deployed credential to its intended provider project. A matching
+  display name or a successful metadata request does not prove that mapping.
+  Retain existing lower caps; do not increase them just to match this ceiling.
 
 ## Authenticated-user and legacy-route protections
 - Paid pilot chat requires a valid, unexpired LUQI account JWT using the
@@ -63,6 +75,10 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
   Failed calls retain their reservation so ambiguous timeouts cannot trigger
   an undetected second charge. Database unreachable, table absent, disabled
   flags or bad allocation all fail closed.
+- Both provider requests have a 20-second timeout. Gemini explicitly makes only
+  one transport attempt per reservation; the OpenAI fetch also has no retry.
+  Synthetic HTTP tests exercise the installed Gemini SDK, including its real
+  timeout and a 503 fallback. OpenAI redirects are rejected.
 - Apply `db/migrations/20261022_ai_pilot_budget.sql` to dedicated MySQL
   after DB is provisioned; the older environment's `luqi-mysql` service is
   actually PostgreSQL and is INCOMPATIBLE with this Node MySQL schema.
@@ -78,9 +94,10 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
    concurrent requests. Add dashboard reconciliation and alerts.
 3. Confirm Gemini/ OpenAI model entitlements and their pricing on account.
 4. Confirm provider project budgets and alerts, disable auto-reload.
-5. After the user explicitly approves activation, flip
-   `LUQI_AI_BILLING_APPROVED=true` and `LUQI_AI_PROVIDER_ENABLED=true`
-   and run a single, measured harmless live request, subject to both limits.
+5. Owner approval is recorded. Once steps 1–4 have direct evidence, set
+   `LUQI_AI_PROVIDER_ENABLED=true` and run a single, measured harmless live
+   request through the authenticated, budgeted route, subject to both limits.
+   Never use an unmetered console request as proof of the gateway's behavior.
 6. Monitor response quality across African languages and stop the pilot on
    errors, unauthorized traffic, overspend or unclear billing.
 
@@ -90,8 +107,8 @@ initiated by this plan.**
 ## Read-only credential preflight
 
 Set `LUQI_AI_CREDENTIAL_CHECK_ENABLED=true` on the web service to opt in to
-one metadata check per provider per process startup. Keep both
-`LUQI_AI_PROVIDER_ENABLED=false` and `LUQI_AI_BILLING_APPROVED=false`.
+one metadata check per provider per process startup. Keep
+`LUQI_AI_PROVIDER_ENABLED=false`; owner-spend approval is independent.
 The check sends only authenticated GET requests for the pilot's configured
 models; it never calls generation APIs, reserves budget, changes provider
 settings, or activates billing. It has no public HTTP trigger.
@@ -109,6 +126,11 @@ return `permission_denied` even when it has other API permissions; do not widen
 permissions automatically. Diagnose other statuses without turning on the pilot.
 After observing the result, set the check flag to `false` with no immediate
 redeployment; subsequent starts will skip the check.
+
+On 2026-10-23 production deployment `2ad89d45-bbca-4fce-b062-059bff0941a4`
+reached `SUCCESS`. Both reviewed models returned `metadata_accessible` in the
+sanitized startup checks. Generation was `not_tested`, billing was
+`not_verified`, and no inference request was made by that preflight.
 
 References:
 - https://ai.google.dev/api/models#method:-models.get

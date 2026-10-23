@@ -29,6 +29,9 @@ export const GEMINI_PILOT_CONFIG = Object.freeze({
   systemInstruction: PLAIN_TEXT_POLICY,
   maxOutputTokens: MAX_OUTPUT_TOKENS,
   thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+  // One committed reservation covers exactly one transport attempt. Do not
+  // rely on changing SDK retry defaults or leave a paid request unbounded.
+  httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
 });
 
 export async function runBudgetedPilotChat(
@@ -77,6 +80,7 @@ User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
       await reservePilotAttempt("openai", userId);
       const result = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
+        redirect: "error", cache: "no-store", credentials: "omit",
         headers: { "Content-Type": "application/json",
           Authorization: `Bearer ${openaiKey}` },
         body: JSON.stringify({
