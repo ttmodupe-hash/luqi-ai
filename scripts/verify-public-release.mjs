@@ -103,7 +103,8 @@ await run("Published Omega and companion frontend", async () => {
   verify(match !== null);
   const bundle = await get(match[1], 8_388_608);
   verify(bundle.status === 200 && bundle.text.includes("Review before queuing") &&
-    bundle.text.includes("Retry same submission") && bundle.text.includes("Export selected conversation"));
+    bundle.text.includes("Retry same submission") && bundle.text.includes("Export selected conversation") &&
+    bundle.text.includes("Download all saved notes") && bundle.text.includes("luqi.private-notes.v1"));
   console.log("Verified public bundle " + match[1]);
 });
 await run("Service worker excludes readiness paths from caching", async () => {

@@ -9,6 +9,7 @@ import { allowedBrowserOrigin, BoundedRateLimiter } from "./lib/httpGuard";
 import type { HttpBindings } from "@hono/node-server";
 import { createTrpcHttp } from "./trpc-http";
 import { privateResponsePolicy, requestTelemetry, redactedHttpError } from "./lib/httpSafety";
+import { releaseIdentity } from './lib/releaseIdentity';
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
@@ -116,6 +117,7 @@ app.route("/api/trpc", createTrpcHttp(appRouter));
 app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
 app.get("/v1/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
 app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
+app.get('/v1/release', releaseIdentity);
 
 /**
  * Liveness (/v1/health) means the process serves HTTP; it is not an AI readiness

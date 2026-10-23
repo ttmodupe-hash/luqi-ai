@@ -35,6 +35,7 @@ jobs:
             --env NODE_ENV=production \
             --env PORT=3000 \
             --env JWT_SECRET=ci-only-not-a-real-key-1234567890123456789012 \
+            --env RAILWAY_GIT_COMMIT_SHA=1111111111111111111111111111111111111111 \
             luqi-railway-smoke:ci
       - name: Verify actual HTTP health and frontend
         run: |
@@ -60,6 +61,16 @@ jobs:
           grep -q '"status":"healthy"' /tmp/luqi-health.json
           curl --fail --silent --max-time 5 http://127.0.0.1:18765/ -o /tmp/luqi-index.html
           grep -qi '<html' /tmp/luqi-index.html
+          # Synthetic commit metadata exercises the actual bundled route in
+          # the non-root image. This is not production deployment evidence.
+          node --input-type=module -e '
+            const response = await fetch("http://127.0.0.1:18765/v1/release");
+            const body = await response.json();
+            if (response.status !== 200 || response.headers.get("cache-control") !== "no-store" ||
+                body.format !== "luqi.release.v1" || body.commit !== "1".repeat(40) ||
+                Object.keys(body).length !== 2) throw new Error("Bundled release identity failed");
+            console.log("Bundled release identity and cache policy verified with synthetic metadata");
+          '
           # With no AI or DB credentials supplied by CI, readiness must fail
           # closed. A liveness response alone must not claim LUQI is AI-ready.
           code=$(curl --silent --show-error --output /tmp/luqi-readiness.json \
