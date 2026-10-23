@@ -8,7 +8,7 @@ import { cors } from "hono/cors";
 import { allowedBrowserOrigin, BoundedRateLimiter } from "./lib/httpGuard";
 import type { HttpBindings } from "@hono/node-server";
 import { createTrpcHttp } from "./trpc-http";
-import { ZodError } from "zod";
+import { privateResponsePolicy, requestTelemetry, redactedHttpError } from "./lib/httpSafety";
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
@@ -22,10 +22,9 @@ import { closeAuthThrottle } from "./services/authThrottle";
 import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
-import { runBudgetedPilotChat } from "./services/aiPilotGateway";
+import { aiPilot } from "./ai-pilot";
 import { checkPilotCredentials } from "./services/pilotCredentialCheck";
-import { MAX_INPUT_CHARS, PilotBlocked, assertPilotEnabled, checkPilotGatewayReadiness } from "./services/aiPilotBudget";
-import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
+import { checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { isUnbudgetedAiRoute } from "./lib/legacyAiRoutes";
 import { GoogleGenAI } from "@google/genai";
 import { GeminiService } from "./geminiService";
@@ -43,6 +42,7 @@ import { AfricanSovereigntyEngine } from "./services/africanSovereigntyEngine";
 import { workspaceUnavailable } from "./workspace-unavailable";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
+app.use('*', privateResponsePolicy);
 
 // ── SECURITY MIDDLEWARE ────────────────────────────────────────────
 
@@ -83,19 +83,7 @@ app.use("/api/*", async (c, next) => {
 });
 
 // ── REQUEST CORRELATION + STRUCTURED LOGGING ───────────────────────
-app.use("/*", async (c, next) => {
-  const requestId = crypto.randomUUID();
-  const start = Date.now();
-  c.header("X-Request-Id", requestId);
-  await next();
-  logger.info({
-    requestId,
-    method: c.req.method,
-    path: c.req.path,
-    status: c.res.status,
-    durationMs: Date.now() - start,
-  }, "request");
-});
+app.use("/*", requestTelemetry);
 
 // ── BODY LIMIT ─────────────────────────────────────────────────────
 app.use(async (c, next) => {
@@ -159,47 +147,8 @@ app.route("/", legacyAdminUnavailable);
 app.route("/", legacyOperationsUnavailable);
 app.route("/", restCompat);
 
-// 1. Unified Chat & KHORO Sovereign Companion Endpoint
-app.post('/api/v1/luqi-core', async (c) => {
-  let body: any = {};
-  try { body = await c.req.json(); } catch { /* invalid body below */ }
-  const rawQuery = body?.user_input ?? body?.prompt;
-  if (typeof rawQuery !== "string" || !rawQuery.trim() || rawQuery.length > MAX_INPUT_CHARS) {
-    return c.json({ status: "error", code: "INVALID_INPUT",
-      message: "Provide a question of at most 6000 characters." }, 400);
-  }
-  const history = Array.isArray(body.history) ? body.history : [];
-  const language = typeof body.language === "string" ? body.language : "auto";
-  try {
-    // Avoid even attempting login/DB auth while billing remains disabled.
-    assertPilotEnabled();
-    const userId = await authenticatePilotUser(c.req.header("authorization"));
-    const result = await runBudgetedPilotChat(rawQuery.trim(), userId, language, history);
-    return c.json({
-      status: "success", agent: SOVEREIGN_AGENT_NAME,
-      provider: result.provider, provider_model: result.model, response: result.response
-    });
-  } catch (error) {
-    if (error instanceof PilotAuthError) {
-      return c.json({ status: "unavailable", code: error.code,
-        message: error.code === "AUTH_REQUIRED" ? "Please sign in to use the AI pilot." :
-          "Secure account verification is temporarily unavailable." },
-        error.code === "AUTH_REQUIRED" ? 401 : 503);
-    }
-    if (error instanceof PilotBlocked) {
-      if (error.reason === "AI_PROVIDER_BUDGET_EXHAUSTED" ||
-          error.reason === "AI_USER_DAILY_QUOTA_EXHAUSTED") {
-        return c.json({ status: "unavailable", code: error.reason,
-          message: "Monthly pilot provider budget exhausted." }, 429);
-      }
-      return c.json({ status: "unavailable", code: error.reason,
-        message: "AI pilot billing remains disabled or its budget ledger is unavailable." }, 503);
-    }
-    return c.json({ status: "unavailable", code: "AI_PROVIDER_UNAVAILABLE",
-      message: "AI provider unavailable or not configured." }, 503);
-  }
-});
-
+// The budgeted text trial is isolated from all legacy provider routes.
+app.route('/api/v1/luqi-core', aiPilot);
 
 // 2. Consumer Rights Legal & Dispute Action Plan Endpoint
 app.post('/api/v1/consumer-rights', async (c) => {
@@ -1280,21 +1229,7 @@ app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
 // ── GLOBAL ERROR HANDLER ───────────────────────────────────────────
 // Uncaught exceptions format cleanly instead of crashing the process.
-app.onError((err, c) => {
-  const requestId = c.res.headers.get("X-Request-Id") ?? crypto.randomUUID();
-
-  if (err instanceof ZodError) {
-    return c.json({ success: false, error: "Validation Error", details: err.issues, requestId }, 400);
-  }
-
-  if (err?.name === "AbortError") {
-    return c.json({ success: false, error: "Client closed request", requestId }, 499);
-  }
-
-  logger.error({ err: err?.message, stack: err?.stack?.slice(0, 500), requestId }, "unhandled error");
-  const status = typeof (err as any)?.status === "number" ? (err as any).status : 500;
-  return c.json({ success: false, error: err?.message || "Internal Server Error", requestId }, status as 500);
-});
+app.onError(redactedHttpError);
 
 export default app;
 
