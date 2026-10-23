@@ -129,7 +129,7 @@ export default function ContentStudioPage() {
       </section>
     </div>
     <section className="luqi-studio-export" aria-labelledby="export-heading"><div><h2 id="export-heading">Review. Export. Make it yours.</h2>
-      <p>Video is silent original motion graphics. No generative video, voice clone, payment or direct social connection is enabled. Add your own licensed audio and verify platform requirements before uploading.</p></div>
+      <p>Video is silent original motion graphics. No generative video, voice clone, payment or direct social connection is enabled. Native timing can vary slightly; check the finished duration before publishing. Add your own licensed audio and verify platform requirements before uploading.</p></div>
       <label>Video format<select aria-label="Video format" value={format} disabled={recording} onChange={e => setFormat(e.target.value as StudioFormat)}>{Object.entries(STUDIO_FORMATS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
       <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={recording} onClick={record}>Record 90-second animation</button>
         {recording && <button type="button" onClick={cancelRecording}>Cancel recording</button>}

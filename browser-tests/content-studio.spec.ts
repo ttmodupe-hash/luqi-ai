@@ -50,3 +50,16 @@ test('legacy animation aliases use the same real creation tool without credit-pu
   await expect(page.getByText('Your storyboard', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test('legacy multimodal aliases distinguish working tools from pending research without provider requests', async ({ page }) => {
+  const calls: string[] = [];
+  page.on('request', request => { if (/\/(api|v1)\//.test(request.url())) calls.push(request.url()); });
+  for (const path of ['/multimodal-hub', '/bioscience', '/gemini-studio']) {
+    await page.goto('/#' + path);
+    await expect(page.getByRole('heading', { name: 'Advanced learning & media', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open the content studio', exact: true })).toHaveAttribute('href', '#/content-studio');
+    await expect(page.getByText('PRO ACTIVE', { exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  expect(calls).toEqual([]);
+});

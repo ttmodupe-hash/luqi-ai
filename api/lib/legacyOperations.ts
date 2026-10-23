@@ -17,6 +17,8 @@ export const retiredOperationPaths = [
   '/api/v1/analytics/log-progression',
   '/api/v1/diagnostics/database-indexes',
   '/api/v1/governance/system-cards',
+  '/api/science/curated-targets',
+  '/api/science/bio-query',
 ] as const;
 
 export const legacyOperationsUnavailable = new Hono();

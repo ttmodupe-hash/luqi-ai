@@ -3,6 +3,9 @@
 The pilot entry route is `/#/start`. It introduces two usable paths: the
 browser-based physics lab without an account, and account-owned conversation
 notes with registration/sign-in. It is not a full AI product launch.
+The local `/#/content-studio` adds an editable 90-second storyboard, interactive
+3D pendulum/time view and local silent-video, script and subtitle exports. It
+does not connect social accounts or professional filing services.
 An optional `/#/ai-trial` page provides a separate, signed-in text request
 with explicit provider processing acknowledgement and configuration checks.
 The page can remain paused; its presence is not proof of a successful AI reply.
@@ -58,14 +61,18 @@ checks explicit submission, mobile layout and session clearing without a paid ca
 - Review privacy/use information, data retention and whole-account erasure
   before collecting sensitive information or inviting a broad audience. The
   pilot pages make no compliance certification or commercial-licensing claim.
-- Complete the dedicated production database identity, historic credential
-  rotation and production-derived recovery acceptance in issue #144.
+- The dedicated production database identity is now verified; retain the separate
+  root/operator account and compatible restricted-role rollback deployment. Historic
+  credential revocation and production-derived recovery acceptance remain in issue #144.
 - Owner approval for the $100 ceiling ($60 Gemini / $40 OpenAI) was granted
   on 2026-10-23. The authenticated text trial is enabled with $60/$40 provider
   project caps, auto-reload OFF and matching deployed masked key identifiers.
   Complete a designated-account budgeted request and reconcile actual usage
   before a broad AI launch. Successful metadata/configuration checks do not
   establish generation or measured billing.
+- Test the local content studio and review a completed clip before manual upload.
+  Direct social publishing requires separate account authorization, developer
+  review and verified delivery; paid video/voice services are not approved.
 - Complete the remaining Omega domain adapters, worker rollout/operations and
   evaluated outcomes. Production intake and workers remain disabled.
 - Complete source-grounded African-language evaluations with native reviewers.

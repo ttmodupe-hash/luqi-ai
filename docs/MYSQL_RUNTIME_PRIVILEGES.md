@@ -127,3 +127,25 @@ restart persistence, export/deletion, and failure before listening for missing
 tables, missing/prefix unique indexes, unsafe counters, non-InnoDB storage,
 unreachable configuration and optional Omega schema/access. These fixtures are
 synthetic and cannot establish production credential rotation or recovery.
+
+## Verified production transition, 2026-10-23
+
+PR #193 passed all six workflows after correcting the browser fixture to use
+the same provisioned identity. The private Railway console then ran the actual
+packaged `--provision-new` operator on deployment
+`76c52b73-8d91-47a5-8714-1cd8db4edec3`; it returned validated, eight tables,
+dedicated_web and table_only. No application records or application schema tables were changed.
+
+The web connection was replaced with the new dedicated identity and the
+one-time password variable was cleared. Deployment
+`8faffbf1-bfd0-4f41-8768-2290fb37a8df` reached SUCCESS. A private read-only check
+confirmed eight valid runtime tables, the expected current identity, nine grant
+rows (USAGE plus eight table grants), no inherited roles and a cleared one-time
+variable. MySQL retained deployment `3776e76d-1621-485f-8fc9-67f5d16263c2`.
+
+That restricted-role deployment is a compatible rollback reference. An earlier
+root-configured snapshot can reintroduce the old operator connection, so review
+its configuration rather than rolling back blindly. Root/operator credential
+revocation and designated human-account acceptance are not established here.
+The initial 941 MB backup and next scheduled backup were visible; no restore
+was run over production and no claim of production-derived recovery is made.
