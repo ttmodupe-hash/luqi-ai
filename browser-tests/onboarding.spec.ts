@@ -29,7 +29,7 @@ test('new visitors can choose a real tool or register from the welcome page at 3
     expect(route.request().postDataJSON()).toEqual({ email: 'new-browser@example.invalid', password: 'Synthetic-New-Account-Password-2026!' });
     return route.fulfill({ status: 201, json: { token: 'new-fixture-token', user: { email: 'new-browser@example.invalid' } } });
   });
-  await page.route('**/api/v1/companion/conversations/**', route => route.fulfill({ json: { conversations: [] } }));
+  await page.route('**/api/v1/companion/conversations**', route => route.fulfill({ json: { conversations: [] } }));
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
   await expect(page.getByLabel('Conversation title')).toBeVisible();

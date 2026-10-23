@@ -49,6 +49,13 @@ jobs:
           fi
       - name: Verify desktop and mobile browser flows with synthetic API fixtures
         run: npx playwright test
+      - name: Preserve public pilot layout evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-pilot-layouts
+          path: test-results/**/getting-started.png
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

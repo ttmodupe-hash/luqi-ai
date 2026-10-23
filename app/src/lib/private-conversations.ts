@@ -44,8 +44,8 @@ export function conversationClient(token: string, request: typeof fetch = fetch)
     return schema.parse(await response.json());
   }
   return {
-    list: (before?: number) => call(`/?limit=50${before ? `&before=${before}` : ""}`, z.object({ conversations: z.array(conversation) })),
-    create: (title: string, personalityId: number) => call("/", z.object({ id, persisted: z.literal(true) }), { title, personalityId }),
+    list: (before?: number) => call(`?limit=50${before ? `&before=${before}` : ""}`, z.object({ conversations: z.array(conversation) })),
+    create: (title: string, personalityId: number) => call("", z.object({ id, persisted: z.literal(true) }), { title, personalityId }),
     messages: (conversationId: number, before?: number) => call(`/${conversationId}/messages?limit=50${before ? `&before=${before}` : ""}`, z.object({ messages: z.array(message) })),
     export: (conversationId: number) => call(`/${conversationId}/export`, conversationExportSchema(conversationId)),
     remove: (conversationId: number) => call(`/${conversationId}`, z.object({ id: z.literal(conversationId), deleted: z.literal(true) }), { confirm: true }, "DELETE"),
