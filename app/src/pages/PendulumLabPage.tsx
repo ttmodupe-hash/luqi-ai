@@ -1264,7 +1264,7 @@ export default function PendulumLabPage() {
                       type="checkbox"
                       checked={showVectors}
                       onChange={(e) => setShowVectors(e.target.checked)}
-                      className="rounded accent-sky-500"
+                      className="rounded-sm accent-sky-500"
                     />
                     <span>Force Vectors</span>
                   </label>
@@ -1273,7 +1273,7 @@ export default function PendulumLabPage() {
                       type="checkbox"
                       checked={showTrace}
                       onChange={(e) => setShowTrace(e.target.checked)}
-                      className="rounded accent-sky-500"
+                      className="rounded-sm accent-sky-500"
                     />
                     <span>Motion Trail</span>
                   </label>
@@ -1336,15 +1336,15 @@ export default function PendulumLabPage() {
               {graphMode === "energy" && (
                 <div className="absolute top-2.5 right-2.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[10px] font-mono space-y-1 shadow-md">
                   <div className="flex items-center gap-2 text-rose-400">
-                    <span className="w-2.5 h-0.5 bg-rose-500 rounded" />
+                    <span className="w-2.5 h-0.5 bg-rose-500 rounded-sm" />
                     <span>Kinetic Ek ({telemetry.ke} J)</span>
                   </div>
                   <div className="flex items-center gap-2 text-sky-400">
-                    <span className="w-2.5 h-0.5 bg-sky-500 rounded" />
+                    <span className="w-2.5 h-0.5 bg-sky-500 rounded-sm" />
                     <span>Potential Ep ({telemetry.pe} J)</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-400">
-                    <span className="w-2.5 h-0.5 bg-emerald-500 rounded border-dashed" />
+                    <span className="w-2.5 h-0.5 bg-emerald-500 rounded-sm border-dashed" />
                     <span>Mechanical Etotal</span>
                   </div>
                 </div>
@@ -1353,7 +1353,7 @@ export default function PendulumLabPage() {
               {graphMode === "phase" && (
                 <div className="absolute top-2.5 right-2.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[10px] font-mono space-y-1 shadow-md">
                   <div className="flex items-center gap-2 text-purple-400">
-                    <span className="w-2.5 h-0.5 bg-purple-500 rounded" />
+                    <span className="w-2.5 h-0.5 bg-purple-500 rounded-sm" />
                     <span>Phase Portrait Orbit</span>
                   </div>
                   <div className="flex items-center gap-2 text-amber-400">
