@@ -1,9 +1,12 @@
 # Outstanding LUQI work
 
 This is an evidence-based checkpoint, not a claim that all features are complete.
-Paid provider activation and billing remain disabled. The $100/month split
-($60 Gemini / $40 OpenAI) is a ceiling for any separately approved activation.
-Do not infer activation approval from an instruction to fix the app.
+The owner explicitly approved provider activation on 2026-10-23 within
+$100/month ($60 Gemini / $40 OpenAI). Production records that consent and both
+reviewed model credentials passed metadata access checks. Paid generation is
+still paused pending provider-account spending controls, deployed key/project
+mapping and a monitored budgeted roundtrip. Customer billing remains disabled.
+See AI_PILOT_100_USD.md; approval and verified operational activation are separate.
 
 | Priority | Work | Current evidence / next completion criterion |
 |---|---|---|
@@ -28,4 +31,5 @@ legacy streaming/session code: unresolved `sessionId`, an unresolved
 `ANTI_HALLUCINATION_PROMPT`, an unsupported orchestration `taskType` field and
 untyped query rows. The focused authentication service/client checks do not
 prove the whole legacy API is type-clean. Resolve and add regression coverage
-before enabling those provider-backed paths. Provider activation stays off.
+before enabling those legacy provider-backed paths. They remain blocked even
+after the separately budgeted text-chat gateway is activated.

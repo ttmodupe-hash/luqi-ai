@@ -50,9 +50,10 @@ acceptance, legal review, a penetration test or a production restore drill.
   pilot pages make no compliance certification or commercial-licensing claim.
 - Complete the dedicated production database identity, historic credential
   rotation and production-derived recovery acceptance in issue #144.
-- Separately approve and verify metered AI provider activation, provider-side
-  spending controls and monitored failures before advertising AI answers.
-  The $100 ceiling ($60 Gemini / $40 OpenAI) is not activation approval.
+- Owner approval for the $100 ceiling ($60 Gemini / $40 OpenAI) was granted
+  on 2026-10-23. Verify deployed key/project mapping, provider-side spending
+  controls and a monitored budgeted request before advertising AI answers.
+  Successful model metadata checks do not establish generation or billing.
 - Complete the remaining Omega domain adapters, worker rollout/operations and
   evaluated outcomes. Production intake and workers remain disabled.
 - Complete source-grounded African-language evaluations with native reviewers.
