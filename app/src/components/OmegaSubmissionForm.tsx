@@ -100,12 +100,12 @@ export default function OmegaSubmissionForm({
       {error && <p role="alert" id="omega-input-error" className="omega-notice">{error}</p>}
       <fieldset disabled={disabled}>
         <legend className="sr-only">Calculation inputs</legend>
-        <label>Calculation type
-          <select ref={picker} value={handler} onChange={event => { setHandler(event.target.value as Handler); setError(""); }}>
-            {handlers.includes("travel.budget") && <option value="travel.budget">Travel budget</option>}
-            {handlers.includes("vehicle.schedule") && <option value="vehicle.schedule">Vehicle service schedule</option>}
-          </select>
-        </label>
+        <label htmlFor="omega-calculation-type">Calculation type</label>
+        <select id="omega-calculation-type" ref={picker} value={handler}
+          onChange={event => { setHandler(event.target.value as Handler); setError(""); }}>
+          {handlers.includes("travel.budget") && <option value="travel.budget">Travel budget</option>}
+          {handlers.includes("vehicle.schedule") && <option value="vehicle.schedule">Vehicle service schedule</option>}
+        </select>
         {handler === "travel.budget" ? <>
           <label>Currency code
             <input required maxLength={3} pattern="[A-Za-z]{3}" value={currency}
