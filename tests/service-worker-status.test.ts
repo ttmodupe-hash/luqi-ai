@@ -7,6 +7,8 @@ describe.each(["public/service-worker.js", "app/public/sw.js"])(
   (workerPath) => {
     it.each([
       "/v1/readiness",
+      "/v1/release",
+      "/api/v1/companion/conversations/export",
       "/v1/health",
       "/health",
       "/api/v1/companion/conversations",
