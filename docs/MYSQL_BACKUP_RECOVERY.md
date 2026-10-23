@@ -1,8 +1,11 @@
 # LUQI MySQL 8.4 — backup, restore and disaster recovery
 
-**Status:** A disposable GitHub CI database has a tested *logical backup
-and restore* procedure. This does **NOT** mean automated snapshots,
-offsite retention, or a production restoration drill are already configured.
+**Status (2026-10-23):** Daily production Railway volume backups are enabled
+with six-day retention, and the initial 941 MB snapshot is listed. A disposable
+GitHub CI database has a tested *logical backup and restore* procedure.
+A production-derived isolated restore, separate encrypted logical exports,
+offsite retention and PITR are still unverified or unconfigured. Snapshot
+availability alone does not prove recoverability; see the evidence below.
 
 ## Production safety rules
 
@@ -54,9 +57,9 @@ other services, encryption policy, or live cross-version migration.
 
 ## Remaining launch gate
 
-Before inviting customers, complete GitHub issue #144: set Railway backup
-retention, least-privilege DB credentials, hosting spend notifications,
-a production-like restore rehearsal and documented incident ownership.
+Before inviting customers, complete GitHub issue #144: verify scheduled Railway
+backups and retention, least-privilege DB credentials, hosting spend notifications,
+a production-derived isolated restore rehearsal and documented incident ownership.
 
 ## Explicit logical export command (not scheduled)
 
