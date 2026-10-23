@@ -46,6 +46,15 @@ Railway's secure Variables UI (never GitHub, screenshots or chat).
   Retain existing lower caps; do not increase them just to match this ceiling.
 
 ## Authenticated-user and legacy-route protections
+- `/#/ai-trial` is the explicit signed-in text trial. It checks configuration
+  separately from inference, requires a provider-processing acknowledgement,
+  and sends only the entered question. It never appends private notes, email,
+  saved history or automatic context. Nothing is sent on sign-in alone.
+- The page stores its session, prompt and reply only in memory. Sign-out and
+  navigation cancel the client request and ignore late responses. A 45-second
+  client timeout does not guarantee that provider processing was cancelled;
+  ambiguous requests are never retried automatically. Starting another question
+  requires an explicit action. Failed calls/fallback still consume attempts.
 - Paid pilot chat requires a valid, unexpired LUQI account JWT using the
   server's `JWT_SECRET` plus a lookup of that user in persistent MySQL.
   Anonymous or deleted users cannot spend pilot credits.
@@ -135,3 +144,20 @@ sanitized startup checks. Generation was `not_tested`, billing was
 References:
 - https://ai.google.dev/api/models#method:-models.get
 - https://developers.openai.com/api/reference/resources/models/methods/retrieve/
+
+## Masked key identifier comparison
+
+The startup metadata check can also compare the deployed key's final four
+characters to the masked identifiers visibly listed in the intended provider
+project. Set `LUQI_PILOT_GEMINI_KEY_IDENTIFIERS` or
+`LUQI_PILOT_OPENAI_KEY_IDENTIFIERS` to a comma-separated list of those exact
+four-character identifiers (at most 20). This is optional diagnostic configuration;
+do not commit actual identifiers or credentials to this repository.
+
+The log reports only `key_identifier=matched`, `mismatched`, `not_checked`,
+`unavailable` or `invalid_configuration`. Neither the key fragment nor the
+configured list is logged or exposed on a public endpoint. No permission or
+credential is created or changed. A match is supporting masked-identifier
+evidence, not a cryptographic proof of project ownership, billing setup or cap
+enforcement. Review it alongside the intended project's visible key list and
+billing controls, and recheck after key rotation. It is never an inference test.

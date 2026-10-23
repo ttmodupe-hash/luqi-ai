@@ -10,6 +10,23 @@ export interface MetadataResult {
   provider: Provider;
   model: string;
   status: MetadataStatus;
+  // Supporting identifier comparison only, not cryptographic project binding.
+  // No key fragments, configured identifiers or project names are returned.
+  key_identifier: "not_checked" | "matched" | "mismatched" | "invalid_configuration" | "unavailable";
+}
+
+export function checkKeyIdentifier(provider: Provider, env: NodeJS.ProcessEnv): MetadataResult["key_identifier"] {
+  const configured = env[`LUQI_PILOT_${provider.toUpperCase()}_KEY_IDENTIFIERS`];
+  if (configured === undefined) return "not_checked";
+  const identifiers = configured.split(",");
+  // Operators copy the four-character masked identifiers visible in the
+  // intended provider project. Empty, wildcard and oversized lists are errors.
+  if (identifiers.length > 20 || !identifiers.every(value => /^[A-Za-z0-9_-]{4}$/.test(value))) {
+    return "invalid_configuration";
+  }
+  const key = env[provider === "gemini" ? "LUQI_PILOT_GEMINI_API_KEY" : "LUQI_PILOT_OPENAI_API_KEY"];
+  if (!key || key.length < 4 || key.length > 2048 || /[^\x21-\x7e]/.test(key)) return "unavailable";
+  return identifiers.includes(key.slice(-4)) ? "matched" : "mismatched";
 }
 
 const PROVIDERS = {
@@ -47,7 +64,8 @@ async function checkProvider(
   provider: Provider, env: NodeJS.ProcessEnv, fetcher: typeof fetch,
 ): Promise<MetadataResult> {
   const model = PILOT_MODELS[provider];
-  const result = (status: MetadataStatus): MetadataResult => ({ provider, model, status });
+  const key_identifier = checkKeyIdentifier(provider, env);
+  const result = (status: MetadataStatus): MetadataResult => ({ provider, model, status, key_identifier });
   const key = env[PROVIDERS[provider].key];
   if (!key) return result("key_missing");
   // Don't guess validity by provider prefixes. Reject whitespace/control chars

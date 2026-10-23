@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ConversationError, signIn, signUp, validAccountPassword, type AccountSession } from '../lib/private-conversations';
 
-export default function AccountAccessForm({ initialMode = 'signin', onAuthenticated }: {
-  initialMode?: 'signin' | 'signup'; onAuthenticated: (session: AccountSession) => void;
+export default function AccountAccessForm({ initialMode = 'signin', purpose = 'notes', onAuthenticated }: {
+  initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai'; onAuthenticated: (session: AccountSession) => void;
 }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState('');
@@ -64,7 +64,7 @@ export default function AccountAccessForm({ initialMode = 'signin', onAuthentica
   return <section className="luqi-access" aria-labelledby="account-access-heading">
     <p className="luqi-eyebrow">YOUR OWN SPACE</p>
     <h2 id="account-access-heading">{mode === 'signup' ? 'Create your LUQI account' : 'Sign in to your LUQI account'}</h2>
-    <p>Keep notes in your account and return to them later. AI replies are not available in this pilot.</p>
+    <p>{purpose === 'ai' ? 'Use your LUQI account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"

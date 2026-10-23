@@ -8,6 +8,11 @@ still paused pending provider-account spending controls, deployed key/project
 mapping and a monitored budgeted roundtrip. Customer billing remains disabled.
 See AI_PILOT_100_USD.md; approval and verified operational activation are separate.
 
+The separate signed-in AI trial now has explicit provider-processing acknowledgement,
+bounded requests, no automatic paid retry and no automatic private-note context.
+It remains configuration-gated; actual production inference, provider-account
+binding and billing reconciliation need direct evidence before a broad AI launch.
+
 | Priority | Work | Current evidence / next completion criterion |
 |---|---|---|
 | P0 | Dependency advisories | Root npm, standalone app, desktop, Bun and resolved Python scans now have zero known findings locally; CI coverage exists for those trees; the isolated edge tooling tree now has an additional audit and bundle gate. See DEPENDENCY_AUTH_HARDENING.md for scope and upgrade checks. Continue scan review and platform release acceptance; zero known advisories is not a complete security audit. |

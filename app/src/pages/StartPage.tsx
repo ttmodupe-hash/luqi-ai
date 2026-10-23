@@ -7,7 +7,7 @@ export default function StartPage() {
       <p className="luqi-eyebrow">WELCOME TO THE LUQI PILOT</p>
       <h1>A useful place to begin.</h1>
       <p>Try a hands-on physics experiment, or create a space for your notes. Start with what works today.</p>
-      <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> AI replies, voice and paid plans are not enabled.</span>
+      <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> Voice and paid plans are not enabled. AI text has a separate limited trial.</span>
     </header>
     <div className="luqi-start-grid">
       <section className="luqi-start-card" aria-labelledby="start-physics">
@@ -31,7 +31,8 @@ export default function StartPage() {
     <section className="luqi-start-details" aria-labelledby="pilot-expectations">
       <h2 id="pilot-expectations">What to expect from the pilot</h2>
       <p>Notes are stored on LUQI’s server and can be accessed by storage administrators. Use ordinary test notes and keep a separate copy of anything important. Deleting active notes does not erase backup copies immediately.</p>
-      <p>Automatic password-reset emails are unavailable. AI answers, verified African-language support, payments and autonomous Omega workers are still being developed.</p>
+      <p>Automatic password-reset emails are unavailable. Verified African-language support, payments and autonomous Omega workers are still being developed.</p>
+      <p><Link to="/ai-trial">View the signed-in AI text trial</Link> to check whether questions are currently enabled. It uses separate provider processing and spending limits; your notes are not sent automatically.</p>
       <div><Link to="/privacy">Privacy information</Link><Link to="/service-status">Check service status</Link><Link to="/contact">Help and feedback</Link></div>
     </section>
   </main>;

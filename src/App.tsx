@@ -6,6 +6,7 @@ import { Routes, Route as RouterRoute, useLocation } from "react-router";
 // Pages
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
+import AiPilotPage from "./pages/AiPilotPage";
 import LabSimulatorPage from "./pages/LabSimulatorPage";
 import SelfHealingPage from "./pages/SelfHealingPage";
 import VideoStudioPage from "./pages/VideoStudioPage";
@@ -52,6 +53,7 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
