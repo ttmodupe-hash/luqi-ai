@@ -200,3 +200,24 @@ test("physics lab remains interactive while the AI tutor is unavailable", async 
   expect(writes).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('archive aliases show unavailable access with a keyboard path to private notes', async ({ page }) => {
+  const apiCalls: string[] = [];
+  page.on('request', request => {
+    if (/\/api\/trpc\//.test(request.url())) apiCalls.push(request.url());
+  });
+  await page.setViewportSize({ width: 320, height: 780 });
+  for (const path of ['/archive', '/vault']) {
+    await page.goto('/#' + path);
+    await expect(page.getByRole('heading', { name: 'Archive vault' })).toBeVisible();
+    await expect(page.getByText('Unavailable', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Existing files are preserved/)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  expect(apiCalls).toEqual([]);
+  const notes = page.getByRole('link', { name: 'Open private notes', exact: true });
+  await notes.focus();
+  await expect(notes).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#\/companion$/);
+});

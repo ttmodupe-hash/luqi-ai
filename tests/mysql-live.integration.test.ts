@@ -9,6 +9,8 @@ import bcrypt from "bcryptjs";
 import { signUserToken } from "../api/lib/userToken";
 import { resetAccountPassword } from "../api/services/accountRecovery";
 import { LUQI_JWT_AUDIENCE, LUQI_JWT_ISSUER } from "../api/lib/userToken";
+import { createRouter } from "../api/middleware";
+import { offlineRouter, OFFLINE_MAX_STORED } from "../api/offline";
 import { privateConversations } from "../api/private-conversations";
 import { restCompat } from "../api/rest-compat";
 import { authenticatePilotUser } from "../api/services/pilotAuth";
@@ -389,4 +391,76 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
       [MONTH]);
     expect(after).toBe(before);
   });
+});
+
+describe.sequential('account-owned offline queue on real MySQL', () => {
+  it('isolates shared device IDs, refuses forged owners, preserves legacy rows and revokes credentials', async () => {
+    const hash = await bcrypt.hash('Offline-CI-Password-2026!', 12);
+    const ids: number[] = [];
+    for (const suffix of ['alice', 'bob']) {
+      const [result] = await pool.execute<mysql.ResultSetHeader>(
+        'INSERT INTO users (email,password_hash,name,is_active) VALUES (?,?,?,1)',
+        [`offline-${suffix}@example.invalid`, hash, suffix]);
+      ids.push(result.insertId);
+    }
+    const router = createRouter({ offline: offlineRouter });
+    const caller = (id: number) => router.createCaller({ req: new Request('https://example.invalid/api/trpc', {
+      headers: { Authorization: `Bearer ${signUserToken(id, hash)}` },
+    }) }).offline;
+    const alice = caller(ids[0]), bob = caller(ids[1]);
+    const input = { deviceId: 'same-device', action: 'save-note', payload: { text: 'private' } };
+    const [orphan] = await pool.execute<mysql.ResultSetHeader>(
+      'INSERT INTO offline_sync_queue (user_id,device_id,action,payload_json,synced) VALUES (NULL,?,?,?,0)',
+      ['same-device', 'legacy', '{"legacy":"unowned"}']);
+    try {
+      await expect(alice.queueAction({ ...input, userId: ids[1] } as any)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      const a = await alice.queueAction(input);
+      const a2 = await alice.queueAction(input);
+      const b = await bob.queueAction(input);
+      const otherDevice = await alice.queueAction({ ...input, deviceId: 'different-device' });
+      expect((await alice.getPending({ deviceId: 'same-device' })).map((row: any) => row.id)).toEqual([a.id, a2.id]);
+      expect((await bob.getPending({ deviceId: 'same-device' })).map((row: any) => row.id)).toEqual([b.id]);
+      expect((await alice.getPending({ deviceId: 'same-device', limit: 1, after: a.id })).map((row: any) => row.id)).toEqual([a2.id]);
+      expect(await alice.markSynced({ deviceId: 'same-device', ids: [b.id, orphan.insertId, otherDevice.id, 999999999] })).toEqual({ synced: true });
+      expect(await singleNumber('SELECT SUM(synced) FROM offline_sync_queue WHERE id IN (?,?,?)',
+        [b.id, orphan.insertId, otherDevice.id])).toBe(0);
+      await alice.markSynced({ deviceId: 'same-device', ids: [a.id] });
+      expect((await alice.getPending({ deviceId: 'same-device' })).map((row: any) => row.id)).toEqual([a2.id]);
+      expect(await singleNumber('SELECT COUNT(*) FROM offline_sync_queue WHERE id=? AND user_id IS NULL', [orphan.insertId])).toBe(1);
+      await pool.execute('UPDATE users SET password_hash=? WHERE id=?', [await bcrypt.hash('Reset-Offline-CI-2026!', 12), ids[0]]);
+      await expect(alice.getPending({ deviceId: 'same-device' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+      await pool.execute('UPDATE users SET is_active=NULL WHERE id=?', [ids[1]]);
+      await expect(bob.markSynced({ deviceId: 'same-device', ids: [b.id] })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    } finally {
+      await pool.execute('DELETE FROM offline_sync_queue WHERE user_id IN (?,?) OR id=?', [...ids, orphan.insertId]);
+      await pool.execute('DELETE FROM users WHERE id IN (?,?)', ids);
+    }
+  }, 30_000);
+
+  it('serializes concurrent intake and counts acknowledged entries toward the stored-row ceiling', async () => {
+    const hash = await bcrypt.hash('Offline-Quota-CI-2026!', 12);
+    const [result] = await pool.execute<mysql.ResultSetHeader>(
+      'INSERT INTO users (email,password_hash,name,is_active) VALUES (?,?,?,1)',
+      ['offline-quota@example.invalid', hash, 'Quota']);
+    const userId = result.insertId;
+    const router = createRouter({ offline: offlineRouter });
+    const caller = router.createCaller({ req: new Request('https://example.invalid', {
+      headers: { Authorization: `Bearer ${signUserToken(userId, hash)}` },
+    }) }).offline;
+    try {
+      const seeded = Array.from({ length: OFFLINE_MAX_STORED - 1 }, () => [userId, 'seed', 'fixture', '{}', 1]);
+      await pool.query('INSERT INTO offline_sync_queue (user_id,device_id,action,payload_json,synced) VALUES ?', [seeded]);
+      const attempts = await Promise.allSettled(Array.from({ length: 8 }, () => caller.queueAction({
+        deviceId: 'new', action: 'fixture', payload: {},
+      })));
+      expect(attempts.filter(a => a.status === 'fulfilled')).toHaveLength(1);
+      const failures = attempts.filter(a => a.status === 'rejected') as PromiseRejectedResult[];
+      expect(failures).toHaveLength(7);
+      for (const failure of failures) expect(failure.reason).toMatchObject({ code: 'TOO_MANY_REQUESTS', message: 'OFFLINE_QUEUE_LIMIT' });
+      expect(await singleNumber('SELECT COUNT(*) FROM offline_sync_queue WHERE user_id=?', [userId])).toBe(OFFLINE_MAX_STORED);
+    } finally {
+      await pool.execute('DELETE FROM offline_sync_queue WHERE user_id=?', [userId]);
+      await pool.execute('DELETE FROM users WHERE id=?', [userId]);
+    }
+  }, 30_000);
 });

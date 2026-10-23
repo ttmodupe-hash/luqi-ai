@@ -7,7 +7,7 @@ import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { allowedBrowserOrigin, BoundedRateLimiter } from "./lib/httpGuard";
 import type { HttpBindings } from "@hono/node-server";
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { createTrpcHttp } from "./trpc-http";
 import { ZodError } from "zod";
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
@@ -15,7 +15,6 @@ import { privateConversations } from "./private-conversations";
 import { omegaTasks } from "./omega-tasks";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
-import { createContext } from "./context";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
@@ -111,6 +110,7 @@ app.use(async (c, next) => {
 // This protects the wallet even if someone accidentally adds old provider keys.
 app.use("*", async (c, next) => {
   if (isUnbudgetedAiRoute(c.req.method, c.req.path)) {
+    c.header("Cache-Control", "no-store");
     return c.json({ status: "unavailable", code: "AI_LEGACY_ROUTE_DISABLED",
       message: "This legacy AI capability is not yet connected to the budgeted gateway." }, 503);
   }
@@ -121,14 +121,7 @@ app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/omega/tasks", omegaTasks);
 
 // ── tRPC ───────────────────────────────────────────────────────────
-app.use("/api/trpc/*", async (c) => {
-  return fetchRequestHandler({
-    endpoint: "/api/trpc",
-    req: c.req.raw,
-    router: appRouter,
-    createContext,
-  });
-});
+app.route("/api/trpc", createTrpcHttp(appRouter));
 
 // ── HEALTH CHECK ENDPOINTS (Railway, Docker & Uptime monitors) ─────
 app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));

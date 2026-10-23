@@ -1,61 +1,62 @@
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
+import { BoundedRateLimiter } from "./lib/httpGuard";
 
+// Explicit procedure/type pairs. New procedures fail closed until reviewed;
+// an ordinary account or a deployment secret is never an administrator role.
+const publicReads = new Set([
+  "ping", "knowledge.getArticles", "knowledge.searchLearning",
+  "content.getHealthTips", "content.getAgricultureNews", "content.getSportsNews",
+  "content.getBusinessTips", "content.getGovernmentInfo", "content.getTourismInfo",
+]);
+const accountProcedures: Record<string, "query" | "mutation"> = {
+  "offline.queueAction": "mutation", "offline.getPending": "query",
+  "offline.markSynced": "mutation", "offline.resolveConflict": "query",
+};
+const safeMessages = new Set([
+  "TRPC_PROCEDURE_UNAVAILABLE", "AUTH_UNAVAILABLE", "AUTH_REQUIRED",
+  "OFFLINE_STORAGE_UNAVAILABLE", "OFFLINE_QUEUE_LIMIT",
+]);
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    // Never serialize SQL, credentials, input payloads or stack traces.
+    return { ...shape,
+      message: safeMessages.has(error.message) ? error.message : error.code,
+      data: { code: shape.data.code, httpStatus: shape.data.httpStatus },
+    };
+  },
 });
-
 export const createRouter = t.router;
-export const publicQuery = t.procedure;
-
-// ── AUTHENTICATION MIDDLEWARE ──────────────────────────────────────
-export const protectedQuery = t.procedure.use(async ({ ctx, next }) => {
-  if (process.env.NODE_ENV !== "production") {
-    return next({ ctx });
+export const publicQuery = t.procedure.use(async ({ ctx, path, type, next }) => {
+  if (publicReads.has(path) && type === "query") return next({ ctx });
+  if (!Object.hasOwn(accountProcedures, path) || accountProcedures[path] !== type) {
+    throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "TRPC_PROCEDURE_UNAVAILABLE" });
   }
-  
-  const authHeader = ctx.req?.headers?.get?.("authorization");
-  const appSecret = process.env.APP_SECRET;
-  
-  if (!appSecret) {
-    throw new Error("Server misconfigured: APP_SECRET not set");
+  let userId: number;
+  try {
+    userId = await authenticatePilotUser(ctx.req.headers.get("authorization") ?? undefined);
+  } catch (error) {
+    const unavailable = error instanceof PilotAuthError && error.code === "AUTH_UNAVAILABLE";
+    throw new TRPCError({ code: unavailable ? "SERVICE_UNAVAILABLE" : "UNAUTHORIZED",
+      message: unavailable ? "AUTH_UNAVAILABLE" : "AUTH_REQUIRED" });
   }
-  
-  if (!authHeader || authHeader !== `Bearer ${appSecret}`) {
-    throw new Error("Unauthorized: Invalid or missing authentication token");
-  }
-  
-  return next({ ctx });
+  return next({ ctx: { ...ctx, userId } });
 });
 
-// ── RATE LIMITING ──────────────────────────────────────────────────
-const requestCounts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 100;
-const RATE_WINDOW = 60 * 1000;
+// Shares the route policy; no development bypass and no shared APP_SECRET.
+export const protectedQuery = publicQuery.use(({ ctx, next }) => {
+  if (!("userId" in ctx) || !Number.isSafeInteger(ctx.userId) || Number(ctx.userId) < 1) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "AUTH_REQUIRED" });
+  }
+  return next({ ctx: { ...ctx, userId: Number(ctx.userId) } });
+});
 
-export const rateLimitedQuery = t.procedure.use(async ({ ctx, next }) => {
-  const clientIp = ctx.req?.headers?.get?.("x-forwarded-for") || 
-                   ctx.req?.headers?.get?.("x-real-ip") || 
-                   "unknown";
-  
-  const now = Date.now();
-  const clientData = requestCounts.get(clientIp);
-  
-  if (clientData && now < clientData.resetAt) {
-    if (clientData.count >= RATE_LIMIT) {
-      throw new Error("Rate limit exceeded. Please try again later.");
-    }
-    clientData.count++;
-  } else {
-    requestCounts.set(clientIp, { count: 1, resetAt: now + RATE_WINDOW });
-  }
-  
-  if (Math.random() < 0.01) {
-    for (const [ip, data] of requestCounts.entries()) {
-      if (now > data.resetAt) requestCounts.delete(ip);
-    }
-  }
-  
+const throttle = new BoundedRateLimiter(100, 60_000, 5000);
+export const rateLimitedQuery = publicQuery.use(({ ctx, next }) => {
+  const key = ctx.req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!throttle.permit(key)) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
   return next({ ctx });
 });
