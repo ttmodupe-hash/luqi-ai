@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 
 const IS_DEV = process.env.NODE_ENV === 'development';
+const SMOKE_TEST = process.argv.includes('--luqi-smoke-test');
 const DEFAULT_API_URL = 'http://localhost:8080';
 
 let mainWindow;
@@ -43,19 +44,40 @@ function createWindow() {
 
   // Load the app
   if (IS_DEV) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'ui/index.html'));
   }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
 
-  // Open external links in browser
+  // Prevent a remote page from inheriting this window's preload bridge.
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+
+  if (SMOKE_TEST) {
+    const timeout = setTimeout(() => app.exit(1), 20000);
+    mainWindow.webContents.on('did-fail-load', () => app.exit(1));
+    mainWindow.webContents.on('did-finish-load', async () => {
+      try {
+        const text = await mainWindow.webContents.executeJavaScript('document.body.innerText');
+        if (!text.includes('LUQI') || !text.includes('Workspace')) throw new Error('Workspace did not render');
+        console.log('Desktop workspace rendered successfully');
+        clearTimeout(timeout);
+        app.exit(0);
+      } catch { app.exit(1); }
+    });
+  }
+
+  // Open only ordinary web links; never pass custom OS protocols to the shell.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    try {
+      if (['https:', 'http:'].includes(new URL(url).protocol)) {
+        void shell.openExternal(url).catch(() => {});
+      }
+    } catch { /* Malformed links are denied. */ }
     return { action: 'deny' };
   });
 

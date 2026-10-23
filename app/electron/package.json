@@ -1,15 +1,16 @@
 {
   "name": "luqi-ai-desktop",
   "version": "3.6.0",
-  "description": "Luqi-AI Desktop — Windows, macOS, Linux",
+  "description": "Luqi-AI Desktop \u2014 Windows, macOS, Linux",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
-    "dist": "electron-builder --publish=never"
+    "build": "npm run prepare:ui && electron-builder",
+    "build:win": "npm run prepare:ui && electron-builder --win",
+    "build:mac": "npm run prepare:ui && electron-builder --mac",
+    "build:linux": "npm run prepare:ui && electron-builder --linux",
+    "dist": "npm run prepare:ui && electron-builder --publish=never",
+    "prepare:ui": "node -e \"require('node:fs').cpSync('../dist/public', 'ui', {recursive:true})\""
   },
   "build": {
     "appId": "com.luqiai.desktop",
@@ -21,7 +22,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "../dist/**/*"
+      "ui/**/*"
     ],
     "extraResources": [
       {
@@ -31,17 +32,28 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "../public/icon-512.png"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "../public/icon-512.png"
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "category": "Office",
-      "icon": "../public/icon-512.png"
+      "icon": "../public/icon-512.png",
+      "executableName": "luqi-ai"
     },
     "nsis": {
       "oneClick": false,
@@ -51,7 +63,7 @@
     }
   },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.0"
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3"
   }
 }

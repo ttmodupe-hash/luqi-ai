@@ -22,7 +22,7 @@ import {
 import { trpc } from "@/providers/trpc";
 import { toast } from "sonner";
 import { ExperientialSimulatorSandbox } from "@/components/ExperientialSimulatorSandbox";
-import { type GradeTier, type EducationalModuleRecord } from "@/api/services/experientialEducationOrchestrator";
+import type { GradeTier, EducationalModuleRecord } from "../../../api/services/experientialEducationOrchestrator";
 
 const DEFAULT_MODULES: EducationalModuleRecord[] = [
   {
