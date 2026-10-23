@@ -48,6 +48,10 @@ backup; the user controls the downloaded file after it leaves the app.
 - Node tests cover both namespace prefixes, fake operator/approval/payment
   fields, malformed bodies, every mutating verb and USSD provider non-execution.
 - Python tests cover retired namespace denial and absence of worker/client imports.
+- The initial GitHub Actions run passed 17 real MySQL tests and the isolated
+  restore drill. Removed the optional npm cache from MySQL/Omega workflows after
+  cache storage egress errors delayed setup by 10 minutes; lockfile-based installs
+  and all database checks remain required.
 - Real MySQL CI adds foreign-owner denial, 60-message export, owned/foreign/null
   memory handling, metadata exclusion, revocation, row/byte limits, preservation
   and export serialization with a concurrent write.
