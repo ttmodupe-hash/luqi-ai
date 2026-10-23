@@ -1,14 +1,21 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
-// Creates all 35 tables on startup when they do not exist yet.
-// DDL matches db/schema.ts exactly. Idempotent (IF NOT EXISTS) and never
-// throws — a database that is unreachable or already provisioned must
-// not block server startup. Also ensures the demo login account exists.
+// Creates application tables and dedicated guard ledgers when absent.
+// Idempotent (IF NOT EXISTS), without seeding accounts. Production startup
+// fails if required schema creation is unavailable.
 // =====================================================================
 
 import mysql from "mysql2/promise";
 
 export const CREATE_STATEMENTS: string[] = [
+  `CREATE TABLE IF NOT EXISTS auth_attempt_windows (
+    scope ENUM('login_global','login_subject','signup_global','signup_subject') NOT NULL,
+    subject_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    reset_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (scope, subject_key),
+    INDEX auth_attempt_windows_expiry (reset_at)
+  ) ENGINE=InnoDB;`,
   `CREATE TABLE IF NOT EXISTS \`ab_test_results\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
 	\`test_id\` int NOT NULL,

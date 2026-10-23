@@ -1,8 +1,10 @@
 # LUQI MySQL 8.4 — backup, restore and disaster recovery
 
-**Status:** A disposable GitHub CI database has a tested *logical backup
-and restore* procedure. This does **NOT** mean automated snapshots,
-offsite retention, or a production restoration drill are already configured.
+**Status:** Disposable MySQL CI exercises logical backup and restore. After
+explicit approval, daily Railway volume backups with 6-day retention were
+enabled and an initial 941 MB snapshot was listed on 2026-10-23 (details
+below). A production-derived isolated restore, offsite logical exports and
+PITR remain outstanding; a listed snapshot is not proof of recoverability.
 
 ## Production safety rules
 
@@ -40,9 +42,11 @@ offsite retention, or a production restoration drill are already configured.
 
 `.github/workflows/mysql-live-integration.yml` provisions an ephemeral
 MySQL 8.4 instance with fake credentials. Its second job seeds a sample
-account and both pilot spending ledgers, runs a transactional `mysqldump`,
-restores it into a newly created database, and checks 37 tables and the
-survival of account and quota data.
+account, both pilot spending ledgers and an authentication throttle counter,
+runs a transactional `mysqldump`, restores it into a newly created database,
+and checks all 38 tables, complete data/schema equality and survival of the
+account, quota and throttle data. The authentication counter table is an
+additive migration; restoration must preserve active protection windows.
 
 Run the fixture against disposable CI only. The script
 `scripts/ci-mysql-restore.sh` refuses any source URL other than the exact

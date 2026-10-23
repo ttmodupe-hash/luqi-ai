@@ -1,8 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
-import { conversationClient, ConversationError } from "../src/lib/private-conversations";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { conversationClient, ConversationError, signIn } from "../src/lib/private-conversations";
 import { readFileSync } from "node:fs";
 
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+afterEach(() => vi.unstubAllGlobals());
+it.each([['117', 117], ['0', 30], ['999999', 30], ['private diagnostic', 30]])('bounds login retry hints %s and never retries automatically', async (header, seconds) => {
+  const request = vi.fn().mockResolvedValue(new Response('private error details', { status: 429, headers: { 'Retry-After': header } }));
+  vi.stubGlobal('fetch', request);
+  await expect(signIn('fixture@example.invalid', 'synthetic-password')).rejects.toEqual(new ConversationError(429, Number(seconds)));
+  expect(request).toHaveBeenCalledTimes(1);
+});
 describe("private conversation browser client", () => {
   it("sends only the account token and allowed user content to the same origin", async () => {
     const request = vi.fn().mockResolvedValue(response({ id: 7, role: "user", persisted: true }, 201));
