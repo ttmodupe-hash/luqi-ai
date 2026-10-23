@@ -134,26 +134,10 @@
   font-weight: 450;
 }
 .luqi-brand-symbol {
-  display: grid;
-  grid-template-columns: 13px 13px;
-  gap: 3px;
-  transform: rotate(-10deg);
-}
-.luqi-brand-symbol i {
-  width: 13px;
-  height: 13px;
-  background: #d0eeaa;
-  border-radius: 3px;
-}
-.luqi-brand-symbol i:nth-child(2) {
-  border-radius: 8px 8px 3px 3px;
-  background: #e2b66c;
-}
-.luqi-brand-symbol i:nth-child(3) {
-  background: #759a68;
-}
-.luqi-brand-symbol i:nth-child(4) {
-  border-radius: 3px 3px 8px 3px;
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
 }
 .luqi-desktop-nav {
   display: flex;
