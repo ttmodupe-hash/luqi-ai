@@ -52,3 +52,21 @@ it("deletes only the chosen conversation with explicit confirmation and no retry
   await expect(conversationClient("token", request).remove(3)).rejects.toThrow();
   expect(request).toHaveBeenCalledTimes(3);
 });
+
+it('validates the exact requested conversation before exposing an export and never retries', async () => {
+  const data = { format: 'luqi.conversation.v1', exportedAt: '2026-10-23T06:00:00Z',
+    conversation: { id: 3, title: 'Private', personalityId: 1, createdAt: null },
+    messages: [{ id: 1, role: 'user', content: '<script>plain JSON</script>', createdAt: null }], memories: [] };
+  const request = vi.fn().mockResolvedValue(response(data));
+  await expect(conversationClient('token', request).export(3)).resolves.toEqual(data);
+  expect(request).toHaveBeenCalledExactlyOnceWith('/api/v1/companion/conversations/3/export', {
+    method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error',
+    headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+  });
+  await expect(conversationClient('token', request).export(4)).rejects.toThrow();
+  for (const status of [401, 404, 422, 503]) {
+    request.mockResolvedValueOnce(response({ privateDetails: 'must not escape' }, status));
+    await expect(conversationClient('token', request).export(3)).rejects.toEqual(new ConversationError(status));
+  }
+  expect(request).toHaveBeenCalledTimes(6);
+});

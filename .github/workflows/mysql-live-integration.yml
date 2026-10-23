@@ -66,10 +66,11 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
+      # Avoid the optional npm cache: storage egress failures stalled setup
+      # for 10 minutes. npm ci installs from the committed lockfile below.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
       - name: Install Node dependencies
         run: npm ci --legacy-peer-deps --include=dev
       - name: Test real InnoDB schema, concurrent quotas and fail-closed rollback
@@ -99,10 +100,11 @@ jobs:
       LUQI_AI_BILLING_APPROVED: "false"
     steps:
       - uses: actions/checkout@v4
+      # Avoid the optional npm cache: storage egress failures stalled setup
+      # for 10 minutes. npm ci installs from the committed lockfile below.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
       - name: Install Node dependencies
         run: npm ci --legacy-peer-deps --include=dev
       - name: Seed isolated MySQL 8.4 account and reservation fixtures

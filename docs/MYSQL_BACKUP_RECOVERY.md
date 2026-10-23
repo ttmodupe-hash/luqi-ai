@@ -11,7 +11,10 @@ offsite retention, or a production restoration drill are already configured.
    whose name misleadingly contains `mysql`.
 2. Before recording sensitive user data, the operator should configure
    automated volume snapshots or a managed backup plan in Railway, verify
-   retention and encryption, and test restoring to a different project.
+   retention and encryption, and rehearse logical recovery into an isolated
+   target. Railway volume snapshots currently restore only within the same
+   project/environment and stage a replacement volume attachment; never use
+   the production Restore button as an isolated rehearsal.
    See Railway's current backup guidance for the plan and account.
 3. Independently schedule encrypted MySQL logical exports to a private,
    access-controlled backup store **outside the production database volume**.
@@ -106,3 +109,54 @@ constraints, routines and triggers. Both fixtures remain quiescent during this
 comparison. SQL stays in a private temporary directory and is removed on exit;
 a mismatch fails the job without printing records. This expands fixture
 coverage, but is still not evidence of a production backup schedule or restore.
+
+## Access and documentation check — 2026-10-23
+
+Production scope: project `kind-spontaneity`
+(`9f627cb8-3136-4b30-89d2-32ca648a1e5f`), environment
+`1e192ef3-1fa6-4684-81fc-60165c7b0e22`, MySQL service
+`8094576f-f2c7-4e50-b474-69661e7c0ba8`, volume
+`d02ad924-218c-4afc-a886-0cee686bc62b` mounted at `/var/lib/mysql`.
+This volume ID is not a volume-instance ID.
+
+The connected Railway tools expose service/volume status but no backup-list or
+schedule-list operation. The user completed dashboard sign-in, allowing a
+read-only check against this exact production service. Before the approved
+change, the dashboard showed no volume backups, no schedule and PITR off.
+
+After the user's separate backup approval on 2026-10-23:
+
+- Enabled **Daily** volume backups: every 24 hours, retained for **6 days**.
+  Weekly and monthly schedules remain off. The dashboard confirmed the next
+  backup in 13 hours at verification time.
+- Created the initial on-demand backup. At approximately 07:19 UTC the dashboard
+  listed the backup labelled `2026-10-23 09:18` (dashboard local time), **941 MB**,
+  with a Restore action. This establishes backup availability, not a tested restore.
+- MySQL remained online; no production restore, image change, service
+  redeployment, volume replacement or data mutation was performed.
+- PITR remains off. Railway requires the current `mysql:8` image to be pinned to
+  the running major.minor before enabling PITR; do not guess that version or
+  change the database image as part of this snapshot approval.
+- The approval covers database backups only. Paid AI/provider activation and
+  application billing remain disabled.
+
+[Railway backup documentation](https://docs.railway.com/volumes/backups) says
+only incremental backup-exclusive data is billed, at the volume-storage rate.
+The [published price](https://docs.railway.com/pricing/plans) checked on this date
+is **$0.15 per GB-month**. Displayed snapshot size is not a forecast of total
+incremental billing. Monitor actual storage consumption; no fixed-cost guarantee
+or new plan was established by this change. The manual backup's expiration was
+not exposed in the inspected view; review retention separately without deleting
+it before a newer verified recovery point exists.
+
+The [volume API documentation](https://docs.railway.com/integrations/api/manage-volumes)
+provides read-only `volumeInstanceBackupList` and
+`volumeInstanceBackupScheduleList` queries when suitable API access exists.
+Never put credentials or database contents into recovery evidence.
+
+Restoring a Railway snapshot stages a replacement volume and service deployment
+within the same project/environment. Do not use the production Restore button
+for a drill. A production-derived, isolated logical restore with approved access
+and cost remains the next recovery proof; the existing disposable CI fixture is
+not a substitute. Daily backups also leave a potential interval of up to about
+24 hours between scheduled recovery points; this is not point-in-time recovery.

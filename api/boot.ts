@@ -19,7 +19,7 @@ import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { closeDb } from "./queries/connection";
 import { closeCache } from "./services/cache";
-import { SuperIntelligenceOrchestrator, UnifiedFinOpsController, GlobalLedger } from "./services/superCore";
+import { SuperIntelligenceOrchestrator, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { runBudgetedPilotChat } from "./services/aiPilotGateway";
 import { checkPilotCredentials } from "./services/pilotCredentialCheck";
@@ -615,23 +615,6 @@ app.post('/api/v1/simulation/verify-terminal', async (c) => {
 // LUQITOONS MULTI-AGENT STORYBOARD, STRIPE LEDGER & SELF-IMPROVEMENT
 // ============================================================================
 
-const corporateBillingLedgerStore = [
-  {
-    id: "TX-STRIPE-9901",
-    customer: "enterprise-client@luqi-ai.com",
-    transaction_reference: "cs_live_990184712049",
-    payout_details: "$499.00 USD (Unlimited Multi-Scene Storyboard)",
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-  },
-  {
-    id: "TX-STRIPE-9902",
-    customer: "academy@pan-africa.edu",
-    transaction_reference: "cs_live_990284712050",
-    payout_details: "$249.00 USD (Grade 10 STEM Simulation Engine)",
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-  }
-];
-
 // Authentication is implemented by the persistent REST-compat router
 // mounted above. Never return fake success or timestamp-based pseudo-JWTs.
 // Real /auth/signup, /auth/register, /auth/login and /api/v1/auth/* aliases
@@ -707,29 +690,6 @@ app.post('/media/compile-and-stream', async (c) => {
     scene_id: sceneId,
     status: "AUDIO_SYNC_LOCKED"
   });
-});
-
-// Stripe Billing Public Webhook
-app.post('/api/v1/billing/stripe-webhook', async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const event = body.type || 'checkout.session.completed';
-  const newRecord = {
-    id: `TX-STRIPE-${corporateBillingLedgerStore.length + 1001}`,
-    customer: body.customer || "corporate-partner@luqi-ai.com",
-    transaction_reference: body.id || `cs_live_${Date.now()}`,
-    payout_details: `$${body.amount || 299.0} USD (${event})`,
-    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
-  };
-  corporateBillingLedgerStore.unshift(newRecord);
-  return c.json({ status: "success", record: newRecord });
-});
-
-// Protected Admin Billing Ledger
-app.get('/api/v1/admin/billing-ledger', (c) => {
-  return c.json(corporateBillingLedgerStore);
-});
-app.get('/admin/billing-ledger', (c) => {
-  return c.json(corporateBillingLedgerStore);
 });
 
 // Self-Improving Intelligence Agent Module
@@ -847,31 +807,6 @@ app.post('/api/v1/admin/verify', async (c) => {
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 400);
   }
-});
-
-// 3. FinOps Cost & Self-Healing Health Dashboard Endpoint (Admin Protected)
-app.get('/api/v1/finops-dashboard', (c) => {
-  if (!checkSovereignAdminAuth(c)) {
-    return c.json({ status: 'error', message: 'Unauthorized' }, 401);
-  }
-  return c.json({
-    status: 'success',
-    data: UnifiedFinOpsController.getDashboardSummary()
-  });
-});
-
-// 4. 70/30 Human-in-the-Loop Payment & Authorization Gate (PayFast / MTN MoMo)
-app.post('/api/v1/billing/initiate-30-auth', async (c) => {
-  const { amountZar, rail, purpose } = await c.req.json();
-  const txRef = `LUQI_AUTH_${Date.now()}`;
-  return c.json({
-    status: 'AWAITING_HUMAN_30_PERCENT_PIN',
-    transactionReference: txRef,
-    rail: rail || 'PAYFAST_MOMO',
-    amountZar: amountZar || 50,
-    purpose: purpose || 'Token Top-Up / SARS Tax Submission Auth',
-    securityNotice: 'AI execution halted at the 70% boundary. Human PIN / OTP required on secure out-of-band handset.'
-  });
 });
 
 // ── KHORO LEGAL & EDUCATIONAL ADVISOR ROUTE ─────────────────────────

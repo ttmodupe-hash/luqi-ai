@@ -4,11 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import CompanionPage from "../src/pages/CompanionPage";
 
+const downloads = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/private-conversations', async importOriginal => ({
+  ...await importOriginal<typeof import('../src/lib/private-conversations')>(),
+  downloadConversationExport: downloads,
+}));
 const request = vi.fn();
 const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 const list = { conversations: [{ id: 4, title: "Private notes", personalityId: 1 }] };
 const history = { messages: [{ id: 2, role: "user", content: "Previously saved", createdAt: "2026-10-22T12:00:00Z" }] };
-beforeEach(() => { request.mockReset(); vi.stubGlobal("fetch", request); });
+beforeEach(() => { downloads.mockReset(); request.mockReset(); vi.stubGlobal("fetch", request); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 async function login() {
   request.mockResolvedValueOnce(reply({ token: "fixture-token", user: { email: "test@example.invalid" } }))
@@ -141,5 +146,49 @@ describe("private conversation deletion", () => {
     await act(async () => resolve(reply({ id: 4, deleted: true })));
     expect(screen.queryByText(/deleted from active storage/)).toBeNull();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+  });
+});
+
+const exportFixture = { format: 'luqi.conversation.v1', exportedAt: '2026-10-23T06:00:00Z',
+  conversation: { id: 4, title: 'Private notes', personalityId: 1, createdAt: null },
+  messages: history.messages, memories: [] };
+describe('private conversation download', () => {
+  it('requires an explicit click, excludes unsaved drafts and downloads only a verified response', async () => {
+    await login(); await selectConversation();
+    expect(downloads).not.toHaveBeenCalled();
+    draft();
+    expect((screen.getByRole('button', { name: 'Export selected conversation' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear draft' }));
+    request.mockResolvedValueOnce(reply(exportFixture));
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected conversation' }));
+    await screen.findByText(/Export download started/);
+    expect(downloads).toHaveBeenCalledExactlyOnceWith(exportFixture);
+    expect(request.mock.calls.at(-1)?.[1].method).toBe('GET');
+  });
+  it.each([404, 422, 503])('never downloads partial/error data on HTTP %s', async status => {
+    await login(); await selectConversation();
+    request.mockResolvedValueOnce(reply({ code: 'PRIVATE_FAILURE' }, status));
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected conversation' }));
+    await screen.findByText(status === 422 ? /No partial export was downloaded/ : /Export could not be completed/);
+    expect(downloads).not.toHaveBeenCalled();
+    expect(screen.getByText('Previously saved')).toBeTruthy();
+  });
+  it('clears private state when the export session is revoked', async () => {
+    await login(); await selectConversation();
+    request.mockResolvedValueOnce(reply({}, 401));
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected conversation' }));
+    await screen.findByRole('button', { name: 'Sign in' });
+    expect(screen.queryByText('Previously saved')).toBeNull();
+    expect(downloads).not.toHaveBeenCalled();
+  });
+  it('discards an export response received after sign-out', async () => {
+    await login(); await selectConversation();
+    let resolve!: (response: Response) => void;
+    request.mockReturnValueOnce(new Promise<Response>(r => { resolve = r; }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected conversation' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await act(async () => resolve(reply(exportFixture)));
+    expect(downloads).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Export download started/)).toBeNull();
   });
 });

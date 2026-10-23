@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { conversationClient, ConversationError, signIn, type Conversation, type SavedMessage } from "../lib/private-conversations";
+import { conversationClient, ConversationError, downloadConversationExport, signIn, type Conversation, type SavedMessage } from "../lib/private-conversations";
 
 const modes = ["Luqi Prime — General", "Dr. Kwame — STEM", "Amina — Trade", "Chidi — Networks"];
 const control = "rounded-lg border border-slate-500 bg-slate-900 p-3 text-white disabled:opacity-50";
@@ -31,7 +31,7 @@ export default function CompanionPage() {
     setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false);
     setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false); setNotice("");
   }
-  async function run(action: (current: () => boolean) => Promise<void>, write = false, writeFailure?: string) {
+  async function run(action: (current: () => boolean) => Promise<void>, write = false, writeFailure?: string, readFailure?: string) {
     if (locked.current) return;
     locked.current = true; setBusy(true); setNotice("");
     const version = epoch.current;
@@ -45,7 +45,7 @@ export default function CompanionPage() {
         if (write) setUncertain(true);
         setNotice(write
           ? writeFailure ?? "Save could not be confirmed. Your draft is retained. Refresh saved history and check for duplicates before trying again."
-          : "Unable to load data. Please try again. No AI reply has been generated.");
+          : readFailure ?? "Unable to load data. Please try again. No AI reply has been generated.");
       }
     } finally { if (current()) { locked.current = false; setBusy(false); } }
   }
@@ -118,6 +118,26 @@ export default function CompanionPage() {
         <section className="min-w-0 space-y-4" aria-label="Conversation messages" aria-busy={busy}>
           {!selected ? <p>Select or create a conversation to save notes.</p> : <>
             <h2 className="text-xl">Saved messages</h2>
+            <section className="space-y-2" aria-label="Export private notes">
+              <p className="text-sm text-slate-400">Download this conversation's saved messages and your linked memories as a JSON file on this device. Keep the file private. Unsaved drafts are excluded.</p>
+              <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => {
+                const exportingId = selected;
+                void run(async current => {
+                  try {
+                    const data = await conversationClient(session.token).export(exportingId);
+                    if (!current()) return;
+                    downloadConversationExport(data);
+                    setNotice("Export download started. Keep the downloaded file private.");
+                  } catch (error) {
+                    if (current() && error instanceof ConversationError && error.status === 422) {
+                      setNotice("This conversation exceeds the export limit (1,000 messages, 1,000 linked memories or 1 MiB of text). No partial export was downloaded. Your saved notes are unchanged.");
+                      return;
+                    }
+                    throw error;
+                  }
+                }, false, undefined, "Export could not be completed. No file was downloaded. Your saved notes are unchanged.");
+              }}>Export selected conversation</button>
+            </section>
             {!deletePrompt ? <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => setDeletePrompt(true)}>Delete selected conversation</button> :
               <section className="space-y-3 rounded-lg border border-red-400 p-4" aria-label="Confirm conversation deletion">
                 <p>Delete this conversation, all its saved messages and your linked memories? This cannot be undone in the app. Copies in backups, if any, are not erased by this action.</p>
