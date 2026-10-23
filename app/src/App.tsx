@@ -16,6 +16,7 @@ import ContactPage from "./pages/ContactPage";
 import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
 import CertMasterPage from "./pages/CertMasterPage";
 import CompanionPage from "./pages/CompanionPage";
+import OmegaTasksPage from "./pages/OmegaTasksPage";
 import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
 import ExperientialEducationPage from "./pages/ExperientialEducationPage";
 import PendulumLabPage from "./pages/PendulumLabPage";
@@ -34,6 +35,7 @@ export default function App() {
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
+        <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />
         <RouterRoute path="/ai-companion" element={<CompanionPage />} />

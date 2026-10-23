@@ -28,12 +28,12 @@ test("workspace filters distinguish usable tools from previews without making AI
   ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(6);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(3);
-  await expect(page.getByRole("article").getByRole("link")).toHaveCount(3);
+  await expect(page.getByRole("article")).toHaveCount(4);
+  await expect(page.getByRole("article").getByRole("link")).toHaveCount(4);
   await page
     .getByRole("button", { name: "In development", exact: true })
     .click();
-  await expect(page.getByRole("article")).toHaveCount(3);
+  await expect(page.getByRole("article")).toHaveCount(2);
   await expect(page.getByRole("article").getByRole("link")).toHaveCount(0);
   await page.getByLabel("Filter workspace tools").fill("unmatched-example");
   await expect(
@@ -62,9 +62,9 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   await expect(search).toBeFocused();
   await search.fill("Omega");
   await expect(
-    dialog.getByRole("heading", { name: "Omega agents" }),
+    dialog.getByRole("link", { name: "Omega tasks" }),
   ).toBeVisible();
-  await expect(dialog.getByRole("link")).toHaveCount(0);
+  await expect(dialog.getByRole("link")).toHaveCount(1);
   for (let i = 0; i < 5; i++) {
     await page.keyboard.press("Tab");
     expect(
