@@ -167,7 +167,10 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
       const ready = await request('/v1/readiness');
       expect(ready.status).toBe(503);
       expect((await ready.json()).checks).toMatchObject({ persistence: 'connected', ai_pilot: 'disabled' });
-      const [seed] = await root.query<RowDataPacket[]>('SELECT COUNT(*) AS n FROM botanical_species');
+      // The legacy seed creates an extra table outside the base 38. Neither
+      // web startup nor a restart may create that table or seed its contents.
+      const [seed] = await root.query<RowDataPacket[]>(`SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='botanical_species'`);
       expect(Number(seed[0].n)).toBe(0);
       expect(run.output()).not.toContain('[Bootstrap]');
       expect(run.output()).not.toContain('[Seed]');
