@@ -38,7 +38,7 @@ test('recording is explicit, locks editing and cancels without a completed or pa
   await expect(page.getByRole('button', { name: 'Cancel recording', exact: true })).toBeVisible();
   await expect(page.getByLabel('Scene title', { exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Cancel recording', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('partial recording was discarded');
+  await expect(page.getByRole('status', { name: 'Studio export status' })).toContainText('partial recording was discarded');
   await expect(page.getByRole('link', { name: /Download 90-second video/ })).toHaveCount(0);
   await expect(page.getByLabel('Scene title', { exact: true })).toBeEnabled();
 });

@@ -113,7 +113,7 @@ export default function ContentStudioPage() {
       <section className="luqi-studio-stage" aria-label="Animation preview">
         <canvas ref={canvas} width={dimensions.width} height={dimensions.height} role="img" aria-label="Projected 3D pendulum animation. The complete script and questions are available in the storyboard editor." style={{ aspectRatio: `${dimensions.width}/${dimensions.height}` }} />
         <div className="luqi-studio-transport"><button type="button" disabled={recording} onClick={() => { if (position.current >= 90) { position.current = 0; setTime(0); } setPlaying(!playing); }}>{playing ? 'Pause preview' : 'Play preview'}</button>
-          <output aria-label="Timeline position">{Math.floor(time)} / 90 s</output><label>Time<input type="range" aria-label="Animation time" min="0" max="90" step=".1" value={time} disabled={recording} onChange={e => seek(Number(e.target.value))} /></label></div>
+          <output role="timer" aria-live="off" aria-label="Timeline position">{Math.floor(time)} / 90 s</output><label>Time<input type="range" aria-label="Animation time" min="0" max="90" step=".1" value={time} disabled={recording} onChange={e => seek(Number(e.target.value))} /></label></div>
         <div className="luqi-studio-physics"><label>Length · {length.toFixed(1)} m<input type="range" aria-label="Pendulum length" min=".5" max="4" step=".1" value={length} disabled={recording} onChange={e => setLength(Number(e.target.value))} /></label>
           <label>Gravity<select aria-label="Gravity" value={gravity} disabled={recording} onChange={e => setGravity(Number(e.target.value))}><option value="9.81">Earth · 9.81 m/s²</option><option value="1.62">Moon · 1.62 m/s²</option><option value="3.71">Mars · 3.71 m/s²</option></select></label>
           <label>Camera angle<input type="range" aria-label="Camera angle" min="-80" max="80" value={yaw} disabled={recording} onChange={e => setYaw(Number(e.target.value))} /></label></div>
@@ -122,9 +122,9 @@ export default function ContentStudioPage() {
       <section className="luqi-studio-editor" aria-labelledby="storyboard-heading"><h2 id="storyboard-heading">Your storyboard</h2>
         <div className="luqi-studio-scenes" role="group" aria-label="Choose a scene">{scenes.map((s, i) => <button key={i} type="button" aria-pressed={selected === i} disabled={recording} onClick={() => seek(i * 15)}><span>{String(i + 1).padStart(2, '0')}</span><span>{s.title || 'Untitled scene'}<small>{i * 15}–{(i + 1) * 15} seconds</small></span></button>)}</div>
         <fieldset disabled={recording}><legend>Edit scene {selected + 1}</legend>
-          <label>Scene title<input maxLength={64} value={scenes[selected].title} onChange={e => edit('title', e.target.value)} /></label>
-          <label>Scene caption<textarea rows={4} maxLength={240} value={scenes[selected].caption} onChange={e => edit('caption', e.target.value)} /></label>
-          <label>Critical-thinking question<textarea rows={2} maxLength={140} value={scenes[selected].question} onChange={e => edit('question', e.target.value)} /></label>
+          <label>Scene title<input aria-label="Scene title" maxLength={64} value={scenes[selected].title} onChange={e => edit('title', e.target.value)} /></label>
+          <label>Scene caption<textarea aria-label="Scene caption" rows={4} maxLength={240} value={scenes[selected].caption} onChange={e => edit('caption', e.target.value)} /></label>
+          <label>Critical-thinking question<textarea aria-label="Critical-thinking question" rows={2} maxLength={140} value={scenes[selected].question} onChange={e => edit('question', e.target.value)} /></label>
         </fieldset>
       </section>
     </div>
@@ -134,7 +134,7 @@ export default function ContentStudioPage() {
       <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={recording} onClick={record}>Record 90-second animation</button>
         {recording && <button type="button" onClick={cancelRecording}>Cancel recording</button>}
         <button type="button" disabled={recording} onClick={() => exportText('storyboard')}>Download storyboard</button><button type="button" disabled={recording} onClick={() => exportText('subtitles')}>Download subtitles</button><button type="button" disabled={recording} onClick={() => exportText('script')}>Download script / podcast outline</button></div>
-      <p role="status" aria-live="polite">{message}</p>
+      <p role="status" aria-label="Studio export status" aria-live="polite">{message}</p>
       {clip && <div><video src={clip.url} controls aria-label="Completed local animation" /><a className="luqi-primary" href={clip.url} download={`luqi-showcase-90s-${clip.format}.${clip.extension}`}>Download 90-second video (.{clip.extension})</a></div>}
     </section>
     <section className="luqi-studio-responsibility"><h2>Support that keeps you in control.</h2><p>Use examples your audience can relate to. Distinguish evidence from opinion and invite a counterexample. Obtain permission for music, images, voices and guests. Check the rules for the audience’s country before publishing.</p>
