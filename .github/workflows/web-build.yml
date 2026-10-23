@@ -28,8 +28,19 @@ jobs:
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
         run: npm run build
-      - name: Install Chromium for browser checks
-        run: npx playwright install --with-deps chromium --only-shell
+      - name: Prepare Chromium for browser checks
+        timeout-minutes: 4
+        shell: bash
+        run: |
+          # GitHub's Ubuntu runner supplies Chrome with its system libraries.
+          # Prefer that executable to an unbounded apt mirror/download wait.
+          luqi_browser_path="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$luqi_browser_path" ]; then
+            "$luqi_browser_path" --version
+            echo "LUQI_CHROMIUM_PATH=$luqi_browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium --only-shell
+          fi
       - name: Verify desktop and mobile browser flows with synthetic API fixtures
         run: npx playwright test
       - uses: actions/upload-artifact@v4
