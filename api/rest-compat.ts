@@ -7,6 +7,7 @@
 // =====================================================================
 
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import bcrypt from "bcryptjs";
 import { validNewPassword } from "./lib/passwordPolicy";
 import { getSigningSecret, signUserToken, verifyUserToken, verifyUserCredential } from "./lib/userToken";
@@ -490,6 +491,15 @@ restCompat.get("/api/v25/payments/balance", legacyPaymentsUnavailable);
 
 // ─── AUTH ─────────────────────────────────────────────────────────────
 
+// Bound all login/signup aliases before JSON parsing, including chunked bodies.
+const signupPaths = ["/auth/signup", "/auth/register", "/api/v1/auth/register"];
+const loginPaths = ["/auth/login", "/api/v1/auth/login"];
+const authBodyLimit = bodyLimit({ maxSize: 16 * 1024, onError: (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json({ code: "AUTH_BODY_TOO_LARGE", detail: "Authentication request is too large" }, 413);
+} });
+for (const path of [...signupPaths, ...loginPaths]) restCompat.use(path, authBodyLimit);
+
 for (const path of ["/auth/forgot-password", "/api/v1/auth/forgot-password"]) {
   restCompat.all(path, (c) => {
     c.header("Cache-Control", "no-store");
@@ -553,7 +563,7 @@ const handleLogin = async (c: any) => {
     const [user] = await db.select().from(users)
       .where(eq(users.email, email)).limit(1);
     // Do not reveal whether this email has an account.
-    if (!user || user.isActive === false) {
+    if (!user || user.isActive !== true) {
       return c.json({ detail: "Invalid credentials" }, 401);
     }
     const ok = await bcrypt.compare(password, user.passwordHash);
@@ -572,23 +582,20 @@ const handleLogin = async (c: any) => {
   }
 };
 
-restCompat.post("/auth/signup", handleSignup);
-restCompat.post("/auth/register", handleSignup);
-restCompat.post("/api/v1/auth/register", handleSignup);
-restCompat.post("/auth/login", handleLogin);
-restCompat.post("/api/v1/auth/login", handleLogin);
+for (const path of signupPaths) restCompat.post(path, handleSignup);
+for (const path of loginPaths) restCompat.post(path, handleLogin);
 
 restCompat.get("/auth/me", async (c) => {
   c.header("Cache-Control", "no-store");
   const auth = c.req.header("authorization") || "";
   const token = /^Bearer ([^\s]+)$/i.exec(auth)?.[1];
-  if (!token) return c.json({ detail: "Missing token" }, 401);
+  if (!token || auth.length > 4096) return c.json({ detail: "Missing or invalid token" }, 401);
 
   try {
     const userId = verifyUserToken(token);
     const db = await getPersistentDb();
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user || user.isActive === false) {
+    if (!user || user.isActive !== true) {
       return c.json({ detail: "Invalid or expired token" }, 401);
     }
     verifyUserCredential(token, userId, user.passwordHash);

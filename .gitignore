@@ -110,3 +110,7 @@ web_ui/dist/
 
 /playwright-report/
 /test-results/
+
+# Generated desktop UI bundle
+app/electron/ui/
+app/release/

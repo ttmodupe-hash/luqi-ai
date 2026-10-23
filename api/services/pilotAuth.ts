@@ -39,7 +39,7 @@ export async function authenticatePilotUser(authHeader: string | undefined): Pro
   try {
     const [user] = await db.select({ id: users.id, isActive: users.isActive, passwordHash: users.passwordHash }).from(users)
       .where(eq(users.id, userId)).limit(1);
-    if (!user || user.isActive === false) {
+    if (!user || user.isActive !== true) {
       throw new PilotAuthError("AUTH_REQUIRED");
     }
     try { verifyUserCredential(authHeader!.slice(7), userId, user.passwordHash); }

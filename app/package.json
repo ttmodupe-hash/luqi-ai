@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node scripts/postbuild.js",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node dist/boot.js",
     "check": "tsc -b",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -122,7 +121,15 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.0.0",
-    "vitest": "^3.0.0",
-    "@tailwindcss/postcss": "^4.3.3"
+    "vitest": "^4.1.12",
+    "@tailwindcss/postcss": "^4.3.3",
+    "vite-plugin-compression": "^0.5.1",
+    "terser": "^5.44.0"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "$esbuild"
+    },
+    "postcss-selector-parser": "^7.1.6"
   }
 }

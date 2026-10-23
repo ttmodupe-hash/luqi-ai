@@ -27,8 +27,20 @@ describe('authentication input boundary', () => {
       expect(getPersistentDb).not.toHaveBeenCalled();
     });
   }
+  for (const path of ['/auth/signup', '/auth/register', '/api/v1/auth/register', '/auth/login', '/api/v1/auth/login']) {
+    it(`bounds authentication bodies even without Content-Length: ${path}`, async () => {
+      const body = JSON.stringify({email: 'fixture@example.invalid', password: 'Strong-Fixture-Password!', name: 'x'.repeat(17 * 1024)});
+      for (const headers of [{ 'Content-Type': 'application/json' }, { 'Content-Type': 'application/json', 'Content-Length': String(Buffer.byteLength(body)) }]) {
+        const response = await restCompat.request(path, { method: 'POST', headers, body });
+        expect(response.status).toBe(413);
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+        expect(await response.json()).toMatchObject({code: 'AUTH_BODY_TOO_LARGE'});
+      }
+      expect(getPersistentDb).not.toHaveBeenCalled();
+    });
+  }
   it('requires an explicit bearer scheme on account lookup', async () => {
-    for (const authorization of ['', 'a.b.c', 'Basic a.b.c', 'Bearer a b']) {
+    for (const authorization of ['', 'a.b.c', 'Basic a.b.c', 'Bearer a b', 'Bearer ' + 'a'.repeat(4096)]) {
       const response = await restCompat.request('/auth/me', {headers:{authorization}});
       expect(response.status).toBe(401);
       expect(response.headers.get('Cache-Control')).toBe('no-store');

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { toast } from "sonner";
-import { type DeliveryMode } from "@/api/services/afriLearnAdaptiveEngine";
+import type { DeliveryMode } from "../../api/services/afriLearnAdaptiveEngine";
 
 interface AdaptiveVisualizerProps {
   initialConcept?: string;

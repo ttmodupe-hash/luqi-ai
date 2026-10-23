@@ -90,6 +90,18 @@ describe.sequential("real InnoDB persistence and $100 pilot gates", () => {
     expect((await account.json()).email).toBe(email);
     expect(await authenticatePilotUser(`Bearer ${signedIn.token}`)).toBe(created.user.id);
 
+    // A nullable legacy flag must fail closed in login, account lookup and all
+    // pilot/private-memory/Omega routes that share authenticatePilotUser.
+    await pool.execute("UPDATE users SET is_active=NULL WHERE id=?", [created.user.id]);
+    for (const path of ["/auth/login", "/api/v1/auth/login"]) {
+      expect((await jsonRequest(path, { email, password })).status).toBe(401);
+    }
+    expect((await restCompat.request("/auth/me", {
+      headers: { Authorization: `Bearer ${signedIn.token}` },
+    })).status).toBe(401);
+    await expect(authenticatePilotUser(`Bearer ${signedIn.token}`))
+      .rejects.toMatchObject({ code: "AUTH_REQUIRED" });
+
     // Disabling account revokes its ability to log in or spend on AI.
     await pool.execute("UPDATE users SET is_active=0 WHERE id=?", [created.user.id]);
     // Re-running schema bootstrap must preserve credentials and account state.
