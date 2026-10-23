@@ -20,6 +20,7 @@ export default function CompanionPage() {
   const [moreConversations, setMoreConversations] = useState(false);
   const [moreMessages, setMoreMessages] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [deletePrompt, setDeletePrompt] = useState(false);
   const epoch = useRef(0);
   const locked = useRef(false);
   useEffect(() => () => { epoch.current++; }, []);
@@ -28,9 +29,9 @@ export default function CompanionPage() {
     epoch.current++; locked.current = false;
     setSession(null); setPassword(""); setEmail(""); setConversations([]); setSelected(null);
     setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false);
-    setMoreConversations(false); setMoreMessages(false); setNotice("");
+    setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false); setNotice("");
   }
-  async function run(action: (current: () => boolean) => Promise<void>, write = false) {
+  async function run(action: (current: () => boolean) => Promise<void>, write = false, writeFailure?: string) {
     if (locked.current) return;
     locked.current = true; setBusy(true); setNotice("");
     const version = epoch.current;
@@ -43,7 +44,7 @@ export default function CompanionPage() {
       } else {
         if (write) setUncertain(true);
         setNotice(write
-          ? "Save could not be confirmed. Your draft is retained. Refresh saved history and check for duplicates before trying again."
+          ? writeFailure ?? "Save could not be confirmed. Your draft is retained. Refresh saved history and check for duplicates before trying again."
           : "Unable to load data. Please try again. No AI reply has been generated.");
       }
     } finally { if (current()) { locked.current = false; setBusy(false); } }
@@ -96,7 +97,7 @@ export default function CompanionPage() {
               const saved = await conversationClient(session.token).create(title.trim(), personalityId);
               if (!current()) return;
               setConversations(previous => [{ id: saved.id, title: title.trim(), personalityId }, ...previous]);
-              setSelected(saved.id); setMessages([]); setMoreMessages(false); setTitle(""); setDraft(""); setNotice("Conversation saved.");
+              setDeletePrompt(false); setSelected(saved.id); setMessages([]); setMoreMessages(false); setTitle(""); setDraft(""); setNotice("Conversation saved.");
             }, true);
           }}>
             <label className="block">Conversation title<input className={`${control} mt-1 w-full`} maxLength={500} required disabled={busy} value={title} onChange={e => setTitle(e.target.value)} /></label>
@@ -106,7 +107,7 @@ export default function CompanionPage() {
           <h2 className="text-xl">Saved conversations</h2>
           <p className="text-sm text-slate-400">Save or clear your draft before changing conversations.</p>
           <ul className="space-y-2">{conversations.map(item => <li key={item.id}><button className={`${control} w-full wrap-break-word text-left`} aria-pressed={selected === item.id} disabled={busy || !!draft || uncertain} onClick={() => {
-            setSelected(item.id); setMessages([]); setMoreMessages(false);
+            setDeletePrompt(false); setSelected(item.id); setMessages([]); setMoreMessages(false);
             void run(async current => {
               const result = await conversationClient(session.token).messages(item.id);
               if (current()) { setMessages([...result.messages].reverse()); setMoreMessages(result.messages.length === 50); }
@@ -117,6 +118,26 @@ export default function CompanionPage() {
         <section className="min-w-0 space-y-4" aria-label="Conversation messages" aria-busy={busy}>
           {!selected ? <p>Select or create a conversation to save notes.</p> : <>
             <h2 className="text-xl">Saved messages</h2>
+            {!deletePrompt ? <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => setDeletePrompt(true)}>Delete selected conversation</button> :
+              <section className="space-y-3 rounded-lg border border-red-400 p-4" aria-label="Confirm conversation deletion">
+                <p>Delete this conversation, all its saved messages and your linked memories? This cannot be undone in the app. Copies in backups, if any, are not erased by this action.</p>
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => {
+                    const deletingId = selected;
+                    void run(async current => {
+                      // Clear the active view while awaiting confirmation. Keep the list
+                      // entry until the server confirms; a lost response needs refresh.
+                      setSelected(null); setMessages([]); setMoreMessages(false); setDeletePrompt(false);
+                      await conversationClient(session.token).remove(deletingId);
+                      if (!current()) return;
+                      setConversations(previous => previous.filter(item => item.id !== deletingId));
+                      setNotice("Conversation, saved messages and your linked memories deleted from active storage.");
+                    }, true, "Deletion could not be confirmed. Refresh saved history before trying again. No automatic retry was made.");
+                  }}>Confirm deletion</button>
+                  <button type="button" autoFocus className={control} disabled={busy} onClick={() => setDeletePrompt(false)}>Cancel deletion</button>
+                </div>
+              </section>}
+
             {moreMessages && <button className={control} disabled={busy} onClick={() => void run(async current => {
               const result = await conversationClient(session.token).messages(selected, messages[0]?.id);
               if (current()) { setMessages(previous => [...result.messages].reverse().concat(previous)); setMoreMessages(result.messages.length === 50); }

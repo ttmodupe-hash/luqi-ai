@@ -2,7 +2,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { and, desc, eq, lt, sql } from "drizzle-orm";
-import { companionConversations, companionMessages } from "../db/schema";
+import { companionConversations, companionMessages, companionMemories } from "../db/schema";
 import { getPersistentDb } from "./queries/connection";
 import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
 
@@ -102,4 +102,26 @@ privateConversations.post('/:id/messages', async c => {
     return persistedId;
   });
   return c.json({ id: messageId, role: 'user', persisted: true }, 201);
+});
+
+// Use the same parent-row lock as message writes. Delete children and parent in
+// one transaction so failed deletes cannot leave a partially erased history.
+privateConversations.delete('/:id', async c => {
+  const conversationId = id.safeParse(c.req.param('id'));
+  const confirmation = z.object({ confirm: z.literal(true) }).strict()
+    .safeParse(await c.req.json().catch(() => null));
+  if (!conversationId.success || !confirmation.success) return c.json({ code: 'INVALID_INPUT' }, 400);
+  const db = await getPersistentDb();
+  await db.transaction(async (tx: any) => {
+    const [owned] = await tx.select({ id: companionConversations.id }).from(companionConversations)
+      .where(and(eq(companionConversations.id, conversationId.data),
+        eq(companionConversations.userId, c.get('userId')))).limit(1).for('update');
+    if (!owned) throw new MissingConversation();
+    await tx.delete(companionMemories).where(and(eq(companionMemories.conversationId, conversationId.data),
+      eq(companionMemories.userId, c.get('userId'))));
+    await tx.delete(companionMessages).where(eq(companionMessages.conversationId, conversationId.data));
+    await tx.delete(companionConversations).where(and(eq(companionConversations.id, conversationId.data),
+      eq(companionConversations.userId, c.get('userId'))));
+  });
+  return c.json({ id: conversationId.data, deleted: true });
 });

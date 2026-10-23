@@ -12,9 +12,9 @@ export class ConversationError extends Error {
 // Same-origin only; never persist credentials or conversation content in browser storage.
 // Writes are deliberately not retried: a lost response may follow a committed write.
 export function conversationClient(token: string, request: typeof fetch = fetch) {
-  async function call<T>(path: string, schema: z.ZodType<T>, body?: unknown): Promise<T> {
+  async function call<T>(path: string, schema: z.ZodType<T>, body?: unknown, method?: "DELETE"): Promise<T> {
     const response = await request(`/api/v1/companion/conversations${path}`, {
-      method: body === undefined ? "GET" : "POST", cache: "no-store", credentials: "omit", redirect: "error",
+      method: method ?? (body === undefined ? "GET" : "POST"), cache: "no-store", credentials: "omit", redirect: "error",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -25,6 +25,7 @@ export function conversationClient(token: string, request: typeof fetch = fetch)
     list: (before?: number) => call(`/?limit=50${before ? `&before=${before}` : ""}`, z.object({ conversations: z.array(conversation) })),
     create: (title: string, personalityId: number) => call("/", z.object({ id, persisted: z.literal(true) }), { title, personalityId }),
     messages: (conversationId: number, before?: number) => call(`/${conversationId}/messages?limit=50${before ? `&before=${before}` : ""}`, z.object({ messages: z.array(message) })),
+    remove: (conversationId: number) => call(`/${conversationId}`, z.object({ id: z.literal(conversationId), deleted: z.literal(true) }), { confirm: true }, "DELETE"),
     save: (conversationId: number, content: string) => call(`/${conversationId}/messages`, z.object({ id, role: z.literal("user"), persisted: z.literal(true) }), { content }),
   };
 }

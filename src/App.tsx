@@ -54,6 +54,7 @@ import {
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const privateConversationRoute = ["/companion", "/mentor", "/ai-companion"].includes(location.pathname.replace(/\/+$/, ""));
 
   // If on admin route or admin subdomain, render AdminSovereignPortal directly
   const isAdmin =
@@ -73,9 +74,9 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Toaster />
       <WelcomeModal />
-      <GlobalSearchTrigger />
-      <FloatingAiChat />
-      <LiveVoiceFloatingCopilot />
+      {!privateConversationRoute && <GlobalSearchTrigger />}
+      {!privateConversationRoute && <FloatingAiChat />}
+      {!privateConversationRoute && <LiveVoiceFloatingCopilot />}
 
       {/* Global Navigation Header with 4 Simplified Public Tabs */}
       <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-40">
@@ -233,7 +234,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
-      <FloatingCritiqueWidget />
+      {!privateConversationRoute && <FloatingCritiqueWidget />}
     </div>
   );
 }

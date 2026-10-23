@@ -38,3 +38,17 @@ describe("private conversation browser client", () => {
       expect(readFileSync(`src/${file}`, "utf8")).toBe(readFileSync(`app/src/${file}`, "utf8"));
   });
 });
+
+it("deletes only the chosen conversation with explicit confirmation and no retry", async () => {
+  const request = vi.fn().mockResolvedValue(response({ id: 3, deleted: true }));
+  await expect(conversationClient("token", request).remove(3)).resolves.toEqual({ id: 3, deleted: true });
+  expect(request).toHaveBeenCalledExactlyOnceWith("/api/v1/companion/conversations/3", {
+    method: "DELETE", cache: "no-store", credentials: "omit", redirect: "error",
+    headers: { Authorization: "Bearer token", "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }),
+  });
+  request.mockResolvedValue(response({ id: 4, deleted: true }));
+  await expect(conversationClient("token", request).remove(3)).rejects.toThrow();
+  request.mockRejectedValue(new TypeError("Lost response"));
+  await expect(conversationClient("token", request).remove(3)).rejects.toThrow();
+  expect(request).toHaveBeenCalledTimes(3);
+});

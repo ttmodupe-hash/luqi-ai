@@ -52,6 +52,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const privateConversationRoute = ["/companion", "/mentor", "/ai-companion"].includes(location.pathname.replace(/\/+$/, ""));
   const { theme, toggleTheme } = useTheme();
   const isMobile = useIsMobile();
 
@@ -60,8 +61,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <Toaster />
       <WelcomeModal />
       <ReportBugButton />
-      <GlobalSearchTrigger />
-      <FloatingAiChat />
+      {!privateConversationRoute && <GlobalSearchTrigger />}
+      {!privateConversationRoute && <FloatingAiChat />}
 
       {/* Global Navigation Header with 22-Language Selection Dropdown */}
       <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-40">
