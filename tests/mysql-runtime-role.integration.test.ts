@@ -136,7 +136,7 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
     for (const args of [['--apply'], ['--unexpected-secret-fixture']]) {
       const apply = runNode('dist/prepare-mysql-schema.js', args);
       expect(await finish(apply)).toBe(1);
-      expect(apply.output()).not.toContain('ci-restricted-role-only-password');
+      expect(apply.output()).not.toContain(RUNTIME_PASSWORD);
       expect(apply.output()).not.toContain('--unexpected-secret-fixture');
     }
     const missing = runNode('dist/prepare-mysql-schema.js', [], { ...runtimeEnvironment, DATABASE_URL: '', DB_HOST: '' });
