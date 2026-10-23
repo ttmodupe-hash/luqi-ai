@@ -60,7 +60,7 @@ beautifulsoup4==4.12.3
 # Templating & CLI
 jinja2==3.1.4
 click==8.1.7
-rich==13.7.1
+rich==13.9.4
 
 # Data
 requests==2.32.3
