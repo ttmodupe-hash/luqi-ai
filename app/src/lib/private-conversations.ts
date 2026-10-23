@@ -53,15 +53,31 @@ export function conversationClient(token: string, request: typeof fetch = fetch)
   };
 }
 
-export async function signIn(email: string, password: string) {
-  const response = await fetch("/api/v1/auth/login", {
-    method: "POST", cache: "no-store", credentials: "omit", redirect: "error",
-    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }),
-  });
-  if (!response.ok) {
-    const raw = response.headers.get('Retry-After') ?? '';
-    const seconds = /^\d{1,4}$/.test(raw) && Number(raw) >= 1 && Number(raw) <= 3600 ? Number(raw) : 30;
-    throw new ConversationError(response.status, response.status === 429 ? seconds : undefined);
-  }
-  return z.object({ token: z.string().min(1), user: z.object({ email: z.string() }) }).parse(await response.json());
+const accountSession = z.object({ token: z.string().min(1).max(4096),
+  user: z.object({ email: z.string().email().max(254) }) });
+export type AccountSession = z.infer<typeof accountSession>;
+export const validAccountPassword = (password: string) => password.length >= 12 &&
+  new TextEncoder().encode(password).length <= 72;
+
+async function accountRequest(path: string, email: string, password: string): Promise<AccountSession> {
+  const normalized = email.trim().toLowerCase();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetch(path, {
+      method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: normalized, password }),
+    });
+    if (!response.ok) {
+      const raw = response.headers.get('Retry-After') ?? '';
+      const seconds = /^\d{1,4}$/.test(raw) && Number(raw) >= 1 && Number(raw) <= 3600 ? Number(raw) : 30;
+      throw new ConversationError(response.status, response.status === 429 ? seconds : undefined);
+    }
+    const result = accountSession.parse(await response.json());
+    if (result.user.email.toLowerCase() !== normalized) throw new Error('Account response mismatch');
+    return result;
+  } finally { clearTimeout(timer); }
 }
+export const signIn = (email: string, password: string) => accountRequest('/api/v1/auth/login', email, password);
+// Registration is a write: never retry an ambiguous response automatically.
+export const signUp = (email: string, password: string) => accountRequest('/api/v1/auth/register', email, password);

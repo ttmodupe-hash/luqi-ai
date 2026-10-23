@@ -4,6 +4,7 @@ import { Routes, Route as RouterRoute } from "react-router";
 
 // Pages
 import Home from "./pages/Home";
+import StartPage from "./pages/StartPage";
 import LabSimulatorPage from "./pages/LabSimulatorPage";
 import SelfHealingPage from "./pages/SelfHealingPage";
 import VideoStudioPage from "./pages/VideoStudioPage";
@@ -33,6 +34,8 @@ export default function App() {
       <Routes>
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
+        <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />

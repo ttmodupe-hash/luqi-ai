@@ -47,8 +47,8 @@ export default function Home() {
               learn next.
             </p>
             <div className="luqi-hero-actions">
-              <Link className="luqi-primary" to="/companion">
-                Open your notes <ArrowUpRight size={19} aria-hidden="true" />
+              <Link className="luqi-primary" to="/start">
+                Get started <ArrowUpRight size={19} aria-hidden="true" />
               </Link>
               <a
                 className="luqi-secondary"
