@@ -464,3 +464,82 @@ describe.sequential('account-owned offline queue on real MySQL', () => {
     }
   }, 30_000);
 });
+
+describe.sequential('private conversation exports on real MySQL', () => {
+  it('exports complete ordered history and only owned linked memories without internal metadata or mutations', async () => {
+    const hash = await bcrypt.hash('Export-Fixture-Password-2026!', 12);
+    const owners: number[] = [];
+    for (const suffix of ['owner', 'other']) {
+      const [insert] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)', [`export-${suffix}@example.invalid`, hash]);
+      owners.push(insert.insertId);
+    }
+    const [conv] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)', [owners[0], 'Private <title>']);
+    const cid = conv.insertId;
+    const req = (owner = owners[0], path = `/${cid}/export`) => privateConversations.request(path, {
+      headers: { Authorization: `Bearer ${signUserToken(owner, hash)}` },
+    });
+    try {
+      const rows = Array.from({ length: 60 }, (_, i) => [cid, 'user', `Sawubona ${i} <script>plain text</script>`, '{"privateInternal":"excluded"}']);
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content,metadata) VALUES ?', [rows]);
+      await pool.execute('INSERT INTO companion_memories (conversation_id,user_id,content) VALUES (?,?,?), (?, ?, ?), (NULL, ?, ?)', [cid, owners[0], 'owned linked', cid, owners[1], 'foreign secret', owners[0], 'unlinked secret']);
+      const [before] = await pool.query<RowDataPacket[]>('SELECT * FROM companion_messages WHERE conversation_id=? ORDER BY id', [cid]);
+      expect((await req(owners[1])).status).toBe(404);
+      expect((await req(owners[0], '/999999999/export')).status).toBe(404);
+      const response = await req();
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(response.headers.get('Content-Disposition')).toBe(`attachment; filename="luqi-conversation-${cid}.json"`);
+      const data = await response.json();
+      expect(data.format).toBe('luqi.conversation.v1');
+      expect(data.conversation).toMatchObject({ id: cid, title: 'Private <title>', personalityId: 1 });
+      expect(data.messages.map((m: any) => m.content)).toEqual(rows.map(r => r[2]));
+      expect(data.memories.map((m: any) => m.content)).toEqual(['owned linked']);
+      expect(JSON.stringify(data)).not.toMatch(/foreign secret|unlinked secret|privateInternal|password_hash|userId|tokensUsed/);
+      const [after] = await pool.query<RowDataPacket[]>('SELECT * FROM companion_messages WHERE conversation_id=? ORDER BY id', [cid]);
+      expect(after).toEqual(before);
+      await pool.execute('UPDATE users SET is_active=0 WHERE id=?', [owners[0]]);
+      expect((await req()).status).toBe(401);
+    } finally {
+      await pool.execute('DELETE FROM companion_memories WHERE user_id IN (?,?)', owners);
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [cid]);
+      await pool.execute('DELETE FROM companion_conversations WHERE id=?', [cid]);
+      await pool.execute('DELETE FROM users WHERE id IN (?,?)', owners);
+    }
+  }, 30_000);
+
+  it('refuses over-limit exports without truncation and waits for concurrent writes to commit', async () => {
+    const hash = await bcrypt.hash('Export-Limits-Password-2026!', 12);
+    const [user] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO users (email,password_hash,is_active) VALUES (?,?,1)', ['export-limits@example.invalid', hash]);
+    const [conv] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO companion_conversations (personality_id,user_id,title) VALUES (1,?,?)', [user.insertId, 'Export limits']);
+    const cid = conv.insertId;
+    const req = () => privateConversations.request(`/${cid}/export`, { headers: { Authorization: `Bearer ${signUserToken(user.insertId, hash)}` } });
+    try {
+      const rows = Array.from({ length: 1001 }, () => [cid, 'user', 'bounded fixture']);
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content) VALUES ?', [rows]);
+      let response = await req();
+      expect(response.status).toBe(422);
+      expect(await response.json()).toEqual({ code: 'CONVERSATION_EXPORT_TOO_LARGE' });
+      expect(await singleNumber('SELECT COUNT(*) FROM companion_messages WHERE conversation_id=?', [cid])).toBe(1001);
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [cid]);
+      await pool.query('INSERT INTO companion_messages (conversation_id,role,content) VALUES ?', [Array.from({ length: 18 }, () => [cid, 'user', 'x'.repeat(60000)])]);
+      expect((await req()).status).toBe(422);
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [cid]);
+      const connection = await pool.getConnection();
+      let pending: ReturnType<typeof req> | undefined;
+      try {
+        await connection.beginTransaction();
+        await connection.execute('SELECT id FROM companion_conversations WHERE id=? FOR UPDATE', [cid]);
+        pending = req();
+        await connection.execute("INSERT INTO companion_messages (conversation_id,role,content) VALUES (?,'user','committed during export')", [cid]);
+        await connection.commit();
+      } finally { await connection.rollback(); connection.release(); }
+      response = await pending!;
+      expect(response.status).toBe(200);
+      expect((await response.json()).messages.map((m: any) => m.content)).toEqual(['committed during export']);
+    } finally {
+      await pool.execute('DELETE FROM companion_messages WHERE conversation_id=?', [cid]);
+      await pool.execute('DELETE FROM companion_conversations WHERE id=?', [cid]);
+      await pool.execute('DELETE FROM users WHERE id=?', [user.insertId]);
+    }
+  }, 30_000);
+});

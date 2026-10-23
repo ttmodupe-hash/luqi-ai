@@ -1,7 +1,8 @@
 /** Authenticated durable storage only. No inference or legacy route activation. */
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, lt, sql } from "drizzle-orm";
 import { companionConversations, companionMessages, companionMemories } from "../db/schema";
 import { getPersistentDb } from "./queries/connection";
 import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
@@ -18,6 +19,9 @@ const page = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 }).strict();
 class MissingConversation extends Error {}
+class ExportTooLarge extends Error {}
+export const MAX_EXPORT_ROWS = 1000;
+export const MAX_EXPORT_TEXT_BYTES = 1024 * 1024;
 
 privateConversations.use('*', async (c, next) => {
   c.header('Cache-Control', 'no-store');
@@ -29,7 +33,11 @@ privateConversations.use('*', async (c, next) => {
   }
   return next();
 });
+privateConversations.use('*', bodyLimit({ maxSize: 32 * 1024,
+  onError: c => c.json({ code: 'CONVERSATION_BODY_TOO_LARGE' }, 413),
+}));
 privateConversations.onError((error, c) => {
+  if (error instanceof ExportTooLarge) return c.json({ code: 'CONVERSATION_EXPORT_TOO_LARGE' }, 422);
   if (error instanceof MissingConversation) return c.json({ code: 'CONVERSATION_NOT_FOUND' }, 404);
   // Raw SQL, credentials and conversation content must not escape in errors.
   return c.json({ code: 'CONVERSATION_STORAGE_UNAVAILABLE' }, 503);
@@ -77,6 +85,49 @@ privateConversations.get('/:id/messages', async c => {
       pagination.data.before ? lt(companionMessages.id, pagination.data.before) : undefined))
     .orderBy(desc(companionMessages.id)).limit(pagination.data.limit);
   return c.json({ messages: rows });
+});
+
+// Export a complete, bounded snapshot of one owned conversation. Never silently
+// truncate, export unrelated account data, or include internal message metadata.
+privateConversations.get('/:id/export', async c => {
+  const conversationId = id.safeParse(c.req.param('id'));
+  if (!conversationId.success || Object.keys(c.req.query()).length) return c.json({ code: 'INVALID_INPUT' }, 400);
+  const ownerId = c.get('userId');
+  const db = await getPersistentDb();
+  const serialized = await db.transaction(async (tx: any) => {
+    // Message writes and deletion take this same lock. The first consistent
+    // read occurs after the lock, so counts/content share a repeatable snapshot.
+    const [conversation] = await tx.select({ id: companionConversations.id, title: companionConversations.title,
+      personalityId: companionConversations.personalityId, createdAt: companionConversations.createdAt })
+      .from(companionConversations).where(and(eq(companionConversations.id, conversationId.data),
+        eq(companionConversations.userId, ownerId))).limit(1).for('update');
+    if (!conversation) throw new MissingConversation();
+    const ownedMessages = and(eq(companionConversations.id, conversationId.data), eq(companionConversations.userId, ownerId));
+    const ownedMemories = and(eq(companionMemories.conversationId, conversationId.data), eq(companionMemories.userId, ownerId));
+    const [messagesSize] = await tx.select({ rows: count(), bytes: sql`COALESCE(SUM(OCTET_LENGTH(${companionMessages.content})), 0)` })
+      .from(companionMessages).innerJoin(companionConversations, eq(companionMessages.conversationId, companionConversations.id))
+      .where(ownedMessages);
+    const [memoriesSize] = await tx.select({ rows: count(), bytes: sql`COALESCE(SUM(OCTET_LENGTH(${companionMemories.content})), 0)` })
+      .from(companionMemories).where(ownedMemories);
+    if (Number(messagesSize.rows) > MAX_EXPORT_ROWS || Number(memoriesSize.rows) > MAX_EXPORT_ROWS ||
+        Number(messagesSize.bytes) + Number(memoriesSize.bytes) > MAX_EXPORT_TEXT_BYTES) throw new ExportTooLarge();
+    const messages = await tx.select({ id: companionMessages.id, role: companionMessages.role,
+      content: companionMessages.content, createdAt: companionMessages.createdAt }).from(companionMessages)
+      .innerJoin(companionConversations, eq(companionMessages.conversationId, companionConversations.id))
+      .where(ownedMessages).orderBy(asc(companionMessages.id)).limit(MAX_EXPORT_ROWS);
+    const memories = await tx.select({ id: companionMemories.id, memoryType: companionMemories.memoryType,
+      category: companionMemories.category, content: companionMemories.content, importance: companionMemories.importance,
+      createdAt: companionMemories.createdAt }).from(companionMemories)
+      .where(ownedMemories).orderBy(asc(companionMemories.id)).limit(MAX_EXPORT_ROWS);
+    const text = JSON.stringify({ format: 'luqi.conversation.v1', exportedAt: new Date().toISOString(),
+      conversation, messages, memories });
+    // Escaping can expand control characters. Reject instead of downloading a
+    // partial document. Keep the response within an explicit memory bound.
+    if (Buffer.byteLength(text, 'utf8') > 8 * 1024 * 1024) throw new ExportTooLarge();
+    return text;
+  }, { isolationLevel: 'repeatable read' });
+  c.header('Content-Disposition', `attachment; filename="luqi-conversation-${conversationId.data}.json"`);
+  return c.body(serialized, 200, { 'Content-Type': 'application/json; charset=utf-8' });
 });
 
 privateConversations.post('/:id/messages', async c => {

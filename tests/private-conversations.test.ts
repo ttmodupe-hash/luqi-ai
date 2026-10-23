@@ -50,3 +50,23 @@ it('requires authentication and explicit deletion confirmation before storage ac
   }
   expect(mocks.db).not.toHaveBeenCalled();
 });
+
+it('authenticates exports, rejects caller identity/query overrides and redacts storage failure', async () => {
+  mocks.auth.mockRejectedValueOnce(new PilotAuthError('AUTH_REQUIRED'));
+  expect((await app.request('/7/export')).status).toBe(401);
+  for (const path of ['/0/export', '/7/export?userId=8', '/7/export?limit=1']) {
+    expect((await app.request(path)).status).toBe(400);
+  }
+  expect(mocks.db).not.toHaveBeenCalled();
+  mocks.db.mockRejectedValueOnce(new Error('mysql://private-password@host'));
+  const response = await app.request('/7/export');
+  expect(response.status).toBe(503);
+  expect(response.headers.get('Cache-Control')).toBe('no-store');
+  expect(await response.json()).toEqual({ code: 'CONVERSATION_STORAGE_UNAVAILABLE' });
+});
+it('bounds authenticated note bodies even without Content-Length', async () => {
+  const response = await app.request('/7/messages', { method: 'POST', body: JSON.stringify({ content: 'x'.repeat(32768) }) });
+  expect(response.status).toBe(413);
+  expect(response.headers.get('Cache-Control')).toBe('no-store');
+  expect(mocks.db).not.toHaveBeenCalled();
+});

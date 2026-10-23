@@ -102,3 +102,49 @@ test('conversation deletion requires confirmation and clears only confirmed hist
   await expect(page.getByRole('button', { name: 'Delete fixture', exact: true })).toHaveCount(0);
   await expect(page.getByText('Private deletion fixture', { exact: true })).toHaveCount(0);
 });
+
+test('exports all saved private notes as JSON after an explicit keyboard action', async ({ page }) => {
+  const data = { format: 'luqi.conversation.v1', exportedAt: '2026-10-23T06:00:00Z',
+    conversation: { id: 4, title: 'Export fixture', personalityId: 1, createdAt: null },
+    messages: Array.from({ length: 60 }, (_, i) => ({ id: i + 1, role: 'user', content: `Sawubona ${i} <script>plain text</script>`, createdAt: null })),
+    memories: [{ id: 1, memoryType: 'preference', category: null, importance: '5.00', content: 'Owned linked memory', createdAt: null }],
+  };
+  let exports = 0;
+  await page.route('**/api/v1/auth/login', route => route.fulfill({ json: {
+    token: 'browser-fixture-token', user: { email: 'browser@example.invalid' },
+  } }));
+  await page.route('**/api/v1/companion/conversations**', route => {
+    const request = route.request();
+    expect(request.method()).toBe('GET');
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith('/export')) {
+      exports++;
+      expect(request.headers().authorization).toBe('Bearer browser-fixture-token');
+      return route.fulfill({ json: data });
+    }
+    return route.fulfill({ json: path.endsWith('/messages') ? { messages: data.messages.slice(10).reverse() }
+      : { conversations: [{ id: 4, title: 'Export fixture', personalityId: 1 }] } });
+  });
+  await page.setViewportSize({ width: 320, height: 780 });
+  await page.goto('/#/companion');
+  await page.getByLabel('Email', { exact: true }).fill('browser@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('fixture-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.getByRole('button', { name: 'Export fixture', exact: true }).click();
+  const control = page.getByRole('button', { name: 'Export selected conversation' });
+  await expect(control).toBeEnabled();
+  expect(exports).toBe(0);
+  await control.focus();
+  await expect(control).toBeFocused();
+  const downloadEvent = page.waitForEvent('download');
+  await page.keyboard.press('Enter');
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe('luqi-conversation-4.json');
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+  expect(JSON.parse(Buffer.concat(chunks).toString('utf8'))).toEqual(data);
+  expect(exports).toBe(1);
+  await expect(page.getByRole('status')).toContainText('Export download started');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});

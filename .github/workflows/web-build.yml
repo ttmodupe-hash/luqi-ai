@@ -21,11 +21,13 @@ jobs:
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify persistent database configuration contracts
-        run: npx vitest run tests/trpc-authorization.test.ts tests/archive-page.test.tsx tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/user-token.test.ts tests/auth-input.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts tests/billing-dashboard-truth.test.ts tests/workspace-truth.test.ts tests/pilot-credential-check.test.ts tests/account-recovery.test.ts tests/private-conversations.test.ts tests/companion-client.test.ts tests/companion-page.test.tsx tests/dependency-audit.test.ts tests/desktop-boundary.test.ts tests/legacy-admin.test.ts tests/admin-status-ui.test.tsx tests/legacy-operations.test.ts tests/service-worker-status.test.ts tests/omega-tasks.test.ts tests/omega-dashboard-client.test.ts tests/omega-dashboard-page.test.tsx
+        run: npx vitest run tests/legacy-controls.test.ts tests/trpc-authorization.test.ts tests/archive-page.test.tsx tests/mysql-config.test.ts tests/ai-provider-contract.test.ts tests/ai-pilot-budget.test.ts tests/ai-pilot-auth.test.ts tests/user-token.test.ts tests/auth-input.test.ts tests/legacy-ai-budget-guard.test.ts tests/http-guard.test.ts tests/gemini-pilot-compat.test.ts tests/production-mysql-bootstrap.test.ts tests/self-healing-truth.test.ts tests/legacy-payments-closed.test.ts tests/billing-dashboard-truth.test.ts tests/workspace-truth.test.ts tests/pilot-credential-check.test.ts tests/account-recovery.test.ts tests/private-conversations.test.ts tests/companion-client.test.ts tests/companion-page.test.tsx tests/dependency-audit.test.ts tests/desktop-boundary.test.ts tests/legacy-admin.test.ts tests/admin-status-ui.test.tsx tests/legacy-operations.test.ts tests/service-worker-status.test.ts tests/omega-tasks.test.ts tests/omega-dashboard-client.test.ts tests/omega-dashboard-page.test.tsx
       - name: Type-check Omega dashboard and client
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/pages/OmegaTasksPage.tsx src/lib/omega-tasks.ts
       - name: Type-check tRPC account boundary
         run: npx tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/context.ts api/middleware.ts api/offline.ts api/trpc-http.ts
+      - name: Type-check private conversation export
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/private-conversations.ts src/lib/private-conversations.ts src/pages/CompanionPage.tsx
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
@@ -82,6 +84,7 @@ jobs:
                 }
               '
               node scripts/verify-trpc-boundary.mjs
+              node scripts/verify-legacy-controls.mjs
               exit 0
             fi
             if ! kill -0 "$server_pid" 2>/dev/null; then

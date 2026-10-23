@@ -11,7 +11,10 @@ offsite retention, or a production restoration drill are already configured.
    whose name misleadingly contains `mysql`.
 2. Before recording sensitive user data, the operator should configure
    automated volume snapshots or a managed backup plan in Railway, verify
-   retention and encryption, and test restoring to a different project.
+   retention and encryption, and rehearse logical recovery into an isolated
+   target. Railway volume snapshots currently restore only within the same
+   project/environment and stage a replacement volume attachment; never use
+   the production Restore button as an isolated rehearsal.
    See Railway's current backup guidance for the plan and account.
 3. Independently schedule encrypted MySQL logical exports to a private,
    access-controlled backup store **outside the production database volume**.
@@ -106,3 +109,33 @@ constraints, routines and triggers. Both fixtures remain quiescent during this
 comparison. SQL stays in a private temporary directory and is removed on exit;
 a mismatch fails the job without printing records. This expands fixture
 coverage, but is still not evidence of a production backup schedule or restore.
+
+## Access and documentation check — 2026-10-23
+
+Production scope: project `kind-spontaneity`
+(`9f627cb8-3136-4b30-89d2-32ca648a1e5f`), environment
+`1e192ef3-1fa6-4684-81fc-60165c7b0e22`, MySQL service
+`8094576f-f2c7-4e50-b474-69661e7c0ba8`, volume
+`d02ad924-218c-4afc-a886-0cee686bc62b` mounted at `/var/lib/mysql`.
+This volume ID is not a volume-instance ID.
+
+The connected Railway tools expose service/volume status but no backup-list or
+schedule-list operation. No local CLI credentials or Railway token are available;
+the read-only dashboard fallback presents sign-in. Therefore backup existence,
+last successful creation, expiration, retention schedule and restore readiness
+are **unknown**, not verified absent and not verified configured. No backup,
+restore, volume, service, credential or billing setting was changed.
+
+Railway's [volume API documentation](https://docs.railway.com/integrations/api/manage-volumes)
+provides read-only `volumeInstanceBackupList` and
+`volumeInstanceBackupScheduleList` queries. Once authenticated access is available,
+verify the volume-instance identity against the exact service/environment above,
+then record backup creation/expiry metadata and the schedule's cron/retention.
+Never put credentials or database contents into this evidence.
+
+The [backup documentation](https://docs.railway.com/volumes/backups) states that
+snapshots incur incremental storage charges and that restore stages a replacement
+volume and service redeployment within the same project/environment. Inspecting
+metadata does not authorize paid activation or applying a production restore.
+An isolated logical restore with approved access/cost remains the next recovery
+proof; the existing disposable CI fixture is not a substitute.
