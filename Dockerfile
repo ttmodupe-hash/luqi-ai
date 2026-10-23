@@ -20,4 +20,6 @@ RUN test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
+# The web process needs readable bundles and network/database access, not root.
+USER node
 ENTRYPOINT ["/bin/bash", "./start.sh"]

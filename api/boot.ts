@@ -1246,7 +1246,7 @@ if (env.isProduction) {
 
     const port = parseInt(process.env.PORT || "3000");
     const server = serve({ fetch: app.fetch, port }, () => {
-      logger.info({ port }, "Server running");
+      logger.info({ port, runtimeUid: typeof process.getuid === 'function' ? process.getuid() : null }, "Server running");
       // One bounded metadata check per startup, only when explicitly enabled.
       // No public endpoint, generation requests, credentials or raw errors.
       void checkPilotCredentials().then(results => {

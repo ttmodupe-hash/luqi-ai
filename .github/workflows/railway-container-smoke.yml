@@ -27,7 +27,7 @@ jobs:
       - name: Build exact Railway Dockerfile
         run: docker build --progress=plain --file Dockerfile --tag luqi-railway-smoke:ci .
       - name: Verify operator CLIs are included in the production image
-        run: docker run --rm --entrypoint /bin/sh luqi-railway-smoke:ci -c 'test -s /app/dist/reset-account-password.js && test -s /app/dist/prepare-mysql-schema.js'
+        run: docker run --rm --entrypoint /bin/sh luqi-railway-smoke:ci -c 'test -s /app/dist/reset-account-password.js && test -s /app/dist/prepare-mysql-schema.js && test -s /app/dist/prepare-mysql-runtime-role.js'
       - name: Start production container without privileged credentials
         run: |
           docker run --detach --name luqi-smoke \
@@ -52,6 +52,10 @@ jobs:
             sleep 2
           done
           test "$healthy" -eq 1 || { echo "Health never became ready"; exit 1; }
+          # Exercise the actual built container's default execution identity.
+          luqi_runtime_uid=$(docker exec luqi-smoke id -u)
+          test "$luqi_runtime_uid" -ne 0 || { echo "Web runtime must not run as Linux root"; exit 1; }
+          echo "Verified non-root web runtime UID: $luqi_runtime_uid"
           cat /tmp/luqi-health.json
           grep -q '"status":"healthy"' /tmp/luqi-health.json
           curl --fail --silent --max-time 5 http://127.0.0.1:18765/ -o /tmp/luqi-index.html
