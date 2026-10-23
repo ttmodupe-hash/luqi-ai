@@ -22,7 +22,7 @@ export default defineConfig({
     command: 'node dist/boot.js', url: 'http://127.0.0.1:8768/v1/health', reuseExistingServer: false,
     timeout: 20_000,
     env: { ...process.env, NODE_ENV: 'production', PORT: '8768',
-      DATABASE_URL: 'mysql://luqi_runtime_ci:ci-restricted-role-only-password@127.0.0.1:3306/luqi_ci',
+      DATABASE_URL: `mysql://luqi_web_runtime:${'a'.repeat(64)}@127.0.0.1:3306/luqi_ci`,
       JWT_SECRET: 'ci-runtime-role-only-jwt-secret-with-over-32-characters',
       LUQI_AI_PROVIDER_ENABLED: 'false', LUQI_AI_BILLING_APPROVED: 'false',
       LUQI_AI_CREDENTIAL_CHECK_ENABLED: 'false', LUQI_OMEGA_WEB_ENABLED: 'false' },

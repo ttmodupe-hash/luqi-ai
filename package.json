@@ -17,7 +17,7 @@
     "db:push": "drizzle-kit push",
     "seed": "tsx prisma/seed.ts",
     "build:recovery": "esbuild scripts/reset-account-password.ts --platform=node --bundle --format=esm --outfile=dist/reset-account-password.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
-    "build:database": "esbuild scripts/prepare-mysql-schema.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-schema.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
+    "build:database": "esbuild scripts/prepare-mysql-schema.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-schema.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild scripts/prepare-mysql-runtime-role.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-runtime-role.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "db:check": "node dist/prepare-mysql-schema.js --check",
     "db:apply": "node dist/prepare-mysql-schema.js --apply"
   },

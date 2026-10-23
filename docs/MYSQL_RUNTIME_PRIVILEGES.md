@@ -9,7 +9,8 @@ listening. Raw SQL, connection strings and driver errors are redacted.
 
 ## Operator commands
 
-`npm run build` packages `dist/prepare-mysql-schema.js` alongside the web and
+`npm run build` packages `dist/prepare-mysql-schema.js` and
+`dist/prepare-mysql-runtime-role.js` alongside the web and
 password-recovery commands. Supply connection settings through the protected
 environment of the operator process, never URL arguments or chat messages.
 
@@ -31,6 +32,33 @@ Never place a privileged migration URL in the web service environment or run
 schema apply automatically on each web restart. Run required additive changes
 privately before deploying code that depends on them. Do not expose a database
 TCP proxy to perform this work.
+
+## Dedicated role operator
+
+The private `prepare-mysql-runtime-role` CLI defaults to `--check`: it connects
+as the proposed web identity and validates its exact grants and runtime schema
+without changing users or tables. `--provision-new` explicitly creates the fixed
+`luqi_web_runtime` identity only when no identity with that name exists, then
+grants exactly the eight table-level permission sets below and verifies them.
+It never alters passwords, revokes privileges, drops accounts or migrates data.
+Retries refuse an existing identity; if a DCL operation fails midway, preserve
+the partial identity and review it privately instead of retrying creation.
+
+The operator process receives its existing protected MySQL `DATABASE_URL` and
+an independently generated 32-byte hex `LUQI_RUNTIME_DB_PASSWORD`. No secrets
+are accepted as arguments, printed or returned. Production connections must
+use Railway private DNS; the only loopback exception is the exact CI fixture.
+The command rejects a reused operator password and an enabled Omega intake.
+It also rejects any inherited role or extra grants when checking the result.
+
+Run the utility in an existing private Railway console/operator process, not
+an HTTP endpoint, web startup or automatic deployment hook. After verification,
+switch only the web `DATABASE_URL` to the dedicated identity, remove the
+one-time password variable, redeploy and verify readiness and release probes.
+Keep the old connection reference in the protected operator/rollback boundary,
+not the new web process. Do not revoke MySQL's root/operator identity as part
+of this app-only transition, and do not describe it as historic root-secret
+revocation. No database restart or public TCP proxy is needed.
 
 ## Web permissions
 
@@ -78,15 +106,16 @@ become mandatory; this does not activate a worker or verify worker permissions.
    guards and budget reservations. Do not enable paid APIs to test SQL grants.
 4. Deploy this migration-free runtime before switching production credentials.
    Then change only the protected web connection setting, redeploy and verify
-   readiness plus designated-account acceptance. Keep paid AI/billing and Omega
-   intake/workers disabled under the current rollout policy.
+   readiness plus designated-account acceptance. Preserve the separately approved
+   AI budget/activation settings; customer billing and Omega intake/workers stay disabled.
 5. If validation or acceptance fails, restore the prior protected connection
    setting and the compatible image. Preserve data and all guard/task tables.
    An older image that performs startup DDL will need its prior operator-level
    setting; do not grant DDL back to the restricted identity to make it boot.
 6. Revoke the old application's access only after the acceptance and rollback
    window. This code change does not rotate any production password or claim
-   that the production service already uses the restricted account.
+   that the production service already uses the restricted account. Record the
+   actual deployment evidence separately after the operational switch.
 
 ## Disposable evidence
 

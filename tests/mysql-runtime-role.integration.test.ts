@@ -7,7 +7,8 @@ import { setTimeout as pause } from 'node:timers/promises';
 import { checkRuntimeSchema, RUNTIME_TABLES } from '../db/runtimeSchema';
 
 const ROOT_URL = 'mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci';
-const RUNTIME_URL = 'mysql://luqi_runtime_ci:ci-restricted-role-only-password@127.0.0.1:3306/luqi_ci';
+const RUNTIME_PASSWORD = 'a'.repeat(64);
+const RUNTIME_URL = `mysql://luqi_web_runtime:${RUNTIME_PASSWORD}@127.0.0.1:3306/luqi_ci`;
 const ORIGIN = 'http://127.0.0.1:8766';
 const enabled = process.env.LUQI_MYSQL_CI_FIXTURE === 'true';
 const runtimeEnvironment: NodeJS.ProcessEnv = { ...process.env, DATABASE_URL: RUNTIME_URL, NODE_ENV: 'production',
@@ -68,7 +69,7 @@ async function rejectsStartup(overrides: Record<string, string> = {}) {
   expect(run.output()).toContain('[Boot] Startup preflight failed (details redacted).');
   expect(run.output()).not.toContain('Server running');
   expect(run.output()).not.toContain('mysql://');
-  expect(run.output()).not.toContain('ci-restricted-role-only-password');
+  expect(run.output()).not.toContain(RUNTIME_PASSWORD);
   await expect(fetch(`${ORIGIN}/v1/health`, { signal: AbortSignal.timeout(500) })).rejects.toThrow();
 }
 async function request(path: string, method = 'GET', body?: unknown, token?: string) {
@@ -94,16 +95,37 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
       expect(await finish(apply, 30_000)).toBe(0);
       expect(apply.output()).toContain('Validated 8 runtime tables');
     }
-    await root.query("CREATE USER 'luqi_runtime_ci'@'%' IDENTIFIED BY 'ci-restricted-role-only-password'");
+    const provision = runNode('dist/prepare-mysql-runtime-role.js', ['--provision-new'], {
+      ...runtimeEnvironment, DATABASE_URL: ROOT_URL, LUQI_RUNTIME_DB_PASSWORD: RUNTIME_PASSWORD,
+    });
+    expect(await finish(provision, 30_000)).toBe(0);
+    expect(provision.output()).toContain('"privileges":"table_only"');
+    expect(provision.output()).not.toContain(RUNTIME_PASSWORD);
     expect(Object.keys(grants).sort()).toEqual(Object.keys(RUNTIME_TABLES).sort());
-    for (const [table, permissions] of Object.entries(grants)) {
-      await root.query(`GRANT ${permissions} ON luqi_ci.\`${table}\` TO 'luqi_runtime_ci'@'%'`);
-    }
   }, 90_000);
   afterAll(async () => {
     for (const child of children) child.kill('SIGKILL');
     await root?.end();
   });
+
+  it('checks real operator grants and never overwrites an existing identity on retry', async () => {
+    const operator = { ...runtimeEnvironment, DATABASE_URL: ROOT_URL, LUQI_RUNTIME_DB_PASSWORD: RUNTIME_PASSWORD };
+    const check = runNode('dist/prepare-mysql-runtime-role.js', ['--check'], operator);
+    expect(await finish(check)).toBe(0);
+    for (const password of [RUNTIME_PASSWORD, 'b'.repeat(64)]) {
+      const collision = runNode('dist/prepare-mysql-runtime-role.js', ['--provision-new'], {
+        ...operator, LUQI_RUNTIME_DB_PASSWORD: password,
+      });
+      expect(await finish(collision)).toBe(1);
+      expect(collision.output()).not.toContain(password);
+    }
+    await root.query("GRANT SELECT ON luqi_ci.sessions TO 'luqi_web_runtime'@'%'");
+    try {
+      const tooBroad = runNode('dist/prepare-mysql-runtime-role.js', ['--check'], operator);
+      expect(await finish(tooBroad)).toBe(1);
+    } finally { await root.query("REVOKE SELECT ON luqi_ci.sessions FROM 'luqi_web_runtime'@'%'"); }
+    expect(await checkRuntimeSchema(runtimeEnvironment)).toEqual({ status: 'validated', tables: 8 });
+  }, 60_000);
 
   it('checks schema with a restricted role; explicit apply and unknown arguments fail safely', async () => {
     expect(await checkRuntimeSchema(runtimeEnvironment)).toEqual({ status: 'validated', tables: 8 });
@@ -114,7 +136,7 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
     for (const args of [['--apply'], ['--unexpected-secret-fixture']]) {
       const apply = runNode('dist/prepare-mysql-schema.js', args);
       expect(await finish(apply)).toBe(1);
-      expect(apply.output()).not.toContain('ci-restricted-role-only-password');
+      expect(apply.output()).not.toContain(RUNTIME_PASSWORD);
       expect(apply.output()).not.toContain('--unexpected-secret-fixture');
     }
     const missing = runNode('dist/prepare-mysql-schema.js', [], { ...runtimeEnvironment, DATABASE_URL: '', DB_HOST: '' });
@@ -128,7 +150,7 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
         'CREATE TABLE IF NOT EXISTS users (id INT)', 'CREATE TABLE forbidden_ci (id INT)',
         'ALTER TABLE users ADD COLUMN forbidden_ci INT', 'DROP TABLE users', 'TRUNCATE TABLE users',
         "CREATE USER 'forbidden_ci'@'%' IDENTIFIED BY 'not-a-real-password'",
-        "GRANT SELECT ON luqi_ci.users TO 'luqi_runtime_ci'@'%'", 'DELETE FROM users',
+        "GRANT SELECT ON luqi_ci.users TO 'luqi_web_runtime'@'%'", 'DELETE FROM users',
         'SELECT * FROM sessions LIMIT 0', 'SELECT * FROM botanical_species LIMIT 0',
       ]) await expect(restricted.query(sql)).rejects.toMatchObject({ code: expect.stringMatching(/ACCESS_DENIED|COMMAND_DENIED/) });
     } finally { await restricted.end(); }
@@ -206,7 +228,7 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
     await rejectsStartup({ LUQI_OMEGA_WEB_ENABLED: 'true' });
     await root.query(readFileSync('db/migrations/20261023_omega_tasks.sql', 'utf8'));
     await expect(checkRuntimeSchema({ ...runtimeEnvironment, LUQI_OMEGA_WEB_ENABLED: 'true' })).rejects.toThrow('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE');
-    await root.query("GRANT SELECT, INSERT, UPDATE, DELETE ON luqi_ci.omega_tasks_v1 TO 'luqi_runtime_ci'@'%'");
+    await root.query("GRANT SELECT, INSERT, UPDATE, DELETE ON luqi_ci.omega_tasks_v1 TO 'luqi_web_runtime'@'%'");
     expect(await checkRuntimeSchema({ ...runtimeEnvironment, LUQI_OMEGA_WEB_ENABLED: 'true' }))
       .toEqual({ status: 'validated', tables: 9 });
   }, 25_000);
