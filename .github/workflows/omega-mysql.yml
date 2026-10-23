@@ -1,0 +1,52 @@
+name: Omega Durable MySQL
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "omega_ai/**"
+      - "tests/test_omega_*.py"
+      - "tests/conftest.py"
+      - "requirements.txt"
+      - "db/migrations/20261023_omega_tasks.sql"
+      - ".github/workflows/omega-mysql.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  durable-worker-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_omega_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # Tests refuse non-CI execution and only connect to a hardcoded local
+      # fixture. No Railway URL, secret or AI-provider key is used by this job.
+      LUQI_OMEGA_MYSQL_CI_FIXTURE: "true"
+      LUQI_AI_PROVIDER_ENABLED: "false"
+      LUQI_AI_BILLING_APPROVED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install fixture dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "PyMySQL[rsa]==1.2.3" pytest
+      - name: Test real MySQL migrations, independent processes and crash recovery
+        run: python -m pytest -o addopts='' -v tests/test_omega_mysql_contract.py tests/test_omega_mysql_integration.py

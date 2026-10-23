@@ -6,7 +6,7 @@ feeds, or continuously running agents. This avoids fabricated live outputs.
 
 | Module | Actual capability | Must still be integrated |
 |---|---|---|
-| `omega_ai.workflow_engine` | Owner-scoped tasks and idempotency, fail-closed host authorization, atomic in-process claims, explicit handler context, bounded read-only retries, human approval and reconciliation states | Persistent queue, distributed worker leases, authenticated web/worker integration, operator RBAC, monitoring and an authorized reconciliation workflow |
+| `omega_ai.workflow_engine` | Owner-scoped tasks and idempotency, fail-closed host authorization, atomic in-process claims plus an opt-in MySQL engine with durable claims, leases and crash recovery, explicit handler context, human approval and reconciliation states | Production persistence rollout, authenticated web/worker integration, operator RBAC, monitoring and an authorized reconciliation workflow |
 | `omega_ai.weather_africa` | Validate time-stamped injected weather readings and derive screening flags | Authoritative African weather-service feeds and verified alerts |
 | `omega_ai.travel_africa` | Ordered travel dates, money budgeting with explicit FX rates, sourced and age-checked visa evidence | Official visas/entry rules, live FX and routing sources |
 | `omega_ai.university_guide` | Search verified-timestamp programme records; identify **potential** scholarships | Verified university records, deadlines, accreditation, eligibility confirmation |
@@ -30,17 +30,20 @@ print(report.needs_service)
 
 ## Security and release requirements
 
-- The Python Workflow Engine stores task data **only in process memory**.
-  It does **not** schedule unattended workers, execute shell code, open
-  provider accounts, transfer money, deploy releases, or self-modify source.
+- `WorkflowEngine` stores task data **only in process memory**. The opt-in
+  `MySQLWorkflowEngine` persists tasks and claims when explicitly configured; see
+  [durable worker requirements](OMEGA_DURABLE_WORKERS.md). Neither engine
+  schedules unattended workers, executes shell code, opens
+  provider accounts, transfers money, deploys releases, or self-modifies source.
 - Side-effect handlers demand an idempotency key and authenticated-host
   approval from the authenticated owner. If a side-effect handler throws or
   is interrupted after a possible remote action, its state becomes
   `reconciliation_required`, not success or confirmed failure. It is never
   retried automatically; no automatic resolution/reset operation exists.
-- The workflow lock prevents duplicate claims only within one engine instance.
-  It does not survive process loss or coordinate multiple processes. Running
-  work cannot be force-cancelled; cancellation applies only before a claim.
+- The in-memory workflow lock coordinates one instance. The durable engine uses
+  InnoDB row locks, expiring claims and token checks across processes; expired
+  side effects require reconciliation. Running work cannot be force-cancelled;
+  cancellation applies only before a claim.
 - None of the other five adapters invents current authoritative data.
   Providers must be injected with valid citations, timestamps and bounds.
   Passing a water screening test does **not** mean a sample is potable.
@@ -50,12 +53,12 @@ print(report.needs_service)
   The existing Python 3.10/3.11/3.12 GitHub matrix also runs these tests.
 - Before exposing these modules to users: implement versioned, authenticated
   APIs; actual provider adapters; failure and observability contracts;
-  database-backed retention/locking; per-account quotas; human evaluations.
+  production retention/encryption and deployment controls; per-account quotas; human evaluations.
   Gate production rollout on the requirements in GitHub issue #133.
 
 ## Workflow host integration contract
 
-The workflow API now requires an explicit `actor` on submit, get, run, run_due,
+Both workflow APIs require an explicit `actor` on submit, get, run, run_due,
 approve and cancel. `WorkflowEngine()` without an `authorizer` denies all such
 operations. The host callback `authorizer(actor, action)` must verify that actor
 against the current authenticated request/session and return literal `True`.
@@ -77,7 +80,7 @@ ownership of any domain resources they access (such as vehicles); workflow
 ownership alone is not a substitute for domain authorization. Registration is
 trusted host configuration, not a user-controlled API or a code sandbox.
 
-Policy callbacks and handlers execute outside the shared task lock. State is
+Policy callbacks and handlers execute outside the shared task lock or database transaction. State is
 checked again after approval authorization, so a concurrent cancellation cannot
 be undone by a stale approval. Claim and attempt increment happen together;
 other tasks can run while one handler blocks. Batches skip already-claimed or
@@ -94,8 +97,10 @@ races, interruption, retry bounds and ambiguous outcomes. These are offline
 synthetic tests. Integration fixtures also run all five domain adapters through
 the workflow engine, verify owner-specific vehicle selection and preserve
 provider failure without invented results. They do not establish live
-authenticated Omega access, durable
-execution, exactly-once remote effects or self-healing/self-improvement.
+authenticated Omega access, exactly-once remote effects or self-healing/self-improvement.
+The separate MySQL CI fixture verifies durable state, independent worker claims
+and recovery after process death; production rollout remains gated by
+[the durable worker contract](OMEGA_DURABLE_WORKERS.md).
 
 ## Relationship to older Omega pull requests
 
