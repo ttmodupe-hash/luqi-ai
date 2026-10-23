@@ -190,6 +190,19 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
       const foreignNotes = await request('/api/v1/companion/conversations/export', 'GET', undefined, foreign.token);
       expect(foreignNotes.status).toBe(200);
       expect(await foreignNotes.json()).toMatchObject({ conversations: [], messages: [], memories: [] });
+      const changed = await request('/api/v1/account/password', 'POST', { currentPassword: password,
+        newPassword: 'CI-Runtime-Changed-Password-2026!' }, owner.token);
+      expect(changed.status).toBe(200);
+      expect(await changed.json()).toEqual({ changed: true, signInRequired: true });
+      expect((await request('/auth/me', 'GET', undefined, owner.token)).status).toBe(401);
+      expect((await request('/api/v1/companion/conversations/export', 'GET', undefined, owner.token)).status).toBe(401);
+      expect((await request('/auth/me', 'GET', undefined, foreign.token)).status).toBe(200);
+      await stop(run); run = await start();
+      expect((await request('/auth/me', 'GET', undefined, owner.token)).status).toBe(401);
+      const newLogin = await request('/api/v1/auth/login', 'POST', { email: 'owner-runtime@example.invalid',
+        password: 'CI-Runtime-Changed-Password-2026!' });
+      expect(newLogin.status).toBe(200); owner.token = (await newLogin.json() as { token: string }).token;
+      expect((await request(`${path}/messages`, 'GET', undefined, owner.token)).status).toBe(200);
       expect((await request(path, 'DELETE', { confirm: true }, foreign.token)).status).toBe(404);
       expect((await request(path, 'DELETE', { confirm: true }, owner.token)).status).toBe(200);
       expect((await request(`${path}/messages`, 'GET', undefined, owner.token)).status).toBe(404);

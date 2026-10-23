@@ -39,8 +39,8 @@ email, screenshots, tickets or command-line arguments.
 
 No production account is reset by deployment, CI, or this runbook. The CLI has
 no HTTP endpoint and requires existing trusted production shell/DB access.
-Self-service recovery, verified email delivery, and an authenticated user-facing
-password-change flow remain separate work.
+Self-service recovery and verified email delivery remain separate work.
+An authenticated change of a known password is described below.
 
 ## Failure and rollback
 
@@ -68,3 +68,45 @@ session-deletion failure that must roll back the password update.
 These tests are not a claim that a production recovery or identity verification
 has been performed. Backups and external deployment-trigger verification remain
 separate release responsibilities.
+
+## Change a known password
+
+A signed-in user can open **Notes → Change password**. This requires the current
+password; it is not a forgotten-password reset or identity-verification channel.
+`POST /api/v1/account/password` accepts only `currentPassword` and `newPassword`,
+requires an active persisted credential-bound session before parsing, and refuses
+query fields, non-JSON input and bodies over 4 KiB. New passwords must have at
+least 12 characters and no more than 72 UTF-8 bytes. Current inputs above 72
+bytes are refused rather than truncated; legacy overlong passwords require the
+operator-assisted procedure. The new password must differ from the old one.
+
+Durable MySQL admission permits 20 changes/attempts globally per minute and five
+per authenticated account per 15 minutes, separate from login/signup limits.
+Every valid attempt, including a success or wrong current password, counts.
+Missing throttle storage fails closed; no caller IP header can reset a counter.
+Shared global limits can temporarily deny other users under abuse.
+
+The server rechecks the JWT against the fetched credential, verifies the current
+password, hashes the new password with bcrypt cost 12, then atomically updates
+only that active account if its former hash still matches byte for byte. No row
+lock is held during bcrypt. A simultaneous reset, password change or account
+disable cannot be overwritten. No schema, grant, billing, provider or note change
+is required. Legacy session rows are not deleted by this flow; all reviewed web
+account endpoints reject tokens bound to the former hash on subsequent checks.
+Already-authorized requests may finish. Do not roll back to an unbound verifier.
+
+Success returns only `{changed:true,signInRequired:true}` and no replacement
+token. The page clears its sign-in and saved view and requires a fresh login.
+A lost response or service error may follow a committed change: the client never
+retries automatically and asks the user to try the new password first, then the
+previous password if needed. It clears password fields as the request begins,
+limits the full response to 4 KiB and 20 seconds, cancels on unmount and ignores
+late responses. Drafts and uncertain saves block starting a password change.
+
+Offline checks cover authorization, field/UTF-8 bounds, rate-denial ordering,
+credential races, redacted failures, uncertain responses, transport bounds and
+form behavior. Disposable MySQL CI exercises competing changes, disable-during-
+hashing, update failure, durable limits, old-token rejection and unchanged notes.
+The compiled restricted-runtime fixture and desktop/mobile browser journeys
+also exercise the flow. These are synthetic accounts, not an assertion that a
+production user's password or infrastructure secret has been changed.

@@ -13,6 +13,7 @@ import { releaseIdentity } from './lib/releaseIdentity';
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
+import { accountSecurity } from "./account-security";
 import { omegaTasks } from "./omega-tasks";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
@@ -108,6 +109,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/api/v1/companion/conversations", privateConversations);
+app.route("/api/v1/account", accountSecurity);
 app.route("/api/v1/omega/tasks", omegaTasks);
 
 // ── tRPC ───────────────────────────────────────────────────────────

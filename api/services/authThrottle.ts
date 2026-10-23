@@ -8,9 +8,11 @@ import { parseMySqlConnectionSettings } from '../lib/mysqlConfig';
 import { getSigningSecret } from '../lib/userToken';
 
 export type AuthAction = 'login' | 'signup';
+type LimitedAction = AuthAction | 'change_password';
 export const AUTH_LIMITS = Object.freeze({
   login: { global: 120, globalSeconds: 60, subject: 10, subjectSeconds: 300 },
   signup: { global: 20, globalSeconds: 60, subject: 5, subjectSeconds: 3600 },
+  change_password: { global: 20, globalSeconds: 60, subject: 5, subjectSeconds: 900 },
 });
 const GLOBAL_KEY = '0'.repeat(64);
 
@@ -69,11 +71,23 @@ async function reserveBucket(conn: PoolConnection, scope: string, key: string,
 
 export async function reserveAuthenticationAttempt(action: AuthAction, email: string,
                                                     testPool?: Pool): Promise<void> {
+  return reserveAttempt(action, email, testPool);
+}
+
+/** Authenticated account ID only; never supplied by the request body. */
+export async function reservePasswordChangeAttempt(userId: number, testPool?: Pool): Promise<void> {
+  return reserveAttempt('change_password', userId, testPool);
+}
+
+async function reserveAttempt(action: LimitedAction, subject: string | number, testPool?: Pool): Promise<void> {
   let conn: PoolConnection | undefined;
   let begun = false;
   try {
     const secret = getSigningSecret();
-    if ((action !== 'login' && action !== 'signup') || !email || email.length > 254) throw new Error('Invalid auth identity');
+    if (action === 'change_password' ? !Number.isSafeInteger(subject) || Number(subject) <= 0
+      : (action !== 'login' && action !== 'signup') || typeof subject !== 'string' || !subject || subject.length > 254) {
+      throw new Error('Invalid auth identity');
+    }
     const limits = AUTH_LIMITS[action];
     conn = await (testPool ?? throttlePool()).getConnection();
     // This connection belongs to the dedicated throttle pool; never holds
@@ -86,14 +100,18 @@ export async function reserveAuthenticationAttempt(action: AuthAction, email: st
     const global = await reserveBucket(conn, `${action}_global`, GLOBAL_KEY, limits.global, limits.globalSeconds);
     if (!global.allowed) throw new AuthThrottleError('AUTH_RATE_LIMITED', global.retryAfter);
 
-    // Resolve existing accounts using the exact database email comparison.
-    // Case/accent/collation-equivalent spellings must share one counter.
-    const [accounts] = await conn.execute<RowDataPacket[]>('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
-    const id = accounts[0]?.id;
-    if (id !== undefined && (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)) throw new Error('Invalid account ID');
-    const identity = id === undefined ? `email:${email.trim().toLowerCase()}` : `account:${Number(id)}`;
+    let identity: string;
+    if (action === 'change_password') identity = `account:${subject}`;
+    else {
+      // Match login's database collation rather than trusting caller spelling.
+      const email = subject as string;
+      const [accounts] = await conn.execute<RowDataPacket[]>('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+      const id = accounts[0]?.id;
+      if (id !== undefined && (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)) throw new Error('Invalid account ID');
+      identity = id === undefined ? `email:${email.trim().toLowerCase()}` : `account:${Number(id)}`;
+    }
     const key = createHmac('sha256', secret).update(`luqi-auth-throttle-v1\0${identity}`).digest('hex');
-    const subject = await reserveBucket(conn, `${action}_subject`, key, limits.subject, limits.subjectSeconds);
+    const admission = await reserveBucket(conn, `${action}_subject`, key, limits.subject, limits.subjectSeconds);
     // A subject denial still spends global admission; otherwise a blocked
     // account could be hammered indefinitely without exhausting that cap.
     await conn.commit();
@@ -105,7 +123,7 @@ export async function reserveAuthenticationAttempt(action: AuthAction, email: st
         await conn.query('DELETE FROM auth_attempt_windows WHERE reset_at < UNIX_TIMESTAMP() - 3600 LIMIT 100');
       } catch { /* Cleanup failure cannot turn a denial into admission. */ }
     }
-    if (!subject.allowed) throw new AuthThrottleError('AUTH_RATE_LIMITED', subject.retryAfter);
+    if (!admission.allowed) throw new AuthThrottleError('AUTH_RATE_LIMITED', admission.retryAfter);
   } catch (error) {
     if (begun && conn) {
       try { await conn.rollback(); } catch { conn.destroy(); conn = undefined; }

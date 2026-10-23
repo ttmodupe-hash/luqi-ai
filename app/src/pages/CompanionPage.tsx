@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { conversationClient, ConversationError, downloadConversationExport, downloadPrivateNotesExport, type AccountSession, type Conversation, type SavedMessage } from "../lib/private-conversations";
 import AccountAccessForm from '../components/AccountAccessForm';
+import AccountPasswordForm from '../components/AccountPasswordForm';
 
 const modes = ["Luqi Prime — General", "Dr. Kwame — STEM", "Amina — Trade", "Chidi — Networks"];
 const control = "rounded-lg border border-slate-500 bg-slate-900 p-3 text-white disabled:opacity-50";
@@ -16,6 +17,7 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
   const [personalityId, setPersonalityId] = useState(1);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [moreConversations, setMoreConversations] = useState(false);
   const [moreMessages, setMoreMessages] = useState(false);
@@ -30,11 +32,11 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
     notesExport.current?.abort(); notesExport.current = null;
     epoch.current++; locked.current = false;
     setSession(null); setConversations([]); setSelected(null);
-    setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false);
+    setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false); setPasswordBusy(false);
     setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false); setNotice("");
   }
   async function run(action: (current: () => boolean) => Promise<void>, write = false, writeFailure?: string, readFailure?: string) {
-    if (locked.current) return;
+    if (locked.current || passwordBusy) return;
     locked.current = true; setBusy(true); setNotice("");
     const version = epoch.current;
     const current = () => version === epoch.current;
@@ -71,7 +73,7 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
     <header><h1 className="text-3xl font-bold">Companion conversations</h1>
       <p className="mt-2 text-slate-300">Save private conversation notes to your account. AI replies and automatic learning are currently disabled.</p>
       <p className="mt-2 text-sm text-slate-400">Saved notes are accessible to storage administrators; this is not end-to-end encryption. Signing out clears this page, but does not delete saved notes.</p>
-      <p className="mt-2 text-sm text-slate-400">After signing in, you can download all your saved conversations, their messages and your saved memories together. This notes archive excludes account credentials, other modules, unsaved drafts and backups.</p>
+      <p className="mt-2 text-sm text-slate-400">After signing in, you can change your password using your current password and download all your saved conversations, their messages and your saved memories together. This notes archive excludes account credentials, other modules, unsaved drafts and backups.</p>
     </header>
     {notice && <p role="status" className="rounded-lg border border-amber-500 p-3">{notice}</p>}
     {!session ? <AccountAccessForm initialMode={accessMode} onAuthenticated={result => {
@@ -82,12 +84,15 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
       }, false, undefined, 'You are signed in, but saved history could not be loaded. Use Refresh saved history to try again.');
     }} /> : <>
       <div className="flex flex-wrap items-center gap-3"><span className="break-all">{session.user.email}</span>
-        <button className={control} onClick={clearSession}>Sign out</button>
-        <button className={control} disabled={busy} onClick={() => loadConversations()}>Refresh saved history</button>
+        <button className={control} disabled={passwordBusy} onClick={clearSession}>Sign out</button>
+        <button className={control} disabled={busy || passwordBusy} onClick={() => loadConversations()}>Refresh saved history</button>
       </div>
+      <AccountPasswordForm token={session.token} email={session.user.email}
+        disabled={busy || uncertain || !!draft || !!title} onBusyChange={setPasswordBusy}
+        onSessionEnd={message => { clearSession(); setNotice(message); }} />
       <section className="space-y-2 rounded-lg border border-slate-700 p-4" aria-label="Download all private notes">
         <p className="text-sm text-slate-300">Download every saved conversation and your memories, including older history beyond the visible list. Keep the JSON file private. Limits: 500 conversations, 5,000 messages, 5,000 memories and 4 MiB of saved text. Larger archives are refused without truncation; export individual conversations instead.</p>
-        <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => {
+        <button type="button" className={control} disabled={busy || passwordBusy || uncertain || !!draft} onClick={() => {
           void run(async current => {
             const controller = new AbortController(); notesExport.current = controller;
             try {
@@ -118,27 +123,27 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
               setDeletePrompt(false); setSelected(saved.id); setMessages([]); setMoreMessages(false); setTitle(""); setDraft(""); setNotice("Conversation saved.");
             }, true);
           }}>
-            <label className="block">Conversation title<input className={`${control} mt-1 w-full`} maxLength={500} required disabled={busy} value={title} onChange={e => setTitle(e.target.value)} /></label>
-            <label className="block">Topic<select className={`${control} mt-1 w-full`} disabled={busy} value={personalityId} onChange={e => setPersonalityId(Number(e.target.value))}>{modes.map((mode, i) => <option key={mode} value={i + 1}>{mode}</option>)}</select></label>
-            <button className={control} disabled={busy || uncertain || !title.trim() || !!draft}>Create conversation</button>
+            <label className="block">Conversation title<input className={`${control} mt-1 w-full`} maxLength={500} required disabled={busy || passwordBusy} value={title} onChange={e => setTitle(e.target.value)} /></label>
+            <label className="block">Topic<select className={`${control} mt-1 w-full`} disabled={busy || passwordBusy} value={personalityId} onChange={e => setPersonalityId(Number(e.target.value))}>{modes.map((mode, i) => <option key={mode} value={i + 1}>{mode}</option>)}</select></label>
+            <button className={control} disabled={busy || passwordBusy || uncertain || !title.trim() || !!draft}>Create conversation</button>
           </form>
           <h2 className="text-xl">Saved conversations</h2>
           <p className="text-sm text-slate-400">Save or clear your draft before changing conversations.</p>
-          <ul className="space-y-2">{conversations.map(item => <li key={item.id}><button className={`${control} w-full wrap-break-word text-left`} aria-pressed={selected === item.id} disabled={busy || !!draft || uncertain} onClick={() => {
+          <ul className="space-y-2">{conversations.map(item => <li key={item.id}><button className={`${control} w-full wrap-break-word text-left`} aria-pressed={selected === item.id} disabled={busy || passwordBusy || !!draft || uncertain} onClick={() => {
             setDeletePrompt(false); setSelected(item.id); setMessages([]); setMoreMessages(false);
             void run(async current => {
               const result = await conversationClient(session.token).messages(item.id);
               if (current()) { setMessages([...result.messages].reverse()); setMoreMessages(result.messages.length === 50); }
             });
           }}>{item.title}</button></li>)}</ul>
-          {moreConversations && <button className={control} disabled={busy} onClick={() => loadConversations(true)}>Older conversations</button>}
+          {moreConversations && <button className={control} disabled={busy || passwordBusy} onClick={() => loadConversations(true)}>Older conversations</button>}
         </aside>
         <section className="min-w-0 space-y-4" aria-label="Conversation messages" aria-busy={busy}>
           {!selected ? <p>Select or create a conversation to save notes.</p> : <>
             <h2 className="text-xl">Saved messages</h2>
             <section className="space-y-2" aria-label="Export private notes">
               <p className="text-sm text-slate-400">Download this conversation's saved messages and your linked memories as a JSON file on this device. Keep the file private. Unsaved drafts are excluded.</p>
-              <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => {
+              <button type="button" className={control} disabled={busy || passwordBusy || uncertain || !!draft} onClick={() => {
                 const exportingId = selected;
                 void run(async current => {
                   try {
@@ -156,11 +161,11 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
                 }, false, undefined, "Export could not be completed. No file was downloaded. Your saved notes are unchanged.");
               }}>Export selected conversation</button>
             </section>
-            {!deletePrompt ? <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => setDeletePrompt(true)}>Delete selected conversation</button> :
+            {!deletePrompt ? <button type="button" className={control} disabled={busy || passwordBusy || uncertain || !!draft} onClick={() => setDeletePrompt(true)}>Delete selected conversation</button> :
               <section className="space-y-3 rounded-lg border border-red-400 p-4" aria-label="Confirm conversation deletion">
                 <p>Delete this conversation, all its saved messages and your linked memories? This cannot be undone in the app. Copies in backups, if any, are not erased by this action.</p>
                 <div className="flex flex-wrap gap-3">
-                  <button type="button" className={control} disabled={busy || uncertain || !!draft} onClick={() => {
+                  <button type="button" className={control} disabled={busy || passwordBusy || uncertain || !!draft} onClick={() => {
                     const deletingId = selected;
                     void run(async current => {
                       // Clear the active view while awaiting confirmation. Keep the list
@@ -172,11 +177,11 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
                       setNotice("Conversation, saved messages and your linked memories deleted from active storage.");
                     }, true, "Deletion could not be confirmed. Refresh saved history before trying again. No automatic retry was made.");
                   }}>Confirm deletion</button>
-                  <button type="button" autoFocus className={control} disabled={busy} onClick={() => setDeletePrompt(false)}>Cancel deletion</button>
+                  <button type="button" autoFocus className={control} disabled={busy || passwordBusy} onClick={() => setDeletePrompt(false)}>Cancel deletion</button>
                 </div>
               </section>}
 
-            {moreMessages && <button className={control} disabled={busy} onClick={() => void run(async current => {
+            {moreMessages && <button className={control} disabled={busy || passwordBusy} onClick={() => void run(async current => {
               const result = await conversationClient(session.token).messages(selected, messages[0]?.id);
               if (current()) { setMessages(previous => [...result.messages].reverse().concat(previous)); setMoreMessages(result.messages.length === 50); }
             })}>Older messages</button>}
@@ -192,10 +197,10 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
                 setDraft(""); setNotice("Message saved to your account. AI replies remain disabled.");
               }, true);
             }}>
-              <label className="block">Your message<textarea className={`${control} mt-1 min-h-32 w-full`} maxLength={8000} required disabled={busy} value={draft} onChange={e => setDraft(e.target.value)} /></label>
+              <label className="block">Your message<textarea className={`${control} mt-1 min-h-32 w-full`} maxLength={8000} required disabled={busy || passwordBusy} value={draft} onChange={e => setDraft(e.target.value)} /></label>
               <p className="text-sm text-slate-400">{draft.length}/8,000 characters. Saving a message does not generate an AI response.</p>
-              <button className={control} disabled={busy || uncertain || !draft.trim()}>Save message</button>
-              <button type="button" className={`${control} ml-2`} disabled={busy} onClick={() => setDraft("")}>Clear draft</button>
+              <button className={control} disabled={busy || passwordBusy || uncertain || !draft.trim()}>Save message</button>
+              <button type="button" className={`${control} ml-2`} disabled={busy || passwordBusy} onClick={() => setDraft("")}>Clear draft</button>
             </form>
           </>}
         </section>
