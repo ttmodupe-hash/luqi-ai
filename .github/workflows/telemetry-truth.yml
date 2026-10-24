@@ -1,0 +1,25 @@
+name: LUQI Telemetry Truthfulness
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify-telemetry-boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install locked tooling without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Verify unavailable reports, truthful readiness and frontend parity
+        run: npx --no-install vitest run tests/telemetry-truth.test.tsx tests/telemetry-boundary.test.ts tests/legacy-operations.test.ts tests/admin-status-ui.test.tsx
+      - name: Strictly check the telemetry entry and its status component
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/pages/TelemetryDashboardPage.tsx app/src/pages/TelemetryDashboardPage.tsx api/lib/legacyOperations.ts
