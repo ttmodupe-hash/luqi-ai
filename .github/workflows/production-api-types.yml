@@ -1,0 +1,44 @@
+name: LUQI Production API Types
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'db/**'
+      - 'shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/production-api-types.yml'
+  push:
+    branches: ['fix/production-api-typecheck-20261024']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-production-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked compiler and application types
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Strictly check every import reachable from the production API
+        shell: bash
+        run: |
+          set -o pipefail
+          npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/boot.ts 2>&1 | tee /tmp/luqi-api-types.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-api-typecheck
+          path: /tmp/luqi-api-types.txt
+          if-no-files-found: ignore
+          retention-days: 7
