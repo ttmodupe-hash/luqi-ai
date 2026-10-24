@@ -1,0 +1,30 @@
+name: LUQI Notes Request Safety
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: notes-request-safety-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-notes-requests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify bounded transport without dependencies or credentials
+        run: node --experimental-strip-types --test tests/conversation-request.test.mjs
+      - name: Install locked application and test dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify integrated client and existing account interaction assertions
+        run: npx --no-install vitest run tests/companion-client.test.ts tests/companion-page.test.tsx
+      - name: Strictly check both browser-client source trees
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/private-conversations.ts app/src/lib/private-conversations.ts src/lib/conversation-request.ts app/src/lib/conversation-request.ts

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requestConversationJson } from "./conversation-request";
 
 const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const conversation = z.object({ id, title: z.string(), personalityId: z.number() });
@@ -104,13 +105,13 @@ export class ConversationError extends Error {
 // Writes are deliberately not retried: a lost response may follow a committed write.
 export function conversationClient(token: string, request: typeof fetch = fetch) {
   async function call<T>(path: string, schema: z.ZodType<T>, body?: unknown, method?: "DELETE"): Promise<T> {
-    const response = await request(`/api/v1/companion/conversations${path}`, {
+    const response = await requestConversationJson(request, `/api/v1/companion/conversations${path}`, {
       method: method ?? (body === undefined ? "GET" : "POST"), cache: "no-store", credentials: "omit", redirect: "error",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     if (!response.ok) throw new ConversationError(response.status);
-    return schema.parse(await response.json());
+    return schema.parse(response.body);
   }
   return {
     list: (before?: number) => call(`?limit=50${before ? `&before=${before}` : ""}`, z.object({ conversations: z.array(conversation) })),
