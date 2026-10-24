@@ -3,7 +3,7 @@ import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Toaster } from "@/components/ui/toaster";
-import { Routes, Route as RouterRoute, useLocation } from "react-router";
+import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
 import Home from "./pages/Home";
@@ -58,6 +58,9 @@ export default function App() {
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
+        {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
+        {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
+        {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
         <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
