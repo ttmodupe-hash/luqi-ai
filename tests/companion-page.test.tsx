@@ -12,7 +12,7 @@ vi.mock('../src/lib/private-conversations', async importOriginal => ({
   downloadPrivateNotesExport: allDownloads,
 }));
 const request = vi.fn();
-const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
+const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 const list = { conversations: [{ id: 4, title: "Private notes", personalityId: 1 }] };
 const history = { messages: [{ id: 2, role: "user", content: "Previously saved", createdAt: "2026-10-22T12:00:00Z" }] };
 beforeEach(() => { downloads.mockReset(); allDownloads.mockReset(); request.mockReset(); vi.stubGlobal("fetch", request); });

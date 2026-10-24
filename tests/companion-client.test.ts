@@ -3,7 +3,7 @@ import { conversationClient, ConversationError, signIn, MAX_NOTES_DOWNLOAD_BYTES
 import { readFileSync } from "node:fs";
 import { Hono } from 'hono';
 
-const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 afterEach(() => vi.unstubAllGlobals());
 it.each([['117', 117], ['0', 30], ['999999', 30], ['private diagnostic', 30]])('bounds login retry hints %s and never retries automatically', async (header, seconds) => {
   const request = vi.fn().mockResolvedValue(new Response('private error details', { status: 429, headers: { 'Retry-After': header } }));
@@ -28,7 +28,7 @@ describe("private conversation browser client", () => {
     const request = vi.fn().mockResolvedValue(response({ id: 7, role: "user", persisted: true }, 201));
     await expect(conversationClient("account-token", request).save(3, "My note")).resolves.toEqual({ id: 7, role: "user", persisted: true });
     expect(request).toHaveBeenCalledExactlyOnceWith("/api/v1/companion/conversations/3/messages", {
-      method: "POST", cache: "no-store", credentials: "omit", redirect: "error",
+      method: "POST", cache: "no-store", credentials: "omit", redirect: "error", signal: expect.any(AbortSignal),
       headers: { Authorization: "Bearer account-token", "Content-Type": "application/json" },
       body: JSON.stringify({ content: "My note" }),
     });
@@ -54,7 +54,7 @@ describe("private conversation browser client", () => {
     expect(request.mock.calls[0][0]).toBe("/api/v1/companion/conversations/2/messages?limit=50&before=5");
   });
   it("keeps both frontend copies identical", () => {
-    for (const file of ["lib/private-conversations.ts", "pages/CompanionPage.tsx"])
+    for (const file of ["lib/private-conversations.ts", "lib/conversation-request.ts", "pages/CompanionPage.tsx"])
       expect(readFileSync(`src/${file}`, "utf8")).toBe(readFileSync(`app/src/${file}`, "utf8"));
   });
 });
@@ -63,7 +63,7 @@ it("deletes only the chosen conversation with explicit confirmation and no retry
   const request = vi.fn().mockResolvedValue(response({ id: 3, deleted: true }));
   await expect(conversationClient("token", request).remove(3)).resolves.toEqual({ id: 3, deleted: true });
   expect(request).toHaveBeenCalledExactlyOnceWith("/api/v1/companion/conversations/3", {
-    method: "DELETE", cache: "no-store", credentials: "omit", redirect: "error",
+    method: "DELETE", cache: "no-store", credentials: "omit", redirect: "error", signal: expect.any(AbortSignal),
     headers: { Authorization: "Bearer token", "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }),
   });
   request.mockResolvedValue(response({ id: 4, deleted: true }));
@@ -80,7 +80,7 @@ it('validates the exact requested conversation before exposing an export and nev
   const request = vi.fn().mockResolvedValue(response(data));
   await expect(conversationClient('token', request).export(3)).resolves.toEqual(data);
   expect(request).toHaveBeenCalledExactlyOnceWith('/api/v1/companion/conversations/3/export', {
-    method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error',
+    method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: expect.any(AbortSignal),
     headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
   });
   await expect(conversationClient('token', request).export(4)).rejects.toThrow();
@@ -156,4 +156,28 @@ describe('bounded complete-notes browser client', () => {
       expect(request).toHaveBeenCalledTimes(1);
     } finally { vi.useRealTimers(); }
   });
+});
+
+// Integrated client regressions: same schemas, bounded transport, no auto retries.
+it.each(['list', 'create', 'messages', 'save', 'remove', 'export'] as const)(
+  'ordinary notes %s times out once without an automatic retry', async operation => {
+    vi.useFakeTimers();
+    try {
+      const request = vi.fn().mockImplementation(() => new Promise(() => {}));
+      const api = conversationClient('synthetic-token', request);
+      const calls = { list: () => api.list(), create: () => api.create('Title', 1),
+        messages: () => api.messages(4), save: () => api.save(4, 'Retained draft'),
+        remove: () => api.remove(4), export: () => api.export(4) };
+      const failed = expect(calls[operation]()).rejects.toMatchObject({ name: 'AbortError' });
+      await vi.advanceTimersByTimeAsync(15_001); await failed;
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(request.mock.calls[0][1].signal.aborted).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+it('selected export rejects an oversized response before JSON parsing', async () => {
+  const request = vi.fn().mockResolvedValue(new Response('{}', { headers: {
+    'Content-Type': 'application/json', 'Content-Length': '8388609',
+  } }));
+  await expect(conversationClient('synthetic-token', request).export(4)).rejects.toThrow('Invalid notes response');
+  expect(request).toHaveBeenCalledTimes(1);
 });
