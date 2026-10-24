@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requestConversationJson } from "./conversation-request";
+import { requestAccountJson, type AccountPath } from "./account-request";
 
 const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const conversation = z.object({ id, title: z.string(), personalityId: z.number() });
@@ -130,25 +131,18 @@ export type AccountSession = z.infer<typeof accountSession>;
 export const validAccountPassword = (password: string) => password.length >= 12 &&
   new TextEncoder().encode(password).length <= 72;
 
-async function accountRequest(path: string, email: string, password: string): Promise<AccountSession> {
+async function accountRequest(path: AccountPath, email: string, password: string, signal?: AbortSignal): Promise<AccountSession> {
   const normalized = email.trim().toLowerCase();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15_000);
-  try {
-    const response = await fetch(path, {
-      method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: normalized, password }),
-    });
-    if (!response.ok) {
-      const raw = response.headers.get('Retry-After') ?? '';
-      const seconds = /^\d{1,4}$/.test(raw) && Number(raw) >= 1 && Number(raw) <= 3600 ? Number(raw) : 30;
-      throw new ConversationError(response.status, response.status === 429 ? seconds : undefined);
-    }
-    const result = accountSession.parse(await response.json());
-    if (result.user.email.toLowerCase() !== normalized) throw new Error('Account response mismatch');
-    return result;
-  } finally { clearTimeout(timer); }
+  const response = await requestAccountJson(fetch, path, { email: normalized, password }, signal);
+  if (!response.ok) throw new ConversationError(response.status, response.retryAfter);
+  const parsed = accountSession.safeParse(response.body);
+  if (!parsed.success || parsed.data.user.email.toLowerCase() !== normalized) {
+    throw new Error('Account response could not be verified');
+  }
+  return parsed.data;
 }
-export const signIn = (email: string, password: string) => accountRequest('/api/v1/auth/login', email, password);
+export const signIn = (email: string, password: string, signal?: AbortSignal) =>
+  accountRequest('/api/v1/auth/login', email, password, signal);
 // Registration is a write: never retry an ambiguous response automatically.
-export const signUp = (email: string, password: string) => accountRequest('/api/v1/auth/register', email, password);
+export const signUp = (email: string, password: string, signal?: AbortSignal) =>
+  accountRequest('/api/v1/auth/register', email, password, signal);

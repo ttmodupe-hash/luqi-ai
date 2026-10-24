@@ -20,11 +20,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Verify bounded transport without dependencies or credentials
-        run: node --experimental-strip-types --test tests/conversation-request.test.mjs
+      - name: Verify bounded notes and account transport without dependencies or credentials
+        run: node --experimental-strip-types --test tests/conversation-request.test.mjs tests/account-request-contract.test.mjs
       - name: Install locked application and test dependencies
         run: npm ci --legacy-peer-deps --include=dev
-      - name: Verify integrated client and existing account interaction assertions
-        run: npx --no-install vitest run tests/companion-client.test.ts tests/companion-page.test.tsx
-      - name: Strictly check both browser-client source trees
-        run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/private-conversations.ts app/src/lib/private-conversations.ts src/lib/conversation-request.ts app/src/lib/conversation-request.ts
+      - name: Verify integrated notes and account interaction assertions
+        run: npx --no-install vitest run tests/companion-client.test.ts tests/companion-page.test.tsx tests/account-access.test.tsx tests/ai-pilot-page.test.tsx
+      - name: Strictly check both browser-client and account-form source trees
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/private-conversations.ts app/src/lib/private-conversations.ts src/lib/conversation-request.ts app/src/lib/conversation-request.ts src/lib/account-request.ts app/src/lib/account-request.ts src/components/AccountAccessForm.tsx app/src/components/AccountAccessForm.tsx

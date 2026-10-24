@@ -14,15 +14,16 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   const [cooldown, setCooldown] = useState(0);
   const epoch = useRef(0);
   const locked = useRef(false);
+  const pending = useRef<AbortController | null>(null);
   const cooling = cooldown > 0;
-  useEffect(() => () => { epoch.current++; }, []);
+  useEffect(() => () => { epoch.current++; pending.current?.abort(); pending.current = null; }, []);
   useEffect(() => {
     if (!cooling) return;
     const timer = setInterval(() => setCooldown(value => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
   }, [cooling]);
   function changeMode() {
-    epoch.current++; locked.current = false;
+    epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     setMode(mode === 'signup' ? 'signin' : 'signup');
     setPassword(''); setConfirmation(''); setNotice(''); setAmbiguous(false); setBusy(false);
   }
@@ -38,8 +39,9 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     }
     locked.current = true; setBusy(true); setNotice('');
     const version = epoch.current;
+    const controller = new AbortController(); pending.current = controller;
     try {
-      const result = await (mode === 'signup' ? signUp : signIn)(email, password);
+      const result = await (mode === 'signup' ? signUp : signIn)(email, password, controller.signal);
       if (version !== epoch.current) return;
       setPassword(''); setConfirmation('');
       onAuthenticated(result);
@@ -58,7 +60,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         ? 'Email or password was not accepted. Please try again.'
         : 'Sign-in is temporarily unavailable. Try again when the service is available.');
     } finally {
-      if (version === epoch.current) { locked.current = false; setBusy(false); }
+      if (version === epoch.current) { pending.current = null; locked.current = false; setBusy(false); }
     }
   }
   return <section className="luqi-access" aria-labelledby="account-access-heading">
@@ -84,7 +86,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
           {busy ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}
         </button>
         {busy && <button type="button" className="luqi-secondary" onClick={() => {
-          epoch.current++; locked.current = false; setBusy(false); setPassword(''); setConfirmation('');
+          epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false; setBusy(false); setPassword(''); setConfirmation('');
           if (mode === 'signup') uncertainSignup(); else setNotice('Sign-in cancelled.');
         }}>Cancel request</button>}
       </div>
