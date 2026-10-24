@@ -1,3 +1,4 @@
+import { readSqlCount } from "./lib/queryResults";
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
@@ -73,25 +74,25 @@ export const selfHealingRouter = createRouter({
         .select({ count: count() })
         .from(errorLogs)
         .where(gte(errorLogs.timestamp, since))
-        .then((r) => Number(r[0]?.count ?? 0));
+        .then(readSqlCount);
       
       const critical = await db
         .select({ count: count() })
         .from(errorLogs)
         .where(and(gte(errorLogs.timestamp, since), eq(errorLogs.severity, "critical")))
-        .then((r) => Number(r[0]?.count ?? 0));
+        .then(readSqlCount);
       
       const warning = await db
         .select({ count: count() })
         .from(errorLogs)
         .where(and(gte(errorLogs.timestamp, since), eq(errorLogs.severity, "warning")))
-        .then((r) => Number(r[0]?.count ?? 0));
+        .then(readSqlCount);
       
       const resolved = await db
         .select({ count: count() })
         .from(errorLogs)
-        .where(and(gte(errorLogs.timestamp, since), eq(errorLogs.resolved, 1)))
-        .then((r) => Number(r[0]?.count ?? 0));
+        .where(and(gte(errorLogs.timestamp, since), eq(errorLogs.resolved, true)))
+        .then(readSqlCount);
       
       return { total, critical, warning, resolved };
     }),
@@ -140,13 +141,13 @@ export const selfHealingRouter = createRouter({
       .select({ count: count() })
       .from(errorLogs)
       .where(gte(errorLogs.timestamp, fiveMinAgo))
-      .then((r) => Number(r[0]?.count ?? 0));
+      .then(readSqlCount);
     
     const recentAnomalies = await db
       .select({ count: count() })
       .from(systemMetrics)
-      .where(and(gte(systemMetrics.timestamp, fiveMinAgo), eq(systemMetrics.isAnomaly, 1)))
-      .then((r) => Number(r[0]?.count ?? 0));
+      .where(and(gte(systemMetrics.timestamp, fiveMinAgo), eq(systemMetrics.isAnomaly, true)))
+      .then(readSqlCount);
     
     return { scanned: recentErrors + recentAnomalies, detected: recentErrors, anomalies: recentAnomalies };
   }),
@@ -157,7 +158,7 @@ export const selfHealingRouter = createRouter({
       const db = await getDb();
       await db
         .update(errorLogs)
-        .set({ resolved: 1, resolvedAt: new Date(), patchId: input.patchId ?? null })
+        .set({ resolved: true, resolvedAt: new Date(), patchId: input.patchId ?? null })
         .where(eq(errorLogs.id, input.errorId));
       return { resolved: true };
     }),
@@ -274,7 +275,7 @@ export const selfHealingRouter = createRouter({
       const db = await getDb();
       const since = new Date(Date.now() - (input?.hours ?? 24) * 60 * 60 * 1000);
       
-      const rows = await db
+      const rows: Array<{ status: typeof healingPatches.$inferSelect["status"]; count: number | string }> = await db
         .select({ status: healingPatches.status, count: count() })
         .from(healingPatches)
         .where(gte(healingPatches.createdAt, since))
@@ -388,7 +389,7 @@ export const selfHealingRouter = createRouter({
     .input(z.object({ status: z.string().optional(), limit: z.number().default(50) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
-      const conditions = input?.status ? eq(benchmarkFeeds.processed, input.status === "processed" ? 1 : 0) : undefined;
+      const conditions = input?.status ? eq(benchmarkFeeds.processed, input.status === "processed") : undefined;
       return db
         .select()
         .from(benchmarkFeeds)

@@ -64,7 +64,7 @@ export const adaptiveRouter = createRouter({
         score: input.score,
         timeSpentSeconds: input.timeSpentSeconds,
         hintsUsed: input.hintsUsed,
-        completed: input.completed ? 1 : 0,
+        completed: input.completed,
       });
       return { recorded: true };
     }),
@@ -74,7 +74,7 @@ export const adaptiveRouter = createRouter({
     .query(async ({ input }) => {
       const db = await getDb();
       
-      const recent = await db
+      const recent: Array<{ labSlug: string | null; avgScore: number | string | null; attempts: number }> = await db
         .select({
           labSlug: adaptiveHistory.labSlug,
           avgScore: sql<number>`AVG(score)`,
@@ -86,7 +86,7 @@ export const adaptiveRouter = createRouter({
         .orderBy(desc(sql`AVG(score)`))
         .limit(5);
 
-      const struggling = recent.filter((r) => (r.avgScore ?? 0) < 60);
+      const struggling = recent.filter((r) => Number(r.avgScore ?? 0) < 60);
       
       return {
         suggestedDifficulty: "intermediate",
