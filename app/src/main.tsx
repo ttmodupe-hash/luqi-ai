@@ -2,8 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router'
 import './index.css'
-import { TRPCProvider } from "@/providers/trpc"
 import App from './App.tsx'
+
+// Core screens use explicit REST clients. Optional query tools load their
+// existing provider with their route instead of adding it to every startup.
 
 // Register Service Worker for PWA offline support
 if ('serviceWorker' in navigator) {
@@ -22,9 +24,7 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
-      <TRPCProvider>
-        <App />
-      </TRPCProvider>
+      <App />
     </HashRouter>
   </StrictMode>,
 )
