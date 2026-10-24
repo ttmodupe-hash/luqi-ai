@@ -3,12 +3,16 @@ test.use({ serviceWorkers: 'allow' });
 
 test('real worker caches public assets but not private-looking, API or query responses', async ({ page, context, baseURL }) => {
   const writes: string[] = [];
+  let networkAvailable = true;
   const publicPath = '/assets/cache-public-123.js';
   const excluded = ['/assets/cache-private-123.js', '/api/v1/cache-proof', '/auth', '/assets/cache-query-123.js?token=synthetic'];
   await context.route('**/*', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== new URL(baseURL!).origin) return route.abort();
     if (request.method() !== 'GET') { writes.push(url.pathname); return route.abort(); }
+    // Synthetic fulfill handlers can answer independently of the browser's
+    // offline switch; explicitly disable them during the offline phase too.
+    if (!networkAvailable) return route.abort('internetdisconnected');
     if (url.pathname === publicPath || excluded.some(path => path === url.pathname + url.search)) {
       return route.fulfill({ status: 200, contentType: 'text/javascript',
         headers: { 'Cache-Control': url.pathname.includes('private') ? 'private, no-store' : 'public, max-age=300' },
@@ -35,11 +39,13 @@ test('real worker caches public assets but not private-looking, API or query res
   await expect.poll(async () => (await keys()).includes(publicPath)).toBe(true);
   for (const path of excluded) expect(await keys()).not.toContain(path);
   try {
+    networkAvailable = false;
     await context.setOffline(true);
     expect(await page.evaluate(async path => (await fetch(path)).status, publicPath)).toBe(200);
+    expect(await page.evaluate(async () => (await fetch('/assets/cache-private-123.js')).status)).toBe(503);
     expect(await page.evaluate(async () => {
       try { await fetch('/api/v1/cache-proof'); return 'unexpected cached API'; } catch { return 'network only'; }
     })).toBe('network only');
-  } finally { await context.setOffline(false); }
+  } finally { networkAvailable = true; await context.setOffline(false); }
   expect(writes).toEqual([]);
 });
