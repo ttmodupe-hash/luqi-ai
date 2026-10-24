@@ -26,14 +26,14 @@ describe('patched validator and SDK resolutions', () => {
   it.each(['package.json', 'app/package.json'])('pins reviewed runtime versions in %s', path => {
     const manifest = json(path);
     expect(manifest.dependencies.zod).toBe('4.6.7');
-    expect(manifest.dependencies.openai).toBe('6.0.0');
+    expect(manifest.dependencies.openai).toBe('7.43.0');
   });
   it.each(['package-lock.json', 'app/package-lock.json'])('has no older resolved Zod copy in %s', path => {
     const packages = json(path).packages;
     const validators = Object.entries(packages).filter(([name]) => name.endsWith('node_modules/zod'));
     expect(validators.length).toBeGreaterThan(0);
     for (const [, value] of validators) expect((value as { version: string }).version).toBe('4.6.7');
-    expect(packages['node_modules/openai'].version).toBe('6.0.0');
+    expect(packages['node_modules/openai'].version).toBe('7.43.0');
     expect(packages['node_modules/openai'].peerDependencies.zod).toContain('^4.');
   });
   it('patches the isolated edge child without downgrading Wrangler', () => {
