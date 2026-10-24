@@ -1,0 +1,27 @@
+name: LUQI Pilot Output Integrity
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  complete-provider-replies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exercise output and bounded JSON contracts before SDK installation
+        run: node --experimental-strip-types --test tests/pilot-output.test.mjs
+      - name: Install locked compiler and test dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Verify real SDK transport and HTTP/client contracts using synthetic responses
+        run: npx --no-install vitest run tests/ai-pilot-transport.test.ts tests/pilot-output-http.test.ts tests/ai-pilot-route.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx
+      - name: Strictly compile production API and both trial pages
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/boot.ts src/pages/AiPilotPage.tsx app/src/pages/AiPilotPage.tsx

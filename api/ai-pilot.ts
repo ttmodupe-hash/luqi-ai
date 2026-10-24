@@ -4,6 +4,7 @@ import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
 import { runBudgetedPilotChat } from './services/aiPilotGateway';
+import { PilotOutputError } from './services/pilotOutput';
 import { MAX_INPUT_CHARS, PilotBlocked, assertPilotEnabled } from './services/aiPilotBudget';
 import { authenticatePilotUser, PilotAuthError } from './services/pilotAuth';
 
@@ -20,6 +21,15 @@ aiPilot.use('*', async (c, next) => {
   return next();
 });
 aiPilot.onError((error, c) => {
+  if (error instanceof PilotOutputError) {
+    const messages = {
+      AI_RESPONSE_BLOCKED: 'The provider declined the request or withheld its reply. No further provider was tried after that decision.',
+      AI_REPLY_INCOMPLETE: 'The provider stopped before completing its reply. Unfinished text was not returned or continued automatically.',
+      AI_RESPONSE_INVALID: 'The provider reply could not be verified and was not returned or retried automatically.',
+    };
+    return c.json({ status: 'unavailable', code: error.code,
+      message: messages[error.code] + ' The attempt may still count toward the allowance.' }, error.code === 'AI_RESPONSE_BLOCKED' ? 422 : 502);
+  }
   if (error instanceof PilotInputError) return c.json({ status: 'error', code: error.code,
     message: error.code === 'AI_INPUT_TOO_LARGE'
       ? 'Your complete question, language and history exceed the 6000-character input limit. Shorten them; no provider attempt was started.'

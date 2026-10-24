@@ -46,7 +46,8 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
     const body = await boundedJson(response);
     if (!response.ok) {
       const known = z.object({ code: z.enum(['AI_DISABLED', 'BILLING_NOT_APPROVED', 'AI_BUDGET_STORE_UNAVAILABLE',
-        'AI_PROVIDER_BUDGET_EXHAUSTED', 'AI_USER_DAILY_QUOTA_EXHAUSTED', 'AI_PROVIDER_UNAVAILABLE', 'AI_INPUT_TOO_LARGE', 'INVALID_INPUT']) }).safeParse(body);
+        'AI_PROVIDER_BUDGET_EXHAUSTED', 'AI_USER_DAILY_QUOTA_EXHAUSTED', 'AI_PROVIDER_UNAVAILABLE',
+        'AI_RESPONSE_BLOCKED', 'AI_REPLY_INCOMPLETE', 'AI_RESPONSE_INVALID', 'AI_INPUT_TOO_LARGE', 'INVALID_INPUT']) }).safeParse(body);
       throw new PilotChatError(known.success ? known.data.code : 'AI_UNAVAILABLE');
     }
     return reply.parse(body);

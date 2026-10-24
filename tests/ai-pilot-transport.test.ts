@@ -10,6 +10,10 @@ vi.mock("../api/services/aiPilotBudget", async importOriginal => ({
 import { runBudgetedPilotChat } from "../api/services/aiPilotGateway";
 import { PilotBlocked } from "../api/services/aiPilotBudget";
 
+const geminiReply = (text: string) => ({ candidates: [{ finishReason: 'STOP', content: { role: 'model', parts: [{ text }] } }] });
+const openaiReply = (text: string) => ({ status: 'completed', error: null, incomplete_details: null,
+  output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text }] }] });
+
 beforeEach(() => {
   for (const [name, value] of Object.entries({
     LUQI_AI_PROVIDER_ENABLED: "true", LUQI_AI_BILLING_APPROVED: "true",
@@ -31,7 +35,7 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
       const request = JSON.parse(options.body as string);
       expect(request.generationConfig.maxOutputTokens).toBe(512);
       expect(request).not.toHaveProperty("tools");
-      return Response.json({ candidates: [{ content: { role: "model", parts: [{ text: "Sawubona" }] } }] });
+      return Response.json(geminiReply('Sawubona'));
     });
     vi.stubGlobal("fetch", fetcher);
     expect(await runBudgetedPilotChat("Say hello", 42)).toEqual({
@@ -54,7 +58,7 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
         model: PILOT_MODELS.openai, max_output_tokens: 512, store: false,
         reasoning: { effort: "none" },
       });
-      return Response.json({ output: [{ content: [{ type: "output_text", text: "Hello" }] }] });
+      return Response.json(openaiReply('Hello'));
     });
     vi.stubGlobal("fetch", fetcher);
     expect((await runBudgetedPilotChat("Say hello", 42)).provider).toBe("openai");
@@ -64,9 +68,7 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
   it("stops a hung Gemini request and charges a separate reservation for fallback", async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn(async (url: string, options: RequestInit) => {
-      if (!url.includes("googleapis")) {
-        return Response.json({ output: [{ content: [{ type: "output_text", text: "Hello" }] }] });
-      }
+      if (!url.includes("googleapis")) return Response.json(openaiReply('Hello'));
       return new Promise<Response>((_, reject) => {
         options.signal!.addEventListener("abort", () => reject(new Error("fixture timeout")), { once: true });
       });
@@ -113,9 +115,7 @@ describe('complete paid input boundary', () => {
       const sent = provider === 'gemini' ? body.contents[0].parts[0].text : body.input;
       expect(sent).toBe(expected); expect(sent.length).toBe(6000);
       expect(sent).toContain('HIST-END'); expect(sent.endsWith('END-TEST')).toBe(true);
-      return provider === 'gemini'
-        ? Response.json({ candidates: [{ content: { role: 'model', parts: [{ text: 'Fixture reply' }] } }] })
-        : Response.json({ output: [{ content: [{ type: 'output_text', text: 'Fixture reply' }] }] });
+      return Response.json(provider === 'gemini' ? geminiReply('Fixture reply') : openaiReply('Fixture reply'));
     });
     vi.stubGlobal('fetch', fetcher);
     expect((await runBudgetedPilotChat(prompt, 42, language, history)).provider).toBe(provider);
@@ -131,5 +131,45 @@ describe('complete paid input boundary', () => {
     await expect(runBudgetedPilotChat('Hello', 42, 'auto', [{ sender: 'user', text: 'x'.repeat(351) }]))
       .rejects.toMatchObject({ code: 'INVALID_INPUT' });
     expect(reserve).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe('provider output must be complete before it is presented as an answer', () => {
+  it.each([
+    ['MAX_TOKENS', 'AI_REPLY_INCOMPLETE'], ['SAFETY', 'AI_RESPONSE_BLOCKED'],
+    ['RECITATION', 'AI_RESPONSE_BLOCKED'], ['SPII', 'AI_RESPONSE_BLOCKED'],
+    ['OTHER', 'AI_RESPONSE_INVALID'], [undefined, 'AI_RESPONSE_INVALID'],
+  ])('Gemini %s is terminal: one attempt, no OpenAI fallback', async (finishReason, code) => {
+    const fetcher = vi.fn(async () => Response.json({ candidates: [{ finishReason,
+      content: { role: 'model', parts: [{ text: 'PRIVATE-PARTIAL-OUTPUT' }] } }] }));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code });
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['gemini', 42]]);
+  });
+  it('Gemini prompt filtering without candidates does not fall through to another provider', async () => {
+    const fetcher = vi.fn(async () => Response.json({ promptFeedback: { blockReason: 'SAFETY' } }));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code: 'AI_RESPONSE_BLOCKED' });
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['gemini', 42]]);
+  });
+  it.each([
+    ['incomplete', 'max_output_tokens', 'AI_REPLY_INCOMPLETE'],
+    ['incomplete', 'content_filter', 'AI_RESPONSE_BLOCKED'],
+    ['in_progress', undefined, 'AI_RESPONSE_INVALID'], ['failed', undefined, 'AI_RESPONSE_INVALID'],
+  ])('OpenAI %s/%s does not publish text or retry', async (status, reason, code) => {
+    vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', '');
+    const response = { ...openaiReply('PRIVATE-PARTIAL-OUTPUT'), status,
+      incomplete_details: reason ? { reason } : null };
+    const fetcher = vi.fn(async () => Response.json(response)); vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code });
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42]]);
+  });
+  it('OpenAI refusal is not a transport outage', async () => {
+    vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', '');
+    const fetcher = vi.fn(async () => Response.json({ status: 'completed', output: [{ type: 'message',
+      role: 'assistant', status: 'completed', content: [{ type: 'refusal', refusal: 'PRIVATE-REFUSAL' }] }] }));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code: 'AI_RESPONSE_BLOCKED' });
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42]]);
   });
 });
