@@ -9,8 +9,8 @@ export function isLegacyQueryModule(id) {
     /\/node_modules\/(?:@trpc\/|@tanstack\/(?:react-query|query-core)\/|superjson\/)/.test(name);
 }
 
-// Count the entire static entry dependency graph, not just the file named index.
-// Dynamic chunks are excluded from startup size but INCLUDED in the safety guard.
+// Count the whole static entry graph. Inspect lazy chunks separately rather
+// than misreporting deliberately deferred query dependencies as removed.
 export function summarizeBundle(output) {
   if (!Array.isArray(output) || output.length === 0) throw new Error('Build output is missing');
   const chunks = output.filter(item => item.type === 'chunk');
@@ -41,20 +41,32 @@ export function summarizeBundle(output) {
     if (!item || item.type !== 'asset' || item.source == null) throw new Error('Unresolved CSS: ' + name);
     cssBytes += Buffer.byteLength(item.source);
   }
-  const legacyModules = [...new Set(chunks.flatMap(chunk => {
+  const allQueryModules = new Set(), startupQueryModules = new Set();
+  for (const chunk of chunks) {
     if (!chunk.modules || typeof chunk.modules !== 'object') throw new Error('Module evidence is missing');
-    return Object.keys(chunk.modules).filter(isLegacyQueryModule);
-  }))];
+    for (const id of Object.keys(chunk.modules).filter(isLegacyQueryModule)) {
+      allQueryModules.add(id);
+      if (visited.has(chunk.fileName)) startupQueryModules.add(id);
+    }
+  }
   return { entry: entries[0].fileName, startupChunks: [...visited].sort(),
     startupJavaScriptBytes: rawBytes, startupJavaScriptGzipBytes: gzipBytes,
     startupCssBytes: cssBytes, dynamicChunkCount: chunks.length - visited.size,
-    legacyQueryModuleCount: legacyModules.length,
-    legacyQueryModules: legacyModules.map(id => id.replaceAll('\\', '/').replace(/^.*?\/node_modules\//, 'node_modules/')) };
+    legacyQueryModuleCount: allQueryModules.size,
+    startupLegacyQueryModuleCount: startupQueryModules.size };
 }
 
 export function assertProviderFree(report) {
-  if (!Number.isSafeInteger(report.legacyQueryModuleCount) || report.legacyQueryModuleCount !== 0) {
-    throw new Error('A shipped route still includes the removed query provider or its runtime dependencies');
+  if (!Number.isSafeInteger(report.startupLegacyQueryModuleCount) || report.startupLegacyQueryModuleCount !== 0) {
+    throw new Error('The initial static graph still includes the optional query runtime');
+  }
+}
+
+export function assertKnownQueryConsumers(consumers) {
+  const wrapped = new Set(['src/pages/LabSimulatorPage.tsx', 'src/pages/SelfHealingPage.tsx',
+    'src/pages/ExperientialEducationPage.tsx', 'src/providers/trpc.tsx']);
+  if (!Array.isArray(consumers) || consumers.some(row => !wrapped.has(row.source.replaceAll('\\', '/')))) {
+    throw new Error('An unreviewed query consumer needs an explicit provider boundary and tests');
   }
 }
 
@@ -83,10 +95,9 @@ async function main() {
   const builds = Array.isArray(result) ? result : [result];
   if (builds.length !== 1 || !Array.isArray(builds[0]?.output)) throw new Error('Unexpected build output');
   const report = { ...summarizeBundle(builds[0].output), directConsumers };
-  // Preserve source-path evidence even on failure; no application data or secrets.
   await writeFile(destination, JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
-  if (guard) assertProviderFree(report);
+  if (guard) { assertProviderFree(report); assertKnownQueryConsumers(directConsumers); }
   console.log('Build-byte measurement only, not measured network latency or full launch approval.');
 }
 

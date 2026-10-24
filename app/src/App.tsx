@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
@@ -16,14 +17,14 @@ import CompanionPage from "./pages/CompanionPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.
-const LabSimulatorPage = lazy(() => import("./pages/LabSimulatorPage"));
-const SelfHealingPage = lazy(() => import("./pages/SelfHealingPage"));
+const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
+const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
-const ExperientialEducationPage = lazy(() => import("./pages/ExperientialEducationPage"));
+const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {

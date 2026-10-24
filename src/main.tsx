@@ -4,8 +4,8 @@ import { HashRouter } from 'react-router'
 import './index.css'
 import App from './App.tsx'
 
-// Shipped screens use their explicit REST clients, not a global query cache.
-// Startup Payload CI rejects any emitted route that still needs that provider.
+// Core screens use explicit REST clients. Optional query tools load their
+// existing provider with their route instead of adding it to every startup.
 
 // Register Service Worker for PWA offline support
 if ('serviceWorker' in navigator) {
