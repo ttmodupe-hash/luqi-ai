@@ -46,6 +46,12 @@ export default function AiPilotPage() {
         setUncertain(true); setNotice('The reply could not be confirmed. A provider attempt may have been charged. We will not retry automatically.');
       } else if (code === 'AI_INPUT_TOO_LARGE' || code === 'INVALID_INPUT') {
         setNotice('Your question could not be sent as entered. Shorten or correct it; no provider attempt was started.');
+      } else if (code === 'AI_RESPONSE_BLOCKED') {
+        setNotice('The provider declined the request or withheld its reply. No further provider was tried after that decision. The attempt may still count toward your allowance.');
+      } else if (code === 'AI_REPLY_INCOMPLETE') {
+        setNotice('The provider stopped before completing a reply. Unfinished text was not shown and no automatic continuation was requested. The attempt may still count toward your allowance. Try a shorter question.');
+      } else if (code === 'AI_RESPONSE_INVALID') {
+        setNotice('The provider reply could not be verified. It was not shown or retried automatically. The attempt may still count toward your allowance.');
       } else if (code === 'AI_USER_DAILY_QUOTA_EXHAUSTED') setNotice('Your daily allowance of 20 provider attempts has been reached. Try another UTC day.');
       else if (code === 'AI_PROVIDER_BUDGET_EXHAUSTED') setNotice('The monthly provider allowance has been reached. No further attempt was started on that provider.');
       else setNotice('AI replies are unavailable. Failed provider attempts may still count toward the allowance.');

@@ -5,6 +5,7 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { PILOT_MODELS } from "./pilotModels";
 import { buildPilotInput } from "../../src/lib/pilot-input";
+import { readGeminiText, readOpenAiText, readProviderJson, PilotOutputError } from "./pilotOutput";
 import {
   assertPilotEnabled, MAX_OUTPUT_TOKENS,
   PilotBlocked, reservePilotAttempt
@@ -58,10 +59,11 @@ export async function runBudgetedPilotChat(
         // No grounding/search/tools; those can incur additional charges.
         config: GEMINI_PILOT_CONFIG,
       });
-      if (result.text?.trim()) {
-        return { response: result.text.trim(), provider: "gemini", model: PILOT_MODELS.gemini };
-      }
+      return { response: readGeminiText(result), provider: "gemini", model: PILOT_MODELS.gemini };
     } catch (error) {
+      // A refusal, unfinished reply or unverified payload is terminal. Do not
+      // bypass that outcome or silently pay for another provider to replace it.
+      if (error instanceof PilotOutputError) throw error;
       if (error instanceof PilotBlocked &&
           error.reason !== "AI_PROVIDER_BUDGET_EXHAUSTED") throw error;
       // No API exception messages: providers may include sensitive headers.
@@ -85,14 +87,9 @@ export async function runBudgetedPilotChat(
         signal: AbortSignal.timeout(20_000),
       });
       if (!result.ok) throw new Error("Provider returned non-success status");
-      const data: any = await result.json();
-      const response = (data.output ?? [])
-        .flatMap((item: any) => Array.isArray(item.content) ? item.content : [])
-        .filter((item: any) => item.type === "output_text" && typeof item.text === "string")
-        .map((item: any) => item.text).join("\n").trim();
-      if (response) return { response, provider: "openai", model: PILOT_MODELS.openai };
+      return { response: readOpenAiText(await readProviderJson(result)), provider: "openai", model: PILOT_MODELS.openai };
     } catch (error) {
-      if (error instanceof PilotBlocked) throw error;
+      if (error instanceof PilotBlocked || error instanceof PilotOutputError) throw error;
     }
   }
   throw new PilotUnavailable();
