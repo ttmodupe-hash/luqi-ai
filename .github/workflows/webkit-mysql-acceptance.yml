@@ -12,7 +12,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   webkit-real-accounts:
-    runs-on: ubuntu-latest
+    # Playwright 1.58.2 does not support Ubuntu 26.04. Keep the browser and
+    # supported OS aligned instead of following the moving latest label.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       mysql:
@@ -48,6 +50,10 @@ jobs:
       - name: Prove configuration collection and refusal guards without account writes
         run: node --test tests/webkit-mysql-config.test.mjs
       - name: Build actual production web and operator bundles
+        env:
+          # Vite mode alone does not override an inherited NODE_ENV=test.
+          # Build the production React branch, while test/fixture steps stay test.
+          NODE_ENV: production
         run: npm run build
       - name: Prepare and verify the existing restricted-role disposable fixture
         run: npx --no-install vitest run tests/mysql-runtime-role.integration.test.ts --no-file-parallelism

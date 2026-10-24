@@ -10,7 +10,8 @@ const exactFixture = { LUQI_MYSQL_CI_FIXTURE: 'true', GITHUB_ACTIONS: 'true',
   DATABASE_URL: 'mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci' };
 function collect(env) {
   const result = spawnSync(process.execPath,
-    ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.mysql-webkit.config.ts', '--list'],
+    // Do not emit a JSON acceptance report for collection alone.
+    ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.mysql-webkit.config.ts', '--list', '--reporter=list'],
     { env: { ...clean, ...env }, encoding: 'utf8', timeout: 20_000, maxBuffer: 2 * 1024 * 1024 });
   assert.equal(result.error, undefined, 'Collection failed to start');
   assert.equal(result.signal, null, 'Collection timed out or was interrupted');
