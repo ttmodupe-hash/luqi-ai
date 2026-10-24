@@ -43,6 +43,13 @@ export default function PasswordField({ label, value, onChange, autoComplete, di
       <button type="button" className="shrink-0 rounded-lg border border-slate-500 bg-slate-900 px-3 py-2 text-white disabled:opacity-50"
         style={{ minWidth: 56, minHeight: 44 }} disabled={disabled} aria-controls={id}
         aria-label={`${revealed ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+        onPointerDown={event => {
+          // Safari need not focus clicked buttons. Keep the focus transfer
+          // inside this group so blur cannot invert a pending Hide click.
+          if (event.button === 0 && !disabled) {
+            event.preventDefault(); event.currentTarget.focus({ preventScroll: true });
+          }
+        }}
         onClick={() => setVisible(previous => !previous)}>{revealed ? 'Hide' : 'Show'}</button>
     </div>
   </div>;

@@ -14,6 +14,11 @@ an explicit disabled/busy transition. Visibility never constitutes authorization
 and does not send a login, signup, password-change, recovery or AI request.
 Authentication-mode changes and closed password settings retain existing
 credential-clearing behaviour. Buttons have minimum 44px touch targets.
+A primary pointer press explicitly focuses the visibility button within its
+field group before click. This avoids depending on Safari's default button
+focus behaviour and prevents a blur from inverting a pending Hide action.
+Keyboard activation remains native; the mouse/touch regression uses actual
+clicks or taps in both Chromium and the existing WebKit acceptance suite.
 
 The sign-in form also provides keyboard-accessible local recovery guidance.
 It states that automated reset mail is unavailable and directs existing pilot
@@ -26,11 +31,12 @@ help text, NOT a new recovery service or proof that anyone's account was reset.
 
 The new workflow exercises the field plus existing account and password-change
 contracts using synthetic fixtures, strict scoped TypeScript checks, and exact
-frontend-copy comparison. The main browser suite discovers five additional
+frontend-copy comparison. The main browser suite discovers six additional
 scenarios in each desktop/mobile configuration: keyboard controls, confirmation
-and mode reset, honest recovery guidance, 320px layout/touch targets, and
-password-change controls. Actual passing results must be recorded in #202.
-Code presence alone is not proof that CI, deployment or manual acceptance passed.
+and mode reset, honest recovery guidance, 320px layout/touch targets,
+password-change controls and the pointer-focus regression. Actual passing
+results must be recorded in #202. Code presence alone is not proof that CI,
+deployment or manual acceptance passed.
 
 Server authentication, rate limits, password policy, account data, mail delivery,
 DNS, provider budgets and customer billing are unchanged. This does not resolve
@@ -43,3 +49,4 @@ Design references checked 24 October 2026:
 - W3C Accessible Authentication (Minimum): https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html
 - W3C H100, properly marked-up email/password inputs: https://www.w3.org/WAI/WCAG21/Techniques/html/H100
 - OWASP Forgot Password Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html
+- MDN button focus behaviour: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button#clicking_and_focus
