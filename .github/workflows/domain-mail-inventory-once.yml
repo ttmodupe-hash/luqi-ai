@@ -1,0 +1,48 @@
+name: LUQI Public Domain Mail Inventory
+on:
+  push:
+    branches: ['ops/domain-mail-inventory-20261024']
+    paths: ['.github/workflows/domain-mail-inventory-once.yml']
+permissions:
+  contents: read
+jobs:
+  public-dns-inventory:
+    if: github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/ops/domain-mail-inventory-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read public DNS from two independent resolvers
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          const queries = [
+            ['luqi-ai.com','NS'], ['luqi-ai.com','MX'], ['luqi-ai.com','TXT'],
+            ['luqi-ai.com','A'], ['luqi-ai.com','AAAA'], ['luqi-ai.com','DS'],
+            ['www.luqi-ai.com','CNAME'], ['mail.luqi-ai.com','CNAME'], ['mail.luqi-ai.com','A'],
+            ['_dmarc.luqi-ai.com','TXT'], ['default._domainkey.luqi-ai.com','TXT'],
+          ];
+          let failed = false;
+          for (const endpoint of ['https://dns.google/resolve','https://cloudflare-dns.com/dns-query']) {
+            for (let offset=0; offset<queries.length; offset+=3) {
+              await Promise.all(queries.slice(offset, offset+3).map(async ([name,type]) => {
+                const url = new URL(endpoint); url.searchParams.set('name',name); url.searchParams.set('type',type);
+                try {
+                  const response = await fetch(url, {headers:{accept:'application/dns-json'},signal:AbortSignal.timeout(7000)});
+                  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                  const result = await response.json();
+                  if (!Number.isInteger(result.Status)) throw new Error('Invalid DNS response');
+                  console.log(JSON.stringify({resolver:url.hostname,name,type,status:result.Status,authenticated:result.AD,
+                    answer:result.Answer??[],authority:result.Authority??[]}));
+                } catch (error) {
+                  failed = true;
+                  console.log(JSON.stringify({resolver:url.hostname,name,type,error:String(error)}));
+                }
+              }));
+            }
+          }
+          console.log('Read-only public DNS inventory. No nameserver, mail, account, certificate or hosting setting changed. A common DKIM selector query is not a complete selector inventory.');
+          if(failed) process.exitCode=1;
+          JS
