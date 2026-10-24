@@ -8,7 +8,7 @@ if (process.env.LUQI_BROWSER_BASE_URL && process.env.LUQI_BROWSER_BASE_URL !== o
 }
 export default defineConfig({
   testDir: './browser-tests',
-  testMatch: ['provider-free-startup.spec.ts', 'workspace-tool-search.spec.ts'],
+  testMatch: ['provider-free-startup.spec.ts', 'workspace-tool-search.spec.ts', 'algebra-content.spec.ts'],
   timeout: 30_000,
   globalTimeout: 4 * 60_000,
   workers: 2,
