@@ -31,10 +31,32 @@ jobs:
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Build and inspect normal checkout
         run: npm run build && node scripts/verify-production-frontend.mjs
-      - name: Build exact Railway image at its actual working directory
+      - name: Build exact Railway image and its mandatory frontend gate
         run: docker build --progress=plain -t luqi-frontend-parity:ci .
-      - name: Verify container frontend graph and actual emitted code
-        run: docker run --rm --network none --entrypoint node luqi-frontend-parity:ci scripts/verify-production-frontend.mjs
+      - name: Compare checkout and container JavaScript and CSS hashes
+        run: |
+          container=$(docker create luqi-frontend-parity:ci)
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container":/srv/luqi/.luqi-frontend-manifest.json /tmp/luqi-container-frontend.json
+          cmp .luqi-frontend-manifest.json /tmp/luqi-container-frontend.json
+          docker run --rm --network none --entrypoint /bin/sh luqi-frontend-parity:ci -c \
+            'test "$(id -u)" -ne 0 && test "$(pwd -P)" = /srv/luqi && test "$(readlink /app)" = /srv/luqi && test -s /app/dist/reset-account-password.js && test -s /app/dist/prepare-mysql-schema.js'
+          echo 'PASS byte-identical JS/CSS, non-root runtime and legacy operator path compatibility'
+      - name: Prove the old colliding layout is rejected rather than normalized silently
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('Dockerfile').read_text()
+          assert 'WORKDIR /srv/luqi' in text and 'RUN ln -s /srv/luqi /app' in text
+          text = text.replace('WORKDIR /srv/luqi', 'WORKDIR /app').replace('RUN ln -s /srv/luqi /app\n', '').replace('/srv/luqi/node_modules', '/app/node_modules')
+          Path('/tmp/Dockerfile.luqi-collision').write_text(text)
+          PY
+          if docker build --progress=plain -f /tmp/Dockerfile.luqi-collision -t luqi-frontend-collision:ci . > /tmp/luqi-collision.log 2>&1; then
+            echo 'ERROR: known colliding layout was not blocked'; exit 1
+          fi
+          grep -F '"app/index.html"' /tmp/luqi-collision.log
+          grep -F 'LUQI_FRONTEND_TREE_DRIFT' /tmp/luqi-collision.log
+          echo 'PASS historical nested-entry regression is caught by the same production gate'
       - name: Install locked browser engines
         run: npx --no-install playwright install --with-deps chromium webkit
       - name: Exercise actual container frontend with synthetic API responses
