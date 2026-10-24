@@ -11,6 +11,9 @@ on:
       - 'src/**'
       - 'app/src/**'
       - 'scripts/verify-production-frontend.mjs'
+      - 'playwright.container.config.ts'
+      - 'browser-tests/provider-free-startup.spec.ts'
+      - 'browser-tests/workspace-tool-search.spec.ts'
       - '.github/workflows/production-frontend-parity.yml'
 permissions:
   contents: read
@@ -60,8 +63,6 @@ jobs:
       - name: Install locked browser engines
         run: npx --no-install playwright install --with-deps chromium webkit
       - name: Exercise actual container frontend with synthetic API responses
-        env:
-          LUQI_BROWSER_BASE_URL: http://127.0.0.1:4173
         run: |
           docker run --detach --name luqi-frontend-parity --publish 127.0.0.1:4173:3000 \
             --env NODE_ENV=production --env PORT=3000 \
@@ -74,7 +75,6 @@ jobs:
             sleep 1
           done
           test "$ready" -eq 1
-          npx --no-install playwright test browser-tests/provider-free-startup.spec.ts browser-tests/workspace-tool-search.spec.ts
-          npx --no-install playwright test --config=playwright.webkit.config.ts browser-tests/provider-free-startup.spec.ts browser-tests/workspace-tool-search.spec.ts
+          npx --no-install playwright test --config=playwright.container.config.ts
       - name: Record bounded scope
         run: echo 'Exact Dockerfile and deployed-style static hosting tested; synthetic API fixtures only. No production credentials, account writes, AI requests or payment activation. Physical-device and full launch gates remain separate.' >> "$GITHUB_STEP_SUMMARY"
