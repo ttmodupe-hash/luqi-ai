@@ -30,6 +30,9 @@ export default defineConfig({
   },
   envDir: path.resolve(__dirname),
   build: {
+    // Preserve native lazy-import recovery after a failed download in WebKit.
+    // Optional dependency preloading is off; code splitting and CSS remain.
+    modulePreload: false,
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     // The repository also contains app/index.html. Force the canonical root

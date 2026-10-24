@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { CLIP_SECONDS, SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episodeOutline,
   pendulumPeriod, sceneAt, storyboardJson, subtitles, type StudioFormat, type StudioScene } from '../lib/content-studio';
 import '../content-studio.css';
+import { browserRecordingType } from '../lib/recording-support';
 
 interface Recording { media: MediaRecorder; stream: MediaStream; chunks: Blob[]; started: number; discard: boolean; timer: ReturnType<typeof setTimeout>; bytes: number }
 function saveText(name: string, body: string, type: string) {
@@ -11,6 +12,7 @@ function saveText(name: string, body: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 export default function ContentStudioPage() {
+  const [recordingType] = useState(browserRecordingType);
   const [scenes, setScenes] = useState<StudioScene[]>(() => SHOWCASE_SCENES.map(s => ({ ...s })));
   const [format, setFormat] = useState<StudioFormat>('landscape');
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [recording, setRecording] = useState(false);
@@ -71,8 +73,7 @@ export default function ContentStudioPage() {
     try {
       storyboardJson(scenes, format, length, gravity);
       if (!canvas.current?.captureStream || typeof MediaRecorder === 'undefined') throw new Error('Video export is unavailable in this browser. Download the storyboard and script instead.');
-      const mimeType = ['video/mp4;codecs=avc1.42001E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
-        .find(type => MediaRecorder.isTypeSupported(type));
+      const mimeType = browserRecordingType();
       if (!mimeType) throw new Error('No supported video encoder. Download the storyboard and script instead.');
       stream = canvas.current.captureStream(24);
       const media = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000 });
@@ -131,9 +132,12 @@ export default function ContentStudioPage() {
     <section className="luqi-studio-export" aria-labelledby="export-heading"><div><h2 id="export-heading">Review. Export. Make it yours.</h2>
       <p>Video is silent original motion graphics. No generative video, voice clone, payment or direct social connection is enabled. Native timing can vary slightly; check the finished duration before publishing. Add your own licensed audio and verify platform requirements before uploading.</p></div>
       <label>Video format<select aria-label="Video format" value={format} disabled={recording} onChange={e => setFormat(e.target.value as StudioFormat)}>{Object.entries(STUDIO_FORMATS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
-      <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={recording} onClick={record}>Record 90-second animation</button>
+      <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={recording || !recordingType} aria-describedby="studio-recording-support" onClick={record}>Record 90-second animation</button>
         {recording && <button type="button" onClick={cancelRecording}>Cancel recording</button>}
         <button type="button" disabled={recording} onClick={() => exportText('storyboard')}>Download storyboard</button><button type="button" disabled={recording} onClick={() => exportText('subtitles')}>Download subtitles</button><button type="button" disabled={recording} onClick={() => exportText('script')}>Download script / podcast outline</button></div>
+      <p id="studio-recording-support">{recordingType
+        ? 'This browser reports a compatible recorder. A successful export still depends on its encoder; review the finished clip.'
+        : 'Video recording is unavailable in this browser. You can still edit and download your storyboard, subtitles and script.'}</p>
       <p role="status" aria-label="Studio export status" aria-live="polite">{message}</p>
       {clip && <div><video src={clip.url} controls aria-label="Completed local animation" /><a className="luqi-primary" href={clip.url} download={`luqi-showcase-90s-${clip.format}.${clip.extension}`}>Download 90-second video (.{clip.extension})</a></div>}
     </section>
