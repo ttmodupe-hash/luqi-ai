@@ -24,7 +24,7 @@ jobs:
         run: |
           test -n "$GCP_PROJECT_ID" && test -n "$GCP_SA_KEY"
       - name: Checkout Code Repository Layer
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Authenticate Securely with Google Cloud
         uses: google-github-actions/auth@v2
