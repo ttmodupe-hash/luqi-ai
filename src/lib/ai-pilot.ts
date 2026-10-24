@@ -31,15 +31,16 @@ export async function pilotAvailability(signal: AbortSignal, request: typeof fet
 
 /** A caller supplies a bounded, cancelable signal; never retry a paid POST. */
 export async function askPilot(token: string, prompt: string, signal: AbortSignal, request: typeof fetch = fetch): Promise<PilotReply> {
-  if (!token || token.length > 4096 || !prompt.trim() || prompt.length > 6000) throw new PilotChatError('INVALID_INPUT');
+  const question = prompt.trim();
+  if (!token || token.length > 4096 || !question || question.length > 6000) throw new PilotChatError('INVALID_INPUT');
   try {
-    // Validate the same formatted limit as the server, without sending context.
-    buildPilotInput(prompt.trim());
+    // Same normalization and complete input limit as the server and UI counter.
+    buildPilotInput(question);
     const response = await request('/api/v1/luqi-core', {
       method: 'POST', signal, credentials: 'omit', cache: 'no-store', redirect: 'error',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       // No private notebook, account email, saved history or automatic context.
-      body: JSON.stringify({ user_input: prompt.trim() }),
+      body: JSON.stringify({ user_input: question }),
     });
     if (response.status === 401) throw new PilotChatError('AUTH_REQUIRED');
     const body = await boundedJson(response);
