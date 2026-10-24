@@ -1,0 +1,35 @@
+name: LUQI Production Probe Safety Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/verify-production-pilot.mjs'
+      - 'tests/production-pilot-probe.test.mjs'
+      - '.github/workflows/production-pilot-probe-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-production-pilot.mjs'
+      - 'tests/production-pilot-probe.test.mjs'
+      - '.github/workflows/production-pilot-probe-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Injected synthetic HTTP only. No live account, provider or database.
+      - name: Check syntax and offline safety fixtures
+        run: |
+          node --check scripts/verify-production-pilot.mjs
+          node --test tests/production-pilot-probe.test.mjs

@@ -2,7 +2,7 @@
 
 **Pan-African and global learning, creativity, and AI pilot.** LUQI brings together browser-based educational tools, a local animation studio, personal notes, and a limited authenticated AI text trial. This is an actively developed pilot, **not a claim that every historic module, paid service, provider integration, or autonomous agent is production-ready**.
 
-> **Verified checkpoint — 24 October 2026.** Current production source is this repository's `main`, deployed to Railway project `kind-spontaneity` as service `web` with a separate persistent **MySQL** service. The latest verified app revision was `5b6ff1b` (PR #201, 23 October), with a successful deployment and 24 public release probes. For newer updates use the [continuation hub](https://github.com/ttmodupe-hash/luqi-ai/issues/202) and [outstanding-work register](docs/OUTSTANDING_WORK.md). Passing probes does not mean launch acceptance is complete.
+> **Verified checkpoint — 24 October 2026.** Current production source is this repository's `main`, deployed to Railway project `kind-spontaneity` as service `web` with a separate persistent **MySQL** service. Revision `2bb5ac2` (PR #207) passed deployment and 24 public release probes. An owner-authorized synthetic production journey subsequently passed signup, notes, password change, exports, cleanup and **one real Gemini reply**. See the [dated acceptance evidence](docs/SYNTHETIC_PRODUCTION_ACCEPTANCE_2026_10_24.md), [continuation hub](https://github.com/ttmodupe-hash/luqi-ai/issues/202) and [outstanding-work register](docs/OUTSTANDING_WORK.md). Synthetic acceptance does not establish full launch, invoice reconciliation or production recovery readiness.
 
 ## Try the current pilot
 
@@ -28,7 +28,7 @@ The older [September unification concept](docs/UNIFICATION.md) proposed a differ
 
 ## AI pilot and spending
 
-The owner-approved API allocation is **$100 USD per UTC calendar month: $60 Gemini and $40 OpenAI**. Provider caps/alerts and local durable reservation controls are documented in [AI pilot runbook](docs/AI_PILOT_100_USD.md). Provider metadata access has been verified, but a real designated-account paid reply and billing reconciliation have **not** yet been confirmed. Provider auto-reload remains off. Do not insert provider credentials in frontend bundles, GitHub issues or screenshots; legacy unrestricted AI endpoints remain closed.
+The owner-approved API allocation is **$100 USD per UTC calendar month: $60 Gemini and $40 OpenAI**. Provider caps/alerts and local durable reservation controls are documented in [AI pilot runbook](docs/AI_PILOT_100_USD.md). Metadata checks passed for both providers. On 24 October an ordinary authenticated production request returned a verified Gemini reply; **OpenAI inference, actual cost reconciliation and designated human-account acceptance remain unverified**. The readiness endpoint describes configuration rather than stored acceptance history. Provider auto-reload remains off. Do not insert provider credentials in frontend bundles, GitHub issues or screenshots; legacy unrestricted AI endpoints remain closed.
 
 The AI pilot budget is **not** a customer payment system or a Railway hosting budget.
 
