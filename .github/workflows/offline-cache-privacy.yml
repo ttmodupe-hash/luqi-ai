@@ -1,0 +1,23 @@
+name: LUQI Offline Cache Privacy
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  public-files-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check both worker entrypoints
+        run: node --check public/service-worker.js && node --check app/public/sw.js
+      - name: Verify offline privacy without dependencies, credentials or external requests
+        run: node --test tests/offline-cache-privacy.test.mjs
