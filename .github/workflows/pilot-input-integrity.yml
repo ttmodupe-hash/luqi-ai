@@ -17,11 +17,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate pure input contract before installing provider dependencies
-        run: node --experimental-strip-types --test tests/pilot-input-contract.test.mjs
+      - name: Validate pure input and bounded response contracts without credentials
+        run: node --experimental-strip-types --test tests/pilot-input-contract.test.mjs tests/pilot-response-contract.test.mjs
       - name: Install locked application and test dependencies
         run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
       - name: Verify gateway, HTTP and browser contracts with synthetic responses only
-        run: npx --no-install vitest run tests/ai-pilot-budget.test.ts tests/ai-pilot-route.test.ts tests/ai-pilot-transport.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx tests/ai-input-normalization.test.ts
+        run: npx --no-install vitest run tests/ai-pilot-budget.test.ts tests/ai-pilot-route.test.ts tests/ai-pilot-transport.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx tests/ai-pilot-response-page.test.tsx tests/ai-input-normalization.test.ts
       - name: Strictly check production API and both trial page trees
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/boot.ts src/pages/AiPilotPage.tsx app/src/pages/AiPilotPage.tsx

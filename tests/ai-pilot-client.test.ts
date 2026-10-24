@@ -18,7 +18,7 @@ describe('same-origin, explicitly submitted AI trial', () => {
     const signal = new AbortController().signal;
     expect((await askPilot('synthetic-token', ' Hello ', signal, request)).response).toBe('Hello');
     expect(request).toHaveBeenCalledExactlyOnceWith('/api/v1/luqi-core', {
-      method: 'POST', signal, credentials: 'omit', cache: 'no-store', redirect: 'error',
+      method: 'POST', signal: expect.any(AbortSignal), credentials: 'omit', cache: 'no-store', redirect: 'error',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer synthetic-token' },
       body: JSON.stringify({ user_input: 'Hello' }),
     });
@@ -42,7 +42,7 @@ describe('same-origin, explicitly submitted AI trial', () => {
     ['AI_PROVIDER_UNAVAILABLE', 503], ['untrusted-private-message', 500]] as const)('bounds failure codes for %s', async (code, status) => {
     const request = vi.fn(async () => Response.json({ code }, { status }));
     await expect(askPilot('token', 'Hi', new AbortController().signal, request)).rejects.toMatchObject({
-      code: code === 'untrusted-private-message' ? 'AI_UNAVAILABLE' : code,
+      code: code === 'untrusted-private-message' ? 'RESPONSE_UNCONFIRMED' : code,
     });
     expect(request).toHaveBeenCalledTimes(1);
   });
@@ -64,5 +64,21 @@ it('sends the full exact-limit question including its final qualifier', async ()
 it.each(['AI_INPUT_TOO_LARGE', 'INVALID_INPUT'])('recognizes a server pre-spend rejection: %s', async code => {
   const request = vi.fn(async () => Response.json({ code }, { status: 400 }));
   await expect(askPilot('token', 'Hello', new AbortController().signal, request)).rejects.toMatchObject({ code });
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
+it('does not send a request after caller cancellation', async () => {
+  const controller = new AbortController(); controller.abort(); const request = vi.fn();
+  await expect(askPilot('token', 'Hello', controller.signal, request)).rejects.toMatchObject({ code: 'RESPONSE_UNCONFIRMED' });
+  expect(request).not.toHaveBeenCalled();
+});
+it('does not trust an input-rejection code delivered with a server error', async () => {
+  const request = vi.fn(async () => Response.json({ code: 'INVALID_INPUT' }, { status: 500 }));
+  await expect(askPilot('token', 'Hello', new AbortController().signal, request)).rejects.toMatchObject({ code: 'RESPONSE_UNCONFIRMED' });
+  expect(request).toHaveBeenCalledTimes(1);
+});
+it('requires JSON media type even for a plausible success body', async () => {
+  const request = vi.fn(async () => new Response(JSON.stringify({ status: 'success', response: 'fixture', provider: 'gemini', provider_model: 'fixture' })));
+  await expect(askPilot('token', 'Hello', new AbortController().signal, request)).rejects.toMatchObject({ code: 'RESPONSE_UNCONFIRMED' });
   expect(request).toHaveBeenCalledTimes(1);
 });
