@@ -8,6 +8,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "bun.lock"
+      - "api/**"
       - "app/**"
       - "edge/**"
       - "requirements.txt"
