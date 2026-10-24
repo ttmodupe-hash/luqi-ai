@@ -11,7 +11,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   verify-webkit-journeys:
-    runs-on: ubuntu-latest
+    # The locked Playwright 1.58.2 does not support WebKit on Ubuntu 26.04.
+    # Avoid ubuntu-latest migration changing the browser test platform silently.
+    runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
