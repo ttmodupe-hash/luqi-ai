@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requestConversationJson } from "./conversation-request";
 import { requestAccountJson, type AccountPath } from "./account-request";
+import { requestNotesExport } from "./notes-export-request";
 
 const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const conversation = z.object({ id, title: z.string(), personalityId: z.number() });
@@ -37,44 +38,15 @@ export const privateNotesExportSchema = z.object({
   }
 });
 export type PrivateNotesExport = z.infer<typeof privateNotesExportSchema>;
-export const MAX_NOTES_DOWNLOAD_BYTES = 32 * 1024 * 1024;
+export { MAX_NOTES_DOWNLOAD_BYTES } from "./notes-export-request";
 
 async function exportAllNotes(token: string, request: typeof fetch, signal?: AbortSignal): Promise<PrivateNotesExport> {
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  if (signal?.aborted) controller.abort();
-  else signal?.addEventListener('abort', abort, { once: true });
-  const timer = setTimeout(abort, 30_000);
-  try {
-    const response = await request('/api/v1/companion/conversations/export', {
-      method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    if (!response.ok) throw new ConversationError(response.status);
-    if (response.headers.get('Content-Type')?.split(';')[0].trim() !== 'application/json' || !response.body ||
-        Number(response.headers.get('Content-Length') ?? 0) > MAX_NOTES_DOWNLOAD_BYTES) throw new Error('Invalid notes export');
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = []; let bytes = 0;
-    const cancelReader = () => { void reader.cancel().catch(() => {}); };
-    controller.signal.addEventListener('abort', cancelReader, { once: true });
-    try {
-      for (;;) {
-        if (controller.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
-        const next = await reader.read();
-        if (next.done) break;
-        bytes += next.value.byteLength;
-        if (bytes > MAX_NOTES_DOWNLOAD_BYTES) throw new Error('Notes export exceeds the download limit');
-        chunks.push(next.value);
-      }
-    } finally {
-      controller.signal.removeEventListener('abort', cancelReader);
-      await reader.cancel().catch(() => {}); reader.releaseLock();
-    }
-    if (controller.signal.aborted) throw new DOMException('Export cancelled', 'AbortError');
-    const body = new Uint8Array(bytes); let offset = 0;
-    for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
-    return privateNotesExportSchema.parse(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)));
-  } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
+  const response = await requestNotesExport(request, token, signal);
+  if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
+  if (!response.ok) throw new ConversationError(response.status);
+  const parsed = privateNotesExportSchema.safeParse(response.body);
+  if (!parsed.success) throw new Error('Notes export could not be verified');
+  return parsed.data;
 }
 
 export function downloadPrivateNotesExport(data: PrivateNotesExport) {
