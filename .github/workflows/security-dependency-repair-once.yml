@@ -3,16 +3,18 @@ name: LUQI Isolated Dependency Repair
 on:
   push:
     branches: ['fix/security-dependencies-20261024']
-    paths: ['.github/workflows/security-dependency-repair-once.yml', 'scripts/security-dependency-repair.mjs']
+    paths: ['.github/workflows/security-dependency-repair-once.yml']
 
 permissions:
   contents: read
 
 jobs:
-  inventory:
+  resolve-reviewed-versions:
     if: github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/fix/security-dependencies-20261024'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,35 +22,85 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Inventory validator consumers and candidate metadata
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: Verify published package metadata and set reviewed versions
         shell: bash
         run: |
-          python - <<'PY'
-          import subprocess, pathlib, re, json
-          files = subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
-          pattern = re.compile(r'from [\x27\"](?:zod|openai)|z\.(?:record|function|object|array)|ZodType|ZodSchema|\.errors\b|errorMap|required_error|invalid_type_error')
-          for f in files:
-              p = pathlib.Path(f)
-              if p.suffix not in ('.ts','.tsx','.js','.mjs') or not p.is_file(): continue
-              s = p.read_text(errors='replace')
-              if not re.search(r'(?:from|require\()\s*[\x27\"](?:zod|openai)',s): continue
-              print('\nFILE',f)
-              for n,line in enumerate(s.splitlines(),1):
-                  if pattern.search(line): print(f'{n}: {line[:300]}')
-          for f in ['package-lock.json','app/package-lock.json','edge/package-lock.json','app/electron/package-lock.json']:
-              p=pathlib.Path(f)
-              if not p.exists(): continue
-              d=json.loads(p.read_text()); print('\nRESOLVED',f)
-              for k,v in d.get('packages',{}).items():
-                  if re.search(r'node_modules/(zod|openai|undici|wrangler|miniflare|@trpc/server|@hookform/resolvers)$',k):
-                      print(k, v.get('version'), 'peers=',v.get('peerDependencies'), 'deps=',v.get('dependencies'))
-          PY
-          npm view zod@4.6.7 version engines --json
-          npm view openai@5.23.3 version peerDependencies engines --json
+          npm view zod@4.6.7 version --json
+          npm view openai@6.0.0 version peerDependencies --json > /tmp/luqi-openai-package.json
           npm view undici@7.30.1 version engines --json
-      - name: Archive tracked public source for review
+          python - <<'PY'
+          import json, pathlib
+          metadata=json.loads(pathlib.Path('/tmp/luqi-openai-package.json').read_text())
+          assert metadata['version']=='6.0.0' and '^4.' in metadata['peerDependencies']['zod'], metadata
+          print('OpenAI 6.0.0 declares Zod 4 compatibility')
+          for f in ['package.json','app/package.json']:
+              p=pathlib.Path(f); d=json.loads(p.read_text())
+              assert d['dependencies']['zod'] in ['^3.24.1','4.6.7']
+              assert d['dependencies']['openai'] in ['^4.76.0','6.0.0']
+              d['dependencies']['zod']='4.6.7'
+              d['dependencies']['openai']='6.0.0'
+              p.write_text(json.dumps(d,indent=2)+'\n')
+          p=pathlib.Path('edge/package.json'); d=json.loads(p.read_text())
+          assert d['devDependencies']['wrangler']=='4.152.0'
+          d.setdefault('overrides',{}).setdefault('miniflare',{})['undici']='7.30.1'
+          p.write_text(json.dumps(d,indent=2)+'\n')
+          PY
+      - name: Regenerate actual lockfiles without dependency lifecycle scripts
+        shell: bash
+        run: |
+          npm install --package-lock-only --ignore-scripts --legacy-peer-deps --no-audit
+          (cd app && npm install --package-lock-only --ignore-scripts --legacy-peer-deps --no-audit)
+          (cd edge && npm install --package-lock-only --ignore-scripts --no-audit)
+          bun install --lockfile-only --ignore-scripts
+          python - <<'PY'
+          import json,pathlib
+          for f in ['package-lock.json','app/package-lock.json']:
+              d=json.loads(pathlib.Path(f).read_text())
+              assert d['packages']['node_modules/zod']['version']=='4.6.7'
+              assert d['packages']['node_modules/openai']['version']=='6.0.0'
+              for k,v in d['packages'].items():
+                  if k.endswith('node_modules/zod'):
+                      assert tuple(map(int,v['version'].split('.'))) >= (4,6,6), (f,k,v['version'])
+                      print(f,k,v['version'])
+          d=json.loads(pathlib.Path('edge/package-lock.json').read_text())
+          assert d['packages']['node_modules/undici']['version']=='7.30.1'
+          print('Edge Miniflare resolves patched Undici 7.30.1')
+          PY
+      - name: Audit resolved candidates before publishing the branch update
+        run: |
+          npm audit --package-lock-only --include=dev --audit-level=low
+          (cd app && npm audit --package-lock-only --include=dev --audit-level=low)
+          (cd edge && npm audit --package-lock-only --include=dev --audit-level=low)
+          bun audit
+      - name: Commit only reviewed manifests and generated locks to the repair branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'ttmodupe-hash/luqi-ai'
+          test "$GITHUB_REF" = 'refs/heads/fix/security-dependencies-20261024'
+          remote_head="$(git ls-remote origin refs/heads/fix/security-dependencies-20261024 | cut -f1)"
+          test "$remote_head" = "$GITHUB_SHA"
+          python - <<'PY'
+          import subprocess
+          allowed={'package.json','package-lock.json','app/package.json','app/package-lock.json','edge/package.json','edge/package-lock.json','bun.lock'}
+          changed=set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())
+          assert changed <= allowed, changed-allowed
+          PY
+          git add -- package.json package-lock.json app/package.json app/package-lock.json edge/package.json edge/package-lock.json bun.lock
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix: pin patched Zod and compatible SDK; resolve patched edge Undici'
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/fix/security-dependencies-20261024
+      - name: Archive tracked public source for code and lockfile review
+        if: always()
         run: git archive --format=tar.gz --output=/tmp/luqi-source-review.tar.gz HEAD
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: luqi-source-review
           path: /tmp/luqi-source-review.tar.gz
