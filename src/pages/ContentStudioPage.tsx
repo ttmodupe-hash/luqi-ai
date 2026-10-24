@@ -4,6 +4,8 @@ import { CLIP_SECONDS, SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episode
   pendulumPeriod, sceneAt, storyboardJson, subtitles, type StudioFormat, type StudioScene } from '../lib/content-studio';
 import '../content-studio.css';
 import { browserRecordingType } from '../lib/recording-support';
+import StudioDraftImport from '../components/StudioDraftImport';
+import { serializeStudioDraft } from '../lib/studio-draft';
 
 interface Recording { media: MediaRecorder; stream: MediaStream; chunks: Blob[]; started: number; discard: boolean; timer: ReturnType<typeof setTimeout>; bytes: number }
 function saveText(name: string, body: string, type: string) {
@@ -14,6 +16,7 @@ function saveText(name: string, body: string, type: string) {
 export default function ContentStudioPage() {
   const [recordingType] = useState(browserRecordingType);
   const [scenes, setScenes] = useState<StudioScene[]>(() => SHOWCASE_SCENES.map(s => ({ ...s })));
+  const [draftBusy, setDraftBusy] = useState(false);
   const [format, setFormat] = useState<StudioFormat>('landscape');
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [recording, setRecording] = useState(false);
   const [length, setLength] = useState(2.5), [gravity, setGravity] = useState(9.81), [yaw, setYaw] = useState(28);
@@ -21,6 +24,7 @@ export default function ContentStudioPage() {
   const [clip, setClip] = useState<{ url: string; extension: string; format: StudioFormat } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null), position = useRef(0), active = useRef<Recording | null>(null), mounted = useRef(true);
   const dimensions = STUDIO_FORMATS[format], selected = sceneAt(time);
+  const editingLocked = recording || draftBusy;
   function cancelRecording() {
     const run = active.current; if (!run) return;
     run.discard = true; clearTimeout(run.timer);
@@ -61,14 +65,14 @@ export default function ContentStudioPage() {
   function edit(key: keyof StudioScene, value: string) { setPlaying(false); setScenes(old => old.map((s, i) => i === selected ? { ...s, [key]: value } : s)); }
   function exportText(kind: 'storyboard' | 'subtitles' | 'script') {
     try {
-      if (kind === 'storyboard') saveText('luqi-storyboard.json', storyboardJson(scenes, format, length, gravity), 'application/json');
+      if (kind === 'storyboard') saveText('luqi-storyboard.json', serializeStudioDraft(scenes, format, length, gravity, yaw), 'application/json');
       if (kind === 'subtitles') saveText('luqi-subtitles.srt', subtitles(scenes), 'text/plain;charset=utf-8');
       if (kind === 'script') saveText('luqi-episode-outline.txt', episodeOutline(scenes), 'text/plain;charset=utf-8');
       setMessage('Download prepared. Review your content before sharing it.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Complete the storyboard before exporting.'); }
   }
   function record() {
-    if (active.current) return;
+    if (active.current || draftBusy) return;
     let stream: MediaStream | undefined;
     try {
       storyboardJson(scenes, format, length, gravity);
@@ -109,20 +113,28 @@ export default function ContentStudioPage() {
   }
   return <main className="luqi-studio">
     <div className="luqi-studio-heading"><p className="luqi-eyebrow">LUQI CONTENT STUDIO · LOCAL CREATION</p><h1>Create. Explain. Make it clear.</h1>
-      <p>Six scenes, ninety seconds. Original 3D motion graphics, an editable story and a time-based learning view. Your draft stays in this page until you download it.</p></div>
+      <p>Six scenes, ninety seconds. Original 3D motion graphics, an editable story and a time-based learning view. Download your storyboard before leaving; reopen that file here to continue editing later.</p></div>
+    <StudioDraftImport disabled={recording} onBusyChange={busy => { setDraftBusy(busy); if (busy) setPlaying(false); }}
+      onRestore={draft => {
+        if (active.current) return;
+        setScenes(draft.scenes.map(scene => ({ ...scene }))); setFormat(draft.aspect);
+        setLength(draft.length); setGravity(draft.gravity); setYaw(draft.yaw);
+        seek(0); setClip(null);
+        setMessage('Saved storyboard restored. Download your edited storyboard before leaving.');
+      }} />
     <div className="luqi-studio-grid">
       <section className="luqi-studio-stage" aria-label="Animation preview">
         <canvas ref={canvas} width={dimensions.width} height={dimensions.height} role="img" aria-label="Projected 3D pendulum animation. The complete script and questions are available in the storyboard editor." style={{ aspectRatio: `${dimensions.width}/${dimensions.height}` }} />
-        <div className="luqi-studio-transport"><button type="button" disabled={recording} onClick={() => { if (position.current >= 90) { position.current = 0; setTime(0); } setPlaying(!playing); }}>{playing ? 'Pause preview' : 'Play preview'}</button>
-          <output role="timer" aria-live="off" aria-label="Timeline position">{Math.floor(time)} / 90 s</output><label>Time<input type="range" aria-label="Animation time" min="0" max="90" step=".1" value={time} disabled={recording} onChange={e => seek(Number(e.target.value))} /></label></div>
-        <div className="luqi-studio-physics"><label>Length · {length.toFixed(1)} m<input type="range" aria-label="Pendulum length" min=".5" max="4" step=".1" value={length} disabled={recording} onChange={e => setLength(Number(e.target.value))} /></label>
-          <label>Gravity<select aria-label="Gravity" value={gravity} disabled={recording} onChange={e => setGravity(Number(e.target.value))}><option value="9.81">Earth · 9.81 m/s²</option><option value="1.62">Moon · 1.62 m/s²</option><option value="3.71">Mars · 3.71 m/s²</option></select></label>
-          <label>Camera angle<input type="range" aria-label="Camera angle" min="-80" max="80" value={yaw} disabled={recording} onChange={e => setYaw(Number(e.target.value))} /></label></div>
+        <div className="luqi-studio-transport"><button type="button" disabled={editingLocked} onClick={() => { if (position.current >= 90) { position.current = 0; setTime(0); } setPlaying(!playing); }}>{playing ? 'Pause preview' : 'Play preview'}</button>
+          <output role="timer" aria-live="off" aria-label="Timeline position">{Math.floor(time)} / 90 s</output><label>Time<input type="range" aria-label="Animation time" min="0" max="90" step=".1" value={time} disabled={editingLocked} onChange={e => seek(Number(e.target.value))} /></label></div>
+        <div className="luqi-studio-physics"><label>Length · {length.toFixed(1)} m<input type="range" aria-label="Pendulum length" min=".5" max="4" step=".1" value={length} disabled={editingLocked} onChange={e => setLength(Number(e.target.value))} /></label>
+          <label>Gravity<select aria-label="Gravity" value={gravity} disabled={editingLocked} onChange={e => setGravity(Number(e.target.value))}><option value="9.81">Earth · 9.81 m/s²</option><option value="1.62">Moon · 1.62 m/s²</option><option value="3.71">Mars · 3.71 m/s²</option>{![9.81, 1.62, 3.71].includes(gravity) && <option value={gravity}>Imported · {gravity} m/s²</option>}</select></label>
+          <label>Camera angle<input type="range" aria-label="Camera angle" min="-80" max="80" value={yaw} disabled={editingLocked} onChange={e => setYaw(Number(e.target.value))} /></label></div>
         <p className="luqi-studio-model">Small-angle model: T ≈ 2π√(L/g) = <strong>{pendulumPeriod(length, gravity).toFixed(2)} s</strong>. “Fourth axis” means time in this view. Predict, observe, compare and explain.</p>
       </section>
       <section className="luqi-studio-editor" aria-labelledby="storyboard-heading"><h2 id="storyboard-heading">Your storyboard</h2>
-        <div className="luqi-studio-scenes" role="group" aria-label="Choose a scene">{scenes.map((s, i) => <button key={i} type="button" aria-pressed={selected === i} disabled={recording} onClick={() => seek(i * 15)}><span>{String(i + 1).padStart(2, '0')}</span><span>{s.title || 'Untitled scene'}<small>{i * 15}–{(i + 1) * 15} seconds</small></span></button>)}</div>
-        <fieldset disabled={recording}><legend>Edit scene {selected + 1}</legend>
+        <div className="luqi-studio-scenes" role="group" aria-label="Choose a scene">{scenes.map((s, i) => <button key={i} type="button" aria-pressed={selected === i} disabled={editingLocked} onClick={() => seek(i * 15)}><span>{String(i + 1).padStart(2, '0')}</span><span>{s.title || 'Untitled scene'}<small>{i * 15}–{(i + 1) * 15} seconds</small></span></button>)}</div>
+        <fieldset disabled={editingLocked}><legend>Edit scene {selected + 1}</legend>
           <label>Scene title<input aria-label="Scene title" maxLength={64} value={scenes[selected].title} onChange={e => edit('title', e.target.value)} /></label>
           <label>Scene caption<textarea aria-label="Scene caption" rows={4} maxLength={240} value={scenes[selected].caption} onChange={e => edit('caption', e.target.value)} /></label>
           <label>Critical-thinking question<textarea aria-label="Critical-thinking question" rows={2} maxLength={140} value={scenes[selected].question} onChange={e => edit('question', e.target.value)} /></label>
@@ -131,8 +143,8 @@ export default function ContentStudioPage() {
     </div>
     <section className="luqi-studio-export" aria-labelledby="export-heading"><div><h2 id="export-heading">Review. Export. Make it yours.</h2>
       <p>Video is silent original motion graphics. No generative video, voice clone, payment or direct social connection is enabled. Native timing can vary slightly; check the finished duration before publishing. Add your own licensed audio and verify platform requirements before uploading.</p></div>
-      <label>Video format<select aria-label="Video format" value={format} disabled={recording} onChange={e => setFormat(e.target.value as StudioFormat)}>{Object.entries(STUDIO_FORMATS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
-      <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={recording || !recordingType} aria-describedby="studio-recording-support" onClick={record}>Record 90-second animation</button>
+      <label>Video format<select aria-label="Video format" value={format} disabled={editingLocked} onChange={e => setFormat(e.target.value as StudioFormat)}>{Object.entries(STUDIO_FORMATS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
+      <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={editingLocked || !recordingType} aria-describedby="studio-recording-support" onClick={record}>Record 90-second animation</button>
         {recording && <button type="button" onClick={cancelRecording}>Cancel recording</button>}
         <button type="button" disabled={recording} onClick={() => exportText('storyboard')}>Download storyboard</button><button type="button" disabled={recording} onClick={() => exportText('subtitles')}>Download subtitles</button><button type="button" disabled={recording} onClick={() => exportText('script')}>Download script / podcast outline</button></div>
       <p id="studio-recording-support">{recordingType
