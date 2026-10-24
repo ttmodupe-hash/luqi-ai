@@ -82,11 +82,16 @@ export function findWorkspaceTools(
   filter: "all" | "ready" | "preview" = "all",
 ) {
   const term = query.trim().toLocaleLowerCase();
+  // Normalize repeated whitespace and search across words in any order.
+  // Keep this local: typing never sends a query to an AI provider.
+  const words = term.split(/\s+/u).filter(Boolean);
   return workspaceTools.filter(
     (tool) =>
       (filter === "all" || tool.ready === (filter === "ready")) &&
-      `${tool.title} ${tool.category} ${tool.description} ${tool.status}`
-        .toLocaleLowerCase()
-        .includes(term),
+      words.every((word) =>
+        `${tool.title} ${tool.category} ${tool.description} ${tool.status}`
+          .toLocaleLowerCase()
+          .includes(word),
+      ),
   );
 }
