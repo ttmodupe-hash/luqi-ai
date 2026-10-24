@@ -2,7 +2,7 @@ import { lazy } from "react";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
-import { Routes, Route as RouterRoute } from "react-router";
+import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
@@ -39,6 +39,9 @@ export default function App() {
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
+        {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
+        {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
+        {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
         <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
