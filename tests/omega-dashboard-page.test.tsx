@@ -376,7 +376,7 @@ it.each([null, "text/plain", "text/html"])(
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "test@example.invalid" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    await screen.findByText(/Sign-in is temporarily unavailable/);
+    await screen.findByText("Unable to verify task information. Please try again. No task outcome has been confirmed.");
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toBe("/api/v1/auth/login");
     expect(screen.queryByRole("region", { name: "Saved tasks" })).toBeNull();

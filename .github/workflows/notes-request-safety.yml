@@ -20,24 +20,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Identify existing account-transport source assertions without exposing content
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          import crypto from 'node:crypto';
-          const patterns = ['does not persist login', 'frontend tRPC transport', 'setTimeout(() => controller.abort(), 15_000)', 'user.email.toLowerCase() !== normalized'];
-          let matches = 0;
-          for (const name of fs.readdirSync('tests').sort()) {
-            if (!/^[a-z0-9.-]+\.test\.tsx?$/i.test(name)) continue;
-            const source = fs.readFileSync('tests/' + name, 'utf8');
-            const matched = patterns.map(pattern => source.includes(pattern));
-            if (!matched.some(Boolean)) continue;
-            const blob = crypto.createHash('sha1').update('blob ' + Buffer.byteLength(source) + '\0' + source).digest('hex');
-            console.log('::notice title=Account contract source::' + JSON.stringify({ path: 'tests/' + name, blob, matched }));
-            matches++;
-          }
-          console.log('::notice title=Account contract inventory::' + JSON.stringify({ matches }));
-          NODE
       - name: Verify bounded notes and account transport without dependencies or credentials
         run: node --experimental-strip-types --test tests/conversation-request.test.mjs tests/account-request-contract.test.mjs
       - name: Install locked application and test dependencies
