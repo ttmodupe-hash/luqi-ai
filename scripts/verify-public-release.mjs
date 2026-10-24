@@ -64,6 +64,8 @@ const checks = [
     ["/api/ussd", "USSD_INTEGRATION_UNAVAILABLE"],
     ["/api/science/curated-targets", "LEGACY_OPERATION_UNAVAILABLE"],
     ["/api/science/bio-query", "LEGACY_OPERATION_UNAVAILABLE"],
+    ["/api/system/diagnostics-ledger", "LEGACY_OPERATION_UNAVAILABLE"],
+    ["/api/v1/intelligence/corporate-report/release-probe", "LEGACY_OPERATION_UNAVAILABLE"],
   ].map(([path, code]) => ({ name: "Retired surface " + path, path, status: 503, code, private: true })),
   ...[
     ["/api/trpc/ping", 200, '"ok":true'],

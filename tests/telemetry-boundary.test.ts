@@ -33,9 +33,13 @@ describe('unverified diagnostics and department reports stay unavailable', () =>
   });
   it('does not intercept the reviewed readiness, account or paid-text route', async () => {
     const app = new Hono().route('/', legacyOperationsUnavailable);
-    for (const path of ['/v1/readiness', '/api/v1/auth/login', '/api/v1/companion/conversations', '/api/v1/luqi-core']) {
-      app.all(path, c => c.json({ reached: true }));
-      expect((await app.request(path)).status).toBe(200);
-    }
+    const paths = ['/v1/readiness', '/api/v1/auth/login', '/api/v1/companion/conversations', '/api/v1/luqi-core'];
+    for (const path of paths) app.all(path, c => c.json({ reached: true }));
+    for (const path of paths) expect((await app.request(path)).status).toBe(200);
+  });
+  it('retains deployment probes for both retired report endpoints', () => {
+    const probes = readFileSync('scripts/verify-public-release.mjs', 'utf8');
+    expect(probes).toContain('["/api/system/diagnostics-ledger", "LEGACY_OPERATION_UNAVAILABLE"]');
+    expect(probes).toContain('["/api/v1/intelligence/corporate-report/release-probe", "LEGACY_OPERATION_UNAVAILABLE"]');
   });
 });
