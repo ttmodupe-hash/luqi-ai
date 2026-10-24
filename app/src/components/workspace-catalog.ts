@@ -77,16 +77,26 @@ export const workspaceTools = [
     icon: "agents",
   },
 ] as const;
+
+// Normalize the fixed public catalog once, not once per word on each keystroke.
+// This index never contains account data or requests information from a provider.
+const searchableTools = workspaceTools.map((tool) => ({
+  tool,
+  text: `${tool.title} ${tool.category} ${tool.description} ${tool.status}`.toLowerCase(),
+}));
+
 export function findWorkspaceTools(
   query: string,
   filter: "all" | "ready" | "preview" = "all",
 ) {
-  const term = query.trim().toLocaleLowerCase();
-  return workspaceTools.filter(
-    (tool) =>
+  // Every literal word must match the same tool; order and whitespace do not matter.
+  // Deduplicate words and use consistent casing across browser locales. No regex
+  // is built from user input, and searching never changes availability or routes.
+  const words = [...new Set(query.toLowerCase().trim().split(/\s+/u).filter(Boolean))];
+  return searchableTools
+    .filter(({ tool, text }) =>
       (filter === "all" || tool.ready === (filter === "ready")) &&
-      `${tool.title} ${tool.category} ${tool.description} ${tool.status}`
-        .toLocaleLowerCase()
-        .includes(term),
-  );
+      words.every((word) => text.includes(word)),
+    )
+    .map(({ tool }) => tool);
 }
