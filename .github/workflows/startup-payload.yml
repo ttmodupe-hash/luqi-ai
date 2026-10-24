@@ -1,0 +1,69 @@
+name: LUQI Startup Payload
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: startup-payload-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  measure-and-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Exercise the measurement and safety guard offline
+        run: node --test candidate/tests/startup-bundle.test.mjs
+      - name: Install locked candidate build dependencies
+        working-directory: candidate
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Inspect every emitted route and measure the static startup graph
+        run: node candidate/scripts/measure-startup-bundle.mjs candidate candidate-report.json --assert-provider-free
+      - name: Keep frontend entrypoints mirrored
+        run: cmp candidate/src/main.tsx candidate/app/src/main.tsx
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: github.event_name == 'pull_request'
+        with:
+          ref: 1e834c5fbbe42bed0444425db0e7cd0d2323fe65
+          path: baseline
+          persist-credentials: false
+      - name: Install the exact previously released dependencies
+        if: github.event_name == 'pull_request'
+        working-directory: baseline
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Measure the released baseline on the same runner
+        if: github.event_name == 'pull_request'
+        run: node candidate/scripts/measure-startup-bundle.mjs baseline baseline-report.json
+      - name: Require a measured reduction, not moving bytes into another startup chunk
+        if: github.event_name == 'pull_request'
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const before = JSON.parse(fs.readFileSync('baseline-report.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('candidate-report.json', 'utf8'));
+          if (!(before.legacyQueryModuleCount > 0) || after.legacyQueryModuleCount !== 0) throw new Error('Provider removal not established');
+          for (const metric of ['startupJavaScriptBytes', 'startupJavaScriptGzipBytes']) {
+            const reduction = 1 - after[metric] / before[metric];
+            if (!Number.isFinite(reduction) || reduction < 0.05) throw new Error('Expected at least 5% reduction in ' + metric);
+            const line = `${metric}: ${before[metric]} -> ${after[metric]} bytes (${(reduction * 100).toFixed(2)}% smaller)`;
+            console.log(line); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + '\n\n');
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, 'Equivalent build bytes only; not measured page-load time, network compression or full launch approval. No production accounts, secrets or paid inference used.\n');
+          JS
+      - name: Preserve measured build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: startup-payload-evidence
+          path: '*-report.json'
+          retention-days: 7
+          if-no-files-found: warn
