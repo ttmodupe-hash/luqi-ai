@@ -20,11 +20,16 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
+      - name: Verify recorder capability detection offline
+        run: node --experimental-strip-types --test tests/recording-support.test.mjs
       - name: Install locked application and test dependencies
         run: npm ci --legacy-peer-deps --include=dev
       - name: Install the WebKit binary matching the locked Playwright version
         timeout-minutes: 5
         run: npx --no-install playwright install --with-deps webkit
+      - name: Diagnose module failure recovery on an isolated loopback fixture
+        timeout-minutes: 2
+        run: node scripts/diagnose-webkit-import-recovery.mjs
       - name: Build the same web application without provider credentials
         run: npm run build
       - name: Run existing account, trial and tool journeys on desktop and iPhone-sized WebKit
