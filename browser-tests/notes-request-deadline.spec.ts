@@ -46,8 +46,11 @@ for (const operation of ['save', 'export'] as const) {
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
       await page.getByRole('button', { name: 'Browser notes', exact: true }).click();
       await expect(page.getByText('Previously saved fixture', { exact: true })).toBeVisible();
+      // Use the textbox's accessible name, not the wrapping label's text content,
+      // which also contains the controlled textarea's nonempty text node.
+      const messageInput = page.getByRole('textbox', { name: 'Your message', exact: true });
       if (operation === 'save') {
-        await page.getByLabel('Your message', { exact: true }).fill(draft);
+        await messageInput.fill(draft);
         await page.getByRole('button', { name: 'Save message', exact: true }).click();
       } else await page.getByRole('button', { name: 'Export selected conversation', exact: true }).click();
       await expect.poll(() => attempts).toBe(1);
@@ -57,12 +60,12 @@ for (const operation of ['save', 'export'] as const) {
         ? 'Save could not be confirmed' : 'Export could not be completed');
       await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeEnabled();
       if (operation === 'save') {
-        await expect(page.getByLabel('Your message', { exact: true })).toHaveValue(draft);
+        await expect(messageInput).toHaveValue(draft);
         await expect(page.getByRole('button', { name: 'Save message', exact: true })).toBeDisabled();
         await page.getByRole('button', { name: 'Refresh saved history' }).click();
         await expect(page.getByRole('status')).toContainText('Saved history refreshed');
         await expect(page.getByText('user · saved #3', { exact: true })).toBeVisible();
-        await expect(page.getByLabel('Your message', { exact: true })).toHaveValue(draft);
+        await expect(messageInput).toHaveValue(draft);
       } else {
         await expect(page.getByRole('status')).toContainText('No file was downloaded');
         await expect(page.getByRole('button', { name: 'Export selected conversation', exact: true })).toBeEnabled();
