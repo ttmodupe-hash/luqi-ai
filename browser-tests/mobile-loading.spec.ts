@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 const physicsChunk = /\/assets\/PendulumLabPage-[A-Za-z0-9_-]+\.js$/;
+const physicsHeading = 'Experiential STEM Physics Laboratory';
 
 test('getting started does not fetch optional tool code; physics loads only on demand', async ({ page, baseURL }) => {
   const scripts: string[] = []; const writes: string[] = [];
@@ -15,7 +16,7 @@ test('getting started does not fetch optional tool code; physics loads only on d
   await expect(page.locator('main h1').first()).toBeVisible();
   expect(scripts.some(path => /\/(PendulumLabPage|VideoStudioPage|CertMasterPage|ExecutiveLabSuite)-/.test(path))).toBe(false);
   await page.evaluate(() => { window.location.hash = '/pendulum-lab'; });
-  await expect(page.getByRole('heading', { name: /pendulum/i }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: physicsHeading, exact: true })).toBeVisible();
   expect(scripts.some(path => physicsChunk.test(path))).toBe(true);
   expect(writes).toEqual([]);
 });
@@ -30,7 +31,7 @@ test('a delayed tool announces loading without removing workspace navigation', a
     await expect(page.getByRole('link', { name: 'LUQI workspace home' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   } finally { release(); }
-  await expect(page.getByRole('heading', { name: /pendulum/i }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: physicsHeading, exact: true })).toBeVisible();
 });
 
 test('missing tool code shows a safe error and permits navigation without retries or payments', async ({ page, baseURL }) => {
@@ -61,6 +62,6 @@ test('a manual reload can recover a failed download without resubmitting anythin
   await expect(page.getByRole('heading', { name: 'This page could not load' })).toBeVisible();
   expect(attempts).toBe(1); broken = false;
   await page.getByRole('button', { name: 'Reload page' }).click();
-  await expect(page.getByRole('heading', { name: /pendulum/i }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: physicsHeading, exact: true })).toBeVisible();
   expect(attempts).toBe(2);
 });
