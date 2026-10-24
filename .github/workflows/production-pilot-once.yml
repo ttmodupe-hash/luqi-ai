@@ -14,7 +14,11 @@ concurrency:
 
 jobs:
   verify-one-journey:
-    if: github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/ops/production-pilot-check-20261024' && github.event.head_commit.message == 'ops: run one owner-approved production pilot check 20261024A' && github.run_attempt == 1
+    if: >-
+      github.repository == 'ttmodupe-hash/luqi-ai' &&
+      github.ref == 'refs/heads/ops/production-pilot-check-20261024' &&
+      github.event.head_commit.message == 'ops: run one owner-approved production pilot check 20261024A' &&
+      github.run_attempt == 1
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
