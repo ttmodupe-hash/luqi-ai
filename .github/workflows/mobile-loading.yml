@@ -1,0 +1,64 @@
+name: LUQI Mobile Loading
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  payload-and-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 8be7570a59d1325c18d3b9d5b34c4dc6c8b58d6a
+          path: .mobile-baseline
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test graph accounting before dependency installation
+        run: node --test tests/mobile-bundle.test.mjs
+      - name: Install exact application dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Verify safe loading and recovery with synthetic components
+        run: npx --no-install vitest run tests/route-load-boundary.test.tsx
+      - name: Strictly check both error-boundary implementations
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/RouteLoadBoundary.tsx app/src/components/RouteLoadBoundary.tsx
+      - name: Verify every existing route and iframe target is preserved
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          for (const path of ['src/App.tsx', 'app/src/App.tsx']) {
+            const before = fs.readFileSync('.mobile-baseline/' + path, 'utf8');
+            const after = fs.readFileSync(path, 'utf8');
+            for (const pattern of [/\bpath="([^"]+)"/g, /\bsrc="(\/labs\/[^"]+)"/g]) {
+              const matches = value => [...value.matchAll(pattern)].map(match => match[1]).sort();
+              assert.deepEqual(matches(after), matches(before), 'Changed route/iframe inventory: ' + path);
+            }
+          }
+          console.log('All pre-existing routes and iframe targets preserved in both applications.');
+          JS
+      - name: Compare eager and deferred routers using the same current dependencies and source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/App.tsx "$RUNNER_TEMP/luqi-candidate-App.tsx"
+          trap 'cp "$RUNNER_TEMP/luqi-candidate-App.tsx" src/App.tsx' EXIT
+          cp .mobile-baseline/src/App.tsx src/App.tsx
+          node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-before"
+          cp "$RUNNER_TEMP/luqi-candidate-App.tsx" src/App.tsx
+          node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-after"
+          node scripts/verify-mobile-bundle.mjs "$RUNNER_TEMP/luqi-mobile-before" "$RUNNER_TEMP/luqi-mobile-after" | tee mobile-bundle-report.json
+      - name: Preserve measured payload evidence only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-bundle-report
+          path: mobile-bundle-report.json
+          if-no-files-found: error

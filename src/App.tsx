@@ -1,3 +1,5 @@
+import { lazy } from "react";
+import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,28 +9,29 @@ import { Routes, Route as RouterRoute, useLocation } from "react-router";
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
 import AiPilotPage from "./pages/AiPilotPage";
-import LabSimulatorPage from "./pages/LabSimulatorPage";
-import SelfHealingPage from "./pages/SelfHealingPage";
-import VideoStudioPage from "./pages/VideoStudioPage";
-import ArchiveVaultPage from "./pages/ArchiveVaultPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
-import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
-import CertMasterPage from "./pages/CertMasterPage";
 import CompanionPage from "./pages/CompanionPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
-import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
-import ExperientialEducationPage from "./pages/ExperientialEducationPage";
-import PendulumLabPage from "./pages/PendulumLabPage";
-import { MultimodalHubPage } from "./pages/MultimodalHubPage";
-import ExecutiveLabSuite from "@/components/ExecutiveLabSuite";
 
-// Components
-import AdminSovereignPortal from "@/components/AdminSovereignPortal";
-import ConsumerRightsAssistant from "@/components/ConsumerRightsAssistant";
+// Load optional tools only when their route is rendered. Keep account, notes,
+// start/help and release-observed core pages available in the initial bundle.
+const LabSimulatorPage = lazy(() => import("./pages/LabSimulatorPage"));
+const SelfHealingPage = lazy(() => import("./pages/SelfHealingPage"));
+const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
+const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
+const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
+const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
+const ExperientialEducationPage = lazy(() => import("./pages/ExperientialEducationPage"));
+const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
+const MultimodalHubPage = lazy(() => import("./pages/MultimodalHubPage").then(module => ({ default: module.MultimodalHubPage })));
+const ExecutiveLabSuite = lazy(() => import("@/components/ExecutiveLabSuite"));
+const AdminSovereignPortal = lazy(() => import("@/components/AdminSovereignPortal"));
+const ConsumerRightsAssistant = lazy(() => import("@/components/ConsumerRightsAssistant"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -40,10 +43,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <Toaster />
-        <AdminSovereignPortal />
+        <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
       </div>
     );
-  return <WorkspaceLayout>{children}</WorkspaceLayout>;
+  return <WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout>;
 }
 
 export default function App() {
@@ -67,79 +70,15 @@ export default function App() {
         <RouterRoute path="/gemini-studio" element={<MultimodalHubPage />} />
         <RouterRoute path="/telemetry" element={<TelemetryDashboardPage />} />
         <RouterRoute path="/super-core" element={<TelemetryDashboardPage />} />
-        <RouterRoute
-          path="/experiential-edu"
-          element={<ExperientialEducationPage />}
-        />
-        <RouterRoute
-          path="/simulation-core"
-          element={<ExperientialEducationPage />}
-        />
+        <RouterRoute path="/experiential-edu" element={<ExperientialEducationPage />} />
+        <RouterRoute path="/simulation-core" element={<ExperientialEducationPage />} />
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
-        <RouterRoute
-          path="/executive-labs"
-          element={
-            <div className="max-w-7xl mx-auto px-4 py-8">
-              <ExecutiveLabSuite />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/stem-suite"
-          element={
-            <div className="max-w-7xl mx-auto px-4 py-8">
-              <ExecutiveLabSuite />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/biology-lab"
-          element={
-            <div className="w-full h-[90vh]">
-              <iframe
-                src="/labs/biology_lab.html"
-                title="Biology Lab"
-                className="w-full h-full border-0"
-              />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/chemistry-lab"
-          element={
-            <div className="w-full h-[90vh]">
-              <iframe
-                src="/labs/chemistry_lab.html"
-                title="Chemistry Lab"
-                className="w-full h-full border-0"
-              />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/algebra-lab"
-          element={
-            <div className="w-full h-[90vh]">
-              <iframe
-                src="/labs/algebra_lab.html"
-                title="Algebra Lab"
-                className="w-full h-full border-0"
-              />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/geometry-lab"
-          element={
-            <div className="w-full h-[90vh]">
-              <iframe
-                src="/labs/geometry_lab.html"
-                title="Geometry Lab"
-                className="w-full h-full border-0"
-              />
-            </div>
-          }
-        />
+        <RouterRoute path="/executive-labs" element={<div className="max-w-7xl mx-auto px-4 py-8"><ExecutiveLabSuite /></div>} />
+        <RouterRoute path="/stem-suite" element={<div className="max-w-7xl mx-auto px-4 py-8"><ExecutiveLabSuite /></div>} />
+        <RouterRoute path="/biology-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/biology_lab.html" title="Biology Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/chemistry-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/chemistry_lab.html" title="Chemistry Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/algebra-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/algebra_lab.html" title="Algebra Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/geometry-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/geometry_lab.html" title="Geometry Lab" className="w-full h-full border-0" /></div>} />
         <RouterRoute path="/pendulum-lab" element={<PendulumLabPage />} />
         <RouterRoute path="/pendulum" element={<PendulumLabPage />} />
         <RouterRoute path="/simple-pendulum" element={<PendulumLabPage />} />
@@ -155,15 +94,9 @@ export default function App() {
         <RouterRoute path="/archive" element={<ArchiveVaultPage />} />
         <RouterRoute path="/vault" element={<ArchiveVaultPage />} />
         <RouterRoute path="/pricing" element={<PricingPage />} />
-        <RouterRoute
-          path="/african-radar"
-          element={<AfricanOpportunityRadarPage />}
-        />
+        <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
-        <RouterRoute
-          path="/sensing"
-          element={<AfricanOpportunityRadarPage />}
-        />
+        <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
         <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
         <RouterRoute path="/ccna" element={<CertMasterPage />} />
@@ -173,37 +106,13 @@ export default function App() {
         <RouterRoute path="/terms" element={<TermsPage />} />
         <RouterRoute path="/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/contact" element={<ContactPage />} />
-        <RouterRoute
-          path="/consumer-rights"
-          element={
-            <div className="max-w-5xl mx-auto px-4 py-8">
-              <ConsumerRightsAssistant />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/cpa"
-          element={
-            <div className="max-w-5xl mx-auto px-4 py-8">
-              <ConsumerRightsAssistant />
-            </div>
-          }
-        />
-        <RouterRoute
-          path="/dispute"
-          element={
-            <div className="max-w-5xl mx-auto px-4 py-8">
-              <ConsumerRightsAssistant />
-            </div>
-          }
-        />
+        <RouterRoute path="/consumer-rights" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
+        <RouterRoute path="/cpa" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
+        <RouterRoute path="/dispute" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
         <RouterRoute path="/admin" element={<AdminSovereignPortal />} />
-        <RouterRoute
-          path="/admin/knowledge-grading"
-          element={<AdminSovereignPortal />}
-        />
+        <RouterRoute path="/admin/knowledge-grading" element={<AdminSovereignPortal />} />
         <RouterRoute path="*" element={<NotFoundPage />} />
       </Routes>
     </AppLayout>

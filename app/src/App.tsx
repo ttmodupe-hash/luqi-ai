@@ -1,32 +1,33 @@
+import { lazy } from "react";
+import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Routes, Route as RouterRoute } from "react-router";
 
-// Pages
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
 import AiPilotPage from "./pages/AiPilotPage";
-import LabSimulatorPage from "./pages/LabSimulatorPage";
-import SelfHealingPage from "./pages/SelfHealingPage";
-import VideoStudioPage from "./pages/VideoStudioPage";
-import ArchiveVaultPage from "./pages/ArchiveVaultPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
-import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
-import CertMasterPage from "./pages/CertMasterPage";
 import CompanionPage from "./pages/CompanionPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
-import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
-import ExperientialEducationPage from "./pages/ExperientialEducationPage";
-import PendulumLabPage from "./pages/PendulumLabPage";
 
-// Components
+// Keep core account/notes/help pages ready, and defer optional tool downloads.
+const LabSimulatorPage = lazy(() => import("./pages/LabSimulatorPage"));
+const SelfHealingPage = lazy(() => import("./pages/SelfHealingPage"));
+const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
+const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
+const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
+const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
+const ExperientialEducationPage = lazy(() => import("./pages/ExperientialEducationPage"));
+const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  return <WorkspaceLayout>{children}</WorkspaceLayout>;
+  return <WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout>;
 }
 
 export default function App() {
@@ -47,14 +48,8 @@ export default function App() {
         <RouterRoute path="/ai-companion" element={<CompanionPage />} />
         <RouterRoute path="/telemetry" element={<TelemetryDashboardPage />} />
         <RouterRoute path="/super-core" element={<TelemetryDashboardPage />} />
-        <RouterRoute
-          path="/experiential-edu"
-          element={<ExperientialEducationPage />}
-        />
-        <RouterRoute
-          path="/simulation-core"
-          element={<ExperientialEducationPage />}
-        />
+        <RouterRoute path="/experiential-edu" element={<ExperientialEducationPage />} />
+        <RouterRoute path="/simulation-core" element={<ExperientialEducationPage />} />
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
         <RouterRoute path="/pendulum-lab" element={<PendulumLabPage />} />
         <RouterRoute path="/pendulum" element={<PendulumLabPage />} />
@@ -71,15 +66,9 @@ export default function App() {
         <RouterRoute path="/archive" element={<ArchiveVaultPage />} />
         <RouterRoute path="/vault" element={<ArchiveVaultPage />} />
         <RouterRoute path="/pricing" element={<PricingPage />} />
-        <RouterRoute
-          path="/african-radar"
-          element={<AfricanOpportunityRadarPage />}
-        />
+        <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
-        <RouterRoute
-          path="/sensing"
-          element={<AfricanOpportunityRadarPage />}
-        />
+        <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
         <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
         <RouterRoute path="/ccna" element={<CertMasterPage />} />
@@ -94,5 +83,3 @@ export default function App() {
     </AppLayout>
   );
 }
-
-// Build timestamp: 2026-09-01T12:05:00Z - FORCE FRESH BUILD
