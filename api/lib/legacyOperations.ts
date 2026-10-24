@@ -19,6 +19,10 @@ export const retiredOperationPaths = [
   '/api/v1/governance/system-cards',
   '/api/science/curated-targets',
   '/api/science/bio-query',
+  // An empty hardcoded ledger is not proof that no errors occurred, and
+  // static department scores are not measured competency/certification.
+  '/api/system/diagnostics-ledger',
+  '/api/v1/intelligence/corporate-report/:dept',
 ] as const;
 
 export const legacyOperationsUnavailable = new Hono();
