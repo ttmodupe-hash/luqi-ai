@@ -21,8 +21,10 @@ jobs:
           const queries = [
             ['luqi-ai.com','NS'], ['luqi-ai.com','MX'], ['luqi-ai.com','TXT'],
             ['luqi-ai.com','A'], ['luqi-ai.com','AAAA'], ['luqi-ai.com','DS'],
-            ['www.luqi-ai.com','CNAME'], ['mail.luqi-ai.com','CNAME'], ['mail.luqi-ai.com','A'],
-            ['_dmarc.luqi-ai.com','TXT'], ['default._domainkey.luqi-ai.com','TXT'],
+            ['luqi-ai.com','CAA'], ['app.luqi-ai.com','CNAME'], ['app.luqi-ai.com','A'],
+            ['app.luqi-ai.com','AAAA'], ['app.luqi-ai.com','TXT'], ['app.luqi-ai.com','CAA'],
+            ['www.luqi-ai.com','CNAME'], ['mail.luqi-ai.com','CNAME'],
+            ['_dmarc.luqi-ai.com','TXT'], ['mail1._domainkey.luqi-ai.com','CNAME'],
           ];
           let failed = false;
           for (const endpoint of ['https://dns.google/resolve','https://cloudflare-dns.com/dns-query']) {
@@ -30,10 +32,11 @@ jobs:
               await Promise.all(queries.slice(offset, offset+3).map(async ([name,type]) => {
                 const url = new URL(endpoint); url.searchParams.set('name',name); url.searchParams.set('type',type);
                 try {
-                  const response = await fetch(url, {headers:{accept:'application/dns-json'},signal:AbortSignal.timeout(7000)});
+                  const response = await fetch(url, {redirect:'error',headers:{accept:'application/dns-json'},signal:AbortSignal.timeout(7000)});
                   if (!response.ok) throw new Error(`HTTP ${response.status}`);
                   const result = await response.json();
                   if (!Number.isInteger(result.Status)) throw new Error('Invalid DNS response');
+                  if (![0,3].includes(result.Status)) failed = true;
                   console.log(JSON.stringify({resolver:url.hostname,name,type,status:result.Status,authenticated:result.AD,
                     answer:result.Answer??[],authority:result.Authority??[]}));
                 } catch (error) {
@@ -43,6 +46,15 @@ jobs:
               }));
             }
           }
-          console.log('Read-only public DNS inventory. No nameserver, mail, account, certificate or hosting setting changed. A common DKIM selector query is not a complete selector inventory.');
+          console.log('Read-only public DNS inventory. No DNS, mail, account, certificate or hosting changes. DNS records do not prove mail delivery or DKIM signing.');
           if(failed) process.exitCode=1;
           JS
+      - name: Read parent delegation directly without changing it
+        shell: bash
+        run: |
+          if command -v dig >/dev/null; then
+            dig +time=5 +tries=1 +norecurse @a.gtld-servers.net luqi-ai.com NS +noall +comments +answer +authority
+          else
+            echo 'Parent delegation could not be queried: dig is not installed.'
+            exit 1
+          fi
