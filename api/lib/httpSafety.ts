@@ -5,9 +5,11 @@ import { routePath } from 'hono/route';
 import { ZodError } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { logger } from './logger';
+import { applyResponseFraming } from './framePolicy';
 
 export const privateResponsePolicy: MiddlewareHandler = async (c, next) => {
   await next();
+  applyResponseFraming(c);
   if (/^\/(?:api|auth|v1|trpc)(?:\/|$)/.test(c.req.path) || c.req.path === '/health') {
     c.header('Cache-Control', 'no-store');
     c.header('Pragma', 'no-cache');
