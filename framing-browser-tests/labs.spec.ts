@@ -26,10 +26,20 @@ test('embedded algebra remains interactive after production headers are applied'
   await page.goto('/#/algebra-lab');
   const frame = page.frameLocator('iframe[src="/labs/algebra_lab.html"]');
   await expect(frame.locator('#dispSlope')).toHaveText('0.00');
-  await frame.locator('#sliderX0').fill('2');
-  await expect(frame.locator('#dispSlope')).toHaveText('9.00');
+  await frame.locator('#sliderX0').focus();
+  await frame.locator('#sliderX0').press('End');
+  await expect(frame.locator('#dispSlope')).toHaveText('45.00');
   await frame.locator('#btnReset').click();
   await expect(frame.locator('#dispSlope')).toHaveText('0.00');
+});
+
+test('missing lab assets never fall through to the account SPA', async ({ request }) => {
+  const response = await request.get('/labs/not-a-lab.html');
+  expect(response.status()).toBe(404);
+  expect(response.headers()['cache-control']).toBe('no-store');
+  expect(response.headers()['x-frame-options']).toBe('DENY');
+  expect(response.headers()['content-security-policy']).toBe("frame-ancestors 'none'");
+  expect(await response.json()).toEqual({ error: 'Not Found' });
 });
 
 for (const target of ['lab', 'account']) {
