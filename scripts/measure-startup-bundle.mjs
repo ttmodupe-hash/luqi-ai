@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib';
-import { resolve } from 'node:path';
+import { resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { writeFile } from 'node:fs/promises';
 
@@ -48,7 +48,8 @@ export function summarizeBundle(output) {
   return { entry: entries[0].fileName, startupChunks: [...visited].sort(),
     startupJavaScriptBytes: rawBytes, startupJavaScriptGzipBytes: gzipBytes,
     startupCssBytes: cssBytes, dynamicChunkCount: chunks.length - visited.size,
-    legacyQueryModuleCount: legacyModules.length };
+    legacyQueryModuleCount: legacyModules.length,
+    legacyQueryModules: legacyModules.map(id => id.replaceAll('\\', '/').replace(/^.*?\/node_modules\//, 'node_modules/')) };
 }
 
 export function assertProviderFree(report) {
@@ -64,15 +65,28 @@ async function main() {
   }
   const root = resolve(rootArg), destination = resolve(reportFile);
   process.chdir(root);
+  const directConsumers = [];
   const { build } = await import('vite');
   const result = await build({ root, configFile: resolve(root, 'vite.config.ts'),
-    logLevel: 'warn', build: { write: false } });
+    logLevel: 'warn', build: { write: false }, plugins: [{
+      name: 'luqi-query-dependency-evidence',
+      generateBundle() {
+        for (const id of this.getModuleIds()) {
+          if (id.replaceAll('\\', '/').includes('/node_modules/')) continue;
+          const info = this.getModuleInfo(id);
+          const dependencies = info?.importedIds.filter(isLegacyQueryModule) ?? [];
+          if (dependencies.length) directConsumers.push({ source: relative(root, id),
+            dependencies: dependencies.map(dependency => relative(root, dependency)) });
+        }
+      },
+    }] });
   const builds = Array.isArray(result) ? result : [result];
   if (builds.length !== 1 || !Array.isArray(builds[0]?.output)) throw new Error('Unexpected build output');
-  const report = summarizeBundle(builds[0].output);
-  if (guard) assertProviderFree(report);
+  const report = { ...summarizeBundle(builds[0].output), directConsumers };
+  // Preserve source-path evidence even on failure; no application data or secrets.
   await writeFile(destination, JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
+  if (guard) assertProviderFree(report);
   console.log('Build-byte measurement only, not measured network latency or full launch approval.');
 }
 
