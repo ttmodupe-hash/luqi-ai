@@ -1,0 +1,49 @@
+name: LUQI Isolated Pilot Input Repair
+on:
+  push:
+    branches: [fix/pilot-input-integrity-20261024]
+    paths: [.github/workflows/pilot-input-repair-once.yml]
+permissions:
+  contents: write
+jobs:
+  apply-fixed-repair:
+    if: >-
+      github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/fix/pilot-input-integrity-20261024' && github.event.head_commit.message == 'Prepare exact pilot input repair 20261024' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply only the reviewed original-source-hash-guarded changes
+        run: python scripts/apply-pilot-input-once.py
+      - name: Test pure input boundaries without installed SDKs
+        run: node --experimental-strip-types --test tests/pilot-input-contract.test.mjs
+      - name: Install locked compiler and offline test dependencies
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Test real SDK transports and UI with synthetic responses only
+        run: npx --no-install vitest run tests/ai-pilot-budget.test.ts tests/ai-pilot-route.test.ts tests/ai-pilot-transport.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx
+      - name: Require production API and both UI trees to compile
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/boot.ts src/pages/AiPilotPage.tsx app/src/pages/AiPilotPage.tsx
+      - name: Publish only the reviewed source repair to its isolated branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          git diff --check
+          python - <<'PY'
+          import subprocess
+          expected={'api/services/aiPilotBudget.ts','api/services/aiPilotGateway.ts','api/ai-pilot.ts','src/lib/ai-pilot.ts','src/pages/AiPilotPage.tsx','app/src/lib/ai-pilot.ts','app/src/pages/AiPilotPage.tsx','tests/ai-pilot-route.test.ts','tests/ai-pilot-client.test.ts','tests/ai-pilot-page.test.tsx','tests/ai-pilot-transport.test.ts'}
+          changed=set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())
+          assert changed==expected, changed
+          assert not subprocess.check_output(['git','ls-files','--others','--exclude-standard']).strip()
+          PY
+          git add api/services/aiPilotBudget.ts api/services/aiPilotGateway.ts api/ai-pilot.ts src/lib/ai-pilot.ts src/pages/AiPilotPage.tsx app/src/lib/ai-pilot.ts app/src/pages/AiPilotPage.tsx tests/ai-pilot-route.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx tests/ai-pilot-transport.test.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: reject over-limit paid input without silently truncating questions'
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/fix/pilot-input-integrity-20261024
