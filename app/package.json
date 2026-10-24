@@ -20,7 +20,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
+    "@anthropic-ai/sdk": "^0.135.0",
     "@aws-sdk/client-s3": "^3.1121.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/cli": "^7.6.8",
