@@ -3,15 +3,8 @@ name: LUQI Production API Types
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'api/**'
-      - 'db/**'
-      - 'shared/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/production-api-types.yml'
   push:
-    branches: ['fix/production-api-typecheck-20261024']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -35,6 +28,10 @@ jobs:
         run: |
           set -o pipefail
           npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/boot.ts 2>&1 | tee /tmp/luqi-api-types.txt
+      - name: Verify repaired API contracts without provider calls or a production database
+        run: npx --no-install vitest run tests/query-results.test.ts tests/agent-tool-calls.test.ts tests/legacy-stream-boundary.test.ts tests/legacy-stream-default.test.ts tests/search-option-contract.test.ts tests/session-history-types.test.ts tests/trpc-authorization.test.ts tests/ai-pilot-route.test.ts tests/legacy-ai-budget-guard.test.ts
+      - name: Type-check the new regression fixtures
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop tests/query-results.test.ts tests/agent-tool-calls.test.ts tests/legacy-stream-boundary.test.ts tests/legacy-stream-default.test.ts tests/search-option-contract.test.ts tests/session-history-types.test.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
