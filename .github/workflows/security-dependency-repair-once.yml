@@ -1,0 +1,92 @@
+name: LUQI Isolated Dependency Repair
+
+on:
+  push:
+    branches: ['fix/security-dependencies-20261024']
+    paths: ['.github/workflows/security-dependency-repair-once.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-reviewed-versions:
+    if: github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/fix/security-dependencies-20261024'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: Apply reviewed SDK and isolated tooling resolution
+        run: |
+          npm view openai@7.43.0 version peerDependencies --json > /tmp/luqi-sdk.json
+          python - <<'PY'
+          import json,pathlib
+          m=json.loads(pathlib.Path('/tmp/luqi-sdk.json').read_text())
+          assert m['version']=='7.43.0' and '^4.' in m['peerDependencies']['zod']
+          for f in ['package.json','app/package.json']:
+              p=pathlib.Path(f); d=json.loads(p.read_text())
+              assert d['dependencies']['openai'] in ['6.0.0','7.43.0'] and d['dependencies']['zod']=='4.6.7'
+              d['dependencies']['openai']='7.43.0'
+              p.write_text(json.dumps(d,indent=2)+'\n')
+          p=pathlib.Path('edge/package.json'); d=json.loads(p.read_text())
+          assert d['devDependencies']['wrangler']=='4.152.0'
+          d['overrides']={'undici':'7.30.1'}
+          p.write_text(json.dumps(d,indent=2)+'\n')
+          p=pathlib.Path('tests/validator-upgrade.test.ts')
+          s=p.read_text(); assert s.count("toBe('6.0.0')")==2
+          p.write_text(s.replace("toBe('6.0.0')","toBe('7.43.0')"))
+          PY
+      - name: Resolve and clean-install committed graph without lifecycle scripts
+        run: |
+          npm install --package-lock-only --ignore-scripts --legacy-peer-deps --no-audit
+          (cd app && npm install --package-lock-only --ignore-scripts --legacy-peer-deps --no-audit)
+          (cd edge && rm package-lock.json && npm install --package-lock-only --ignore-scripts --no-audit && npm ci --ignore-scripts --include=dev)
+          bun install --lockfile-only --ignore-scripts
+          npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Verify actual validators and transport before publishing the candidate
+        run: |
+          npx --no-install vitest run tests/validator-upgrade.test.ts tests/ai-pilot-route.test.ts tests/password-change.test.ts tests/private-conversations.test.ts tests/omega-tasks.test.ts tests/trpc-authorization.test.ts
+          npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop tests/validator-upgrade.test.ts
+      - name: Audit candidate graphs without exclusions
+        run: |
+          npm audit --include=dev --audit-level=low
+          (cd app && npm audit --package-lock-only --include=dev --audit-level=low)
+          (cd edge && npm audit --include=dev --audit-level=low)
+          bun audit
+      - name: Commit only reviewed manifests, locks and version assertions to the fixed branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'ttmodupe-hash/luqi-ai'
+          test "$GITHUB_REF" = 'refs/heads/fix/security-dependencies-20261024'
+          test "$(git ls-remote origin refs/heads/fix/security-dependencies-20261024 | cut -f1)" = "$GITHUB_SHA"
+          python - <<'PY'
+          import subprocess
+          allowed={'package.json','package-lock.json','app/package.json','app/package-lock.json','edge/package.json','edge/package-lock.json','bun.lock','tests/validator-upgrade.test.ts'}
+          changed=set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())
+          assert changed <= allowed, changed-allowed
+          PY
+          git add -- package.json package-lock.json app/package.json app/package-lock.json edge/package.json edge/package-lock.json bun.lock tests/validator-upgrade.test.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix: use verified v4 schema SDK and clean-install-compatible edge resolution'
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/fix/security-dependencies-20261024
+      - name: Archive tracked source for final review
+        if: always()
+        run: git archive --format=tar.gz --output=/tmp/luqi-source-review.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: luqi-source-review
+          path: /tmp/luqi-source-review.tar.gz
+          retention-days: 2
