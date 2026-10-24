@@ -1,0 +1,55 @@
+name: LUQI Isolated Dependency Repair
+
+on:
+  push:
+    branches: ['fix/security-dependencies-20261024']
+    paths: ['.github/workflows/security-dependency-repair-once.yml', 'scripts/security-dependency-repair.mjs']
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/fix/security-dependencies-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inventory validator consumers and candidate metadata
+        shell: bash
+        run: |
+          python - <<'PY'
+          import subprocess, pathlib, re, json
+          files = subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
+          pattern = re.compile(r'from [\x27\"](?:zod|openai)|z\.(?:record|function|object|array)|ZodType|ZodSchema|\.errors\b|errorMap|required_error|invalid_type_error')
+          for f in files:
+              p = pathlib.Path(f)
+              if p.suffix not in ('.ts','.tsx','.js','.mjs') or not p.is_file(): continue
+              s = p.read_text(errors='replace')
+              if not re.search(r'(?:from|require\()\s*[\x27\"](?:zod|openai)',s): continue
+              print('\nFILE',f)
+              for n,line in enumerate(s.splitlines(),1):
+                  if pattern.search(line): print(f'{n}: {line[:300]}')
+          for f in ['package-lock.json','app/package-lock.json','edge/package-lock.json','app/electron/package-lock.json']:
+              p=pathlib.Path(f)
+              if not p.exists(): continue
+              d=json.loads(p.read_text()); print('\nRESOLVED',f)
+              for k,v in d.get('packages',{}).items():
+                  if re.search(r'node_modules/(zod|openai|undici|wrangler|miniflare|@trpc/server|@hookform/resolvers)$',k):
+                      print(k, v.get('version'), 'peers=',v.get('peerDependencies'), 'deps=',v.get('dependencies'))
+          PY
+          npm view zod@4.6.7 version engines --json
+          npm view openai@5.23.3 version peerDependencies engines --json
+          npm view undici@7.30.1 version engines --json
+      - name: Archive tracked public source for review
+        run: git archive --format=tar.gz --output=/tmp/luqi-source-review.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luqi-source-review
+          path: /tmp/luqi-source-review.tar.gz
+          retention-days: 2
