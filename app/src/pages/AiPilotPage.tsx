@@ -68,9 +68,10 @@ export default function AiPilotPage() {
       <section><h2>Ask one question</h2>
         <p>Only the question below is sent to the providers. Your private notes and account email are not added to it. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
-          <label className="block">Your question<textarea className="luqi-access-input" rows={5}
+          <label className="block" htmlFor="ai-question">Your question</label>
+          <textarea id="ai-question" className="luqi-access-input" rows={5}
             aria-describedby="ai-question-limit" aria-invalid={tooLong || undefined}
-            disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} /></label>
+            disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} />
           <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters. Request formatting uses the rest of the 6000-character input limit.
             {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}</p>
           <label className="block"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /> I understand my question goes to Google Gemini and may also go to OpenAI. I will use ordinary test content.</label>
