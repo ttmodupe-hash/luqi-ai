@@ -1,0 +1,47 @@
+name: LUQI Isolated API Type Repair
+on:
+  push:
+    branches: ['fix/production-api-typecheck-20261024']
+    paths: ['scripts/repair-api-types-once.py', '.github/workflows/api-types-repair-once.yml']
+permissions:
+  contents: read
+jobs:
+  repair-fixed-branch:
+    if: github.repository == 'ttmodupe-hash/luqi-ai' && github.ref == 'refs/heads/fix/production-api-typecheck-20261024'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply reviewed source-hash-guarded repairs
+        run: python scripts/repair-api-types-once.py
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Require the complete production API import graph to type-check
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/boot.ts
+      - name: Test real contracts with synthetic data and no provider calls
+        run: npx --no-install vitest run tests/query-results.test.ts tests/agent-tool-calls.test.ts tests/legacy-stream-boundary.test.ts tests/legacy-stream-default.test.ts tests/search-option-contract.test.ts tests/trpc-authorization.test.ts tests/ai-pilot-route.test.ts tests/legacy-ai-budget-guard.test.ts
+      - name: Publish only the reviewed source repair to the fixed branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          git diff --check
+          python - <<'PY'
+          import subprocess
+          expected = {'api/adaptive.ts','api/guardian.ts','api/knowledge.ts','api/rest-compat.ts','api/search.ts','api/self-healing.ts','api/services/agent.ts','api/services/orchestrator.ts','api/services/session.ts','api/video.ts'}
+          changed = set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())
+          assert changed == expected, changed
+          PY
+          git add api/adaptive.ts api/guardian.ts api/knowledge.ts api/rest-compat.ts api/search.ts api/self-healing.ts api/services/agent.ts api/services/orchestrator.ts api/services/session.ts api/video.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: resolve production API type defects without reopening retired routes'
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/fix/production-api-typecheck-20261024
