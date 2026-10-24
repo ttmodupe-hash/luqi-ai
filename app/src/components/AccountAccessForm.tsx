@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ConversationError, signIn, signUp, validAccountPassword, type AccountSession } from '../lib/private-conversations';
+import PasswordField from './PasswordField';
 
 export default function AccountAccessForm({ initialMode = 'signin', purpose = 'notes', onAuthenticated }: {
   initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai'; onAuthenticated: (session: AccountSession) => void;
@@ -70,16 +71,15 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"
+        inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
         maxLength={254} required disabled={busy} value={email} onChange={event => setEmail(event.target.value)} /></label>
-      <label className="block">Password<input className="luqi-access-input" type="password"
-        autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required disabled={busy}
-        aria-describedby={mode === 'signup' ? 'account-password-help' : undefined}
-        value={password} onChange={event => setPassword(event.target.value)} /></label>
+      <PasswordField key={mode} label="Password" value={password} onChange={setPassword}
+        autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={busy}
+        describedBy={mode === 'signup' ? 'account-password-help' : undefined} />
       {mode === 'signup' && <>
         <p id="account-password-help" className="luqi-access-help">At least 12 characters; at most 72 UTF-8 bytes. Use a unique password from a password manager.</p>
-        <label className="block">Confirm password<input className="luqi-access-input" type="password"
-          autoComplete="new-password" required disabled={busy} value={confirmation}
-          onChange={event => setConfirmation(event.target.value)} /></label>
+        <PasswordField label="Confirm password" value={confirmation} onChange={setConfirmation}
+          autoComplete="new-password" disabled={busy} describedBy="account-password-help" />
       </>}
       <div className="luqi-access-actions">
         <button className="luqi-primary" disabled={busy || ambiguous || cooling}>
@@ -94,6 +94,12 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     <button type="button" className="luqi-access-switch" disabled={busy} onClick={changeMode}>
       {mode === 'signup' ? 'Use an existing account' : 'Create an account'}
     </button>
+    {mode === 'signin' && <details className="mt-4 rounded-lg border border-slate-600 p-3">
+      <summary className="cursor-pointer font-semibold">Forgot your password?</summary>
+      <p className="luqi-access-help">Automatic password-reset emails are unavailable in this pilot. For a forgotten password, reply privately through your existing LUQI pilot invitation or verified administrator conversation. Account ownership must be checked before a reset.</p>
+      <p className="luqi-access-help">Do not post your email, password, one-time codes or account details in a public issue. Opening this help does not send an email or change your account.</p>
+      {!busy && <a className="luqi-access-switch" href="#/contact">Read account recovery guidance</a>}
+    </details>}
     <p className="luqi-access-help">Your session stays in this page’s memory and ends when you leave or reload it. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
   </section>;
 }
