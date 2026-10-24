@@ -6,7 +6,8 @@ export default function StartPage() {
     <header className="luqi-start-heading">
       <p className="luqi-eyebrow">WELCOME TO THE LUQI PILOT</p>
       <h1>A useful place to begin.</h1>
-      <p>Try a hands-on physics experiment, or create a space for your notes. Start with what works today.</p>
+      <p>Try a limited AI text question, explore a hands-on physics experiment, or create a space for your notes.</p>
+      <p><Link className="luqi-primary" to="/ai-trial">Try the AI text trial <ArrowUpRight size={18} aria-hidden="true" /></Link></p>
       <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> Voice and paid plans are not enabled. AI text has a separate limited trial.</span>
     </header>
     <div className="luqi-start-grid">

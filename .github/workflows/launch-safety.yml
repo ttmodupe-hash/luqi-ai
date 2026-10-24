@@ -1,0 +1,25 @@
+name: LUQI Launch Discovery and Cache Safety
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  public-cache-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check both worker scripts
+        run: node --check public/service-worker.js && node --check app/public/sw.js
+      - name: Verify cache privacy, failure isolation, bounds and version cleanup offline
+        run: node --test tests/public-cache.test.mjs
+      - name: Verify discoverability and mirrored UI without providers or dependencies
+        run: node --experimental-strip-types --test tests/launch-discovery.test.mjs
