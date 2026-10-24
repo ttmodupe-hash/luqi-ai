@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import AiPilotPage from '../src/pages/AiPilotPage';
+import { MAX_PILOT_QUESTION_CHARS } from '../src/lib/pilot-input';
 
 let available = true;
 const inference = vi.fn(); const request = vi.fn();
@@ -95,5 +96,31 @@ it('aborts after 45 seconds without making a second provider request', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await act(async () => { await vi.advanceTimersByTimeAsync(45_001); });
   expect(screen.getByText(/The reply could not be confirmed/)).toBeTruthy();
+  expect(inference).toHaveBeenCalledTimes(1);
+});
+
+it('keeps an over-limit draft intact and blocks both button and form submission', async () => {
+  await login(); consent();
+  const question = 'x'.repeat(MAX_PILOT_QUESTION_CHARS) + 'END-TEST';
+  const input = screen.getByLabelText('Your question') as HTMLTextAreaElement;
+  fireEvent.change(input, { target: { value: question } });
+  expect(input.value).toBe(question);
+  expect(input.getAttribute('aria-invalid')).toBe('true');
+  expect(screen.getByText(/It will not be sent or shortened automatically/)).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.submit(input.closest('form')!);
+  expect(inference).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { value: 'A corrected question' } });
+  expect(input.hasAttribute('aria-invalid')).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  expect(inference).toHaveBeenCalledTimes(1);
+});
+it('reports pre-spend input failure without a charged-attempt warning or clearing the draft', async () => {
+  inference.mockResolvedValue(Response.json({ code: 'AI_INPUT_TOO_LARGE' }, { status: 400 }));
+  await login(); draft(); consent(); fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByText(/no provider attempt was started/);
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Say hello in isiZulu');
+  expect(screen.queryByText(/Failed provider attempts may/)).toBeNull();
   expect(inference).toHaveBeenCalledTimes(1);
 });

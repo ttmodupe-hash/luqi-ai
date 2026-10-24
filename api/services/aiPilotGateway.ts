@@ -4,8 +4,9 @@
  */
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { PILOT_MODELS } from "./pilotModels";
+import { buildPilotInput } from "../../src/lib/pilot-input";
 import {
-  assertPilotEnabled, MAX_INPUT_CHARS, MAX_OUTPUT_TOKENS,
+  assertPilotEnabled, MAX_OUTPUT_TOKENS,
   PilotBlocked, reservePilotAttempt
 } from "./aiPilotBudget";
 
@@ -39,17 +40,9 @@ export async function runBudgetedPilotChat(
   history: Array<{ sender: string; text: string }> = []
 ): Promise<PilotReply> {
   assertPilotEnabled();
-  if (!prompt.trim() || prompt.length > MAX_INPUT_CHARS) {
-    throw new PilotUnavailable("INVALID_INPUT");
-  }
-  // Limit the TOTAL provider input, not just the most recent message.
-  const past = (Array.isArray(history) ? history.slice(-4) : [])
-    .filter(x => x && (x.sender === "user" || x.sender === "ai") && typeof x.text === "string")
-    .map(x => `${x.sender}: ${x.text.slice(0, 350)}`).join("\n").slice(0, 1400);
-  const input = `Language preference: ${language.slice(0, 50)}
-Recent conversation:
-${past}
-User: ${prompt}`.slice(0, MAX_INPUT_CHARS);
+  // Validate the complete formatted input BEFORE keys, reservations or requests.
+  // A late qualifier in a long question must never be silently cut off.
+  const input = buildPilotInput(prompt, language, history);
 
   const geminiKey = process.env.LUQI_PILOT_GEMINI_API_KEY;
   const openaiKey = process.env.LUQI_PILOT_OPENAI_API_KEY;

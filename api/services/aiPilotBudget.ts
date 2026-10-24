@@ -5,6 +5,7 @@
  * reservation, to avoid double-spend after ambiguous network failures.
  */
 import mysql, { type Pool } from "mysql2/promise";
+import { MAX_PILOT_INPUT_CHARS } from "../../src/lib/pilot-input";
 import { parseMySqlConnectionSettings } from "../lib/mysqlConfig";
 
 export type PilotProvider = "gemini" | "openai";
@@ -21,7 +22,7 @@ export class PilotBlocked extends Error {
 export const PILOT_CENTS = Object.freeze({ gemini: 6000, openai: 4000 });
 export const PILOT_TOTAL_CENTS = 10000;
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
-export const MAX_INPUT_CHARS = 6000;
+export const MAX_INPUT_CHARS = MAX_PILOT_INPUT_CHARS;
 export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
 export const MAX_OUTPUT_TOKENS = 512;
 

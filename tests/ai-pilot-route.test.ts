@@ -7,6 +7,7 @@ vi.mock('../api/services/pilotAuth', async importOriginal => ({
   ...await importOriginal<typeof import('../api/services/pilotAuth')>(), authenticatePilotUser: vi.fn(),
 }));
 import { aiPilot } from '../api/ai-pilot';
+import { buildPilotInput, MAX_PILOT_INPUT_CHARS } from '../src/lib/pilot-input';
 import { runBudgetedPilotChat } from '../api/services/aiPilotGateway';
 import { assertPilotEnabled, PilotBlocked } from '../api/services/aiPilotBudget';
 import { authenticatePilotUser, PilotAuthError } from '../api/services/pilotAuth';
@@ -77,8 +78,21 @@ describe('paid AI HTTP entrypoint', () => {
 
   it('accepts the bounded compatibility prompt and explicit recent conversation', async () => {
     const history = [{ sender: 'user', text: 'My explicitly supplied context' }];
-    expect((await send({ prompt: 'x'.repeat(6000), language: 'isiZulu', history })).status).toBe(200);
-    expect(chat).toHaveBeenCalledExactlyOnceWith('x'.repeat(6000), 42, 'isiZulu', history);
+    const room = MAX_PILOT_INPUT_CHARS - buildPilotInput('x', 'isiZulu', history).length + 1;
+    const question = 'x'.repeat(room - 8) + 'END-TEST';
+    expect((await send({ prompt: question, language: 'isiZulu', history })).status).toBe(200);
+    expect(chat).toHaveBeenCalledExactlyOnceWith(question, 42, 'isiZulu', history);
+  });
+
+  it('rejects combined overflow before the gateway rather than silently truncating the question', async () => {
+    const response = await send({ prompt: 'x'.repeat(6000), language: 'isiZulu',
+      history: [{ sender: 'user', text: 'explicit context' }] });
+    expect(response.status).toBe(400);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    const body = await response.json();
+    expect(body.code).toBe('AI_INPUT_TOO_LARGE');
+    expect(body.message).toContain('no provider attempt was started');
+    expect(chat).not.toHaveBeenCalled();
   });
 
   it('rejects invalid JSON or media types without invoking a provider', async () => {

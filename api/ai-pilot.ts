@@ -1,5 +1,6 @@
 /** The sole paid HTTP entrypoint: authenticate, bound, validate, then reserve. */
 import { Hono } from 'hono';
+import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
 import { runBudgetedPilotChat } from './services/aiPilotGateway';
@@ -19,6 +20,10 @@ aiPilot.use('*', async (c, next) => {
   return next();
 });
 aiPilot.onError((error, c) => {
+  if (error instanceof PilotInputError) return c.json({ status: 'error', code: error.code,
+    message: error.code === 'AI_INPUT_TOO_LARGE'
+      ? 'Your complete question, language and history exceed the 6000-character input limit. Shorten them; no provider attempt was started.'
+      : 'The question or conversation context is invalid. No provider attempt was started.' }, 400);
   if (error instanceof PilotAuthError) return c.json({ status: 'unavailable', code: error.code,
     message: error.code === 'AUTH_REQUIRED' ? 'Please sign in to use the AI trial.' :
       'Secure account verification is temporarily unavailable.' }, error.code === 'AUTH_REQUIRED' ? 401 : 503);
@@ -49,6 +54,8 @@ aiPilot.post('/', async c => {
   if (!parsed.success) return c.json({ status: 'error', code: 'INVALID_INPUT',
     message: 'Provide one question of at most 6000 characters.' }, 400);
   const { user_input, prompt, language, history } = parsed.data;
+  // Keep the HTTP boundary truthful even if the gateway implementation changes.
+  buildPilotInput((user_input ?? prompt)!, language, history);
   const result = await runBudgetedPilotChat((user_input ?? prompt)!, c.get('pilotUserId'), language, history);
   return c.json({ status: 'success', agent: 'KHORO', provider: result.provider,
     provider_model: result.model, response: result.response });

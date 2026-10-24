@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import type { AccountSession } from '../lib/private-conversations';
+import { MAX_PILOT_QUESTION_CHARS } from '../lib/pilot-input';
 
 export default function AiPilotPage() {
   const [session, setSession] = useState<AccountSession | null>(null);
@@ -12,6 +13,8 @@ export default function AiPilotPage() {
   const [answer, setAnswer] = useState<PilotReply | null>(null);
   const [busy, setBusy] = useState(false); const [notice, setNotice] = useState('');
   const [uncertain, setUncertain] = useState(false);
+  const questionLength = prompt.trim().length;
+  const tooLong = questionLength > MAX_PILOT_QUESTION_CHARS;
   const epoch = useRef(0); const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
 
@@ -28,7 +31,7 @@ export default function AiPilotPage() {
     setSession(null); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
   }
   async function submit() {
-    if (!session || !consent || !available || locked.current || uncertain || !prompt.trim()) return;
+    if (!session || !consent || !available || locked.current || uncertain || !prompt.trim() || tooLong) return;
     locked.current = true; setBusy(true); setAnswer(null); setNotice('');
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
@@ -41,6 +44,8 @@ export default function AiPilotPage() {
       if (code === 'AUTH_REQUIRED') { signOut(); setNotice('Your session ended. Sign in again.'); return; }
       if (code === 'RESPONSE_UNCONFIRMED') {
         setUncertain(true); setNotice('The reply could not be confirmed. A provider attempt may have been charged. We will not retry automatically.');
+      } else if (code === 'AI_INPUT_TOO_LARGE' || code === 'INVALID_INPUT') {
+        setNotice('Your question could not be sent as entered. Shorten or correct it; no provider attempt was started.');
       } else if (code === 'AI_USER_DAILY_QUOTA_EXHAUSTED') setNotice('Your daily allowance of 20 provider attempts has been reached. Try another UTC day.');
       else if (code === 'AI_PROVIDER_BUDGET_EXHAUSTED') setNotice('The monthly provider allowance has been reached. No further attempt was started on that provider.');
       else setNotice('AI replies are unavailable. Failed provider attempts may still count toward the allowance.');
@@ -63,12 +68,15 @@ export default function AiPilotPage() {
       <section><h2>Ask one question</h2>
         <p>Only the question below is sent to the providers. Your private notes and account email are not added to it. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
-          <label className="block">Your question<textarea className="luqi-access-input" rows={5} maxLength={6000}
-            disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} /></label>
-          <p>{prompt.length}/6000 characters</p>
+          <label className="block" htmlFor="ai-question">Your question</label>
+          <textarea id="ai-question" className="luqi-access-input" rows={5}
+            aria-describedby="ai-question-limit" aria-invalid={tooLong || undefined}
+            disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} />
+          <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters. Request formatting uses the rest of the 6000-character input limit.
+            {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}</p>
           <label className="block"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /> I understand my question goes to Google Gemini and may also go to OpenAI. I will use ordinary test content.</label>
           <p><Link to="/privacy">Read the provider privacy information</Link></p>
-          <button className="luqi-primary" disabled={!available || !consent || !prompt.trim() || busy || uncertain}>
+          <button className="luqi-primary" disabled={!available || !consent || !prompt.trim() || tooLong || busy || uncertain}>
             {busy ? 'Waiting for a reply…' : 'Send question'}
           </button>
         </form>

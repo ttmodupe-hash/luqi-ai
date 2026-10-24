@@ -1,3 +1,4 @@
+import { buildPilotInput, MAX_PILOT_INPUT_CHARS } from '../src/lib/pilot-input';
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PILOT_MODELS } from "../api/services/pilotModels";
 
@@ -94,5 +95,41 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
     vi.stubGlobal("fetch", fetcher);
     await expect(runBudgetedPilotChat("Say hello", 42)).rejects.toMatchObject({ reason: "AI_PROVIDER_BUDGET_EXHAUSTED" });
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('complete paid input boundary', () => {
+  it.each(['gemini', 'openai'] as const)('preserves the entire exact-limit prompt on %s', async provider => {
+    if (provider === 'openai') vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', '');
+    const history = [{ sender: 'user', text: 'x'.repeat(350) }, { sender: 'ai', text: 'y'.repeat(350) },
+      { sender: 'user', text: 'z'.repeat(350) }, { sender: 'ai', text: 'w'.repeat(342) + 'HIST-END' }];
+    const language = 'isiZulu';
+    const room = MAX_PILOT_INPUT_CHARS - buildPilotInput('x', language, history).length + 1;
+    const prompt = 'p'.repeat(room - 8) + 'END-TEST';
+    const expected = buildPilotInput(prompt, language, history);
+    const fetcher = vi.fn(async (_url: string, options: RequestInit) => {
+      expect(reserve.mock.calls).toEqual([[provider, 42]]);
+      const body = JSON.parse(options.body as string);
+      const sent = provider === 'gemini' ? body.contents[0].parts[0].text : body.input;
+      expect(sent).toBe(expected); expect(sent.length).toBe(6000);
+      expect(sent).toContain('HIST-END'); expect(sent.endsWith('END-TEST')).toBe(true);
+      return provider === 'gemini'
+        ? Response.json({ candidates: [{ content: { role: 'model', parts: [{ text: 'Fixture reply' }] } }] })
+        : Response.json({ output: [{ content: [{ type: 'output_text', text: 'Fixture reply' }] }] });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    expect((await runBudgetedPilotChat(prompt, 42, language, history)).provider).toBe(provider);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it('rejects formatted overflow before reservations, transport or fallback', async () => {
+    const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('x'.repeat(6000), 42)).rejects.toMatchObject({ code: 'AI_INPUT_TOO_LARGE' });
+    expect(reserve).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('rejects an oversized history turn rather than clipping it at the service boundary', async () => {
+    const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('Hello', 42, 'auto', [{ sender: 'user', text: 'x'.repeat(351) }]))
+      .rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    expect(reserve).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
   });
 });
