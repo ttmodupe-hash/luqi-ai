@@ -15,7 +15,7 @@ import { getSigningSecret, signUserToken, verifyUserToken, verifyUserCredential 
 import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
 import { users, knowledgeArticles, creditWallets } from "../db/schema";
-import { orchestrateRequest, orchestrateStream, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
+import { orchestrateRequest, getOrchestratorStatus, routeCapability, getAgentCapableClient, executeHighPrecisionExtraction, type SearchSource } from "./services/orchestrator";
 import { orchestrateAgent } from "./services/agent";
 import { appendTurn, getHistory, historyToContext } from "./services/session";
 import { generateImage, imageProviderAvailable } from "./services/media";
@@ -23,7 +23,6 @@ import { paymentsConfigured } from "./services/payments";
 import { analyzeContractText } from "./services/legal";
 import { getRadar, RADAR_DISCLAIMER } from "./services/insights";
 import { getCachedAIResponse, setCachedAIResponse, hashPrompt } from "./services/cache";
-import { streamSSE } from "hono/streaming";
 import { legacyControlUnavailable } from "./legacy-control-unavailable";
 export const restCompat = new Hono();
 restCompat.route("/", legacyControlUnavailable);
@@ -182,91 +181,12 @@ restCompat.post("/api/v25/chat", async (c) => {
   return c.json(await handleChat(message, body.session_id, body.email || body.user_key));
 });
 
-// ─── SSE STREAMING CHAT ───────────────────────────────────────────────
-// Tokens stream to the browser as the provider generates them.
-// Frame shapes: {"provider","model"} | {"sources":[...]} | {"text": "..."}
-// | {"error": "..."}, terminated by data: [DONE]. Falls back to honest
-// JSON when no provider is configured (content-type application/json).
-restCompat.post("/api/v25/ai-brain/stream", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const message = (body.message || body.query || "").toString().slice(0, 4000);
-  if (!message.trim()) {
-    return c.json({ error: "message is required" }, 400);
-  }
-
-  const status = getOrchestratorStatus();
-  if (status.demo) {
-    return c.json(aiUnavailableResponse());
-  }
-
-  const route = routeCapability(message);
-  const streamPrompt = route.systemHint ? `${LUQI_SYSTEM_PROMPT}\n\n${route.systemHint}` : LUQI_SYSTEM_PROMPT;
-
-  const cacheKey = hashPrompt(message);
-  const cached = await getCachedAIResponse(cacheKey);
-
-  return streamSSE(c, async (stream) => {
-    if (cached) {
-      let cachedText = cached;
-      try {
-        const parsed = JSON.parse(cached);
-        cachedText = parsed.content ?? cached;
-        if (parsed.sources?.length) {
-          await stream.writeSSE({ data: JSON.stringify({ sources: parsed.sources }) });
-        }
-      } catch { /* legacy plain-text cache entry */ }
-      await stream.writeSSE({ data: JSON.stringify({ provider: "cache", model: "redis", cached: true }) });
-      for (const piece of cachedText.match(/.{1,80}/gs) || []) {
-        await stream.writeSSE({ data: JSON.stringify({ text: piece }) });
-      }
-      await stream.writeSSE({ data: "[DONE]" });
-      return;
-    }
-
-    // Web-researcher capability: fetch real sources before streaming
-    let searchContext: string | undefined;
-    let sources: SearchSource[] = [];
-    if (route.useSearch && process.env.SERPER_API_KEY) {
-      try {
-        const { searchWeb, formatSearchContext } = await import("./services/serper");
-        const results = await searchWeb(message, { numResults: 5 });
-        if (results?.organic?.length) {
-          searchContext = formatSearchContext(results);
-          sources = results.organic.slice(0, 5).map((s) => ({ title: s.title, link: s.link, snippet: s.snippet }));
-          await stream.writeSSE({ data: JSON.stringify({ sources }) });
-        }
-      } catch (e) {
-        console.warn("[Chat] Search augmentation failed:", e);
-      }
-    }
-
-    const historyContext = sessionId ? historyToContext(await getHistory(sessionId)) : undefined;
-    const streamContext = [searchContext, historyContext].filter(Boolean).join("\n\n") || undefined;
-
-    let full = "";
-    try {
-      for await (const ev of orchestrateStream({ query: message, context: streamContext, systemPrompt: streamPrompt })) {
-        if (ev.provider) {
-          await stream.writeSSE({ data: JSON.stringify({ provider: ev.provider, model: ev.model }) });
-        }
-        if (ev.delta) {
-          full += ev.delta;
-          await stream.writeSSE({ data: JSON.stringify({ text: ev.delta }) });
-        }
-        if (ev.error) {
-          await stream.writeSSE({ data: JSON.stringify({ error: ev.error }) });
-        }
-      }
-      if (full) await setCachedAIResponse(cacheKey, JSON.stringify({ content: full, sources }), 3600);
-      if (full && sessionId) {
-        await appendTurn(sessionId, "user", message);
-        await appendTurn(sessionId, "assistant", full);
-      }
-    } catch (e: any) {
-      await stream.writeSSE({ data: JSON.stringify({ error: e?.message || "stream failed" }) });
-    }
-    await stream.writeSSE({ data: "[DONE]" });
-  });
+// The old stream has no authenticated owner/budget boundary. Reject here as
+// well as in boot middleware; never restore ownerless session/cache access.
+restCompat.post("/api/v25/ai-brain/stream", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json({ status: "unavailable", code: "AI_LEGACY_ROUTE_DISABLED",
+    message: "This legacy AI capability is not yet connected to the budgeted gateway." }, 503);
 });
 
 // ─── STATUS ───────────────────────────────────────────────────────────
@@ -297,7 +217,7 @@ restCompat.post("/api/v25/kb/ask", async (c) => {
 
   try {
     const db = await getDb();
-    const rows = await db
+    const rows: Array<typeof knowledgeArticles.$inferSelect> = await db
       .select()
       .from(knowledgeArticles)
       .limit(5);
@@ -318,7 +238,7 @@ restCompat.post("/api/v25/kb/search", async (c) => {
   const query = (body.query || "").toString().slice(0, 500);
   try {
     const db = await getDb();
-    const rows = await db
+    const rows: Array<typeof knowledgeArticles.$inferSelect> = await db
       .select()
       .from(knowledgeArticles)
       .limit(20);
@@ -331,7 +251,7 @@ restCompat.post("/api/v25/kb/search", async (c) => {
 restCompat.get("/api/v25/kb/categories", async (c) => {
   try {
     const db = await getDb();
-    const rows = await db.select({ category: knowledgeArticles.category }).from(knowledgeArticles);
+    const rows: Array<Pick<typeof knowledgeArticles.$inferSelect, "category">> = await db.select({ category: knowledgeArticles.category }).from(knowledgeArticles);
     const categories = [...new Set(rows.map((r) => r.category).filter(Boolean))];
     return c.json({ categories });
   } catch {
@@ -1330,8 +1250,7 @@ Your duty:
     const aiResponse = await orchestrateRequest({
       query,
       systemPrompt: certPrompt,
-      context,
-      taskType: "technical"
+      context
     });
 
     if (aiResponse && aiResponse.content) {

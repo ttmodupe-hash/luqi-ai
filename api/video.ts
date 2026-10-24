@@ -1,3 +1,4 @@
+import { readSqlCount } from "./lib/queryResults";
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
@@ -242,7 +243,7 @@ export const videoRouter = createRouter({
     const total = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(videoProjects)
-      .then((r) => Number(r[0]?.count ?? 0));
+      .then(readSqlCount);
     const byStatus = await db
       .select({
         status: videoProjects.status,

@@ -46,7 +46,7 @@ export const knowledgeRouter = createRouter({
     .input(z.object({ topic: z.string(), difficulty: z.string().default("medium"), count: z.number().default(5) }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      const articles = await db
+      const articles: Array<typeof knowledgeArticles.$inferSelect> = await db
         .select()
         .from(knowledgeArticles)
         .where(sql`title LIKE ${'%' + input.topic + '%'} OR content LIKE ${'%' + input.topic + '%'}`)

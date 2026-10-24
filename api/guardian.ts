@@ -1,3 +1,4 @@
+import { readSqlCount } from "./lib/queryResults";
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
@@ -42,7 +43,7 @@ export const guardianRouter = createRouter({
           .select({ count: count() })
           .from(adaptiveHistory)
           .where(and(eq(adaptiveHistory.studentId, link.studentUserId), gte(adaptiveHistory.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))))
-          .then((r) => Number(r[0]?.count ?? 0));
+          .then(readSqlCount);
 
         const recentReports = await db
           .select()
