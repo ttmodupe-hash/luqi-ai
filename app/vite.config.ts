@@ -19,6 +19,8 @@ export default defineConfig({
     port: 3000,
   },
   build: {
+    // Match the main application's tested, manually recoverable lazy imports.
+    modulePreload: false,
     target: "es2020",
     outDir: "dist/public",
     emptyOutDir: true,

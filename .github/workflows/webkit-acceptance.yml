@@ -29,11 +29,10 @@ jobs:
       - name: Install the WebKit binary matching the locked Playwright version
         timeout-minutes: 5
         run: npx --no-install playwright install --with-deps webkit
-      - name: Diagnose module failure recovery on an isolated loopback fixture
-        timeout-minutes: 2
-        run: node scripts/diagnose-webkit-import-recovery.mjs
       - name: Build the same web application without provider credentials
         run: npm run build
+      - name: Verify resolved loading policy and emitted public entrypoint
+        run: node scripts/verify-module-loading.mjs
       - name: Run existing account, trial and tool journeys on desktop and iPhone-sized WebKit
         timeout-minutes: 8
         run: npx --no-install playwright test --config=playwright.webkit.config.ts
