@@ -1,0 +1,46 @@
+name: LUQI Account Accessibility
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/components/PasswordField.tsx'
+      - '**/components/AccountAccessForm.tsx'
+      - '**/components/AccountPasswordForm.tsx'
+      - tests/password-field.test.tsx
+      - browser-tests/account-accessibility.spec.ts
+      - .github/workflows/account-accessibility.yml
+  push:
+    branches: [main]
+    paths:
+      - '**/components/PasswordField.tsx'
+      - '**/components/AccountAccessForm.tsx'
+      - '**/components/AccountPasswordForm.tsx'
+      - tests/password-field.test.tsx
+      - browser-tests/account-accessibility.spec.ts
+      - .github/workflows/account-accessibility.yml
+permissions:
+  contents: read
+jobs:
+  account-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Exercise local controls and existing account contracts with synthetic fixtures
+        run: npx --no-install vitest run tests/password-field.test.tsx tests/account-access.test.tsx tests/password-change-client.test.ts tests/companion-page.test.tsx
+      - name: Strictly check both frontend copies
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/PasswordField.tsx src/components/AccountAccessForm.tsx src/components/AccountPasswordForm.tsx app/src/components/PasswordField.tsx app/src/components/AccountAccessForm.tsx app/src/components/AccountPasswordForm.tsx
+      - name: Keep both frontend copies identical
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            for (const name of ["PasswordField.tsx", "AccountAccessForm.tsx", "AccountPasswordForm.tsx"]) {
+              if (fs.readFileSync("src/components/" + name, "utf8") !== fs.readFileSync("app/src/components/" + name, "utf8")) throw new Error("Account component diverged: " + name);
+            }
+          '
