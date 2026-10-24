@@ -39,8 +39,10 @@ test('home tool search exposes the trial under its provider name without a check
   await page.goto('/#/');
   await page.getByRole('button', { name: 'Ready to use', exact: true }).click();
   await page.getByRole('textbox', { name: 'Filter workspace tools', exact: true }).fill('Gemini');
-  await expect(page.getByRole('heading', { name: 'AI text trial', exact: true })).toBeVisible();
-  await expect(page.getByText('Limited trial · sign-in required', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Open ai text trial', exact: true }).click();
+  const trialCard = page.getByRole('article').filter({ has: page.getByRole('heading', { name: 'AI text trial', exact: true }) });
+  await expect(trialCard).toHaveCount(1);
+  await expect(trialCard.getByRole('heading', { name: 'AI text trial', exact: true })).toBeVisible();
+  await expect(trialCard.getByText('Limited trial · sign-in required', { exact: true })).toBeVisible();
+  await trialCard.getByRole('link', { name: 'Open ai text trial', exact: true }).click();
   await trialPage(page, writes);
 });
