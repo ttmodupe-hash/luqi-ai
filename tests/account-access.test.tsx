@@ -10,7 +10,7 @@ const accepted = vi.fn();
 const password = 'Synthetic-Unique-Password-2026!';
 const email = 'new-user@example.invalid';
 const session = { token: 'synthetic-session', user: { email } };
-const reply = (body: unknown, status = 201) => new Response(JSON.stringify(body), { status });
+const reply = (body: unknown, status = 201) => Response.json(body, { status });
 beforeEach(() => { request.mockReset(); accepted.mockReset(); vi.stubGlobal('fetch', request); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 function setup() {
@@ -73,6 +73,7 @@ describe('new account access', () => {
     request.mockReturnValueOnce(new Promise<Response>(resolve => { finish = resolve; }));
     fireEvent.click(screen.getByRole('button', { name: 'Create account', exact: true }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel request' }));
+    expect(request.mock.calls[0][1].signal.aborted).toBe(true);
     await act(async () => finish(reply(session)));
     expect(accepted).not.toHaveBeenCalled();
     expect(screen.getByRole('status').textContent).toContain('may already exist');
@@ -81,7 +82,8 @@ describe('new account access', () => {
     setup(); let finish!: (response: Response) => void;
     request.mockReturnValueOnce(new Promise<Response>(resolve => { finish = resolve; }));
     fireEvent.click(screen.getByRole('button', { name: 'Create account', exact: true }));
-    cleanup(); await act(async () => finish(reply(session)));
+    cleanup(); expect(request.mock.calls[0][1].signal.aborted).toBe(true);
+    await act(async () => finish(reply(session)));
     expect(accepted).not.toHaveBeenCalled();
   });
   it('retains the bounded throttle across auth mode changes and never repeats credentials', async () => {
@@ -109,4 +111,60 @@ describe('new account access', () => {
     expect((await outcome).name).toBe('AbortError');
     expect(request).toHaveBeenCalledTimes(1);
   });
+});
+
+// Synthetic regressions only: never point these tests at the production account API.
+for (const mode of ['signin', 'signup'] as const) {
+  const submitName = mode === 'signup' ? 'Create account' : 'Sign in';
+  function prepareMode() {
+    render(<AccountAccessForm initialMode={mode} onAuthenticated={accepted} />);
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
+    if (mode === 'signup') fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: password } });
+  }
+  for (const stalled of ['fetch', 'body'] as const) {
+    it(`${mode} exits a stalled ${stalled} without retry or accepting a session`, async () => {
+      vi.useFakeTimers(); prepareMode(); const cancelled = vi.fn(() => new Promise<void>(() => {}));
+      request.mockImplementation(() => stalled === 'fetch' ? new Promise<Response>(() => {}) : Promise.resolve(
+        new Response(new ReadableStream({ cancel: cancelled }), { headers: { 'Content-Type': 'application/json' } })));
+      fireEvent.click(screen.getByRole('button', { name: submitName, exact: true }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(15_001); });
+      expect(accepted).not.toHaveBeenCalled(); expect(request).toHaveBeenCalledTimes(1);
+      expect(request.mock.calls[0][1].signal.aborted).toBe(true);
+      expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('');
+      if (stalled === 'body') expect(cancelled).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('status').textContent).toContain(mode === 'signup' ? 'may already exist' : 'temporarily unavailable');
+      expect((screen.getByRole('button', { name: submitName, exact: true }) as HTMLButtonElement).disabled).toBe(mode === 'signup');
+      expect(screen.queryByRole('button', { name: 'Cancel request' })).toBeNull();
+    });
+  }
+  it(`${mode} cancel propagates abort without a second credential submission`, async () => {
+    prepareMode(); request.mockImplementation(() => new Promise<Response>(() => {}));
+    fireEvent.click(screen.getByRole('button', { name: submitName, exact: true }));
+    const signal = request.mock.calls[0][1].signal;
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel request' })); });
+    expect(signal.aborted).toBe(true); expect(request).toHaveBeenCalledTimes(1); expect(accepted).not.toHaveBeenCalled();
+    expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('');
+  });
+  it(`${mode} unmount aborts the pending request`, async () => {
+    prepareMode(); request.mockImplementation(() => new Promise<Response>(() => {}));
+    fireEvent.click(screen.getByRole('button', { name: submitName, exact: true }));
+    const signal = request.mock.calls[0][1].signal;
+    await act(async () => { cleanup(); });
+    expect(signal.aborted).toBe(true); expect(accepted).not.toHaveBeenCalled(); expect(request).toHaveBeenCalledTimes(1);
+  });
+}
+it('rejects plausible account JSON without JSON media type', async () => {
+  request.mockResolvedValue(new Response(JSON.stringify(session)));
+  await expect(signUp(email, password)).rejects.toThrow('Account request failed');
+  expect(request).toHaveBeenCalledTimes(1);
+});
+it('does not submit credentials when the caller already cancelled', async () => {
+  const controller = new AbortController(); controller.abort();
+  await expect(signUp(email, password, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+  expect(request).not.toHaveBeenCalled();
+});
+it('reports invalid account schema without retaining token-bearing validation errors', async () => {
+  request.mockResolvedValue(reply({ token: 'fixture-sensitive-token', user: { email: 'not-an-email' } }));
+  await expect(signUp(email, password)).rejects.toThrow('Account response could not be verified');
 });

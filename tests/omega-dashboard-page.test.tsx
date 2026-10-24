@@ -19,7 +19,9 @@ import {
 } from "./fixtures/omega-dashboard";
 const request = vi.fn();
 const reply = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), { status });
+  new Response(JSON.stringify(data), {
+    status, headers: { "Content-Type": "application/json" },
+  });
 beforeEach(() => {
   request.mockReset();
   vi.stubGlobal("fetch", request);
@@ -356,3 +358,32 @@ it("disables retry if refreshed authenticated status withdraws the reviewed hand
   expect((screen.getByRole("button", { name: "Retry same submission" }) as HTMLButtonElement).disabled).toBe(true);
   expect(submissions()).toHaveLength(1);
 });
+
+it.each([null, "text/plain", "text/html"])(
+  "rejects a successful login response with Content-Type %s without requesting tasks",
+  async (contentType) => {
+    const headers = new Headers();
+    if (contentType) headers.set("Content-Type", contentType);
+    // Bytes deliberately avoid Response's automatic text/plain string header.
+    const body = new TextEncoder().encode(JSON.stringify({
+      token: "fixture-rejected-token",
+      user: { email: "test@example.invalid" },
+    }));
+    const response = new Response(body, { status: 200, headers });
+    expect(response.headers.get("Content-Type")).toBe(contentType);
+    request.mockResolvedValueOnce(response);
+    render(<OmegaTasksPage />);
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "test@example.invalid" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await screen.findByText("Unable to verify task information. Please try again. No task outcome has been confirmed.");
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0]?.[0]).toBe("/api/v1/auth/login");
+    expect(screen.queryByRole("region", { name: "Saved tasks" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+    expect(screen.queryByText("fixture-rejected-token")).toBeNull();
+    expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+  },
+);
