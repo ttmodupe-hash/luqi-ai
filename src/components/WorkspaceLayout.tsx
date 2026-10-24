@@ -227,8 +227,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           )}
         </div>
         <p className="luqi-dialog-note">
-          Preview items are still in development. AI chat and payments are not
-          enabled.
+          AI text has a separate signed-in trial with availability checks and
+          provider limits. Voice, payments and autonomous workers remain unavailable.
         </p>
       </dialog>
     </div>

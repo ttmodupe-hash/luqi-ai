@@ -1,5 +1,16 @@
 export const workspaceTools = [
   {
+    id: "ai-trial",
+    title: "AI text trial",
+    category: "Ask a question, with clear limits",
+    description:
+      "Sign in and give consent to try Gemini, with a separately limited OpenAI fallback. Availability is checked before sending; private notes are not sent automatically.",
+    status: "Limited trial · sign-in required",
+    ready: true,
+    path: "/ai-trial",
+    icon: "status",
+  },
+  {
     id: "notes",
     title: "Private notes",
     category: "Your ideas, kept together",
