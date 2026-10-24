@@ -41,7 +41,9 @@ jobs:
           assert changed==expected, changed
           assert not subprocess.check_output(['git','ls-files','--others','--exclude-standard']).strip()
           PY
-          git add api/services/aiPilotBudget.ts api/services/aiPilotGateway.ts api/ai-pilot.ts src/lib/ai-pilot.ts src/pages/AiPilotPage.tsx app/src/lib/ai-pilot.ts app/src/pages/AiPilotPage.tsx tests/ai-pilot-route.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx tests/ai-pilot-transport.test.ts
+          # Update only already-tracked files after the exact changed-set guard.
+          # Broad historical lib/ ignore rules must not suppress tracked repairs.
+          git add -u
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'fix: reject over-limit paid input without silently truncating questions'
