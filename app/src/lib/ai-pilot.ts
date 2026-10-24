@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { buildPilotInput, PilotInputError } from './pilot-input';
 
 const reply = z.object({ status: z.literal('success'), response: z.string().trim().min(1).max(20_000),
   provider: z.enum(['gemini', 'openai']), provider_model: z.string().min(1).max(100) });
@@ -32,6 +33,8 @@ export async function pilotAvailability(signal: AbortSignal, request: typeof fet
 export async function askPilot(token: string, prompt: string, signal: AbortSignal, request: typeof fetch = fetch): Promise<PilotReply> {
   if (!token || token.length > 4096 || !prompt.trim() || prompt.length > 6000) throw new PilotChatError('INVALID_INPUT');
   try {
+    // Validate the same formatted limit as the server, without sending context.
+    buildPilotInput(prompt.trim());
     const response = await request('/api/v1/luqi-core', {
       method: 'POST', signal, credentials: 'omit', cache: 'no-store', redirect: 'error',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -42,11 +45,12 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
     const body = await boundedJson(response);
     if (!response.ok) {
       const known = z.object({ code: z.enum(['AI_DISABLED', 'BILLING_NOT_APPROVED', 'AI_BUDGET_STORE_UNAVAILABLE',
-        'AI_PROVIDER_BUDGET_EXHAUSTED', 'AI_USER_DAILY_QUOTA_EXHAUSTED', 'AI_PROVIDER_UNAVAILABLE']) }).safeParse(body);
+        'AI_PROVIDER_BUDGET_EXHAUSTED', 'AI_USER_DAILY_QUOTA_EXHAUSTED', 'AI_PROVIDER_UNAVAILABLE', 'AI_INPUT_TOO_LARGE', 'INVALID_INPUT']) }).safeParse(body);
       throw new PilotChatError(known.success ? known.data.code : 'AI_UNAVAILABLE');
     }
     return reply.parse(body);
   } catch (error) {
+    if (error instanceof PilotInputError) throw new PilotChatError(error.code);
     if (error instanceof PilotChatError) throw error;
     // Do not turn an ambiguous network failure into a second paid attempt.
     throw new PilotChatError('RESPONSE_UNCONFIRMED');

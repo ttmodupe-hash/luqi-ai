@@ -1,3 +1,4 @@
+import { MAX_PILOT_QUESTION_CHARS } from '../src/lib/pilot-input';
 import { describe, expect, it, vi } from 'vitest';
 import { askPilot, pilotAvailability } from '../src/lib/ai-pilot';
 
@@ -45,4 +46,23 @@ describe('same-origin, explicitly submitted AI trial', () => {
     });
     expect(request).toHaveBeenCalledTimes(1);
   });
+});
+
+it('refuses a question that fits the raw API field but not the complete input', async () => {
+  const request = vi.fn();
+  await expect(askPilot('token', 'x'.repeat(MAX_PILOT_QUESTION_CHARS + 1), new AbortController().signal, request))
+    .rejects.toMatchObject({ code: 'AI_INPUT_TOO_LARGE' });
+  expect(request).not.toHaveBeenCalled();
+});
+it('sends the full exact-limit question including its final qualifier', async () => {
+  const question = 'x'.repeat(MAX_PILOT_QUESTION_CHARS - 8) + 'END-TEST';
+  const request = vi.fn(async () => Response.json({ status: 'success', response: 'Hello', provider: 'gemini', provider_model: 'fixture-model' }));
+  await askPilot('token', question, new AbortController().signal, request);
+  expect(JSON.parse((request.mock.calls[0] as unknown as [string, RequestInit])[1].body as string).user_input).toBe(question);
+  expect(request).toHaveBeenCalledTimes(1);
+});
+it.each(['AI_INPUT_TOO_LARGE', 'INVALID_INPUT'])('recognizes a server pre-spend rejection: %s', async code => {
+  const request = vi.fn(async () => Response.json({ code }, { status: 400 }));
+  await expect(askPilot('token', 'Hello', new AbortController().signal, request)).rejects.toMatchObject({ code });
+  expect(request).toHaveBeenCalledTimes(1);
 });
