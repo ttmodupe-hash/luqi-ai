@@ -1,0 +1,33 @@
+name: LUQI Launch DNS Observation
+on:
+  push:
+    branches: [fix/launch-dns-observation-20261024]
+  pull_request:
+    paths:
+      - scripts/audit-launch-dns.py
+      - tests/test_launch_dns_audit.py
+      - .github/workflows/launch-dns-observation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: luqi-launch-dns-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  observe-public-dns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test conservative DNS verdicts offline
+        run: python3 -m unittest discover -s tests -p test_launch_dns_audit.py -v
+      - name: Observe fixed public DNS names without credentials or writes
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/audit-launch-dns.py
+      - name: Explain scope
+        if: always()
+        run: |
+          echo 'Read-only observation, NOT launch approval. Missing records or transport errors keep the domain gate blocked.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No account creation, paid AI, DNS writes, secret access, email changes, database access or deployment.' >> "$GITHUB_STEP_SUMMARY"
