@@ -1,0 +1,71 @@
+name: LUQI Production Lab Framing
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: lab-framing-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  production-browser-boundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Test HTTP framing, missing assets and privacy boundaries
+        run: npx --no-install vitest run tests/frame-policy.test.ts tests/lab-static-fallback.test.ts tests/http-safety.test.ts
+      - name: Strictly type-check response policy
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/lib/framePolicy.ts api/lib/httpSafety.ts api/lib/vite.ts
+      - name: Build the actual production server and UI without credentials
+        run: npm run build
+      - name: Install browser engines
+        timeout-minutes: 5
+        run: |
+          chrome="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$chrome" ]; then
+            echo "LUQI_CHROMIUM_PATH=$chrome" >> "$GITHUB_ENV"
+          else
+            npx --no-install playwright install --with-deps chromium --only-shell
+          fi
+          npx --no-install playwright install --with-deps webkit
+      - name: Exercise real-server lab frames and clickjacking boundaries
+        run: npx --no-install playwright test --config=playwright.framing.config.ts
+      - name: Retain synthetic failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lab-framing-failure
+          path: test-results-framing/
+          retention-days: 7
+          if-no-files-found: ignore
+  public-framing:
+    if: github.event_name == 'push'
+    needs: production-browser-boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Observe the exact live release and existing safety boundaries
+        env:
+          LUQI_VERIFY_PUBLIC: 'true'
+          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+        run: node scripts/verify-deployed-release.mjs
+      - name: Verify deployed lab documents and restrictive framing policy
+        env:
+          LUQI_VERIFY_PUBLIC: 'true'
+          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+        run: node scripts/verify-lab-framing.mjs

@@ -509,6 +509,7 @@
     sliderX0.addEventListener('input', update);
 
     document.getElementById('btnReset').addEventListener('click', () => {
+      sliderX0.value = sliderX0.defaultValue;
       setMode('cubic');
     });
 
