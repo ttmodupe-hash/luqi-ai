@@ -41,18 +41,18 @@ jobs:
             const routePattern = /\bpath="([^"]+)"/g;
             const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
             const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
-            // The only newly reviewed public route is the lazy, no-provider
-            // Business Desk. Remove exactly one from the new inventory before
-            // enforcing byte-identical legacy route and iframe inventories.
+            // The only approved public additions are two reviewed, lazy,
+            // provider-free routes. Legacy routes/iframes stay identical.
             const routes = matches(after, routePattern);
-            const additions = routes.filter(route => route === '/business-desk');
-            assert.deepEqual(additions, ['/business-desk'], 'Missing or duplicated approved Business Desk route: ' + path);
-            assert.deepEqual(routes.filter(route => route !== '/business-desk'),
+            const approved = ['/business-desk', '/study-desk'];
+            const additions = routes.filter(route => approved.includes(route));
+            assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
+            assert.deepEqual(routes.filter(route => !approved.includes(route)),
               matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
             assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
               'Existing iframe targets changed: ' + path);
           }
-          console.log('Pre-existing routes and iframe targets preserved; only /business-desk is new.');
+          console.log('Pre-existing routes and iframe targets preserved; only two reviewed local tools are new.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash

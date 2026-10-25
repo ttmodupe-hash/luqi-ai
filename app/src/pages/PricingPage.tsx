@@ -27,6 +27,11 @@ export default function PricingPage() {
       <p>It is a drafting and arithmetic aid, not an invoicing, tax or payment-collection service.</p>
       <Link className="luqi-primary" to="/business-desk">Open the business desk</Link>
     </section>
+    <section><h2>Learn by practising what you remember</h2>
+      <p>Make your own flashcards, reveal answers, review again on a suggested date and plan exam topics across the calendar. Export a study deck and re-import it when you return.</p>
+      <p>This works only from user-supplied material; it does not certify exam results or automatically save your deck online. Downloaded JSON files are not encrypted.</p>
+      <Link className="luqi-primary" to="/study-desk">Open the study desk</Link>
+    </section>
     <section><h2>Paid plans</h2>
       <p>Paid plans, credit purchases and checkout are not available. LUQI does not offer active commercial subscriptions in this pilot.</p>
       <p>We are evaluating affordable memberships, but no membership pricing, AI quota or paid entitlement is active. Commercial offers are being prepared. A paid offer needs a confirmed seller, a working payment account, a clear price and delivery and refund terms before customers can purchase it.</p>

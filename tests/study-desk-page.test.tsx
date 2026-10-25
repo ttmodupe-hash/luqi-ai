@@ -15,7 +15,7 @@ describe('Study Desk real offline customer journeys', () => {
     fireEvent.change(screen.getByLabelText('Question'), { target: { value: 'What is DHCP?' } });
     fireEvent.change(screen.getByLabelText('Answer'), { target: { value: 'Dynamic Host Configuration Protocol' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add study card' }));
-    expect(screen.getByText('What is DHCP?')).toBeTruthy();
+    expect(screen.getAllByText('What is DHCP?').length).toBeGreaterThanOrEqual(2);
     fireEvent.click(screen.getByRole('button', { name: 'Reveal answer' }));
     expect(screen.getByText('Dynamic Host Configuration Protocol')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'I remembered' }));

@@ -24,6 +24,7 @@ const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"))
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
+const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
@@ -61,6 +62,7 @@ export default function App() {
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
+        <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
         {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
         {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}

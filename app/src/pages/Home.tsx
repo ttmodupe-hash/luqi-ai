@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   BookOpen,
   BriefcaseBusiness,
+  GraduationCap,
   FlaskConical,
   Globe2,
   Layers3,
@@ -24,6 +25,7 @@ const icons = {
   academy: BookOpen,
   agents: Layers3,
   business: BriefcaseBusiness,
+  study: GraduationCap,
 };
 
 export default function Home() {

@@ -47,3 +47,12 @@ test('business quotation and pricing calculations are discoverable without billi
   assert.match(tools[0].description, /No AI calls/);
   assert.deepEqual(findWorkspaceTools('business payment processing', 'preview'), []);
 });
+
+test('local study practice is discoverable without implying generated answers or paid plans', () => {
+  const matches = findWorkspaceTools('study flashcards exam', 'ready');
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].id, 'study');
+  assert.equal(matches[0].path, '/study-desk');
+  assert.match(matches[0].description, /No AI calls/);
+  assert.equal(findWorkspaceTools('automated exam grading', 'ready').some(t => t.id === 'study'), false);
+});
