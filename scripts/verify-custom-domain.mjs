@@ -75,19 +75,28 @@ export async function verifyCustomDomain(expected, request = fetch) {
     support_mail_verified: false, launch_approved: false };
 }
 
+// A revision superseded before it goes live is not proof of broken HTTPS.
+export function domainCheckFailureMessage(stage) {
+  if (stage === "preflight") return "FAIL Custom HTTPS check not authorized or revision invalid.";
+  if (stage === "deployment") return "UNVERIFIED_DEPLOYMENT: expected release not observed; custom-domain HTTPS was NOT tested.";
+  if (stage === "https") return "UNVERIFIED_CUSTOM_HTTPS: release observed but hostname HTTPS/redirect acceptance failed.";
+  throw Error("INVALID_CHECK_STAGE");
+}
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  let stage = "preflight";
   try {
     if (process.env.LUQI_VERIFY_PUBLIC !== "true") throw Error("NO_PUBLIC_PROBE_APPROVAL");
     const expected = process.env.LUQI_EXPECTED_COMMIT;
     if (!SHA.test(expected || "")) throw Error("INVALID_EXPECTED_REVISION");
-    // Wait for source-verified Railway rollout before checking the custom hostname.
+    stage = "deployment";
     await waitForPublicRevision(expected, { timeoutMs: 300_000 });
+    stage = "https";
     await verifyCustomDomain(expected);
     console.log("PASS Custom LUQI HTTPS health, release identity and safe account entry.");
     console.log("No account created, user authenticated, mailbox checked or payment initiated.");
   } catch {
-    // Redact low-level DNS, TLS and network information; these may contain internals.
-    console.error("FAIL Custom-domain HTTPS acceptance is not yet verified.");
+    // Redact private transport, DNS/TLS and HTTP diagnostics.
+    console.error(domainCheckFailureMessage(stage));
     process.exitCode = 1;
   }
 }
