@@ -1,0 +1,31 @@
+name: LUQI P0 Operator Evidence Contract
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/p0-operator-handoff.mjs'
+      - 'scripts/review-p0-operator-handoff.mjs'
+      - 'tests/p0-operator-handoff.test.mjs'
+      - 'docs/P0_OPERATOR_EVIDENCE_HANDOFF_2026_10_25.md'
+      - '.github/workflows/p0-evidence-contract.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-handoff-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify script syntax
+        run: |
+          node --check scripts/p0-operator-handoff.mjs
+          node --check scripts/review-p0-operator-handoff.mjs
+      - name: Test redacted evidence with no vendor, database or payments
+        run: node --test tests/p0-operator-handoff.test.mjs
+      - name: Preserve scope
+        run: echo 'Synthetic documentary completeness only; no production test, vendor invoices, DB restore, merchant charge or launch approval.' >> "$GITHUB_STEP_SUMMARY"
