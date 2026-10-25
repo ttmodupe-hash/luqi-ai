@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asZar, checkPricing, createQuote, toCents } from '../src/lib/business-desk';
+import { asZar, checkPricing, createQuote, toCents, exportQuoteProject, importQuoteProject } from '../src/lib/business-desk';
 
 describe('zero-provider LUQI Business Desk', () => {
   it('does exact-cent arithmetic instead of floating point rounding', () => {
@@ -34,6 +34,47 @@ describe('zero-provider LUQI Business Desk', () => {
       { rows: [{ description: 'Service', quantity: 1.1, unitPriceZar: '1' }] },
     ]) expect(() => createQuote({ ...valid, ...patch })).toThrow('INVALID_BUSINESS_INPUT');
   });
+
+  it('round-trips only a versioned, editable quote without importing claimed totals or payments', () => {
+    const draft = { businessName: 'Dumela Studio', customerName: 'Mma Dineo',
+      reference: 'Q-204', rows: [
+        { description: 'Logo', quantity: 2, unitPriceZar: '100.25' },
+        { description: 'Delivery', quantity: 1, unitPriceZar: '0.10' },
+      ] };
+    const saved = exportQuoteProject(draft);
+    const parsed = JSON.parse(saved);
+    expect(parsed.format).toBe('luqi.business.quote.v1');
+    expect(parsed).not.toHaveProperty('payment');
+    expect(parsed).not.toHaveProperty('subtotalZar');
+    expect(importQuoteProject(saved)).toEqual({
+      ...draft, rows: [
+        { description: 'Logo', quantity: 2, unitPriceZar: '100.25' },
+        { description: 'Delivery', quantity: 1, unitPriceZar: '0.10' },
+      ],
+    });
+    expect(createQuote(importQuoteProject(saved)).subtotalZar).toBe('200.60');
+  });
+  it('refuses extra fields, forged invoice claims, unsupported formats and oversized projects', () => {
+    const fixture = JSON.parse(exportQuoteProject({
+      businessName: 'Local', customerName: 'Customer', reference: 'Q1',
+      rows: [{ description: 'Work', quantity: 1, unitPriceZar: '40' }],
+    }));
+    const altered = [
+      { ...fixture, format: 'luqi.business.quote.v2' },
+      { ...fixture, paid: true },
+      { ...fixture, rows: [{ ...fixture.rows[0], paid: true }] },
+      { ...fixture, rows: [{ ...fixture.rows[0], unitPriceZar: '1e100' }] },
+      { ...fixture, rows: [{ ...fixture.rows[0], quantity: 0 }] },
+      { ...fixture, rows: Array(13).fill(fixture.rows[0]) },
+      { ...fixture, businessName: 'Hello\nPaid in full' },
+    ];
+    for (const value of altered)
+      expect(() => importQuoteProject(JSON.stringify(value))).toThrow('INVALID_BUSINESS_INPUT');
+    for (const value of ['', '{}', '[1,2,3]', '{broken', 'x'.repeat(16_385),
+      '{"__proto__":{"isAdmin":true}}'])
+      expect(() => importQuoteProject(value)).toThrow('INVALID_BUSINESS_INPUT');
+  });
+
   it('calculates gross margin and whole break-even sales, not a profit guarantee', () => {
     expect(checkPricing({ sellingPriceZar: '150', directCostZar: '100', monthlyFixedZar: '1000' }))
       .toEqual({ unitSaleZar: '150.00', unitCostZar: '100.00', fixedCostsZar: '1000.00',

@@ -47,3 +47,21 @@ support. Do not charge for access to these currently free pilot tools.
 See #202 for broad launch holds: historical credentials, isolated
 production-derived restore, verified private support and account recovery,
 actual provider spend reconciliation and a verified merchant account.
+
+## Reusable local quote projects
+
+A signed-in plan is not needed to export a portable `luqi.business.quote.v1`
+JSON project or reopen it using the browser's local file picker. The app
+validates a strict 16 KiB maximum, whitelisted keys, the format/version,
+line count, decimal money, names and item limits. It ignores no unknown
+fields and recalculates the quote; imported invoices, payments or asserted
+totals are never trusted. Downloads are owned by the user and may contain
+client details: users must store and share them with appropriate care.
+
+Project files are not stored in browser storage or on LUQI servers. Users must
+download the file before leaving or reloading. Invalid/oversized files never
+replace the existing form. Late file reads cannot override new edits.
+Private, authenticated cross-device storage would be a separate,
+chargeable-value feature only after recovery/privacy, billing, entitlements
+and account-erasure checks have passed. This improvement does not introduce
+a paid subscription or a merchant integration.
