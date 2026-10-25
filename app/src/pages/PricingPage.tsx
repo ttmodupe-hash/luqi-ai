@@ -22,9 +22,14 @@ export default function PricingPage() {
       <p>Save account-owned notes, return to your conversations and download a copy. The notes workspace stores what you write and is separate from the AI trial.</p>
       <Link className="luqi-primary" to="/companion">Open your private notes</Link>
     </section>
+    <section><h2>Prepare for your next customer</h2>
+      <p>Use LUQI Business Desk to create a draft ZAR quotation and check your selling price, gross margin and break-even sales. Export a text draft without uploading customer information or using paid AI.</p>
+      <p>It is a drafting and arithmetic aid, not an invoicing, tax or payment-collection service.</p>
+      <Link className="luqi-primary" to="/business-desk">Open the business desk</Link>
+    </section>
     <section><h2>Paid plans</h2>
       <p>Paid plans, credit purchases and checkout are not available. LUQI does not offer active commercial subscriptions in this pilot.</p>
-      <p>Commercial offers are being prepared. A paid offer needs a confirmed seller, a working payment account, a clear price and delivery and refund terms before customers can purchase it.</p>
+      <p>We are evaluating affordable memberships, but no membership pricing, AI quota or paid entitlement is active. Commercial offers are being prepared. A paid offer needs a confirmed seller, a working payment account, a clear price and delivery and refund terms before customers can purchase it.</p>
       <p>Generated voice and AI video, direct social posting, professional submissions and autonomous Omega workers require further integration. They are not included in an active paid plan.</p>
     </section>
     <p><Link to="/start">Choose your first step</Link> · <Link to="/service-status">Check service status</Link> · <Link to="/contact">Help and feedback</Link></p>

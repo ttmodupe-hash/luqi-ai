@@ -1,12 +1,12 @@
 import { Link } from 'react-router';
-import { ArrowUpRight, FlaskConical, NotebookPen, Layers3, Check, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, FlaskConical, NotebookPen, Layers3, BriefcaseBusiness, Check, ShieldCheck } from 'lucide-react';
 
 export default function StartPage() {
   return <main className="luqi-start">
     <header className="luqi-start-heading">
       <p className="luqi-eyebrow">WELCOME TO THE LUQI PILOT</p>
       <h1>A useful place to begin.</h1>
-      <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, or save your ideas as notes.</p>
+      <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, prepare a client quote, or save your ideas as notes.</p>
       <p><Link className="luqi-primary" to="/ai-trial">Try the AI text trial <ArrowUpRight size={18} aria-hidden="true" /></Link></p>
       <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> Voice and paid plans are not enabled. AI text has a separate limited trial.</span>
     </header>
@@ -35,6 +35,14 @@ export default function StartPage() {
         <p>Add amounts in one currency or check a vehicle's service date and mileage using your own figures.</p>
         <ul><li><Check aria-hidden="true" /> Exact budget totals in your browser</li><li><Check aria-hidden="true" /> Supplied service intervals, not mechanical advice</li><li><Check aria-hidden="true" /> No account or stored task needed</li></ul>
         <Link className="luqi-primary" to="/omega-tasks">Try Omega calculations <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
+      <section className="luqi-start-card" aria-labelledby="start-business">
+        <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">NO ACCOUNT OR AI CHARGE</p>
+        <h2 id="start-business">Prepare a quotation for your next customer.</h2>
+        <p>Create a draft ZAR quote, download it as text and check whether a selling price covers your costs.</p>
+        <ul><li><Check aria-hidden="true" /> Itemised draft quotations</li><li><Check aria-hidden="true" /> Gross margin and break-even calculations</li><li><Check aria-hidden="true" /> Runs locally without sharing customer details</li></ul>
+        <Link className="luqi-primary" to="/business-desk">Open the business desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
     </div>
     <section className="luqi-start-details" aria-labelledby="pilot-expectations">

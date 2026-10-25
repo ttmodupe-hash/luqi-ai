@@ -26,15 +26,15 @@ test("workspace filters distinguish usable tools from previews without making AI
   await expect(
     page.getByText("Check AI trial availability"),
   ).toBeVisible();
-  await expect(page.getByRole("article")).toHaveCount(7);
+  await expect(page.getByRole("article")).toHaveCount(8);
   // The signed-in trial is one new discoverable card; all existing tools remain.
   await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
     "AI text trial", "Private notes", "Physics lab", "Service status",
-    "African languages", "Content studio", "Omega tasks",
+    "African languages", "Content studio", "Omega tasks", "Business desk",
   ]);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(6);
-  await expect(page.getByRole("article").getByRole("link")).toHaveCount(6);
+  await expect(page.getByRole("article")).toHaveCount(7);
+  await expect(page.getByRole("article").getByRole("link")).toHaveCount(7);
   await expect(page.getByRole("article").getByText("Limited trial · sign-in required", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "In development", exact: true })
@@ -46,14 +46,14 @@ test("workspace filters distinguish usable tools from previews without making AI
     page.getByRole("heading", { name: "No tools match your search." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Show all tools" }).click();
-  await expect(page.getByRole("article")).toHaveCount(7);
+  await expect(page.getByRole("article")).toHaveCount(8);
   await page.getByLabel("Filter workspace tools").fill("  PHYSICS  ");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("article").getByRole("heading", { name: "Physics lab" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear tool search" }).click();
-  await expect(page.getByRole("article")).toHaveCount(7);
+  await expect(page.getByRole("article")).toHaveCount(8);
   expect(requests).toEqual([]);
 });
 

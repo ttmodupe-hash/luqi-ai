@@ -20,6 +20,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
@@ -40,6 +41,7 @@ export default function App() {
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
+        <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
         {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
         {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}

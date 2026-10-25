@@ -38,3 +38,12 @@ test('Omega local budget and vehicle tools are discoverable without implying act
   assert.deepEqual(findWorkspaceTools('omega autonomous workers', 'ready'), []);
   assert.deepEqual(findWorkspaceTools('weather official alerts', 'ready'), []);
 });
+
+test('business quotation and pricing calculations are discoverable without billing or provider calls', () => {
+  const tools = findWorkspaceTools('business quotation', 'ready');
+  assert.equal(tools.length, 1);
+  assert.equal(tools[0].id, 'business');
+  assert.equal(tools[0].path, '/business-desk');
+  assert.match(tools[0].description, /No AI calls/);
+  assert.deepEqual(findWorkspaceTools('business payment processing', 'preview'), []);
+});
