@@ -64,6 +64,23 @@ const omega: TableContract = {
     handler_version: { type: 'varbinary(128)' }, state: { type: 'varchar(32)', collation: 'ascii_bin' },
     document: { type: 'json' } },
 };
+const memberEntitlements: TableContract = {
+  columns: ['user_id','plan','status','source','valid_until','updated_at'],
+  unique: [['user_id']], critical: {
+    user_id: {type:'bigint unsigned'},plan:{type:'varchar(16)',collation:'ascii_bin'},
+    status:{type:'varchar(16)',collation:'ascii_bin'},
+    source:{type:'varchar(24)',collation:'ascii_bin'},
+  },
+};
+const memberProjects: TableContract = {
+  columns: ['id','user_id','kind','title','document','revision','created_at','updated_at'],
+  unique: [['id']], critical: {
+    id:{type:'char(36)',collation:'ascii_bin'},
+    user_id:{type:'bigint unsigned'},
+    kind:{type:'varchar(16)',collation:'ascii_bin'},
+    document:{type:'json'},revision:{type:'int unsigned'},
+  },
+};
 const normalizeType = (type: string) => type.toLowerCase()
   .replace(/\b(tinyint|smallint|mediumint|int|bigint)\(\d+\)/g, '$1');
 const unavailable = () => new Error('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE');
@@ -119,7 +136,11 @@ Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
     const settings = parseMySqlConnectionSettings(environment);
     if (!settings) return { status: 'unconfigured', tables: 0 };
     const contracts = { ...RUNTIME_TABLES,
-      ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}) };
+      ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
+      ...(environment.LUQI_MEMBER_VAULT_ENABLED === 'true' ? {
+        luqi_member_entitlements_v1:memberEntitlements,
+        luqi_member_projects_v1:memberProjects,
+      } : {}) };
     connection = await mysql.createConnection({ ...settings, connectTimeout: 4_000 });
     const activeConnection = connection;
     await Promise.race([

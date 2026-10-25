@@ -16,6 +16,7 @@ import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
 import { accountSecurity } from "./account-security";
 import { omegaTasks } from "./omega-tasks";
+import { memberVault } from "./member-vault";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
 import { env } from "./lib/env";
@@ -112,6 +113,7 @@ app.use("*", async (c, next) => {
 app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/account", accountSecurity);
 app.route("/api/v1/omega/tasks", omegaTasks);
+app.route("/api/v1/members/projects", memberVault);
 
 // ── tRPC ───────────────────────────────────────────────────────────
 app.route("/api/trpc", createTrpcHttp(appRouter));
