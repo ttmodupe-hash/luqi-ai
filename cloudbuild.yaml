@@ -1,32 +1,10 @@
+# Legacy Cloud Build configuration is validation-only.
+# An external Cloud Build trigger may still invoke this file and incur build
+# costs. It cannot push an image, change Cloud Run traffic, or deploy LUQI.
+# Railway remains LUQI's source-linked production host.
 steps:
-  # Step 1: Build the container image using the Dockerfile context cleanly
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build', 
-      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/luqi-toons-repo/engine-image:latest', 
-      '.'
-    ]
-
-  # Step 2: Stream the container layer directly up to Google Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'push', 
-      'us-central1-docker.pkg.dev/$PROJECT_ID/luqi-toons-repo/engine-image:latest'
-    ]
-
-  # Step 3: Deploy the image live to Cloud Run and explicitly update routing parameters
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      - 'run'
-      - 'deploy'
-      - 'luqi-ai-backend'
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/luqi-toons-repo/engine-image:latest'
-      - '--region=us-central1'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      # CRITICAL ROUTING FIXES: Forces Google infrastructure to scale traffic to the latest build instantly
-      - '--update-traffic=latest=100'
-      - '--port=3000'
-
+    id: 'build-only'
+    args: ['build', '--file', 'Dockerfile', '--tag', 'luqi-validation-only:local', '.']
 options:
   logging: CLOUD_LOGGING_ONLY
