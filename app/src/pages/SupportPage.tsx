@@ -325,12 +325,20 @@ export default function SupportPage() {
     setSubmitError(false);
     if (!newSubject.trim() || !newDescription.trim() || !newCategory || !newPriority) return;
     try {
-      await post("/api/v25/support/tickets", {
+      const result = await post("/api/v25/support/tickets", {
         subject: newSubject,
         description: newDescription,
         category: newCategory,
         priority: newPriority,
       });
+      // A 2xx response without a persisted ticket identifier is not receipt proof.
+      // Preserve the draft for operator reconciliation rather than claiming success.
+      const ticketId = result?.ticket_id ?? result?.ticket?.ticket_id;
+      if (typeof ticketId !== "string" || !ticketId.trim()) {
+        setSubmitSuccess(false);
+        setSubmitError(true);
+        return;
+      }
       setSubmitSuccess(true);
       setNewSubject("");
       setNewDescription("");
@@ -846,7 +854,7 @@ export default function SupportPage() {
               <CardContent className="space-y-4">
                 {submitError && (
                   <div role="alert" className="p-3 rounded-lg border border-red-500/30 text-red-300 text-sm">
-                    Ticket submission could not be confirmed. Your draft is still here. Contact a verified support operator; do not repeatedly submit sensitive details.
+                    Ticket submission could not be confirmed. Your draft is still here. Check with a verified support operator before trying again; the request may have reached the server.
                   </div>
                 )}
                 {submitSuccess && (
