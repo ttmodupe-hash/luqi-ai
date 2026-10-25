@@ -167,3 +167,27 @@ its configuration rather than rolling back blindly. Root/operator credential
 revocation and designated human-account acceptance are not established here.
 The initial 941 MB backup and next scheduled backup were visible; no restore
 was run over production and no claim of production-derived recovery is made.
+
+
+## Optional private project vault (not activated, 25 October 2026)
+
+The signed-in encrypted project-vault foundation introduces an **independent,
+disabled-by-default** opt-in switch: LUQI_PROJECT_VAULT_ENABLED=true. The
+existing production web identity remains on its eight core grant sets; Omega
+remains another optional ninth set. The vault requires an explicit, separately
+reviewed table luqi_project_vault_v1 and grants **only SELECT, INSERT, UPDATE,
+DELETE on that table** to the restricted web runtime. No DDL, GRANT or
+credential is applied by startup or by the normal CI build.
+
+When enabled, runtime schema preflight requires the vault table's InnoDB
+ownership composite key, fields and types. The private operator --check
+requires exact grants for the combination of enabled modules, with no surplus
+grants or roles. --provision-new is disabled if either Omega or the vault
+flag is true. The worker must never inherit the vault permission set.
+
+A locally encrypted project is not a paid entitlement. The vault exposes no
+billing or subscription purchase controls. It must remain off in production
+until production-derived isolated restore, account deletion/retention,
+verified support and explicit operator approval have been completed. Do not
+run the synthetic MySQL CI job against Railway or substitute fixture recovery
+for a real production restore.
