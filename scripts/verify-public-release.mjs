@@ -127,7 +127,7 @@ await run("Legacy public login and administration pages are retired", async () =
   ]) {
     const result = await get(path, 16_384);
     verify(result.status === 200 && result.text.includes(requiredText));
-    verify(!/<(?:form|input|script)\\b/i.test(result.text));
+    verify(!/<(?:form|input|script)\b/i.test(result.text));
   }
 });
 
