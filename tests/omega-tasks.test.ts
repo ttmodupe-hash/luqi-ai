@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), submit: vi.fn(), get: vi.fn(), list: vi.fn(), cancel: vi.fn(), status: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), submit: vi.fn(), get: vi.fn(), list: vi.fn(), cancel: vi.fn(), removeFinished: vi.fn(), status: vi.fn() }));
 vi.mock('../api/services/pilotAuth', () => ({ authenticatePilotUser: mocks.auth,
   PilotAuthError: class extends Error { constructor(public code: string) { super(code); } } }));
 vi.mock('../api/services/omegaTaskStore', async importOriginal => ({
@@ -22,12 +22,12 @@ describe('authenticated Omega queue boundary', () => {
   it('authenticates every route before storage or disclosing configuration', async () => {
     mocks.auth.mockRejectedValue(new PilotAuthError('AUTH_REQUIRED'));
     for (const [path, method] of [['/status', 'GET'], ['/', 'GET'], ['/', 'POST'], [`/${id}`, 'GET'],
-      [`/${id}/cancel`, 'POST'], [`/${id}/run`, 'POST']] as const) {
+      [`/${id}/cancel`, 'POST'], [`/${id}/remove`, 'POST'], [`/${id}/run`, 'POST']] as const) {
       const response = await app.request(path, { method });
       expect(response.status).toBe(401);
       expect(response.headers.get('Cache-Control')).toBe('no-store');
     }
-    for (const operation of [mocks.get, mocks.submit, mocks.list, mocks.cancel, mocks.status]) expect(operation).not.toHaveBeenCalled();
+    for (const operation of [mocks.get, mocks.submit, mocks.list, mocks.cancel, mocks.removeFinished, mocks.status]) expect(operation).not.toHaveBeenCalled();
   });
   it('fails closed on auth storage failure and sanitizes its message', async () => {
     mocks.auth.mockRejectedValue(new PilotAuthError('AUTH_UNAVAILABLE'));
@@ -79,7 +79,27 @@ describe('authenticated Omega queue boundary', () => {
     mocks.cancel.mockResolvedValue({ id, state: 'cancelled' });
     expect((await post(`/${id}/cancel`, { confirm: true })).status).toBe(200);
     expect(mocks.cancel).toHaveBeenCalledWith(7, id);
-    for (const action of ['run', 'approve', 'recover', 'delete']) expect((await post(`/${id}/${action}`, {})).status).toBe(404);
+    for (const action of ['run', 'approve', 'recover', 'delete', 'erase-all']) expect((await post(`/${id}/${action}`, {})).status).toBe(404);
+  });
+  it('removes only an explicitly confirmed account-owned terminal task', async () => {
+    for (const invalid of [{}, { confirm: false }, { confirm: true, owner_id: 'other' }]) {
+      expect((await post(`/${id}/remove`, invalid)).status).toBe(400);
+    }
+    expect((await post(`/${id}/remove?actor=other`, { confirm: true })).status).toBe(400);
+    expect((await post('/not-a-uuid/remove', { confirm: true })).status).toBe(400);
+    expect(mocks.removeFinished).not.toHaveBeenCalled();
+    mocks.removeFinished.mockResolvedValue({ removed: true, id });
+    const result = await post(`/${id}/remove`, { confirm: true });
+    expect(result.status).toBe(200);
+    expect(result.headers.get('Cache-Control')).toBe('no-store');
+    expect(await result.json()).toEqual({ removed: true, id });
+    expect(mocks.removeFinished).toHaveBeenCalledExactlyOnceWith(7, id);
+  });
+  it('fails closed without confirming cleanup on a MySQL failure', async () => {
+    mocks.removeFinished.mockRejectedValue(new Error('private SQL details'));
+    const result = await post(`/${id}/remove`, { confirm: true });
+    expect(result.status).toBe(503);
+    expect(await result.json()).toEqual({ code: 'OMEGA_STORAGE_UNAVAILABLE' });
   });
   it.each([['OMEGA_TASK_NOT_FOUND', 404], ['OMEGA_TASK_CONFLICT', 409], ['OMEGA_TASK_LIMIT', 429], ['AUTH_REQUIRED', 401]] as const)
     ('maps %s without leaking task content', async (code, status) => {

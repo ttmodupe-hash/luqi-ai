@@ -59,5 +59,17 @@ omegaTasks.post('/:id/cancel', async c => {
   if (!id.success || !body.success || Object.keys(c.req.query()).length) return c.json({ code: 'INVALID_INPUT' }, 400);
   return c.json({ task: await omegaTaskStore.cancel(c.get('userId'), id.data) });
 });
+// Removal is deliberately restricted to terminal, non-billable tasks owned by
+// the verified account; it is not a general queue purge or a worker operation.
+omegaTasks.post('/:id/remove', async c => {
+  const id = omegaId.safeParse(c.req.param('id'));
+  const body = z.object({ confirm: z.literal(true) }).strict()
+    .safeParse(await c.req.json().catch(() => null));
+  if (!id.success || !body.success || Object.keys(c.req.query()).length)
+    return c.json({ code: 'INVALID_INPUT' }, 400);
+  await omegaTaskStore.removeFinished(c.get('userId'), id.data);
+  // Confirm only after commit; no task contents or ownership details returned.
+  return c.json({ removed: true, id: id.data });
+});
 // There is intentionally no run, approve, recover, arbitrary handler or admin API.
 omegaTasks.all('*', c => c.json({ code: 'OMEGA_ROUTE_NOT_FOUND' }, 404));
