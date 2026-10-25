@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { checkPricing, createQuote, exportQuoteProject, importQuoteProject, type QuoteDraft, type QuoteResult, type PricingResult } from '../lib/business-desk';
