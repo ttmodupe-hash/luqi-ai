@@ -115,7 +115,7 @@ test('Omega local calculators are discoverable at 320px without account or netwo
   await page.getByLabel('Filter workspace tools', { exact: true }).fill('omega travel budget');
   const card = page.locator('.luqi-tool-card');
   await expect(card).toHaveCount(1);
-  await expect(card.getByText('Two in-browser tools · no account', { exact: true })).toBeVisible();
+  await expect(card.getByText('Local · no account', { exact: true })).toBeVisible();
   await card.getByRole('link', { name: 'Open omega tasks' }).click();
   await expect(page.getByRole('heading', { name: 'Tasks, with a clear record.' })).toBeVisible();
   await page.getByLabel('Local amounts (one per line)').fill('100.25\\n40\\n0.10'.replaceAll('\\n', '\n'));

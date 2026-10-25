@@ -71,7 +71,7 @@ export const workspaceTools = [
     category: "Travel and vehicle calculations",
     description:
       "Use Omega's travel budget and vehicle service schedule calculators now, directly in your browser without an account or paid AI. The separate saved task queue and workers are not activated.",
-    status: "Two in-browser tools · no account",
+    status: "Local · no account",
     ready: true,
     path: "/omega-tasks",
     icon: "agents",
