@@ -98,6 +98,39 @@ for (let start = 0; start < checks.length; start += 3) {
     if (check.contains) verify(result.text.includes(check.contains));
   })));
 }
+// Bounded, unauthenticated account entry checks against the exact deployed revision.
+// Deliberately do NOT follow a redirect or submit a registration/login request.
+// No query strings, user identifiers, passwords or email addresses are sent.
+for (const [path, target] of [
+  ["/signup", "/#/join"],
+  ["/login", "/#/companion"],
+]) {
+  await run("Published account entry " + path, async () => {
+    const response = await fetch(origin + path, {
+      method: "GET", cache: "no-store", credentials: "omit", redirect: "manual",
+      headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(15_000),
+    });
+    try {
+      verify(response.status === 302);
+      verify(response.headers.get("Location") === target);
+      verify(response.headers.get("Cache-Control") === "no-store");
+    } finally {
+      // These redirects have no useful body; never follow their destination.
+      void response.body?.cancel().catch(() => {});
+    }
+  });
+}
+await run("Legacy public login and administration pages are retired", async () => {
+  for (const [path, requiredText] of [
+    ["/login.html", "Sign in to LUQI"],
+    ["/admin.html", "Legacy administration is unavailable"],
+  ]) {
+    const result = await get(path, 16_384);
+    verify(result.status === 200 && result.text.includes(requiredText));
+    verify(!/<(?:form|input|script)\\b/i.test(result.text));
+  }
+});
+
 await run("Published Omega and companion frontend", async () => {
   const home = await get("/", 131_072);
   verify(home.status === 200);
