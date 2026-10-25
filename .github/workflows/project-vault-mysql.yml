@@ -17,6 +17,8 @@ on:
       - 'app/src/pages/BusinessDeskPage.tsx'
       - 'tests/project-vault-client.test.ts'
       - 'tests/account-project-vault.test.tsx'
+      - 'vault-browser-tests/**'
+      - 'playwright.vault.config.ts'
       - 'db/migrations/20261025_project_vault.sql'
       - 'db/runtimeSchema.ts'
       - 'db/runtimeRole.ts'
@@ -84,9 +86,7 @@ jobs:
         run: npx vite build
       - name: Install locked browser engines
         run: npx playwright install --with-deps chromium webkit
-      - name: Verify real encrypted data round-trip on 320px Chromium mobile
-        run: npx playwright test browser-tests/account-project-vault.spec.ts --config=playwright.config.ts --project=mobile
-      - name: Verify browser consent, encryption and disabled-gate behavior on WebKit
-        run: npx playwright test browser-tests/account-project-vault.spec.ts --config=playwright.webkit.config.ts
+      - name: Verify encryption, consent, restore and deletion on isolated mobile Chromium and WebKit
+        run: npx playwright test --config=playwright.vault.config.ts
       - name: Record isolated scope
         run: echo 'All accounts, project records and HTTP API results were synthetic Playwright fixtures. No real service, database migration, AI, payments or provider usage.' >> "$GITHUB_STEP_SUMMARY"
