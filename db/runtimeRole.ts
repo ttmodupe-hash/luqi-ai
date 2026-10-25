@@ -21,9 +21,15 @@ export async function prepareRuntimeRole(environment: Record<string, string | un
   try {
     const settings = parseMySqlConnectionSettings(environment);
     const password = environment.LUQI_RUNTIME_DB_PASSWORD ?? '';
+    const omegaEnabled = environment.LUQI_OMEGA_WEB_ENABLED === 'true';
+    // A previously approved Omega grant is checkable without creating users,
+    // modifying grants or running migrations. Provision-new remains core-only.
+    const expectedGrants: Readonly<Record<string, string>> = omegaEnabled
+      ? { ...WEB_RUNTIME_GRANTS, omega_tasks_v1: 'SELECT, INSERT, UPDATE, DELETE' }
+      : WEB_RUNTIME_GRANTS;
     if (!settings || !/^[a-f0-9]{64}$/.test(password) || password === settings.password ||
         !/^[a-zA-Z0-9_]{1,64}$/.test(settings.database) || settings.user === WEB_RUNTIME_USER ||
-        environment.LUQI_OMEGA_WEB_ENABLED === 'true') throw unavailable();
+        (provisionNew && omegaEnabled)) throw unavailable();
     const fixture = environment.LUQI_MYSQL_CI_FIXTURE === 'true' && settings.host === '127.0.0.1' &&
       settings.port === 3306 && settings.database === 'luqi_ci';
     if (!fixture && !settings.host.endsWith('.railway.internal')) throw unavailable();
@@ -48,7 +54,7 @@ export async function prepareRuntimeRole(environment: Record<string, string | un
     if (roles[0]?.active_roles !== 'NONE') throw unavailable();
     const [grants] = await restricted.query<RowDataPacket[]>({ sql: 'SHOW GRANTS', timeout: 4_000 });
     const expected = new Set([`GRANT USAGE ON *.* TO ${account}`,
-      ...Object.entries(WEB_RUNTIME_GRANTS).map(([table, permissions]) =>
+      ...Object.entries(expectedGrants).map(([table, permissions]) =>
         `GRANT ${permissions} ON ${database}.${mysql.escapeId(table)} TO ${account}`)]);
     if (grants.length !== expected.size || grants.some(row => !expected.delete(String(Object.values(row)[0]))) || expected.size) {
       throw unavailable();
