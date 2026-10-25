@@ -440,6 +440,17 @@ function authThrottleResponse(c: any, error: AuthThrottleError) {
     error.code === "AUTH_RATE_LIMITED" ? 429 : 503);
 }
 
+// A concurrent registration can pass the pre-insert SELECT just before another
+// request commits the same unique email. Only a MySQL 1062 from the *users
+// insert* is treated as an existing account; other storage failures remain 503.
+// Do not surface raw SQL messages, identifiers or unexpected driver errors.
+function isDuplicateUserInsert(error: unknown): boolean {
+  const outer = error && typeof error === "object" ? error as Record<string, unknown> : null;
+  const inner = outer?.cause && typeof outer.cause === "object"
+    ? outer.cause as Record<string, unknown> : null;
+  return [outer, inner].some(value => value?.code === "ER_DUP_ENTRY" && value?.errno === 1062);
+}
+
 const handleSignup = async (c: any) => {
   c.header("Cache-Control", "no-store");
   const body = (await c.req.json().catch(() => null)) ?? {};
@@ -465,8 +476,15 @@ const handleSignup = async (c: any) => {
     if (existing) return c.json({ detail: "Account already exists" }, 409);
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const [result] = await db.insert(users).values({ email, passwordHash, name });
-    const userId = Number(result.insertId);
+    let insertedId: unknown;
+    try {
+      const [result] = await db.insert(users).values({ email, passwordHash, name });
+      insertedId = result.insertId;
+    } catch (error) {
+      if (isDuplicateUserInsert(error)) return c.json({ detail: "Account already exists" }, 409);
+      throw error;
+    }
+    const userId = Number(insertedId);
     if (!Number.isSafeInteger(userId) || userId <= 0) {
       throw new Error("Invalid persisted account identifier");
     }
