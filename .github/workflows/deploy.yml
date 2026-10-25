@@ -1,57 +1,16 @@
-name: LuqiToons Automated CI/CD Production Pipeline
-
+# LEGACY GOOGLE CLOUD DEPLOYMENT RETIRED. Railway is the current LUQI web host.
+# Explicit dispatch is a refusal, not authorization to deploy or access secrets.
+name: LUQI Legacy GCP Deployment Disabled
 on:
-  push:
-    branches:
-      - main # Triggers the build deployment sequence instantly on pushes to your main branch
-
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: us-central1
-  SERVICE_NAME: luqi-ai-backend
-  GAR_LOCATION: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/luqi-toons-repo/engine-image
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  build-and-deploy:
-    # GCP is a separate, explicitly enabled release target; Railway is primary.
-    if: ${{ vars.GCP_DEPLOY_ENABLED == 'true' }}
+  disabled:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Confirm GCP deploy credentials are available
-        env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      - name: Refuse obsolete production deployment
         run: |
-          test -n "$GCP_PROJECT_ID" && test -n "$GCP_SA_KEY"
-      - name: Checkout Code Repository Layer
-        uses: actions/checkout@v4
-
-      - name: Authenticate Securely with Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }} # Uses your encrypted Service Account secret credentials matrix
-
-      - name: Set up Google Cloud SDK Command Suite
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Authorize Docker Client for Artifact Registry Access
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-      - name: Compile and Build Docker Container Image Layer
-        run: |
-          docker build -t ${{ env.GAR_LOCATION }}:${{ github.sha }} .
-          docker tag ${{ env.GAR_LOCATION }}:${{ github.sha }} ${{ env.GAR_LOCATION }}:latest
-
-      - name: Stream Container Up to Google Artifact Storage Repository
-        run: |
-          docker push ${{ env.GAR_LOCATION }}:${{ github.sha }}
-          docker push ${{ env.GAR_LOCATION }}:latest
-
-      - name: Release Live Image Update to Google Cloud Run Panel
-        run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image ${{ env.GAR_LOCATION }}:${{ github.sha }} \
-            --platform managed \
-            --region ${{ env.REGION }} \
-
-
+          echo "Legacy GCP deployment is retired. Use a separately reviewed, approved target-specific release process."
+          exit 1
