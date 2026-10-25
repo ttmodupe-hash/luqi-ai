@@ -42,7 +42,7 @@ export function todayLocal(now: Date = new Date()): string {
 function plusDays(day: string, days: number): string {
   return new Date(dateUTC(day) + days * 86_400_000).toISOString().slice(0, 10);
 }
-function whole(value: unknown, min: number, max: number): boolean {
+function whole(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
 }
 export function makeCard(question: string, answer: string): StudyCard {
