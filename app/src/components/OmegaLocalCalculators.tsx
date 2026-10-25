@@ -77,7 +77,7 @@ export default function OmegaLocalCalculators() {
           setMode(event.target.value as Mode); invalidate();
         }}>
           <option value="travel.budget">Travel budget total</option>
-          <option value="vehicle.schedule">Vehicle service schedule</option>
+          <option value="vehicle.schedule">Vehicle service schedule (local)</option>
         </select>
         {mode === 'travel.budget' ? <>
           <label htmlFor="omega-local-currency">Local currency code</label>
