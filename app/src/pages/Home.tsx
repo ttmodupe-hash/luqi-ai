@@ -28,6 +28,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "preview">("all");
   const tools = findWorkspaceTools(query, filter);
+  const readyCount = tools.filter(tool => tool.ready && !!tool.path).length;
   return (
     <main className="luqi-home">
       <div className="luqi-home-inner">
@@ -120,6 +121,9 @@ export default function Home() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Find a tool…"
+                type="search"
+                enterKeyHint="search"
+                autoComplete="off"
               />
               {query && (
                 <button
@@ -132,8 +136,8 @@ export default function Home() {
               )}
             </label>
           </div>
-          <p className="luqi-sr-only" role="status">
-            {tools.length} tools shown
+          <p className="luqi-tool-count" role="status" aria-live="polite" aria-atomic="true">
+            {tools.length === 0 ? "No matching tools" : `${tools.length} matching ${tools.length === 1 ? "tool" : "tools"}`} · {readyCount} available to open
           </p>
           <div className="luqi-tool-grid">
             {tools.map((tool, index) => {
