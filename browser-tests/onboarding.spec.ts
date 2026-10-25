@@ -32,6 +32,20 @@ test('homepage offers a single-click account entry with working aliases on mobil
   await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
 });
 
+test('obsolete public login and admin URLs cannot collect credentials or simulate admin access', async ({ page }) => {
+  await page.goto('/login.html');
+  await expect(page.getByRole('heading', { name: 'Sign in to LUQI' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Create account', exact: true })).toHaveAttribute('href', '/#/join');
+  await expect(page.locator('form, input[type="password"]')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Create account', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
+
+  await page.goto('/admin.html');
+  await expect(page.getByRole('heading', { name: 'Legacy administration is unavailable' })).toBeVisible();
+  await expect(page.locator('form, input, button')).toHaveCount(0);
+  await expect(page.getByText(/does not provide authenticated administrator access/)).toBeVisible();
+});
+
 test('new visitors can choose a real tool or register from the welcome page at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 820 });
   await page.goto('/#/');
