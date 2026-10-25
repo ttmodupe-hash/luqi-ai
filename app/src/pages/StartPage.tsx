@@ -1,12 +1,12 @@
 import { Link } from 'react-router';
-import { ArrowUpRight, FlaskConical, NotebookPen, Layers3, BriefcaseBusiness, Check, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, FlaskConical, NotebookPen, Layers3, BriefcaseBusiness, GraduationCap, Check, ShieldCheck } from 'lucide-react';
 
 export default function StartPage() {
   return <main className="luqi-start">
     <header className="luqi-start-heading">
       <p className="luqi-eyebrow">WELCOME TO THE LUQI PILOT</p>
       <h1>A useful place to begin.</h1>
-      <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, prepare a client quote, or save your ideas as notes.</p>
+      <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, prepare a client quote, practise flashcards, or save your ideas as notes.</p>
       <p><Link className="luqi-primary" to="/ai-trial">Try the AI text trial <ArrowUpRight size={18} aria-hidden="true" /></Link></p>
       <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> Voice and paid plans are not enabled. AI text has a separate limited trial.</span>
     </header>
@@ -43,6 +43,14 @@ export default function StartPage() {
         <p>Create a draft ZAR quote, download it as text and check whether a selling price covers your costs.</p>
         <ul><li><Check aria-hidden="true" /> Itemised draft quotations</li><li><Check aria-hidden="true" /> Gross margin and break-even calculations</li><li><Check aria-hidden="true" /> Runs locally without sharing customer details</li></ul>
         <Link className="luqi-primary" to="/business-desk">Open the business desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
+      <section className="luqi-start-card" aria-labelledby="start-study">
+        <span className="luqi-tool-icon luqi-icon-study"><GraduationCap aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">STUDY LOCALLY · NO AI CHARGE</p>
+        <h2 id="start-study">Practise what you want to remember.</h2>
+        <p>Build flashcards from your trusted materials, check your recall and plan topics ahead of an exam.</p>
+        <ul><li><Check aria-hidden="true" /> User-authored flashcards and review dates</li><li><Check aria-hidden="true" /> Export and reopen your deck</li><li><Check aria-hidden="true" /> No subscription or AI required</li></ul>
+        <Link className="luqi-primary" to="/study-desk">Open the study desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
     </div>
     <section className="luqi-start-details" aria-labelledby="pilot-expectations">

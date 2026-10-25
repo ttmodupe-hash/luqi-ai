@@ -87,6 +87,17 @@ export const workspaceTools = [
     path: "/business-desk",
     icon: "business",
   },
+  {
+    id: "study",
+    title: "Study desk",
+    category: "Self-paced flashcards and exam topic planning",
+    description:
+      "Create and review your own flashcards, plan topics before an exam, and download or import a bounded study deck. No AI calls, cloud storage or account required.",
+    status: "Local · no account",
+    ready: true,
+    path: "/study-desk",
+    icon: "study",
+  },
 ] as const;
 
 // Normalize the fixed public catalog once, not once per word on each keystroke.
