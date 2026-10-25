@@ -191,7 +191,7 @@ export default function BusinessDeskPage() {
           <p className="luqi-business-result-note">Review your business identity, price, applicable taxes and terms before you share it. LUQI does not issue tax invoices or collect payment.</p>
         </section>}
         <EncryptedQuoteBackup quote={quote} onRestore={restoreEncryptedQuote} />
-        {import.meta.env.VITE_LUQI_PROJECT_VAULT_UI === 'true' &&
+        {(import.meta as ImportMeta & { env?: { VITE_LUQI_PROJECT_VAULT_UI?: string } }).env?.VITE_LUQI_PROJECT_VAULT_UI === 'true' &&
           <AccountProjectVault quote={quote} onRestoreQuote={restoreEncryptedQuote} />}
       </section>
       <section className="luqi-business-panel" aria-labelledby="luqi-pricing-heading">
