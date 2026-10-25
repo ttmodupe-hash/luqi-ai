@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 test('phone users prepare an actual quotation draft, download it and never send personal details', async ({ page, baseURL }) => {
   const origin = new URL(baseURL!).origin;
@@ -91,7 +92,12 @@ test('reusable local quotation can be downloaded and reopened after a reload', a
   expect(saved).toBeTruthy();
   await page.reload();
   await expect(page.getByLabel('Business name')).toHaveValue('');
-  await page.getByLabel('Restore editable quotation (.json)').setInputFiles(saved!);
+  // Playwright's internal download path has no .json extension; preserve the
+  // actual user-visible download filename when simulating a restored project.
+  await page.getByLabel('Restore editable quotation (.json)').setInputFiles({
+    name: download.suggestedFilename(), mimeType: 'application/json',
+    buffer: readFileSync(saved!),
+  });
   await expect(page.getByLabel('Business name')).toHaveValue('Ubuntu Studio');
   await expect(page.getByLabel('Customer name')).toHaveValue('Local Client');
   await expect(page.getByRole('status', { name: 'Draft quotation result' })).toContainText('R 175.25');
