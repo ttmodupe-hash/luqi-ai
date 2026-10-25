@@ -16,7 +16,7 @@ test('homepage offers a single-click account entry with working aliases on mobil
   await expect(join).toBeVisible();
   await expect(join).toHaveAttribute('href', '#/join');
   await join.click();
-  await expect(page).toHaveURL(/#\\/join$/);
+  await expect(page).toHaveURL(/#\/join$/);
   await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toHaveAttribute('type', 'email');
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('autocomplete', 'new-password');
@@ -26,7 +26,7 @@ test('homepage offers a single-click account entry with working aliases on mobil
   await page.getByRole('button', { name: 'Use an existing account' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
   await page.goto('/#/signup');
-  await expect(page).toHaveURL(/#\\/join$/);
+  await expect(page).toHaveURL(/#\/join$/);
   await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
   await page.goto('/#/login');
   await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
