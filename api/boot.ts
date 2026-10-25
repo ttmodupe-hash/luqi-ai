@@ -115,6 +115,21 @@ app.route("/api/v1/omega/tasks", omegaTasks);
 // ── tRPC ───────────────────────────────────────────────────────────
 app.route("/api/trpc", createTrpcHttp(appRouter));
 
+// Direct bookmarks for account entry use canonical hash routes. Never forward
+// query parameters, user data or credentials to another origin.
+for (const path of ["/signup", "/register", "/sign-up", "/join"]) {
+  app.get(path, c => {
+    c.header("Cache-Control", "no-store");
+    return c.redirect("/#/join", 302);
+  });
+}
+for (const path of ["/login", "/signin", "/sign-in"]) {
+  app.get(path, c => {
+    c.header("Cache-Control", "no-store");
+    return c.redirect("/#/companion", 302);
+  });
+}
+
 // ── HEALTH CHECK ENDPOINTS (Railway, Docker & Uptime monitors) ─────
 app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
 app.get("/v1/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
