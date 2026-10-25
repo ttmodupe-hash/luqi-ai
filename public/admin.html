@@ -1,194 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LuqiToons - Protected Administrative Command Grid</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
-        body { background: #0b0f17; color: #f1f5f9; padding: 30px; }
-        .dashboard-layout { display: grid; grid-template-columns: 1fr; gap: 30px; max-width: 1400px; margin: auto; }
-        .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-        p { color: #9ca3af; font-size: 0.85rem; margin-bottom: 20px; }
-        .ledger-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-        .ledger-table th, .ledger-table td { padding: 12px 16px; border-bottom: 1px solid #1f2937; }
-        .ledger-table th { background: #1e293b; color: #38bdf8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-        .ledger-table tr:hover { background: #1f2937; }
-        .btn { background: #2563eb; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        .btn:hover { background: #1d4ed8; }
-        .badge { background: #065f46; color: #34d399; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
-        .terminal { background: #020617; border: 1px solid #1e293b; border-radius: 6px; padding: 14px; font-family: monospace; color: #eab308; font-size: 0.8rem; height: 180px; overflow-y: auto; line-height: 1.6; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <title>LUQI administrative access unavailable</title>
+  <style>
+    body { margin: 0; background: #102017; color: #f4f7ed; font: 16px/1.6 system-ui, sans-serif; }
+    main { margin: 10vh auto; width: min(90vw, 540px); padding: 28px; border: 1px solid #6f886c; border-radius: 16px; }
+    p { color: #d8e2d4; }
+    a { color: #ebf6d6; text-decoration: underline; display: inline-block; padding: 12px; min-height: 44px; }
+    a:focus-visible { outline: 3px solid #bedfa1; }
+  </style>
 </head>
 <body>
-
-    <div style="max-width:1400px; margin:0 auto 24px auto; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <h1 style="font-size:1.8rem; font-weight:800; color:#fff;">LuqiToons HQ Admin Terminal</h1>
-            <p style="color:#9ca3af;">Protected Workspace Management, Transaction Audits & System Self-Optimization Controls</p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <a href="/" class="btn" style="background:#334155; text-decoration:none;">Platform Home</a>
-            <button class="btn" style="background:#475569;" onclick="logoutAdmin()">Secure Exit</button>
-        </div>
-    </div>
-
-    <div class="dashboard-layout">
-        
-        <!-- MODULE 1: COMPREHENSIVE STRIPE TRANSACTION LEDGER -->
-        <div class="card">
-            <h2>💳 Secured Corporate Revenue Ledger</h2>
-            <p>Monitors confirmed incoming transactional subscription milestones. This panel is strictly inaccessible on the public frontend domain.</p>
-            <button id="fetch-ledger-btn" class="btn">Query Financial Registry Logs</button>
-            
-            <table class="ledger-table" style="margin-top: 16px;">
-                <thead>
-                    <tr>
-                        <th>Account ID</th>
-                        <th>Reference Token Mapping</th>
-                        <th>Processing Capture Event</th>
-                        <th>Execution Timestamp</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="ledger-entries-target">
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: #4b5563; padding: 30px;">Initialize query sequence to extract live cloud transaction registers...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- MODULE 2: META-INTELLIGENCE AGENT SHIELD CONTROLS -->
-        <div class="card" style="border-color: #d97706;">
-            <h2 style="color: #eab308;">🤖 Self-Improving Agent Control Room</h2>
-            <p>Triggers the background optimization loop to scan configuration metrics and update core application prompts automatically.</p>
-            
-            <div id="admin-agent-console" class="terminal">
-                [SYSTEM RECON] Standing by for orchestration orders. Self-healing algorithms initialized...
-            </div>
-            <button id="trigger-agent-btn" class="btn" style="background: #d97706; margin-top: 14px;">Deploy Autonomous Self-Optimization Loop</button>
-        <!-- MODULE 3: REAL-TIME USER CRITIQUE & FLAW BACKLOG -->
-        <div class="card" style="border-color:#dc2626;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="color:#f87171;">🚨 Real-Time User Critique & Flaw Backlog</h2>
-                <button id="refresh-critiques-btn" class="btn" style="background:#991b1b; padding:6px 14px; font-size:0.75rem; width:auto; margin:0;">Sync Critiques</button>
-            </div>
-            <p>Displays raw complaints processed directly through the floating widget framework and queued for autonomous remediation.</p>
-            
-            <div id="critique-log-stream" style="background:#020617; border:1px solid #1e293b; padding:14px; border-radius:6px; font-family:monospace; font-size:0.8rem; height:220px; overflow-y:auto; color:#fca5a5; line-height:1.6;">
-                [INFO] Awaiting new user feedback data streams...
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        const API_BASE_URL = window.location.origin + "/api/v1";
-
-        // Fetch and display live critiques
-        async function loadCritiques() {
-            const streamBox = document.getElementById('critique-log-stream');
-            try {
-                const res = await fetch(`${API_BASE_URL}/workspace/critiques`);
-                const critiques = await res.json();
-                if(!critiques || critiques.length === 0) {
-                    streamBox.innerHTML = '<span style="color:#64748b;">[CLEAN] No open critiques logged in current operational window.</span>';
-                    return;
-                }
-                streamBox.innerHTML = '';
-                critiques.forEach(item => {
-                    const sevColor = item.severity_rating >= 4 ? '#ef4444' : (item.severity_rating >= 3 ? '#f59e0b' : '#38bdf8');
-                    streamBox.innerHTML += `
-                        <div style="margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #1e293b;">
-                            <span style="color:${sevColor}; font-weight:bold;">[${item.critique_type}] Severity: ${item.severity_rating}/5</span> | 
-                            <span style="color:#94a3b8;">${item.submitted_at}</span> by <code>${item.user_id}</code><br>
-                            <span style="color:#f1f5f9;">"${item.user_complaint_text}"</span><br>
-                            <span style="color:#64748b; font-size:0.75rem;">URL: ${item.associated_page_url || '/'} | Status: <strong style="color:#34d399;">${item.agent_remediation_status}</strong></span>
-                        </div>
-                    `;
-                });
-            } catch(e) {
-                streamBox.innerHTML = `<span style="color:#ef4444;">[ERROR] Failed to stream critique backlog: ${e.message}</span>`;
-            }
-        }
-
-        document.getElementById('refresh-critiques-btn')?.addEventListener('click', loadCritiques);
-        window.addEventListener('DOMContentLoaded', loadCritiques);
-
-        // Secured query extraction to fetch administrative datasets
-        document.getElementById('fetch-ledger-btn').addEventListener('click', async () => {
-            const token = localStorage.getItem("luqi_admin_token") || sessionStorage.getItem("luqi_admin_token") || "LUQI-ADMIN-2026";
-            const targetTable = document.getElementById('ledger-entries-target');
-
-            targetTable.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#eab308;">Decryption sequence running...</td></tr>';
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/admin/billing-ledger`, {
-                    method: "GET",
-                    headers: { 
-                        "Authorization": `Bearer ${token}`,
-                        "x-luqi-admin-key": token
-                    }
-                });
-
-                if(res.status === 403 || res.status === 401) {
-                    alert("Access Rejection: Administrative validation failure. Redirecting to login.");
-                    window.location.href = "login.html";
-                    return;
-                }
-
-                const data = await res.json();
-                targetTable.innerHTML = '';
-
-                if(!data || data.length === 0) {
-                    targetTable.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6b7280;">No revenue records logged in current operational cycle.</td></tr>';
-                    return;
-                }
-
-                data.forEach(log => {
-                    targetTable.innerHTML += `
-                        <tr>
-                            <td><strong>${log.customer || log.user_id || 'Corporate Client'}</strong></td>
-                            <td><code>${log.transaction_reference || log.id || 'TX-REF-001'}</code></td>
-                            <td><span style="color:#34d399;">${log.payout_details || log.amount || 'Verified Settlement'}</span></td>
-                            <td>${log.timestamp || new Date().toISOString()}</td>
-                            <td><span class="badge">VERIFIED</span></td>
-                        </tr>
-                    `;
-                });
-            } catch (err) {
-                targetTable.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#ef4444;">Database query processing error: ' + err.message + '</td></tr>';
-            }
-        });
-
-        // Triggering the self-improving meta-intelligence engine from the admin deck
-        document.getElementById('trigger-agent-btn').addEventListener('click', async () => {
-            const consoleBox = document.getElementById('admin-agent-console');
-            consoleBox.innerHTML += `\n[COMPILE] Compiling analytics files for optimization scan...`;
-            consoleBox.scrollTop = consoleBox.scrollHeight;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/intelligence/self-optimize`, { method: "POST" });
-                const patchData = await res.json();
-                
-                consoleBox.innerHTML += `
-                    \n<span style="color:#34d399;">[RESOLVED] Patched Gaps: ${(patchData.detected_bottlenecks || []).join(', ') || 'Zero critical vulnerabilities'}</span>
-                    \n[SUCCESS] Core Optimization Patch Applied. Score: +${patchData.capability_expansion_score || 15}%
-                    \n[SYNC COMPLETE] System Prompt layers updated to absolute peak capabilities.
-                `;
-            } catch(err) {
-                consoleBox.innerHTML += `\n[FAIL] Self-optimization process thread dropped: ${err.message}`;
-            }
-            consoleBox.scrollTop = consoleBox.scrollHeight;
-        });
-
-        function logoutAdmin() {
-            localStorage.removeItem("luqi_admin_token");
-            sessionStorage.removeItem("luqi_admin_token");
-            window.location.href = "login.html";
-        }
-    </script>
+  <main>
+    <h1>Legacy administration is unavailable</h1>
+    <p>This old public administrative page has been retired. It does not provide authenticated administrator access, payment reports or automated system controls.</p>
+    <p>Use your existing privately verified operator channel for administrative access. Never enter credentials into an old bookmark or public issue.</p>
+    <a href="/#/start">Return to LUQI</a>
+  </main>
 </body>
 </html>
