@@ -251,6 +251,24 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
     await root.query("GRANT SELECT, INSERT, UPDATE, DELETE ON luqi_ci.omega_tasks_v1 TO 'luqi_web_runtime'@'%'");
     expect(await checkRuntimeSchema({ ...runtimeEnvironment, LUQI_OMEGA_WEB_ENABLED: 'true' }))
       .toEqual({ status: 'validated', tables: 9 });
+    // The owner/operator separately applied this exact table grant to the
+    // disposable fixture. --check must validate it but never change it.
+    const omegaRole = { ...runtimeEnvironment, DATABASE_URL: ROOT_URL,
+      LUQI_RUNTIME_DB_PASSWORD: RUNTIME_PASSWORD, LUQI_OMEGA_WEB_ENABLED: 'true' };
+    const omegaCheck = runNode('dist/prepare-mysql-runtime-role.js', ['--check'], omegaRole);
+    expect(await finish(omegaCheck)).toBe(0);
+    expect(omegaCheck.output()).toContain('"tables":9');
+    expect(omegaCheck.output()).toContain('"privileges":"table_only"');
+    expect(omegaCheck.output()).not.toContain(RUNTIME_PASSWORD);
+    const refuseProvision = runNode('dist/prepare-mysql-runtime-role.js', ['--provision-new'], omegaRole);
+    expect(await finish(refuseProvision)).toBe(1);
+    expect(refuseProvision.output()).not.toContain(RUNTIME_PASSWORD);
+    // A core-only check still rejects an unexpected extra grant, not silently
+    // broadening the policy when Omega intake is disabled.
+    const coreCheck = runNode('dist/prepare-mysql-runtime-role.js', ['--check'],
+      { ...omegaRole, LUQI_OMEGA_WEB_ENABLED: 'false' });
+    expect(await finish(coreCheck)).toBe(1);
+
   }, 25_000);
 
   it('fails closed before listening for unreachable or invalid configured MySQL', async () => {

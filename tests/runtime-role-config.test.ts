@@ -6,6 +6,16 @@ afterEach(() => vi.clearAllMocks());
 const environment = { DATABASE_URL: 'mysql://operator:old-secret@mysql.railway.internal:3306/railway',
   LUQI_RUNTIME_DB_PASSWORD: 'a'.repeat(64) };
 describe('private role provisioning configuration', () => {
+  it('allows only a read-only check of separately prepared Omega grants', async () => {
+    const omega = { ...environment, LUQI_OMEGA_WEB_ENABLED: 'true' };
+    vi.mocked(mysql.createConnection).mockRejectedValueOnce(new Error('private-database-detail'));
+    await expect(prepareRuntimeRole(omega, false)).rejects.toThrow('MYSQL_RUNTIME_ROLE_UNAVAILABLE');
+    expect(mysql.createConnection).toHaveBeenCalledTimes(1);
+    vi.mocked(mysql.createConnection).mockClear();
+    await expect(prepareRuntimeRole(omega, true)).rejects.toThrow('MYSQL_RUNTIME_ROLE_UNAVAILABLE');
+    expect(mysql.createConnection).not.toHaveBeenCalled();
+  });
+
   it.each([{}, { ...environment, LUQI_RUNTIME_DB_PASSWORD: '' },
     { ...environment, LUQI_RUNTIME_DB_PASSWORD: 'secret-with-quote-\'' },
     { ...environment, DATABASE_URL: 'mysql://operator:old-secret@public.example:3306/railway' },
