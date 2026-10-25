@@ -1,9 +1,11 @@
 # Omega task dashboard
 
 The shared web frontends expose `/#/omega-tasks` through navigation, workspace
-search and the Omega card. The dashboard is an authenticated task-history viewer
-with explicit queued-task cancellation. It does not submit tasks, execute workers,
-enable providers, activate billing, apply migrations or provision services.
+search and the Omega card. The page now offers two no-account browser calculators alongside a separate
+authenticated task-history viewer, reviewed queue submission and queued-task
+cancellation when intake is enabled. Local calculations are not saved. The
+page does not execute workers, enable providers, activate billing, apply
+migrations or provision services.
 Production intake and workers remain disabled.
 
 ## User flow and outcome boundaries
@@ -50,7 +52,7 @@ production account, worker activity or production backup recovery.
 Still needed before broad task rollout: explicit migration and dedicated worker
 credentials, operating procedures and monitoring, retention/erasure policy,
 backup/restore validation, and designated production test-account acceptance.
-Task creation forms, running-task cancellation, general admin roles, live-domain
+Live worker execution, running-task cancellation, general admin roles, live-domain
 feeds, autonomous execution and self-improvement are not implemented by this UI.
 The existing intake switch remains the rollout boundary. Rollback can revert this
 UI while preserving task rows and all existing user data.

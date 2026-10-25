@@ -67,7 +67,7 @@ export default function OmegaLocalCalculators() {
   }
 
   return (
-    <section className="omega-panel omega-local" aria-labelledby="omega-local-title">
+    <section id="omega-local-tools" className="omega-panel omega-local" aria-labelledby="omega-local-title">
       <span className="omega-badge">Available in your browser</span>
       <h2 id="omega-local-title">Omega quick calculations</h2>
       <p>Calculate now without signing in or waiting for a worker. The calculation runs only in this browser tab; it sends no inputs to LUQI, AI providers or third parties and saves no task.</p>

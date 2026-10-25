@@ -314,3 +314,36 @@
 }
 .omega-local .omega-submit button { justify-self: start; }
 .omega-local .omega-result { max-width: 640px; }
+
+/* Compact, disclosure-first Omega Six status. Never imply six live agents. */
+.omega-six {
+  margin: 0 0 32px;
+  border: 1px solid #3a4b3d;
+  border-radius: 16px;
+  background: #17251e;
+  padding: 18px 24px;
+}
+.omega-six > summary { font-weight: 600; color: #dcebcf; line-height: 1.5; }
+.omega-six-intro { max-width: 860px; }
+.omega-six-list {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 4px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.omega-six-list li {
+  min-width: 0;
+  border: 1px solid #435847;
+  background: #1b2e23;
+  border-radius: 10px;
+  padding: 15px;
+}
+.omega-six-list h3 { margin: 0 0 8px; }
+.omega-six-list p { margin: 6px 0; }
+.omega-six-state { font-weight: 600; color: #d6e9bc; }
+@media (max-width: 640px) {
+  .omega-six { padding: 14px; }
+  .omega-six-list { grid-template-columns: minmax(0, 1fr); }
+}
