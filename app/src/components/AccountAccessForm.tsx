@@ -3,7 +3,7 @@ import { ConversationError, signIn, signUp, validAccountPassword, type AccountSe
 import PasswordField from './PasswordField';
 
 export default function AccountAccessForm({ initialMode = 'signin', purpose = 'notes', onAuthenticated }: {
-  initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai'; onAuthenticated: (session: AccountSession) => void;
+  initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai' | 'vault'; onAuthenticated: (session: AccountSession) => void;
 }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState('');
@@ -67,7 +67,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   return <section className="luqi-access" aria-labelledby="account-access-heading">
     <p className="luqi-eyebrow">YOUR OWN SPACE</p>
     <h2 id="account-access-heading">{mode === 'signup' ? 'Create your LUQI account' : 'Sign in to your LUQI account'}</h2>
-    <p>{purpose === 'ai' ? 'Use your LUQI account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
+    <p>{purpose === 'ai' ? 'Use your LUQI account for the limited text trial. Signing in does not send a question to an AI provider.' : purpose === 'vault' ? 'Sign in for an optional encrypted-project pilot. Signing in alone does not upload your quotation or activate storage.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"

@@ -1,8 +1,10 @@
+/// <reference types="vite/client" />
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { checkPricing, createQuote, exportQuoteProject, importQuoteProject, type QuoteDraft, type QuoteResult, type PricingResult } from '../lib/business-desk';
 import SalesBoard from '../components/SalesBoard';
 import EncryptedQuoteBackup from '../components/EncryptedQuoteBackup';
+import AccountProjectVault from '../components/AccountProjectVault';
 import '../business-desk.css';
 
 interface DraftRow { description: string; quantity: string; unitPriceZar: string }
@@ -189,6 +191,8 @@ export default function BusinessDeskPage() {
           <p className="luqi-business-result-note">Review your business identity, price, applicable taxes and terms before you share it. LUQI does not issue tax invoices or collect payment.</p>
         </section>}
         <EncryptedQuoteBackup quote={quote} onRestore={restoreEncryptedQuote} />
+        {(import.meta as ImportMeta & { env?: { VITE_LUQI_PROJECT_VAULT_UI?: string } }).env?.VITE_LUQI_PROJECT_VAULT_UI === 'true' &&
+          <AccountProjectVault quote={quote} onRestoreQuote={restoreEncryptedQuote} />}
       </section>
       <section className="luqi-business-panel" aria-labelledby="luqi-pricing-heading">
         <h2 id="luqi-pricing-heading">Check a selling price</h2>

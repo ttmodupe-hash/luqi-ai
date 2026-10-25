@@ -12,6 +12,8 @@ describe('LUQI Business Desk, no account and no provider calls', () => {
   it('creates a real downloadable draft without generating an invoice or sending data', () => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
     render(<MemoryRouter><BusinessDeskPage /></MemoryRouter>);
+    // The private account project vault needs a separate build-time gate; default is closed.
+    expect(screen.queryByRole('heading', { name: 'Account-owned encrypted projects' })).toBeNull();
     fireEvent.change(screen.getByLabelText('Business name'), { target: { value: 'Mzansi Studio' } });
     fireEvent.change(screen.getByLabelText('Customer name'), { target: { value: 'Local Client' } });
     fireEvent.change(screen.getByLabelText('Quote reference'), { target: { value: 'Q-01' } });

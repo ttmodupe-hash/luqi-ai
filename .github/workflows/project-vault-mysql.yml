@@ -6,7 +6,19 @@ on:
       - 'api/private-project-vault.ts'
       - 'api/services/projectVault*.ts'
       - 'src/lib/project-vault-crypto.ts'
+      - 'src/lib/project-vault-client.ts'
+      - 'src/components/AccountProjectVault.tsx'
+      - 'src/components/AccountAccessForm.tsx'
+      - 'src/pages/BusinessDeskPage.tsx'
       - 'app/src/lib/project-vault-crypto.ts'
+      - 'app/src/lib/project-vault-client.ts'
+      - 'app/src/components/AccountProjectVault.tsx'
+      - 'app/src/components/AccountAccessForm.tsx'
+      - 'app/src/pages/BusinessDeskPage.tsx'
+      - 'tests/project-vault-client.test.ts'
+      - 'tests/account-project-vault.test.tsx'
+      - 'vault-browser-tests/**'
+      - 'playwright.vault.config.ts'
       - 'db/migrations/20261025_project_vault.sql'
       - 'db/runtimeSchema.ts'
       - 'db/runtimeRole.ts'
@@ -47,7 +59,34 @@ jobs:
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Prove account-owned encrypted project storage against disposable MySQL
         run: npx vitest run tests/project-vault-mysql.integration.test.ts --no-file-parallelism
+      - name: Exercise offline client transport and gated vault UI
+        run: npx vitest run tests/project-vault-client.test.ts tests/account-project-vault.test.tsx --no-file-parallelism
       - name: Verify no production storage or payment activation
         run: |
           node -e "const fs=require('fs'); const sql=fs.readFileSync('db/migrations/20261025_project_vault.sql','utf8'); if(/DROP TABLE|ALTER TABLE|TRUNCATE/i.test(sql)) process.exit(1)"
           echo 'Disposable fixtures only; no production GRANT, migration, merchant or live customer account.'
+
+  isolated-vault-browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Synthetic, localhost-only UI preview. This variable is never deployed.
+      VITE_LUQI_PROJECT_VAULT_UI: 'true'
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Build only local opt-in browser fixture
+        run: npx vite build
+      - name: Install locked browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Verify encryption, consent, restore and deletion on isolated mobile Chromium and WebKit
+        run: npx playwright test --config=playwright.vault.config.ts
+      - name: Record isolated scope
+        run: echo 'All accounts, project records and HTTP API results were synthetic Playwright fixtures. No real service, database migration, AI, payments or provider usage.' >> "$GITHUB_STEP_SUMMARY"
