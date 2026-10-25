@@ -122,5 +122,56 @@ class OfflineTests(unittest.TestCase):
             folder.chmod(0o700)
 
 
+    def test_network_request_is_one_readonly_scoped_query_and_no_redirect(self):
+        payload = json.dumps(fixture()).encode("utf-8")
+        calls = []
+        class StubResponse:
+            status = 200
+            headers = {"Content-Length": str(len(payload))}
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, amount):
+                self_amount = amount
+                assert self_amount == app.MAX_BYTES + 1
+                return payload
+        class StubOpener:
+            def open(self, request, timeout):
+                calls.append((request, timeout))
+                return StubResponse()
+        with patch.object(app.urllib.request, "build_opener", return_value=StubOpener()):
+            result = app.query_railway(INSTANCE, "fixture-private-token", project_token=False)
+        self.assertEqual(len(calls), 1)
+        request, timeout = calls[0]
+        self.assertEqual(request.full_url, app.URL)
+        self.assertEqual(request.get_method(), "POST")
+        self.assertEqual(timeout, 12)
+        self.assertEqual(json.loads(request.data)["variables"], {"id": INSTANCE})
+        self.assertEqual(request.get_header("Authorization"), "Bearer fixture-private-token")
+        self.assertEqual(result, fixture())
+        self.assertNotIn("fixture-private-token", json.dumps(app.summarise(result, INSTANCE, NOW)))
+        with self.assertRaises(app.InventoryGap):
+            app.NoRedirect().redirect_request(None, None, 302, "Found", {},
+                                             "https://unverified.example.invalid")
+
+    def test_rejects_unbounded_http_body_without_disclosing_it(self):
+        class BadResponse:
+            status = 200
+            headers = {"Content-Length": str(app.MAX_BYTES + 1)}
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, amount):
+                raise AssertionError("Must refuse before reading")
+        class BadOpener:
+            def open(self, request, timeout):
+                return BadResponse()
+        with patch.object(app.urllib.request, "build_opener", return_value=BadOpener()):
+            with self.assertRaises(app.InventoryGap):
+                app.query_railway(INSTANCE, "fixture-private-token")
+
+
 if __name__ == "__main__":
     unittest.main()
