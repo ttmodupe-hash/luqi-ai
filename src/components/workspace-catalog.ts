@@ -76,6 +76,17 @@ export const workspaceTools = [
     path: "/omega-tasks",
     icon: "agents",
   },
+  {
+    id: "business",
+    title: "Business desk",
+    category: "Quotes and pricing for small businesses",
+    description:
+      "Prepare a draft ZAR quotation for a customer, download its text, and estimate gross margin and break-even sales in your browser. No AI calls, tax invoices or payment processing.",
+    status: "Local · no account",
+    ready: true,
+    path: "/business-desk",
+    icon: "business",
+  },
 ] as const;
 
 // Normalize the fixed public catalog once, not once per word on each keystroke.

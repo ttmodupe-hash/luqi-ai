@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
+  BriefcaseBusiness,
   FlaskConical,
   Globe2,
   Layers3,
@@ -22,6 +23,7 @@ const icons = {
   languages: Globe2,
   academy: BookOpen,
   agents: Layers3,
+  business: BriefcaseBusiness,
 };
 
 export default function Home() {

@@ -1090,5 +1090,5 @@
 
 /* Three first-user choices on wide screens; retain a single column on phones. */
 @media (min-width: 1000px) {
-  .luqi-start-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .luqi-start-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

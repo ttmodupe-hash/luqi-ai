@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { asZar, checkPricing, createQuote, type QuoteResult, type PricingResult } from '../lib/business-desk';
+import { checkPricing, createQuote, type QuoteResult, type PricingResult } from '../lib/business-desk';
 import '../business-desk.css';
 
 interface DraftRow { description: string; quantity: string; unitPriceZar: string }
