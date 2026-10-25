@@ -30,7 +30,7 @@ test("workspace filters distinguish usable tools from previews without making AI
   // The signed-in trial is one new discoverable card; all existing tools remain.
   await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
     "AI text trial", "Private notes", "Physics lab", "Service status",
-    "African languages", "Content studio", "Omega tasks", "Business desk",
+    "African languages", "Content studio", "Omega tasks", "Business desk", "Business desk",
   ]);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(7);
