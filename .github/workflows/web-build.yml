@@ -28,6 +28,8 @@ jobs:
         run: node --test tests/provider-cost-review.test.mjs
       - name: Verify retired static authentication entrypoints
         run: node --test tests/retired-public-auth.test.mjs
+      - name: Verify retired public identity and security consoles
+        run: node --test tests/retired-legacy-public-pages.test.mjs
       - name: Type-check paid pilot gateway
         run: npx tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/aiPilotGateway.ts api/services/pilotCredentialCheck.ts api/ai-pilot.ts api/lib/httpSafety.ts api/lib/releaseIdentity.ts
       - name: Type-check local content studio
