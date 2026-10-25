@@ -284,3 +284,33 @@
 .omega-submit-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .omega-input-summary { overflow-wrap: anywhere; }
 @media (max-width: 600px) { .omega-input-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Browser-only Omega tools never share the queued-task submission form. */
+.omega-local { margin: 0 0 28px; }
+.omega-local > h2 { margin-top: 16px; }
+.omega-local .omega-submit {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+}
+.omega-local .omega-submit label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.omega-local .omega-submit input,
+.omega-local .omega-submit select,
+.omega-local .omega-submit textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid #738b71;
+  border-radius: 8px;
+  background: #101c15;
+  color: #f5f7ef;
+  font: inherit;
+}
+.omega-local .omega-submit button { justify-self: start; }
+.omega-local .omega-result { max-width: 640px; }

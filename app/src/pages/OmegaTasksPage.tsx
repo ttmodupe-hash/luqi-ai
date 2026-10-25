@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
 import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
+import OmegaLocalCalculators from "../components/OmegaLocalCalculators";
 import { ConversationError, signIn } from "../lib/private-conversations";
 import {
   omegaClient,
@@ -233,6 +234,7 @@ export default function OmegaTasksPage() {
           This dashboard does not start workers or generate AI responses.
         </p>
       </header>
+      <OmegaLocalCalculators />
       {notice && (
         <p role="status" className="omega-notice">
           {notice}
