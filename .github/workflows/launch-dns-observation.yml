@@ -1,0 +1,51 @@
+name: LUQI Launch DNS Observation
+on:
+  push:
+    branches: [fix/launch-dns-observation-20261024]
+  pull_request:
+    paths:
+      - scripts/audit-launch-dns.py
+      - tests/test_launch_dns_audit.py
+      - .github/workflows/launch-dns-observation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: luqi-launch-dns-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  observe-public-dns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test conservative DNS verdicts offline
+        run: python3 -m unittest discover -s tests -p test_launch_dns_audit.py -v
+      - name: Observe fixed public DNS names without credentials or writes
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/audit-launch-dns.py
+      - name: Observe parent delegation and the reported authoritative nameservers
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          if ! command -v dig >/dev/null; then
+            echo 'Direct-authoritative observation unavailable: dig not installed.'
+            exit 0
+          fi
+          echo 'PARENT .com delegation, not the child-zone apex NS list:'
+          dig @a.gtld-servers.net luqi-ai.com NS +norecurse +time=2 +tries=1 +noall +comments +authority +answer || true
+          echo 'PARENT .com DNSSEC DS observation:'
+          dig @a.gtld-servers.net luqi-ai.com DS +norecurse +time=2 +tries=1 +noall +comments +authority +answer || true
+          for server in ns1.host-ww.net ns2.host-ww.net ns3.host-ww.net ns4.host-ww.net dns1.registrar-servers.com dns2.registrar-servers.com; do
+            echo "AUTHORITATIVE READ ONLY: $server"
+            dig "@$server" luqi-ai.com SOA +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
+            dig "@$server" app.luqi-ai.com CNAME +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
+            dig "@$server" _railway-verify.app.luqi-ai.com TXT +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
+          done
+      - name: Explain scope
+        if: always()
+        run: |
+          echo 'Read-only observation, NOT launch approval. Missing records or transport errors keep the domain gate blocked.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No account creation, paid AI, DNS writes, secret access, email changes, database access or deployment.' >> "$GITHUB_STEP_SUMMARY"
