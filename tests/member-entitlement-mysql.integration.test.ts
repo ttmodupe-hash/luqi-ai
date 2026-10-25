@@ -63,8 +63,8 @@ describe.skipIf(!isolated).sequential('read-only entitlement candidate against d
     expect(tables).toHaveLength(2);
   });
   it('never admits a user merely because a row, price idea or account exists', async () => {
-    expect((await read(101)).allowed).toBe(false);
-    expect((await read(102)).allowed).toBe(false);
+    expect((await read(101)).recordMatched).toBe(false);
+    expect((await read(102)).recordMatched).toBe(false);
     await receipt(101, { review: 'pending' });
     expect((await read(101)).reason).toBe('not_confirmed');
     expect((await readMemberEligibility(101, { pool, nowUtc: utc,
@@ -74,10 +74,10 @@ describe.skipIf(!isolated).sequential('read-only entitlement candidate against d
     await receipt(102, { tier: 'creator' });
     await receipt(103, { tier: 'creator' });
     const result = await read(102);
-    expect(result).toEqual({ allowed: true, tier: 'creator',
-      expiresAtUtc: '2026-11-23T12:00:00.000000Z', reason: 'record_eligible' });
-    expect((await read(104)).allowed).toBe(false);
-    expect((await read(103)).allowed).toBe(false);
+    expect(result).toEqual({ paidAccessAllowed: false, recordMatched: true, tier: 'creator',
+      expiresAtUtc: '2026-11-23T12:00:00.000000Z', reason: 'candidate_only' });
+    expect(result.paidAccessAllowed).toBe(false);\n    expect((await read(104)).recordMatched).toBe(false);
+    expect((await read(103)).recordMatched).toBe(false);
     expect(JSON.stringify(result)).not.toMatch(/order|merchant|receipt|event/i);
   });
   it('refuses reversals, disputes, paused entitlements and expired periods', async () => {
@@ -85,12 +85,12 @@ describe.skipIf(!isolated).sequential('read-only entitlement candidate against d
     await receipt(105, { settlement: 'disputed' });
     await receipt(106, { membership: 'paused' });
     await receipt(107, { begin: '2026-09-01 00:00:00.000000', end: '2026-09-30 00:00:00.000000' });
-    for (const owner of [104,105,106,107]) expect((await read(owner)).allowed).toBe(false);
+    for (const owner of [104,105,106,107]) expect((await read(owner)).recordMatched).toBe(false);
   });
   it('denies ambiguous overlapping grants instead of silently stacking them', async () => {
     await receipt(108);
     await receipt(108, { tier: 'creator' });
-    expect(await read(108)).toEqual({ allowed:false,tier:null,expiresAtUtc:null,reason:'ambiguous' });
+    expect(await read(108)).toEqual({ paidAccessAllowed:false,recordMatched:false,tier:null,expiresAtUtc:null,reason:'ambiguous' });
   });
   it('prevents duplicate settlement event keys and orders from producing extra grants', async () => {
     const known = await receipt(109);
@@ -106,6 +106,6 @@ describe.skipIf(!isolated).sequential('read-only entitlement candidate against d
          settlement_state,review_state,settled_at_utc,created_at_utc)
         VALUES ('other-merchant',?,?,109,'ZAR',9900,'settled','approved',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))`,
       [digest('another-event'),known.order])).rejects.toBeTruthy();
-    expect((await read(109)).allowed).toBe(true);
+    expect((await read(109)).recordMatched).toBe(true);
   });
 });

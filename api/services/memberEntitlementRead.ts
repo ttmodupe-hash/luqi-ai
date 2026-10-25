@@ -11,10 +11,10 @@ import { getPersistentMySqlPool } from '../queries/connection';
 
 export type MemberTier = 'starter' | 'creator';
 export type MemberDecision =
-  | { allowed: false; tier: null; expiresAtUtc: null;
+  | { paidAccessAllowed: false; recordMatched: false; tier: null; expiresAtUtc: null;
       reason: 'disabled' | 'not_confirmed' | 'unavailable' | 'ambiguous' }
-  | { allowed: true; tier: MemberTier; expiresAtUtc: string;
-      reason: 'record_eligible' };
+  | { paidAccessAllowed: false; recordMatched: true; tier: MemberTier; expiresAtUtc: string;
+      reason: 'candidate_only' };
 
 type ReadOnlyPool = Pick<Pool, 'execute'>;
 export type MemberReadOptions = {
@@ -24,7 +24,7 @@ export type MemberReadOptions = {
 };
 
 const refuse = (reason: 'disabled' | 'not_confirmed' | 'unavailable' | 'ambiguous'): MemberDecision =>
-  ({ allowed: false, tier: null, expiresAtUtc: null, reason });
+  ({ paidAccessAllowed: false, recordMatched: false, tier: null, expiresAtUtc: null, reason });
 const safeOwner = (value: number) => Number.isSafeInteger(value) && value > 0;
 // Strict contract: a future reviewer can make a different decision for annual
 // plans but this pilot cannot silently accept unbounded memberships.
@@ -38,7 +38,7 @@ const TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
  *   and a finite monthly entitlement can produce a candidate positive result.
  * - This function has no user-supplied email, token, browser tier, payment
  *   redirect or order-reference arguments.
- * - Even a positive candidate MUST NOT trigger provider calls or paid access
+ * - The return type permanently sets paidAccessAllowed=false, even with a\n *   matching synthetic record. It is NOT a merchant signature or permission.\n * - Even a positive candidate MUST NOT trigger provider calls or paid access
  *   until a separate merchant signature, settlement and capacity acceptance
  *   has been implemented and independently approved.
  */
@@ -86,8 +86,8 @@ export async function readMemberEligibility(
         !TIME_PATTERN.test(row.expires_at) ||
         !Number.isFinite(Date.parse(row.expires_at)) ||
         Date.parse(row.expires_at) <= now.getTime()) return refuse('unavailable');
-    return { allowed: true, tier: row.tier as MemberTier,
-      expiresAtUtc: row.expires_at, reason: 'record_eligible' };
+    return { paidAccessAllowed: false, recordMatched: true, tier: row.tier as MemberTier,
+      expiresAtUtc: row.expires_at, reason: 'candidate_only' };
   } catch {
     // Missing optional migration/grants, DB errors and bad records fail closed.
     // Never expose SQL text, payment hashes, accounts or credential values.

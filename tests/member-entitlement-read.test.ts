@@ -8,9 +8,9 @@ describe('unattached paid-membership candidate stays default-deny', () => {
       environment: { LUQI_MEMBER_ENTITLEMENTS_ENABLED: 'false' },
       pool: { execute: query } as never,
     });
-    expect(result).toEqual({ allowed: false, tier: null,
+    expect(result).toEqual({ paidAccessAllowed: false, recordMatched: false, tier: null,
       expiresAtUtc: null, reason: 'disabled' });
-    expect(query).not.toHaveBeenCalled();
+    expect(result.paidAccessAllowed).toBe(false);\n    expect(query).not.toHaveBeenCalled();
   });
 
   it('rejects invalid owner IDs without consulting payment records', async () => {
@@ -21,7 +21,7 @@ describe('unattached paid-membership candidate stays default-deny', () => {
         pool: { execute: query } as never,
         nowUtc: new Date('2026-10-25T12:00:00Z'),
       });
-      expect(result.allowed).toBe(false);
+      expect(result.recordMatched).toBe(false);
     }
     expect(query).not.toHaveBeenCalled();
   });
@@ -42,7 +42,7 @@ describe('unattached paid-membership candidate stays default-deny', () => {
       expect((await readMemberEligibility(123, {
         environment: { LUQI_MEMBER_ENTITLEMENTS_ENABLED: 'true' },
         pool: fakePool(rows), nowUtc: now,
-      })).allowed).toBe(false);
+      })).recordMatched).toBe(false);
     }
   });
 
@@ -52,7 +52,7 @@ describe('unattached paid-membership candidate stays default-deny', () => {
       environment: { LUQI_MEMBER_ENTITLEMENTS_ENABLED: 'true' },
       pool, nowUtc: new Date('2026-10-25T12:00:00Z'),
     });
-    expect(result).toEqual({ allowed: false, tier: null,
+    expect(result).toEqual({ paidAccessAllowed: false, recordMatched: false, tier: null,
       expiresAtUtc: null, reason: 'unavailable' });
     expect(JSON.stringify(result)).not.toContain('private');
   });
