@@ -135,8 +135,13 @@ test("saved outcomes render on desktop and mobile with keyboard access and no ex
   });
   await signIn(page);
   const history = page.getByRole("region", { name: "Saved tasks" });
-  await history.getByRole("button", { name: /Travel budget/ }).focus();
-  await page.keyboard.press("Enter");
+  const budgetButton = history.getByRole("button", { name: /Travel budget/ });
+  // The account-owned list may render before the authenticated refresh has
+  // unlocked actions. WebKit must press Enter only once the action is enabled.
+  await expect(budgetButton).toBeEnabled();
+  await budgetButton.focus();
+  await expect(budgetButton).toBeFocused();
+  await budgetButton.press("Enter");
   await expect(page.getByText("ZAR 140.35", { exact: true })).toBeVisible();
   await expect(
     page
