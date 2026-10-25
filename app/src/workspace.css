@@ -456,6 +456,13 @@
   align-items: center;
   margin-bottom: 24px;
 }
+.luqi-tool-count {
+  margin: -12px 0 20px;
+  color: #596b52;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
 .luqi-filters {
   display: flex;
   gap: 5px;
