@@ -6,7 +6,17 @@ on:
       - 'api/private-project-vault.ts'
       - 'api/services/projectVault*.ts'
       - 'src/lib/project-vault-crypto.ts'
+      - 'src/lib/project-vault-client.ts'
+      - 'src/components/AccountProjectVault.tsx'
+      - 'src/components/AccountAccessForm.tsx'
+      - 'src/pages/BusinessDeskPage.tsx'
       - 'app/src/lib/project-vault-crypto.ts'
+      - 'app/src/lib/project-vault-client.ts'
+      - 'app/src/components/AccountProjectVault.tsx'
+      - 'app/src/components/AccountAccessForm.tsx'
+      - 'app/src/pages/BusinessDeskPage.tsx'
+      - 'tests/project-vault-client.test.ts'
+      - 'tests/account-project-vault.test.tsx'
       - 'db/migrations/20261025_project_vault.sql'
       - 'db/runtimeSchema.ts'
       - 'db/runtimeRole.ts'
@@ -47,6 +57,8 @@ jobs:
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Prove account-owned encrypted project storage against disposable MySQL
         run: npx vitest run tests/project-vault-mysql.integration.test.ts --no-file-parallelism
+      - name: Exercise offline client transport and gated vault UI
+        run: npx vitest run tests/project-vault-client.test.ts tests/account-project-vault.test.tsx --no-file-parallelism
       - name: Verify no production storage or payment activation
         run: |
           node -e "const fs=require('fs'); const sql=fs.readFileSync('db/migrations/20261025_project_vault.sql','utf8'); if(/DROP TABLE|ALTER TABLE|TRUNCATE/i.test(sql)) process.exit(1)"

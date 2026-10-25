@@ -162,3 +162,29 @@
   border: 1px solid #aec48e; border-radius: 10px; }
 @media (max-width: 940px) { .luqi-business-encrypted-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { .luqi-business-encrypted { padding: 14px; } }
+
+/* Optional encrypted account vault. Hidden unless build flag AND runtime API are approved. */
+.luqi-private-vault { margin-top: 24px; padding: 20px; min-width: 0; border: 1px solid #739575;
+  border-radius: 12px; background: #21382a; overflow-wrap: anywhere; }
+.luqi-private-vault > h2 { margin-bottom: 12px; }
+.luqi-private-vault h3 { margin: 0 0 12px; font-size: 17px; }
+.luqi-vault-email { overflow-wrap: anywhere; }
+.luqi-vault-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px; margin-top: 18px; }
+.luqi-vault-grid > div { min-width: 0; }
+.luqi-vault-grid label, .luqi-vault-selected label { display: grid; gap: 8px; min-width: 0; margin: 12px 0; font-size: 14px; }
+.luqi-vault-grid input, .luqi-vault-selected input[type="password"] { display: block; box-sizing: border-box;
+  min-width: 0; width: 100%; min-height: 48px; padding: 10px 12px; color: #f1f6eb;
+  background: #0f2017; border: 1px solid #8ba185; border-radius: 8px; font-size: 16px; }
+.luqi-vault-list { padding: 0; margin: 12px 0; list-style: none; display: grid; gap: 12px; }
+.luqi-vault-list li { display: grid; gap: 10px; padding: 14px; background: #16291e;
+  border: 1px solid #58745d; border-radius: 10px; overflow-wrap: anywhere; }
+.luqi-vault-list button { justify-self: start; }
+.luqi-vault-selected { border-top: 1px solid #68866b; padding-top: 18px; margin-top: 22px; min-width: 0; }
+.luqi-vault-selected code { overflow-wrap: anywhere; }
+.luqi-vault-danger { border: 1px solid #a78474; border-radius: 10px; margin-top: 22px; padding: 16px; }
+.luqi-vault-danger label { display: flex; align-items: flex-start; gap: 10px; }
+.luqi-vault-danger input[type="checkbox"] { min-width: 20px; width: 20px; height: 20px; }
+.luqi-private-vault input:focus-visible { outline: 3px solid #d4ecaa; outline-offset: 2px; }
+@media (max-width: 700px) { .luqi-vault-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .luqi-private-vault { padding: 14px; } }
