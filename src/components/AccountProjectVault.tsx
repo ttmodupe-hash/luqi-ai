@@ -67,7 +67,7 @@ export default function AccountProjectVault({ quote, onRestoreQuote }: {
     setBusy(false); message(reason, !!reason);
   }
   async function work(task: (signal: AbortSignal, stillCurrent: () => boolean) => Promise<void>,
-                      failure: string, mutation = false) {
+                      failure: string, mutation = false, holdId?: string) {
     if (locked.current) return;
     locked.current = true; setBusy(true); message('');
     const version = generation.current;
@@ -81,7 +81,7 @@ export default function AccountProjectVault({ quote, onRestoreQuote }: {
         signOut('Session invalid or expired. Sign in again. If a write was in flight, verify the outcome independently.');
       } else if (mutation) {
         // A lost reply or 503 can occur after a transaction commits. Never repeat it.
-        setHold(failure);
+        setHold(holdId ?? 'unconfirmed operation');
         message(failure + ' No automatic retry. Refresh the saved list and independently review the outcome before starting a new session.', true);
       } else message(failure, true);
     } finally {
@@ -95,14 +95,18 @@ export default function AccountProjectVault({ quote, onRestoreQuote }: {
       setGate('checking'); setSelected(null); setCandidate(null);
       setRemoveConfirm(false); clearPhrases();
       const api = projectVaultClient(active.token);
-      const state = await api.status(signal);
+      let state;
+      try { state = await api.status(signal); }
+      catch (error) { if (current()) setGate('unavailable'); throw error; }
       if (!current()) return;
       if (state.availability === 'disabled') {
         setGate('disabled'); setRecords([]);
         message('Account sync is disabled. Free local quotation tools are unaffected.');
         return;
       }
-      const list = await api.list(signal);
+      let list;
+      try { list = await api.list(signal); }
+      catch (error) { if (current()) setGate('unavailable'); throw error; }
       if (!current()) return;
       setRecords(list); setGate('ready');
       message('Encrypted project metadata refreshed. This does not certify backup recoverability.');
@@ -117,7 +121,7 @@ export default function AccountProjectVault({ quote, onRestoreQuote }: {
   function load(item: ProjectMetadata) {
     if (!session || gate !== 'ready') return;
     void work(async (signal, current) => {
-      setCandidate(null); setSelected(null); setRemoveConfirm(false); clearPhrases();
+      setCandidate(null); setSelected(null); setEdit(null); setRemoveConfirm(false); clearPhrases();
       const value = await projectVaultClient(session.token).get(item.id, signal);
       if (!current()) return;
       if (value.kind !== 'quote' || value.revision !== item.revision) {
@@ -191,7 +195,7 @@ export default function AccountProjectVault({ quote, onRestoreQuote }: {
         }
         throw error;
       }
-    }, 'Encrypted save outcome is unconfirmed for project ' + target.id + '.', true);
+    }, 'Encrypted save outcome is unconfirmed for project ' + target.id + '.', true, target.id);
   }
   function remove() {
     if (!session || gate !== 'ready' || busy || hold || !selected || !removeConfirm) return;
@@ -216,7 +220,7 @@ export default function AccountProjectVault({ quote, onRestoreQuote }: {
       if (edit?.id === target.id) setEdit(null);
       setSelected(null); setCandidate(null);
       message('Project removed from active storage with confirmed acknowledgement. Backups and exported files remain separate.');
-    }, 'Project removal outcome is unconfirmed for ' + target.id + '.', true);
+    }, 'Project removal outcome is unconfirmed for ' + target.id + '.', true, target.id);
   }
   function backup() {
     if (!selected || busy) return;
