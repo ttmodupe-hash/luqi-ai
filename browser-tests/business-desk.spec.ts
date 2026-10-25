@@ -63,3 +63,41 @@ test('local break-even calculator rejects unsustainable price and has no paid ch
   expect(apiCalls).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test('reusable local quotation can be downloaded and reopened after a reload', async ({ page, baseURL }) => {
+  const origin = new URL(baseURL!).origin, forbidden: string[] = [];
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== origin || /^\/(?:api|v1)\//.test(url.pathname)) {
+      forbidden.push(url.origin + url.pathname);
+      return route.abort();
+    }
+    return route.continue();
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/business-desk');
+  await page.getByLabel('Business name').fill('Ubuntu Studio');
+  await page.getByLabel('Customer name').fill('Local Client');
+  await page.getByLabel('Quote reference').fill('Q-LOCAL');
+  await page.getByLabel('Item 1 description').fill('Monthly design');
+  await page.getByLabel('Item 1 unit price (ZAR)').fill('175.25');
+  await page.getByRole('button', { name: 'Prepare quotation' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Save editable project' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('luqi-quote-project.json');
+  const saved = await download.path();
+  expect(saved).toBeTruthy();
+  await page.reload();
+  await expect(page.getByLabel('Business name')).toHaveValue('');
+  await page.getByLabel('Restore editable quotation (.json)').setInputFiles(saved!);
+  await expect(page.getByLabel('Business name')).toHaveValue('Ubuntu Studio');
+  await expect(page.getByLabel('Customer name')).toHaveValue('Local Client');
+  await expect(page.getByRole('status', { name: 'Draft quotation result' })).toContainText('R 175.25');
+  await page.getByLabel('Item 1 unit price (ZAR)').fill('200.00');
+  await expect(page.getByRole('button', { name: 'Save editable project' })).toHaveCount(0);
+  expect(forbidden).toEqual([]);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
