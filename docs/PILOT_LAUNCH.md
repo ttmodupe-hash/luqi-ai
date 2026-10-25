@@ -1,8 +1,9 @@
 # LUQI first-user pilot
 
-The pilot entry route is `/#/start`. It introduces two usable paths: the
-browser-based physics lab without an account, and account-owned conversation
-notes with registration/sign-in. It is not a full AI product launch.
+The pilot entry route is `/#/start`. It introduces three usable paths: the
+browser-based physics lab without an account, local no-account Omega travel
+budget and vehicle service calculators, and account-owned conversation notes
+with registration/sign-in. It is not a full AI product launch.
 The local `/#/content-studio` adds an editable 90-second storyboard, interactive
 3D pendulum/time view and local silent-video, script and subtitle exports. It
 does not connect social accounts or professional filing services.
@@ -79,3 +80,13 @@ checks explicit submission, mobile layout and session clearing without a paid ca
 
 Do not send invitations or promise a public AI launch based only on green CI
 or runtime health. Record direct production evidence alongside these limits.
+
+## Omega local-function acceptance
+- On `/#/start`, a third choice links to `/#/omega-tasks` without sign-in.
+- Add 100.25 + 40 + 0.10 in one currency and verify 140.35; editing a figure
+  must clear the old answer before another calculation.
+- Enter a real non-sensitive odometer and manufacturer service intervals;
+  verify the due date and distance, but do not interpret this as a safety diagnosis.
+- At 320px check keyboard/touch navigation and no API/provider requests.
+- This is **not** the production task queue, six live agent integrations,
+  official weather/visa/university/water feeds, or autonomous execution.

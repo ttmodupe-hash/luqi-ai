@@ -27,3 +27,14 @@ test('search no longer incorrectly declares the text trial disabled', async () =
   assert.doesNotMatch(content, /AI chat and payments are not/);
   assert.match(content, /signed-in trial with availability checks/);
 });
+
+test('Omega local budget and vehicle tools are discoverable without implying active workers', () => {
+  const matches = findWorkspaceTools('omega travel budget', 'ready');
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].id, 'agents');
+  assert.equal(matches[0].path, '/omega-tasks');
+  assert.match(matches[0].description, /without an account or paid AI/);
+  assert.match(matches[0].description, /workers are not activated/);
+  assert.deepEqual(findWorkspaceTools('omega autonomous workers', 'ready'), []);
+  assert.deepEqual(findWorkspaceTools('weather official alerts', 'ready'), []);
+});
