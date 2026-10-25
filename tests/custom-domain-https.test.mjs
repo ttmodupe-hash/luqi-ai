@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { CUSTOM_ORIGIN, verifyCustomDomain } from "../scripts/verify-custom-domain.mjs";
+import { CUSTOM_ORIGIN, verifyCustomDomain, domainCheckFailureMessage } from "../scripts/verify-custom-domain.mjs";
 
 const revision = "a".repeat(40);
 const reply = (body, headers = {}) => new Response(JSON.stringify(body), {
@@ -36,6 +36,17 @@ describe("custom-domain workflow rollout discipline", () => {
     assert.ok(!push.includes("paths:"));
     assert.ok(workflow.includes("cancel-in-progress: true"));
     assert.ok(workflow.includes("timeout-minutes: 11"));
+  });
+});
+
+describe("deployment versus HTTPS failure classification", () => {
+  it("labels an unobserved revision as NOT TESTED, never as a proven HTTPS failure", () => {
+    assert.match(domainCheckFailureMessage("preflight"), /not authorized/);
+    assert.match(domainCheckFailureMessage("deployment"), /UNVERIFIED_DEPLOYMENT/);
+    assert.match(domainCheckFailureMessage("deployment"), /NOT tested/i);
+    assert.doesNotMatch(domainCheckFailureMessage("deployment"), /UNVERIFIED_CUSTOM_HTTPS/);
+    assert.match(domainCheckFailureMessage("https"), /UNVERIFIED_CUSTOM_HTTPS/);
+    assert.throws(() => domainCheckFailureMessage("bad"), /INVALID_CHECK_STAGE/);
   });
 });
 
