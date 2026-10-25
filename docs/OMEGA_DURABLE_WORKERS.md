@@ -38,6 +38,11 @@ integer from 1 to 3600 seconds, default 60. Trusted handlers receive
 lock the row and require both the current token and an unexpired lease. An old
 worker cannot extend a replacement claim or overwrite its outcome (`LeaseLost`).
 No timer, daemon, queue polling or renewal thread starts automatically.
+The separately authenticated Node web bridge supports only an explicit,
+confirmed removal of terminal read-only web-v1 tasks; it cannot purge pending,
+running, retry-wait, approval or reconciliation-required work. It cannot delete
+other owners' records. Worker and migration accounts must not receive a general
+task cleanup/bulk deletion authority.
 
 ## Recovery and effects
 

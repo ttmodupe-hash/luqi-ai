@@ -70,6 +70,7 @@ export default function OmegaTasksPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [submission, setSubmission] = useState<OmegaSubmission | null>(null);
   const [submissionUncertain, setSubmissionUncertain] = useState(false);
@@ -100,6 +101,7 @@ export default function OmegaTasksPage() {
     setMore(false);
     setBusy(false);
     setConfirm(false);
+    setConfirmRemove(false);
     setUncertain(false);
     setSubmission(null);
     setSubmissionUncertain(false);
@@ -107,7 +109,7 @@ export default function OmegaTasksPage() {
   }
   async function run(
     action: (current: () => boolean) => Promise<void>,
-    mutation?: "cancel" | "submit",
+    mutation?: "cancel" | "submit" | "remove",
   ) {
     if (locked.current) return;
     locked.current = true;
@@ -134,6 +136,11 @@ export default function OmegaTasksPage() {
         setNotice(error instanceof OmegaError && error.status === 429
           ? "The task limit was reached. No new task was confirmed. Review saved tasks or contact your operator. No automatic retry was made."
           : "Submission could not be confirmed. Check saved tasks or retry this same submission. No automatic retry was made.");
+      } else if (mutation === "remove") {
+        setSelected(null);
+        setConfirmRemove(false);
+        setUncertain(true);
+        setNotice("Task removal could not be confirmed. Refresh saved tasks before taking another action. We have not retried automatically.");
       } else if (mutation === "cancel") {
         setSelected(null);
         setConfirm(false);
@@ -162,6 +169,7 @@ export default function OmegaTasksPage() {
     setSelected(null);
     setMore(false);
     setConfirm(false);
+    setConfirmRemove(false);
     const api = omegaClient(token),
       fresh = await api.status();
     if (!current()) return;
@@ -212,6 +220,7 @@ export default function OmegaTasksPage() {
     if (!session) return;
     setSelected(null);
     setConfirm(false);
+    setConfirmRemove(false);
     void run(async (current) => {
       const result = await omegaClient(session.token).get(id);
       if (current()) {
@@ -530,6 +539,52 @@ export default function OmegaTasksPage() {
                         A running task cannot be cancelled from this dashboard.
                       </p>
                     )}
+                    {["completed", "failed", "cancelled"].includes(selected.state) &&
+                      !confirmRemove && (
+                        <button
+                          className="luqi-secondary"
+                          disabled={busy || uncertain || submissionUncertain}
+                          onClick={() => { setConfirm(false); setConfirmRemove(true); }}
+                        >
+                          Remove saved task
+                        </button>
+                      )}
+                    {confirmRemove && (
+                      <section className="omega-confirm" aria-label="Confirm saved task removal">
+                        <h3>Remove this finished task from LUQI?</h3>
+                        <p>
+                          This permanently removes the selected finished record from
+                          active task storage and frees a queue slot. Backups can
+                          retain copies until their retention period ends. Running,
+                          queued and uncertain tasks cannot be removed this way.
+                        </p>
+                        <button
+                          className="luqi-secondary"
+                          disabled={busy}
+                          onClick={() => setConfirmRemove(false)}
+                        >
+                          Keep saved task
+                        </button>
+                        <button
+                          className="luqi-primary"
+                          disabled={busy || uncertain || submissionUncertain}
+                          onClick={() => {
+                            const id = selected.id;
+                            void run(async current => {
+                              const response = await omegaClient(session.token).removeFinished(id);
+                              if (!current()) return;
+                              if (!response.removed || response.id !== id) return;
+                              setSelected(null);
+                              setTasks(previous => previous.filter(item => item.id !== id));
+                              setConfirmRemove(false);
+                              setNotice("Finished task removed from active storage. Backup copies may remain until the retention period ends.");
+                            }, "remove");
+                          }}
+                        >
+                          Confirm removal
+                        </button>
+                      </section>
+                    )}
                     {confirm && (
                       <section
                         className="omega-confirm"
@@ -587,7 +642,7 @@ export default function OmegaTasksPage() {
           )}
           <p className="omega-muted omega-privacy">
             Signing out clears this page; it does not delete saved tasks.
-            Storage administrators can access task records. Task deletion is not available in this dashboard. Unconfirmed submission inputs stay only in page memory; check saved tasks before starting another after leaving or reloading.
+            When intake is enabled, you can explicitly remove finished task records; pending and uncertain work is protected, and backups may retain copies. Storage administrators can access task records. Unconfirmed submission inputs stay only in page memory; check saved tasks before starting another after leaving or reloading.
           </p>
         </>
       )}
