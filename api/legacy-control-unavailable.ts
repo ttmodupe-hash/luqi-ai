@@ -37,3 +37,12 @@ for (const path of ["/api/v25/support", "/api/v25/support/*"]) {
     }, 503);
   });
 }
+
+// Unverified public sensing data formerly returned fabricated live grants,
+// random viewer counts, static satellite observations and guessed AfCFTA duties.
+// Close the whole namespace for ALL methods until a source-validated
+// owner-authorised implementation is explicitly reviewed.
+for (const prefix of ['/api/v1/sensing', '/v1/sensing']) {
+  closed(prefix, 'SENSING_SOURCE_UNVERIFIED');
+  closed(prefix + '/*', 'SENSING_SOURCE_UNVERIFIED');
+}
