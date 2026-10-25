@@ -10,6 +10,7 @@ import type { HttpBindings } from "@hono/node-server";
 import { createTrpcHttp } from "./trpc-http";
 import { privateResponsePolicy, requestTelemetry, redactedHttpError } from "./lib/httpSafety";
 import { releaseIdentity } from './lib/releaseIdentity';
+import { runtimeLiveness } from './lib/runtimeLiveness';
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
@@ -131,9 +132,8 @@ for (const path of ["/login", "/signin", "/sign-in"]) {
 }
 
 // ── HEALTH CHECK ENDPOINTS (Railway, Docker & Uptime monitors) ─────
-app.get("/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
-app.get("/v1/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
-app.get("/api/health", (c) => c.json({ status: "healthy", timestamp: Date.now(), service: "luqi-ai-engine", khoro_active: true }));
+// HTTP liveness only: do not imply availability of a worker, database or AI provider.
+for (const path of ["/health", "/v1/health", "/api/health"]) app.get(path, runtimeLiveness);
 app.get('/v1/release', releaseIdentity);
 
 /**
