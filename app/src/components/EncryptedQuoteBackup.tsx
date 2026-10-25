@@ -135,11 +135,11 @@ export default function EncryptedQuoteBackup({
         <p className="luqi-business-note">First prepare a valid quotation above.</p>
         <label>New backup passphrase
           <input type="password" ref={createPassphrase} minLength={14} maxLength={128}
-            autoComplete="new-password" disabled={busy} />
+            autoComplete="off" disabled={busy} />
         </label>
         <label>Repeat backup passphrase
           <input type="password" ref={repeatPassphrase} minLength={14} maxLength={128}
-            autoComplete="new-password" disabled={busy} />
+            autoComplete="off" disabled={busy} />
         </label>
         <button className="luqi-business-small" type="button" disabled={busy || !quote}
           onClick={() => void encrypt()}>Download encrypted backup</button>

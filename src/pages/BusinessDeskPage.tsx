@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { checkPricing, createQuote, exportQuoteProject, importQuoteProject, type QuoteResult, type PricingResult } from '../lib/business-desk';
+import { checkPricing, createQuote, exportQuoteProject, importQuoteProject, type QuoteDraft, type QuoteResult, type PricingResult } from '../lib/business-desk';
 import SalesBoard from '../components/SalesBoard';
+import EncryptedQuoteBackup from '../components/EncryptedQuoteBackup';
 import '../business-desk.css';
 
 interface DraftRow { description: string; quantity: string; unitPriceZar: string }
@@ -83,6 +84,21 @@ export default function BusinessDeskPage() {
         setQuoteError('The selected file is not a valid LUQI editable quotation project (maximum 16 KB). Your existing details were not replaced.');
       }
     }
+  }
+
+  function restoreEncryptedQuote(project: QuoteDraft) {
+    // An old asynchronous plain-file import must never replace this explicit restore.
+    importEpoch.current++;
+    const verified = createQuote(project);
+    setBusinessName(project.businessName);
+    setCustomerName(project.customerName);
+    setReference(project.reference);
+    setRows(project.rows.map(row => ({
+      description: row.description, quantity: String(row.quantity),
+      unitPriceZar: row.unitPriceZar,
+    })));
+    setQuote(verified);
+    setQuoteError('');
   }
 
   function preparePricing(event: FormEvent<HTMLFormElement>) {
@@ -172,6 +188,7 @@ export default function BusinessDeskPage() {
           </div>
           <p className="luqi-business-result-note">Review your business identity, price, applicable taxes and terms before you share it. LUQI does not issue tax invoices or collect payment.</p>
         </section>}
+        <EncryptedQuoteBackup quote={quote} onRestore={restoreEncryptedQuote} />
       </section>
       <section className="luqi-business-panel" aria-labelledby="luqi-pricing-heading">
         <h2 id="luqi-pricing-heading">Check a selling price</h2>
