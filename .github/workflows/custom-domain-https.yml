@@ -1,0 +1,45 @@
+name: LUQI Custom Domain HTTPS Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/verify-custom-domain.mjs"
+      - "tests/custom-domain-https.test.mjs"
+      - ".github/workflows/custom-domain-https.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/verify-custom-domain.mjs"
+      - "tests/custom-domain-https.test.mjs"
+      - ".github/workflows/custom-domain-https.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: luqi-custom-https-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-custom-https:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Parse bounded HTTPS acceptance script
+        run: node --check scripts/verify-custom-domain.mjs
+      - name: Exercise custom-domain contract with offline fixtures
+        run: node --test tests/custom-domain-https.test.mjs
+      - name: Verify live custom domain after matching public Railway revision
+        if: github.event_name != 'pull_request'
+        env:
+          LUQI_VERIFY_PUBLIC: "true"
+          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+        run: node scripts/verify-custom-domain.mjs
