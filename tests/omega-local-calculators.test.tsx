@@ -58,12 +58,12 @@ describe('browser-only Omega pilot UI', () => {
     render(<OmegaLocalCalculators />);
     fireEvent.change(screen.getByLabelText('Choose a local calculation'), {target:{value:'vehicle.schedule'}});
     const entries: Record<string,string> = {
-      'Current odometer (km)': '11000',
-      'Odometer at last service (km)': '10000',
-      'Manufacturer distance interval (km)': '10000',
-      'Manufacturer time interval (days)': '365',
-      'Date of last service':'2025-02-01',
-      'Assessment date':'2025-03-01',
+      'Local current odometer (km)': '11000',
+      'Local odometer at last service (km)': '10000',
+      'Local manufacturer distance interval (km)': '10000',
+      'Local manufacturer time interval (days)': '365',
+      'Local date of last service':'2025-02-01',
+      'Local assessment date':'2025-03-01',
     };
     for (const [label,value] of Object.entries(entries)) fireEvent.change(screen.getByLabelText(label), {target:{value}});
     fireEvent.click(screen.getByRole('button',{name:'Calculate in browser'}));

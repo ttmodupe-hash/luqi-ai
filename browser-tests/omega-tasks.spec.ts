@@ -333,3 +333,37 @@ test("queue a reviewed vehicle schedule without inventing service advice", async
   await expect(page.getByText("Service is due", { exact: true })).toHaveCount(0);
   await noOverflow(page);
 });
+
+
+test("local Omega math works at 320px without a task or provider request", async ({ page }) => {
+  const omegaCalls: string[] = [];
+  await page.route("**/api/v1/omega/tasks**", route => {
+    omegaCalls.push(route.request().url());
+    return route.fulfill({ json: disabled });
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/#/omega-tasks");
+  await page.getByLabel("Local amounts (one per line)").fill("100.25\n40\n0.10");
+  await page.getByRole("button", { name: "Calculate in browser" }).click();
+  await expect(page.getByRole("status", { name: "Local calculation result" }))
+    .toContainText("ZAR 140.35");
+  expect(omegaCalls).toEqual([]);
+  await noOverflow(page);
+  await page.getByLabel("Choose a local calculation").selectOption("vehicle.schedule");
+  await expect(page.getByRole("status", { name: "Local calculation result" })).toHaveCount(0);
+  for (const [label, value] of [
+    ["Local current odometer (km)", "11000"],
+    ["Local odometer at last service (km)", "10000"],
+    ["Local manufacturer distance interval (km)", "10000"],
+    ["Local manufacturer time interval (days)", "365"],
+    ["Local date of last service", "2025-02-01"],
+    ["Local assessment date", "2025-03-01"],
+  ]) await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByRole("button", { name: "Calculate in browser" }).click();
+  await expect(page.getByRole("status", { name: "Local calculation result" }))
+    .toContainText("Service is not yet due");
+  await expect(page.getByRole("status", { name: "Local calculation result" }))
+    .toContainText("2026-02-01");
+  expect(omegaCalls).toEqual([]);
+  await noOverflow(page);
+});

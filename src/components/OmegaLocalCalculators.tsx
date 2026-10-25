@@ -20,13 +20,13 @@ const emptyVehicle: VehicleFields = {
   today: '', intervalKm: '', intervalDays: '',
 };
 const numericFields = [
-  ['odometerKm', 'Current odometer (km)', 0, 10000000],
-  ['lastServiceKm', 'Odometer at last service (km)', 0, 10000000],
-  ['intervalKm', 'Manufacturer distance interval (km)', 1, 1000000],
-  ['intervalDays', 'Manufacturer time interval (days)', 1, 3650],
+  ['odometerKm', 'Local current odometer (km)', 0, 10000000],
+  ['lastServiceKm', 'Local odometer at last service (km)', 0, 10000000],
+  ['intervalKm', 'Local manufacturer distance interval (km)', 1, 1000000],
+  ['intervalDays', 'Local manufacturer time interval (days)', 1, 3650],
 ] as const;
 const dateFields = [
-  ['lastServiceDate', 'Date of last service'], ['today', 'Assessment date'],
+  ['lastServiceDate', 'Local date of last service'], ['today', 'Local assessment date'],
 ] as const;
 function decimalInteger(value: string): number {
   return /^[0-9]+$/.test(value) ? Number(value) : NaN;
