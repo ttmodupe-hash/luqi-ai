@@ -96,6 +96,14 @@ jobs:
           test "$legacy_code" = "503"
           grep -q '"code":"AI_LEGACY_ROUTE_DISABLED"' /tmp/luqi-legacy-block.json
 
+          # Unimplemented support routes must fail closed in the shipped image.
+          support_status=$(curl --silent --show-error --max-time 8 \
+            --output /tmp/luqi-support-unavailable.json --write-out '%{http_code}' \
+            http://127.0.0.1:18765/api/v25/support/tickets)
+          test "$support_status" = "503"
+          grep -q '"code":"SUPPORT_TICKETING_UNAVAILABLE"' /tmp/luqi-support-unavailable.json
+          grep -q '"success":false' /tmp/luqi-support-unavailable.json
+
           # Production must never advertise successful registration/login with
           # no persistent database. The old API returned fake timestamp JWTs.
           for route in /api/v1/auth/login /auth/login /api/v1/auth/register /auth/register; do
