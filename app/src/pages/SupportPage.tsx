@@ -75,102 +75,6 @@ interface DashboardData {
   top_issues: { subject: string; count: number }[];
 }
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-
-const MOCK_TICKETS: SupportTicket[] = [
-  {
-    ticket_id: "TICK-001",
-    subject: "Login not working",
-    description: "I cannot log in with my credentials. It says 'Invalid password' even though I'm sure it's correct.",
-    category: "technical",
-    priority: "high",
-    status: "open",
-    created_at: "2026-07-26T10:00:00",
-    responses: [],
-  },
-  {
-    ticket_id: "TICK-002",
-    subject: "Double charged",
-    description: "I was charged twice for my subscription this month.",
-    category: "billing",
-    priority: "medium",
-    status: "in_progress",
-    created_at: "2026-07-25T14:00:00",
-    responses: [
-      { message: "We are investigating your billing issue and will get back to you shortly.", created_at: "2026-07-25T15:00:00", responder: "Support Agent" },
-    ],
-  },
-  {
-    ticket_id: "TICK-003",
-    subject: "Dark mode request",
-    description: "Would love to see a dark mode option in the dashboard.",
-    category: "feature_request",
-    priority: "low",
-    status: "waiting",
-    created_at: "2026-07-24T09:00:00",
-    responses: [],
-  },
-];
-
-const MOCK_FAQS: FAQ[] = [
-  {
-    faq_id: "FAQ-001",
-    question: "How do I reset my password?",
-    answer: "Go to Settings > Security > Change Password. Enter your current password, then your new password twice, and click Save.",
-    category: "account",
-    helpful_count: 42,
-  },
-  {
-    faq_id: "FAQ-002",
-    question: "Why was I charged twice?",
-    answer: "Duplicate charges usually resolve automatically within 24-48 hours. If the charge persists, please open a billing ticket.",
-    category: "billing",
-    helpful_count: 35,
-  },
-  {
-    faq_id: "FAQ-003",
-    question: "Is my data secure?",
-    answer: "Yes. We use AES-256 encryption at rest and TLS 1.3 in transit. We are fully compliant with POPIA and GDPR.",
-    category: "security",
-    helpful_count: 47,
-  },
-  {
-    faq_id: "FAQ-004",
-    question: "How do I export my data?",
-    answer: "Navigate to Settings > Data > Export. You can download your data in CSV or JSON format.",
-    category: "account",
-    helpful_count: 28,
-  },
-  {
-    faq_id: "FAQ-005",
-    question: "What browsers are supported?",
-    answer: "We support Chrome, Firefox, Safari, and Edge (latest two versions). Internet Explorer is not supported.",
-    category: "technical",
-    helpful_count: 19,
-  },
-];
-
-const MOCK_DASHBOARD: DashboardData = {
-  total_tickets: 156,
-  open_tickets: 23,
-  avg_resolution_hours: 4.2,
-  sla_compliance_percent: 94,
-  category_breakdown: {
-    billing: 42,
-    technical: 58,
-    account: 31,
-    security: 15,
-    feature_request: 10,
-  },
-  top_issues: [
-    { subject: "Password reset", count: 24 },
-    { subject: "Login failure", count: 18 },
-    { subject: "Billing inquiry", count: 15 },
-    { subject: "Feature request", count: 12 },
-    { subject: "Data export", count: 9 },
-  ],
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string) {
@@ -255,6 +159,7 @@ export default function SupportPage() {
   const [newCategory, setNewCategory] = useState("");
   const [newPriority, setNewPriority] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   // ─ Active tab ─
   const [activeTab, setActiveTab] = useState("tickets");
@@ -270,10 +175,10 @@ export default function SupportPage() {
       } else if (Array.isArray(data)) {
         setTickets(data);
       } else {
-        setTickets(MOCK_TICKETS);
+        setTickets([]);
       }
     } catch {
-      setTickets(MOCK_TICKETS);
+      setTickets([]);
     }
   }, [get]);
 
@@ -285,10 +190,10 @@ export default function SupportPage() {
       } else if (Array.isArray(data)) {
         setFaqs(data);
       } else {
-        setFaqs(MOCK_FAQS);
+        setFaqs([]);
       }
     } catch {
-      setFaqs(MOCK_FAQS);
+      setFaqs([]);
     }
   }, [get]);
 
@@ -298,10 +203,10 @@ export default function SupportPage() {
       if (data) {
         setDashboard(data);
       } else {
-        setDashboard(MOCK_DASHBOARD);
+        setDashboard(null);
       }
     } catch {
-      setDashboard(MOCK_DASHBOARD);
+      setDashboard(null);
     }
   }, [get]);
 
@@ -397,7 +302,7 @@ export default function SupportPage() {
         // Local search fallback
         const term = faqSearch.toLowerCase();
         setFaqSearchResults(
-          MOCK_FAQS.filter(
+          faqs.filter(
             (f) =>
               f.question.toLowerCase().includes(term) ||
               f.answer.toLowerCase().includes(term)
@@ -407,7 +312,7 @@ export default function SupportPage() {
     } catch {
       const term = faqSearch.toLowerCase();
       setFaqSearchResults(
-        MOCK_FAQS.filter(
+        faqs.filter(
           (f) =>
             f.question.toLowerCase().includes(term) ||
             f.answer.toLowerCase().includes(term)
@@ -417,6 +322,7 @@ export default function SupportPage() {
   };
 
   const handleCreateTicket = async () => {
+    setSubmitError(false);
     if (!newSubject.trim() || !newDescription.trim() || !newCategory || !newPriority) return;
     try {
       await post("/api/v25/support/tickets", {
@@ -433,25 +339,9 @@ export default function SupportPage() {
       loadTickets();
       setTimeout(() => setSubmitSuccess(false), 4000);
     } catch {
-      // Show success UI anyway with mock
-      setSubmitSuccess(true);
-      const mockNewTicket: SupportTicket = {
-        ticket_id: `TICK-${String(MOCK_TICKETS.length + 1).padStart(3, "0")}`,
-        subject: newSubject,
-        description: newDescription,
-        category: newCategory,
-        priority: newPriority,
-        status: "open",
-        created_at: new Date().toISOString(),
-        responses: [],
-      };
-      MOCK_TICKETS.unshift(mockNewTicket);
-      setTickets([...MOCK_TICKETS]);
-      setNewSubject("");
-      setNewDescription("");
-      setNewCategory("");
-      setNewPriority("");
-      setTimeout(() => setSubmitSuccess(false), 4000);
+      // Do not invent a ticket or clear an unsaved report when submission fails.
+      setSubmitSuccess(false);
+      setSubmitError(true);
     }
   };
 
@@ -954,6 +844,11 @@ export default function SupportPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {submitError && (
+                  <div role="alert" className="p-3 rounded-lg border border-red-500/30 text-red-300 text-sm">
+                    Ticket submission could not be confirmed. Your draft is still here. Contact a verified support operator; do not repeatedly submit sensitive details.
+                  </div>
+                )}
                 {submitSuccess && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
                     <CheckCircle size={16} />
