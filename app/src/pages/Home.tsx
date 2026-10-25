@@ -50,6 +50,9 @@ export default function Home() {
               <Link className="luqi-primary" to="/start">
                 Get started <ArrowUpRight size={19} aria-hidden="true" />
               </Link>
+              <Link className="luqi-secondary" to="/join">
+                Create account <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
               <a
                 className="luqi-secondary"
                 href="#tools"
