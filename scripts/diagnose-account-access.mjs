@@ -74,7 +74,7 @@ async function main() {
   }
   assertAccountContext(process.env);
   assertOperatorAppRoot(process.cwd());
-  const { parseMySqlConnectionSettings } = await import('file:///srv/luqi/api/lib/mysqlConfig.ts');
+  const { parseMySqlConnectionSettings } = await import('../api/lib/mysqlConfig.ts');
   const configuration = parseMySqlConnectionSettings(process.env);
   if (!configuration || configuration.user !== 'luqi_web_runtime') {
     throw new Error('ACCOUNT_RUNTIME_ROLE_REQUIRED');
