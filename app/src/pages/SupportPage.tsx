@@ -142,6 +142,10 @@ export default function SupportPage() {
   const [ticketFilter, setTicketFilter] = useState<string>("all");
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
+  const [replyError, setReplyError] = useState(false);
+  const [ticketsUnavailable, setTicketsUnavailable] = useState(false);
+  const [faqUnavailable, setFaqUnavailable] = useState(false);
+  const [dashboardUnavailable, setDashboardUnavailable] = useState(false);
   const [ticketDetail, setTicketDetail] = useState<SupportTicket | null>(null);
 
   // ─ FAQ state ─
@@ -170,14 +174,17 @@ export default function SupportPage() {
     try {
       const query = statusFilter && statusFilter !== "all" ? `?status=${statusFilter}` : "";
       const data = await get(`/api/v25/support/tickets${query}`);
+      setTicketsUnavailable(false);
       if (data && Array.isArray(data.tickets)) {
         setTickets(data.tickets);
       } else if (Array.isArray(data)) {
         setTickets(data);
       } else {
         setTickets([]);
+        setTicketsUnavailable(true);
       }
     } catch {
+      setTicketsUnavailable(true);
       setTickets([]);
     }
   }, [get]);
@@ -185,14 +192,17 @@ export default function SupportPage() {
   const loadFaqs = useCallback(async () => {
     try {
       const data = await get("/api/v25/support/faqs");
+      setFaqUnavailable(false);
       if (data && Array.isArray(data.faqs)) {
         setFaqs(data.faqs);
       } else if (Array.isArray(data)) {
         setFaqs(data);
       } else {
         setFaqs([]);
+        setFaqUnavailable(true);
       }
     } catch {
+      setFaqUnavailable(true);
       setFaqs([]);
     }
   }, [get]);
@@ -200,12 +210,15 @@ export default function SupportPage() {
   const loadDashboard = useCallback(async () => {
     try {
       const data = await get("/api/v25/support/dashboard");
-      if (data) {
+      if (data && data.success !== false && typeof data.total_tickets === "number") {
+        setDashboardUnavailable(false);
         setDashboard(data);
       } else {
         setDashboard(null);
+        setDashboardUnavailable(true);
       }
     } catch {
+      setDashboardUnavailable(true);
       setDashboard(null);
     }
   }, [get]);
@@ -232,6 +245,7 @@ export default function SupportPage() {
     }
     setExpandedTicket(ticketId);
     setReplyMessage("");
+    setReplyError(false);
     try {
       const data = await get(`/api/v25/support/tickets/${ticketId}`);
       if (data) {
@@ -249,41 +263,26 @@ export default function SupportPage() {
   const handleReply = async () => {
     if (!replyMessage.trim() || !expandedTicket) return;
     try {
-      await post(`/api/v25/support/tickets/${expandedTicket}/respond`, {
+      const result = await post(`/api/v25/support/tickets/${encodeURIComponent(expandedTicket)}/respond`, {
         message: replyMessage,
       });
-      // Refresh ticket detail
+      if (!result || result.success !== true || !result.response_id) {
+        setReplyError(true);
+        return;
+      }
+      // Only a confirmed server response can clear the draft.
+      setReplyMessage("");
+      setReplyError(false);
       try {
-        const data = await get(`/api/v25/support/tickets/${expandedTicket}`);
-        if (data) {
-          setTicketDetail(data.ticket || data);
-        }
+        const detail = await get(`/api/v25/support/tickets/${encodeURIComponent(expandedTicket)}`);
+        if (detail && detail.success !== false) setTicketDetail(detail.ticket || detail);
       } catch {
-        // use local mock update
-        if (ticketDetail) {
-          setTicketDetail({
-            ...ticketDetail,
-            responses: [
-              ...ticketDetail.responses,
-              { message: replyMessage, created_at: new Date().toISOString(), responder: "You" },
-            ],
-          });
-        }
+        // A failed refresh cannot justify inventing a local reply.
       }
-      setReplyMessage("");
-      loadTickets(ticketFilter);
+      void loadTickets(ticketFilter);
     } catch {
-      // Local mock update on failure
-      if (ticketDetail) {
-        setTicketDetail({
-          ...ticketDetail,
-          responses: [
-            ...ticketDetail.responses,
-            { message: replyMessage, created_at: new Date().toISOString(), responder: "You" },
-          ],
-        });
-      }
-      setReplyMessage("");
+      setReplyError(true);
+      // Keep the draft: a failed response may have reached the server.
     }
   };
 
@@ -334,7 +333,7 @@ export default function SupportPage() {
       // A 2xx response without a persisted ticket identifier is not receipt proof.
       // Preserve the draft for operator reconciliation rather than claiming success.
       const ticketId = result?.ticket_id ?? result?.ticket?.ticket_id;
-      if (typeof ticketId !== "string" || !ticketId.trim()) {
+      if (result?.success === false || typeof ticketId !== "string" || !ticketId.trim()) {
         setSubmitSuccess(false);
         setSubmitError(true);
         return;
@@ -379,6 +378,11 @@ export default function SupportPage() {
   return (
     <div className="h-full overflow-auto p-6 bg-neutral-900 text-white">
       <div className="max-w-5xl mx-auto space-y-6">
+        {(faqUnavailable || dashboardUnavailable || replyError) && (
+          <div role="alert" className="rounded-lg border border-amber-500/30 p-3 text-sm text-amber-300">
+            {replyError ? "Reply not confirmed; your draft is preserved. Check with support before resending." : "Some support data is unavailable or unverified. Statistics and FAQs may be incomplete."}
+          </div>
+        )}
         {/* ── Header ── */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -457,7 +461,7 @@ export default function SupportPage() {
                 {filteredTickets.length === 0 && (
                   <div className="text-center py-12 text-neutral-500">
                     <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
-                    <p>No tickets found.</p>
+                    <p>{ticketsUnavailable ? "Ticket service unavailable; no ticket records could be verified." : "No tickets found."}</p>
                   </div>
                 )}
                 {filteredTickets.map((ticket) => (
