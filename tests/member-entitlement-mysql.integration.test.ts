@@ -76,7 +76,8 @@ describe.skipIf(!isolated).sequential('read-only entitlement candidate against d
     const result = await read(102);
     expect(result).toEqual({ paidAccessAllowed: false, recordMatched: true, tier: 'creator',
       expiresAtUtc: '2026-11-23T12:00:00.000000Z', reason: 'candidate_only' });
-    expect(result.paidAccessAllowed).toBe(false);\n    expect((await read(104)).recordMatched).toBe(false);
+    expect(result.paidAccessAllowed).toBe(false);
+    expect((await read(104)).recordMatched).toBe(false);
     expect((await read(103)).recordMatched).toBe(false);
     expect(JSON.stringify(result)).not.toMatch(/order|merchant|receipt|event/i);
   });

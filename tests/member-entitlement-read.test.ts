@@ -10,7 +10,8 @@ describe('unattached paid-membership candidate stays default-deny', () => {
     });
     expect(result).toEqual({ paidAccessAllowed: false, recordMatched: false, tier: null,
       expiresAtUtc: null, reason: 'disabled' });
-    expect(result.paidAccessAllowed).toBe(false);\n    expect(query).not.toHaveBeenCalled();
+    expect(result.paidAccessAllowed).toBe(false);
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('rejects invalid owner IDs without consulting payment records', async () => {

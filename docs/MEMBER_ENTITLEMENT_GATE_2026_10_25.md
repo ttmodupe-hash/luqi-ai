@@ -28,7 +28,10 @@ on these tables.
 - The read-side gate `LUQI_MEMBER_ENTITLEMENTS_ENABLED` defaults off. It
   is not configured on production and is insufficient to activate anything:
   the reading function is not wired to any customer path.
-- The return type fixes **paidAccessAllowed=false** in *every* branch.\n  A matching synthetic ledger record yields recordMatched=true but cannot\n  authorise a subscription, quota or any paid feature.\n- Return values contain only a candidate tier/expiry, not email, payment
+- The return type fixes **paidAccessAllowed=false** in *every* branch.
+  A matching synthetic ledger record yields recordMatched=true but cannot
+  authorise a subscription, quota or any paid feature.
+- Return values contain only a candidate tier/expiry, not email, payment
   reference, receipts, provider credentials, or account content.
 - Proposed `starter` and `creator` values are internal *labels*, not
   approved prices or products. The R49/R99 research prices remain INACTIVE.

@@ -38,7 +38,9 @@ const TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
  *   and a finite monthly entitlement can produce a candidate positive result.
  * - This function has no user-supplied email, token, browser tier, payment
  *   redirect or order-reference arguments.
- * - The return type permanently sets paidAccessAllowed=false, even with a\n *   matching synthetic record. It is NOT a merchant signature or permission.\n * - Even a positive candidate MUST NOT trigger provider calls or paid access
+ * - The return type permanently sets paidAccessAllowed=false, even with a
+ *   matching synthetic record. It is NOT a merchant signature or permission.
+ * - Even a positive candidate MUST NOT trigger provider calls or paid access
  *   until a separate merchant signature, settlement and capacity acceptance
  *   has been implemented and independently approved.
  */
