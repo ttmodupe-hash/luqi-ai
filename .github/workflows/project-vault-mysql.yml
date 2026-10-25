@@ -1,0 +1,53 @@
+name: LUQI Private Project Vault MySQL
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/private-project-vault.ts'
+      - 'api/services/projectVault*.ts'
+      - 'src/lib/project-vault-crypto.ts'
+      - 'app/src/lib/project-vault-crypto.ts'
+      - 'db/migrations/20261025_project_vault.sql'
+      - 'db/runtimeSchema.ts'
+      - 'db/runtimeRole.ts'
+      - 'tests/project-vault-*.ts'
+      - '.github/workflows/project-vault-mysql.yml'
+permissions:
+  contents: read
+jobs:
+  encrypted-vault-boundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_vault_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # Hardcoded ephemeral loopback fixture. Never connects to Railway.
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_vault_ci
+      LUQI_PROJECT_VAULT_CI_FIXTURE: 'true'
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Prove account-owned encrypted project storage against disposable MySQL
+        run: npx vitest run tests/project-vault-mysql.integration.test.ts --no-file-parallelism
+      - name: Verify no production storage or payment activation
+        run: |
+          node -e "const fs=require('fs'); const sql=fs.readFileSync('db/migrations/20261025_project_vault.sql','utf8'); if(/DROP TABLE|ALTER TABLE|TRUNCATE/i.test(sql)) process.exit(1)"
+          echo 'Disposable fixtures only; no production GRANT, migration, merchant or live customer account.'
