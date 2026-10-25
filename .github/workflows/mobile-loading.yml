@@ -38,12 +38,21 @@ jobs:
           for (const path of ['src/App.tsx', 'app/src/App.tsx']) {
             const before = fs.readFileSync('.mobile-baseline/' + path, 'utf8');
             const after = fs.readFileSync(path, 'utf8');
-            for (const pattern of [/\bpath="([^"]+)"/g, /\bsrc="(\/labs\/[^"]+)"/g]) {
-              const matches = value => [...value.matchAll(pattern)].map(match => match[1]).sort();
-              assert.deepEqual(matches(after), matches(before), 'Changed route/iframe inventory: ' + path);
-            }
+            const routePattern = /\bpath="([^"]+)"/g;
+            const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
+            const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
+            // The only newly reviewed public route is the lazy, no-provider
+            // Business Desk. Remove exactly one from the new inventory before
+            // enforcing byte-identical legacy route and iframe inventories.
+            const routes = matches(after, routePattern);
+            const additions = routes.filter(route => route === '/business-desk');
+            assert.deepEqual(additions, ['/business-desk'], 'Missing or duplicated approved Business Desk route: ' + path);
+            assert.deepEqual(routes.filter(route => route !== '/business-desk'),
+              matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
+            assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
+              'Existing iframe targets changed: ' + path);
           }
-          console.log('All pre-existing routes and iframe targets preserved in both applications.');
+          console.log('Pre-existing routes and iframe targets preserved; only /business-desk is new.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash
