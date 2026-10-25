@@ -1,12 +1,12 @@
 import { Link } from 'react-router';
-import { ArrowUpRight, FlaskConical, NotebookPen, Check, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, FlaskConical, NotebookPen, Layers3, Check, ShieldCheck } from 'lucide-react';
 
 export default function StartPage() {
   return <main className="luqi-start">
     <header className="luqi-start-heading">
       <p className="luqi-eyebrow">WELCOME TO THE LUQI PILOT</p>
       <h1>A useful place to begin.</h1>
-      <p>Try a limited AI text question, explore a hands-on physics experiment, or create a space for your notes.</p>
+      <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, or save your ideas as notes.</p>
       <p><Link className="luqi-primary" to="/ai-trial">Try the AI text trial <ArrowUpRight size={18} aria-hidden="true" /></Link></p>
       <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> Voice and paid plans are not enabled. AI text has a separate limited trial.</span>
     </header>
@@ -28,11 +28,19 @@ export default function StartPage() {
         <Link className="luqi-primary" to="/join">Create your notes account <ArrowUpRight size={18} aria-hidden="true" /></Link>
         <Link className="luqi-start-existing" to="/companion">Already have an account? Sign in</Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-omega">
+        <span className="luqi-tool-icon luqi-icon-agents"><Layers3 aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">NO ACCOUNT OR AI PAYMENT</p>
+        <h2 id="start-omega">Put Omega to work on useful numbers.</h2>
+        <p>Add amounts in one currency or check a vehicle's service date and mileage using your own figures.</p>
+        <ul><li><Check aria-hidden="true" /> Exact budget totals in your browser</li><li><Check aria-hidden="true" /> Supplied service intervals, not mechanical advice</li><li><Check aria-hidden="true" /> No account or stored task needed</li></ul>
+        <Link className="luqi-primary" to="/omega-tasks">Try Omega calculations <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
     </div>
     <section className="luqi-start-details" aria-labelledby="pilot-expectations">
       <h2 id="pilot-expectations">What to expect from the pilot</h2>
       <p>Notes are stored on LUQI’s server and can be accessed by storage administrators. Use ordinary test notes and keep a separate copy of anything important. Deleting active notes does not erase backup copies immediately.</p>
-      <p>Automatic password-reset emails are unavailable. Verified African-language support, payments and autonomous Omega workers are still being developed.</p>
+      <p>Automatic password-reset emails are unavailable. Verified African-language support, payments, live-data Omega modules and autonomous workers are still being developed.</p>
       <p><Link to="/ai-trial">View the signed-in AI text trial</Link> to check whether questions are currently enabled. It uses separate provider processing and spending limits; your notes are not sent automatically.</p>
       <div><Link to="/privacy">Privacy information</Link><Link to="/service-status">Check service status</Link><Link to="/contact">Help and feedback</Link></div>
     </section>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
 import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
 import OmegaLocalCalculators from "../components/OmegaLocalCalculators";
+import OmegaDomainGuide from "../components/OmegaDomainGuide";
 import { ConversationError, signIn } from "../lib/private-conversations";
 import {
   omegaClient,
@@ -235,6 +236,7 @@ export default function OmegaTasksPage() {
         </p>
       </header>
       <OmegaLocalCalculators />
+      <OmegaDomainGuide />
       {notice && (
         <p role="status" className="omega-notice">
           {notice}

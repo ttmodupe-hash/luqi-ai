@@ -68,10 +68,10 @@ export const workspaceTools = [
   {
     id: "agents",
     title: "Omega tasks",
-    category: "Reliable help, carefully built",
+    category: "Travel and vehicle calculations",
     description:
-      "Review saved task status and calculation results after signing in. Intake may be disabled; worker activity is not verified by this dashboard.",
-    status: "Dashboard · sign-in required",
+      "Use Omega's travel budget and vehicle service schedule calculators now, directly in your browser without an account or paid AI. The separate saved task queue and workers are not activated.",
+    status: "Local · no account",
     ready: true,
     path: "/omega-tasks",
     icon: "agents",
