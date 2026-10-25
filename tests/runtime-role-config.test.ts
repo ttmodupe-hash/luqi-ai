@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-vi.mock('mysql2/promise', () => ({ default: { createConnection: vi.fn() } }));
+vi.mock('mysql2/promise', () => ({ default: { createConnection: vi.fn(),
+  escapeId: vi.fn((name: string) => '`' + name + '`') } }));
 import mysql from 'mysql2/promise';
 import { prepareRuntimeRole } from '../db/runtimeRole';
 afterEach(() => vi.clearAllMocks());
