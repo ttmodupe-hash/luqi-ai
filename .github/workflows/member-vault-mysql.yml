@@ -1,0 +1,61 @@
+name: LUQI Member Vault MySQL Acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/member-vault.ts'
+      - 'api/services/memberVault*.ts'
+      - 'db/migrations/20261025_member_vault.sql'
+      - 'db/runtimeRole.ts'
+      - 'db/runtimeSchema.ts'
+      - 'api/boot.ts'
+      - 'tests/member-vault*.test.ts'
+      - '.github/workflows/member-vault-mysql.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/member-vault.ts'
+      - 'api/services/memberVault*.ts'
+      - 'db/migrations/20261025_member_vault.sql'
+      - 'db/runtimeRole.ts'
+      - 'db/runtimeSchema.ts'
+      - 'api/boot.ts'
+      - 'tests/member-vault*.test.ts'
+      - '.github/workflows/member-vault-mysql.yml'
+permissions:
+  contents: read
+jobs:
+  vault-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_member_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GITHUB_ACTIONS: 'true'
+      LUQI_MEMBER_VAULT_CI_FIXTURE: 'true'
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_member_ci
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install exact dependencies without unreviewed hooks
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Test member project auth, MySQL quota and ownership on disposable data only
+        run: npx vitest run tests/member-vault.test.ts tests/member-vault-mysql.integration.test.ts --no-file-parallelism
