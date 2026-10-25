@@ -23,3 +23,17 @@ for (const path of ["/api/v1/admin/billing-ledger", "/admin/billing-ledger", "/a
   closed(path, "LEGACY_PAYMENTS_DISABLED");
 }
 for (const path of ["/api/ussd", "/api/ussd/*"]) closed(path, "USSD_INTEGRATION_UNAVAILABLE");
+
+// The old Support Centre has no live, account-owned ticket database or reviewed
+// authentication contract. Do not silently accept writes or invent success.
+for (const path of ["/api/v25/support", "/api/v25/support/*"]) {
+  legacyControlUnavailable.all(path, c => {
+    c.header("Cache-Control", "no-store");
+    return c.json({
+      success: false,
+      status: "unavailable",
+      code: "SUPPORT_TICKETING_UNAVAILABLE",
+      message: "Ticket submissions, replies, dashboards and FAQs are unavailable until a verified support service is launched. For private help, use your existing verified pilot contact; never post account details in public issues.",
+    }, 503);
+  });
+}
