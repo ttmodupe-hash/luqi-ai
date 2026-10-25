@@ -70,3 +70,28 @@ volume), private support and recovery operator, independent crypto/privacy
 review, feature-specific restricted grants and a small consenting acceptance
 cohort. Only after those gates should account-bound entitlements and
 merchant-hosted checkout be considered. See #202 and #133.
+
+
+## Strict browser transport layer staged (25 October 2026)
+
+The additional mirrored TypeScript client is a **pre-activation** API interface,
+not a visible cloud-sync feature or membership. It requires an existing
+in-memory LUQI JWT, uses only same-origin /api/v1/projects with no-store,
+omitted browser credentials, no redirects, a bounded response size, fixed
+15-second deadlines, and no automatic retries. Its type validators refuse
+extra fields, unsupported data types, mismatched UUIDs, stale revisions,
+unconfirmed saves/removals and any fabricated subscriptionActive=true status.
+
+The interface supports explicit status, metadata list, encrypted record GET,
+version-bound create/update and confirmed removal. It deliberately does not
+accept account identifiers, arbitrary endpoints, plaintext projects,
+passphrases or merchant/AI calls. Passphrases and project encryption are owned
+by the separate tested browser-only Web Crypto helper, not HTTP transport.
+
+There is still **no supported customer save-to-cloud UI** or subscription
+entitlement. The server feature flag remains OFF, and no vault migration,
+private database grant, production project write, merchant checkout or
+provider request was performed. The eventual customer UX must independently
+prove sign-in/revocation, wrong-key handling, explicit user consent,
+passphrase-loss warning, optimistic stale-device conflict, safe recovery
+and deletion, and real-device acceptance before any activation.
