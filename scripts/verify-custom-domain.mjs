@@ -81,7 +81,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const expected = process.env.LUQI_EXPECTED_COMMIT;
     if (!SHA.test(expected || "")) throw Error("INVALID_EXPECTED_REVISION");
     // Wait for source-verified Railway rollout before checking the custom hostname.
-    await waitForPublicRevision(expected, { timeoutMs: 180_000 });
+    await waitForPublicRevision(expected, { timeoutMs: 300_000 });
     await verifyCustomDomain(expected);
     console.log("PASS Custom LUQI HTTPS health, release identity and safe account entry.");
     console.log("No account created, user authenticated, mailbox checked or payment initiated.");
