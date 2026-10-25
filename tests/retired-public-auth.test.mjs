@@ -19,6 +19,15 @@ describe("retired public login/admin assets", () => {
     }
     assert.match(admin, /Legacy administration is unavailable/);
   });
+  it("never reintroduces the unused demo login and local-storage signup forms", () => {
+    const oldLogin = readFileSync("app/src/pages/LoginPage.tsx", "utf8");
+    const oldSignup = readFileSync("app/src/pages/SignupPage.tsx", "utf8");
+    assert.match(oldLogin, /<Navigate to="\\/companion" replace \\/>/);
+    assert.match(oldSignup, /<Navigate to="\\/join" replace \\/>/);
+    for (const source of [oldLogin, oldSignup]) {
+      assert.doesNotMatch(source, /demo@|demo123|localStorage|sessionStorage|setItem|fetch\\s*\\(|useApi/);
+    }
+  });
   it("cannot put a fallback admin token in client storage or call the network", () => {
     assert.doesNotMatch(script, /fetch\s*\(|localStorage|sessionStorage|ADMIN-2026|setItem|requestSubmit/);
     assert.match(script, /preventDefault\(\)/);
