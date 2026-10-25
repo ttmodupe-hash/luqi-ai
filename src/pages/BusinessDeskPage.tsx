@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { checkPricing, createQuote, type QuoteResult, type PricingResult } from '../lib/business-desk';
+import { checkPricing, createQuote, exportQuoteProject, importQuoteProject, type QuoteResult, type PricingResult } from '../lib/business-desk';
 import '../business-desk.css';
 
 interface DraftRow { description: string; quantity: string; unitPriceZar: string }
@@ -8,11 +8,11 @@ const freshRow = (): DraftRow => ({ description: '', quantity: '1', unitPriceZar
 function integer(value: string): number {
   return /^[0-9]{1,4}$/.test(value) ? Number(value) : NaN;
 }
-function downloadDraft(body: string) {
-  const url = URL.createObjectURL(new Blob([body], { type: 'text/plain;charset=utf-8' }));
+function downloadDraft(body: string, filename = 'luqi-draft-quotation.txt', type = 'text/plain;charset=utf-8') {
+  const url = URL.createObjectURL(new Blob([body], { type }));
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'luqi-draft-quotation.txt';
+  anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
@@ -24,13 +24,15 @@ export default function BusinessDeskPage() {
   const [rows, setRows] = useState<DraftRow[]>([freshRow()]);
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [quoteError, setQuoteError] = useState('');
+  const importEpoch = useRef(0);
+  useEffect(() => () => { importEpoch.current++; }, []);
   const [selling, setSelling] = useState('');
   const [cost, setCost] = useState('');
   const [fixed, setFixed] = useState('');
   const [pricing, setPricing] = useState<PricingResult | null>(null);
   const [pricingError, setPricingError] = useState('');
 
-  function editQuote() { setQuote(null); setQuoteError(''); }
+  function editQuote() { importEpoch.current++; setQuote(null); setQuoteError(''); }
   function setRow(index: number, field: keyof DraftRow, value: string) {
     setRows(previous => previous.map((row, i) => i === index ? { ...row, [field]: value } : row));
     editQuote();
@@ -51,6 +53,37 @@ export default function BusinessDeskPage() {
       setQuoteError('Check the business, customer, reference and 1–12 item lines. Use positive whole quantities and ZAR amounts with no more than two decimal places.');
     }
   }
+
+  async function loadProject(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+    // Every new intent invalidates an earlier import. A late read cannot
+    // overwrite edits or switch an account/session.
+    const epoch = ++importEpoch.current;
+    setQuote(null); setQuoteError('');
+    try {
+      if (!file.name.toLowerCase().endsWith('.json') || file.size < 1 || file.size > 16_384)
+        throw new Error('INVALID_BUSINESS_INPUT');
+      const raw = await file.text();
+      if (epoch !== importEpoch.current) return;
+      const project = importQuoteProject(raw);
+      setBusinessName(project.businessName);
+      setCustomerName(project.customerName);
+      setReference(project.reference);
+      setRows(project.rows.map(row => ({
+        description: row.description, quantity: String(row.quantity),
+        unitPriceZar: row.unitPriceZar,
+      })));
+      setQuote(createQuote(project));
+      setQuoteError('');
+    } catch {
+      if (epoch === importEpoch.current) {
+        setQuoteError('The selected file is not a valid LUQI editable quotation project (maximum 16 KB). Your existing details were not replaced.');
+      }
+    }
+  }
+
   function preparePricing(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPricing(null); setPricingError('');
@@ -68,7 +101,7 @@ export default function BusinessDeskPage() {
       <p className="luqi-eyebrow">PRACTICAL TOOLS FOR INDEPENDENT WORK</p>
       <h1>Business desk</h1>
       <p>Prepare a draft client quotation and work out how many sales could cover your stated fixed costs. Both tools run in your browser—no sign-in, AI credits, external services or subscription required.</p>
-      <p className="luqi-business-note">Your entries stay in this tab. Nothing is sent to LUQI or saved to your account. Download a quotation before leaving if you want to keep it.</p>
+      <p className="luqi-business-note">Your entries stay in this tab. Nothing is sent to LUQI or saved to your account. Download the text quotation or an editable project before leaving if you want to keep it.</p>
     </header>
     <div className="luqi-business-grid">
       <section className="luqi-business-panel" aria-labelledby="luqi-quote-heading">
@@ -119,13 +152,23 @@ export default function BusinessDeskPage() {
             <button className="luqi-primary" type="submit">Prepare quotation</button>
           </div>
         </form>
+        <div className="luqi-business-project-actions">
+          <label className="luqi-business-project-upload">
+            Restore editable quotation (.json)
+            <input type="file" accept=".json,application/json" onChange={loadProject} />
+          </label>
+          <p className="luqi-business-note">Choose a LUQI project you previously saved. It is opened locally, not uploaded. A valid file replaces this tab's draft; save your current one first if needed.</p>
+        </div>
         {quoteError && <p className="luqi-business-error" role="alert">{quoteError}</p>}
         {quote && <section className="luqi-business-result" aria-label="Draft quotation result" role="status">
           <h3>Draft quotation ready</h3>
           <p className="luqi-business-money">R {quote.subtotalZar}</p>
           <p>Subtotal before any taxes or transaction fees.</p>
           <pre>{quote.textDraft}</pre>
-          <button type="button" className="luqi-business-download" onClick={() => downloadDraft(quote.textDraft)}>Download text draft</button>
+          <div className="luqi-business-actions">
+            <button type="button" className="luqi-business-download" onClick={() => downloadDraft(quote.textDraft)}>Download text draft</button>
+            <button type="button" className="luqi-business-download" onClick={() => downloadDraft(exportQuoteProject(quote), 'luqi-quote-project.json', 'application/json;charset=utf-8')}>Save editable project</button>
+          </div>
           <p className="luqi-business-result-note">Review your business identity, price, applicable taxes and terms before you share it. LUQI does not issue tax invoices or collect payment.</p>
         </section>}
       </section>

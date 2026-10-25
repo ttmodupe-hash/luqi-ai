@@ -47,3 +47,28 @@
   .luqi-business-result dl { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .luqi-business-result dd { margin-bottom: 8px; }
 }
+
+/* Reusable quote projects are local files only, never an account upload. */
+.luqi-business-project-actions {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #49634b;
+  padding-top: 14px;
+  margin-top: 20px;
+}
+.luqi-business-project-upload {
+  display: grid;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+.luqi-business-project-upload input[type="file"] {
+  border: 1px solid #8ba185;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
+  max-width: 100%;
+  background: #10221a;
+  color: #f1f6eb;
+}
