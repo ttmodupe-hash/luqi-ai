@@ -22,14 +22,17 @@ export async function prepareRuntimeRole(environment: Record<string, string | un
     const settings = parseMySqlConnectionSettings(environment);
     const password = environment.LUQI_RUNTIME_DB_PASSWORD ?? '';
     const omegaEnabled = environment.LUQI_OMEGA_WEB_ENABLED === 'true';
+    const privateVaultEnabled = environment.LUQI_PROJECT_VAULT_ENABLED === 'true';
     // A previously approved Omega grant is checkable without creating users,
     // modifying grants or running migrations. Provision-new remains core-only.
     const expectedGrants: Readonly<Record<string, string>> = omegaEnabled
-      ? { ...WEB_RUNTIME_GRANTS, omega_tasks_v1: 'SELECT, INSERT, UPDATE, DELETE' }
-      : WEB_RUNTIME_GRANTS;
+      ? { ...WEB_RUNTIME_GRANTS, omega_tasks_v1: 'SELECT, INSERT, UPDATE, DELETE',
+          ...(privateVaultEnabled ? { luqi_project_vault_v1: 'SELECT, INSERT, UPDATE, DELETE' } : {}) }
+      : { ...WEB_RUNTIME_GRANTS,
+          ...(privateVaultEnabled ? { luqi_project_vault_v1: 'SELECT, INSERT, UPDATE, DELETE' } : {}) };
     if (!settings || !/^[a-f0-9]{64}$/.test(password) || password === settings.password ||
         !/^[a-zA-Z0-9_]{1,64}$/.test(settings.database) || settings.user === WEB_RUNTIME_USER ||
-        (provisionNew && omegaEnabled)) throw unavailable();
+        (provisionNew && (omegaEnabled || privateVaultEnabled))) throw unavailable();
     const fixture = environment.LUQI_MYSQL_CI_FIXTURE === 'true' && settings.host === '127.0.0.1' &&
       settings.port === 3306 && settings.database === 'luqi_ci';
     if (!fixture && !settings.host.endsWith('.railway.internal')) throw unavailable();

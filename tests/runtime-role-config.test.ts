@@ -24,6 +24,7 @@ describe('private role provisioning configuration', () => {
     { ...environment, DATABASE_URL: 'mysql://luqi_web_runtime:old-secret@mysql.railway.internal:3306/railway' },
     { ...environment, DATABASE_URL: `mysql://operator:${'a'.repeat(64)}@mysql.railway.internal:3306/railway` },
     { ...environment, LUQI_OMEGA_WEB_ENABLED: 'true' },
+    { ...environment, LUQI_PROJECT_VAULT_ENABLED: 'true' },
     { ...environment, DATABASE_URL: 'mysql://operator:old-secret@127.0.0.1:3306/luqi_ci' },
   ])('refuses unsafe configuration before opening any SQL connection: %j', async env => {
     await expect(prepareRuntimeRole(env, true)).rejects.toThrow('MYSQL_RUNTIME_ROLE_UNAVAILABLE');

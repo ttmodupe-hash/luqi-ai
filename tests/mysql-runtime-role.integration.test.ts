@@ -271,6 +271,32 @@ describe.skipIf(!enabled).sequential('restricted MySQL web runtime', () => {
 
   }, 25_000);
 
+
+  it('keeps project storage opt-in and verifies exact ninth/tenth grants only after a reviewed migration', async () => {
+    await rejectsStartup({LUQI_PROJECT_VAULT_ENABLED:'true'});
+    await root.query(readFileSync('db/migrations/20261025_project_vault.sql', 'utf8'));
+    await expect(checkRuntimeSchema({...runtimeEnvironment, LUQI_PROJECT_VAULT_ENABLED:'true'}))
+      .rejects.toThrow('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE');
+    await root.query("GRANT SELECT, INSERT, UPDATE, DELETE ON luqi_ci.luqi_project_vault_v1 TO 'luqi_web_runtime'@'%'");
+    expect(await checkRuntimeSchema({
+      ...runtimeEnvironment, LUQI_OMEGA_WEB_ENABLED:'true', LUQI_PROJECT_VAULT_ENABLED:'true',
+    })).toEqual({status:'validated',tables:10});
+    const operator = {
+      ...runtimeEnvironment, DATABASE_URL:ROOT_URL, LUQI_RUNTIME_DB_PASSWORD:RUNTIME_PASSWORD,
+      LUQI_OMEGA_WEB_ENABLED:'true', LUQI_PROJECT_VAULT_ENABLED:'true',
+    };
+    const check = runNode('dist/prepare-mysql-runtime-role.js',['--check'],operator);
+    expect(await finish(check)).toBe(0);
+    expect(check.output()).toContain('"tables":10');
+    expect(check.output()).toContain('"privileges":"table_only"');
+    expect(check.output()).not.toContain(RUNTIME_PASSWORD);
+    const prohibited = runNode('dist/prepare-mysql-runtime-role.js',['--provision-new'],operator);
+    expect(await finish(prohibited)).toBe(1);
+    expect(prohibited.output()).not.toContain(RUNTIME_PASSWORD);
+    const omitted = runNode('dist/prepare-mysql-runtime-role.js',['--check'],
+      {...operator, LUQI_PROJECT_VAULT_ENABLED:'false'});
+    expect(await finish(omitted)).toBe(1);
+  },45_000);
   it('fails closed before listening for unreachable or invalid configured MySQL', async () => {
     await rejectsStartup({ DATABASE_URL: 'mysql://fixture:private-synthetic-unreachable-password@127.0.0.1:1/luqi_ci' });
     await rejectsStartup({ DATABASE_URL: 'postgresql://fixture:private-synthetic-password@127.0.0.1:1/luqi_ci' });

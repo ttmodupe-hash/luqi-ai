@@ -64,6 +64,17 @@ const omega: TableContract = {
     handler_version: { type: 'varbinary(128)' }, state: { type: 'varchar(32)', collation: 'ascii_bin' },
     document: { type: 'json' } },
 };
+const privateVault: TableContract = {
+  columns: ['owner_id', 'id', 'kind', 'revision', 'sealed', 'created_at', 'updated_at'],
+  unique: [['owner_id', 'id']],
+  critical: {
+    owner_id: { type: 'bigint unsigned' },
+    id: { type: 'char(36)', collation: 'ascii_bin' },
+    kind: { type: 'varchar(8)', collation: 'ascii_bin' },
+    revision: { type: 'int unsigned' },
+    sealed: { type: 'json' },
+  },
+};
 const normalizeType = (type: string) => type.toLowerCase()
   .replace(/\b(tinyint|smallint|mediumint|int|bigint)\(\d+\)/g, '$1');
 const unavailable = () => new Error('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE');
@@ -119,7 +130,8 @@ Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
     const settings = parseMySqlConnectionSettings(environment);
     if (!settings) return { status: 'unconfigured', tables: 0 };
     const contracts = { ...RUNTIME_TABLES,
-      ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}) };
+      ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
+      ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
     connection = await mysql.createConnection({ ...settings, connectTimeout: 4_000 });
     const activeConnection = connection;
     await Promise.race([

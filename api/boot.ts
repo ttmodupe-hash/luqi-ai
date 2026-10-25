@@ -16,6 +16,7 @@ import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
 import { accountSecurity } from "./account-security";
 import { omegaTasks } from "./omega-tasks";
+import { privateProjectVault } from "./private-project-vault";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
 import { env } from "./lib/env";
@@ -112,6 +113,8 @@ app.use("*", async (c, next) => {
 app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/account", accountSecurity);
 app.route("/api/v1/omega/tasks", omegaTasks);
+// Authenticated encrypted project sync is disabled without an explicit rollout flag.
+app.route("/api/v1/projects", privateProjectVault);
 
 // ── tRPC ───────────────────────────────────────────────────────────
 app.route("/api/trpc", createTrpcHttp(appRouter));
