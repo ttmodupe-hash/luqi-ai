@@ -82,3 +82,29 @@ the public Pricing page MUST say checkout is unavailable.
    before turning on any paid inference bundle.
 5. Reinvest actual contribution from paying customers, not hypothetical
    signup numbers. Grants remain optional, not a dependency.
+
+## Actual repeat-use feature shipped for pilot users
+The Business Desk gained a local 50-prospect follow-up board with stage
+changes, due-date screening and explicit file save/reopen. It is a
+consumer-controlled, no-AI-cost *free pilot* tool. It is not cross-device
+cloud CRM, encrypted storage, automatic notifications or a paid entitlement.
+Use real small-business test cases to assess weekly retention and demand
+for secure account-synced projects, rather than counting homepage hits
+as paying-customer traction.
+
+## Minimum honest paid upgrade
+A future Starter or Creator subscription needs at least one differentiated
+feature **actually enforced by an authenticated server**. User-owned
+cross-device quote/project saves with a bounded number of projects and
+end-to-end delete/export are candidates, once migrations, backups,
+whole-account retention and support pass. A larger, carefully budgeted
+AI allowance is optional and must pass a fixed per-subscriber monthly
+entitlement and admission-capacity audit, not just reuse the free 20/day
+pilot cap. Premium status can only originate from a verified merchant
+payment event and reconciled active entitlement, never a price-table label,
+user-controlled field, browser cookie or speculative signup.
+
+Do not claim that a proposed R49 or R99 tier gives more model usage,
+model quality, voice, long generative video or storage than the verified
+competitor plans. The competitive differentiator is cheaper practical
+African-focused workflows, subject to evaluated user demand.
