@@ -54,6 +54,11 @@ privateProjectVault.put('/:id', async c => {
   const submitted = vaultWrite.safeParse(await c.req.json().catch(() => null));
   if (!submitted.success) return c.json({ code: 'INVALID_INPUT' }, 400);
   const result = await projectVaultStore.save(c.get('userId'), id.data, submitted.data);
+  if (result.saved !== true || result.id !== id.data ||
+      result.revision !== submitted.data.expectedRevision + 1 ||
+      result.created !== (submitted.data.expectedRevision === 0)) {
+    throw Error('PROJECT_SAVE_UNCONFIRMED');
+  }
   return c.json(result, result.created ? 201 : 200);
 });
 privateProjectVault.post('/:id/remove', async c => {
