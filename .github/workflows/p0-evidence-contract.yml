@@ -5,6 +5,11 @@ on:
     paths:
       - 'scripts/p0-operator-handoff.mjs'
       - 'scripts/review-p0-operator-handoff.mjs'
+      - 'scripts/release-control-posture.mjs'
+      - 'scripts/review-release-controls.mjs'
+      - 'tests/release-control-posture.test.mjs'
+      - 'docs/RELEASE_CONTROL_LOCKDOWN_2026_10_25.md'
+      - '.github/workflows/web-build.yml'
       - 'tests/p0-operator-handoff.test.mjs'
       - 'docs/P0_OPERATOR_EVIDENCE_HANDOFF_2026_10_25.md'
       - '.github/workflows/p0-evidence-contract.yml'
@@ -25,7 +30,11 @@ jobs:
         run: |
           node --check scripts/p0-operator-handoff.mjs
           node --check scripts/review-p0-operator-handoff.mjs
+          node --check scripts/release-control-posture.mjs
+          node --check scripts/review-release-controls.mjs
       - name: Test redacted evidence with no vendor, database or payments
         run: node --test tests/p0-operator-handoff.test.mjs
+      - name: Validate release-control safeguards and main push-check trigger
+        run: node --test tests/release-control-posture.test.mjs
       - name: Preserve scope
-        run: echo 'Synthetic documentary completeness only; no production test, vendor invoices, DB restore, merchant charge or launch approval.' >> "$GITHUB_STEP_SUMMARY"
+        run: echo 'Synthetic documentary and release-control checks only; no production mutation, real branch-policy verification, vendor invoices, DB restore, merchant charge or launch approval.' >> "$GITHUB_STEP_SUMMARY"
