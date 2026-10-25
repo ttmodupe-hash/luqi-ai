@@ -367,3 +367,36 @@ test("local Omega math works at 320px without a task or provider request", async
   expect(omegaCalls).toEqual([]);
   await noOverflow(page);
 });
+
+test("finished-task cleanup is owner-confirmed and does not start an Omega worker", async ({ page }) => {
+  const saved = { ...task, state: "completed", attempts: 1, result: budgetResult };
+  const calls: string[] = [];
+  await page.route("**/api/v1/omega/tasks**", route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    calls.push(request.method() + " " + path);
+    if (path.endsWith("/status")) return route.fulfill({ json: configured });
+    if (path.endsWith("/remove")) {
+      expect(request.method()).toBe("POST");
+      expect(request.postDataJSON()).toEqual({ confirm: true });
+      return route.fulfill({ json: { removed: true, id: task.id } });
+    }
+    return route.fulfill({ json: path.endsWith(task.id) ? { task: saved } : { tasks: [saved] } });
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await signIn(page);
+  const history = page.getByRole("region", { name: "Saved tasks" });
+  await history.getByRole("button", { name: /Travel budget/ }).click();
+  await expect(page.getByRole("button", { name: "Remove saved task" })).toBeVisible();
+  await page.getByRole("button", { name: "Remove saved task" }).click();
+  await expect(page.getByRole("region", { name: "Confirm saved task removal" })).toBeVisible();
+  expect(calls.filter(call => call.endsWith("/remove"))).toHaveLength(0);
+  await page.getByRole("button", { name: "Keep saved task" }).click();
+  await page.getByRole("button", { name: "Remove saved task" }).click();
+  await page.getByRole("button", { name: "Confirm removal" }).click();
+  await expect(page.getByRole("status")).toContainText("Finished task removed from active storage");
+  await expect(history.getByRole("button", { name: /Travel budget/ })).toHaveCount(0);
+  expect(calls.filter(call => call.endsWith("/remove"))).toHaveLength(1);
+  expect(calls.some(call => /\/(?:run|approve|recover)(?:\/|$)/.test(call))).toBe(false);
+  await noOverflow(page);
+});
