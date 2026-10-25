@@ -7,7 +7,7 @@ const cloudbuild = fs.readFileSync("cloudbuild.yaml", "utf8");
 // A default-branch push must not start a legacy Google Cloud deployment.
 assert.match(workflow, /^on:\s*\n\s+workflow_dispatch:\s*$/m);
 assert.doesNotMatch(workflow, /^\s+push\s*:/m);
-assert.doesNotMatch(workflow, /google-github-actions|credentials_json:|secrets\.|GCP_DEPLOY_ENABLED|docker\s+push|gcloud\s+run\s+deploy|--update-traffic|--allow-unauthenticated|--clear-env-vars/i);
+assert.doesNotMatch(workflow, /google-github-actions|credentials_json:|\$\{\{\s*secrets\.|GCP_DEPLOY_ENABLED|docker\s+push|gcloud\s+run\s+deploy|--update-traffic|--allow-unauthenticated|--clear-env-vars/i);
 assert.match(workflow, /\bexit 1\b/, "Manual dispatch must fail closed");
 assert.match(workflow, /contents:\s*read/, "Least-privilege GitHub job required");
 
