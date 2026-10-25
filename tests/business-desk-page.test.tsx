@@ -19,7 +19,7 @@ describe('LUQI Business Desk, no account and no provider calls', () => {
     fireEvent.change(screen.getByLabelText('Item 1 quantity'), { target: { value: '3' } });
     fireEvent.change(screen.getByLabelText('Item 1 unit price (ZAR)'), { target: { value: '100.25' } });
     fireEvent.click(screen.getByRole('button', { name: 'Prepare quotation' }));
-    expect(screen.getByRole('status', { name: 'Draft quotation result' })).textContent).toContain('R 300.75');
+    expect(screen.getByRole('status', { name: 'Draft quotation result' }).textContent).toContain('R 300.75');
     expect(screen.getByText(/Not a tax invoice/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Download text draft' })).toBeTruthy();
     expect(fetch).not.toHaveBeenCalled();
@@ -35,7 +35,7 @@ describe('LUQI Business Desk, no account and no provider calls', () => {
       ['Fixed costs to cover (ZAR, same period)', '1000'],
     ]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
     fireEvent.click(screen.getByRole('button', { name: 'Calculate break-even sales' }));
-    expect(screen.getByRole('status', { name: 'Selling price result' })).textContent).toContain('20');
+    expect(screen.getByRole('status', { name: 'Selling price result' }).textContent).toContain('20');
     expect(screen.getByText('33.33%')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Direct cost per sale (ZAR)'), { target: { value: '170' } });
     expect(screen.queryByText('33.33%')).toBeNull();
@@ -51,7 +51,7 @@ describe('LUQI Business Desk, no account and no provider calls', () => {
     fireEvent.change(screen.getByLabelText('Item 1 description'), { target: { value: 'Work' } });
     fireEvent.change(screen.getByLabelText('Item 1 unit price (ZAR)'), { target: { value: '12.345' } });
     fireEvent.click(screen.getByRole('button', { name: 'Prepare quotation' }));
-    expect(screen.getByRole('alert')).textContent).toContain('Check the business');
+    expect(screen.getByRole('alert').textContent).toContain('Check the business');
     expect(screen.queryByRole('status', { name: 'Draft quotation result' })).toBeNull();
   });
 });
