@@ -7,12 +7,10 @@ on:
       - "scripts/verify-custom-domain.mjs"
       - "tests/custom-domain-https.test.mjs"
       - ".github/workflows/custom-domain-https.yml"
+  # Verify every production source revision, not only edits to this workflow.
+  # Concurrency cancels the previous revision if another merge supersedes it.
   push:
     branches: [main]
-    paths:
-      - "scripts/verify-custom-domain.mjs"
-      - "tests/custom-domain-https.test.mjs"
-      - ".github/workflows/custom-domain-https.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,7 +23,7 @@ concurrency:
 jobs:
   verify-custom-https:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 11
     steps:
       - uses: actions/checkout@v4
         with:

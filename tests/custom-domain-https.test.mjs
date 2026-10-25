@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { CUSTOM_ORIGIN, verifyCustomDomain } from "../scripts/verify-custom-domain.mjs";
 
 const revision = "a".repeat(40);
@@ -25,6 +26,18 @@ function fixture(change = {}) {
   };
   return { request, calls };
 }
+
+describe("custom-domain workflow rollout discipline", () => {
+  it("checks every main push and cancels superseded revision waits", () => {
+    const workflow = readFileSync(".github/workflows/custom-domain-https.yml", "utf8");
+    const push = workflow.split("  push:")[1]?.split("  workflow_dispatch:")[0];
+    assert.ok(push);
+    assert.ok(push.includes("branches: [main]"));
+    assert.ok(!push.includes("paths:"));
+    assert.ok(workflow.includes("cancel-in-progress: true"));
+    assert.ok(workflow.includes("timeout-minutes: 11"));
+  });
+});
 
 describe("fixed LUQI custom-domain HTTPS checks", () => {
   it("checks only four fixed read-only GET URLs without credentials, queries or provider calls", async () => {
