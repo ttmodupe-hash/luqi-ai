@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { checkPricing, createQuote, exportQuoteProject, importQuoteProject, type QuoteResult, type PricingResult } from '../lib/business-desk';
+import SalesBoard from '../components/SalesBoard';
 import '../business-desk.css';
 
 interface DraftRow { description: string; quantity: string; unitPriceZar: string }
@@ -204,5 +205,6 @@ export default function BusinessDeskPage() {
         <p className="luqi-business-note">Need another tool? <Link to="/content-studio">Create a local storyboard</Link> or <Link to="/omega-tasks">check an Omega budget</Link>. <Link to="/pricing">See what is actually available</Link>.</p>
       </section>
     </div>
+    <SalesBoard suggestedQuote={quote ? { alias: quote.customerName, amountZar: quote.subtotalZar } : null} />
   </main>;
 }
