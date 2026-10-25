@@ -109,10 +109,14 @@ test("navigation and skip link work at small widths without changing hash routes
 }) => {
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/#/");
+  // A newly loaded SPA can still be mounting when the first key arrives.
+  // Wait for its actual navigation landmark, without changing the keyboard
+  // assertion or programmatically focusing the skip link.
+  const skipLink = page.getByRole("link", { name: "Skip to content" });
+  await expect(skipLink).toBeAttached();
+  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
   await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("link", { name: "Skip to content" }),
-  ).toBeFocused();
+  await expect(skipLink).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#workspace-content")).toBeFocused();
   await expect(page).toHaveURL(/#\/$/);
