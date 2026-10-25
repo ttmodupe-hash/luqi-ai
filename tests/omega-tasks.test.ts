@@ -95,6 +95,12 @@ describe('authenticated Omega queue boundary', () => {
     expect(await result.json()).toEqual({ removed: true, id });
     expect(mocks.removeFinished).toHaveBeenCalledExactlyOnceWith(7, id);
   });
+  it('rejects contradictory store acknowledgments instead of claiming a deletion', async () => {
+    mocks.removeFinished.mockResolvedValue({ removed: false, id });
+    const response = await post(`/${id}/remove`, { confirm: true });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'OMEGA_STORAGE_UNAVAILABLE' });
+  });
   it('fails closed without confirming cleanup on a MySQL failure', async () => {
     mocks.removeFinished.mockRejectedValue(new Error('private SQL details'));
     const result = await post(`/${id}/remove`, { confirm: true });

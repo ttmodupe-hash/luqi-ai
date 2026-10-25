@@ -67,7 +67,9 @@ omegaTasks.post('/:id/remove', async c => {
     .safeParse(await c.req.json().catch(() => null));
   if (!id.success || !body.success || Object.keys(c.req.query()).length)
     return c.json({ code: 'INVALID_INPUT' }, 400);
-  await omegaTaskStore.removeFinished(c.get('userId'), id.data);
+  const outcome = await omegaTaskStore.removeFinished(c.get('userId'), id.data);
+  if (outcome.removed !== true || outcome.id !== id.data)
+    throw new Error('OMEGA_REMOVAL_UNCONFIRMED');
   // Confirm only after commit; no task contents or ownership details returned.
   return c.json({ removed: true, id: id.data });
 });
