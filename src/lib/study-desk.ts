@@ -52,6 +52,7 @@ export function validateDeck(input: unknown): StudyDeck {
   if (!record(input) || !exactKeys(input, ['format', 'title', 'cards']) ||
       input.format !== STUDY_FORMAT || !Array.isArray(input.cards) || input.cards.length > MAX_STUDY_CARDS) return fail();
   const title = text(input.title, 85);
+  if (/[\r\n]/u.test(title)) return fail();
   const cards = input.cards.map((raw: unknown) => {
     if (!record(raw) || !exactKeys(raw, ['question', 'answer', 'intervalDays', 'dueOn', 'reviews']) ||
         !whole(raw.intervalDays, 0, 90) || !whole(raw.reviews, 0, 10000) ||
