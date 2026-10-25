@@ -24,6 +24,28 @@ async function expectLocalOnly(page: Page, forbidden: string[]) {
     .toEqual({ local: 0, session: 0 });
 }
 
+test('mobile search announces visible available-tool counts without network access', async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  const forbidden = await prepare(page, baseURL);
+  const status = page.locator('.luqi-tool-count');
+  const search = page.getByLabel('Filter workspace tools', { exact: true });
+  await expect(status).toContainText('7 matching tools');
+  await expect(search).toHaveAttribute('type', 'search');
+  await expect(search).toHaveAttribute('enterkeyhint', 'search');
+  await search.fill('STUDIO content');
+  await expect(status).toContainText('1 matching tool');
+  await expect(status).toContainText('1 available to open');
+  await search.fill('languages african');
+  await expect(status).toContainText('1 matching tool');
+  await expect(status).toContainText('0 available to open');
+  await page.getByRole('button', { name: 'Ready to use', exact: true }).click();
+  await expect(status).toContainText('No matching tools');
+  await page.getByRole('button', { name: 'Show all tools', exact: true }).click();
+  await expect(status).toContainText('7 matching tools');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  await expectLocalOnly(page, forbidden);
+});
+
 test('homepage finds reversed words and words across fields without API requests', async ({ page, baseURL }) => {
   const forbidden = await prepare(page, baseURL);
   const search = page.getByLabel('Filter workspace tools', { exact: true });
