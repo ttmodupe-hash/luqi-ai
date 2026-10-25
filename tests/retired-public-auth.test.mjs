@@ -19,13 +19,15 @@ describe("retired public login/admin assets", () => {
     }
     assert.match(admin, /Legacy administration is unavailable/);
   });
-  it("never reintroduces the unused demo login and local-storage signup forms", () => {
+  it("never reintroduces unused demo login and local-storage signup forms", () => {
     const oldLogin = readFileSync("app/src/pages/LoginPage.tsx", "utf8");
     const oldSignup = readFileSync("app/src/pages/SignupPage.tsx", "utf8");
-    assert.match(oldLogin, /<Navigate to="\\/companion" replace \\/>/);
-    assert.match(oldSignup, /<Navigate to="\\/join" replace \\/>/);
+    assert.ok(oldLogin.includes('<Navigate to="/companion" replace />'));
+    assert.ok(oldSignup.includes('<Navigate to="/join" replace />'));
     for (const source of [oldLogin, oldSignup]) {
-      assert.doesNotMatch(source, /demo@|demo123|localStorage|sessionStorage|setItem|fetch\\s*\\(|useApi/);
+      for (const forbidden of ["demo@", "demo123", "localStorage", "sessionStorage", "setItem", "fetch(", "useApi"]) {
+        assert.equal(source.includes(forbidden), false, "retired component contains legacy authentication code");
+      }
     }
   });
   it("cannot put a fallback admin token in client storage or call the network", () => {
