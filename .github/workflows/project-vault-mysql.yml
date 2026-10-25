@@ -63,3 +63,30 @@ jobs:
         run: |
           node -e "const fs=require('fs'); const sql=fs.readFileSync('db/migrations/20261025_project_vault.sql','utf8'); if(/DROP TABLE|ALTER TABLE|TRUNCATE/i.test(sql)) process.exit(1)"
           echo 'Disposable fixtures only; no production GRANT, migration, merchant or live customer account.'
+
+  isolated-vault-browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Synthetic, localhost-only UI preview. This variable is never deployed.
+      VITE_LUQI_PROJECT_VAULT_UI: 'true'
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Build only local opt-in browser fixture
+        run: npx vite build
+      - name: Install locked browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Verify real encrypted data round-trip on 320px Chromium mobile
+        run: npx playwright test browser-tests/account-project-vault.spec.ts --config=playwright.config.ts --project=mobile
+      - name: Verify browser consent, encryption and disabled-gate behavior on WebKit
+        run: npx playwright test browser-tests/account-project-vault.spec.ts --config=playwright.webkit.config.ts
+      - name: Record isolated scope
+        run: echo 'All accounts, project records and HTTP API results were synthetic Playwright fixtures. No real service, database migration, AI, payments or provider usage.' >> "$GITHUB_STEP_SUMMARY"
