@@ -8,17 +8,17 @@ import {
 
 export type { DisputeType } from '../lib/consumer-rights-guide';
 
-const input = 'block w-full rounded-lg border border-slate-500 bg-slate-950 px-3 py-3 text-slate-100';
+const input = 'block w-full min-w-0 max-w-full rounded-lg border border-slate-500 bg-slate-950 px-3 py-3 text-slate-100';
 const categories: readonly { value: DisputeType; label: string }[] = [
-  { value: 'UNSURE', label: 'I am not sure which consumer category applies' },
-  { value: 'DEFECTIVE_GOODS', label: 'Defective goods or warranty dispute' },
-  { value: 'UNFAIR_CANCELLATION', label: 'Booking, reservation or cancellation fee' },
-  { value: 'ONLINE_SCAM', label: 'Undelivered online order or suspected scam' },
-  { value: 'UNAUTHORIZED_DEBIT_ORDER', label: 'Disputed debit order or bank transaction' },
+  { value: 'UNSURE', label: 'Not sure / other issue' },
+  { value: 'DEFECTIVE_GOODS', label: 'Faulty goods / warranty' },
+  { value: 'UNFAIR_CANCELLATION', label: 'Cancellation fee / booking' },
+  { value: 'ONLINE_SCAM', label: 'Online order / suspected scam' },
+  { value: 'UNAUTHORIZED_DEBIT_ORDER', label: 'Disputed bank debit' },
   { value: 'POPIA_DATA_BREACH', label: 'Privacy or unwanted marketing' },
-  { value: 'TELCO_BILLING_DISPUTE', label: 'Mobile phone or internet-service billing' },
-  { value: 'MASHONISA_ILLEGAL_LOAN', label: 'Lender, loan or retained bank card' },
-  { value: 'DEBT_REVIEW_TRAP', label: 'Debt review or debt-counselling dispute' },
+  { value: 'TELCO_BILLING_DISPUTE', label: 'Mobile / internet billing' },
+  { value: 'MASHONISA_ILLEGAL_LOAN', label: 'Loan / retained bank card' },
+  { value: 'DEBT_REVIEW_TRAP', label: 'Debt review / counselling' },
 ];
 
 export const ConsumerRightsAssistant: React.FC = () => {
