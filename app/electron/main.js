@@ -63,7 +63,7 @@ function createWindow() {
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
         const text = await mainWindow.webContents.executeJavaScript('document.body.innerText');
-        if (!text.includes('LUQI') || !text.includes('Workspace')) throw new Error('Workspace did not render');
+        if (!text.includes('LUQI') || !text.includes('Chat') || !text.includes('Explore')) throw new Error('Chat-first workspace did not render');
         console.log('Desktop workspace rendered successfully');
         clearTimeout(timeout);
         app.exit(0);
