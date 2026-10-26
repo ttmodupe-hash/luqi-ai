@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
-import { loadHostedOffer, type HostedOfferResponse } from '../lib/hosted-checkout';
+import { isPublicKeyOffer, loadHostedOffer, type HostedOfferResponse } from '../lib/hosted-checkout';
 
 export default function PaymentsPage() {
   const location = useLocation();
@@ -40,7 +40,9 @@ export default function PaymentsPage() {
       <h3>Cancellation and refunds</h3><p>{offer.refunds}</p>
       <h3>Taxes and fees</h3><p>{offer.taxesAndFees}</p>
       <h3>Order support</h3><p><a href={`mailto:${offer.supportEmail}`}>{offer.supportEmail}</a></p>
-      <p>Paystack handles payment details on its own website. Confirm the seller, service and total there before paying. Your LUQI login and private notes are not attached to the payment link.</p>
+      <p>{isPublicKeyOffer(offer)
+        ? 'A separate checkout page asks for your receipt email before opening Paystack. Confirm the seller and total inside Paystack before paying. Your LUQI login and private notes are not attached.'
+        : 'Paystack handles payment details on its own website. Confirm the seller, service and total there before paying. Your LUQI login and private notes are not attached to the payment link.'}</p>
       <p>This purchase does not activate an AI subscription, app credits or extra AI allowance. Follow the seller’s delivery and receipt instructions for this assisted service.</p>
       <label className="block"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} /> I have reviewed the service, price, delivery and refund details above.</label>
       {reviewed && result?.status === 'available' ? <p><a className="luqi-primary" href={`/api/v1/commerce/checkout?id=${encodeURIComponent(offer.id)}&revision=${result.revision}`} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Continue to Paystack</a></p>

@@ -34,6 +34,10 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 700,
     rollupOptions: {
+      input: {
+        app: path.resolve(__dirname, "index.html"),
+        checkout: path.resolve(__dirname, "paystack-checkout.html"),
+      },
       output: {
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",

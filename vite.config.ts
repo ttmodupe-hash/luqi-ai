@@ -37,6 +37,9 @@ export default defineConfig({
     emptyOutDir: true,
     // The repository also contains app/index.html. Force the canonical root
     // entry to produce dist/public/index.html for the Hono static server.
-    rollupOptions: { input: path.resolve(__dirname, "index.html") },
+    rollupOptions: { input: {
+      app: path.resolve(__dirname, "index.html"),
+      checkout: path.resolve(__dirname, "paystack-checkout.html"),
+    } },
   },
 });

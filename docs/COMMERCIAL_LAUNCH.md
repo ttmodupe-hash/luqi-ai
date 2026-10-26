@@ -1,5 +1,10 @@
 # LUQI commercial launch preparation
 
+The [public-key checkout alternative](PAYSTACK_PUBLIC_KEY_CHECKOUT_2026_10_26.md)
+can avoid the shared-browser merchant-login handoff using Paystack's frontend
+public key. It still requires real merchant/offer and operator-receipt
+acceptance. No payment secret or automatic entitlement is introduced.
+
 **26 October update:** the owner explicitly instructed turning on customer
 payments and updating the website. Activation authorization is recorded.
 The prepared hosted-checkout connection and the missing merchant/link/terms
