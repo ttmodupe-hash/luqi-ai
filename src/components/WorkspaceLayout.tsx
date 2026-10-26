@@ -8,11 +8,10 @@ import "../workspace.css";
 const navigation = [
   ["/chat", "Chat"],
   ["/", "Explore"],
-  ["/companion", "Private notes"],
-  ["/omega-tasks", "Omega tasks"],
-  ["/pendulum-lab", "Physics lab"],
+  ["/omega-tasks", "Plan"],
+  ["/study-desk", "Learn"],
   ["/content-studio", "Create"],
-  ["/start", "Start here"],
+  ["/companion", "Notes"],
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();

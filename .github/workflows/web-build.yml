@@ -26,6 +26,8 @@ jobs:
         run: npx vitest run tests/luqi-intent-guide.test.ts tests/luqi-guide-page.test.tsx
       - name: Verify bounded paid-provider transport without external calls
         run: npx vitest run tests/ai-pilot-transport.test.ts tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx
+      - name: Verify offline AI capacity scenarios never change approved caps
+        run: node --test tests/ai-capacity-scenarios.test.mjs
       - name: Verify offline AI cost review does not certify bills
         run: node --test tests/provider-cost-review.test.mjs
       - name: Verify retired static authentication entrypoints

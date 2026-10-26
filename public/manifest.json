@@ -3,7 +3,7 @@
   "name": "LUQI AI — Your Africa companion",
   "short_name": "Luqi AI",
   "description": "Tell LUQI what you need. Explore Africa travel planning, learning, creation, local tools and a separate limited AI text trial. No live bookings yet.",
-  "start_url": "/",
+  "start_url": "/#/chat",
   "scope": "/",
   "display": "standalone",
   "background_color": "#111e19",
