@@ -60,6 +60,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Direct links to original sources</li><li><Check aria-hidden="true" /> Shows when source summaries need rechecking</li><li><Check aria-hidden="true" /> No personal story, AI call or submission required</li></ul>
         <Link className="luqi-primary" to="/rights-guide">Open the rights guide <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-consumer-rights">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">FREE LOCAL GUIDANCE · NO AI CALL OR ACCOUNT</p>
+        <h2 id="start-consumer-rights">Understand your consumer options.</h2>
+        <p>Describe an anonymised consumer concern, choose its category, review official complaint sources and prepare an editable factual message.</p>
+        <ul><li><Check aria-hidden="true" /> No story uploads or automatic email</li><li><Check aria-hidden="true" /> Sector-specific routes and source links</li><li><Check aria-hidden="true" /> General information, not a legal verdict</li></ul>
+        <Link className="luqi-primary" to="/consumer-rights">Open the consumer guide <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
     </div>
     <section className="luqi-start-details" aria-labelledby="pilot-expectations">
       <h2 id="pilot-expectations">What to expect from the pilot</h2>
