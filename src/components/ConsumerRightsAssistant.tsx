@@ -27,22 +27,26 @@ export const ConsumerRightsAssistant: React.FC = () => {
   const [organisation, setOrganisation] = useState('');
   const [submitted, setSubmitted] = useState<ReturnType<typeof prepareConsumerStory>>(null);
   const [copied, setCopied] = useState(false);
+  const [draft, setDraft] = useState('');
   const [copyNotice, setCopyNotice] = useState('');
   const current = consumerGuideIsCurrent();
   const valid = story.trim().length >= 10 && story.trim().length <= MAX_CONSUMER_STORY_LENGTH;
   const sources = submitted ? consumerSourcesFor(submitted.category) : CONSUMER_SOURCES;
-  const letter = submitted && current ? makeConsumerDraft(organisation, submitted.userStory) : '';
+  const letter = submitted && current ? draft : '';
 
   function clearResult() {
     setSubmitted(null);
     setCopied(false);
     setCopyNotice('');
+    setDraft('');
   }
   function prepare(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearResult();
     if (!current) return;
-    setSubmitted(prepareConsumerStory(type, story));
+    const prepared = prepareConsumerStory(type, story);
+    setSubmitted(prepared);
+    if (prepared) setDraft(makeConsumerDraft(organisation, prepared.userStory));
   }
   async function copyLetter() {
     if (!letter || typeof navigator.clipboard?.writeText !== 'function') {
@@ -168,10 +172,10 @@ export const ConsumerRightsAssistant: React.FC = () => {
               Correct inaccuracies, remove private details and select the recipient yourself.
             </p>
             <textarea aria-label="Your editable factual complaint draft" className={input + ' font-mono text-xs'}
-              rows={12} defaultValue={letter} key={letter.slice(0, 120)} />
+              rows={12} value={draft} onChange={event => { setDraft(event.target.value); setCopied(false); }} />
             <button type="button" onClick={() => { void copyLetter(); }}
               className="rounded-lg border border-cyan-400 px-4 py-2 text-sm font-semibold text-cyan-100">
-              {copied ? 'Original draft copied' : 'Copy original draft'}
+              {copied ? 'Draft copied' : 'Copy reviewed draft'}
             </button>
             {copyNotice && <p role="status" className="text-sm">{copyNotice}</p>}
           </section>
@@ -184,7 +188,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
           Different organisations cover different complaints. Choose the most relevant body after checking its scope and current requirements.
         </p>
         <ul className="list-disc space-y-2 pl-5 text-sm">
-          {(current ? CONSUMER_SOURCES : CONSUMER_SOURCES).map(source => <li key={source.id}>
+          {CONSUMER_SOURCES.map(source => <li key={source.id}>
             <a href={source.url} target="_blank" rel="noopener noreferrer"
               className="break-words text-cyan-300 underline underline-offset-2">{source.publisher}: {source.name}</a>
           </li>)}
