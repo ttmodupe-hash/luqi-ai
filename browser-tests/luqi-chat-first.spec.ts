@@ -115,8 +115,8 @@ test('visitor can turn a travel goal into a usable provider enquiry without book
   await page.getByPlaceholder('10–15 December').fill('10–15 December');
   await page.getByRole('button', { name: 'Prepare provider enquiry' }).click();
   const draft = page.getByLabel('Your editable-by-copy draft (not a booking)');
-  await expect(draft).toContainText('DRAFT TRAVEL ENQUIRY');
-  await expect(draft).toContainText('Destination: Cape Town');
+  await expect(draft).toHaveValue(/DRAFT TRAVEL ENQUIRY/);
+  await expect(draft).toHaveValue(/Destination: Cape Town/);
   await expect(page.getByText('Booking and checkout unavailable')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   expect(writes).toEqual([]);
