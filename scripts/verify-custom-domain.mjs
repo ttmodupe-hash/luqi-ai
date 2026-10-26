@@ -68,7 +68,7 @@ export async function verifyCustomDomain(expected, request = fetch) {
       keys.join(",") !== "commit,format" || release.body.format !== "luqi.release.v1" ||
       release.body.commit !== expected) throw Error("UNVERIFIED_CUSTOM_REVISION");
   await readRedirect(request, "/signup", "/#/join");
-  await readRedirect(request, "/login", "/#/companion");
+  await readRedirect(request, "/login", "/#/login");
   return { format: "luqi.custom-https.v1", status: "verified", matched_commit: expected,
     signup_redirect_verified: true, login_redirect_verified: true,
     account_registration_executed: false, customer_login_executed: false,

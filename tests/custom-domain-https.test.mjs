@@ -19,7 +19,7 @@ function fixture(change = {}) {
       reply({ format: "luqi.release.v1", commit: revision }, { "Cache-Control": "no-store" });
     if (path === "/signup" || path === "/login") return change[path] ??
       new Response(null, { status: 302, headers: {
-        "Location": path === "/signup" ? "/#/join" : "/#/companion",
+        "Location": path === "/signup" ? "/#/join" : "/#/login",
         "Cache-Control": "no-store",
       } });
     throw Error("unexpected route");
