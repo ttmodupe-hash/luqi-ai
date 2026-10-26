@@ -4,10 +4,11 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: lab-framing-${{ github.ref }}
+  group: lab-framing-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   production-browser-boundary:
@@ -50,7 +51,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
   public-framing:
-    if: github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: production-browser-boundary
     runs-on: ubuntu-24.04
     timeout-minutes: 12
