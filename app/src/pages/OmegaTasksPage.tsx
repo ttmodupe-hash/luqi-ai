@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
 import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
 import OmegaLocalCalculators from "../components/OmegaLocalCalculators";
@@ -190,21 +190,21 @@ export default function OmegaTasksPage() {
       "Task information refreshed. Status changes appear when you refresh.",
     );
   }
-  // A sign-in from Notes or Chat also unlocks this account-owned task view.
-  useEffect(() => {
+  // A shared sign-in unlocks this view; clear a former identity before paint.
+  useLayoutEffect(() => {
     const token = session?.token ?? null;
     if (token === previousToken.current) return;
     const wasSignedIn = previousToken.current !== null;
     previousToken.current = token;
-    if (!token) {
-      if (wasSignedIn) {
-        epoch.current++; locked.current = false;
-        setStatus(null); setTasks([]); setSelected(null); setMore(false); setBusy(false);
-        setConfirm(false); setConfirmRemove(false); setUncertain(false);
-        setSubmission(null); setSubmissionUncertain(false); setEmail(''); setPassword(''); setNotice('');
-      }
-      return;
+    if (wasSignedIn) {
+      epoch.current++; locked.current = false;
+      authenticatedHere.current = false;
+      setStatus(null); setTasks([]); setSelected(null); setMore(false); setBusy(false);
+      setConfirm(false); setConfirmRemove(false); setUncertain(false);
+      setSubmission(null); setSubmissionUncertain(false); setEmail(''); setPassword(''); setNotice('');
+      setFormVersion(value => value + 1);
     }
+    if (!token) return;
     if (authenticatedHere.current) { authenticatedHere.current = false; return; }
     void run(current => refresh(token, current));
   }, [session?.token]);

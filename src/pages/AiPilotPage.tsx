@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
@@ -28,8 +28,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   const epoch = useRef(0); const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
 
-  // Switching identity must never forward the previous user's question or consent.
-  useEffect(() => {
+  // Clear the former identity before paint; never forward its question or consent.
+  useLayoutEffect(() => {
     const token = session?.token ?? null;
     if (previousToken.current && previousToken.current !== token) {
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
