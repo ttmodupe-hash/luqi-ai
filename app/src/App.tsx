@@ -15,6 +15,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import CompanionPage from "./pages/CompanionPage";
+import CustomerEntryPage from "./pages/CustomerEntryPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
@@ -52,9 +53,10 @@ export default function App() {
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
-        {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
+        {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
+        <RouterRoute path="/login" element={<CustomerEntryPage initialMode="signin" />} />
         {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
-        <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
+        <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />

@@ -23,11 +23,11 @@ export default function StartPage() {
       <section className="luqi-start-card" aria-labelledby="start-notes">
         <span className="luqi-tool-icon luqi-icon-notes"><NotebookPen aria-hidden="true" /></span>
         <p className="luqi-card-kicker">ACCOUNT REQUIRED</p>
-        <h2 id="start-notes">Give your ideas a home.</h2>
-        <p>Use one LUQI account for your private notes, Omega task history and limited AI text trial. Sign in once while moving between tools in this tab.</p>
+        <h2 id="start-notes">One LUQI account, starting with Chat.</h2>
+        <p>Create one LUQI account and begin with Chat. Private notes and Omega task history are optional; your login works across customer tools in this tab.</p>
         <ul><li><Check aria-hidden="true" /> Account-owned conversation history</li><li><Check aria-hidden="true" /> Download one conversation as JSON</li><li><Check aria-hidden="true" /> Confirm before deleting saved notes</li></ul>
-        <Link className="luqi-primary" to="/join">Create your notes account <ArrowUpRight size={18} aria-hidden="true" /></Link>
-        <Link className="luqi-start-existing" to="/companion">Already have an account? Sign in</Link>
+        <Link className="luqi-primary" to="/join">Create your LUQI account <ArrowUpRight size={18} aria-hidden="true" /></Link>
+        <Link className="luqi-start-existing" to="/login">Already have an account? Sign in</Link>
       </section>
       <section className="luqi-start-card" aria-labelledby="start-omega">
         <span className="luqi-tool-icon luqi-icon-agents"><Layers3 aria-hidden="true" /></span>

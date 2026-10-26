@@ -18,7 +18,7 @@ describe("direct account entry URLs", () => {
     async path => {
       const result = await app.request(path + "?password=private&next=https://external.invalid");
       expect(result.status).toBe(302);
-      expect(result.headers.get("location")).toBe("/#/companion");
+      expect(result.headers.get("location")).toBe("/#/login");
       expect(result.headers.get("cache-control")).toBe("no-store");
     },
   );

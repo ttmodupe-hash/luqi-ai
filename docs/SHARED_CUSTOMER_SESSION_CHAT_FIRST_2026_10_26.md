@@ -9,6 +9,12 @@ Previously Notes, the metered AI text trial and authenticated Omega task history
 - The free local intent/tool guide is secondary, and Notes remain optional. AI follow-up context exists only in page memory and is shared with a provider only after an explicit, reviewed opt-in.
 - Test both the signed-out and signed-in mobile journeys at 320px, without invoking paid AI in automated browser acceptance. Real-provider quality and physical-device acceptance remain separate.
 
+## First-account onboarding (reviewed in the same candidate)
+
+- `/#/join` creates a LUQI **customer account**, not a Notes account. On a confirmed server response, the shared in-memory session opens `/#/chat` immediately. `/#/login` behaves the same for existing customers.
+- The direct GET aliases remain 302 no-store, discard untrusted query fields and now resolve to `/#/login` rather than the Notes vault. No new auth endpoint, storage, redirect URL or provider call.
+- Synthetic browser acceptance must confirm one registration POST, immediate Chat access, no Notes call, no AI inference and no token persisted to browser storage. A lost or ambiguous registration response must not trigger a retry or claim success.
+
 ## Security and truthfulness
 - The existing authenticated account transport, MySQL ownership checks, JWT and per-route server authorisation are unchanged. This is **shared customer login**, not an administrator SSO or elevation of privileges. Admin remains isolated.
 - No JWT, password, account content or AI question is written to cookies, localStorage, sessionStorage, URL, service worker, analytics or browser caches. Full reload/tab close still requires a fresh sign-in; cross-tab persistence is **not** implemented. A later HttpOnly/SameSite cookie design would require CSRF, revocation and independent security review.
