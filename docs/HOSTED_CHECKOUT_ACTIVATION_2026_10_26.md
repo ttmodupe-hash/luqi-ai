@@ -1,5 +1,11 @@
 # Hosted checkout connection — 26 October 2026
 
+**Alternative to the shared-browser sign-in problem:** the direct
+[public-key checkout](PAYSTACK_PUBLIC_KEY_CHECKOUT_2026_10_26.md) accepts the
+merchant's public pk_live_ key instead of a Payment Page URL. It needs no
+payment API secret or agent merchant login. The same real merchant/offer and
+manual-receipt acceptance gates apply. The original route below stays supported.
+
 The owner has explicitly instructed activation of customer payments and a
 website update. That authorization is recorded; it does not supply a merchant
 account, a payment-page URL, a final product price or service terms. The current

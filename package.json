@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node scripts/postbuild.js && npm run build:recovery && npm run build:database",
+    "build": "vite build && npm run build:checkout && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node scripts/postbuild.js && npm run build:recovery && npm run build:database",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "NODE_ENV=production node dist/boot.js",
@@ -19,7 +19,8 @@
     "build:recovery": "esbuild scripts/reset-account-password.ts --platform=node --bundle --format=esm --outfile=dist/reset-account-password.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "build:database": "esbuild scripts/prepare-mysql-schema.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-schema.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild scripts/prepare-mysql-runtime-role.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-runtime-role.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "db:check": "node dist/prepare-mysql-schema.js --check",
-    "db:apply": "node dist/prepare-mysql-schema.js --apply"
+    "db:apply": "node dist/prepare-mysql-schema.js --apply",
+    "build:checkout": "vite build --config vite.checkout.config.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

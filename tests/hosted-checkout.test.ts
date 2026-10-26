@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { configuredHostedOffer, hostedCheckout, hostedOfferDigest } from '../api/hosted-checkout';
 import { loadHostedOffer } from '../src/lib/hosted-checkout';
 import { hostedOfferFixture as offer, hostedOfferRevisionFixture as revision } from './fixtures/hosted-offer';
+import { publicKeyOfferFixture } from './fixtures/hosted-offer';
 
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 const approved = () => ({ LUQI_HOSTED_CHECKOUT_ENABLED: 'true',
@@ -85,4 +86,25 @@ it('bounds a transport that ignores cancellation and never retries', async () =>
   await vi.advanceTimersByTimeAsync(10_001);
   expect(await outcome).toBeInstanceOf(Error);
   expect(request).toHaveBeenCalledTimes(1);
+});
+it('accepts a reviewed live public key in place of a payment page and routes to a separate document', async () => {
+  const accepted = hostedOfferDigest(publicKeyOfferFixture);
+  vi.stubEnv('LUQI_HOSTED_CHECKOUT_ENABLED', 'true');
+  vi.stubEnv('LUQI_HOSTED_CHECKOUT_OFFER', JSON.stringify(publicKeyOfferFixture));
+  vi.stubEnv('LUQI_HOSTED_CHECKOUT_ACCEPTED_SHA256', accepted);
+  expect(configuredHostedOffer()).toEqual({ status: 'available', offer: publicKeyOfferFixture, revision: accepted });
+  const response = await hostedCheckout.request('/checkout?id=' + offer.id + '&revision=' + accepted);
+  expect(response.headers.get('location')).toBe('/paystack-checkout.html?id=' + offer.id + '&revision=' + accepted);
+  expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+  vi.stubEnv('LUQI_HOSTED_CHECKOUT_OFFER', JSON.stringify({ ...publicKeyOfferFixture, paystackPublicKey: 'pk_live_ANOTHERFIXTUREONLYPUBLICKEY' }));
+  expect(configuredHostedOffer()).toEqual({ status: 'unavailable' });
+});
+it('rejects secret/test keys, mixed checkout modes and unreviewed public-key offers', () => {
+  for (const change of [{ paystackPublicKey: 'sk_live_FIXTUREONLYNOTAREALKEY' },
+    { paystackPublicKey: 'pk_test_FIXTUREONLYNOTAREALKEY' },
+    { paystackPublicKey: 'https://evil.example/' }, { paystackPublicKey: 'pk_live_ space' },
+    { checkoutMode: 'subscription' }, { checkoutUrl: offer.checkoutUrl }, { amountMinor: 0 }]) {
+    expect(() => hostedOfferDigest({ ...publicKeyOfferFixture, ...change })).toThrow();
+  }
+  expect(configuredHostedOffer({ LUQI_HOSTED_CHECKOUT_OFFER: JSON.stringify(publicKeyOfferFixture) })).toEqual({ status: 'unavailable' });
 });

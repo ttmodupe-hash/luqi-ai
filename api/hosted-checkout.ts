@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Hono } from 'hono';
-import { hostedOfferSchema, type HostedOfferResponse } from '../src/lib/hosted-checkout';
+import { hostedOfferSchema, isPublicKeyOffer, type HostedOfferResponse } from '../src/lib/hosted-checkout';
 
 /** A digest binds the reviewed public offer to the exact published terms.
  * It is not merchant verification: approval, fixed price, receipts, support
@@ -45,6 +45,9 @@ hostedCheckout.get('/checkout', c => {
   // Recheck current rollout/terms at handoff. Never forward query parameters,
   // buyer identity or a LUQI token to the fixed provider-owned destination.
   c.header('Referrer-Policy', 'no-referrer');
+  if (isPublicKeyOffer(result.offer)) {
+    return c.redirect('/paystack-checkout.html?id=' + encodeURIComponent(result.offer.id) + '&revision=' + result.revision, 302);
+  }
   return c.redirect(result.offer.checkoutUrl, 302);
 });
 hostedCheckout.all('*', c => c.json({ code: 'METHOD_NOT_ALLOWED' }, 405));

@@ -3,7 +3,7 @@ import { z } from 'zod';
 /** Public commercial terms only. No token, email prefill, callback, balance or
  * paid entitlement can be supplied by the visitor or inferred from a redirect. */
 const text = (maximum: number) => z.string().trim().min(1).max(maximum);
-export const hostedOfferSchema = z.object({
+const offerDetails = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
   provider: z.literal('paystack'),
   kind: z.literal('one_time_assisted_service'),
@@ -19,16 +19,27 @@ export const hostedOfferSchema = z.object({
   revisions: text(800),
   refunds: text(1600),
   taxesAndFees: text(800),
-  checkoutUrl: z.string().max(300).refine(value => {
+});
+const paymentPageUrl = z.string().max(300).refine(value => {
     try {
       const url = new URL(value);
       return url.protocol === 'https:' && url.hostname === 'paystack.com' &&
         !url.port && !url.username && !url.password && !url.search && !url.hash &&
         /^\/pay\/[A-Za-z0-9_-]{1,100}$/.test(url.pathname);
     } catch { return false; }
-  }, 'Invalid hosted payment page').transform(value => new URL(value).href),
+  }, 'Invalid hosted payment page').transform(value => new URL(value).href);
+// Keep the original field order/digest and exact allowlist for existing pages.
+const paymentPageOffer = offerDetails.extend({ checkoutUrl: paymentPageUrl }).strict();
+const publicKeyOffer = offerDetails.extend({
+  checkoutMode: z.literal('paystack_public_key'),
+  paystackPublicKey: z.string().regex(/^pk_live_[A-Za-z0-9]{16,160}$/),
 }).strict();
+export const hostedOfferSchema = z.union([paymentPageOffer, publicKeyOffer]);
 export type HostedOffer = z.infer<typeof hostedOfferSchema>;
+export type PublicKeyOffer = z.infer<typeof publicKeyOffer>;
+export function isPublicKeyOffer(offer: HostedOffer): offer is PublicKeyOffer {
+  return 'paystackPublicKey' in offer;
+}
 export const hostedOfferResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('unavailable') }).strict(),
   z.object({ status: z.literal('available'), offer: hostedOfferSchema,
