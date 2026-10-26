@@ -14,7 +14,7 @@ jobs:
     # The locked Playwright 1.58.2 does not support WebKit on Ubuntu 26.04.
     # Avoid ubuntu-latest migration changing the browser test platform silently.
     runs-on: ubuntu-24.04
-    timeout-minutes: 18
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -26,8 +26,9 @@ jobs:
         run: node --experimental-strip-types --test tests/recording-support.test.mjs
       - name: Install locked application and test dependencies
         run: npm ci --legacy-peer-deps --include=dev
+      # Preserve real WebKit coverage: apt downloads on Ubuntu 24.04 exceeded the old 5-min cap.
       - name: Install the WebKit binary matching the locked Playwright version
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: npx --no-install playwright install --with-deps webkit
       - name: Build the same web application without provider credentials
         run: npm run build

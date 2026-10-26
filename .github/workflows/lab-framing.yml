@@ -12,7 +12,7 @@ concurrency:
 jobs:
   production-browser-boundary:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -27,8 +27,10 @@ jobs:
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/lib/framePolicy.ts api/lib/httpSafety.ts api/lib/vite.ts
       - name: Build the actual production server and UI without credentials
         run: npm run build
+      # WebKit apt dependencies were still downloading when the old five-minute cap expired.
+      # Keep real Chromium/WebKit acceptance; allow bounded install time on slower mirrors.
       - name: Install browser engines
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: |
           chrome="$(command -v google-chrome || command -v chromium || true)"
           if [ -n "$chrome" ]; then
