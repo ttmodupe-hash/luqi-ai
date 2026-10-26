@@ -128,25 +128,25 @@ export const RIGHTS_INFORMATION: readonly RightsInformation[] = [
 export interface RightsLanguage {
   code: string;
   name: string;
-  reviewedLegalText: boolean;
+  sourceLinkedTextAvailable: boolean;
 }
 export const RIGHTS_LANGUAGES: readonly RightsLanguage[] = [
-  { code: 'en', name: 'English (source-linked explanation)', reviewedLegalText: true },
-  { code: 'sepitori', name: 'Sepitori — native-speaker review needed', reviewedLegalText: false },
-  { code: 'nso', name: 'Sepedi — review needed', reviewedLegalText: false },
-  { code: 'tn', name: 'Setswana — review needed', reviewedLegalText: false },
-  { code: 'st', name: 'Sesotho — review needed', reviewedLegalText: false },
-  { code: 'zu', name: 'isiZulu — review needed', reviewedLegalText: false },
-  { code: 'xh', name: 'isiXhosa — review needed', reviewedLegalText: false },
-  { code: 'ts', name: 'itsonga — review needed', reviewedLegalText: false },
-  { code: 've', name: 'Tshivenda — review needed', reviewedLegalText: false },
-  { code: 'ss', name: 'siSwati — review needed', reviewedLegalText: false },
-  { code: 'sn', name: 'Shona — review needed', reviewedLegalText: false },
-  { code: 'sw', name: 'Kiswahili — review needed', reviewedLegalText: false },
-  { code: 'so', name: 'Somali — review needed', reviewedLegalText: false },
-  { code: 'am', name: 'Amharic — review needed', reviewedLegalText: false },
-  { code: 'fr', name: 'French — review needed', reviewedLegalText: false },
-  { code: 'pt', name: 'Portuguese — review needed', reviewedLegalText: false },
+  { code: 'en', name: 'English (source-linked explanation)', sourceLinkedTextAvailable: true },
+  { code: 'sepitori', name: 'Sepitori — native-speaker review needed', sourceLinkedTextAvailable: false },
+  { code: 'nso', name: 'Sepedi — review needed', sourceLinkedTextAvailable: false },
+  { code: 'tn', name: 'Setswana — review needed', sourceLinkedTextAvailable: false },
+  { code: 'st', name: 'Sesotho — review needed', sourceLinkedTextAvailable: false },
+  { code: 'zu', name: 'isiZulu — review needed', sourceLinkedTextAvailable: false },
+  { code: 'xh', name: 'isiXhosa — review needed', sourceLinkedTextAvailable: false },
+  { code: 'ts', name: 'itsonga — review needed', sourceLinkedTextAvailable: false },
+  { code: 've', name: 'Tshivenda — review needed', sourceLinkedTextAvailable: false },
+  { code: 'ss', name: 'siSwati — review needed', sourceLinkedTextAvailable: false },
+  { code: 'sn', name: 'Shona — review needed', sourceLinkedTextAvailable: false },
+  { code: 'sw', name: 'Kiswahili — review needed', sourceLinkedTextAvailable: false },
+  { code: 'so', name: 'Somali — review needed', sourceLinkedTextAvailable: false },
+  { code: 'am', name: 'Amharic — review needed', sourceLinkedTextAvailable: false },
+  { code: 'fr', name: 'French — review needed', sourceLinkedTextAvailable: false },
+  { code: 'pt', name: 'Portuguese — review needed', sourceLinkedTextAvailable: false },
 ] as const;
 
 export function legalInformationIsCurrent(now: Date = new Date()): boolean {
@@ -155,8 +155,8 @@ export function legalInformationIsCurrent(now: Date = new Date()): boolean {
     && time <= Date.parse('2026-11-02T23:59:59+02:00');
 }
 
-export function rightsLanguageHasReviewedText(code: string): boolean {
-  return RIGHTS_LANGUAGES.some(language => language.code === code && language.reviewedLegalText);
+export function rightsLanguageHasSourceLinkedText(code: string): boolean {
+  return RIGHTS_LANGUAGES.some(language => language.code === code && language.sourceLinkedTextAvailable);
 }
 
 export function rightsSourcesFor(item: RightsInformation): RightsSource[] {
