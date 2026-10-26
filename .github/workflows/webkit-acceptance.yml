@@ -14,6 +14,10 @@ jobs:
     # The locked Playwright 1.58.2 does not support WebKit on Ubuntu 26.04.
     # Avoid ubuntu-latest migration changing the browser test platform silently.
     runs-on: ubuntu-24.04
+    # Browser+OS dependencies are preinstalled in the digest-pinned official
+    # Playwright image; this avoids flaky public APT/CDN downloads.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -26,9 +30,12 @@ jobs:
         run: node --experimental-strip-types --test tests/recording-support.test.mjs
       - name: Install locked application and test dependencies
         run: npm ci --legacy-peer-deps --include=dev
-      - name: Install the WebKit binary matching the locked Playwright version
-        timeout-minutes: 5
-        run: npx --no-install playwright install --with-deps webkit
+      - name: Verify the digest-pinned, lockfile-matched WebKit engine
+        run: |
+          test "$(node -p "require('@playwright/test/package.json').version")" = "1.58.2"
+          test "$PLAYWRIGHT_BROWSERS_PATH" = "/ms-playwright"
+          test -d /ms-playwright
+          npx --no-install playwright --version
       - name: Build the same web application without provider credentials
         run: npm run build
       - name: Verify resolved loading policy and emitted public entrypoint

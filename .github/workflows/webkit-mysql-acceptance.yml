@@ -15,7 +15,7 @@ jobs:
     # Playwright 1.58.2 does not support Ubuntu 26.04. Keep the browser and
     # supported OS aligned instead of following the moving latest label.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       mysql:
         image: mysql:8.4
@@ -57,11 +57,29 @@ jobs:
         run: npm run build
       - name: Prepare and verify the existing restricted-role disposable fixture
         run: npx --no-install vitest run tests/mysql-runtime-role.integration.test.ts --no-file-parallelism
-      - name: Install the lockfile-matched WebKit engine and system dependencies
-        timeout-minutes: 6
-        run: npx --no-install playwright install --with-deps webkit
-      - name: Verify registration, persisted notes, export, deletion and password change in WebKit
-        run: npx --no-install playwright test --config playwright.mysql-webkit.config.ts
+      # GitHub runner APT mirrors repeatedly stall before the real browser assertions.
+      # Run the locked WebKit engine in the same digest-pinned official image already
+      # accepted by the production Lab Framing check. The disposable MySQL service
+      # stays on the host, and --network host preserves the exact 127.0.0.1 fixture guard.
+      - name: Verify registration, persisted notes, export, deletion and password change in pinned WebKit
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d'
+          docker run --rm --init --network host --ipc host \
+            --volume "$GITHUB_WORKSPACE:/work" --workdir /work \
+            --env GITHUB_ACTIONS=true --env LUQI_MYSQL_CI_FIXTURE \
+            --env DATABASE_URL --env NODE_ENV=test \
+            --env LUQI_AI_PROVIDER_ENABLED --env LUQI_AI_BILLING_APPROVED \
+            --env LUQI_AI_CREDENTIAL_CHECK_ENABLED --env LUQI_OMEGA_WEB_ENABLED \
+            "$image" bash -lc '
+              set -euo pipefail
+              test "$(node -p "require(\"@playwright/test/package.json\").version")" = "1.58.2"
+              test "$PLAYWRIGHT_BROWSERS_PATH" = "/ms-playwright"
+              test -d /ms-playwright
+              npx --no-install playwright test --config playwright.mysql-webkit.config.ts
+            '
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

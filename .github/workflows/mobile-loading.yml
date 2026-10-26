@@ -41,10 +41,12 @@ jobs:
             const routePattern = /\bpath="([^"]+)"/g;
             const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
             const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
-            // The only approved public additions are three reviewed, lazy,
-            // provider-free routes. Legacy routes/iframes stay identical.
+            // Preserve every existing route. The packaged app additionally gains
+            // the already-public, provider-free consumer-rights page.
             const routes = matches(after, routePattern);
-            const approved = ['/business-desk', '/rights-guide', '/study-desk'];
+            const approved = path.startsWith('app/')
+              ? ['/business-desk', '/consumer-rights', '/rights-guide', '/study-desk']
+              : ['/business-desk', '/rights-guide', '/study-desk'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),
@@ -52,7 +54,7 @@ jobs:
             assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
               'Existing iframe targets changed: ' + path);
           }
-          console.log('Pre-existing routes and iframe targets preserved; only three reviewed local guides/tools are new.');
+          console.log('All legacy routes and iframe targets preserved; reviewed local routes include packaged consumer guide.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash
