@@ -1,4 +1,4 @@
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { useCustomerSession } from '../providers/customer-session';
 
@@ -10,6 +10,10 @@ import { useCustomerSession } from '../providers/customer-session';
 export default function CustomerEntryPage({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
   const { session, acceptSession } = useCustomerSession();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Never retain untrusted redirect targets, email addresses or passwords in
+  // bookmarked hash-route query strings. Drop them before rendering the form.
+  if (location.search) return <Navigate to={location.pathname} replace />;
   if (session) return <Navigate to="/chat" replace />;
   return <main className="luqi-info" aria-labelledby="luqi-account-entry-heading">
     <p className="luqi-eyebrow">ONE LUQI ACCOUNT</p>
