@@ -59,6 +59,19 @@ describe('LUQI exact-scope release safeguards stay fail closed',()=>{
   assert.ok(report(val).blocking_findings.includes('DEPLOYMENT_UNHEALTHY'));
   assert.ok(report(val).blocking_findings.includes('STAGED_PRODUCTION_CHANGES'));
  });
+ it('classifies all known non-success Railway deployment states as blocked',()=>{
+  for (const deployment_status of [
+    'CRASHED','QUEUED','INITIALIZING','WAITING','BUILDING','DEPLOYING',
+    'NEEDS_APPROVAL','FAILED','SKIPPED','REMOVING','REMOVED','SLEEPING','UNKNOWN',
+  ]) {
+    const val=packet({railway_web:{...packet().railway_web,deployment_status}});
+    const result=report(val);
+    assert.equal(result.status,'RELEASE_CONTROLS_BLOCKED',deployment_status);
+    assert.ok(result.blocking_findings.includes('DEPLOYMENT_UNHEALTHY'),deployment_status);
+    assert.equal(result.latest_reported_deployment_success,false,deployment_status);
+    assert.equal(result.public_or_paid_launch_approved,false);
+  }
+ });
  it('marks observation older than one day stale, never fresh recovery evidence',()=>{
   const val=packet({observed_at_utc:'2026-10-24T14:00:00Z'});
   assert.ok(report(val).blocking_findings.includes('OBSERVATION_STALE'));
@@ -73,6 +86,7 @@ describe('LUQI exact-scope release safeguards stay fail closed',()=>{
     {...packet(),railway_web:{...packet().railway_web,wait_for_ci:'true'}},
     {...packet(),github_main:{...packet().github_main,admin_token:'DO_NOT_LOG'}},
     {...packet(),railway_web:{...packet().railway_web,database_url:'private'}},
+    {...packet(),railway_web:{...packet().railway_web,deployment_status:'FAKE_SUCCESS'}},
     {...packet(),launch_approved:true},
     {...packet(),observed_at_utc:'2026-10-25T17:26:00Z'},
     {...packet(),observed_at_utc:'2026-02-30T12:00:00Z'},
