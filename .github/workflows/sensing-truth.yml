@@ -1,0 +1,65 @@
+name: LUQI Honest Sensing and Local Trade
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/legacy-control-unavailable.ts'
+      - 'api/rest-compat.ts'
+      - 'src/pages/AfricanOpportunityRadarPage.tsx'
+      - 'app/src/pages/AfricanOpportunityRadarPage.tsx'
+      - 'src/lib/trade-scenario.ts'
+      - 'app/src/lib/trade-scenario.ts'
+      - 'tests/sensing-truth-guard.test.ts'
+      - 'tests/trade-scenario.test.ts'
+      - 'tests/african-opportunity-page.test.tsx'
+      - 'browser-tests/trade-scenario.spec.ts'
+      - '.github/workflows/sensing-truth.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/legacy-control-unavailable.ts'
+      - 'api/rest-compat.ts'
+      - 'src/pages/AfricanOpportunityRadarPage.tsx'
+      - 'app/src/pages/AfricanOpportunityRadarPage.tsx'
+      - 'src/lib/trade-scenario.ts'
+      - 'app/src/lib/trade-scenario.ts'
+      - 'tests/sensing-truth-guard.test.ts'
+      - 'tests/trade-scenario.test.ts'
+      - 'tests/african-opportunity-page.test.tsx'
+      - 'browser-tests/trade-scenario.spec.ts'
+      - '.github/workflows/sensing-truth.yml'
+permissions:
+  contents: read
+jobs:
+  no-fabricated-data:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Type-check honest source pages and pure arithmetic
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/legacy-control-unavailable.ts src/pages/AfricanOpportunityRadarPage.tsx src/lib/trade-scenario.ts
+      - name: Assert closed legacy live feeds and local user-entered scenario
+        run: npx vitest run tests/sensing-truth-guard.test.ts tests/trade-scenario.test.ts tests/african-opportunity-page.test.tsx --no-file-parallelism
+      - name: Verify matching frontend copies
+        run: |
+          cmp src/pages/AfricanOpportunityRadarPage.tsx app/src/pages/AfricanOpportunityRadarPage.tsx
+          cmp src/lib/trade-scenario.ts app/src/lib/trade-scenario.ts
+      - name: Build local browser candidate
+        run: npx vite build
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Verify honest 320px offline calculator in Chromium and WebKit
+        run: |
+          npx playwright test browser-tests/trade-scenario.spec.ts --config=playwright.config.ts --project=mobile
+          npx playwright test browser-tests/trade-scenario.spec.ts --config=playwright.webkit.config.ts
+      - name: Bound acceptance
+        run: echo 'No live tariff, satellite, grant, model provider, payment, external application, production SQL or Railway deployment in this fixture.' >> "$GITHUB_STEP_SUMMARY"

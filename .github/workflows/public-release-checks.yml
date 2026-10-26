@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: luqi-public-release-${{ github.ref }}
+  group: luqi-public-release-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -26,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Refuse manual live acceptance outside main
+        if: github.event_name == 'workflow_dispatch'
+        run: test "$GITHUB_REF" = 'refs/heads/main'
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -37,7 +40,7 @@ jobs:
           node --check scripts/verify-public-release.mjs
           node --check scripts/verify-deployed-release.mjs
       - name: Wait for the expected live commit and verify its public safety boundaries
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         env:
           LUQI_VERIFY_PUBLIC: "true"
           LUQI_EXPECTED_COMMIT: ${{ github.sha }}

@@ -24,17 +24,17 @@ test("workspace filters distinguish usable tools from previews without making AI
   });
   await page.goto("/#/");
   await expect(
-    page.getByText("Check AI trial availability"),
+    page.getByText("Open LUQI chat and guidance"),
   ).toBeVisible();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article")).toHaveCount(10);
   // The signed-in trial is one new discoverable card; all existing tools remain.
   await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
-    "AI text trial", "Private notes", "Physics lab", "Service status",
+    "Ask LUQI", "AI text trial", "Private notes", "Physics lab", "Service status",
     "African languages", "Content studio", "Omega tasks", "Business desk", "Study desk",
   ]);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(8);
-  await expect(page.getByRole("article").getByRole("link")).toHaveCount(8);
+  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article").getByRole("link")).toHaveCount(9);
   await expect(page.getByRole("article").getByText("Limited trial · sign-in required", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "In development", exact: true })
@@ -46,14 +46,14 @@ test("workspace filters distinguish usable tools from previews without making AI
     page.getByRole("heading", { name: "No tools match your search." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Show all tools" }).click();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article")).toHaveCount(10);
   await page.getByLabel("Filter workspace tools").fill("  PHYSICS  ");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("article").getByRole("heading", { name: "Physics lab" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear tool search" }).click();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article")).toHaveCount(10);
   expect(requests).toEqual([]);
 });
 
@@ -141,7 +141,7 @@ test("navigation and skip link work at small widths without changing hash routes
   await page.getByRole("button", { name: "Open navigation" }).click();
   await page
     .getByRole("navigation", { name: "Mobile navigation" })
-    .getByRole("link", { name: "Private notes" })
+    .getByRole("link", { name: "Notes" })
     .click();
   await expect(
     page.getByRole("heading", { name: "Companion conversations" }),

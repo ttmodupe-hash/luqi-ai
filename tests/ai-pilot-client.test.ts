@@ -82,3 +82,31 @@ it('requires JSON media type even for a plausible success body', async () => {
   await expect(askPilot('token', 'Hello', new AbortController().signal, request)).rejects.toMatchObject({ code: 'RESPONSE_UNCONFIRMED' });
   expect(request).toHaveBeenCalledTimes(1);
 });
+
+it('sends only explicitly opted-in bounded recent turns, never notes or account metadata', async () => {
+  const history = [
+    { sender: 'user' as const, text: 'I am visiting Ghana' },
+    { sender: 'ai' as const, text: 'What kind of visit?' },
+  ];
+  const request = vi.fn(async () => Response.json({
+    status: 'success', response: 'What matters most?', provider: 'gemini', provider_model: 'fixture-model',
+  }));
+  const response = await askPilot('synthetic-token', 'Help me plan', new AbortController().signal, request, history);
+  expect(response.response).toBe('What matters most?');
+  const body = JSON.parse((request.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+  expect(body).toEqual({ user_input: 'Help me plan', history });
+  expect(JSON.stringify(body)).not.toContain('accountEmail');
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
+it('rejects oversized or unreviewed context before a paid request', async () => {
+  const request = vi.fn();
+  const signal = new AbortController().signal;
+  await expect(askPilot('token', 'Hello', signal, request, [
+    { sender: 'ai', text: 'x'.repeat(351) },
+  ])).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+  await expect(askPilot('token', 'Hello', signal, request, Array(5).fill({
+    sender: 'user' as const, text: 'x',
+  }))).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+  expect(request).not.toHaveBeenCalled();
+});
