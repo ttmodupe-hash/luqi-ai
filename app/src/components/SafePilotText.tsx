@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 /**
  * Intentionally tiny, safe renderer for the verified, bounded pilot reply.
@@ -15,7 +15,7 @@ export default function SafePilotText({ text }: { text: string }) {
     const inner = raw.slice(strong ? 2 : 1, strong ? -2 : -1);
     tokens.push({ start, end: start + raw.length, inner, kind: strong ? 'strong' : 'em' });
   }
-  const result: React.ReactNode[] = [];
+  const result: ReactNode[] = [];
   let cursor = 0;
   for (const [i, token] of tokens.entries()) {
     if (token.start < cursor) continue;
