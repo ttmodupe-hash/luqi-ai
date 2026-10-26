@@ -36,6 +36,13 @@ describe('LUQI local intent guidance', () => {
     expect(guideLuqiNeed('Create a short animated story')?.primaryPath).toBe('/content-studio');
     expect(guideLuqiNeed('Prepare a business quotation')?.primaryPath).toBe('/business-desk');
   });
+  it('recognises destinations across Africa without inventing current country data', () => {
+    for (const country of ['Rwanda','Botswana','Eswatini','Côte d’Ivoire','São Tomé and Príncipe','Mauritius','Zambia','Uganda','Namibia','Senegal']) {
+      const result = guideLuqiNeed('Tell me about ' + country)!;
+      expect(result.kind).toBe('travel');
+      expect(result.caution).toMatch(/Confirm entry rules/);
+    }
+  });
   it('keeps arbitrary user input bounded and does not claim autonomous understanding', () => {
     expect(guideLuqiNeed('')).toBeNull();
     expect(guideLuqiNeed('   ')).toBeNull();

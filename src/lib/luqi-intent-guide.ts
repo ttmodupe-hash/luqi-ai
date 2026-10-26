@@ -89,6 +89,25 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     caution: 'AI responses may be wrong and cannot confirm current travel, financial or medical facts.', bookingPreview: false,
   },
 };
+// Names help route a question; they are NOT country-specific facts, visas or feeds.
+// Normalize diacritics and punctuation only in this browser-local classifier.
+const AFRICAN_DESTINATION_NAMES = [
+  'algeria','angola','benin','botswana','burkina faso','burundi','cabo verde',
+  'cape verde','cameroon','central african republic','chad','comoros','congo',
+  'democratic republic of the congo','dr congo','drc','cote d ivoire','ivory coast',
+  'djibouti','egypt','equatorial guinea','eritrea','eswatini','ethiopia','gabon',
+  'gambia','ghana','guinea','guinea bissau','kenya','lesotho','liberia','libya',
+  'madagascar','malawi','mali','mauritania','mauritius','morocco','mozambique',
+  'namibia','niger','nigeria','rwanda','sao tome and principe','senegal',
+  'seychelles','sierra leone','somalia','south africa','south sudan','sudan',
+  'tanzania','togo','tunisia','uganda','zambia','zimbabwe',
+] as const;
+function mentionsAfricanDestination(query: string): boolean {
+  const normalized = ' ' + query.normalize('NFD').replace(/\p{M}/gu, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
+  return AFRICAN_DESTINATION_NAMES.some(name => normalized.includes(' ' + name + ' '));
+}
+
 export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   if (typeof input !== 'string' || !input.trim() || input.length > MAX_GUIDE_NEED_CHARS) return null;
   const q = input.trim().toLowerCase();
@@ -96,7 +115,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
     /\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight)\b/u.test(q) ? 'booking' :
     /\b(translate|translation|language|languages|custom|customs|culture|cultural|sawubona|dumela|isizulu|setswana|sesotho|swahili|kiswahili|yoruba)\b/u.test(q) ? 'language' :
-    /\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|south africa|kenya|nigeria|ghana|tanzania|morocco|egypt|africa)\b/u.test(q) ? 'travel' :
+    (/\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|africa)\b/u.test(q) || mentionsAfricanDestination(q)) ? 'travel' :
     /\b(study|learn|exam|university|student|homework|school|flashcard|revision|course|certification)\b/u.test(q) ? 'study' :
     /\b(create|story|video|animation|cartoon|film|script|content|design|creator)\b/u.test(q) ? 'create' :
     /\b(business|quotation|quote|customer|profit|sell|sales|invoice|pricing|startup|company)\b/u.test(q) ? 'business' :
