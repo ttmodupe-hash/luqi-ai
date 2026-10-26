@@ -6,6 +6,7 @@ import { useCustomerSession } from '../providers/customer-session';
 import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, guideLuqiNeed, MAX_GUIDE_NEED_CHARS } from '../lib/luqi-intent-guide';
 import { buildTravelEnquiry, MAX_TRAVEL_DESTINATION, MAX_TRAVEL_DETAIL } from '../lib/travel-enquiry';
 import SovereignRegionBar from '../components/SovereignRegionBar';
+import { getKhoroCriticalThinkingSteps } from '../services/panAfricanSovereignEngine';
 import '../luqi-guide.css';
 
 const emptyTrip = () => ({ destination: '', dates: '', travellers: '2', budget: '', preferences: '' });
@@ -123,6 +124,15 @@ export default function AskLuqiPage() {
         <h3>Here's a useful way forward</h3>
         <ol>{GUIDE_NEXT_STEPS[result.kind].map(step => <li key={step}>{step}</li>)}</ol>
       </div>
+      {result.kind !== 'urgent' && <details className="luqi-region-reasoning">
+        <summary>Think two steps ahead with KHORO</summary>
+        <p>A practical first-principles checklist — questions to investigate, not a legal ruling or AI-generated fact.</p>
+        <ol>{getKhoroCriticalThinkingSteps(
+          result.kind === 'business' ? 'business' :
+          result.kind === 'study' ? 'study' :
+          result.kind === 'rights' || result.kind === 'consumer' ? 'rights' : 'general'
+        ).map(step => <li key={step}>{step}</li>)}</ol>
+      </details>}
       <p className="luqi-guide-followup"><strong>To help you further:</strong> {result.nextQuestion}</p>
       <p className="luqi-guide-caution"><ShieldCheck size={17} aria-hidden="true" /> {result.caution}</p>
       <div className="luqi-guide-actions">

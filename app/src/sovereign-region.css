@@ -24,3 +24,10 @@
 .luqi-region-compact .luqi-region-links { max-height: 95px; overflow-y: auto; }
 @media (max-width:680px) { .luqi-region-head { grid-template-columns: minmax(0,1fr); gap: 15px; } .luqi-region-grid { grid-template-columns: minmax(0,1fr); } .luqi-region-links { flex-direction: column; } .luqi-region-links a { width: 100%; } .luqi-region-compact .luqi-region-links { max-height: 160px; } }
 @media (prefers-reduced-motion: reduce) { .luqi-region-bar * { scroll-behavior: auto!important; } }
+
+/* No LLM invocation: a user-opened Socratic analysis checklist. */
+.luqi-region-reasoning { margin: 18px 0; border: 1px solid #58715a; border-radius: 13px; background: #182e23; padding: 15px 18px; }
+.luqi-region-reasoning summary { cursor: pointer; min-height: 44px; color: #e1f0c5; font-weight: 700; padding: 8px 0; }
+.luqi-region-reasoning p, .luqi-region-reasoning li { font-size: 13px; color: #d4e5d1; line-height: 1.65; }
+.luqi-region-reasoning ol { padding-left: 20px; }
+.luqi-region-reasoning li { margin: 10px 0; }

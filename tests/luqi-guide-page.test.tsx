@@ -55,6 +55,7 @@ it('accepts a natural-language need locally and shows only real available tools'
   fireEvent.click(screen.getByRole('button', { name: 'Find my next step' }));
   expect(screen.getByRole('heading', { name: 'Make learning more practical' })).toBeTruthy();
   expect(screen.getByRole('link', { name: /Open study desk/ }).getAttribute('href')).toBe('/study-desk');
+  expect(screen.getByText('Think two steps ahead with KHORO')).toBeTruthy();
   expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
 });
 
