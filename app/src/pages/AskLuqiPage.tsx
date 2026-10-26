@@ -5,6 +5,7 @@ import AiPilotPage from './AiPilotPage';
 import { useCustomerSession } from '../providers/customer-session';
 import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, guideLuqiNeed, MAX_GUIDE_NEED_CHARS } from '../lib/luqi-intent-guide';
 import { buildTravelEnquiry, MAX_TRAVEL_DESTINATION, MAX_TRAVEL_DETAIL } from '../lib/travel-enquiry';
+import SovereignRegionBar from '../components/SovereignRegionBar';
 import '../luqi-guide.css';
 
 const emptyTrip = () => ({ destination: '', dates: '', travellers: '2', budget: '', preferences: '' });
@@ -86,6 +87,7 @@ export default function AskLuqiPage() {
       </div>
       <p className="luqi-guide-intro-note"><ShieldCheck size={16} aria-hidden="true" /> No booking, payment, account creation or model call happens just by entering a goal.</p>
     </section>
+    <SovereignRegionBar />
     <section className="luqi-guide-hero" aria-labelledby="luqi-guide-title">
       <p className="luqi-guide-eyebrow"><MessageCircle size={17} aria-hidden="true" /> START WITH YOUR GOAL · NO SIGN-IN REQUIRED</p>
       <h2 id="luqi-guide-title">Tell LUQI what you need.<br/><em>See a real next step.</em></h2>

@@ -1,0 +1,26 @@
+/* In-memory, opt-in regional context; country links are authoritative destinations, not integrations. */
+.luqi-region-bar { margin: 20px 0 28px; padding: clamp(18px, 3vw, 26px); border: 1px solid #66836c; border-radius: 20px; background: linear-gradient(125deg,#1a3428,#10251d); color: #ecf5e7; min-width: 0; }
+.luqi-region-head { display: grid; grid-template-columns: minmax(0,1fr) minmax(205px,280px); align-items: center; gap: 24px; }
+.luqi-region-overline { text-transform: uppercase; letter-spacing: .09em; color: #cbe3ad; font-size: 11px; font-weight: 750; margin: 0 0 8px; }
+.luqi-region-head h2 { color: #f3f7eb; font-size: clamp(19px,2.4vw,26px); font-weight: 750; line-height: 1.3; margin: 0 0 9px; }
+.luqi-region-head p, .luqi-region-note { font-size: 12px; color: #d4e3d3; line-height: 1.65; margin: 8px 0; }
+.luqi-region-head label { display: flex; flex-direction: column; gap: 9px; min-width: 0; font-size: 13px; font-weight: 650; color: #e5f2e1; }
+.luqi-region-head select { width: 100%; min-width: 0; min-height: 46px; padding: 9px 12px; font-size: 13px; color: #f5f8f0; background: #203c2c; border: 1px solid #a0b79b; border-radius: 9px; }
+.luqi-region-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0 3px; }
+.luqi-region-links a { display: inline-flex; align-items: center; gap: 5px; min-height: 42px; padding: 8px 11px; color: #e6f1d6; text-decoration: underline; text-underline-offset: 3px; background: #264732; border-radius: 9px; font-size: 12px; line-height: 1.4; }
+.luqi-region-links a:hover { color: #fff; background: #335640; }
+.luqi-region-hint { background: #2c4430; border-radius: 10px; padding: 10px 13px; font-size: 12px; line-height: 1.5; color: #e4efde; }
+.luqi-region-hint button { display: inline-flex; padding: 7px 10px; margin-left: 8px; border: 1px solid #bdd9a7; border-radius: 8px; background: #183b25; color: #e8f4d7; min-height: 40px; }
+.luqi-region-details { border-top: 1px solid #526e5c; margin-top: 15px; padding-top: 15px; color: #d9e7d3; font-size: 13px; line-height: 1.7; }
+.luqi-region-details summary { cursor: pointer; color: #d5ecb6; font-weight: 650; padding: 8px 0; min-height: 42px; }
+.luqi-region-details h3 { font-size: 14px; color: #f0f7e7; font-weight: 700; margin: 9px 0; }
+.luqi-region-details ul { padding-left: 18px; margin: 0; }
+.luqi-region-details li { margin: 7px 0; }
+.luqi-region-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 13px 0 20px; }
+.luqi-region-rec-list { font-size: 12px; }
+.luqi-region-compact { margin: 18px 0 0; padding: 17px; border-radius: 15px; }
+.luqi-region-compact .luqi-region-head h2 { font-size: 17px; }
+.luqi-region-compact .luqi-region-head select { font-size: 12px; }
+.luqi-region-compact .luqi-region-links { max-height: 95px; overflow-y: auto; }
+@media (max-width:680px) { .luqi-region-head { grid-template-columns: minmax(0,1fr); gap: 15px; } .luqi-region-grid { grid-template-columns: minmax(0,1fr); } .luqi-region-links { flex-direction: column; } .luqi-region-links a { width: 100%; } .luqi-region-compact .luqi-region-links { max-height: 160px; } }
+@media (prefers-reduced-motion: reduce) { .luqi-region-bar * { scroll-behavior: auto!important; } }
