@@ -21,7 +21,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   const contextPreview = shareContext ? previewPilotHistory(turns) : [];
   const contextTooLong = (() => {
     if (!prompt.trim() || tooLong) return false;
-    try { buildPilotInput(prompt, 'auto', contextPreview); return false; }
+    try { buildPilotInput(prompt.trim(), 'auto', contextPreview); return false; }
     catch { return true; }
   })();
   const epoch = useRef(0); const locked = useRef(false);
