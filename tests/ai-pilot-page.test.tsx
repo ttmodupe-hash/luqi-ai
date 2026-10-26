@@ -116,6 +116,18 @@ it('keeps an over-limit draft intact and blocks both button and form submission'
   await screen.findByRole('heading', { name: 'AI reply' });
   expect(inference).toHaveBeenCalledTimes(1);
 });
+it('allows a padded draft when the exact trimmed question fits and sends only that question', async () => {
+  await login(); consent();
+  const accepted = 'x'.repeat(MAX_PILOT_QUESTION_CHARS - 8) + 'END-TEST';
+  const draft = ' '.repeat(100) + accepted + '\n'.repeat(100);
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: draft } });
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  expect(inference).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ user_input: accepted });
+});
+
 it('reports pre-spend input failure without a charged-attempt warning or clearing the draft', async () => {
   inference.mockResolvedValue(Response.json({ code: 'AI_INPUT_TOO_LARGE' }, { status: 400 }));
   await login(); draft(); consent(); fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
