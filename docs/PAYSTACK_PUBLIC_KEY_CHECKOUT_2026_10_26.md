@@ -33,6 +33,10 @@ After offer review, the server rechecks availability and redirects to
 loads without the customer session, Chat, Notes, main router or analytics. A
 URL/callback cannot confirm a payment.
 
+An independent Vite build adds the document and checkout-assets directory
+after the canonical main build. The main single-entry startup, provider and
+emitted-byte parity guards remain unchanged.
+
 The buyer enters a receipt email and reviews seller, exact ZAR price, service,
 delivery, revisions, refunds, taxes/fees and support. Only an explicit action
 loads the fixed official SDK. Availability is rechecked before and after SDK

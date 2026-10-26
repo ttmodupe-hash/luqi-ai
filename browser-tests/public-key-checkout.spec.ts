@@ -23,7 +23,11 @@ async function fixtures(context: BrowserContext, baseURL?: string) {
     json: state.available ? { status: 'available', offer, revision } : { status: 'unavailable' },
   }));
   await context.route('**/api/v1/commerce/checkout?**', route => route.fulfill({
-    status: 302, headers: { location: '/paystack-checkout.html?id=' + offer.id + '&revision=' + revision },
+    // WebKit routing cannot fulfill a synthetic 302. The API unit suite checks
+    // the actual guarded 302; native refresh takes this fixture to the real
+    // checkout document while retaining every no-opener/privacy assertion.
+    contentType: 'text/html',
+    body: '<!doctype html><meta http-equiv="refresh" content="0;url=/paystack-checkout.html?id=' + offer.id + '&amp;revision=' + revision + '">',
   }));
   const app = new Hono(); app.use('*', paymentDocumentHeaders); app.get('*', c => c.html(''));
   const policy = Object.fromEntries((await app.request('/paystack-checkout.html')).headers);
