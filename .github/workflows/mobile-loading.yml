@@ -44,7 +44,7 @@ jobs:
             // The only approved public additions are three reviewed, lazy,
             // provider-free routes. Legacy routes/iframes stay identical.
             const routes = matches(after, routePattern);
-            const approved = ['/business-desk', '/study-desk', '/rights-guide'];
+            const approved = ['/business-desk', '/rights-guide', '/study-desk'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),
