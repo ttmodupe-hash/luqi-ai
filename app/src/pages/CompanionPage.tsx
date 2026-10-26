@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { conversationClient, ConversationError, downloadConversationExport, downloadPrivateNotesExport, type Conversation, type SavedMessage } from "../lib/private-conversations";
 import AccountAccessForm from '../components/AccountAccessForm';
 import AccountPasswordForm from '../components/AccountPasswordForm';
@@ -76,21 +76,20 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
   }
 
   // Returning from Chat or Omega uses the existing account without another login.
-  // Do not reuse the previous user's private list after global sign-out.
-  useEffect(() => {
+  // Clear a former identity before the browser paints the new account.
+  useLayoutEffect(() => {
     const token = session?.token ?? null;
     if (token === previousToken.current) return;
     const wasSignedIn = previousToken.current !== null;
     previousToken.current = token;
-    if (!token) {
-      if (wasSignedIn) {
-        epoch.current++; notesExport.current?.abort(); locked.current = false;
-        setConversations([]); setSelected(null); setMessages([]); setDraft(''); setTitle('');
-        setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false);
-        setUncertain(false); setBusy(false); setPasswordBusy(false); setNotice('');
-      }
-      return;
+    if (wasSignedIn) {
+      epoch.current++; notesExport.current?.abort(); locked.current = false;
+      authenticatedHere.current = false;
+      setConversations([]); setSelected(null); setMessages([]); setDraft(''); setTitle('');
+      setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false);
+      setUncertain(false); setBusy(false); setPasswordBusy(false); setNotice('');
     }
+    if (!token) return;
     if (authenticatedHere.current) { authenticatedHere.current = false; return; }
     void run(async current => {
       const data = await conversationClient(token).list();

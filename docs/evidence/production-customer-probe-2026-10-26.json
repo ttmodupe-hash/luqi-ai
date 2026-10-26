@@ -1,0 +1,115 @@
+{
+  "origin": "https://app.luqi-ai.com",
+  "format": "luqi.synthetic-production-acceptance.v1",
+  "expectedCommit": "f07f8602be4bba38c8415de43085fd6b7b9c167c",
+  "startedAt": "2026-10-26T11:01:12.698Z",
+  "syntheticAccountId": 4,
+  "checks": [
+    {
+      "check": "expected_revision_before",
+      "passed": true
+    },
+    {
+      "check": "persistence_ready",
+      "passed": true
+    },
+    {
+      "check": "anonymous_notes_denied",
+      "passed": true
+    },
+    {
+      "check": "normal_signup",
+      "passed": true
+    },
+    {
+      "check": "account_identity",
+      "passed": true
+    },
+    {
+      "check": "normal_login",
+      "passed": true
+    },
+    {
+      "check": "new_account_has_no_notes",
+      "passed": true
+    },
+    {
+      "check": "create_test_notebook",
+      "passed": true
+    },
+    {
+      "check": "persist_test_note",
+      "passed": true
+    },
+    {
+      "check": "known_password_change",
+      "passed": true
+    },
+    {
+      "check": "old_session_revoked",
+      "passed": true
+    },
+    {
+      "check": "sign_in_after_password_change",
+      "passed": true
+    },
+    {
+      "check": "note_survives_new_session",
+      "passed": true
+    },
+    {
+      "check": "owned_conversation_export",
+      "passed": true
+    },
+    {
+      "check": "owned_notes_archive",
+      "passed": true
+    },
+    {
+      "check": "recovery_limit_is_explicit",
+      "passed": true
+    },
+    {
+      "check": "expected_revision_before_paid_request",
+      "passed": true
+    },
+    {
+      "check": "one_budgeted_ai_reply",
+      "passed": true
+    },
+    {
+      "check": "cleanup_test_notes",
+      "passed": true
+    },
+    {
+      "check": "retire_synthetic_credentials",
+      "passed": true
+    },
+    {
+      "check": "final_session_revoked",
+      "passed": true
+    },
+    {
+      "check": "expected_revision_after",
+      "passed": true
+    }
+  ],
+  "providerRequestSubmitted": true,
+  "providerReplyVerified": true,
+  "billingReconciliation": "not_verified",
+  "cleanup": {
+    "notes": "deleted_and_verified",
+    "sessions": "revoked_and_verified"
+  },
+  "limitations": [
+    "Synthetic HTTP journey, not human/browser acceptance",
+    "No email verification or automated recovery",
+    "No database restart or production restore",
+    "Synthetic account and throttle/budget counters retained"
+  ],
+  "success": true,
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "replySha256": "994c4f121fd4b25abbe606213f891fc260d7623eedc9d4a940d68a7ff872880d",
+  "finishedAt": "2026-10-26T11:04:18.013Z"
+}

@@ -147,6 +147,9 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         )}
       </header>
       <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
+        {customer?.expired && <p role="status" className="luqi-info">
+          Your session ended. <Link to="/login">Sign in again</Link> to use your LUQI account.
+        </p>}
         {children}
       </div>
       <footer className="luqi-footer">
