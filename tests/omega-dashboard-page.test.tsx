@@ -4,12 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderUI,
   screen,
   act,
   within,
 } from "@testing-library/react";
 import OmegaTasksPage from "../src/pages/OmegaTasksPage";
+import { CustomerSessionProvider } from "../src/providers/customer-session";
 import {
   task,
   taskId,
@@ -17,6 +18,7 @@ import {
   disabled,
   budgetResult,
 } from "./fixtures/omega-dashboard";
+const render = (element: React.ReactElement) => renderUI(<CustomerSessionProvider>{element}</CustomerSessionProvider>);
 const request = vi.fn();
 const reply = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {

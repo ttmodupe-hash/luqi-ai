@@ -1,0 +1,17 @@
+# LUQI — one customer login and Chat-first access (review candidate, 26 October 2026 SAST)
+
+## User problem and scope
+Previously Notes, the metered AI text trial and authenticated Omega task history each held a separate component-local JWT. Route navigation discarded it, forcing another login. Chat was absent from the primary navigation. This change shares **one customer account session in React memory across those three authenticated public tools** and makes Chat discoverable on desktop, mobile, homepage and installed PWA entry.
+
+## Security and truthfulness
+- The existing authenticated account transport, MySQL ownership checks, JWT and per-route server authorisation are unchanged. This is **shared customer login**, not an administrator SSO or elevation of privileges. Admin remains isolated.
+- No JWT, password, account content or AI question is written to cookies, localStorage, sessionStorage, URL, service worker, analytics or browser caches. Full reload/tab close still requires a fresh sign-in; cross-tab persistence is **not** implemented. A later HttpOnly/SameSite cookie design would require CSRF, revocation and independent security review.
+- Signing out from any participating customer tool clears the shared identity; pages drop private local state and ignore stale async completions. HTTP 401 on protected operations also clears the shared identity.
+- Chat first offers browser-local intent guidance from the previously reviewed draft #271, with honest links to currently available tools and an explicit no-booking state. The embedded AI text trial remains separately consented and subject to existing provider quotas; no question is submitted automatically. It is not an always-on, live-data, multi-turn, voice or booking agent.
+- No server, database, merchant, payment, AI model, secret, spending cap, DNS or infrastructure changes. Existing USD100/month (USD60 Gemini, USD40 OpenAI) remains unchanged.
+
+## Release verification required
+- Root and app frontend mirrors must remain identical for shared files; preserve all existing rights/consumer and legacy guarded routes.
+- Exact-revision TypeScript/web build, unit tests, WebKit/mobile and disposable-MySQL first-user journeys must pass. New browser acceptance signs in once, navigates Notes → Chat → Omega → Notes without another authentication POST, checks no paid AI POST, then signs out and verifies sign-in is required.
+- Validate 320px visible Ask LUQI header action and honest booking empty state. Verify account creation, login, session expiration and logout on a real iPhone and Android device. No production account creation or provider inference in CI.
+- Independent security/product review, protected release ordering and explicit deployment acceptance before merging to auto-deploy main. This review candidate is **not deployed**.

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import AiPilotPage from '../src/pages/AiPilotPage';
+import { CustomerSessionProvider } from '../src/providers/customer-session';
 import { MAX_PILOT_QUESTION_CHARS } from '../src/lib/pilot-input';
 
 let available = true;
@@ -21,7 +22,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 async function login() {
-  render(<MemoryRouter><AiPilotPage /></MemoryRouter>);
+  render(<MemoryRouter><CustomerSessionProvider><AiPilotPage /></CustomerSessionProvider></MemoryRouter>);
   await screen.findByText(/Provider access is configured|AI requests are paused/);
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'trial@example.invalid' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Fixture-Password-2026!' } });

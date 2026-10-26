@@ -4,6 +4,7 @@ import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
 import OmegaLocalCalculators from "../components/OmegaLocalCalculators";
 import OmegaDomainGuide from "../components/OmegaDomainGuide";
 import { ConversationError, signIn } from "../lib/private-conversations";
+import { useCustomerSession } from "../providers/customer-session";
 import {
   omegaClient,
   OmegaError,
@@ -58,9 +59,9 @@ function TaskResult({ task }: { task: OmegaTask }) {
 const formatTime = (value: string) => new Date(value).toLocaleString();
 
 export default function OmegaTasksPage() {
-  const [session, setSession] = useState<Awaited<
-    ReturnType<typeof signIn>
-  > | null>(null);
+  const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const authenticatedHere = useRef(false);
+  const previousToken = useRef<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<OmegaStatus | null>(null);
@@ -92,7 +93,7 @@ export default function OmegaTasksPage() {
   function clearSession() {
     epoch.current++;
     locked.current = false;
-    setSession(null);
+    previousToken.current = null; signOutShared();
     setEmail("");
     setPassword("");
     setStatus(null);
@@ -187,6 +188,25 @@ export default function OmegaTasksPage() {
       "Task information refreshed. Status changes appear when you refresh.",
     );
   }
+  // A sign-in from Notes or Chat also unlocks this account-owned task view.
+  useEffect(() => {
+    const token = session?.token ?? null;
+    if (token === previousToken.current) return;
+    const wasSignedIn = previousToken.current !== null;
+    previousToken.current = token;
+    if (!token) {
+      if (wasSignedIn) {
+        epoch.current++; locked.current = false;
+        setStatus(null); setTasks([]); setSelected(null); setMore(false); setBusy(false);
+        setConfirm(false); setConfirmRemove(false); setUncertain(false);
+        setSubmission(null); setSubmissionUncertain(false); setEmail(''); setPassword(''); setNotice('');
+      }
+      return;
+    }
+    if (authenticatedHere.current) { authenticatedHere.current = false; return; }
+    void run(current => refresh(token, current));
+  }, [session?.token]);
+
   function prepareSubmission(draft: OmegaDraft) {
     if (busy || locked.current || uncertain || submission || status?.intake !== "configured" ||
         !status.handlers.includes(draft.handler)) return;
@@ -261,7 +281,7 @@ export default function OmegaTasksPage() {
                 const account = await signIn(email, password);
                 if (!current()) return;
                 setPassword("");
-                setSession(account);
+                authenticatedHere.current = true; acceptSession(account);
                 await refresh(account.token, current);
               });
             }}
@@ -296,7 +316,7 @@ export default function OmegaTasksPage() {
               {busy ? "Signing in…" : "Sign in"}
             </button>
             <p className="omega-muted">
-              Your session stays in memory until you leave or reload this page.
+              Your LUQI account stays signed in across customer tools in this tab. Reloading or signing out ends the session.
               Account recovery requires your LUQI administrator.
             </p>
           </form>

@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
+import { CustomerSessionProvider } from "./providers/customer-session";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
@@ -21,6 +22,7 @@ import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
@@ -32,7 +34,7 @@ const ExperientialEducationPage = lazyQueryPage(() => import("./pages/Experienti
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  return <WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout>;
+  return <CustomerSessionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></CustomerSessionProvider>;
 }
 
 export default function App() {
@@ -42,6 +44,8 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/chat" element={<AskLuqiPage />} />
+        <RouterRoute path="/ask" element={<AskLuqiPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />

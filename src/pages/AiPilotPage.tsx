@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
-import type { AccountSession } from '../lib/private-conversations';
+import { useCustomerSession } from '../providers/customer-session';
 import { MAX_PILOT_QUESTION_CHARS } from '../lib/pilot-input';
 
-export default function AiPilotPage() {
-  const [session, setSession] = useState<AccountSession | null>(null);
+export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
+  const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const previousToken = useRef<string | null>(null);
   const [available, setAvailable] = useState(false);
   const [checking, setChecking] = useState(true);
   const [prompt, setPrompt] = useState(''); const [consent, setConsent] = useState(false);
@@ -18,6 +19,17 @@ export default function AiPilotPage() {
   const epoch = useRef(0); const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
 
+  // Only an explicit action on the Chat guide supplies a draft; never auto-send.
+  useEffect(() => { if (initialQuestion) setPrompt(initialQuestion); }, [initialQuestion]);
+  useEffect(() => {
+    const token = session?.token ?? null;
+    if (previousToken.current && previousToken.current !== token) {
+      epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+      setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false); setNotice('');
+    }
+    previousToken.current = token;
+  }, [session?.token]);
+
   useEffect(() => {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000);
     void pilotAvailability(controller.signal).then(value => {
@@ -28,7 +40,7 @@ export default function AiPilotPage() {
 
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
-    setSession(null); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
+    previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
   }
   async function submit() {
     if (!session || !consent || !available || locked.current || uncertain || !prompt.trim() || tooLong) return;
@@ -61,17 +73,20 @@ export default function AiPilotPage() {
     }
   }
 
-  return <main className="luqi-info" aria-labelledby="ai-trial-heading">
-    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><h1 id="ai-trial-heading">Try a question with LUQI</h1>
+  const Root = embedded ? 'section' : 'main';
+  const Heading = embedded ? 'h3' : 'h1';
+  const Subheading = embedded ? 'h3' : 'h2';
+  return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
+    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with LUQI</Heading>
     <p>Gemini answers first, with OpenAI as a separately limited fallback. This is an experimental text-only trial; answers can be wrong. No browsing, sources, tools, files, voice or autonomous actions are enabled.</p>
     <p role="status">{checking ? 'Checking AI configuration…' : available
       ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
       : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>
     <p>Up to 20 provider attempts per account per UTC day. A fallback uses another attempt. Replies are limited to 512 tokens. African-language accuracy has not been independently evaluated.</p>
     {notice && <p role="alert">{notice}</p>}
-    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; setSession(value); setNotice(''); }} /> : <>
-      <section><p>Signed in as {session.user.email}</p><button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button></section>
-      <section><h2>Ask one question</h2>
+    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); }} /> : <>
+      <section><p>Signed in as {session.user.email}. This LUQI account also opens your Notes and Omega history in this tab.</p><button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button></section>
+      <section><Subheading>Ask one question</Subheading>
         <p>Only the question below is sent to the providers. Your private notes and account email are not added to it. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
           <label className="block" htmlFor="ai-question">Your question</label>
@@ -88,11 +103,11 @@ export default function AiPilotPage() {
         </form>
         {uncertain && <button className="luqi-secondary" type="button" onClick={() => { setUncertain(false); setPrompt(''); setNotice(''); }}>Start a new question</button>}
       </section>
-      {answer && <section aria-labelledby="ai-reply-heading"><h2 id="ai-reply-heading">AI reply</h2>
+      {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{answer.response}</p>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
       </section>}
     </>}
     <p><Link to="/companion">Open your private notes</Link> · <Link to="/start">Back to getting started</Link></p>
-  </main>;
+  </Root>;
 }
