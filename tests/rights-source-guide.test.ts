@@ -19,6 +19,7 @@ describe('source-linked South African rights guide (offline)', () => {
       expect(parsed.search).toBe('');
       expect(source.reviewedOn).toBe(RIGHTS_REVIEWED_ON);
       expect(source.publisher.length).toBeGreaterThan(4);
+      expect(source.authorityLabel.length).toBeGreaterThan(12);
     }
     for (const item of RIGHTS_INFORMATION) {
       expect(item.explanation.length).toBeGreaterThan(40);
@@ -68,7 +69,12 @@ describe('source-linked South African rights guide (offline)', () => {
     expect(judgment?.url).toMatch(/^https:\/\/collections\.concourt\.org\.za\//);
     const summary = RIGHTS_SOURCES.find(item => item.id === 'court-summary');
     expect(summary?.title).toMatch(/not binding/);
+    const statute = RIGHTS_SOURCES.find(item => item.id === 'refugees-act');
+    expect(statute?.url).toBe('https://www.gov.za/xh/documents/refugees-act');
+    expect(statute?.authorityLabel).toMatch(/Legislation/);
     const court = RIGHTS_INFORMATION.find(item => item.id === 'court');
+    expect(court?.sources).toContain('refugees-act');
+    expect(court?.explanation).toMatch(/4\(1\)\(f\)/);
     expect(court?.sources).toContain('court-ruling');
     expect(court?.sources).toContain('court-summary');
     expect(court?.explanation).toMatch(/does not automatically grant/);
