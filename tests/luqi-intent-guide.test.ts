@@ -43,6 +43,12 @@ describe('LUQI local intent guidance', () => {
       expect(result.caution).toMatch(/Confirm entry rules/);
     }
   });
+  it('prioritises the action over a destination mentioned in the same question', () => {
+    expect(guideLuqiNeed('Create an animation about Rwanda')?.kind).toBe('create');
+    expect(guideLuqiNeed('Study South African history for an exam')?.kind).toBe('study');
+    expect(guideLuqiNeed('Prepare a quotation for a customer in Botswana')?.kind).toBe('business');
+    expect(guideLuqiNeed('Help me plan a business trip to Kenya')?.kind).toBe('travel');
+  });
   it('keeps arbitrary user input bounded and does not claim autonomous understanding', () => {
     expect(guideLuqiNeed('')).toBeNull();
     expect(guideLuqiNeed('   ')).toBeNull();
