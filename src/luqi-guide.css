@@ -58,3 +58,16 @@
   .luqi-guide-examples button { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .luqi-guide * { scroll-behavior: auto !important; } }
+
+/* Optional conversation sharing: review before each metered AI follow-up. */
+.luqi-guide-ai .luqi-chat-context {
+  border: 1px solid #708c6f;
+  background: #172d20;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 18px 0;
+}
+.luqi-guide-ai .luqi-chat-context p { color: #c9d7c8; font-size: 13px; line-height: 1.65; }
+.luqi-guide-ai .luqi-chat-context details { border-top: 1px solid #577258; margin-top: 12px; padding-top: 12px; }
+.luqi-guide-ai .luqi-chat-context summary { cursor: pointer; font-weight: 650; color: #e0f1cb; }
+.luqi-guide-ai .luqi-chat-context li { margin: 10px 0; overflow-wrap: anywhere; white-space: pre-wrap; }

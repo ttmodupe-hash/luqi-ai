@@ -1092,3 +1092,24 @@
 @media (min-width: 1000px) {
   .luqi-start-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Chat must stay visible on every phone screen, not hidden behind the menu. */
+@media (max-width: 700px) {
+  .luqi-header-actions .luqi-account-link {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 0 11px;
+    gap: 0;
+    background: #2d4731;
+    border-color: #a9cb8b;
+    color: #effadf;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .luqi-header-actions .luqi-account-link svg { display: none; }
+}
+@media (max-width: 390px) {
+  .luqi-header-inner { padding-left: 12px; padding-right: 12px; gap: 8px; }
+  .luqi-brand { font-size: 19px; gap: 7px; }
+  .luqi-header-actions .luqi-search-button { display: none; }
+}
