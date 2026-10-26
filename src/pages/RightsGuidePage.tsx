@@ -16,6 +16,8 @@ export default function RightsGuidePage() {
   const current = legalInformationIsCurrent();
   const englishTextAvailable = rightsLanguageHasSourceLinkedText(language);
   const languageLabel = RIGHTS_LANGUAGES.find(item => item.code === language)?.name ?? 'Selected language';
+  const october9 = RIGHTS_SOURCES.find(source => source.id === 'government-withdrawal');
+  const october11 = RIGHTS_SOURCES.find(source => source.id === 'government-transition');
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 text-slate-100" aria-labelledby="rights-guide-title">
@@ -68,9 +70,15 @@ export default function RightsGuidePage() {
           </p>
         ) : (
           <p role="status" className="rounded-lg border border-slate-600 p-3 text-sm">
-            Procedures may change before {RIGHTS_RECHECK_AFTER}. An 11 October 2026 government announcement
-            proposed an intention-registration system by 10 November 2026; this page does not verify it is operational.
-            Check the original government announcement below.
+            Procedures may change before {RIGHTS_RECHECK_AFTER}. Home Affairs withdrew a prior asylum intake
+            directive on 9 October 2026. Government subsequently proposed a new intention-registration system
+            by 10 November; LUQI has not verified that system is operating.
+            {' '}Read the{' '}
+            {october9 && <a className="underline underline-offset-2 text-cyan-200" target="_blank" rel="noopener noreferrer"
+              href={october9.url}>official withdrawal notice</a>}
+            {' '}and{' '}
+            {october11 && <a className="underline underline-offset-2 text-cyan-200" target="_blank" rel="noopener noreferrer"
+              href={october11.url}>official October briefing</a>}.
           </p>
         )}
       </section>
