@@ -29,7 +29,10 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
   const epoch = useRef(0);
   const locked = useRef(false);
   const notesExport = useRef<AbortController | null>(null);
-  useEffect(() => () => { epoch.current++; notesExport.current?.abort(); }, []);
+  useEffect(() => () => {
+    epoch.current++; notesExport.current?.abort(); locked.current = false;
+    previousToken.current = null; // StrictMode remount must reload authenticated data.
+  }, []);
 
   function clearSession() {
     notesExport.current?.abort(); notesExport.current = null;

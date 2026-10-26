@@ -86,6 +86,8 @@ export default function OmegaTasksPage() {
   useEffect(
     () => () => {
       epoch.current++;
+      locked.current = false;
+      previousToken.current = null; // StrictMode remount must refresh the account view.
     },
     [],
   );
