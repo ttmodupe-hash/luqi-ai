@@ -119,6 +119,19 @@ export default function RightsGuidePage() {
         ) : null}
       </section>
 
+      <section className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-labelledby="adviser-questions">
+        <h2 id="adviser-questions" className="text-xl font-semibold">Questions to take to a qualified adviser</h2>
+        <p className="text-sm text-slate-200">Use these general questions privately with an authorised legal adviser or appropriate official.
+          You do not need to give your story, identification number or case documents to LUQI.</p>
+        <ul className="list-inside list-disc space-y-2 text-sm text-slate-100">
+          <li>What is the current official application or appointment procedure for my situation?</li>
+          <li>Can I request an interpreter in a language I understand?</li>
+          <li>How can I check the status and conditions of documents already issued to me?</li>
+          <li>If I received a written decision, what is the applicable deadline and where can I obtain urgent legal help?</li>
+        </ul>
+        <p className="text-xs text-slate-300">These are preparation questions, not filing instructions or a personalised legal checklist.</p>
+      </section>
+
       <section className="space-y-2 rounded-xl border border-slate-500 bg-slate-900 p-4" aria-labelledby="urgent-support">
         <h2 id="urgent-support" className="text-xl font-semibold">Need a qualified person?</h2>
         <p className="text-sm">For detention, a written rejection, a possible deadline or urgent protection,
