@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act, afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import ConsumerRightsAssistant from '../src/components/ConsumerRightsAssistant';
 
 const requests = vi.fn();
