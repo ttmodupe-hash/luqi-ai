@@ -67,6 +67,7 @@ describe('consumer rights guide, zero-provider fallback', () => {
     expect(prepareConsumerStory('DEFECTIVE_GOODS', {})).toBeNull();
     expect(prepareConsumerStory('DEFECTIVE_GOODS', 'z'.repeat(MAX_CONSUMER_STORY_LENGTH + 1))).toBeNull();
     expect(prepareConsumerStory('MADE_UP' as DisputeType, 'a believable case story')).toBeNull();
+    expect(prepareConsumerStory('toString' as DisputeType, 'a believable case story')).toBeNull();
     const result = prepareConsumerStory('TELCO_BILLING_DISPUTE', '  Charged twice on my mobile account.  ');
     expect(result).not.toBeNull();
     expect(result?.userStory).toBe('Charged twice on my mobile account.');
