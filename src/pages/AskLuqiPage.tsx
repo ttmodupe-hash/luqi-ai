@@ -29,7 +29,8 @@ export default function AskLuqiPage() {
   function askAi() {
     if (!result || !submitted) return;
     setAiDraft(submitted);
-    document.getElementById('luqi-guide-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = document.getElementById('luqi-guide-ai');
+    if (typeof target?.scrollIntoView === 'function') target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   return <main className="luqi-guide">
     <section className="luqi-guide-hero" aria-labelledby="luqi-guide-title">

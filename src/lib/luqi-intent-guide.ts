@@ -95,8 +95,8 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const kind: GuideKind =
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
     /\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight)\b/u.test(q) ? 'booking' :
-    /\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|south africa|kenya|nigeria|ghana|tanzania|morocco|egypt|africa)\b/u.test(q) ? 'travel' :
     /\b(translate|translation|language|languages|custom|customs|culture|cultural|sawubona|dumela|isizulu|setswana|sesotho|swahili|kiswahili|yoruba)\b/u.test(q) ? 'language' :
+    /\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|south africa|kenya|nigeria|ghana|tanzania|morocco|egypt|africa)\b/u.test(q) ? 'travel' :
     /\b(study|learn|exam|university|student|homework|school|flashcard|revision|course|certification)\b/u.test(q) ? 'study' :
     /\b(create|story|video|animation|cartoon|film|script|content|design|creator)\b/u.test(q) ? 'create' :
     /\b(business|quotation|quote|customer|profit|sell|sales|invoice|pricing|startup|company)\b/u.test(q) ? 'business' :
