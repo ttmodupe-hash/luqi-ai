@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import HeroAiChatConsole from "../components/HeroAiChatConsole";
+import CreatorPackPreview from "../components/CreatorPackPreview";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
 const icons = {
@@ -76,6 +77,7 @@ export default function Home() {
           </div>
           <HeroAiChatConsole />
         </section>
+        <CreatorPackPreview compact />
         <section
           id="tools"
           className="luqi-tools-section"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { isPublicKeyOffer, loadHostedOffer, type HostedOfferResponse } from '../lib/hosted-checkout';
+import CreatorPackPreview from '../components/CreatorPackPreview';
 
 export default function PaymentsPage() {
   const location = useLocation();
@@ -29,6 +30,7 @@ export default function PaymentsPage() {
       <p>No money has been collected by opening this page.</p>
       <Link className="luqi-primary" to="/chat">Go to Chat</Link>
     </section>}
+    {result?.status === 'unavailable' && <CreatorPackPreview />}
     {offer && <section aria-labelledby="paid-offer-heading">
       <p>One-time assisted service</p><h2 id="paid-offer-heading">{offer.title}</h2>
       <p>{offer.description}</p>

@@ -1,0 +1,40 @@
+/* A truthful offer preview: never a checkout or entitlement switch. */
+.luqi-creator-offer {
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 28px 0;
+  padding: clamp(20px, 4vw, 34px);
+  border: 1px solid #587651;
+  border-radius: 22px;
+  background: linear-gradient(140deg, #1c3128 0%, #15251e 60%, #182920 100%);
+  color: #f2f7eb;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, .12);
+}
+.luqi-info section.luqi-creator-offer { padding: clamp(20px, 4vw, 34px); background: linear-gradient(140deg, #1c3128, #15251e); border-color: #587651; }
+.luqi-creator-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 190px); gap: 22px; align-items: start; }
+.luqi-creator-kicker { color: #c6dda8 !important; font-size: 11px; font-weight: 750; letter-spacing: .1em; line-height: 1.5; text-transform: uppercase; margin: 0 0 12px !important; }
+.luqi-creator-offer h2 { color: #f7f9ee; font-size: clamp(22px, 3.2vw, 30px); line-height: 1.25; margin: 0 0 14px; }
+.luqi-creator-copy > p:not(.luqi-creator-kicker), .luqi-creator-offer .luqi-creator-limit { color: #d1dece; line-height: 1.7; }
+.luqi-creator-copy > p:not(.luqi-creator-kicker) { margin: 0; }
+.luqi-creator-price { display: flex; flex-direction: column; gap: 8px; border: 1px solid #718d68; background: #243a2a; border-radius: 16px; padding: 17px; min-width: 0; }
+.luqi-creator-price > span { color: #d9e8d2; font-size: 12px; line-height: 1.4; }
+.luqi-creator-price strong { color: #f7f5cd; font-size: clamp(32px, 5vw, 43px); font-weight: 750; letter-spacing: -.035em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.luqi-creator-includes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 18px; color: #f0f5e7; padding: 0; margin: 25px 0; list-style: none; }
+.luqi-creator-includes li { position: relative; padding-left: 23px; font-size: 14px; line-height: 1.55; }
+.luqi-creator-includes li::before { content: '✓'; position: absolute; left: 0; color: #d0e7a1; font-weight: 800; }
+.luqi-creator-offer .luqi-creator-limit { font-size: 13px; margin: 20px 0 !important; }
+.luqi-creator-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.luqi-creator-offer .luqi-primary { background: #d4e9b9; border-color: #d4e9b9; color: #18301e; text-decoration: none; font-weight: 700; }
+.luqi-creator-offer .luqi-primary:hover { background: #eff7dd; }
+.luqi-creator-offer .luqi-creator-detail-link { color: #e1efc7; text-decoration: underline; text-underline-offset: 4px; min-height: 44px; display: inline-flex; align-items: center; }
+.luqi-creator-offer-compact { margin: 0 auto 22px; max-width: 1180px; }
+.luqi-creator-offer-compact .luqi-creator-limit { margin-top: 14px !important; }
+@media (max-width: 560px) {
+ .luqi-creator-top { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+ .luqi-creator-price { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 16px; }
+ .luqi-creator-price strong { grid-row: 1 / span 2; grid-column: 1; }
+ .luqi-creator-price span { grid-column: 2; }
+ .luqi-creator-includes { grid-template-columns: minmax(0, 1fr); }
+ .luqi-creator-actions { align-items: stretch; }
+ .luqi-creator-actions .luqi-primary { white-space: normal; }
+}

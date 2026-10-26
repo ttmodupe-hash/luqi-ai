@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import CreatorPackPreview from '../components/CreatorPackPreview';
 
 export default function PricingPage() {
   return <main className="luqi-info"><p className="luqi-eyebrow">MAKE. LEARN. MOVE YOUR IDEA FORWARD.</p>
@@ -32,6 +33,7 @@ export default function PricingPage() {
       <p>This works only from user-supplied material; it does not certify exam results or automatically save your deck online. Downloaded JSON files are not encrypted.</p>
       <Link className="luqi-primary" to="/study-desk">Open the study desk</Link>
     </section>
+    <CreatorPackPreview />
     <section><h2>Paid plans</h2>
       <p>AI subscriptions and in-app credit purchases are not available in this pilot. Any one-time assisted service is listed separately with its seller, exact price, delivery and refund details.</p>
       <p>Check the payment page for current availability. Opening it does not charge you or change your AI allowance.</p>
