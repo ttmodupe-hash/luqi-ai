@@ -8,6 +8,10 @@ on:
       - 'scripts/release-control-posture.mjs'
       - 'scripts/review-release-controls.mjs'
       - 'tests/release-control-posture.test.mjs'
+      - 'tests/release-workflow-phases.test.mjs'
+      - '.github/workflows/public-release-checks.yml'
+      - '.github/workflows/custom-domain-https.yml'
+      - '.github/workflows/lab-framing.yml'
       - 'docs/RELEASE_CONTROL_LOCKDOWN_2026_10_25.md'
       - '.github/workflows/web-build.yml'
       - 'tests/p0-operator-handoff.test.mjs'
@@ -36,5 +40,7 @@ jobs:
         run: node --test tests/p0-operator-handoff.test.mjs
       - name: Validate release-control safeguards and main push-check trigger
         run: node --test tests/release-control-posture.test.mjs
+      - name: Verify source CI cannot wait for an undeployed commit
+        run: node --test tests/release-workflow-phases.test.mjs
       - name: Preserve scope
         run: echo 'Synthetic documentary and release-control checks only; no production mutation, real branch-policy verification, vendor invoices, DB restore, merchant charge or launch approval.' >> "$GITHUB_STEP_SUMMARY"

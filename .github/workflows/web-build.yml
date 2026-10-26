@@ -35,6 +35,8 @@ jobs:
           tests/trade-scenario.test.ts
           tests/african-opportunity-page.test.tsx
           --no-file-parallelism
+      - name: Verify predeploy and postdeploy workflow ordering
+        run: node --test tests/release-workflow-phases.test.mjs
       - name: Verify offline AI cost review does not certify bills
         run: node --test tests/provider-cost-review.test.mjs
       - name: Verify retired static authentication entrypoints

@@ -15,6 +15,16 @@ The existing WebKit acceptance and Production API Types workflows already trigge
 
 Official Railway explanation: https://docs.railway.com/deployments/github-autodeploys#wait-for-ci . Railway waits for **GitHub Actions workflow conclusions**, not every job; cancelled/skipped/neutral conclusions have caveats, and outstanding checks time out. At least one push-to-main workflow is required. Railway is not a substitute for enforced GitHub rules.
 
+## Release ordering — predeploy versus postdeploy (26 October 2026 candidate)
+
+**Issue identified:** `LUQI Public Release Checks`, `LUQI Custom Domain HTTPS Acceptance`, and `LUQI Production Lab Framing` previously ran live exact-SHA probes on `push: main`. Those probes wait for the new commit to be deployed. If Railway **Wait for CI** holds the deployment until those push workflows complete, both sides can wait for each other. This is a potential release deadlock, not an observed production outage.
+
+This candidate keeps the workflows' pull-request and main-push **source, fixture and real-browser tests**, but gates the live HTTPS checks to **manual `workflow_dispatch` on `refs/heads/main` only**. Existing bounded live probes and exact-SHA assertions remain unchanged. Separate event-specific concurrency groups prevent manual postdeployment checks from cancelling push CI. The static workflow-ordering regression test runs in the P0 evidence workflow and always-on Web Build.
+
+**Required operator step after an authorised deployment:** Verify the intended GitHub main SHA matches the successful Railway web deployment and check web/MySQL status. On GitHub Actions with branch **main**, manually run `LUQI Public Release Checks`, `LUQI Custom Domain HTTPS Acceptance`, and `LUQI Production Lab Framing`. Record their actual terminal results for that exact revision. Do not dispatch before the intended revision is live. Failed acceptance means stop promotion and investigate; it is not automatic rollback. Manual checks are **not continuous monitoring**, real-device account acceptance or paid-launch approval.
+
+Do not enable Wait for CI until the proposed changes, required checks, branch rules and safe rollback plan have been reviewed. No workflow was dispatched by this PR. Any future event-driven postdeployment check requires separate, verified deployment-event integration.
+
 ## Owner-managed controls — **not enabled by this PR**
 
 1. In **GitHub → ttmodupe-hash/luqi-ai → Settings → Rules → Rulesets**, inspect repository permissions and create an **enforced** branch ruleset targeting only main. Require pull requests, block force pushes and deletion, and restrict bypass. Arrange an eligible independent reviewer before requiring approval to avoid locking out the only owner.
