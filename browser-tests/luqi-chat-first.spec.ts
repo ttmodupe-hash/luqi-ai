@@ -1,4 +1,14 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function openCustomerTool(page: Page, label: string) {
+  const desktop = page.getByRole('navigation', { name: 'Primary navigation' })
+    .getByRole('link', { name: label, exact: true });
+  if (await desktop.isVisible()) { await desktop.click(); return; }
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await page.getByRole('navigation', { name: 'Mobile navigation' })
+    .getByRole('link', { name: label, exact: true }).click();
+}
+
 
 test('visitor finds the chat-first Africa guide on real browser engines without paid calls', async ({ page }) => {
   const paidRequests: string[] = [];
@@ -58,9 +68,9 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
   await expect(page.getByText(/Signed in as single-session@example.invalid/)).toBeVisible();
-  await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Omega tasks' }).click();
+  await openCustomerTool(page, 'Omega tasks');
   await expect(page.getByRole('heading', { name: 'Tasks are not enabled yet' })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Private notes' }).click();
+  await openCustomerTool(page, 'Private notes');
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
   expect(auth).toHaveLength(1);
   expect(paid).toHaveLength(0);
