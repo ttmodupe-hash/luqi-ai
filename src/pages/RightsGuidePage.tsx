@@ -90,8 +90,8 @@ export default function RightsGuidePage() {
         {current ? (
           <div aria-live="polite" className="grid gap-4">
             {RIGHTS_INFORMATION.filter(item => item.topic === topic).map(item => (
-              <article key={item.id} className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
-                <h3 className="text-lg font-semibold">{item.title}</h3>
+              <article key={item.id} aria-labelledby={"rights-item-" + item.id} className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
+                <h3 id={"rights-item-" + item.id} className="text-lg font-semibold">{item.title}</h3>
                 <p className="leading-relaxed text-slate-200">{item.explanation}</p>
                 <div className="space-y-2">
                   <p className="text-sm font-semibold">Where this information comes from:</p>
