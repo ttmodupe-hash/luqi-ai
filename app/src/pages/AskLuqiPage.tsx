@@ -1,16 +1,28 @@
-import { useState, type FormEvent } from 'react';
+import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Compass, Globe2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import AiPilotPage from './AiPilotPage';
+import { useCustomerSession } from '../providers/customer-session';
 import { GUIDE_EXAMPLES, guideLuqiNeed, MAX_GUIDE_NEED_CHARS } from '../lib/luqi-intent-guide';
 import '../luqi-guide.css';
 
 /** No paid AI or booking is called by the local guide; only explicit AI trial consent can submit. */
 export default function AskLuqiPage() {
+  const { session } = useCustomerSession();
+  const previousToken = useRef<string | null>(null);
   const [need, setNeed] = useState('');
   const [submitted, setSubmitted] = useState('');
   const [aiDraft, setAiDraft] = useState('');
   const [error, setError] = useState('');
+  // The optional local helper can contain the same text as the AI draft.
+  // Keep anonymous-to-account handoff, but clear a former account before paint.
+  useLayoutEffect(() => {
+    const token = session?.token ?? null;
+    if (previousToken.current && previousToken.current !== token) {
+      setNeed(''); setSubmitted(''); setAiDraft(''); setError('');
+    }
+    previousToken.current = token;
+  }, [session?.token]);
   const result = guideLuqiNeed(submitted);
   function guide(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

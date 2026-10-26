@@ -68,7 +68,11 @@ the token, persist it in browser storage or send an AI question automatically.
 Chat, optional Notes and Omega clear the former account's data before the next
 account is painted. Pending former-account replies cannot repopulate the view.
 Chat clears consent, question, answer and reviewed history; a new account must
-give fresh consent. Shared sign-in across tools in the same tab is preserved.
+give fresh consent. The optional local guide also clears its entered need,
+result and handoff draft when a former account leaves. A regression reproduced
+that text surviving an account switch before this fix. An anonymous draft can
+still be handed into Chat when its author signs in. Shared sign-in across tools
+in the same tab is preserved.
 
 ## Operational holds
 

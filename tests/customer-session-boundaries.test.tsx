@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { CustomerSessionProvider, useCustomerSession } from '../src/providers/customer-session';
 import CompanionPage from '../src/pages/CompanionPage';
 import AiPilotPage from '../src/pages/AiPilotPage';
+import AskLuqiPage from '../src/pages/AskLuqiPage';
 import OmegaTasksPage from '../src/pages/OmegaTasksPage';
 import { configured, task } from './fixtures/omega-dashboard';
 
@@ -115,4 +116,19 @@ it('aborts a pending Chat request when its session expires and never shows a lat
   expect(screen.queryByLabelText('Your question')).toBeNull();
   expect(screen.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeTruthy();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
+});
+
+it('clears the optional local guide and its handoff draft on an account change', async () => {
+  request.mockResolvedValue(Response.json({ checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } }));
+  mount(<AskLuqiPage />);
+  await screen.findByText(/Provider access is configured/);
+  fireEvent.change(screen.getByLabelText('What would you like help with?'), { target: { value: 'Help me plan my visit to Cape Town' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Find my next step' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use my question in Chat above' }));
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Help me plan my visit to Cape Town');
+  fireEvent.click(screen.getByRole('button', { name: 'Use second account' }));
+  expect((screen.getByLabelText('What would you like help with?') as HTMLTextAreaElement).value).toBe('');
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('');
+  expect(screen.queryByRole('button', { name: 'Use my question in Chat above' })).toBeNull();
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
 });
