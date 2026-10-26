@@ -63,6 +63,8 @@ export default function RightsGuidePage() {
         <h2 id="source-date-title" className="text-lg font-semibold">Source review and changes</h2>
         <p className="text-sm text-slate-200">Last manual source check: <strong>{RIGHTS_REVIEWED_ON}</strong>.
           This is not a live government feed or a qualified lawyer's sign-off.</p>
+        <p className="text-sm text-amber-100">This public pilot is available, but the English legal summaries have not been independently approved by a South African legal practitioner. They are educational explanations, not a licensed legal service.</p>
+        <p className="text-sm text-slate-200">Read the legislation and court judgment for legal rules; read dated government statements for announced office procedures. A proposed registration or booking process is not proof that an official government system is operating.</p>
         {!current ? (
           <p role="alert" className="rounded-lg border border-rose-400 bg-rose-950/40 p-4 text-sm">
             Source review expired after {RIGHTS_RECHECK_AFTER}. Detailed summaries are withheld
@@ -108,7 +110,7 @@ export default function RightsGuidePage() {
                       <li key={source.id}>
                         <a href={source.url} target="_blank" rel="noopener noreferrer"
                           className="break-words text-cyan-300 underline underline-offset-2">{source.publisher}: {source.title}</a>
-                        <span className="text-slate-400"> · Checked {source.reviewedOn}</span>
+                        <span className="text-slate-400"> · {source.authorityLabel} · Checked {source.reviewedOn}</span>
                       </li>
                     ))}
                   </ul>
@@ -153,6 +155,7 @@ export default function RightsGuidePage() {
               <a href={source.url} rel="noopener noreferrer" target="_blank" className="text-cyan-300 underline underline-offset-2">
                 {source.publisher}: {source.title}
               </a>
+              <span className="text-sm text-slate-400"> · {source.authorityLabel}</span>
             </li>
           ))}
         </ul>

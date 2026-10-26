@@ -22,6 +22,8 @@ it('renders every explanation alongside linked original sources and does not fet
   show();
   expect(screen.getByRole('heading', { name: /Understand your rights/ })).toBeTruthy();
   expect(screen.getByRole('heading', { name: /Important: LUQI can make mistakes/ })).toBeTruthy();
+  expect(screen.getByText(/have not been independently approved by a South African legal practitioner/)).toBeTruthy();
+  expect(screen.getByText(/A proposed registration or booking process is not proof/)).toBeTruthy();
   expect(screen.getByRole('heading', { name: /Find the current official application route/ })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'official withdrawal notice' }).getAttribute('href'))
     .toMatch(/^https:\/\/www\.gov\.za\//);
