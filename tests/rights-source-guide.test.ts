@@ -9,7 +9,7 @@ describe('source-linked South African rights guide (offline)', () => {
   it('ties every factual item to an explicit, dated, trusted source URL', () => {
     expect(RIGHTS_INFORMATION.length).toBeGreaterThanOrEqual(5);
     const knownIds = new Set(RIGHTS_SOURCES.map(source => source.id));
-    const allowHosts = new Set(['help.unhcr.org', 'www.gov.za', 'www.concourt.org.za']);
+    const allowHosts = new Set(['help.unhcr.org', 'www.gov.za', 'www.concourt.org.za', 'collections.concourt.org.za']);
     for (const source of RIGHTS_SOURCES) {
       const parsed = new URL(source.url);
       expect(parsed.protocol).toBe('https:');
@@ -64,7 +64,13 @@ describe('source-linked South African rights guide (offline)', () => {
     expect(transition?.url).toMatch(/gov\.za\/news\/media-statements\/inter-ministerial-committee/);
     const documents = RIGHTS_INFORMATION.find(item => item.id === 'documents');
     expect(documents?.explanation).toMatch(/pages disagree/);
+    const judgment = RIGHTS_SOURCES.find(item => item.id === 'court-ruling');
+    expect(judgment?.url).toMatch(/^https:\/\/collections\.concourt\.org\.za\//);
+    const summary = RIGHTS_SOURCES.find(item => item.id === 'court-summary');
+    expect(summary?.title).toMatch(/not binding/);
     const court = RIGHTS_INFORMATION.find(item => item.id === 'court');
+    expect(court?.sources).toContain('court-ruling');
+    expect(court?.sources).toContain('court-summary');
     expect(court?.explanation).toMatch(/does not automatically grant/);
     const refusal = RIGHTS_INFORMATION.find(item => item.id === 'appeals');
     expect(refusal?.explanation).toMatch(/does not calculate your deadline/);
