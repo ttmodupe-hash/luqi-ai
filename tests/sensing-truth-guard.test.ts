@@ -1,7 +1,31 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { restCompat } from '../api/rest-compat';
 
 describe('legacy sensing results fail closed instead of inventing evidence', () => {
+  it('keeps removed fabricated handlers out of the live REST compatibility source', () => {
+    const source = readFileSync(new URL('../api/rest-compat.ts', import.meta.url), 'utf8');
+    expect(source).toContain('restCompat.route("/", legacyControlUnavailable)');
+    for (const retired of [
+      'AFRICAN_VERTICALS_DATA', 'AFRICAN_GRANTS_DATA', 'AFRICAN_TICKER_FEED',
+      'satellite_ndvi_index', 'estimated_border_clearance_hours',
+      'tariff_savings_percentage', 'sandbox_tested: true',
+      'restCompat.get("/api/v1/sensing/ticker"',
+      'restCompat.post("/api/v1/sensing/agritech-predict"',
+    ]) expect(source).not.toContain(retired);
+  });
+  it('keeps self-healing dispatch explicitly unavailable on both namespaces', async () => {
+    for (const path of ['/api/v1/sensing/dispatch-to-pipeline', '/v1/sensing/dispatch-to-pipeline']) {
+      for (const method of ['GET', 'POST']) {
+        const response = await restCompat.request(path, { method });
+        expect(response.status).toBe(503);
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+        expect(await response.json()).toMatchObject({
+          status: 'unavailable', code: 'SELF_HEALING_PIPELINE_NOT_CONFIGURED',
+        });
+      }
+    }
+  });
   for (const path of [
     '/api/v1/sensing/radar', '/v1/sensing/radar',
     '/api/v1/sensing/ticker', '/v1/sensing/ticker',
