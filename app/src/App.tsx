@@ -15,6 +15,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import CompanionPage from "./pages/CompanionPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
+import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
@@ -88,6 +89,7 @@ export default function App() {
         <RouterRoute path="/terms" element={<TermsPage />} />
         <RouterRoute path="/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/contact" element={<ContactPage />} />
+        <RouterRoute path="/consumer-rights" element={<ConsumerRightsAssistant />} />
         <RouterRoute path="*" element={<NotFoundPage />} />
       </Routes>
     </AppLayout>
