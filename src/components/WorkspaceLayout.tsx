@@ -6,12 +6,12 @@ import { findWorkspaceTools } from "./workspace-catalog";
 import "../workspace.css";
 
 const navigation = [
-  ["/", "Workspace"],
-  ["/companion", "Private notes"],
-  ["/omega-tasks", "Omega tasks"],
-  ["/pendulum-lab", "Physics lab"],
+  ["/chat", "Chat"],
+  ["/", "Explore"],
+  ["/omega-tasks", "Plan"],
+  ["/study-desk", "Learn"],
   ["/content-studio", "Create"],
-  ["/start", "Start here"],
+  ["/companion", "Notes"],
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -98,8 +98,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <span>Search</span>
               <kbd>⌘ K</kbd>
             </button>
-            <Link className="luqi-account-link" to="/companion">
-              Your notes <ArrowUpRight size={16} aria-hidden="true" />
+            <Link className="luqi-account-link" to="/chat">
+              Ask LUQI <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             <button
               ref={menuButton}
