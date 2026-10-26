@@ -4,6 +4,21 @@ on:
     branches: [main]
     paths:
       - 'api/legacy-control-unavailable.ts'
+      - 'api/rest-compat.ts'
+      - 'src/pages/AfricanOpportunityRadarPage.tsx'
+      - 'app/src/pages/AfricanOpportunityRadarPage.tsx'
+      - 'src/lib/trade-scenario.ts'
+      - 'app/src/lib/trade-scenario.ts'
+      - 'tests/sensing-truth-guard.test.ts'
+      - 'tests/trade-scenario.test.ts'
+      - 'tests/african-opportunity-page.test.tsx'
+      - 'browser-tests/trade-scenario.spec.ts'
+      - '.github/workflows/sensing-truth.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/legacy-control-unavailable.ts'
+      - 'api/rest-compat.ts'
       - 'src/pages/AfricanOpportunityRadarPage.tsx'
       - 'app/src/pages/AfricanOpportunityRadarPage.tsx'
       - 'src/lib/trade-scenario.ts'
