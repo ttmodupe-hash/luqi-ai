@@ -250,7 +250,7 @@ export function consumerGuideIsCurrent(date: Date = new Date()): boolean {
 }
 
 export function prepareConsumerStory(type: DisputeType, story: unknown) {
-  if (!(type in CONSUMER_ISSUES) || typeof story !== 'string') return null;
+  if (!Object.prototype.hasOwnProperty.call(CONSUMER_ISSUES, type) || typeof story !== 'string') return null;
   const safe = story.trim();
   if (safe.length < 10 || safe.length > MAX_CONSUMER_STORY_LENGTH) return null;
   return { category: type, userStory: safe, guide: CONSUMER_ISSUES[type] };
