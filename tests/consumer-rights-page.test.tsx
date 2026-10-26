@@ -65,8 +65,8 @@ it('changes dispute categories without presenting stale warranty guidance for ba
   enter('I have a disputed bank debit order and I contacted the bank.');
   prepare();
   expect(screen.getByRole('heading', { name: 'Disputed debit order or bank transaction' })).toBeTruthy();
-  expect(screen.getByRole('link', { name: /National Financial Ombud/ })).toBeTruthy();
   const categorySources = screen.getByRole('region', { name: 'Official legislation and complaint information' });
+  expect(within(categorySources).getByRole('link', { name: /National Financial Ombud/ })).toBeTruthy();
   expect(within(categorySources).queryByRole('link', { name: /Consumer Protection Act 68/ })).toBeNull();
   expect(requests).not.toHaveBeenCalled();
 });
