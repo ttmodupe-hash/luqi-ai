@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "LUQI AI — Your everyday workspace",
+  "name": "LUQI AI — Your Africa companion",
   "short_name": "Luqi AI",
-  "description": "Private notes, an interactive physics lab and a limited signed-in AI text trial. Check current availability before use.",
+  "description": "Tell LUQI what you need. Explore Africa travel planning, learning, creation, local tools and a separate limited AI text trial. No live bookings yet.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -5,7 +5,7 @@ import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '..
 import type { AccountSession } from '../lib/private-conversations';
 import { MAX_PILOT_QUESTION_CHARS } from '../lib/pilot-input';
 
-export default function AiPilotPage() {
+export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
   const [session, setSession] = useState<AccountSession | null>(null);
   const [available, setAvailable] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -25,6 +25,12 @@ export default function AiPilotPage() {
     }).catch(() => {}).finally(() => { clearTimeout(timer); setChecking(false); });
     return () => { epoch.current++; controller.abort(); pending.current?.abort(); clearTimeout(timer); };
   }, []);
+
+  useEffect(() => {
+    if (initialQuestion && initialQuestion.trim() && initialQuestion.length <= MAX_PILOT_QUESTION_CHARS) {
+      setPrompt(initialQuestion);
+    }
+  }, [initialQuestion]);
 
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
@@ -61,8 +67,10 @@ export default function AiPilotPage() {
     }
   }
 
-  return <main className="luqi-info" aria-labelledby="ai-trial-heading">
-    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><h1 id="ai-trial-heading">Try a question with LUQI</h1>
+  const Root = embedded ? 'section' : 'main';
+  const Heading = embedded ? 'h2' : 'h1';
+  return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
+    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with LUQI</Heading>
     <p>Gemini answers first, with OpenAI as a separately limited fallback. This is an experimental text-only trial; answers can be wrong. No browsing, sources, tools, files, voice or autonomous actions are enabled.</p>
     <p role="status">{checking ? 'Checking AI configuration…' : available
       ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
@@ -94,5 +102,5 @@ export default function AiPilotPage() {
       </section>}
     </>}
     <p><Link to="/companion">Open your private notes</Link> · <Link to="/start">Back to getting started</Link></p>
-  </main>;
+  </Root>;
 }

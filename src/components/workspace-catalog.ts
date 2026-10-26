@@ -1,5 +1,15 @@
 export const workspaceTools = [
   {
+    id: 'chat-guide',
+    title: 'Ask LUQI',
+    category: 'Tell LUQI what you need',
+    description: 'Start with natural-language local guidance for Africa travel, learning, creating and business. A separate signed-in AI text trial is available with explicit consent. Live booking is not connected.',
+    status: 'Local guidance · optional limited AI',
+    ready: true,
+    path: '/chat',
+    icon: 'status',
+  },
+  {
     id: "ai-trial",
     title: "AI text trial",
     category: "Ask a question, with clear limits",
