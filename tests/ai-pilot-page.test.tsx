@@ -148,8 +148,16 @@ it('keeps conversation in memory and sends follow-up context only with explicit 
   expect(body.history).toHaveLength(4);
   expect(body.history[0]).toEqual({ sender: 'user', text: 'Say hello in isiZulu' });
   expect(JSON.stringify(body)).not.toContain('trial@example.invalid');
+  await screen.findByRole('heading', { name: 'AI reply' });
+  const contextToggle = screen.getByRole('checkbox', { name: /Include recent conversation context/ }) as HTMLInputElement;
+  expect(contextToggle.checked).toBe(false);
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'One more follow-up without context' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await waitFor(() => expect(inference).toHaveBeenCalledTimes(4));
+  expect(JSON.parse(inference.mock.calls[3][0].body)).toEqual({ user_input: 'One more follow-up without context' });
+
   fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
   expect(screen.queryByText(/Earlier conversation/)).toBeNull();
   expect(screen.queryByLabelText(/Include recent conversation context/)).toBeNull();
-  expect(inference).toHaveBeenCalledTimes(3);
+  expect(inference).toHaveBeenCalledTimes(4);
 });

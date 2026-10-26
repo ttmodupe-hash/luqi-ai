@@ -51,16 +51,22 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     const submittedQuestion = prompt;
     const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
     locked.current = true; setBusy(true); setAnswer(null); setNotice('');
+    // Sharing is a one-request decision; subsequent prompts default to no context.
+    setShareContext(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
       const result = await askPilot(session.token, submittedQuestion, controller.signal, fetch, approvedHistory);
       if (epoch.current === version) {
         setAnswer(result);
-        setTurns(previous => [...previous,
-          { sender: 'user', text: submittedQuestion },
-          { sender: 'ai', text: result.response },
-        ].slice(-8));
+        setTurns(previous => {
+          const next: PilotConversationTurn[] = [
+            ...previous,
+            { sender: 'user', text: submittedQuestion },
+            { sender: 'ai', text: result.response },
+          ];
+          return next.slice(-8);
+        });
         setPrompt('');
       }
     } catch (error) {
@@ -103,7 +109,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
           <label className="block" htmlFor="ai-question">Your question</label>
           <textarea id="ai-question" className="luqi-access-input" rows={5}
-            aria-describedby="ai-question-limit" aria-invalid={tooLong || undefined}
+            aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
             disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} />
           <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters. Request formatting uses the rest of the 6000-character input limit.
             {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}
