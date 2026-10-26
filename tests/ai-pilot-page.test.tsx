@@ -135,6 +135,7 @@ it('keeps conversation in memory and sends follow-up context only with explicit 
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'What about Durban?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await waitFor(() => expect(inference).toHaveBeenCalledTimes(2));
+  await screen.findByRole('heading', { name: 'Earlier conversation' });
   expect(JSON.parse(inference.mock.calls[1][0].body)).toEqual({ user_input: 'What about Durban?' });
 
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'How do I plan my visit?' } });
