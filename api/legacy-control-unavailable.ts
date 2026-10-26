@@ -37,3 +37,23 @@ for (const path of ["/api/v25/support", "/api/v25/support/*"]) {
     }, 503);
   });
 }
+
+// Unverified public sensing data formerly returned fabricated live grants,
+// random viewer counts, static satellite observations and guessed AfCFTA duties.
+// Close the whole namespace for ALL methods until a source-validated
+// owner-authorised implementation is explicitly reviewed.
+// Preserve the reviewed self-healing denial code for dispatch operations.
+for (const path of ['/api/v1/sensing/dispatch-to-pipeline', '/v1/sensing/dispatch-to-pipeline']) {
+  legacyControlUnavailable.all(path, c => {
+    c.header('Cache-Control', 'no-store');
+    return c.json({
+      status: 'unavailable',
+      code: 'SELF_HEALING_PIPELINE_NOT_CONFIGURED',
+      message: 'No verified agent execution or production deployment is connected.',
+    }, 503);
+  });
+}
+for (const prefix of ['/api/v1/sensing', '/v1/sensing']) {
+  closed(prefix, 'SENSING_SOURCE_UNVERIFIED');
+  closed(prefix + '/*', 'SENSING_SOURCE_UNVERIFIED');
+}
