@@ -50,6 +50,17 @@ it('keeps Sepitori visible but refuses to invent unreviewed legal translations',
   expect(requests).not.toHaveBeenCalled();
 });
 
+it('shows general adviser preparation questions without asking for personal case details', () => {
+  show();
+  expect(screen.getByRole('heading', { name: 'Questions to take to a qualified adviser' })).toBeTruthy();
+  expect(screen.getByText(/What is the current official application or appointment procedure/)).toBeTruthy();
+  expect(screen.getByText(/Can I request an interpreter in a language I understand/)).toBeTruthy();
+  expect(screen.getByText(/These are preparation questions, not filing instructions/)).toBeTruthy();
+  expect(screen.queryByRole('textbox')).toBeNull();
+  expect(screen.queryByRole('file')).toBeNull();
+  expect(requests).not.toHaveBeenCalled();
+});
+
 it('navigates public topics locally and preserves urgent referral link', () => {
   show();
   fireEvent.click(screen.getByRole('button', { name: 'Interview and interpreter' }));
