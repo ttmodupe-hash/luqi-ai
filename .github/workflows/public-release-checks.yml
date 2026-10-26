@@ -26,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Refuse manual live acceptance outside main
+        if: github.event_name == 'workflow_dispatch'
+        run: test "$GITHUB_REF" = 'refs/heads/main'
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

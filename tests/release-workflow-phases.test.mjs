@@ -42,6 +42,12 @@ describe('predeploy GitHub CI must not wait for a Railway deployment it blocks',
     assert.ok(text.includes('run: node scripts/verify-lab-framing.mjs'));
     assert.ok(text.includes('LUQI_EXPECTED_COMMIT: ${{ github.sha }}'));
   });
+  it('fails closed when manual release acceptance is dispatched from another branch', () => {
+    for (const [file] of cases) {
+      const text=read(file);
+      assert.ok(text.includes("if: github.event_name == 'workflow_dispatch'\n        run: test \"$GITHUB_REF\" = 'refs/heads/main'"),file);
+    }
+  });
   it('does not allow manual postdeploy acceptance to cancel main push CI', () => {
     for (const [file, prefix] of cases) {
       assert.ok(read(file).includes('group: ' + prefix + '-${{ github.event_name }}-${{ github.ref }}'), file);
