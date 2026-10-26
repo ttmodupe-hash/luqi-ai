@@ -12,6 +12,7 @@ on:
       - '.github/workflows/public-release-checks.yml'
       - '.github/workflows/custom-domain-https.yml'
       - '.github/workflows/lab-framing.yml'
+      - '.github/workflows/webkit-mysql-acceptance.yml'
       - 'docs/RELEASE_CONTROL_LOCKDOWN_2026_10_25.md'
       - '.github/workflows/web-build.yml'
       - 'tests/p0-operator-handoff.test.mjs'

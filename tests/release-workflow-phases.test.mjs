@@ -48,6 +48,15 @@ describe('predeploy GitHub CI must not wait for a Railway deployment it blocks',
       assert.ok(text.includes("if: github.event_name == 'workflow_dispatch'\n        run: test \"$GITHUB_REF\" = 'refs/heads/main'"),file);
     }
   });
+  it('keeps the real disposable-MySQL WebKit account suite and sufficient bounded installation time', () => {
+    const text=read('webkit-mysql-acceptance.yml');
+    assert.ok(text.includes('  webkit-real-accounts:'));
+    assert.ok(text.includes('    timeout-minutes: 35'));
+    assert.ok(text.includes('Install the lockfile-matched WebKit engine and system dependencies\n        timeout-minutes: 15'));
+    assert.ok(text.includes('npx --no-install playwright install --with-deps webkit'));
+    assert.ok(text.includes('npx --no-install playwright test --config playwright.mysql-webkit.config.ts'));
+    assert.ok(text.includes("LUQI_AI_PROVIDER_ENABLED: 'false'"));
+  });
   it('does not allow manual postdeploy acceptance to cancel main push CI', () => {
     for (const [file, prefix] of cases) {
       assert.ok(read(file).includes('group: ' + prefix + '-${{ github.event_name }}-${{ github.ref }}'), file);

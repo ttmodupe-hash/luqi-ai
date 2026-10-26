@@ -15,7 +15,7 @@ jobs:
     # Playwright 1.58.2 does not support Ubuntu 26.04. Keep the browser and
     # supported OS aligned instead of following the moving latest label.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     services:
       mysql:
         image: mysql:8.4
@@ -57,8 +57,10 @@ jobs:
         run: npm run build
       - name: Prepare and verify the existing restricted-role disposable fixture
         run: npx --no-install vitest run tests/mysql-runtime-role.integration.test.ts --no-file-parallelism
+      # Prior exact-head CI timed out during Ubuntu apt downloads, before browser assertions.
+      # Preserve the real disposable-MySQL WebKit suite with a bounded install budget.
       - name: Install the lockfile-matched WebKit engine and system dependencies
-        timeout-minutes: 6
+        timeout-minutes: 15
         run: npx --no-install playwright install --with-deps webkit
       - name: Verify registration, persisted notes, export, deletion and password change in WebKit
         run: npx --no-install playwright test --config playwright.mysql-webkit.config.ts
