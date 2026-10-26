@@ -24,3 +24,12 @@ test('traveller can describe a need and is directed to a real local tool', async
   await expect(page.getByRole('heading', { name: 'Make learning more practical' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open study desk' })).toHaveAttribute('href', '#/study-desk');
 });
+
+test('persistent Ask LUQI link is visible and usable at narrow iPhone width', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 690 });
+  await page.goto('/#/omega-tasks');
+  const chat = page.getByRole('link', { name: 'Ask LUQI' });
+  await expect(chat).toBeVisible();
+  await chat.click();
+  await expect(page.getByRole('heading', { name: /Tell LUQI what you need/i })).toBeVisible();
+});
