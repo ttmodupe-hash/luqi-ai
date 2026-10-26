@@ -8,7 +8,7 @@ export const RIGHTS_RECHECK_AFTER = '2026-11-02';
 
 export type RightsSourceId =
   | 'unhcr-asylum' | 'government-service' | 'court-ruling'
-  | 'government-transition' | 'unhcr-rights' | 'unhcr-legal-aid';
+  | 'government-withdrawal' | 'government-transition' | 'unhcr-rights' | 'unhcr-legal-aid';
 
 export interface RightsSource {
   id: RightsSourceId;
@@ -41,10 +41,17 @@ export const RIGHTS_SOURCES: readonly RightsSource[] = [
     reviewedOn: RIGHTS_REVIEWED_ON,
   },
   {
+    id: 'government-withdrawal',
+    title: '9 October 2026: Home Affairs withdraws earlier asylum intake directive',
+    url: 'https://www.gov.za/news/media-statements/home-affairs-director-general-withdraws-asylum-directive-09-oct-2026',
+    publisher: 'South African Government / Department of Home Affairs',
+    reviewedOn: RIGHTS_REVIEWED_ON,
+  },
+  {
     id: 'government-transition',
-    title: '11 October 2026 announcement: proposed asylum-registration changes',
-    url: 'https://www.sanews.gov.za/index.php/south-africa/government-seek-court-guidance-asylum-ruling-introduce-registration-system',
-    publisher: 'SAnews / South African Government',
+    title: '11 October 2026 official briefing: proposed asylum-registration changes',
+    url: 'https://www.gov.za/news/media-statements/inter-ministerial-committee-migration-outlines-legal-response-constitutional',
+    publisher: 'South African Government / Inter-Ministerial Committee',
     reviewedOn: RIGHTS_REVIEWED_ON,
   },
   {
@@ -85,8 +92,8 @@ export const RIGHTS_INFORMATION: readonly RightsInformation[] = [
     id: 'begin',
     topic: 'starting',
     title: 'Find the current official application route',
-    explanation: 'UNHCR explains how asylum applications are handled through Refugee Reception Offices. On 11 October 2026 government announced a proposed new intention-registration and appointment system, expected by 10 November. That announcement did not verify the system was operating. Check the latest official instructions before travelling, making a booking or sharing documents.',
-    sources: ['unhcr-asylum', 'government-transition'],
+    explanation: 'UNHCR's general guide describes Refugee Reception Office applications. On 9 October 2026 Home Affairs withdrew an earlier operational directive. On 11 October government announced a proposed phased intention-registration and appointment system expected by 10 November 2026. Neither announcement establishes that the new platform is operating. Check current official instructions or seek recognised legal assistance before travelling or making arrangements.',
+    sources: ['unhcr-asylum', 'government-withdrawal', 'government-transition'],
   },
   {
     id: 'court',
@@ -106,7 +113,7 @@ export const RIGHTS_INFORMATION: readonly RightsInformation[] = [
     id: 'documents',
     topic: 'documents',
     title: 'Understand Section 22 and Section 24',
-    explanation: 'UNHCR distinguishes an asylum-seeker document (often called Section 22) from refugee recognition documentation (Section 24). Keep copies of official notices and your own documents safely. Check the expiry and conditions on the actual issued document; do not rely on generic validity periods.',
+    explanation: 'UNHCR distinguishes an asylum-seeker document (often called Section 22) from refugee recognition documentation (Section 24). Public government and UNHCR pages disagree on generic Section 24 document validity periods; do not infer the expiry of your own document from either summary. Keep official notices securely and confirm the terms on your issued document with Home Affairs or qualified legal assistance.',
     sources: ['unhcr-asylum', 'government-service'],
   },
   {
