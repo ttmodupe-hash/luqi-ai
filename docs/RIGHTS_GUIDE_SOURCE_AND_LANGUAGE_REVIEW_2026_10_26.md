@@ -17,7 +17,8 @@ A review-only public rights-guide route shows English source-linked text plus th
 |---|---|
 | [UNHCR asylum and status](https://help.unhcr.org/southafrica/topics/asylum/) | Application journey, interview, interpreter, status documents and decisions |
 | [South African Government asylum/refugee documents](https://www.gov.za/services/services-foreign-nationals/temporary-residence/asylum-seeker-and-refugee-permits) | General official background on temporary asylum and refugee recognition |
-| [Constitutional Court judgment, 7 July 2026](https://www.concourt.org.za/index.php/judgement/650-scalabrini-centre-of-cape-town-and-another-v-minister-of-home-affairs-and-others-cct126-25) | Judicial ruling on procedural barriers, not automatic approval |
+| [Constitutional Court original judgment repository, 7 July 2026](https://collections.concourt.org.za/items/bcee0850-32df-4c95-80b4-11970f817d53) | Full judicial decision, [2026] ZACC 30; the item page links the full PDF judgment |
+| [Constitutional Court plain-language media summary](https://www.concourt.org.za/index.php/judgement/650-scalabrini-centre-of-cape-town-and-another-v-minister-of-home-affairs-and-others-cct126-25) | Useful explanation, explicitly non-binding; never substitute for the court's judgment |
 | [Home Affairs, 9 October 2026](https://www.gov.za/news/media-statements/home-affairs-director-general-withdraws-asylum-directive-09-oct-2026) | Earlier operational directive withdrawn; do not assume old intake practice remains in force |
 | [Inter-Ministerial Committee, 11 October 2026](https://www.gov.za/news/media-statements/inter-ministerial-committee-migration-outlines-legal-response-constitutional) | Primary government statement: planned November intention-registration system; NOT evidence that the system is operating |
 | [UNHCR rights/legal protection](https://help.unhcr.org/southafrica/rights-legal-protection/) | Rights and detention assistance |
