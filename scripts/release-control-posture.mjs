@@ -66,7 +66,9 @@ export function assessReleaseControlPosture(packet, { asOf = new Date() } = {}) 
       r.source_repo !== RELEASE_SCOPE.repository ||
       r.source_branch !== 'main' || typeof r.wait_for_ci !== 'boolean' ||
       !SHA.test(r.deployment_sha) ||
-      !['SUCCESS','FAILED','BUILDING','WAITING','SKIPPED','REMOVED','UNKNOWN'].includes(r.deployment_status) ||
+      !['SUCCESS','FAILED','CRASHED','QUEUED','INITIALIZING','WAITING','BUILDING',
+        'DEPLOYING','NEEDS_APPROVAL','SKIPPED','REMOVING','REMOVED','SLEEPING','UNKNOWN']
+        .includes(r.deployment_status) ||
       !Number.isSafeInteger(r.pending_change_count) ||
       r.pending_change_count < 0 || r.pending_change_count > 10000) invalid();
 
