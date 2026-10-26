@@ -49,6 +49,11 @@ describe('LUQI local intent guidance', () => {
     expect(guideLuqiNeed('Prepare a quotation for a customer in Botswana')?.kind).toBe('business');
     expect(guideLuqiNeed('Help me plan a business trip to Kenya')?.kind).toBe('travel');
   });
+  it('understands visitor transport, food and where-to-stay requests without fake listings', () => {
+    expect(guideLuqiNeed('How do I get a taxi from the airport?')?.kind).toBe('travel');
+    expect(guideLuqiNeed('Where can I eat near the museum?')?.kind).toBe('travel');
+    expect(guideLuqiNeed('Where should I stay in Durban?')?.kind).toBe('booking');
+  });
   it('keeps arbitrary user input bounded and does not claim autonomous understanding', () => {
     expect(guideLuqiNeed('')).toBeNull();
     expect(guideLuqiNeed('   ')).toBeNull();

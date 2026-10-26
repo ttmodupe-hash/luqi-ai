@@ -58,4 +58,5 @@ it('keeps urgent safety guidance out of the AI upsell and booking paths', () => 
   expect(screen.getByRole('heading', { name: 'Your safety comes first' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: /Use my question in the AI text trial/ })).toBeNull();
   expect(screen.queryByText('Booking and checkout unavailable')).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Ask LUQI a question' })).toBeNull();
 });

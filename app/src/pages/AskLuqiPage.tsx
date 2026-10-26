@@ -87,7 +87,7 @@ export default function AskLuqiPage() {
       </div>}
     </section>}
 
-    <section className="luqi-guide-chat-section" aria-labelledby="luqi-guide-chat-heading" id="luqi-guide-ai">
+    {result?.kind !== 'urgent' && <section className="luqi-guide-chat-section" aria-labelledby="luqi-guide-chat-heading" id="luqi-guide-ai">
       <div className="luqi-guide-chat-heading">
         <Sparkles size={22} aria-hidden="true" />
         <div><p className="luqi-guide-overline">REAL TEXT AI · LIMITED PILOT</p>
@@ -95,7 +95,7 @@ export default function AskLuqiPage() {
       </div>
       <p>For an actual AI-generated text reply, use the signed-in trial below. It requires your consent, has shared usage limits and does not browse live travel listings or book anything. Notes sign-in is separate for now.</p>
       <AiPilotPage embedded initialQuestion={aiDraft} />
-    </section>
+    </section>}
 
     <section className="luqi-guide-bottom" aria-label="More ways to use LUQI">
       <h2>More than a travel companion.</h2>

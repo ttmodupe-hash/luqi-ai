@@ -113,12 +113,12 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const q = input.trim().toLowerCase();
   const kind: GuideKind =
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
-    /\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight)\b/u.test(q) ? 'booking' :
+    (/\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight|place to stay|where to stay|where can i stay|where should i stay|stay in|stay near)\b/u.test(q)) ? 'booking' :
     /\b(translate|translation|language|languages|custom|customs|culture|cultural|sawubona|dumela|isizulu|setswana|sesotho|swahili|kiswahili|yoruba)\b/u.test(q) ? 'language' :
     /\b(study|learn|exam|university|student|homework|school|flashcard|revision|course|certification)\b/u.test(q) ? 'study' :
     /\b(create|story|video|animation|cartoon|film|script|content|design|creator)\b/u.test(q) ? 'create' :
     /\b(quotation|quote|profit|sell|sales|invoice|pricing|startup|company|business plan|business idea|business proposal)\b/u.test(q) ? 'business' :
-    (/\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|africa)\b/u.test(q) || mentionsAfricanDestination(q)) ? 'travel' :
+    (/\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|transport|taxi|train|bus|shuttle|directions|route|commute|sightseeing|restaurant|dining|eat|attraction|experience|museum|beach|africa)\b/u.test(q) || mentionsAfricanDestination(q)) ? 'travel' :
     /\b(business|customer)\b/u.test(q) ? 'business' :
     'general';
   return { kind, ...recommendations[kind] };
