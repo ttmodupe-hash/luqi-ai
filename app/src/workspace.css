@@ -1113,3 +1113,8 @@
   .luqi-brand { font-size: 19px; gap: 7px; }
   .luqi-header-actions .luqi-search-button { display: none; }
 }
+
+/* Preserve first-user onboarding while keeping Chat the primary action. */
+.luqi-hero-onboarding { margin: 14px 0 0; font-size: 13px; line-height: 1.6; color: #c9d8c9; }
+.luqi-hero-onboarding a { color: #e2f4bf; text-underline-offset: 3px; font-weight: 700; }
+.luqi-hero-onboarding a:focus-visible { outline: 3px solid #d6f0aa; outline-offset: 3px; }
