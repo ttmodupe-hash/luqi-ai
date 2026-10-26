@@ -128,7 +128,8 @@ test('a manually selected country opens official links and does not automaticall
   await page.setViewportSize({ width: 320, height: 760 });
   await page.goto('/#/chat');
   await page.getByLabel('Country and continental view').selectOption('EAC_KE');
-  await expect(page.getByText(/Kenya · East Africa/).first()).toBeVisible();
+  await expect(page.getByLabel('Country and continental view')).toHaveValue('EAC_KE');
+  await expect(page.getByText('Kenya', { exact: true })).toBeVisible();
   const gov = page.getByRole('link', { name: /Kenya Revenue Authority \(KRA\) iTax/ });
   await expect(gov).toHaveAttribute('href', 'https://itax.kra.go.ke/KRA-Portal/');
   await expect(page.getByText(/not a government or payment integration/)).toBeVisible();
