@@ -1,39 +1,51 @@
 # LUQI first-user pilot
 
-The pilot entry route is `/#/start`. It introduces three usable paths: the
-browser-based physics lab without an account, local no-account Omega travel
-budget and vehicle service calculators, and account-owned conversation notes
-with registration/sign-in. It is not a full AI product launch.
+The primary pilot route is `/#/chat`. New customers can create their LUQI
+account at `/#/join` and go straight to Chat. One memory-only customer login
+works across tools in the same tab. Notes are optional and are never a
+substitute for an actual provider reply. This is not a full AI product launch.
+The `/#/start` introduction also links to the browser-based physics lab,
+local Omega travel/vehicle calculations, the Business Desk and Study Desk.
 The local `/#/content-studio` adds an editable 90-second storyboard, interactive
 3D pendulum/time view and local silent-video, script and subtitle exports. It
 does not connect social accounts or professional filing services.
-An optional `/#/ai-trial` page provides a separate, signed-in text request
-with explicit provider processing acknowledgement and configuration checks.
-The page can remain paused; its presence is not proof of a successful AI reply.
+The older `/#/ai-trial` URL redirects to the same Chat experience. AI text
+requires sign-in, explicit provider-processing acknowledgement and configuration
+checks. A reachable page is not proof of a successful AI reply.
 
 ## First-user acceptance
 
-1. Open the public app and choose **Get started**. On mobile, confirm that both
-   choices, the feature limits and help links remain readable and reachable.
-2. Try the physics lab without an account. Change the string length and pause
-   and resume the simulation. The AI tutor remains unavailable.
-3. Create a notes account with an email you control and a unique password.
+1. Open `/#/join` on the tester's own phone, create a LUQI account with an
+   email they control and a unique password, and confirm arrival in Chat.
    No verification email or automatic password-reset email is sent. Keep
-   recovery arrangements private with the verified operator who invited you.
-4. Create a notebook and save an ordinary test note. Reload, sign in with the
-   same account and verify that the saved note is still present.
-5. Export the selected conversation and inspect the JSON locally. Confirm a
-   deletion and check that the active records disappear. Delete the downloaded
-   file separately if it is no longer needed.
-6. Sign out and check that the page clears the email and private history.
-7. For the owner-approved AI trial, check its current configuration status,
-   sign in and acknowledge provider processing before one ordinary test question.
-   Verify the real reply and provider, attempt counters and actual billing
-   separately. Do not send sensitive notes or use a synthetic browser reply as
-   production inference evidence. A failed/lost reply must not be retried automatically.
+   recovery arrangements private with the operator who invited the tester.
+2. Check the displayed AI availability. If a transient failure pauses Chat,
+   choose **Check availability again**. This repeats only a bounded public
+   readiness GET, keeps the signed-in draft and never sends a question.
+3. Choose a starting question or write an ordinary test question. A starter
+   only fills the composer. Review it, acknowledge provider processing and
+   explicitly choose **Send question**. Record the actual reply/provider,
+   attempt counters and billing separately. Never replay a lost paid request.
+4. Ask a follow-up. Recent conversation context stays off unless the tester
+   explicitly enables it and reviews its exact preview. Confirm the previous
+   successful reply stays visible if the next request fails. An availability
+   check must not unlock or replay an unconfirmed AI request.
+5. Choose **New chat**. Confirm the question, replies and provider consent
+   clear while the account stays signed in. Navigate to another customer
+   tool in the same tab and verify the login is shared. Leaving Chat clears
+   its unsaved conversation; no persistent Chat history is promised.
+6. Sign out, then sign in again or switch to a second tester-owned account.
+   Confirm the prior account's text and consent never reappear. Record mobile
+   browser/OS and the result. Test real expiry when it occurs; synthetic
+   timers are not physical-device expiry acceptance.
+7. Optionally try local tools and account-owned Notes. Note persistence,
+   export and deletion are separate acceptance checks, not prerequisites
+   for Chat. Keep feedback in the existing private owner invitation
+   conversation while a verified support/recovery service remains open.
 
-The session token remains in page memory. Navigation/reload ends the session;
-no persistent browser login or draft recovery is promised. Registration has no
+The session token remains in tab memory. Navigation between customer tools
+keeps the login; a full reload or closing the tab ends it. Chat content clears
+when leaving Chat; no persistent browser login or draft recovery is promised. Registration has no
 automatic retry. If its response is lost, the form keeps the account outcome
 uncertain and offers explicit sign-in rather than creating more accounts.
 
@@ -68,9 +80,10 @@ checks explicit submission, mobile layout and session clearing without a paid ca
 - Owner approval for the $100 ceiling ($60 Gemini / $40 OpenAI) was granted
   on 2026-10-23. The authenticated text trial is enabled with $60/$40 provider
   project caps, auto-reload OFF and matching deployed masked key identifiers.
-  Complete a designated-account budgeted request and reconcile actual usage
-  before a broad AI launch. Successful metadata/configuration checks do not
-  establish generation or measured billing.
+  One real Gemini reply was independently verified on 26 October; see
+  `CUSTOMER_SESSION_ACCEPTANCE_2026_10_26.md`. Complete physical-customer
+  acceptance, OpenAI inference and actual bill/ledger reconciliation before
+  a broad AI launch. Metadata/configuration checks do not establish inference.
 - Test the local content studio and review a completed clip before manual upload.
   Direct social publishing requires separate account authorization, developer
   review and verified delivery; paid video/voice services are not approved.

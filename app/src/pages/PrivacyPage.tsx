@@ -1,8 +1,8 @@
 import { Link } from 'react-router';
 export default function PrivacyPage() {
-  return <main className="luqi-info"><p className="luqi-eyebrow">BEFORE YOU SAVE A NOTE</p>
+  return <main className="luqi-info"><p className="luqi-eyebrow">YOUR LUQI ACCOUNT AND CONTENT</p>
     <h1>Pilot privacy information</h1>
-    <p>This describes the current notes pilot. It does not certify legal compliance or end-to-end encryption.</p>
+    <p>This describes LUQI Chat, your account and optional saved notes. It does not certify legal compliance or end-to-end encryption.</p>
     <section><h2>Account and saved content</h2><p>Registration stores your email address and a password hash. Conversation titles, saved messages and linked memories are stored on LUQI’s server. Storage administrators can access saved records. Avoid confidential, financial, health or identity documents while testing.</p></section>
     <section><h2>On your device</h2><p>The LUQI customer sign-in token stays in this browser tab’s React memory and works across Notes, Omega and the text trial without a second login. Reloading or closing the tab ends the session; leaving a tool can clear its unsaved drafts. Tokens are not written to browser storage. The site may cache application assets for loading; account and note responses are excluded from its service-worker cache.</p></section>
     <section><h2>Changing your password</h2><p>You can change a known password in your signed-in notes settings. Your current and new passwords are sent to LUQI to verify and replace the stored hash; they are not saved in browser storage or sent to an AI provider. After a confirmed change, older sign-ins are rejected on their next account check. Requests already authorized may finish. Your saved notes and other accounts are unchanged.</p></section>

@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import { useCustomerSession } from '../providers/customer-session';
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
+import '../chat.css';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
@@ -27,6 +28,28 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   })();
   const epoch = useRef(0); const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
+  const availabilityPending = useRef<AbortController | null>(null);
+  const mounted = useRef(false);
+
+  // A transient startup failure must not force a reload (and lose the session).
+  // Only this public GET is repeatable. Never replay an AI request or clear its
+  // uncertain outcome when the user checks configuration again.
+  const checkAvailability = useCallback(async () => {
+    if (!mounted.current || availabilityPending.current) return;
+    const controller = new AbortController(); availabilityPending.current = controller;
+    setChecking(true); setAvailable(false);
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const value = await pilotAvailability(controller.signal);
+      if (!controller.signal.aborted && availabilityPending.current === controller) setAvailable(value);
+    } catch { /* Keep requests paused; no inference or automatic retry. */ }
+    finally {
+      clearTimeout(timer);
+      if (mounted.current && availabilityPending.current === controller) {
+        availabilityPending.current = null; setChecking(false);
+      }
+    }
+  }, []);
 
   // Clear the former identity before paint; never forward its question or consent.
   useLayoutEffect(() => {
@@ -40,12 +63,14 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   }, [session?.token]);
 
   useEffect(() => {
-    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000);
-    void pilotAvailability(controller.signal).then(value => {
-      if (!controller.signal.aborted) setAvailable(value);
-    }).catch(() => {}).finally(() => { clearTimeout(timer); setChecking(false); });
-    return () => { epoch.current++; controller.abort(); pending.current?.abort(); clearTimeout(timer); };
-  }, []);
+    mounted.current = true;
+    void checkAvailability();
+    return () => {
+      mounted.current = false; epoch.current++;
+      availabilityPending.current?.abort(); availabilityPending.current = null;
+      pending.current?.abort();
+    };
+  }, [checkAvailability]);
 
   useEffect(() => {
     if (initialQuestion && initialQuestion.trim() && initialQuestion.length <= MAX_PILOT_QUESTION_CHARS) {
@@ -58,11 +83,19 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
     setTurns([]); setShareContext(false);
   }
+  function newChat() {
+    if (locked.current) return;
+    epoch.current++;
+    setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
+    setConsent(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+  }
   async function submit() {
-    if (!session || !consent || !available || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
+    if (!session || !consent || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
-    locked.current = true; setBusy(true); setAnswer(null); setNotice('');
+    // Keep the last confirmed reply visible while a follow-up is pending or
+    // fails. The next successful reply replaces it; errors never erase it.
+    locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
     setShareContext(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
@@ -113,13 +146,35 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     <p role="status">{checking ? 'Checking AI configuration…' : available
       ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
       : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>
+    <div className="luqi-chat-availability">
+      <button className="luqi-secondary" type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
+        {checking ? 'Checking availability…' : 'Check availability again'}
+      </button>
+      {!checking && !available && <p>Your sign-in and question stay here while you check again. This check does not send a question.</p>}
+    </div>
     <p>Up to 20 provider attempts per account per UTC day. A fallback uses another attempt. Replies are limited to 512 tokens. African-language accuracy has not been independently evaluated.</p>
     {notice && <p role="alert">{notice}</p>}
     {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); }} /> : <>
-      <section><p>Signed in as {session.user.email}. This LUQI login works across customer tools in this tab.</p><button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button></section>
+      <section><p>Signed in as {session.user.email}. This LUQI login works across customer tools in this tab.</p>
+        <div className="luqi-chat-actions">
+          <button className="luqi-secondary" type="button" disabled={busy} onClick={newChat}>New chat</button>
+          <button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button>
+        </div>
+        <p>New chat clears the questions and replies on this page and keeps you signed in.</p>
+      </section>
       <section><Subheading>Ask LUQI</Subheading>
         <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up. Your private notes and account email are never attached. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
+          {!turns.length && !prompt && <fieldset className="luqi-chat-starters" disabled={busy || uncertain}>
+            <legend>Try a starting question</legend>
+            {[
+              ['Help me study', 'Explain one useful study technique and give me a short example.'],
+              ['Plan an idea', 'Help me turn a small business idea into three practical first steps.'],
+              ['Draft a message', 'Help me write a polite message to a customer about a delayed delivery.'],
+            ].map(([label, question]) => <button className="luqi-secondary" key={label} type="button" onClick={() => {
+              setPrompt(question); document.getElementById('ai-question')?.focus();
+            }}>{label}</button>)}
+          </fieldset>}
           <label className="block" htmlFor="ai-question">Your question</label>
           <textarea id="ai-question" className="luqi-access-input" rows={5}
             aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}

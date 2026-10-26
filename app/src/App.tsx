@@ -8,7 +8,6 @@ import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
-import AiPilotPage from "./pages/AiPilotPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
@@ -49,7 +48,7 @@ export default function App() {
         <RouterRoute path="/chat" element={<AskLuqiPage />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />
-        <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
+        <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />

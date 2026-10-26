@@ -50,6 +50,77 @@ it('keeps submission disabled when the pilot is paused', async () => {
   expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
   expect(inference).not.toHaveBeenCalled();
 });
+it('recovers availability without reloading, losing the signed-in draft or sending it automatically', async () => {
+  available = false; await login(); draft(); consent();
+  available = true;
+  fireEvent.click(screen.getByRole('button', { name: 'Check availability again' }));
+  await screen.findByText(/Provider access is configured/);
+  expect(screen.getByText(/Signed in as trial@example.invalid/)).toBeTruthy();
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Say hello in isiZulu');
+  expect(request.mock.calls.filter(([path]) => path === '/v1/readiness')).toHaveLength(2);
+  expect(inference).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  expect(inference).toHaveBeenCalledTimes(1);
+});
+it('bounds an availability recheck to ten seconds even if the transport ignores cancellation', async () => {
+  await login(); draft(); consent(); vi.useFakeTimers();
+  request.mockImplementation(() => new Promise<Response>(() => {}));
+  fireEvent.click(screen.getByRole('button', { name: 'Check availability again' }));
+  const checking = screen.getByRole('button', { name: 'Checking availability…' }) as HTMLButtonElement;
+  expect(checking.disabled).toBe(true);
+  fireEvent.click(checking);
+  expect(request.mock.calls.filter(([path]) => path === '/v1/readiness')).toHaveLength(2);
+  await act(async () => { await vi.advanceTimersByTimeAsync(10_001); });
+  expect((screen.getByRole('button', { name: 'Check availability again' }) as HTMLButtonElement).disabled).toBe(false);
+  expect(screen.getByText(/AI requests are paused/)).toBeTruthy();
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Say hello in isiZulu');
+  expect(request.mock.calls.at(-1)![1].signal.aborted).toBe(true);
+  expect(inference).not.toHaveBeenCalled();
+});
+it('fills a useful starting question without making an AI or Notes request', async () => {
+  await login();
+  fireEvent.click(screen.getByRole('button', { name: 'Help me study' }));
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Explain one useful study technique and give me a short example.');
+  expect(document.activeElement).toBe(screen.getByLabelText('Your question'));
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(inference).not.toHaveBeenCalled();
+  expect(request.mock.calls.some(([path]) => path.includes('conversations'))).toBe(false);
+});
+it('keeps the last confirmed reply visible during and after a failed follow-up', async () => {
+  await login(); draft(); consent();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  let reject!: (error: Error) => void;
+  inference.mockImplementation(() => new Promise<Response>((_, fail) => { reject = fail; }));
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'A follow-up question' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  expect(screen.getByText('<script>fixture</script> Sawubona')).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Check availability again' }) as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => reject(new TypeError('synthetic lost reply')));
+  await screen.findByText(/The reply could not be confirmed/);
+  expect(screen.getByText('<script>fixture</script> Sawubona')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Check availability again' }));
+  await screen.findByText(/Provider access is configured/);
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).disabled).toBe(true);
+  expect(inference).toHaveBeenCalledTimes(2);
+});
+it('starts a clean chat without ending the account session or carrying over provider consent', async () => {
+  await login(); draft(); consent();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Unsaved follow-up' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /Include recent conversation context/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  expect(screen.getByText('Chat cleared. You are still signed in.')).toBeTruthy();
+  expect(screen.getByText(/Signed in as trial@example.invalid/)).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'AI reply' })).toBeNull();
+  expect(screen.queryByLabelText(/Include recent conversation context/)).toBeNull();
+  expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('');
+  expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
+  expect(inference).toHaveBeenCalledTimes(1);
+});
 it('prevents double sends and discards a late response after signing out', async () => {
   let resolve!: (value: Response) => void;
   inference.mockImplementation(() => new Promise<Response>(r => { resolve = r; }));
