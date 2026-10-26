@@ -1,0 +1,30 @@
+name: LUQI Read-Only Backup Evidence Guards
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/read-railway-backup-inventory.py'
+      - 'tests/test_railway_backup_inventory.py'
+      - 'docs/PRODUCTION_RECOVERY_INVENTORY_2026_10_25.md'
+      - 'docs/HISTORICAL_CREDENTIAL_REVIEW_2026_10_25.md'
+      - '.github/workflows/backup-inventory-readonly.yml'
+permissions:
+  contents: read
+jobs:
+  metadata-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    env:
+      CI: 'true'
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source and bounded synthetic backups without network access
+        run: |
+          python3 -m py_compile scripts/read-railway-backup-inventory.py
+          python3 -m unittest discover -s tests -p 'test_railway_backup_inventory.py' -v
+      - name: Record strict boundary
+        run: echo 'Only synthetic metadata tested. No Railway token, API request, snapshot, export, restore, customer account, live MySQL, model or merchant used.' >> "$GITHUB_STEP_SUMMARY"
