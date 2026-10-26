@@ -10,7 +10,7 @@ import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-route
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
 import AiPilotPage from "./pages/AiPilotPage";
-import AskLuqiPage from "./pages/AskLuqiPage";
+
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
@@ -24,6 +24,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
