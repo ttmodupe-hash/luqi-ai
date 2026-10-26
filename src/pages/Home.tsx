@@ -69,6 +69,9 @@ export default function Home() {
                 Explore tools <ArrowRight size={18} aria-hidden="true" />
               </a>
             </div>
+            <p className="luqi-hero-onboarding">
+              New to LUQI? <Link to="/start">Get started</Link> with a guided introduction.
+            </p>
             <p className="luqi-hero-footnote">
               <ShieldCheck size={15} aria-hidden="true" /> Your notes require
               sign-in. Local guidance is free; actual AI replies require separate consent and limits.
