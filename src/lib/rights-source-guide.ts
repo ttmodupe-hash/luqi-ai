@@ -7,7 +7,7 @@ export const RIGHTS_REVIEWED_ON = '2026-10-26';
 export const RIGHTS_RECHECK_AFTER = '2026-11-02';
 
 export type RightsSourceId =
-  | 'unhcr-asylum' | 'government-service' | 'court-ruling'
+  | 'unhcr-asylum' | 'government-service' | 'court-ruling' | 'court-summary'
   | 'government-withdrawal' | 'government-transition' | 'unhcr-rights' | 'unhcr-legal-aid';
 
 export interface RightsSource {
@@ -35,9 +35,16 @@ export const RIGHTS_SOURCES: readonly RightsSource[] = [
   },
   {
     id: 'court-ruling',
-    title: 'Scalabrini Centre v Minister of Home Affairs, Constitutional Court, 7 July 2026',
+     title: 'Scalabrini Centre judgment [2026] ZACC 30 — original court repository and full judgment',
+    url: 'https://collections.concourt.org.za/items/bcee0850-32df-4c95-80b4-11970f817d53',
+    publisher: 'Constitutional Court of South Africa / Judgments repository',
+    reviewedOn: RIGHTS_REVIEWED_ON,
+  },
+  {
+    id: 'court-summary',
+    title: '7 July 2026 Constitutional Court explanatory media summary (not binding)',
     url: 'https://www.concourt.org.za/index.php/judgement/650-scalabrini-centre-of-cape-town-and-another-v-minister-of-home-affairs-and-others-cct126-25',
-    publisher: 'Constitutional Court of South Africa',
+    publisher: 'Constitutional Court of South Africa / Media summary',
     reviewedOn: RIGHTS_REVIEWED_ON,
   },
   {
@@ -100,7 +107,7 @@ export const RIGHTS_INFORMATION: readonly RightsInformation[] = [
     topic: 'starting',
     title: 'A 2026 court decision concerns access, not automatic approval',
     explanation: 'On 7 July 2026 the Constitutional Court confirmed that certain procedural exclusions under the Refugees Act were invalid. The decision does not automatically grant refugee status to an applicant. If entry or reporting rules affect your situation, seek qualified legal help.',
-    sources: ['court-ruling', 'government-transition'],
+    sources: ['court-ruling', 'court-summary', 'government-transition'],
   },
   {
     id: 'interpreter',
