@@ -1122,3 +1122,16 @@
 .luqi-hero-onboarding { margin: 14px 0 0; font-size: 13px; line-height: 1.6; color: #c9d8c9; }
 .luqi-hero-onboarding a { color: #e2f4bf; text-underline-offset: 3px; font-weight: 700; }
 .luqi-hero-onboarding a:focus-visible { outline: 3px solid #d6f0aa; outline-offset: 3px; }
+
+/* A long status must wrap beside its icon instead of widening a 320px page. */
+@media (max-width: 700px) {
+  .luqi-tool-card, .luqi-tool-card-top { min-width: 0; }
+  .luqi-tool-card-top .luqi-status-pill {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 54px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+}
