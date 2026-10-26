@@ -41,7 +41,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await expect(page.getByText('Synthetic first account Chat reply')).toBeVisible();
   await page.getByLabel('What would you like help with?').fill('Help me plan my visit to Cape Town');
   await page.getByRole('button', { name: 'Find my next step', exact: true }).click();
-  await page.getByRole('button', { name: 'Use my question in Chat above' }).click();
+  await page.getByRole('button', { name: 'Use my question in AI Chat' }).click();
   await expect(page.getByLabel('Your question')).toHaveValue('Help me plan my visit to Cape Town');
   const headerLogout = page.getByRole('button', { name: 'Log out of LUQI', exact: true });
   if (await headerLogout.isVisible()) await headerLogout.click();
@@ -59,7 +59,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await expect(page.getByText(/Signed in as second@example.invalid/)).toBeVisible();
   await expect(page.getByText('Synthetic first account Chat reply')).toHaveCount(0);
   await expect(page.getByLabel('Your question')).toHaveValue('');
-  await expect(page.getByRole('button', { name: 'Use my question in Chat above' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Use my question in AI Chat' })).toHaveCount(0);
   await expect(page.getByRole('checkbox', { name: /I understand my question goes/ })).not.toBeChecked();
   expect(paid).toHaveLength(1);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);

@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
+import SovereignRegionBar from "./SovereignRegionBar";
 
 /** Availability panel only. No provider SDK, credentials, inference or canned answers. */
 export function HeroAiChatConsole() {
@@ -24,6 +25,7 @@ export function HeroAiChatConsole() {
       <p>
         Ask LUQI to explain a topic, shape an idea or help draft a message. Create one account, open Chat and choose when to send your question. AI text requires consent and has shared spending limits.
       </p>
+      <SovereignRegionBar compact />
       <div className="luqi-chat-bottom">
         <span>Open LUQI chat and guidance</span>
         <Link to="/chat" aria-label="Open LUQI chat and guidance">

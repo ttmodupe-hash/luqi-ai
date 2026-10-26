@@ -245,3 +245,19 @@ it('keeps conversation in memory and sends follow-up context only with explicit 
   expect(screen.queryByLabelText(/Include recent conversation context/)).toBeNull();
   expect(inference).toHaveBeenCalledTimes(4);
 });
+
+it('offers a real local follow-through only after a confirmed AI reply, with no tool execution', async () => {
+  await login();
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Help me study for an exam' } });
+  consent();
+  expect(screen.queryByRole('link', { name: 'Open study desk' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  const next = screen.getByRole('link', { name: 'Open study desk' });
+  expect(next.getAttribute('href')).toBe('/study-desk');
+  expect(screen.getByText(/nothing is sent or booked automatically/i)).toBeTruthy();
+  expect(inference).toHaveBeenCalledTimes(1);
+  expect(request.mock.calls.filter(([path]) => String(path).includes('/study-desk'))).toHaveLength(0);
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  expect(screen.queryByRole('link', { name: 'Open study desk' })).toBeNull();
+});

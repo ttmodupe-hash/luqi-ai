@@ -3,6 +3,7 @@ import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import { CustomerSessionProvider } from "./providers/customer-session";
+import { SovereignRegionProvider } from "./providers/sovereign-region";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
@@ -53,7 +54,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
       </div>
     );
-  return <CustomerSessionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></CustomerSessionProvider>;
+  return <CustomerSessionProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></CustomerSessionProvider>;
 }
 
 export default function App() {

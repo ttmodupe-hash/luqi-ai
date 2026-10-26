@@ -3,6 +3,7 @@ import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import { CustomerSessionProvider } from "./providers/customer-session";
+import { SovereignRegionProvider } from "./providers/sovereign-region";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
@@ -35,7 +36,7 @@ const ExperientialEducationPage = lazyQueryPage(() => import("./pages/Experienti
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  return <CustomerSessionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></CustomerSessionProvider>;
+  return <CustomerSessionProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></CustomerSessionProvider>;
 }
 
 export default function App() {

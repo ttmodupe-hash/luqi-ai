@@ -3,12 +3,18 @@ import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import { useCustomerSession } from '../providers/customer-session';
+import { useSovereignRegion } from '../providers/sovereign-region';
+import { AFRICAN_REGIONAL_PROFILES } from '../services/panAfricanSovereignEngine';
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
+import { guideLuqiNeed } from '../lib/luqi-intent-guide';
+import SafePilotText from '../components/SafePilotText';
 import '../chat.css';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const { region } = useSovereignRegion();
+  const [shareRegion, setShareRegion] = useState(false);
   const previousToken = useRef<string | null>(null);
   const [available, setAvailable] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -18,6 +24,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   const [uncertain, setUncertain] = useState(false);
   const [turns, setTurns] = useState<PilotConversationTurn[]>([]);
   const [shareContext, setShareContext] = useState(false);
+  // Changing a country invalidates prior optional provider-processing approval.
+  useEffect(() => { setShareRegion(false); }, [region]);
   const questionLength = prompt.trim().length;
   const tooLong = questionLength > MAX_PILOT_QUESTION_CHARS;
   const contextPreview = shareContext ? previewPilotHistory(turns) : [];
@@ -57,7 +65,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     if (previousToken.current && previousToken.current !== token) {
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
       setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
-      setTurns([]); setShareContext(false); setNotice('');
+      setTurns([]); setShareContext(false); setShareRegion(false); setNotice('');
     }
     previousToken.current = token;
   }, [session?.token]);
@@ -81,27 +89,28 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
-    setTurns([]); setShareContext(false);
+    setTurns([]); setShareContext(false); setShareRegion(false);
   }
   function newChat() {
     if (locked.current) return;
     epoch.current++;
     setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
-    setConsent(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+    setConsent(false); setShareRegion(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
   async function submit() {
     if (!session || !consent || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
+    const approvedRegion = shareRegion && region !== 'PAN_AFRICAN_AU' ? region : undefined;
     // Keep the last confirmed reply visible while a follow-up is pending or
     // fails. The next successful reply replaces it; errors never erase it.
     locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
-    setShareContext(false);
+    setShareContext(false); setShareRegion(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-      const result = await askPilot(session.token, submittedQuestion, controller.signal, fetch, approvedHistory);
+      const result = await askPilot(session.token, submittedQuestion, controller.signal, fetch, approvedHistory, approvedRegion);
       if (epoch.current === version) {
         setAnswer(result);
         setTurns(previous => {
@@ -137,6 +146,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     }
   }
 
+  // The next-step link comes only from the customer's own verified question,
+  // never from model output or an untrusted tool command. No tool runs automatically.
+  const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
+  const actionablePath = nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   const Root = embedded ? 'section' : 'main';
   const Heading = embedded ? 'h2' : 'h1';
   const Subheading = embedded ? 'h3' : 'h2';
@@ -189,6 +202,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
               <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> {turn.text}</li>)}</ol>
             </details>}
           </div>}
+          {region !== 'PAN_AFRICAN_AU' && <label className="block"><input type="checkbox" checked={shareRegion} disabled={busy}
+            onChange={event => setShareRegion(event.target.checked)} /> Include my selected country guide ({AFRICAN_REGIONAL_PROFILES[region].country}) for this one AI request. It is not verified geolocation or legal advice; country information goes to the provider only if I opt in.</label>}
           <label className="block"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /> I understand my question goes to Google Gemini and may also go to OpenAI. I will use ordinary test content.</label>
           <p><Link to="/privacy">Read the provider privacy information</Link></p>
           <button className="luqi-primary" disabled={!available || !consent || !prompt.trim() || tooLong || contextTooLong || busy || uncertain}>
@@ -204,8 +219,9 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
       </section>}
       {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
-        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{answer.response}</p>
+        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><SafePilotText text={answer.response} /></p>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
+        {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real LUQI tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
       </section>}
     </>}
     <details className="luqi-chat-details">

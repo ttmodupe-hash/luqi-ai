@@ -81,7 +81,7 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   expect(auth).toHaveLength(1);
 });
 
-test('real AI text is the first Chat section on mobile and Notes are optional', async ({ page }) => {
+test('one goal-first Chat journey leads to optional AI on mobile; Notes remain optional', async ({ page }) => {
   const paid: string[] = [];
   page.on('request', request => {
     if (request.method() === 'POST' && /\/api\/v1\/luqi-core(?:\?|$)/.test(request.url())) paid.push(request.url());
@@ -94,10 +94,46 @@ test('real AI text is the first Chat section on mobile and Notes are optional', 
   await expect(primary).toBeVisible();
   await expect(ai).toBeVisible();
   await expect(local).toBeVisible();
-  const first = await primary.boundingBox(), second = await local.boundingBox();
+  const first = await local.boundingBox(), second = await ai.boundingBox();
   expect(first).not.toBeNull(); expect(second).not.toBeNull();
   expect(first!.y).toBeLessThan(second!.y);
+  await page.getByRole('button', { name: 'Go straight to AI Chat' }).click();
+  await expect(page.getByRole('heading', { name: 'Continue with AI Chat' })).toBeVisible();
   await expect(page.getByText(/Notes are optional/).first()).toBeVisible();
   expect(paid).toHaveLength(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+test('visitor can turn a travel goal into a usable provider enquiry without booking or paid calls', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') writes.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/chat');
+  await page.getByRole('button', { name: 'Find somewhere to stay' }).click();
+  await expect(page.getByRole('heading', { name: "Here's a useful way forward" })).toBeVisible();
+  await page.getByPlaceholder('Cape Town, South Africa').fill('Cape Town');
+  await page.getByPlaceholder('10–15 December').fill('10–15 December');
+  await page.getByRole('button', { name: 'Prepare provider enquiry' }).click();
+  const draft = page.getByLabel('Your editable-by-copy draft (not a booking)');
+  await expect(draft).toHaveValue(/DRAFT TRAVEL ENQUIRY/);
+  await expect(draft).toHaveValue(/Destination: Cape Town/);
+  await expect(page.getByText('Booking and checkout unavailable')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  expect(writes).toEqual([]);
+});
+
+test('a manually selected country opens official links and does not automatically spend AI or send location', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto('/#/chat');
+  await page.getByLabel('Country and continental view').selectOption('EAC_KE');
+  await expect(page.getByLabel('Country and continental view')).toHaveValue('EAC_KE');
+  await expect(page.getByText('Kenya', { exact: true })).toBeVisible();
+  const gov = page.getByRole('link', { name: /Kenya Revenue Authority \(KRA\) iTax/ });
+  await expect(gov).toHaveAttribute('href', 'https://itax.kra.go.ke/KRA-Portal/');
+  await expect(page.getByText(/not a government or payment integration/)).toBeVisible();
+  await expect(page.getByLabel(/Include my selected country guide/)).toHaveCount(0);
+  expect(posts).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });

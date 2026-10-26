@@ -14,6 +14,53 @@ export interface GuideRecommendation {
   caution: string;
   bookingPreview: boolean;
 }
+
+/** Honest, deterministic next steps. Not search results, a booking service or an AI plan. */
+export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
+  urgent: [
+    'Use official emergency services or an appropriate local help point now.',
+    'Do not rely on a booking screen or this experimental AI chat for an emergency.',
+  ],
+  booking: [
+    'Write down your destination, dates, group size and maximum total budget.',
+    'Ask the real provider for named property or experience details, dated availability and total fees.',
+    'Review the cancellation policy and verify the provider’s payment channel before paying.',
+  ],
+  travel: [
+    'Set your destination, travel window and priorities.',
+    'Use the local budget calculator for your own figures; obtain actual prices from providers.',
+    'Confirm current entry, safety and transport information with official sources.',
+  ],
+  language: [
+    'Choose the country, language and real-world situation you are preparing for.',
+    'Ask a local speaker or authoritative source to review sensitive translations.',
+  ],
+  study: [
+    'Choose one topic and create a few questions from trusted material.',
+    'Practise with Study Desk or explore a real browser experiment, then check your answers.',
+  ],
+  create: [
+    'Define your audience and one clear message.',
+    'Build six scenes in Content Studio, then inspect the silent export before sharing.',
+  ],
+  business: [
+    'Describe the product or service and note the costs you actually know.',
+    'Use Business Desk to draft a quote; review prices and tax before sending it.',
+  ],
+  rights: [
+    'Read the dated primary sources linked in the free rights guide.',
+    'For personal cases or deadlines, contact qualified help without sharing your details here.',
+  ],
+  consumer: [
+    'Identify the company, product and issue without entering account details.',
+    'Check the source-linked options and prepare a factual draft for your own review.',
+  ],
+  general: [
+    'State the outcome you want and one constraint that matters.',
+    'Open a working local tool or choose to submit one question to the limited AI trial.',
+  ],
+};
+
 export const GUIDE_EXAMPLES = [
   { label: 'Plan a visit', need: 'I am visiting South Africa. Help me plan my trip.' },
   { label: 'Find somewhere to stay', need: 'I want to book accommodation in Cape Town. What should I check?' },
