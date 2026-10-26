@@ -103,7 +103,7 @@ for (let start = 0; start < checks.length; start += 3) {
 // No query strings, user identifiers, passwords or email addresses are sent.
 for (const [path, target] of [
   ["/signup", "/#/join"],
-  ["/login", "/#/companion"],
+  ["/login", "/#/login"],
 ]) {
   await run("Published account entry " + path, async () => {
     const response = await fetch(origin + path, {
