@@ -8,6 +8,7 @@ import { AFRICAN_REGIONAL_PROFILES } from '../services/panAfricanSovereignEngine
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 import { guideLuqiNeed } from '../lib/luqi-intent-guide';
+import SafePilotText from '../components/SafePilotText';
 import '../chat.css';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
@@ -218,7 +219,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
       </section>}
       {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
-        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{answer.response}</p>
+        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><SafePilotText text={answer.response} /></p>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
         {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real LUQI tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
       </section>}
