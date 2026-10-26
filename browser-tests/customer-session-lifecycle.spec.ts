@@ -43,7 +43,13 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await page.getByRole('button', { name: 'Find my next step', exact: true }).click();
   await page.getByRole('button', { name: 'Use my question in Chat above' }).click();
   await expect(page.getByLabel('Your question')).toHaveValue('Help me plan my visit to Cape Town');
-  await page.getByRole('button', { name: 'Log out of LUQI', exact: true }).click();
+  const headerLogout = page.getByRole('button', { name: 'Log out of LUQI', exact: true });
+  if (await headerLogout.isVisible()) await headerLogout.click();
+  else {
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Mobile navigation' })
+      .getByRole('button', { name: 'Log out of LUQI', exact: true }).click();
+  }
   await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('What would you like help with?')).toHaveValue('');
