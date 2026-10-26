@@ -1109,9 +1109,13 @@
   .luqi-header-actions .luqi-account-link svg { display: none; }
 }
 @media (max-width: 390px) {
-  .luqi-header-inner { padding-left: 12px; padding-right: 12px; gap: 8px; }
-  .luqi-brand { font-size: 19px; gap: 7px; }
-  .luqi-header-actions .luqi-search-button { display: none; }
+  .luqi-header-inner { padding-left: 8px; padding-right: 8px; gap: 4px; }
+  .luqi-brand { font-size: 16px; gap: 4px; letter-spacing: -.8px; }
+  .luqi-brand-symbol { width: 28px; height: 28px; }
+  .luqi-header-actions { gap: 4px; }
+  .luqi-header-actions .luqi-account-link { min-height: 38px; padding: 0 7px; font-size: 11px; }
+  .luqi-header-actions .luqi-search-button { display: flex; width: 34px; min-height: 38px; padding: 0; }
+  .luqi-menu-button { width: 38px; height: 38px; }
 }
 
 /* Preserve first-user onboarding while keeping Chat the primary action. */
