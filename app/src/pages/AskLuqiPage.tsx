@@ -46,7 +46,7 @@ export default function AskLuqiPage() {
   function askAi() {
     if (!result || result.kind === 'urgent' || !submitted) return;
     setAiDraft(submitted);
-    document.getElementById('luqi-guide-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('luqi-guide-ai')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
   function changeTrip(field: keyof ReturnType<typeof emptyTrip>, value: string) {
     setTrip(current => ({ ...current, [field]: value }));
@@ -80,7 +80,7 @@ export default function AskLuqiPage() {
         <button type="button" className="luqi-guide-submit" onClick={() => document.getElementById('luqi-guide-need')?.focus()}>
           Tell LUQI my goal <ArrowRight size={18} aria-hidden="true" />
         </button>
-        <button type="button" className="luqi-guide-secondary" onClick={() => document.getElementById('luqi-guide-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+        <button type="button" className="luqi-guide-secondary" onClick={() => document.getElementById('luqi-guide-ai')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}>
           Go straight to AI Chat <Sparkles size={17} aria-hidden="true" />
         </button>
       </div>
