@@ -11,7 +11,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it('plans never request billing, fabricate a balance or offer legacy checkout/job controls', () => {
   const request = vi.fn(); vi.stubGlobal('fetch', request);
   render(<MemoryRouter><PricingPage /></MemoryRouter>);
-  expect(screen.getByText(/Paid plans, credit purchases and checkout are not available/)).toBeTruthy();
+  expect(screen.getByText(/AI subscriptions and in-app credit purchases are not available/)).toBeTruthy();
   expect(screen.queryByRole('button')).toBeNull();
   expect(screen.queryByText(/150|Queue Active|50%/)).toBeNull();
   expect(request).not.toHaveBeenCalled();

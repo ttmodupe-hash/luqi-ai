@@ -26,6 +26,7 @@ const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"))
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
@@ -64,6 +65,7 @@ export default function App() {
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/chat" element={<AskLuqiPage />} />
+        <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />

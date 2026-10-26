@@ -165,6 +165,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <Link to="/terms">Terms</Link>
           <Link to="/contact">Help and feedback</Link>
           <Link to="/pricing">Plans</Link>
+          <Link to="/payments">Payments</Link>
         </nav>
         <span>© {new Date().getFullYear()} LUQI AI</span>
       </footer>
