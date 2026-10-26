@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   RIGHTS_INFORMATION, RIGHTS_LANGUAGES, RIGHTS_RECHECK_AFTER, RIGHTS_REVIEWED_ON,
-  RIGHTS_SOURCES, RIGHTS_TOPICS, legalInformationIsCurrent, rightsLanguageHasReviewedText,
+  RIGHTS_SOURCES, RIGHTS_TOPICS, legalInformationIsCurrent, rightsLanguageHasSourceLinkedText,
   rightsSourcesFor, type RightsTopic,
 } from '../lib/rights-source-guide';
 
@@ -14,7 +14,7 @@ export default function RightsGuidePage() {
   const [topic, setTopic] = useState<RightsTopic>('starting');
   const [language, setLanguage] = useState('en');
   const current = legalInformationIsCurrent();
-  const englishTextAvailable = rightsLanguageHasReviewedText(language);
+  const englishTextAvailable = rightsLanguageHasSourceLinkedText(language);
   const languageLabel = RIGHTS_LANGUAGES.find(item => item.code === language)?.name ?? 'Selected language';
 
   return (
