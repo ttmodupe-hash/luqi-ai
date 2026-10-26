@@ -9,18 +9,30 @@ LUQI's browser-local Content Studio currently supports six editable 15-second sc
 
 Sources: [Content Studio implementation record](CONTENT_STUDIO.md), [commercial baseline](COMMERCIAL_LAUNCH.md), [pilot conditions](PILOT_LAUNCH.md), [launch tracker #202](https://github.com/ttmodupe-hash/luqi-ai/issues/202).
 
+## South African entry-price adjustment — proposal, not a published sale
+
+**Proposed once-off price: R299 ZAR** (previous internal draft R499). This is a *new proposed entry price*, not a public “was R499” saving or artificial discount. We selected it because a budget-sensitive local audience should not have to pay full custom-production prices for a **template-assisted, silent** clip. It remains subject to a real timed fulfilment rehearsal, provider settlement/fee verification, seller tax review and human approval.
+
+Indicative South African online comparators as checked 26 October 2026:
+- Wonder Studio lists **30-second promotional videos from R199** and **60-second videos from R349**: https://www.wonderstudio.co.za/product/custom-made-video-for-your-business-brand-product-or-service/
+- TLM Vision lists **short video editing (up to 60 seconds) at R350**: https://tlmvision.co.za/
+
+These are different services with different filming, editing, support and licence scope. LUQI cannot claim exact like-for-like superiority; its R299 proposal is specifically for reusable original LUQI visual templates, one silent 90-second sequence and low-touch preparation. Do not claim custom filming, unique illustrated animation or fully generative video.
+
+**Pricing guardrail:** Operator effort (briefing, six text edits, export/QA, one minor text revision and handover) should be **90 minutes or less per order**, as demonstrated by rehearsal, not assumed. Customer supplies up to six clear short messages/text points and rights-cleared logo if used. No design from scratch or client meetings. If realistic average work exceeds 90 minutes, **do not sell at R299 by merely absorbing the loss**; simplify the offer with customer agreement or revisit the price. Maintain a safe cap on simultaneous orders, not guaranteed instant delivery. Existing browser-local studio remains free for DIY users.
+
 ## Proposed customer-visible product (all commercial terms require owner acceptance)
 
 | Field | Proposed term / decision needed |
 | --- | --- |
 | Name | LUQI Assisted Creator Pack |
 | Product type | One-time human-assisted production, not a membership or self-service software purchase |
-| Price | **R499 ZAR, example for costing and approval only**. Not authorised to advertise or collect; confirm tax treatment and fees |
+| Price | **R299 ZAR, proposed once-off entry price only**. Not authorised to advertise or collect; confirm tax treatment, deliverability and fees |
 | Deliverables | One six-scene, approximately 90-second **silent** video in **one** agreed aspect ratio/compatible format; an accompanying plain-text script/storyboard; timed subtitles as a downloadable file |
-| Human work | Review the customer brief, prepare/edit six scenes, inspect export, perform agreed file handover |
-| Revisions | **Proposed** one round of minor caption/text edits within the agreed brief; full rewrite, added scenes and alternate formats require a separate quote, not automatic extra charges |
+| Human work | Low-touch editing of up to six buyer-supplied short messages within an existing LUQI scene template, one export and visual review, and agreed file handover. **Target 90 minutes maximum including the revision, subject to rehearsal** |
+| Revisions | **Proposed** one round of minor typo/caption adjustments in the same six scenes. No new concept, complex redesign, additional scene, music, extra format or custom filming; such changes require a separate agreed quote and can be declined |
 | Turnaround | **Proposed** five working days after both valid payment confirmation and receipt/acceptance of a complete brief and rights-cleared assets; unverified until a rehearsal establishes operator capacity |
-| Customer-provided input | Short non-sensitive brief, correct text, brand colours and files that the buyer has rights to use; obtain permission before processing logos or likenesses |
+| Customer-provided input | Short non-sensitive brief and up to six ready-to-use messages, plus rights-cleared colour/logo if needed; buyer must review spelling and rights. No unsolicited private images, minors' content or identities |
 | Buyer outputs | Customer can review the files and upload them themselves where a platform accepts the codec, size and rights; no direct posting or approval guarantee |
 | Not included | Synthetic voice, voice cloning, AI video generation, sound/music licensing, 3D animated characters on demand, automatic social posting, advertising placements, guaranteed views, translations, professional legal advice or subscriber credits |
 | Seller/legal identity | **Missing — owner to verify legal trading entity, physical contact disclosures, country, tax/registration details as applicable** |
@@ -34,19 +46,20 @@ All fields marked proposed must be confirmed by the owner, operator and, for leg
 
 > **From idea to a clear visual story.** LUQI Assisted Creator Pack helps you turn a small business, study or community message into a six-scene silent video. You'll receive one reviewed video, a script and subtitles in an agreed format. We help prepare the story; you decide where to share it. Human-assisted service only. No AI voiceover or automatic posting. Price, availability, support and final terms will be published only after activation acceptance.
 
-Do not display R499, a Buy button, an open order form, 'instant delivery', 'AI-generated film', customer testimonials, fictitious discounts or a subscription until the missing commercial terms and merchant acceptance are complete.
+Do not display the proposed R299 as an active price, a Buy button, an open order form, '40% off', 'instant delivery', 'AI-generated film', customer testimonials, fictitious discounts or a subscription until the missing commercial terms and merchant acceptance are complete.
 
 ## Transparent unit economics — ILLUSTRATION, not observed business income
 
-Assume an **unapproved R499 gross customer price**, a local South African **card** transaction, Paystack's publicly listed **2.9% + R1 excluding VAT**, and **15% VAT on the processor fee**. On that assumption, the processor charge is approximately **R17.79**, leaving approximately **R481.21** before the seller's output VAT (if applicable), labour, preparation, support, hosting, refunds, taxes and other expenses. Another payment method or merchant rate changes this example.
+Assume an **unapproved R299 gross customer price**, a local South African **card** transaction, Paystack's published **2.9% + R1 excluding VAT**, and **15% VAT on the processor fee**. On that assumption, processing costs approximately **R11.12**, leaving approximately **R287.88** before the seller's output VAT (if applicable), labour, preparation, support, hosting, refunds, taxes, marketing and other expenses. This is *not profit*, merchant settlement confirmation or a tax quotation. Another payment method or merchant rate changes the example.
 
 | Hypothetical owner labour at R120/hour | Remainder after illustrative processing fee and labour, before all other costs |
 | --- | ---: |
-| 2 hours (R240) | R241.21 |
-| 3 hours (R360) | R121.21 |
-| 4 hours (R480) | R1.21 |
+| 60 minutes (R120) | R167.88 |
+| **90 minutes (R180) — target** | **R107.88** |
+| 120 minutes (R240) | R47.88 |
+| 150 minutes (R300) | **−R12.12 (loss before overhead)** |
 
-R120/hour is an **assumed costing rate**, not LUQI's measured wage or a market quotation. Record time spent on a full rehearsal, customer corrections, file export and delivery. Confirm actual seller tax status and provider fee before approving price. No inference costs are assumed for this browser-local package; if paid generation is later introduced, measure and approve it separately. Avoid treating gross receipts as profit.
+R120/hour is an **illustrative value of operator time**, not LUQI's measured wage or a market quotation. At R299 even two hours leave little room for overhead; orders must not be accepted based only on a hypothetical 90-minute target. Record time spent on a full rehearsal, customer corrections, file export and delivery. Confirm actual seller tax status and provider fee before approving price. No inference costs are assumed for this browser-local package; if paid generation is later introduced, measure and approve it separately. Avoid treating gross receipts as profit.
 
 Current fee source: https://paystack.com/za/pricing ; Paystack mode/merchant prerequisite: https://support.paystack.com/en/articles/2129922 and https://support.paystack.com/en/articles/2125506 .
 
@@ -72,7 +85,7 @@ Legal reference: https://www.saflii.org/za/legis/consol_act/ecata2002427/ (secti
 
 ### Offer status / decisions (complete privately, publish only redacted result)
 
-- [ ] Final owner-approved R499 or other price and output VAT treatment
+- [ ] Final owner-approved proposed R299 or other price and output VAT treatment, after timed rehearsal and payment-fee review
 - [ ] Seller legal identity and statutory contact information verified
 - [ ] Real operator appointed; completed sample and timed delivery accepted
 - [ ] Fixed scope, five-day (or other) turnaround and revision limit accepted
