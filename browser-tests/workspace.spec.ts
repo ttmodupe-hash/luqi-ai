@@ -24,7 +24,7 @@ test("workspace filters distinguish usable tools from previews without making AI
   });
   await page.goto("/#/");
   await expect(
-    page.getByText("Check AI trial availability"),
+    page.getByText("Open LUQI chat and guidance"),
   ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(9);
   // The signed-in trial is one new discoverable card; all existing tools remain.

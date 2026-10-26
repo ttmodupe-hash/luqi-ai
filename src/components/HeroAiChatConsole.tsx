@@ -18,16 +18,15 @@ export function HeroAiChatConsole() {
         <MessageCircle size={34} strokeWidth={1.4} />
       </div>
       <h2 id="chat-availability-heading">
-        A space for your <br />
-        next good question.
+        Tell LUQI what you need.<br />
+        Find your next step.
       </h2>
       <p>
-        Sign in to check the limited AI text trial. Questions use shared
-        spending limits and separate provider processing.
+        Start with local guidance for travel, learning, creativity and everyday needs. For an actual AI reply, the signed-in text trial requires consent and has shared spending limits.
       </p>
       <div className="luqi-chat-bottom">
-        <span>Check AI trial availability</span>
-        <Link to="/ai-trial" aria-label="Open AI text trial">
+        <span>Open LUQI chat and guidance</span>
+        <Link to="/chat" aria-label="Open LUQI chat and guidance">
           <ArrowUpRight size={21} aria-hidden="true" />
         </Link>
       </div>

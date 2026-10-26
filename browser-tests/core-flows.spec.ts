@@ -74,7 +74,7 @@ test('Companion controls remain styled, visible and usable after a failed save',
 test('public pages render without horizontal overflow or JavaScript exceptions', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
-  for (const [path, heading] of [['/', /A little curiosity/], ['/public', /A little curiosity/], ['/portal', /A little curiosity/], ['/service-status', 'Service status'], ['/admin', 'LUQI administration'], ['/pricing', 'Plans and availability'], ['/start', 'A useful place to begin.'], ['/join', 'Companion conversations'], ['/privacy', 'Pilot privacy information'], ['/terms', 'Pilot use information'], ['/contact', 'Help and feedback'], ['/companion', 'Companion conversations']]) {
+  for (const [path, heading] of [['/', /A little curiosity/], ['/public', /A little curiosity/], ['/portal', /A little curiosity/], ['/service-status', 'Service status'], ['/admin', 'LUQI administration'], ['/pricing', 'Plans and availability'], ['/start', 'A useful place to begin.'], ['/join', 'Create your LUQI account'], ['/privacy', 'Pilot privacy information'], ['/terms', 'Pilot use information'], ['/contact', 'Help and feedback'], ['/companion', 'Companion conversations']]) {
     await page.goto("/#" + path);
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
     if (path === '/service-status') await expect(page.getByRole('alert')).toContainText('Status unavailable');

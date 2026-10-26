@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
+import { CustomerSessionProvider } from "./providers/customer-session";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
@@ -16,6 +17,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import CompanionPage from "./pages/CompanionPage";
+import CustomerEntryPage from "./pages/CustomerEntryPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
 
 // Load optional tools only when their route is rendered. Keep account, notes,
@@ -23,6 +25,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
@@ -50,7 +53,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
       </div>
     );
-  return <WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout>;
+  return <CustomerSessionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></CustomerSessionProvider>;
 }
 
 export default function App() {
@@ -60,15 +63,18 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/chat" element={<AskLuqiPage />} />
+        <RouterRoute path="/ask" element={<AskLuqiPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
-        {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
+        {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
+        <RouterRoute path="/login" element={<CustomerEntryPage initialMode="signin" />} />
         {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
-        <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
+        <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />

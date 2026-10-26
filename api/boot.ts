@@ -130,7 +130,7 @@ for (const path of ["/signup", "/register", "/sign-up", "/join"]) {
 for (const path of ["/login", "/signin", "/sign-in"]) {
   app.get(path, c => {
     c.header("Cache-Control", "no-store");
-    return c.redirect("/#/companion", 302);
+    return c.redirect("/#/login", 302);
   });
 }
 

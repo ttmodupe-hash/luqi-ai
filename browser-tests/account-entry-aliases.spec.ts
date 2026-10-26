@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 
 // Exercise the built frontend. These checks never submit account credentials.
 const aliases = [
-  ['/login', '/companion', 'Sign in to your LUQI account'],
-  ['/signin', '/companion', 'Sign in to your LUQI account'],
-  ['/sign-in', '/companion', 'Sign in to your LUQI account'],
+  ['/login', '/login', 'Sign in to your LUQI account'],
+  ['/signin', '/login', 'Sign in to your LUQI account'],
+  ['/sign-in', '/login', 'Sign in to your LUQI account'],
   ['/register', '/join', 'Create your LUQI account'],
   ['/signup', '/join', 'Create your LUQI account'],
   ['/sign-up', '/join', 'Create your LUQI account'],
@@ -34,7 +34,7 @@ test('sign-in aliases discard untrusted return URLs and do not prefill URL crede
     external.push(route.request().url()); await route.abort();
   });
   await page.goto('/#/login?next=https%3A%2F%2Fexample.invalid%2F&email=not-an-account%40example.invalid&password=not-a-password');
-  await expect(page).toHaveURL(/#\/companion$/);
+  await expect(page).toHaveURL(/#\/login$/);
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');
   expect(external).toEqual([]);
@@ -48,4 +48,31 @@ test('switching to signup through an alias clears the previous password', async 
   await expect(page.getByRole('heading', { name: 'Create your LUQI account', exact: true })).toBeVisible();
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Confirm password', { exact: true })).toHaveValue('');
+});
+
+test('successful LUQI registration enters Chat directly, never Notes or paid AI', async ({ page }) => {
+  const registrations: string[] = [], paid: string[] = [], notes: string[] = [];
+  await page.route('**/api/v1/auth/register', route => {
+    registrations.push(route.request().url());
+    return route.fulfill({ status: 201, contentType: 'application/json',
+      body: JSON.stringify({ token: 'synthetic-customer-token', user: { email: 'new@example.invalid' } }) });
+  });
+  await page.route('**/v1/readiness', route =>
+    route.fulfill({ json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } } }));
+  page.on('request', request => {
+    if (request.method() === 'POST' && /\/api\/v1\/luqi-core(?:\?|$)/.test(request.url())) paid.push(request.url());
+    if (/\/api\/v1\/companion\/conversations/.test(request.url())) notes.push(request.url());
+  });
+  await page.goto('/#/join');
+  await page.getByLabel('Email', { exact: true }).fill('new@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('Synthetic-Password-2026!');
+  await page.getByLabel('Confirm password', { exact: true }).fill('Synthetic-Password-2026!');
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(page).toHaveURL(/#\/chat$/);
+  await expect(page.getByRole('heading', { name: 'Chat with LUQI', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Your question')).toBeVisible();
+  expect(registrations).toHaveLength(1);
+  expect(paid).toHaveLength(0);
+  expect(notes).toHaveLength(0);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
 });

@@ -3,18 +3,20 @@ import { Link, NavLink, useLocation } from "react-router";
 import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
 import { findWorkspaceTools } from "./workspace-catalog";
+import { useOptionalCustomerSession } from "../providers/customer-session";
 import "../workspace.css";
 
 const navigation = [
+  ["/chat", "Chat"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
   ["/omega-tasks", "Omega tasks"],
-  ["/pendulum-lab", "Physics lab"],
   ["/content-studio", "Create"],
   ["/start", "Start here"],
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const customer = useOptionalCustomerSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -98,9 +100,11 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <span>Search</span>
               <kbd>⌘ K</kbd>
             </button>
-            <Link className="luqi-account-link" to="/companion">
-              Your notes <ArrowUpRight size={16} aria-hidden="true" />
+            <Link className="luqi-account-link" to="/chat">
+              Ask LUQI <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
+            {customer?.session && <button type="button" className="luqi-header-signout"
+              aria-label="Log out of LUQI" onClick={customer.signOut}>Sign out</button>}
             <button
               ref={menuButton}
               className="luqi-menu-button"
@@ -135,6 +139,10 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
                 <ArrowUpRight size={16} aria-hidden="true" />
               </NavLink>
             ))}
+            {customer?.session && <button type="button" className="luqi-mobile-signout"
+              aria-label="Log out of LUQI" onClick={() => { customer.signOut(); setMenuOpen(false); }}>
+              Sign out of LUQI
+            </button>}
           </nav>
         )}
       </header>

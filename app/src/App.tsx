@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
+import { CustomerSessionProvider } from "./providers/customer-session";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
@@ -14,6 +15,7 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import CompanionPage from "./pages/CompanionPage";
+import CustomerEntryPage from "./pages/CustomerEntryPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
@@ -21,6 +23,7 @@ import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
@@ -32,7 +35,7 @@ const ExperientialEducationPage = lazyQueryPage(() => import("./pages/Experienti
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  return <WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout>;
+  return <CustomerSessionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></CustomerSessionProvider>;
 }
 
 export default function App() {
@@ -42,15 +45,18 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/chat" element={<AskLuqiPage />} />
+        <RouterRoute path="/ask" element={<AskLuqiPage />} />
         <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
-        {["/login", "/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/companion" replace />} />)}
+        {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
+        <RouterRoute path="/login" element={<CustomerEntryPage initialMode="signin" />} />
         {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
-        <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
+        <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />

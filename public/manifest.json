@@ -3,7 +3,7 @@
   "name": "LUQI AI — Your everyday workspace",
   "short_name": "Luqi AI",
   "description": "Private notes, an interactive physics lab and a limited signed-in AI text trial. Check current availability before use.",
-  "start_url": "/",
+  "start_url": "/#/chat",
   "scope": "/",
   "display": "standalone",
   "background_color": "#111e19",
