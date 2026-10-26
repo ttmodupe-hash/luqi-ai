@@ -3,7 +3,8 @@ import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import type { AccountSession } from '../lib/private-conversations';
-import { MAX_PILOT_QUESTION_CHARS } from '../lib/pilot-input';
+import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
+import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
   const [session, setSession] = useState<AccountSession | null>(null);
@@ -13,8 +14,16 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   const [answer, setAnswer] = useState<PilotReply | null>(null);
   const [busy, setBusy] = useState(false); const [notice, setNotice] = useState('');
   const [uncertain, setUncertain] = useState(false);
+  const [turns, setTurns] = useState<PilotConversationTurn[]>([]);
+  const [shareContext, setShareContext] = useState(false);
   const questionLength = prompt.trim().length;
   const tooLong = questionLength > MAX_PILOT_QUESTION_CHARS;
+  const contextPreview = shareContext ? previewPilotHistory(turns) : [];
+  const contextTooLong = (() => {
+    if (!prompt.trim() || tooLong) return false;
+    try { buildPilotInput(prompt, 'auto', contextPreview); return false; }
+    catch { return true; }
+  })();
   const epoch = useRef(0); const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
 
@@ -35,15 +44,25 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     setSession(null); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
+    setTurns([]); setShareContext(false);
   }
   async function submit() {
-    if (!session || !consent || !available || locked.current || uncertain || !prompt.trim() || tooLong) return;
+    if (!session || !consent || !available || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
+    const submittedQuestion = prompt;
+    const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
     locked.current = true; setBusy(true); setAnswer(null); setNotice('');
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-      const result = await askPilot(session.token, prompt, controller.signal);
-      if (epoch.current === version) { setAnswer(result); setPrompt(''); }
+      const result = await askPilot(session.token, submittedQuestion, controller.signal, fetch, approvedHistory);
+      if (epoch.current === version) {
+        setAnswer(result);
+        setTurns(previous => [...previous,
+          { sender: 'user', text: submittedQuestion },
+          { sender: 'ai', text: result.response },
+        ].slice(-8));
+        setPrompt('');
+      }
     } catch (error) {
       if (epoch.current !== version) return;
       const code = error instanceof PilotChatError ? error.code : 'RESPONSE_UNCONFIRMED';
@@ -77,26 +96,41 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
       : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>
     <p>Up to 20 provider attempts per account per UTC day. A fallback uses another attempt. Replies are limited to 512 tokens. African-language accuracy has not been independently evaluated.</p>
     {notice && <p role="alert">{notice}</p>}
-    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; setSession(value); setNotice(''); }} /> : <>
+    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; setSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); }} /> : <>
       <section><p>Signed in as {session.user.email}</p><button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button></section>
-      <section><h2>Ask one question</h2>
-        <p>Only the question below is sent to the providers. Your private notes and account email are not added to it. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
+      <section><h2>Ask LUQI</h2>
+        <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up. Your private notes and account email are never attached. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
           <label className="block" htmlFor="ai-question">Your question</label>
           <textarea id="ai-question" className="luqi-access-input" rows={5}
             aria-describedby="ai-question-limit" aria-invalid={tooLong || undefined}
             disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} />
           <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters. Request formatting uses the rest of the 6000-character input limit.
-            {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}</p>
+            {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}
+            {contextTooLong && ' Your question plus selected conversation context exceeds the input limit. Shorten the question or turn off context; nothing will be sent.'}</p>
+          {turns.length > 0 && <div className="luqi-chat-context">
+            <label className="block"><input type="checkbox" checked={shareContext} disabled={busy}
+              onChange={event => setShareContext(event.target.checked)} /> Include recent conversation context in this request (optional)</label>
+            <p>Off by default. If enabled, up to four recent turns, shortened to 350 characters each, will be sent to the provider with your next question. Review the exact preview first.</p>
+            {shareContext && <details open><summary>Review the conversation context to be sent</summary>
+              <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> {turn.text}</li>)}</ol>
+            </details>}
+          </div>}
           <label className="block"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /> I understand my question goes to Google Gemini and may also go to OpenAI. I will use ordinary test content.</label>
           <p><Link to="/privacy">Read the provider privacy information</Link></p>
-          <button className="luqi-primary" disabled={!available || !consent || !prompt.trim() || tooLong || busy || uncertain}>
+          <button className="luqi-primary" disabled={!available || !consent || !prompt.trim() || tooLong || contextTooLong || busy || uncertain}>
             {busy ? 'Waiting for a reply…' : 'Send question'}
           </button>
         </form>
         {uncertain && <button className="luqi-secondary" type="button" onClick={() => { setUncertain(false); setPrompt(''); setNotice(''); }}>Start a new question</button>}
       </section>
+      {turns.length > 2 && <section aria-label="Earlier conversation turns"><h2>Earlier conversation</h2>
+        <ol>{turns.slice(0, -2).map((turn, index) => <li key={index}>
+          <strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{turn.text}</span>
+        </li>)}</ol>
+      </section>}
       {answer && <section aria-labelledby="ai-reply-heading"><h2 id="ai-reply-heading">AI reply</h2>
+        <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{answer.response}</p>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
       </section>}
