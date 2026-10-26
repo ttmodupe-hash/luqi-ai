@@ -42,11 +42,12 @@ jobs:
             const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
             const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
             // Preserve every existing route. The packaged app additionally gains
-            // the already-public, provider-free consumer-rights page.
+            // the already-public, provider-free consumer-rights page and
+            // the newly reviewed Chat and Ask routes. Every older route stays required.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/business-desk', '/consumer-rights', '/rights-guide', '/study-desk']
-              : ['/business-desk', '/rights-guide', '/study-desk'];
+              ? ['/ask', '/business-desk', '/chat', '/consumer-rights', '/rights-guide', '/study-desk']
+              : ['/ask', '/business-desk', '/chat', '/rights-guide', '/study-desk'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),
@@ -54,7 +55,7 @@ jobs:
             assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
               'Existing iframe targets changed: ' + path);
           }
-          console.log('All legacy routes and iframe targets preserved; reviewed local routes include packaged consumer guide.');
+          console.log('All legacy routes and iframe targets preserved; reviewed Chat and local consumer guide routes added.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash
