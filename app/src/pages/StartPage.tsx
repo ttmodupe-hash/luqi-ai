@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowUpRight, FlaskConical, NotebookPen, Layers3, BriefcaseBusiness, GraduationCap, Scale, Check, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, FlaskConical, MessageCircle, Layers3, BriefcaseBusiness, GraduationCap, Scale, Check, ShieldCheck } from 'lucide-react';
 
 export default function StartPage() {
   return <main className="luqi-start">
@@ -21,11 +21,11 @@ export default function StartPage() {
         <Link className="luqi-primary" to="/pendulum-lab">Try the physics lab <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
       <section className="luqi-start-card" aria-labelledby="start-notes">
-        <span className="luqi-tool-icon luqi-icon-notes"><NotebookPen aria-hidden="true" /></span>
-        <p className="luqi-card-kicker">ACCOUNT REQUIRED</p>
+        <span className="luqi-tool-icon luqi-icon-notes"><MessageCircle aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">ONE ACCOUNT FOR CUSTOMER TOOLS</p>
         <h2 id="start-notes">One LUQI account, starting with Chat.</h2>
         <p>Create one LUQI account and begin with Chat. Private notes and Omega task history are optional; your login works across customer tools in this tab.</p>
-        <ul><li><Check aria-hidden="true" /> Account-owned conversation history</li><li><Check aria-hidden="true" /> Download one conversation as JSON</li><li><Check aria-hidden="true" /> Confirm before deleting saved notes</li></ul>
+        <ul><li><Check aria-hidden="true" /> Sign in once while navigating this tab</li><li><Check aria-hidden="true" /> Chat without creating or saving notes</li><li><Check aria-hidden="true" /> Private notes remain optional</li></ul>
         <Link className="luqi-primary" to="/join">Create your LUQI account <ArrowUpRight size={18} aria-hidden="true" /></Link>
         <Link className="luqi-start-existing" to="/login">Already have an account? Sign in</Link>
       </section>
