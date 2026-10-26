@@ -98,7 +98,7 @@ test('lost registration responses are not retried and public plans make no billi
   await page.goto('/#/pricing');
   await expect(page.getByRole('heading', { name: 'Plans and availability' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Purchase|Activate|Simulate/ })).toHaveCount(0);
-  await expect(page.getByText(/Paid plans, credit purchases and checkout are not available/)).toBeVisible();
+  await expect(page.getByText(/AI subscriptions and in-app credit purchases are not available/)).toBeVisible();
   expect(calls).toEqual([]);
   await expect(page.getByRole('link', { name: 'Open the content studio', exact: true })).toHaveAttribute('href', '#/content-studio');
   await expect(page.getByRole('link', { name: 'Check the AI text trial', exact: true })).toHaveAttribute('href', '#/ai-trial');

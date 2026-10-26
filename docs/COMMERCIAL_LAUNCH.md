@@ -1,5 +1,13 @@
 # LUQI commercial launch preparation
 
+**26 October update:** the owner explicitly instructed turning on customer
+payments and updating the website. Activation authorization is recorded.
+The prepared hosted-checkout connection and the missing merchant/link/terms
+dependency are documented in
+[HOSTED_CHECKOUT_ACTIVATION_2026_10_26.md](HOSTED_CHECKOUT_ACTIVATION_2026_10_26.md).
+No approved live merchant page is configured yet; authorization alone cannot
+provide that connection. The historical preparation record follows.
+
 Status on 2026-10-23: the owner explicitly requested activation and income
 from LUQI. This is commercial intent and authorization to prepare the rollout;
 it does not supply missing merchant identity, prices or delivery capacity.

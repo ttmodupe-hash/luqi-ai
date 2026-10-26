@@ -33,8 +33,9 @@ export default function PricingPage() {
       <Link className="luqi-primary" to="/study-desk">Open the study desk</Link>
     </section>
     <section><h2>Paid plans</h2>
-      <p>Paid plans, credit purchases and checkout are not available. LUQI does not offer active commercial subscriptions in this pilot.</p>
-      <p>We are evaluating affordable memberships, but no membership pricing, AI quota or paid entitlement is active. Commercial offers are being prepared. A paid offer needs a confirmed seller, a working payment account, a clear price and delivery and refund terms before customers can purchase it.</p>
+      <p>AI subscriptions and in-app credit purchases are not available in this pilot. Any one-time assisted service is listed separately with its seller, exact price, delivery and refund details.</p>
+      <p>Check the payment page for current availability. Opening it does not charge you or change your AI allowance.</p>
+      <Link className="luqi-primary" to="/payments">View payment availability</Link>
       <p>Generated voice and AI video, direct social posting, professional submissions and autonomous Omega workers require further integration. They are not included in an active paid plan.</p>
     </section>
     <p><Link to="/start">Choose your first step</Link> · <Link to="/service-status">Check service status</Link> · <Link to="/contact">Help and feedback</Link></p>
