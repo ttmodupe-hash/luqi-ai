@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import AiPilotPage from '../src/pages/AiPilotPage';
 import { CustomerSessionProvider } from '../src/providers/customer-session';
@@ -117,6 +117,18 @@ it('keeps an over-limit draft intact and blocks both button and form submission'
   await screen.findByRole('heading', { name: 'AI reply' });
   expect(inference).toHaveBeenCalledTimes(1);
 });
+it('allows a padded draft when the exact trimmed question fits and sends only that question', async () => {
+  await login(); consent();
+  const accepted = 'x'.repeat(MAX_PILOT_QUESTION_CHARS - 8) + 'END-TEST';
+  const draft = ' '.repeat(100) + accepted + '\n'.repeat(100);
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: draft } });
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  expect(inference).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ user_input: accepted });
+});
+
 it('reports pre-spend input failure without a charged-attempt warning or clearing the draft', async () => {
   inference.mockResolvedValue(Response.json({ code: 'AI_INPUT_TOO_LARGE' }, { status: 400 }));
   await login(); draft(); consent(); fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
@@ -124,4 +136,41 @@ it('reports pre-spend input failure without a charged-attempt warning or clearin
   expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Say hello in isiZulu');
   expect(screen.queryByText(/Failed provider attempts may/)).toBeNull();
   expect(inference).toHaveBeenCalledTimes(1);
+});
+
+it('keeps conversation in memory and sends follow-up context only with explicit opt-in', async () => {
+  await login(); consent(); draft();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  expect(inference).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ user_input: 'Say hello in isiZulu' });
+
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'What about Durban?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await waitFor(() => expect(inference).toHaveBeenCalledTimes(2));
+  await screen.findByRole('heading', { name: 'Earlier conversation' });
+  expect(JSON.parse(inference.mock.calls[1][0].body)).toEqual({ user_input: 'What about Durban?' });
+
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'How do I plan my visit?' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /Include recent conversation context/ }));
+  expect(screen.getByText(/Review the conversation context to be sent/)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await waitFor(() => expect(inference).toHaveBeenCalledTimes(3));
+  const body = JSON.parse(inference.mock.calls[2][0].body);
+  expect(body.user_input).toBe('How do I plan my visit?');
+  expect(body.history).toHaveLength(4);
+  expect(body.history[0]).toEqual({ sender: 'user', text: 'Say hello in isiZulu' });
+  expect(JSON.stringify(body)).not.toContain('trial@example.invalid');
+  await screen.findByRole('heading', { name: 'AI reply' });
+  const contextToggle = screen.getByRole('checkbox', { name: /Include recent conversation context/ }) as HTMLInputElement;
+  expect(contextToggle.checked).toBe(false);
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'One more follow-up without context' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await waitFor(() => expect(inference).toHaveBeenCalledTimes(4));
+  expect(JSON.parse(inference.mock.calls[3][0].body)).toEqual({ user_input: 'One more follow-up without context' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+  expect(screen.queryByText(/Earlier conversation/)).toBeNull();
+  expect(screen.queryByLabelText(/Include recent conversation context/)).toBeNull();
+  expect(inference).toHaveBeenCalledTimes(4);
 });

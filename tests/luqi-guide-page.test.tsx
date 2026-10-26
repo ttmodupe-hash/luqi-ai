@@ -29,7 +29,12 @@ it('makes chat discoverable in primary navigation and account action', () => {
 
 it('guides a tourist to an honest booking empty state without calling a booking or AI endpoint', () => {
   render(<MemoryRouter><CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider></MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Chat with LUQI', level: 1 })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Try a question with LUQI' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: /Tell LUQI what you need/ })).toBeTruthy();
+  const headings = screen.getAllByRole('heading');
+  expect(headings[0].textContent).toBe('Chat with LUQI');
+  expect(fetchMock.mock.calls.filter(([path, options]) => path === '/api/v1/luqi-core' || options?.method === 'POST')).toHaveLength(0);
   fireEvent.click(screen.getByRole('button', { name: 'Find somewhere to stay' }));
   expect(screen.getByRole('heading', { name: 'Know exactly what you are booking' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'See the real offer before you commit' })).toBeTruthy();
@@ -57,7 +62,7 @@ it('keeps urgent safety guidance out of the AI upsell and booking paths', () => 
   });
   fireEvent.click(screen.getByRole('button', { name: 'Find my next step' }));
   expect(screen.getByRole('heading', { name: 'Your safety comes first' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: /Use my question in the AI text trial/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Use my question in Chat above/ })).toBeNull();
   expect(screen.queryByText('Booking and checkout unavailable')).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Ask LUQI a question' })).toBeNull();
 });

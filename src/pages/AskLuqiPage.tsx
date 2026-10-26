@@ -33,10 +33,20 @@ export default function AskLuqiPage() {
     if (typeof target?.scrollIntoView === 'function') target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   return <main className="luqi-guide">
+    <section className="luqi-guide-chat-section luqi-chat-first" aria-labelledby="luqi-guide-chat-heading" id="luqi-guide-ai">
+      <div className="luqi-guide-chat-heading">
+        <Sparkles size={22} aria-hidden="true" />
+        <div><p className="luqi-guide-overline">REAL AI CHAT · LIMITED TEXT PILOT</p>
+          <h1 id="luqi-guide-chat-heading">Chat with LUQI</h1></div>
+      </div>
+      <p>Chat is the main experience, not a Notes page. Sign in once for Chat and other customer tools in this tab. AI text requires your explicit consent and shared usage limits; no message is sent automatically. Notes are optional and never attached to the AI request.</p>
+      <AiPilotPage embedded initialQuestion={aiDraft} />
+    </section>
+    <p className="luqi-guide-chat-divider">Want to explore without signing in? Use the free, local guide below. It does not call an AI provider.</p>
     <section className="luqi-guide-hero" aria-labelledby="luqi-guide-title">
       <div className="luqi-guide-eyebrow"><Globe2 size={17} aria-hidden="true" /> AFRICA IN MIND · OPEN TO EVERYONE</div>
-      <h1 id="luqi-guide-title">Tell LUQI what you need.<br/><em>Start from here.</em></h1>
-      <p className="luqi-guide-lede">Start with one clear place to explore, learn, create and plan. Describe your goal in your own words. LUQI will show what works today, what still needs a trusted source, and where to go next.</p>
+      <h2 id="luqi-guide-title">Tell LUQI what you need.<br/><em>Find a useful tool.</em></h2>
+      <p className="luqi-guide-lede">This free local guide helps you explore, learn, create and plan without an AI request. Describe your goal in your own words. LUQI will show what works today, what still needs a trusted source, and where to go next.</p>
       <form onSubmit={guide} className="luqi-guide-form">
         <label htmlFor="luqi-guide-need"><MessageCircle size={19} aria-hidden="true" /> What would you like help with?</label>
         <textarea id="luqi-guide-need" value={need} maxLength={MAX_GUIDE_NEED_CHARS} rows={3}
@@ -72,7 +82,7 @@ export default function AskLuqiPage() {
           {result.primaryLabel} <ArrowRight size={17} aria-hidden="true" />
         </Link>}
         {result.kind !== 'urgent' && <button type="button" className="luqi-guide-submit" onClick={askAi}>
-          Use my question in the AI text trial <ArrowRight size={17} aria-hidden="true" />
+          Use my question in Chat above <ArrowRight size={17} aria-hidden="true" />
         </button>}
       </div>
       {result.bookingPreview && <div className="luqi-booking-review" aria-labelledby="luqi-booking-review-title">
@@ -87,15 +97,7 @@ export default function AskLuqiPage() {
       </div>}
     </section>}
 
-    {result?.kind !== 'urgent' && <section className="luqi-guide-chat-section" aria-labelledby="luqi-guide-chat-heading" id="luqi-guide-ai">
-      <div className="luqi-guide-chat-heading">
-        <Sparkles size={22} aria-hidden="true" />
-        <div><p className="luqi-guide-overline">REAL TEXT AI · LIMITED PILOT</p>
-          <h2 id="luqi-guide-chat-heading">Ask LUQI a question</h2></div>
-      </div>
-      <p>For an actual AI-generated text reply, use the signed-in trial below. It requires your consent, has shared usage limits and does not browse live travel listings or book anything. Your LUQI account sign-in is shared with Notes, Omega task history and this text trial in the current tab.</p>
-      <AiPilotPage embedded initialQuestion={aiDraft} />
-    </section>}
+
 
     <section className="luqi-guide-bottom" aria-label="More ways to use LUQI">
       <h2>More than a travel companion.</h2>

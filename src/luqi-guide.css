@@ -71,3 +71,11 @@
 .luqi-guide-ai .luqi-chat-context details { border-top: 1px solid #577258; margin-top: 12px; padding-top: 12px; }
 .luqi-guide-ai .luqi-chat-context summary { cursor: pointer; font-weight: 650; color: #e0f1cb; }
 .luqi-guide-ai .luqi-chat-context li { margin: 10px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+/* Chat is the primary LUQI service. The local tool finder is secondary. */
+.luqi-guide-chat-section.luqi-chat-first { margin-top: 0; margin-bottom: 28px; }
+.luqi-chat-first .luqi-guide-chat-heading h1 { font-size: clamp(29px, 4.5vw, 46px); margin: 8px 0 14px; }
+.luqi-guide-chat-divider { color: #d3e7cf; margin: 20px 6px 28px; font-size: 14px; line-height: 1.6; }
+.luqi-guide-hero h2 { font-size: clamp(30px, 5vw, 54px); line-height: 1.1; letter-spacing: -.04em; }
+.luqi-guide-hero h2 em { color: #d1edab; }
+@media (max-width: 680px) { .luqi-chat-first { padding: 18px !important; } }

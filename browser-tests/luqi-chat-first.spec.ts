@@ -80,3 +80,24 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
   expect(auth).toHaveLength(1);
 });
+
+test('real AI text is the first Chat section on mobile and Notes are optional', async ({ page }) => {
+  const paid: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && /\/api\/v1\/luqi-core(?:\?|$)/.test(request.url())) paid.push(request.url());
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/chat');
+  const primary = page.getByRole('heading', { name: 'Chat with LUQI', exact: true });
+  const ai = page.getByRole('heading', { name: 'Try a question with LUQI' });
+  const local = page.getByRole('heading', { name: /Tell LUQI what you need/ });
+  await expect(primary).toBeVisible();
+  await expect(ai).toBeVisible();
+  await expect(local).toBeVisible();
+  const first = await primary.boundingBox(), second = await local.boundingBox();
+  expect(first).not.toBeNull(); expect(second).not.toBeNull();
+  expect(first!.y).toBeLessThan(second!.y);
+  await expect(page.getByText(/Notes are optional/).first()).toBeVisible();
+  expect(paid).toHaveLength(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
