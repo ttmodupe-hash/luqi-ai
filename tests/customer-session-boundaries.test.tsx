@@ -124,11 +124,11 @@ it('clears the optional local guide and its handoff draft on an account change',
   await screen.findByText(/Provider access is configured/);
   fireEvent.change(screen.getByLabelText('What would you like help with?'), { target: { value: 'Help me plan my visit to Cape Town' } });
   fireEvent.click(screen.getByRole('button', { name: 'Find my next step' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Use my question in Chat above' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Use my question in AI Chat' }));
   expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('Help me plan my visit to Cape Town');
   fireEvent.click(screen.getByRole('button', { name: 'Use second account' }));
   expect((screen.getByLabelText('What would you like help with?') as HTMLTextAreaElement).value).toBe('');
   expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).value).toBe('');
-  expect(screen.queryByRole('button', { name: 'Use my question in Chat above' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Use my question in AI Chat' })).toBeNull();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
 });
