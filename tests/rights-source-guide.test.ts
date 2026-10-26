@@ -9,7 +9,7 @@ describe('source-linked South African rights guide (offline)', () => {
   it('ties every factual item to an explicit, dated, trusted source URL', () => {
     expect(RIGHTS_INFORMATION.length).toBeGreaterThanOrEqual(5);
     const knownIds = new Set(RIGHTS_SOURCES.map(source => source.id));
-    const allowHosts = new Set(['help.unhcr.org', 'www.gov.za', 'www.concourt.org.za', 'www.sanews.gov.za']);
+    const allowHosts = new Set(['help.unhcr.org', 'www.gov.za', 'www.concourt.org.za']);
     for (const source of RIGHTS_SOURCES) {
       const parsed = new URL(source.url);
       expect(parsed.protocol).toBe('https:');
@@ -54,8 +54,16 @@ describe('source-linked South African rights guide (offline)', () => {
 
   it('does not describe planned immigration changes as live, or offer AI filing and fabricated outcomes', () => {
     const start = RIGHTS_INFORMATION.find(item => item.id === 'begin');
-    expect(start?.explanation).toMatch(/proposed new intention-registration/);
-    expect(start?.explanation).toMatch(/did not verify/);
+    expect(start?.explanation).toMatch(/proposed phased intention-registration/);
+    expect(start?.sources).toContain('government-withdrawal');
+    expect(start?.sources).toContain('government-transition');
+    expect(start?.explanation).toMatch(/has not verified|neither announcement establishes/i);
+    const withdrawal = RIGHTS_SOURCES.find(item => item.id === 'government-withdrawal');
+    expect(withdrawal?.url).toMatch(/gov\.za\/news\/media-statements\/home-affairs-director-general-withdraws/);
+    const transition = RIGHTS_SOURCES.find(item => item.id === 'government-transition');
+    expect(transition?.url).toMatch(/gov\.za\/news\/media-statements\/inter-ministerial-committee/);
+    const documents = RIGHTS_INFORMATION.find(item => item.id === 'documents');
+    expect(documents?.explanation).toMatch(/pages disagree/);
     const court = RIGHTS_INFORMATION.find(item => item.id === 'court');
     expect(court?.explanation).toMatch(/does not automatically grant/);
     const refusal = RIGHTS_INFORMATION.find(item => item.id === 'appeals');
