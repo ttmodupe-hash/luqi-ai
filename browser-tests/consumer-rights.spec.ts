@@ -36,9 +36,17 @@ test('consumer story stays local and options link to original regulators on a 32
       };
     }).filter(item => item.visible && item.right > window.innerWidth + 1)
       .sort((a, b) => b.right - a.right).slice(0, 14);
-    return { width: window.innerWidth, scroll: document.documentElement.scrollWidth, offenders };
+    const internalOverflow = nodes.map(element => ({
+      tag: element.tagName.toLowerCase(),
+      className: typeof element.className === 'string' ? element.className.slice(0, 75) : '',
+      client: element.clientWidth, scroll: element.scrollWidth,
+    })).filter(item => item.client > 0 && item.scroll > item.client + 2)
+      .sort((a, b) => b.scroll - b.client - (a.scroll - a.client)).slice(0, 12);
+    return { width: window.innerWidth, scroll: document.documentElement.scrollWidth, offenders, internalOverflow };
   });
-  expect(viewport.scroll, 'No horizontal overflow. Overshooting element bounds: ' + JSON.stringify(viewport.offenders))
+  expect(viewport.scroll,
+    '320px horizontal overflow. Rects: ' + JSON.stringify(viewport.offenders) +
+    '; internal widths: ' + JSON.stringify(viewport.internalOverflow))
     .toBeLessThanOrEqual(viewport.width + 1);
   expect(unexpected, 'consumer complaint preparation must never post user stories to an API').toEqual([]);
 });
