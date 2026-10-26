@@ -44,7 +44,8 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
   expect(checks).toBe(2); expect(calls).toBe(0);
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByText('Synthetic confirmed study reply', { exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('chat-ready.png'), fullPage: true });
+  await page.getByRole('heading', { name: 'AI reply', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('chat-ready.png') });
 
   await page.getByLabel('Your question', { exact: true }).fill('A synthetic follow-up');
   await page.getByRole('button', { name: 'Send question' }).click();
@@ -62,5 +63,6 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
   await expect(page.getByRole('checkbox', { name: /I understand my question/ })).not.toBeChecked();
   expect(calls).toBe(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: testInfo.outputPath('chat-recovered.png'), fullPage: true });
+  await page.getByLabel('Your question', { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('chat-recovered.png') });
 });
