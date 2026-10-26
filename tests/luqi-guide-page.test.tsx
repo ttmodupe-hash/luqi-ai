@@ -34,6 +34,9 @@ it('guides a tourist to an honest booking empty state without calling a booking 
   expect(screen.getByRole('heading', { name: /Tell LUQI what you need/ })).toBeTruthy();
   const headings = screen.getAllByRole('heading');
   expect(headings[0].textContent).toBe('Chat with LUQI');
+  const local = screen.getByRole('heading', { name: /Tell LUQI what you need/ });
+  const ai = screen.getByRole('heading', { name: 'Try a question with LUQI' });
+  expect(local.compareDocumentPosition(ai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(fetchMock.mock.calls.filter(([path, options]) => path === '/api/v1/luqi-core' || options?.method === 'POST')).toHaveLength(0);
   fireEvent.click(screen.getByRole('button', { name: 'Find somewhere to stay' }));
   expect(screen.getByRole('heading', { name: 'Know exactly what you are booking' })).toBeTruthy();
@@ -62,7 +65,22 @@ it('keeps urgent safety guidance out of the AI upsell and booking paths', () => 
   });
   fireEvent.click(screen.getByRole('button', { name: 'Find my next step' }));
   expect(screen.getByRole('heading', { name: 'Your safety comes first' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: /Use my question in Chat above/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Use my question in AI Chat/ })).toBeNull();
   expect(screen.queryByText('Booking and checkout unavailable')).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Ask LUQI a question' })).toBeNull();
+});
+
+it('lets an anonymous traveller prepare a provider enquiry without a payment or AI call', () => {
+  render(<MemoryRouter><CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: 'Find somewhere to stay' }));
+  fireEvent.change(screen.getByPlaceholderText('Cape Town, South Africa'), { target: { value: 'Cape Town' } });
+  fireEvent.change(screen.getByPlaceholderText('10–15 December'), { target: { value: '20–22 November' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Prepare provider enquiry' }));
+  const brief = screen.getByLabelText('Your editable-by-copy draft (not a booking)') as HTMLTextAreaElement;
+  expect(brief.value).toContain('DRAFT TRAVEL ENQUIRY — NO RESERVATION OR PAYMENT');
+  expect(brief.value).toContain('Destination: Cape Town');
+  expect(screen.getByText('Booking and checkout unavailable')).toBeTruthy();
+  expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
+  fireEvent.change(screen.getByPlaceholderText('Cape Town, South Africa'), { target: { value: 'Durban' } });
+  expect(screen.queryByLabelText('Your editable-by-copy draft (not a booking)')).toBeNull();
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GUIDE_EXAMPLES, MAX_GUIDE_NEED_CHARS, guideLuqiNeed } from '../src/lib/luqi-intent-guide';
+import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, MAX_GUIDE_NEED_CHARS, guideLuqiNeed } from '../src/lib/luqi-intent-guide';
 
 describe('LUQI local intent guidance', () => {
   it('does not fabricate bookings, prices, availability or payments', () => {
@@ -72,6 +72,12 @@ describe('LUQI local intent guidance', () => {
     const general = guideLuqiNeed('I have a question about tomorrow')!;
     expect(general.kind).toBe('general');
     expect(general.detail).toMatch(/not yet a fully integrated multi-turn/i);
+  });
+  it('gives a concrete safe next step without invented provider inventory', () => {
+    expect(GUIDE_NEXT_STEPS.booking).toHaveLength(3);
+    expect(GUIDE_NEXT_STEPS.booking.join(' ')).toMatch(/verify the provider|verify the provider’s/i);
+    expect(GUIDE_NEXT_STEPS.urgent.join(' ')).toMatch(/official emergency services/i);
+    expect(GUIDE_NEXT_STEPS.business.join(' ')).toMatch(/Business Desk/i);
   });
   it('offers concrete examples without claiming live integrations', () => {
     expect(GUIDE_EXAMPLES.length).toBeGreaterThanOrEqual(4);

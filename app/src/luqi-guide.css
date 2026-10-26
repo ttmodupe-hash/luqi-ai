@@ -79,3 +79,33 @@
 .luqi-guide-hero h2 { font-size: clamp(30px, 5vw, 54px); line-height: 1.1; letter-spacing: -.04em; }
 .luqi-guide-hero h2 em { color: #d1edab; }
 @media (max-width: 680px) { .luqi-chat-first { padding: 18px !important; } }
+
+/* One meaningful entry point before optional sign-in or provider use. */
+.luqi-guide-intro { padding: clamp(24px, 4vw, 46px); border: 1px solid #567358; border-radius: 24px; background: linear-gradient(125deg, #243d2e, #122820 62%, #0e211d); margin-bottom: 20px; }
+.luqi-guide-intro .luqi-guide-overline { display: inline-flex; align-items: center; gap: 10px; }
+.luqi-guide-intro h1 { font-size: clamp(34px, 5.2vw, 58px); letter-spacing: -.045em; font-weight: 750; line-height: 1.1; margin: 16px 0; }
+.luqi-guide-intro > p:not(.luqi-guide-overline) { max-width: 740px; color: #d6e6d5; line-height: 1.75; }
+.luqi-guide-intro-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 14px; }
+.luqi-guide-intro-note { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.luqi-guide-intro-note svg { flex: none; margin-top: 4px; }
+.luqi-guide-hero { padding: clamp(24px, 4.5vw, 48px); }
+.luqi-guide-plan { border: 1px solid #4f7054; background: #1c3428; border-radius: 15px; padding: 18px 22px; margin: 20px 0; }
+.luqi-guide-plan h3 { font-size: 17px; color: #edf8df; font-weight: 700; margin: 0 0 12px; }
+.luqi-guide-plan ol { list-style: decimal; margin: 0; padding-left: 24px; display: grid; gap: 10px; color: #d6e8d1; line-height: 1.65; font-size: 14px; }
+.luqi-guide-travel { margin: 24px 0 0; padding: clamp(18px, 3vw, 26px); border-radius: 16px; background: #0f241a; border: 1px solid #658367; min-width: 0; }
+.luqi-guide-travel h3 { color: #f0f6e9; font-size: 22px; margin: 12px 0; }
+.luqi-guide-travel > p, .luqi-guide-travel-note { font-size: 13px; color: #c5d7c4; line-height: 1.7; }
+.luqi-guide-travel-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
+.luqi-guide-travel-fields label, .luqi-guide-travel-output label { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: #e0edda; font-size: 13px; font-weight: 650; }
+.luqi-guide-travel-fields .luqi-guide-travel-wide { grid-column: 1 / -1; }
+.luqi-guide-travel-fields input, .luqi-guide-travel-fields textarea, .luqi-guide-travel-output textarea { display: block; box-sizing: border-box; width: 100%; min-width: 0; padding: 12px; border-radius: 10px; background: #192f24; color: #f2f8ed; border: 1px solid #78957c; font: inherit; line-height: 1.5; }
+.luqi-guide-travel-fields input::placeholder, .luqi-guide-travel-fields textarea::placeholder { color: #b6ccb9; }
+.luqi-guide-travel-output { border-top: 1px solid #4d6952; margin-top: 20px; padding-top: 18px; }
+.luqi-guide-travel-output textarea { margin: 10px 0; min-height: 210px; white-space: pre-wrap; font-size: 13px; }
+@media (max-width: 680px) {
+ .luqi-guide-intro { padding: 22px 20px; border-radius: 19px; }
+ .luqi-guide-intro-actions { flex-direction: column; }
+ .luqi-guide-travel-fields { grid-template-columns: minmax(0, 1fr); }
+ .luqi-guide-travel-fields .luqi-guide-travel-wide { grid-column: auto; }
+ .luqi-guide-travel { padding: 17px; }
+}
