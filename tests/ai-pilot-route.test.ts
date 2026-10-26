@@ -138,3 +138,13 @@ describe('paid AI HTTP entrypoint', () => {
     expect(chat).toHaveBeenCalledTimes(1);
   });
 });
+
+it('accepts only country enum and passes opted-in context to the budgeted gateway', async () => {
+  const response = await send({ user_input: 'How can I export software?', regionContext: 'ECOWAS_NG' });
+  expect(response.status).toBe(200);
+  expect(chat).toHaveBeenCalledExactlyOnceWith('How can I export software?',42,undefined,undefined,'ECOWAS_NG');
+  chat.mockClear();
+  const bad = await send({ user_input: 'Hello', regionContext: 'anywhere' });
+  expect(bad.status).toBe(400);
+  expect(chat).not.toHaveBeenCalled();
+});

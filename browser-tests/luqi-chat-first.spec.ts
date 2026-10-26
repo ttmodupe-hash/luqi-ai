@@ -121,3 +121,18 @@ test('visitor can turn a travel goal into a usable provider enquiry without book
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   expect(writes).toEqual([]);
 });
+
+test('a manually selected country opens official links and does not automatically spend AI or send location', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto('/#/chat');
+  await page.getByLabel('Country and continental view').selectOption('EAC_KE');
+  await expect(page.getByText(/Kenya · East Africa/).first()).toBeVisible();
+  const gov = page.getByRole('link', { name: /Kenya Revenue Authority \(KRA\) iTax/ });
+  await expect(gov).toHaveAttribute('href', 'https://itax.kra.go.ke/KRA-Portal/');
+  await expect(page.getByText(/not a government or payment integration/)).toBeVisible();
+  await expect(page.getByLabel(/Include my selected country guide/)).toHaveCount(0);
+  expect(posts).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});

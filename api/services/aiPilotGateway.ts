@@ -5,6 +5,7 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { PILOT_MODELS } from "./pilotModels";
 import { buildPilotInput } from "../../src/lib/pilot-input";
+import { buildKhoroContinentalSystemPrompt, isAfricanRegionCode, type AfricanRegionCode } from "../../src/services/panAfricanSovereignEngine";
 import { readGeminiText, readOpenAiText, readProviderJson, PilotOutputError } from "./pilotOutput";
 import {
   assertPilotEnabled, MAX_OUTPUT_TOKENS,
@@ -38,12 +39,17 @@ export const GEMINI_PILOT_CONFIG = Object.freeze({
 
 export async function runBudgetedPilotChat(
   prompt: string, userId: number, language: string = "auto",
-  history: Array<{ sender: string; text: string }> = []
+  history: Array<{ sender: string; text: string }> = [], regionContext?: AfricanRegionCode
 ): Promise<PilotReply> {
   assertPilotEnabled();
-  // Validate the complete formatted input BEFORE keys, reservations or requests.
-  // A late qualifier in a long question must never be silently cut off.
+  // Validate before keys, reservation or paid provider traffic.
+  if (regionContext !== undefined && !isAfricanRegionCode(regionContext)) throw new PilotUnavailable("AI_REGION_CONTEXT_INVALID");
   const input = buildPilotInput(prompt, language, history);
+  // Country text is server-owned; the browser can only select a bounded code.
+  // This never asserts verified geolocation, government integration or current law.
+  const instructions = regionContext && regionContext !== "PAN_AFRICAN_AU"
+    ? PLAIN_TEXT_POLICY + "\n" + buildKhoroContinentalSystemPrompt(regionContext, language)
+    : PLAIN_TEXT_POLICY;
 
   const geminiKey = process.env.LUQI_PILOT_GEMINI_API_KEY;
   const openaiKey = process.env.LUQI_PILOT_OPENAI_API_KEY;
@@ -57,7 +63,8 @@ export async function runBudgetedPilotChat(
         model: PILOT_MODELS.gemini,
         contents: input,
         // No grounding/search/tools; those can incur additional charges.
-        config: GEMINI_PILOT_CONFIG,
+        config: instructions === PLAIN_TEXT_POLICY ? GEMINI_PILOT_CONFIG
+          : { ...GEMINI_PILOT_CONFIG, systemInstruction: instructions },
       });
       return { response: readGeminiText(result), provider: "gemini", model: PILOT_MODELS.gemini };
     } catch (error) {
@@ -79,7 +86,7 @@ export async function runBudgetedPilotChat(
         headers: { "Content-Type": "application/json",
           Authorization: `Bearer ${openaiKey}` },
         body: JSON.stringify({
-          model: PILOT_MODELS.openai, instructions: PLAIN_TEXT_POLICY,
+          model: PILOT_MODELS.openai, instructions,
           input, max_output_tokens: MAX_OUTPUT_TOKENS,
           reasoning: { effort: "none" },
           store: false,

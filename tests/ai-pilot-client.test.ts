@@ -110,3 +110,15 @@ it('rejects oversized or unreviewed context before a paid request', async () => 
   }))).rejects.toMatchObject({ code: 'INVALID_INPUT' });
   expect(request).not.toHaveBeenCalled();
 });
+
+it('only includes a whitelisted country when explicitly supplied; preserves normal request without context', async () => {
+  const request = vi.fn(async () => Response.json({ status: 'success', response: 'OK', provider: 'gemini', provider_model: 'fixture' }));
+  await askPilot('token', 'Plan a small business', new AbortController().signal, request, [], 'EAC_KE');
+  const body = JSON.parse((request.mock.calls[0] as unknown as [string,RequestInit])[1].body as string);
+  expect(body).toEqual({ user_input: 'Plan a small business', regionContext: 'EAC_KE' });
+  expect(request).toHaveBeenCalledTimes(1);
+  const never = vi.fn();
+  await expect(askPilot('token','Hi',new AbortController().signal,never,[], 'not-a-real-country' as never))
+    .rejects.toMatchObject({ code: 'INVALID_INPUT' });
+  expect(never).not.toHaveBeenCalled();
+});
