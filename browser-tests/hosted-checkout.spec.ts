@@ -14,6 +14,7 @@ test('visitor sees truthful payment availability from Plans without any payment 
 });
 
 test('a configured synthetic offer shows complete terms before its hosted link; never navigates to a provider in CI', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 780 });
   const external: string[] = [], posts: string[] = [];
   page.on('request', request => {
     if (request.url().startsWith('https://paystack.com/')) external.push(request.url());

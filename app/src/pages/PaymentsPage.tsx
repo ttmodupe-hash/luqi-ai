@@ -18,7 +18,7 @@ export default function PaymentsPage() {
   }, [location.search]);
   if (location.search) return <Navigate to="/payments" replace />;
   const offer = result?.status === 'available' ? result.offer : null;
-  return <main className="luqi-info" aria-labelledby="payments-heading">
+  return <main className="luqi-info" style={{ overflowWrap: 'anywhere' }} aria-labelledby="payments-heading">
     <p className="luqi-eyebrow">CLEAR DETAILS BEFORE YOU PAY</p>
     <h1 id="payments-heading">Payments</h1>
     {!result && !failed && <p role="status">Checking payment availability…</p>}

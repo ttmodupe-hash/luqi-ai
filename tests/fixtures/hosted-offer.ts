@@ -5,7 +5,7 @@ export const hostedOfferFixture = {
   title: 'Fixture assisted service', description: 'Synthetic offer for offline checkout tests only.',
   amountMinor: 12500, currency: 'ZAR' as const,
   sellerName: 'Fixture seller', sellerCountry: 'ZA' as const,
-  supportEmail: 'orders@example.invalid', deliverables: ['One reviewed fixture file'],
+  supportEmail: 'orders-for-the-merchant-with-a-long-team-name@example.invalid', deliverables: ['One reviewed fixture file'],
   delivery: 'Fixture delivery terms', revisions: 'Fixture revision terms',
   refunds: 'Fixture cancellation and refund terms', taxesAndFees: 'Fixture tax and fee disclosure',
   checkoutUrl: 'https://paystack.com/pay/luqi-fixture-only',
