@@ -92,7 +92,7 @@ export const RIGHTS_INFORMATION: readonly RightsInformation[] = [
     id: 'begin',
     topic: 'starting',
     title: 'Find the current official application route',
-    explanation: 'UNHCR's general guide describes Refugee Reception Office applications. On 9 October 2026 Home Affairs withdrew an earlier operational directive. On 11 October government announced a proposed phased intention-registration and appointment system expected by 10 November 2026. Neither announcement establishes that the new platform is operating. Check current official instructions or seek recognised legal assistance before travelling or making arrangements.',
+    explanation: 'UNHCR’s general guide describes Refugee Reception Office applications. On 9 October 2026 Home Affairs withdrew an earlier operational directive. On 11 October government announced a proposed phased intention-registration and appointment system expected by 10 November 2026. Neither announcement establishes that the new platform is operating. Check current official instructions or seek recognised legal assistance before travelling or making arrangements.',
     sources: ['unhcr-asylum', 'government-withdrawal', 'government-transition'],
   },
   {
