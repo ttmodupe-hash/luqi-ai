@@ -18,7 +18,8 @@ A review-only public rights-guide route shows English source-linked text plus th
 | [UNHCR asylum and status](https://help.unhcr.org/southafrica/topics/asylum/) | Application journey, interview, interpreter, status documents and decisions |
 | [South African Government asylum/refugee documents](https://www.gov.za/services/services-foreign-nationals/temporary-residence/asylum-seeker-and-refugee-permits) | General official background on temporary asylum and refugee recognition |
 | [Constitutional Court judgment, 7 July 2026](https://www.concourt.org.za/index.php/judgement/650-scalabrini-centre-of-cape-town-and-another-v-minister-of-home-affairs-and-others-cct126-25) | Judicial ruling on procedural barriers, not automatic approval |
-| [SAnews, 11 October 2026](https://www.sanews.gov.za/index.php/south-africa/government-seek-court-guidance-asylum-ruling-introduce-registration-system) | Planned intention-registration system for November; NOT evidence that the system is operating |
+| [Home Affairs, 9 October 2026](https://www.gov.za/news/media-statements/home-affairs-director-general-withdraws-asylum-directive-09-oct-2026) | Earlier operational directive withdrawn; do not assume old intake practice remains in force |
+| [Inter-Ministerial Committee, 11 October 2026](https://www.gov.za/news/media-statements/inter-ministerial-committee-migration-outlines-legal-response-constitutional) | Primary government statement: planned November intention-registration system; NOT evidence that the system is operating |
 | [UNHCR rights/legal protection](https://help.unhcr.org/southafrica/rights-legal-protection/) | Rights and detention assistance |
 | [UNHCR legal assistance](https://help.unhcr.org/southafrica/topics/legal-assistance/) | Recognised legal partners and province-based referrals |
 
