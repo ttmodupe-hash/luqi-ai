@@ -3,6 +3,12 @@
 ## User problem and scope
 Previously Notes, the metered AI text trial and authenticated Omega task history each held a separate component-local JWT. Route navigation discarded it, forcing another login. Chat was absent from the primary navigation. This change shares **one customer account session in React memory across those three authenticated public tools** and makes Chat discoverable on desktop, mobile, homepage and installed PWA entry.
 
+## User-centred Chat acceptance
+
+- **Chat is the primary customer journey**. The first prominent input must reach the real, consent-based AI text gateway when configured; it is not a disguised Notes form or a local keyword classifier.
+- The free local intent/tool guide is secondary, and Notes remain optional. AI follow-up context exists only in page memory and is shared with a provider only after an explicit, reviewed opt-in.
+- Test both the signed-out and signed-in mobile journeys at 320px, without invoking paid AI in automated browser acceptance. Real-provider quality and physical-device acceptance remain separate.
+
 ## Security and truthfulness
 - The existing authenticated account transport, MySQL ownership checks, JWT and per-route server authorisation are unchanged. This is **shared customer login**, not an administrator SSO or elevation of privileges. Admin remains isolated.
 - No JWT, password, account content or AI question is written to cookies, localStorage, sessionStorage, URL, service worker, analytics or browser caches. Full reload/tab close still requires a fresh sign-in; cross-tab persistence is **not** implemented. A later HttpOnly/SameSite cookie design would require CSRF, revocation and independent security review.
