@@ -1,6 +1,6 @@
 # LUQI Consumer Rights — truthful story-to-options foundation (26 October 2026, South Africa)
 
-Status: **DRAFT REVIEW ONLY**. No main merge, no live AI, no government filing, no email sending, no paid subscription, no legal outcome and no real client acceptance.
+Status: **DEPLOYED FREE INFORMATION PILOT — NOT INDEPENDENTLY LEGALLY APPROVED**. Merged as [PR #273](https://github.com/ttmodupe-hash/luqi-ai/pull/273) to `main` and deployed to Railway production as commit `f851be0f84bec307f3d5a4be7055c7ddf0469e8d` on 26 October 2026. This browser-local consumer guide is live, but no generative legal AI, government filing, email sending, paid subscription, legal case determination or independent human/legal acceptance is confirmed.
 
 ## Purpose
 
@@ -53,4 +53,4 @@ English text only in this version. Sepitori must remain distinct from Sepedi/Set
 - Obtain consumer law subject-matter review; validate each source/route, exclusion and terminology.
 - No real customer stories should be used for testing. Use synthetic disputes only.
 - Preserve the USD100/month Gemini USD60/OpenAI USD40 budget and existing paid-provider denylist.
-- No merging into unprotected auto-deploying main, no production operations, no payments and no authorised provider usage without independent launch approvals. See issue #202 and rights-guide draft PR #272.
+- The original implementation was already merged and deployed via [PR #273](https://github.com/ttmodupe-hash/luqi-ai/pull/273). Future code changes require independent review, exact-revision CI and controlled release approval; do not infer legal or broad-launch acceptance from the earlier merge. No payments, unapproved AI routing or personal legal case submissions. See [issue #202](https://github.com/ttmodupe-hash/luqi-ai/issues/202) and [rights-guide PR #272](https://github.com/ttmodupe-hash/luqi-ai/pull/272).
