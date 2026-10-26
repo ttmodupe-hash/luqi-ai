@@ -30,6 +30,21 @@ Each scene should be configured to **15 seconds** in the existing Content Studio
 
 This script is an accompanying text asset, **not synthesized or recorded narration**. The video must remain silent. Do not tell a buyer that the platform provided a voiceover or automatically posted the film.
 
+## Affordability and repeatability gate — proposed R299
+
+The [draft South African entry offer](../CREATOR_PACK_FIRST_PAID_OFFER_2026_10_26.md) was repriced from an earlier internal R499 illustration to **R299 once-off** on 26 October 2026. That is a proposal only: no merchant or customer-facing offer is active. The operator must measure total **hands-on work**, not confuse the **90-second video timeline** with production time.
+
+| Illustrative work allocation | Target |
+| --- | ---: |
+| Check customer's six ready-to-use messages and permissions | 10 minutes |
+| Adapt existing LUQI scenes, captions and layout | 35 minutes |
+| Export, inspect media and prepare script/SRT | 20 minutes |
+| One minor text correction and corresponding re-export | 15 minutes |
+| Package/check handover, answer normal delivery question | 10 minutes |
+| **Total working-time target** | **90 minutes** |
+
+These allocations are *targets*, not observations or guarantees. Stopwatch timing must include waiting for render/codec issues and ordinary customer support. Require a satisfactory six-scene silent media file before charging; do not sacrifice quality, privacy or statutory refund rights to hit a price. If a complete rehearsal consistently needs longer than 90 minutes, reconsider scope/price rather than accept an unprofitable R299 order. New illustrations, filmed footage, music, voiceover, alternate renders and bespoke revisions are excluded from this entry price.
+
 ## Practical rehearsal checklist — all results remain blank until performed
 
 ### Prepare and time the job
@@ -60,7 +75,7 @@ This script is an accompanying text asset, **not synthesized or recorded narrati
 | Android playback and OS | NOT TESTED |
 | Successful caption/script handover | NOT TESTED |
 | One minor revision end-to-end | NOT TESTED |
-| Total labour including second export | NOT MEASURED |
+| Total labour including second export and support; 90-minute gate | NOT MEASURED |
 | Customer/operator quality sign-off | NOT RECEIVED |
 
 The [Content Studio engineering report](../CONTENT_STUDIO.md) includes a **prior** complete 90.000-second normalized source example. Do not copy its result into this *new independent* rehearsal record. A timed demonstration and live recipient acceptance still need to happen.
