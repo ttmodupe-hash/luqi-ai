@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import { useCustomerSession } from '../providers/customer-session';
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
+import '../chat.css';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
@@ -27,6 +28,28 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   })();
   const epoch = useRef(0); const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
+  const availabilityPending = useRef<AbortController | null>(null);
+  const mounted = useRef(false);
+
+  // A transient startup failure must not force a reload (and lose the session).
+  // Only this public GET is repeatable. Never replay an AI request or clear its
+  // uncertain outcome when the user checks configuration again.
+  const checkAvailability = useCallback(async () => {
+    if (!mounted.current || availabilityPending.current) return;
+    const controller = new AbortController(); availabilityPending.current = controller;
+    setChecking(true); setAvailable(false);
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const value = await pilotAvailability(controller.signal);
+      if (!controller.signal.aborted && availabilityPending.current === controller) setAvailable(value);
+    } catch { /* Keep requests paused; no inference or automatic retry. */ }
+    finally {
+      clearTimeout(timer);
+      if (mounted.current && availabilityPending.current === controller) {
+        availabilityPending.current = null; setChecking(false);
+      }
+    }
+  }, []);
 
   // Clear the former identity before paint; never forward its question or consent.
   useLayoutEffect(() => {
@@ -40,12 +63,14 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   }, [session?.token]);
 
   useEffect(() => {
-    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10_000);
-    void pilotAvailability(controller.signal).then(value => {
-      if (!controller.signal.aborted) setAvailable(value);
-    }).catch(() => {}).finally(() => { clearTimeout(timer); setChecking(false); });
-    return () => { epoch.current++; controller.abort(); pending.current?.abort(); clearTimeout(timer); };
-  }, []);
+    mounted.current = true;
+    void checkAvailability();
+    return () => {
+      mounted.current = false; epoch.current++;
+      availabilityPending.current?.abort(); availabilityPending.current = null;
+      pending.current?.abort();
+    };
+  }, [checkAvailability]);
 
   useEffect(() => {
     if (initialQuestion && initialQuestion.trim() && initialQuestion.length <= MAX_PILOT_QUESTION_CHARS) {
@@ -58,11 +83,19 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
     setTurns([]); setShareContext(false);
   }
+  function newChat() {
+    if (locked.current) return;
+    epoch.current++;
+    setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
+    setConsent(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+  }
   async function submit() {
-    if (!session || !consent || !available || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
+    if (!session || !consent || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
-    locked.current = true; setBusy(true); setAnswer(null); setNotice('');
+    // Keep the last confirmed reply visible while a follow-up is pending or
+    // fails. The next successful reply replaces it; errors never erase it.
+    locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
     setShareContext(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
@@ -109,28 +142,49 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   const Subheading = embedded ? 'h3' : 'h2';
   return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
     <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with LUQI</Heading>
-    <p>Ask a real AI question. Gemini answers first, with OpenAI as a separately limited fallback. This is an experimental text-only trial; answers can be wrong. No browsing, sources, tools, files, voice or autonomous actions are enabled.</p>
+    <p>Get help with writing, studying and ideas. Review the answer: AI can make mistakes.</p>
     <p role="status">{checking ? 'Checking AI configuration…' : available
       ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
       : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>
-    <p>Up to 20 provider attempts per account per UTC day. A fallback uses another attempt. Replies are limited to 512 tokens. African-language accuracy has not been independently evaluated.</p>
+    <div className="luqi-chat-availability">
+      <button className="luqi-secondary" type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
+        {checking ? 'Checking availability…' : 'Check availability again'}
+      </button>
+      {!checking && !available && <p>Your sign-in and question stay here while you check again. This check does not send a question.</p>}
+    </div>
+    <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 512 tokens.</p>
     {notice && <p role="alert">{notice}</p>}
     {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); }} /> : <>
-      <section><p>Signed in as {session.user.email}. This LUQI login works across customer tools in this tab.</p><button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button></section>
+      <section><p>Signed in as {session.user.email}.</p>
+        <div className="luqi-chat-actions">
+          <button className="luqi-secondary" type="button" disabled={busy} onClick={newChat}>New chat</button>
+          <button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button>
+        </div>
+      </section>
       <section><Subheading>Ask LUQI</Subheading>
-        <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up. Your private notes and account email are never attached. Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them.</p>
+        <p>Ask in your own words, or try a starting question. Only your question is sent by default.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
+          {!turns.length && !prompt && <fieldset className="luqi-chat-starters" disabled={busy || uncertain}>
+            <legend>Try a starting question</legend>
+            {[
+              ['Help me study', 'Explain one useful study technique and give me a short example.'],
+              ['Plan an idea', 'Help me turn a small business idea into three practical first steps.'],
+              ['Draft a message', 'Help me write a polite message to a customer about a delayed delivery.'],
+            ].map(([label, question]) => <button className="luqi-secondary" key={label} type="button" onClick={() => {
+              setPrompt(question); document.getElementById('ai-question')?.focus();
+            }}>{label}</button>)}
+          </fieldset>}
           <label className="block" htmlFor="ai-question">Your question</label>
           <textarea id="ai-question" className="luqi-access-input" rows={5}
             aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
             disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} />
-          <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters. Request formatting uses the rest of the 6000-character input limit.
+          <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters.
             {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}
             {contextTooLong && ' Your question plus selected conversation context exceeds the input limit. Shorten the question or turn off context; nothing will be sent.'}</p>
           {turns.length > 0 && <div className="luqi-chat-context">
             <label className="block"><input type="checkbox" checked={shareContext} disabled={busy}
               onChange={event => setShareContext(event.target.checked)} /> Include recent conversation context in this request (optional)</label>
-            <p>Off by default. If enabled, up to four recent turns, shortened to 350 characters each, will be sent to the provider with your next question. Review the exact preview first.</p>
+            <p>Off by default. Review the exact preview before including recent messages.</p>
             {shareContext && <details open><summary>Review the conversation context to be sent</summary>
               <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> {turn.text}</li>)}</ol>
             </details>}
@@ -154,6 +208,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
       </section>}
     </>}
+    <details className="luqi-chat-details">
+      <summary>How Chat works</summary>
+      <p>Gemini answers first, with OpenAI as a separately limited fallback. A fallback uses another provider attempt. This is an experimental text-only trial. No browsing, sources, tools, files, voice or autonomous actions are enabled. African-language accuracy has not been independently evaluated.</p>
+      <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up: up to four recent turns, shortened to 350 characters each. Request formatting uses the rest of the 6000-character input limit. Your private notes and account email are never attached.</p>
+      <p>Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them. New chat clears this conversation and provider consent while keeping you signed in. Your LUQI login works across customer tools in this tab; a full reload ends it.</p>
+    </details>
     <p>Notes are optional. This conversation stays in this page's memory and is not saved to Notes. <Link to="/start">Explore other tools</Link></p>
   </Root>;
 }

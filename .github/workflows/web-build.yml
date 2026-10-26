@@ -85,6 +85,8 @@ jobs:
           path: |
             test-results/**/getting-started.png
             test-results/**/plans-availability.png
+            test-results/**/chat-ready.png
+            test-results/**/chat-recovered.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: failure()

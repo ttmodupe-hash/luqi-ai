@@ -22,7 +22,7 @@ export function HeroAiChatConsole() {
         Find your next step.
       </h2>
       <p>
-        Start with local guidance for travel, learning, creativity and everyday needs. For an actual AI reply, the signed-in text trial requires consent and has shared spending limits.
+        Ask LUQI to explain a topic, shape an idea or help draft a message. Create one account, open Chat and choose when to send your question. AI text requires consent and has shared spending limits.
       </p>
       <div className="luqi-chat-bottom">
         <span>Open LUQI chat and guidance</span>

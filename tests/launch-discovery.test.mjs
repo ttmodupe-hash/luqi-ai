@@ -5,7 +5,7 @@ import { findWorkspaceTools, workspaceTools } from '../src/components/workspace-
 for (const query of ['AI text', 'Gemini', 'OpenAI']) {
   test(`the limited trial is discoverable by ${query}`, () => {
     const matches = findWorkspaceTools(query, 'ready');
-    assert.ok(matches.some(tool => tool.id === 'ai-trial' && tool.path === '/ai-trial'));
+    assert.ok(matches.some(tool => tool.id === 'ai-trial' && tool.path === '/chat'));
   });
 }
 test('trial listing describes sign-in, separate availability checks and private-note exclusion', () => {

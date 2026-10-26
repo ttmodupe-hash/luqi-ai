@@ -51,7 +51,7 @@ export default function AskLuqiPage() {
         <div><p className="luqi-guide-overline">REAL AI CHAT · LIMITED TEXT PILOT</p>
           <h1 id="luqi-guide-chat-heading">Chat with LUQI</h1></div>
       </div>
-      <p>Chat is the main experience, not a Notes page. Sign in once for Chat and other customer tools in this tab. AI text requires your explicit consent and shared usage limits; no message is sent automatically. Notes are optional and never attached to the AI request.</p>
+      <p>Ask LUQI to explain a topic, shape an idea or draft a message. One login works across tools in this tab; Notes are optional.</p>
       <AiPilotPage embedded initialQuestion={aiDraft} />
     </section>
     <p className="luqi-guide-chat-divider">Want to explore without signing in? Use the free, local guide below. It does not call an AI provider.</p>

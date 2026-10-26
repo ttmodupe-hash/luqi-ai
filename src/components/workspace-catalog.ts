@@ -7,7 +7,7 @@ export const workspaceTools = [
       "Sign in and give consent to try Gemini, with a separately limited OpenAI fallback. Availability is checked before sending; private notes are not sent automatically.",
     status: "Limited trial · sign-in required",
     ready: true,
-    path: "/ai-trial",
+    path: "/chat",
     icon: "status",
   },
   {
