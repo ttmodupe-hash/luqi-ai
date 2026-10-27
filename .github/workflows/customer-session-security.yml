@@ -34,10 +34,12 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev
-      - name: Seed known isolated recovery fixtures
-        run: npx vitest run tests/mysql-backup-fixture.integration.test.ts
       - name: Verify real rotation, replay, revocation, grants and password rollback
         run: npx vitest run tests/customer-resume-mysql.integration.test.ts --no-file-parallelism
+      - name: Seed known recovery counters after synthetic session traffic
+        env:
+          LUQI_SESSION_BACKUP_FIXTURE: 'true'
+        run: npx vitest run tests/mysql-backup-fixture.integration.test.ts
       - name: Verify device-session rows survive an isolated full database restore
         env:
           LUQI_SESSION_BACKUP_FIXTURE: 'true'
