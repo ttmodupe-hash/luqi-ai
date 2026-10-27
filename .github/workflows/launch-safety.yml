@@ -27,3 +27,5 @@ jobs:
         run: node --test tests/main-web-build-trigger.test.mjs
       - name: Verify event-driven post-deployment acceptance is restricted to canonical Railway
         run: node --test tests/canonical-railway-status.test.mjs
+      - name: Verify mirrored LUQIChat workspace and in-tab privacy boundaries
+        run: node --test tests/chat-workspace-contract.test.mjs
