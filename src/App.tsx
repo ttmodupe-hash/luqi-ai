@@ -12,7 +12,6 @@ import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-route
 // Pages
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
-import InstallAppPage from "./pages/InstallAppPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
@@ -24,6 +23,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 
 // Load optional tools only when their route is rendered. Keep account, notes,
 // start/help and release-observed core pages available in the initial bundle.
+const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));

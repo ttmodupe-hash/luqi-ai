@@ -10,7 +10,6 @@ import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
-import InstallAppPage from "./pages/InstallAppPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
@@ -22,6 +21,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.
+const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
