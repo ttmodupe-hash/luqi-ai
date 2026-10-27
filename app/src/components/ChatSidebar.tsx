@@ -9,13 +9,13 @@ import SavedNotesPeek from './SavedNotesPeek';
 import '../chat-workspace.css';
 
 const shortcuts = [
-  { path: '/chat', label: 'LUQIChat', icon: MessageCircle },
+  { path: '/chat', label: 'Luqi Chat', icon: MessageCircle },
   { path: '/business-desk', label: 'Business desk', icon: BriefcaseBusiness },
   { path: '/study-desk', label: 'Study desk', icon: GraduationCap },
   { path: '/content-studio', label: 'Content studio', icon: PenLine },
   { path: '/ask', label: 'Africa & travel guide', icon: Globe2 },
   { path: '/companion', label: 'Private notes', icon: BookOpen },
-  { path: '/omega-tasks', label: 'LUQI tools', icon: Compass },
+  { path: '/omega-tasks', label: 'Luqi tools', icon: Compass },
 ] as const;
 
 export default function ChatSidebar() {
@@ -54,16 +54,16 @@ export default function ChatSidebar() {
         aria-label={mobileOpen ? 'Close chat sidebar' : 'Open chat sidebar'} onClick={() => setMobileOpen(open => !open)}>
         {mobileOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
       </button>
-      <Link to="/chat" onClick={close}>LUQI<span>Chat</span></Link>
+      <Link to="/chat" onClick={close}>Luqi<span>Chat</span></Link>
       <button type="button" aria-label="New chat" onClick={start}><Plus size={22} aria-hidden="true" /></button>
     </div>
     {mobileOpen && <button className="luqi-chat-backdrop" type="button" aria-label="Dismiss sidebar overlay" onClick={closeWithFocus} />}
-    <aside id="luqi-chat-sidebar" aria-label="LUQIChat sidebar"
+    <aside id="luqi-chat-sidebar" aria-label="Luqi Chat sidebar"
       className={'luqi-chat-rail' + (mobileOpen ? ' luqi-chat-rail-open' : '') + (collapsed ? ' luqi-chat-rail-compact' : '')}>
       <div className="luqi-chat-rail-top">
-        <Link to="/" className="luqi-chat-rail-brand" onClick={close} aria-label="LUQI workspace home">
+        <Link to="/" className="luqi-chat-rail-brand" onClick={close} aria-label="Luqi workspace home">
           <img src="/luqi-mark.svg" alt="" aria-hidden="true" width="31" height="31" />
-          <span>LUQI <strong>AI</strong></span>
+          <span>Luqi</span>
         </Link>
         <button type="button" className="luqi-chat-rail-collapse"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -75,12 +75,12 @@ export default function ChatSidebar() {
         <button className="luqi-chat-rail-new" type="button" onClick={start} title="New chat">
           <Plus size={20} aria-hidden="true" /><span>New chat</span>
         </button>
-        <button className="luqi-chat-rail-search" type="button" title="Search LUQI tools"
+        <button className="luqi-chat-rail-search" type="button" title="Search Luqi tools"
           onClick={() => { close(); window.dispatchEvent(new Event('luqi:open-search')); }}>
           <Search size={18} aria-hidden="true" /><span>Search tools</span>
         </button>
       </div>
-      <nav aria-label="Jump into LUQI services" className="luqi-chat-rail-services">
+      <nav aria-label="Jump into Luqi services" className="luqi-chat-rail-services">
         <p className="luqi-chat-rail-section-label">Jump into</p>
         {shortcuts.map(({ path, label, icon: Icon }) => <NavLink key={path} to={path}
           title={label} onClick={close} className={({ isActive }) => isActive ? 'active' : ''}>
@@ -141,7 +141,7 @@ export default function ChatSidebar() {
           <CircleHelp size={18} aria-hidden="true" /><span>Help and feedback</span>
         </Link>
         {customer?.session ? <button type="button" onClick={() => { customer.signOut(); close(); }}
-          title="Sign out of LUQI">
+          title="Sign out of Luqi">
           <ChevronLeft size={18} aria-hidden="true" /><span>Sign out</span>
         </button> : <Link to="/login" title="Sign in" onClick={close}>
           <ChevronRight size={18} aria-hidden="true" /><span>Sign in</span>
