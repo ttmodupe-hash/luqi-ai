@@ -23,6 +23,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 
 // Load optional tools only when their route is rendered. Keep account, notes,
 // start/help and release-observed core pages available in the initial bundle.
+const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
@@ -66,6 +67,8 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/install" element={<InstallAppPage />} />
+        <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />

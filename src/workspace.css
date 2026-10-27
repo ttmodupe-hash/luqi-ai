@@ -1143,3 +1143,88 @@
 .luqi-hero-onboarding { margin: 14px 0 0; font-size: 13px; line-height: 1.6; color: #c9d8c9; }
 .luqi-hero-onboarding a { color: #e2f4bf; text-underline-offset: 3px; font-weight: 700; }
 .luqi-hero-onboarding a:focus-visible { outline: 3px solid #d6f0aa; outline-offset: 3px; }
+
+/* Shareable Luqi mobile PWA install page, no third-party downloads. */
+.luqi-hero-app {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 17px 0 0;
+  padding: 13px 15px;
+  max-width: 570px;
+  border-radius: 12px;
+  border: 1px solid #cbd9c4;
+  background: #eaf3e5;
+  color: #35523a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.luqi-hero-app svg { flex: 0 0 auto; }
+.luqi-hero-app a { color: #193c24; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
+.luqi-hero-app span { color: #56705a; }
+.luqi-install-page { max-width: 1060px; }
+.luqi-install-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  align-items: center;
+  gap: 30px;
+  padding: clamp(22px, 4.5vw, 48px);
+  border: 1px solid #527258;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #1b3026, #10221a 75%);
+}
+.luqi-install-page .luqi-eyebrow { color: #d6f0b7; }
+.luqi-install-hero h1 { margin: 12px 0 18px; font-size: clamp(33px, 6vw, 55px); line-height: 1.13; letter-spacing: -1.5px; color: #f1f8e9; }
+.luqi-install-hero p { max-width: 690px; color: #d8e4d5; }
+.luqi-install-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+.luqi-install-actions .luqi-primary { border-color: #bada9c; color: #f3ffe7; }
+.luqi-install-actions .luqi-primary:disabled { opacity: .65; }
+.luqi-install-open { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; color: #def8b9 !important; }
+.luqi-install-page .luqi-install-hint, .luqi-install-page .luqi-install-installed {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid #74916a;
+  background: #263f2e;
+  border-radius: 12px;
+  padding: 11px 14px;
+  color: #f1ffe5;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.luqi-install-installed svg { flex-shrink: 0; }
+.luqi-install-page .luqi-install-feedback { color: #e2f1ca; padding: 11px 0 0; }
+.luqi-install-icon-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #507257;
+  border-radius: 22px;
+  background: #263f30;
+  text-align: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+.luqi-install-icon-preview img { border-radius: 24px; width: 128px; height: 128px; object-fit: contain; }
+.luqi-install-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.luqi-install-steps section { min-width: 0; }
+.luqi-install-step-icon { display: inline-flex; background: #2b4934; border-radius: 12px; padding: 12px; color: #d7f6b6; margin-bottom: 12px; }
+.luqi-install-steps ol { counter-reset: luqi-install; margin: 18px 0 0; padding-left: 24px; color: #e4ede1; }
+.luqi-install-steps li { padding-left: 6px; margin: 12px 0; line-height: 1.7; overflow-wrap: anywhere; }
+.luqi-install-steps strong { color: #f7ffe9; }
+.luqi-install-clarity { margin-top: 20px !important; }
+.luqi-install-clarity p { color: #d5e6d1; }
+@media (max-width: 700px) {
+  .luqi-install-hero { grid-template-columns: 1fr; gap: 22px; }
+  .luqi-install-icon-preview { flex-direction: row; justify-content: flex-start; padding: 14px; }
+  .luqi-install-icon-preview img { height: 64px; width: 64px; border-radius: 14px; }
+  .luqi-install-steps { grid-template-columns: 1fr; gap: 0; }
+  .luqi-install-actions { align-items: stretch; flex-direction: column; }
+  .luqi-install-actions .luqi-primary, .luqi-install-open { width: 100%; }
+  .luqi-hero-app { align-items: flex-start; }
+}

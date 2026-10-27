@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { BookOpen, BriefcaseBusiness, ChevronLeft, ChevronRight, CircleHelp, Compass,
   Globe2, GraduationCap, History, LayoutGrid, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen,
-  PenLine, Plus, Search, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
+  PenLine, Plus, Search, ShieldCheck, Smartphone, Trash2, UserRound, X } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import { useOptionalCustomerSession } from '../providers/customer-session';
 import SavedNotesPeek from './SavedNotesPeek';
@@ -131,6 +131,9 @@ export default function ChatSidebar() {
       </section>
       {customer?.session && <SavedNotesPeek key={customer.session.token} token={customer.session.token} onNavigate={close} />}
       <nav className="luqi-chat-rail-bottom" aria-label="Help and account">
+        <Link to="/install" title="Install Luqi on your phone" onClick={close}>
+          <Smartphone size={18} aria-hidden="true" /><span>Install Luqi</span>
+        </Link>
         <Link to="/service-status" title="Service status" onClick={close}>
           <ShieldCheck size={18} aria-hidden="true" /><span>Service status</span>
         </Link>

@@ -7,7 +7,10 @@ import RouteLoadBoundary from "./RouteLoadBoundary";
 const ChatSidebar = lazy(() => import("./ChatSidebar"));
 import { findWorkspaceTools } from "./workspace-catalog";
 import { useOptionalCustomerSession } from "../providers/customer-session";
+import { captureLuqiInstallPrompt } from "../lib/pwa-install";
 import "../workspace.css";
+
+captureLuqiInstallPrompt();
 
 const navigation = [
   ["/chat", "Chat"],
@@ -16,6 +19,7 @@ const navigation = [
   ["/omega-tasks", "LUQI tools"],
   ["/content-studio", "Create"],
   ["/start", "Start here"],
+  ["/install", "Install"],
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -182,6 +186,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <Link to="/contact">Help and feedback</Link>
           <Link to="/pricing">Plans</Link>
           <Link to="/payments">Payments</Link>
+          <Link to="/install">Install Luqi</Link>
         </nav>
         <span>© {new Date().getFullYear()} LUQI AI</span>
       </footer>
