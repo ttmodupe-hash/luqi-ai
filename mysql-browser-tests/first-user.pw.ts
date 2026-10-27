@@ -20,7 +20,7 @@ test('first user registers, saves, reloads, signs in, exports and deletes owned 
   };
   await page.goto('/#/');
   await page.getByRole('link', { name: 'Get started', exact: true }).click();
-  await page.getByRole('link', { name: 'Create your LUQI account' }).click();
+  await page.getByRole('link', { name: 'Create your Luqi account' }).click();
   await credentials();
   await page.getByLabel('Confirm password', { exact: true }).fill(password);
   const registration = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/register'));

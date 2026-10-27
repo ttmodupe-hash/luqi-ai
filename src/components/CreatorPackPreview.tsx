@@ -10,8 +10,8 @@ export default function CreatorPackPreview({ compact = false }: CreatorPackPrevi
     <div className="luqi-creator-top">
       <div className="luqi-creator-copy">
         <p className="luqi-creator-kicker">ONE-TIME HUMAN-ASSISTED SERVICE · PREVIEW</p>
-        <h2 id="luqi-creator-offer-heading">LUQI Assisted Creator Pack</h2>
-        <p>Turn up to six short messages into an approximately 90-second, six-scene <strong>silent</strong> video using LUQI's existing creative templates.</p>
+        <h2 id="luqi-creator-offer-heading">Luqi Assisted Creator Pack</h2>
+        <p>Turn up to six short messages into an approximately 90-second, six-scene <strong>silent</strong> video using Luqi's existing creative templates.</p>
       </div>
       <div className="luqi-creator-price" aria-label="Not currently for sale"><span>Pricing under review</span><strong>Not on sale</strong><span>No approved purchase price</span></div>
     </div>
