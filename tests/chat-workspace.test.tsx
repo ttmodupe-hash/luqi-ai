@@ -62,10 +62,10 @@ it('shows only confirmed in-tab chats and selecting one never repeats metered in
   await ask('My verified first question');
   const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
   const history = within(sidebar).getByRole('group', { name: 'Chats from this tab' });
-  expect(within(history).getByRole('button', { name: 'My verified first question' })).toBeTruthy();
+  expect(within(history).getByRole('button', { name: 'My verified first question', exact: true })).toBeTruthy();
   fireEvent.click(within(sidebar).getByRole('button', { name: 'New chat' }));
   expect(screen.queryByText('Verified response to My verified first question')).toBeNull();
-  fireEvent.click(within(history).getByRole('button', { name: 'My verified first question' }));
+  fireEvent.click(within(history).getByRole('button', { name: 'My verified first question', exact: true }));
   await screen.findByText('Verified response to My verified first question');
   expect((screen.getByRole('checkbox', { name: /I understand this question may go/i }) as HTMLInputElement).checked).toBe(false);
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
@@ -110,7 +110,7 @@ it('keeps the dock reachable and lets signed-in users manage many in-tab chats w
   }
   expect(within(sidebar).getByText('Showing 12 of 14 in-tab chats.')).toBeTruthy();
   fireEvent.click(within(sidebar).getByRole('button', { name: /Show more chats/ }));
-  expect(within(sidebar).getByRole('button', { name: 'Synthetic chat topic 1' })).toBeTruthy();
+  expect(within(sidebar).getByRole('button', { name: 'Synthetic chat topic 1', exact: true })).toBeTruthy();
   fireEvent.click(within(sidebar).getByRole('button', { name: 'Forget Synthetic chat topic 1 from this tab' }));
   expect(within(sidebar).getByRole('group', { name: 'Forget recent chat' })).toBeTruthy();
   fireEvent.click(within(sidebar).getByRole('button', { name: 'Remove from tab' }));
