@@ -113,7 +113,7 @@ export default function AskLuqiPage() {
         <p className="luqi-guide-coach-note">Not sure how to ask? The free writing helper below can prepare a clearer draft before you decide whether to sign in. Nothing is sent automatically.</p>
         {urgentNeed && <p role="alert" className="luqi-guide-error">For urgent safety needs, use official emergency services. The AI writing helper is paused for this request.</p>}
         <LuqiPromptCoach draft={need} disabled={urgentNeed} focusTargetId="luqi-guide-need"
-          onApply={value => { setNeed(value); setError(''); setCoachDraftReady(false); }}
+          onApply={value => { setNeed(value); setSubmitted(''); setError(''); setCoachDraftReady(false); clearTravel(); }}
           onUseGuidedDraft={value => {
             if (urgentNeed) return;
             setAiDraft(value); setCoachDraftReady(true); setSubmitted(''); setError(''); clearTravel();
