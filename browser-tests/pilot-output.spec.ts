@@ -21,7 +21,8 @@ for (const [code, status, message] of [
     });
     await page.setViewportSize({ width: 320, height: 820 });
     await page.goto('/#/ai-trial');
-    await page.getByLabel('Email', { exact: true }).fill('output@example.invalid');
+    await page.locator('details.luqi-chat-signin-inline > summary').click();
+  await page.getByLabel('Email', { exact: true }).fill('output@example.invalid');
     await page.getByLabel('Password', { exact: true }).fill('Fixture-Password-2026!');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByLabel('Your question', { exact: true }).fill('Synthetic question');
