@@ -11,6 +11,8 @@ import { guideLuqiNeed } from '../lib/luqi-intent-guide';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
+import CompanionNotePicker, { type SharedCompanionNote } from '../components/CompanionNotePicker';
+import { prepareCompanionQuestion } from '../lib/companion-context';
 import '../chat.css';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '', workspaceMode = false }: { embedded?: boolean; initialQuestion?: string; workspaceMode?: boolean } = {}) {
@@ -35,6 +37,9 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [uncertain, setUncertain] = useState(false);
   const [turns, setTurns] = useState<PilotConversationTurn[]>([]);
   const [shareContext, setShareContext] = useState(false);
+  const [companionMode, setCompanionMode] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
+  const [shareNote, setShareNote] = useState(false);
   // Changing a country invalidates prior optional provider-processing approval.
   useEffect(() => { setShareRegion(false); }, [region]);
   const questionLength = prompt.trim().length;
@@ -42,7 +47,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const contextPreview = shareContext ? previewPilotHistory(turns) : [];
   const contextTooLong = (() => {
     if (!prompt.trim() || tooLong) return false;
-    try { buildPilotInput(prompt.trim(), 'auto', contextPreview); return false; }
+    try { buildPilotInput(prepareCompanionQuestion(prompt.trim(), companionMode, shareNote ? selectedNote?.content : undefined), 'auto', contextPreview); return false; }
     catch { return true; }
   })();
   const epoch = useRef(0); const locked = useRef(false);
@@ -77,7 +82,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (previousToken.current && previousToken.current !== token) {
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
       setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
-      setTurns([]); setShareContext(false); setShareRegion(false); setNotice('');
+      setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
     }
     previousToken.current = token;
   }, [session?.token]);
@@ -91,7 +96,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
     setTurns(workspace.activeThread?.turns ?? []);
-    setShareContext(false); setShareRegion(false); setConsent(false);
+    setShareContext(false); setShareRegion(false); setConsent(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
     setBusy(false); setUncertain(false);
     setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
   }, [workspace?.selectionVersion]);
@@ -115,29 +120,31 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
-    setTurns([]); setShareContext(false); setShareRegion(false);
+    setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
   }
   function newChat() {
     if (locked.current) return;
     if (workspace) { workspace.startNewChat(); return; }
     epoch.current++;
     setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
-    setConsent(false); setShareRegion(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+    setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
   async function submit() {
     if (!session || !consent || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
+    const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
+      shareNote ? selectedNote?.content : undefined);
     const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
     const approvedRegion = shareRegion && region !== 'PAN_AFRICAN_AU' ? region : undefined;
     // Keep the last confirmed reply visible while a follow-up is pending or
     // fails. The next successful reply replaces it; errors never erase it.
     locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
-    setShareContext(false); setShareRegion(false);
+    setShareContext(false); setShareRegion(false); setShareNote(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-      const result = await askPilot(session.token, submittedQuestion, controller.signal, fetch, approvedHistory, approvedRegion);
+      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion);
       if (epoch.current === version) {
         setAnswer(result);
         setTurns(previous => {
@@ -185,7 +192,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       <header className="luqi-chat-canvas-header">
         <div>
           <h1 id="luqi-workspace-chat-heading">LUQIChat</h1>
-          <p>Your AI conversation, with useful tools one click away.</p>
+          <p>Chat with Luqi, or choose a thoughtful companion conversation. Both use the same protected text gateway.</p>
         </div>
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
       </header>
@@ -210,8 +217,9 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               ['Plan my business', 'Help me plan the first three steps for a small business idea.'],
               ['Write a message', 'Help me draft a friendly response to a customer.'],
               ['Explore Africa', 'What should I research before visiting a new African country?'],
+              ['Talk it through', 'I want to talk through a challenge. Please listen and help me think about the next step.'],
             ].map(([label, text]) => <button type="button" key={label} disabled={busy || uncertain}
-              onClick={() => { setPrompt(text); document.getElementById('ai-question')?.focus(); }}>{label}</button>)}
+              onClick={() => { setPrompt(text); if (label === 'Talk it through') setCompanionMode(true); document.getElementById('ai-question')?.focus(); }}>{label}</button>)}
           </div>}
         </div> : <>
           {turns.map((turn, index) => <article key={index}
@@ -249,6 +257,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           disabled={busy || uncertain}
           placeholder="Ask LUQI about an idea, a study topic, a trip or a challenge…"
           onChange={event => setPrompt(event.target.value)} />
+        <label className="luqi-chat-companion-mode">
+          <input type="checkbox" checked={companionMode} disabled={busy || uncertain}
+            onChange={event => setCompanionMode(event.target.checked)} />
+          <span>Companion conversation — ask Luqi to listen thoughtfully and support your thinking (text only, not a person or emergency service).</span>
+        </label>
         <label className="luqi-chat-consent">
           <input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} />
           <span>I understand this question may go to Gemini or OpenAI within the trial limits. I'll use non-sensitive content.</span>
@@ -256,6 +269,17 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <details className="luqi-chat-compose-details">
           <summary>Conversation context, country guide and limits (optional)</summary>
           <p>Consent is per request. No private notes, account email, browsing or voice are attached automatically.</p>
+          <details className="luqi-chat-companion-personalise">
+            <summary>Personalise this reply with one saved private note</summary>
+            <CompanionNotePicker key={session.token} token={session.token} disabled={busy || uncertain}
+              selected={selectedNote} onSelect={note => { setSelectedNote(note); setShareNote(false); }} />
+            {selectedNote && <label className="luqi-chat-companion-share">
+              <input type="checkbox" checked={shareNote} disabled={busy || uncertain}
+                onChange={event => setShareNote(event.target.checked)} />
+              Include the selected note in this one provider request. Off by default; review the note above.
+            </label>}
+            <p>No private note is sent merely by loading, selecting or saving it. A reply is sent only after the separate provider-consent and Send question actions.</p>
+          </details>
           {turns.length > 0 && <label><input type="checkbox" checked={shareContext} disabled={busy}
             onChange={event => setShareContext(event.target.checked)} /> Include reviewed previous turns in this question (off by default)</label>}
           {shareContext && <ol aria-label="Context to send">{contextPreview.map((turn, index) => <li key={index}>
@@ -265,7 +289,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
           <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
           <p>20 provider attempts per account per UTC day, maximum 512 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
-          <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. Nothing is saved in private notes.</p>
+          <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. AI replies are not automatically saved as private notes or long-term memories.</p>
           <Link to="/privacy">Privacy and provider information</Link>
         </details>
         <div className="luqi-chat-compose-actions">
