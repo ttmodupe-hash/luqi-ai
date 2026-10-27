@@ -1,29 +1,13 @@
-# LUQI web/API: Node service. Python workloads use Dockerfile.python separately.
+FROM node:22-alpine AS build
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps --include=dev --ignore-scripts
+COPY api/lib/mysqlConfig.ts api/lib/mysqlConfig.ts
+COPY db/ db/
+COPY scripts/inspect-release-database.ts scripts/inspect-release-database.ts
+RUN node_modules/.bin/esbuild scripts/inspect-release-database.ts --bundle --platform=node --format=esm --outfile=/build/inspect.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
 FROM node:22-alpine
-
-# /app collides with this repository's app/ tree in Vite's absolute-URL resolver.
-# Use a non-colliding physical root; preserve /app for existing operator commands.
-WORKDIR /srv/luqi
-RUN ln -s /srv/luqi /app
-RUN apk add --no-cache bash
-
-COPY package*.json ./
-RUN npm ci --legacy-peer-deps --include=dev
-ENV PATH="/srv/luqi/node_modules/.bin:${PATH}"
-
-COPY . .
-RUN chmod +x ./start.sh
-
-# Do not suppress errors: verify the graph and bytes inside the real image.
-RUN node scripts/verify-build.mjs \
-    && npm run build \
-    && node scripts/verify-production-frontend.mjs
-
-RUN test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js && test -s dist/prepare-mysql-schema.js && test -s dist/prepare-mysql-runtime-role.js
-
-ENV NODE_ENV=production
-ENV PORT=3000
-EXPOSE 3000
-# The web process needs readable bundles and network/database access, not root.
+WORKDIR /work
+COPY --from=build /build/inspect.js ./inspect.js
 USER node
-ENTRYPOINT ["/bin/bash", "./start.sh"]
+CMD ["node","/work/inspect.js"]
