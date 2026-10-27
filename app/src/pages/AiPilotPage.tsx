@@ -153,11 +153,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       } else if (code === 'AI_INPUT_TOO_LARGE' || code === 'INVALID_INPUT') {
         setNotice('Your question could not be sent as entered. Shorten or correct it; no provider attempt was started.');
       } else if (code === 'AI_RESPONSE_BLOCKED') {
-        setNotice('LUQI couldn't answer this request. We won't automatically send it elsewhere. The attempt may still count toward your usage limit.');
+        setNotice('LUQI could not answer this request. We won't automatically send it elsewhere. The attempt may still count toward your usage limit.');
       } else if (code === 'AI_REPLY_INCOMPLETE') {
-        setNotice('LUQI couldn't finish this answer. Nothing incomplete was displayed, and we won't send another request without your approval. This attempt may still count toward your usage limit. You can try a shorter question.');
+        setNotice('LUQI could not finish this answer. Nothing incomplete was displayed, and we will not send another request without your approval. This attempt may still count toward your usage limit. You can try a shorter question.');
       } else if (code === 'AI_RESPONSE_INVALID') {
-        setNotice('LUQI couldn't verify a complete answer, so it wasn't displayed or retried automatically. This attempt may still count toward your usage limit.');
+        setNotice('LUQI could not verify a complete answer, so it was not displayed or retried automatically. This attempt may still count toward your usage limit.');
       } else if (code === 'AI_USER_DAILY_QUOTA_EXHAUSTED') setNotice('Your daily allowance of 20 provider attempts has been reached. Try another UTC day.');
       else if (code === 'AI_PROVIDER_BUDGET_EXHAUSTED') setNotice('The monthly provider allowance has been reached. No further attempt was started on that provider.');
       else setNotice('AI replies are unavailable. Failed provider attempts may still count toward the allowance.');
