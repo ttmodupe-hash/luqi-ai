@@ -9,8 +9,9 @@ test('visitor sees truthful payment availability from Plans without any payment 
   await page.getByRole('link', { name: 'View payment availability', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Payments are not available yet' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'LUQI Assisted Creator Pack' })).toBeVisible();
-  await expect(page.getByText('R299', { exact: true })).toBeVisible();
-  await expect(page.getByText(/not yet bookable/)).toBeVisible();
+  await expect(page.getByText('Not on sale', { exact: true })).toBeVisible();
+  await expect(page.getByText('No approved purchase price')).toBeVisible();
+  await expect(page.getByText('R299', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Continue to Paystack' })).toHaveCount(0);
   expect(posts).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
