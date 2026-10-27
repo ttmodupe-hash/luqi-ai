@@ -15,9 +15,9 @@ async function isolate(page: Page, baseURL: string) {
 }
 async function trialPage(page: Page, writes: string[]) {
   await expect(page).toHaveURL(/#\/chat$/);
-  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Sign in to LUQI' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in to Luqi' })).toBeVisible();
   await expect(page.locator('#ai-question')).toHaveCount(0);
   expect(writes).toEqual([]);
 }

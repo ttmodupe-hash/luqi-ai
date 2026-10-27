@@ -2,20 +2,20 @@ import { test, expect } from '@playwright/test';
 
 test.use({ serviceWorkers: 'block' });
 
-test('desktop LUQIChat opens sidebar and conversation with usable service shortcuts', async ({ page }, testInfo) => {
+test('desktop Luqi Chat opens sidebar and conversation with usable service shortcuts', async ({ page }, testInfo) => {
   const writes: string[] = [];
   page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto('/#/chat');
   const rail = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
-  const canvas = page.getByRole('heading', { name: 'LUQIChat', exact: true });
+  const canvas = page.getByRole('heading', { name: 'Luqi Chat', exact: true });
   await expect(rail).toBeVisible(); await expect(canvas).toBeVisible();
   await expect(rail.getByRole('button', { name: 'New chat' })).toBeVisible();
-  const services = rail.getByRole('navigation', { name: 'Jump into LUQI services' });
+  const services = rail.getByRole('navigation', { name: 'Jump into Luqi services' });
   for (const [name, href] of [
     ['Business desk', '#/business-desk'], ['Study desk', '#/study-desk'],
     ['Content studio', '#/content-studio'], ['Private notes', '#/companion'],
-    ['LUQI tools', '#/omega-tasks'],
+    ['Luqi tools', '#/omega-tasks'],
   ]) await expect(services.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
   const left = await rail.boundingBox(), right = await canvas.boundingBox();
   expect(left).not.toBeNull(); expect(right).not.toBeNull();
@@ -30,7 +30,7 @@ test('320px mobile sidebar opens, closes and never creates a paid request', asyn
   page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto('/#/chat');
-  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
   const dock = page.getByRole('navigation', { name: 'Mobile chat navigation' });
   await expect(dock).toBeVisible();
   await expect(dock.getByRole('button', { name: 'Browse services' })).toBeVisible();
@@ -38,9 +38,9 @@ test('320px mobile sidebar opens, closes and never creates a paid request', asyn
   await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('luqichat-mobile.png'), fullPage: true });
   await dock.getByRole('button', { name: 'Browse services' }).click();
-  const sidebar = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const sidebar = page.getByRole('complementary', { name: 'Luqi Chat sidebar' });
   await expect(sidebar).toBeInViewport();
-  await expect(sidebar.getByRole('navigation', { name: 'Jump into LUQI services' })
+  await expect(sidebar.getByRole('navigation', { name: 'Jump into Luqi services' })
     .getByRole('link', { name: 'Africa & travel guide' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('luqichat-mobile-menu.png'), fullPage: true });
   await page.keyboard.press('Escape');
@@ -61,7 +61,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   await page.route('**/api/v1/luqi-core', route => {
     replies++;
     expect(route.request().postDataJSON()).toEqual({ user_input: 'A synthetic first question' });
-    return route.fulfill({ json: { status: 'success', response: 'Synthetic LUQI confirmed answer',
+    return route.fulfill({ json: { status: 'success', response: 'Synthetic Luqi confirmed answer',
       provider: 'gemini', provider_model: 'fixture-model' } });
   });
   await page.setViewportSize({ width: 1440, height: 960 });
@@ -78,7 +78,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   const recent = rail.getByRole('group', { name: 'Chats from this tab' });
   await expect(recent.getByRole('button', { name: 'A synthetic first question', exact: true })).toBeVisible();
   await rail.getByRole('button', { name: 'New chat' }).click();
-  await expect(page.getByText('Synthetic LUQI confirmed answer')).toHaveCount(0);
+  await expect(page.getByText('Synthetic Luqi confirmed answer')).toHaveCount(0);
   await recent.getByRole('button', { name: 'A synthetic first question', exact: true }).click();
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: /I understand this question may go/ })).not.toBeChecked();
