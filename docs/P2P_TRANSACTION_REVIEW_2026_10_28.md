@@ -50,6 +50,17 @@ processes, privacy/retention readiness and physical-device acceptance. Messaging
 remains off until those requirements are met. No complete-security, immutable-ledger,
 verified translation quality or multi-member group-chat claim is made.
 
+## Dependency audit finding
+
+The first CI run found CVE-2026-114605 in dnspython 2.8.0 on Python 3.10. The
+fixed 2.9.0 release requires Python 3.11 or later. Repository-wide import/reference
+inspection found `email-validator` only in requirements.txt: no Python application
+or test imports it or Pydantic's EmailStr. Remove that unused direct dependency
+instead of suppressing the advisory or claiming support for an incompatible
+resolver release. Existing application validation is unchanged. The complete
+resolved-runtime audits and Python compatibility suite must pass on the updated
+commit; no audit exclusion or interpreter support change is introduced.
+
 Primary references checked during review:
 
 - [MySQL 8.4 — InnoDB error handling](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html):
@@ -57,6 +68,7 @@ Primary references checked during review:
   Explicitly rolling back the full attempt is necessary before replaying its work.
 - [MySQL 8.4 — Handling deadlocks](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks-handling.html).
 - [W3C Web Cryptography](https://www.w3.org/TR/webcrypto/).
+- [dnspython security advisory](https://github.com/rthalley/dnspython/security/advisories/GHSA-45c3-73f7-pv4m).
 - [OWASP HTML5 storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html):
   device encryption does not establish browser authentication or protect an unlocked
   page from same-origin script compromise.
