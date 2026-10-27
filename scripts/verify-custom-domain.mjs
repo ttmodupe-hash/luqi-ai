@@ -58,6 +58,25 @@ async function readRedirect(request, path, destination) {
   }
 }
 
+// Use synthetic filenames only. Never fetch a real secret path or inspect a
+// response body when verifying the public static-file denial contract.
+async function verifySyntheticStaticDenial(request, path) {
+  const response = await request(CUSTOM_ORIGIN + path, {
+    method: "GET", cache: "no-store", credentials: "omit", redirect: "error",
+    headers: { "Accept": "application/json", "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(12_000),
+  });
+  try {
+    if (response.status !== 404 || response.redirected ||
+        response.headers.get("Cache-Control") !== "no-store" ||
+        response.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
+      throw Error("UNVERIFIED_STATIC_DENIAL");
+    }
+  } finally {
+    void response.body?.cancel().catch(() => {});
+  }
+}
+
 export async function verifyCustomDomain(expected, request = fetch) {
   if (typeof expected !== "string" || !SHA.test(expected)) throw Error("INVALID_EXPECTED_REVISION");
   const health = await readJson(request, "/v1/health");
@@ -69,8 +88,10 @@ export async function verifyCustomDomain(expected, request = fetch) {
       release.body.commit !== expected) throw Error("UNVERIFIED_CUSTOM_REVISION");
   await readRedirect(request, "/signup", "/#/join");
   await readRedirect(request, "/login", "/#/login");
+  await verifySyntheticStaticDenial(request, "/__luqi_boundary_sentinel__.env");
+  await verifySyntheticStaticDenial(request, "/assets/__luqi_boundary_sentinel__.js");
   return { format: "luqi.custom-https.v1", status: "verified", matched_commit: expected,
-    signup_redirect_verified: true, login_redirect_verified: true,
+    signup_redirect_verified: true, login_redirect_verified: true, static_boundary_verified: true,
     account_registration_executed: false, customer_login_executed: false,
     support_mail_verified: false, launch_approved: false };
 }
@@ -80,6 +101,7 @@ export function domainCheckFailureMessage(stage) {
   if (stage === "preflight") return "FAIL Custom HTTPS check not authorized or revision invalid.";
   if (stage === "deployment") return "UNVERIFIED_DEPLOYMENT: expected release not observed; custom-domain HTTPS was NOT tested.";
   if (stage === "https") return "UNVERIFIED_CUSTOM_HTTPS: release observed but hostname HTTPS/redirect acceptance failed.";
+  if (stage === "static") return "UNVERIFIED_STATIC_BOUNDARY: hostname responded but synthetic file denials failed.";
   throw Error("INVALID_CHECK_STAGE");
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -91,8 +113,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     stage = "deployment";
     await waitForPublicRevision(expected, { timeoutMs: 300_000 });
     stage = "https";
-    await verifyCustomDomain(expected);
-    console.log("PASS Custom LUQI HTTPS health, release identity and safe account entry.");
+    try {
+      await verifyCustomDomain(expected);
+    } catch (error) {
+      if (error instanceof Error && error.message === "UNVERIFIED_STATIC_DENIAL") stage = "static";
+      throw error;
+    }
+    console.log("PASS Custom LUQI HTTPS health, release identity, safe account entry and synthetic static-file denials.");
     console.log("No account created, user authenticated, mailbox checked or payment initiated.");
   } catch {
     // Redact private transport, DNS/TLS and HTTP diagnostics.
