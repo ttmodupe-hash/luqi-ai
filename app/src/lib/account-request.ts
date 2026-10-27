@@ -22,8 +22,11 @@ export async function requestAccountJson(
   const timer = setTimeout(abort, ACCOUNT_REQUEST_TIMEOUT_MS);
   const operation = async (): Promise<AccountResult> => {
     const response = await request(path, {
-      method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      // Same-origin cookies are accepted only by the reviewed host-only session
+      // issuer. The response's bearer token is still kept only in React memory.
+      method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+        'X-Luqi-Session-Intent': path === '/api/v1/auth/login' ? 'login' : 'signup' },
       body: JSON.stringify({ email: credentials.email, password: credentials.password }),
     });
     const discard = () => { void response.body?.cancel().catch(() => {}); };
