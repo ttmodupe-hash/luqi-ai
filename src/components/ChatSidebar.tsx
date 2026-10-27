@@ -29,6 +29,7 @@ export default function ChatSidebar() {
   const [confirmForget, setConfirmForget] = useState<string | null>(null);
   const [mobileSection, setMobileSection] = useState<'services' | 'recents'>('services');
   const recentAnchor = useRef<HTMLElement>(null);
+  const mobileMenu = useRef<HTMLButtonElement>(null);
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
   useEffect(() => { setConfirmForget(null); setShown(12); }, [customer?.session?.token]);
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function ChatSidebar() {
   }, [mobileOpen, mobileSection]);
   useEffect(() => {
     if (!mobileOpen) return;
-    const handle = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); };
+    const handle = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMobileOpen(false); mobileMenu.current?.focus(); } };
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [mobileOpen]);
@@ -44,18 +45,19 @@ export default function ChatSidebar() {
     chat.title.toLowerCase().includes(filter.trim().toLowerCase()));
   const visibleRecent = recent.slice(0, shown);
   const close = () => { setMobileOpen(false); setMobileSection('services'); };
+  const closeWithFocus = () => { close(); mobileMenu.current?.focus(); };
   const showSidebar = (section: 'services' | 'recents') => { setMobileSection(section); setMobileOpen(true); };
   const start = () => { workspace?.startNewChat(); close(); };
   return <>
     <div className="luqi-chat-mobile-bar">
-      <button type="button" aria-controls="luqi-chat-sidebar" aria-expanded={mobileOpen}
+      <button ref={mobileMenu} type="button" aria-controls="luqi-chat-sidebar" aria-expanded={mobileOpen}
         aria-label={mobileOpen ? 'Close chat sidebar' : 'Open chat sidebar'} onClick={() => setMobileOpen(open => !open)}>
         {mobileOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
       </button>
       <Link to="/chat" onClick={close}>LUQI<span>Chat</span></Link>
       <button type="button" aria-label="New chat" onClick={start}><Plus size={22} aria-hidden="true" /></button>
     </div>
-    {mobileOpen && <button className="luqi-chat-backdrop" type="button" aria-label="Dismiss sidebar overlay" onClick={close} />}
+    {mobileOpen && <button className="luqi-chat-backdrop" type="button" aria-label="Dismiss sidebar overlay" onClick={closeWithFocus} />}
     <aside id="luqi-chat-sidebar" aria-label="LUQIChat sidebar"
       className={'luqi-chat-rail' + (mobileOpen ? ' luqi-chat-rail-open' : '') + (collapsed ? ' luqi-chat-rail-compact' : '')}>
       <div className="luqi-chat-rail-top">
