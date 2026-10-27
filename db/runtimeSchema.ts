@@ -30,6 +30,10 @@ export const RUNTIME_TABLES: Readonly<Record<string, TableContract>> = {
       'importance', 'created_at'],
     unique: [['id']], critical: { id },
   },
+  // Only required after the operator deliberately enables session restoration
+  // and grants the dedicated web role tightly scoped access to this table.
+  // A missing table or privilege blocks enablement; it never auto-migrates.
+  // Omitted from the ordinary pilot contract while rollout is disabled.
   offline_sync_queue: {
     columns: ['id', 'user_id', 'device_id', 'action', 'payload_json', 'synced', 'synced_at', 'created_at'],
     unique: [['id']], critical: { id },
@@ -54,6 +58,12 @@ export const RUNTIME_TABLES: Readonly<Record<string, TableContract>> = {
     critical: { day_utc: { type: 'char(10)' }, user_id: { type: 'bigint' },
       attempts: { type: 'int unsigned' } },
   },
+};
+const customerResume: TableContract = {
+  columns: ['id', 'user_id', 'token', 'expires_at', 'created_at'],
+  unique: [['id'], ['token']],
+  critical: { id: { type: 'bigint unsigned' }, token: { type: 'varchar(500)' },
+    expires_at: { type: 'timestamp' } },
 };
 const omega: TableContract = {
   columns: ['id', 'owner_id', 'idempotency_key', 'handler', 'handler_version', 'side_effects',
@@ -130,6 +140,7 @@ Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
     const settings = parseMySqlConnectionSettings(environment);
     if (!settings) return { status: 'unconfigured', tables: 0 };
     const contracts = { ...RUNTIME_TABLES,
+      ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { sessions: customerResume } : {}),
       ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
       ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
     connection = await mysql.createConnection({ ...settings, connectTimeout: 4_000 });
