@@ -66,7 +66,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setThreads(previous => {
       const existing = previous.find(chat => chat.id === targetId);
       const turns: PilotConversationTurn[] = [...(existing?.turns ?? []),
-        { sender: 'user', text: safeQuestion }, { sender: 'ai', text: reply.response }].slice(-MAX_TURNS);
+        { sender: 'user' as const, text: safeQuestion }, { sender: 'ai' as const, text: reply.response }].slice(-MAX_TURNS);
       const updated: ChatThread = { id: targetId, title: existing?.title ?? nextTitle, turns, lastReply: reply };
       return [updated, ...previous.filter(chat => chat.id !== targetId)].slice(0, MAX_CHATS);
     });
