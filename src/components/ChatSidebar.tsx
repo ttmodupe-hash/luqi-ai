@@ -44,7 +44,7 @@ export default function ChatSidebar() {
       <Link to="/chat" onClick={close}>LUQI<span>Chat</span></Link>
       <button type="button" aria-label="New chat" onClick={start}><Plus size={22} aria-hidden="true" /></button>
     </div>
-    {mobileOpen && <button className="luqi-chat-backdrop" type="button" aria-label="Close chat sidebar" onClick={close} />}
+    {mobileOpen && <button className="luqi-chat-backdrop" type="button" aria-label="Dismiss sidebar overlay" onClick={close} />}
     <aside id="luqi-chat-sidebar" aria-label="LUQIChat sidebar"
       className={'luqi-chat-rail' + (mobileOpen ? ' luqi-chat-rail-open' : '') + (collapsed ? ' luqi-chat-rail-compact' : '')}>
       <div className="luqi-chat-rail-top">
