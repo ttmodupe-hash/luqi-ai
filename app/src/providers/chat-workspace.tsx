@@ -19,10 +19,11 @@ type ChatWorkspaceValue = {
   selectionVersion: number;
   startNewChat: () => void;
   selectThread: (id: string) => void;
+  forgetThread: (id: string) => void;
   recordConfirmedReply: (question: string, reply: PilotReply) => void;
 };
 const Context = createContext<ChatWorkspaceValue | null>(null);
-const MAX_CHATS = 25;
+const MAX_CHATS = 100; // Bounded in-tab recents; never advertised as a cloud archive.
 const MAX_TURNS = 8; // The pilot shares a separate, shorter preview only with explicit consent.
 
 export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
@@ -56,6 +57,14 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setActiveId(id);
     setSelectionVersion(version => version + 1);
   }, [token, threads]);
+  const forgetThread = useCallback((id: string) => {
+    if (!token || tokenAtPaint.current !== token || !threads.some(chat => chat.id === id)) return;
+    setThreads(current => current.filter(chat => chat.id !== id));
+    if (activeId === id) {
+      setActiveId(null);
+      setSelectionVersion(version => version + 1);
+    }
+  }, [token, threads, activeId]);
   const recordConfirmedReply = useCallback((question: string, reply: PilotReply) => {
     if (!token || tokenAtPaint.current !== token || !question.trim()) return;
     const safeQuestion = question.trim().slice(0, 6000);
@@ -75,7 +84,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
 
   const activeThread = visibleThreads.find(chat => chat.id === activeId) ?? null;
   const value = useMemo<ChatWorkspaceValue>(() => ({
-    threads: visibleThreads, activeThread, selectionVersion, startNewChat, selectThread, recordConfirmedReply,
+    threads: visibleThreads, activeThread, selectionVersion, startNewChat, selectThread, forgetThread, recordConfirmedReply,
   }), [visibleThreads, activeThread, selectionVersion, startNewChat, selectThread, recordConfirmedReply]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

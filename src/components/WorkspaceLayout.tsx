@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
-import ChatSidebar from "./ChatSidebar";
+import RouteLoadBoundary from "./RouteLoadBoundary";
+// The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
+const ChatSidebar = lazy(() => import("./ChatSidebar"));
 import { findWorkspaceTools } from "./workspace-catalog";
 import { useOptionalCustomerSession } from "../providers/customer-session";
 import "../workspace.css";
@@ -69,7 +71,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       </a>
       {isChatWorkspace ? (
         <div className="luqi-chat-shell">
-          <ChatSidebar />
+          <RouteLoadBoundary><ChatSidebar /></RouteLoadBoundary>
           <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
             {customer?.expired && <p role="status" className="luqi-info">
               Your session ended. <Link to="/login">Sign in again</Link> to use your LUQI account.

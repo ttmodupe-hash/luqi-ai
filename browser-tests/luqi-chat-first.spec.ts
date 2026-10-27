@@ -86,7 +86,7 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   expect(auth).toHaveLength(1);
 });
 

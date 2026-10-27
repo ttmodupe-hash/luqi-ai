@@ -31,13 +31,18 @@ test('320px mobile sidebar opens, closes and never creates a paid request', asyn
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto('/#/chat');
   await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Open chat sidebar' })).toBeVisible();
-  await page.getByRole('button', { name: 'Open chat sidebar' }).click();
+  const dock = page.getByRole('navigation', { name: 'Mobile chat navigation' });
+  await expect(dock).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Browse services' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Show recent chats' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('luqichat-mobile.png'), fullPage: true });
+  await dock.getByRole('button', { name: 'Browse services' }).click();
   const sidebar = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
   await expect(sidebar).toBeInViewport();
   await expect(sidebar.getByRole('navigation', { name: 'Jump into LUQI services' })
     .getByRole('link', { name: 'Africa & travel guide' })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('luqichat-mobile.png'), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath('luqichat-mobile-menu.png'), fullPage: true });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Open chat sidebar' })).toHaveAttribute('aria-expanded', 'false');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -61,6 +66,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   });
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto('/#/chat');
+  await page.locator('details.luqi-chat-signin-inline > summary').click();
   await page.getByLabel('Email', { exact: true }).fill('synthetic@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-passphrase-only-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -70,17 +76,41 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
   const rail = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
   const recent = rail.getByRole('group', { name: 'Chats from this tab' });
-  await expect(recent.getByRole('button', { name: 'A synthetic first question' })).toBeVisible();
+  await expect(recent.getByRole('button', { name: 'A synthetic first question', exact: true })).toBeVisible();
   await rail.getByRole('button', { name: 'New chat' }).click();
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toHaveCount(0);
-  await recent.getByRole('button', { name: 'A synthetic first question' }).click();
+  await recent.getByRole('button', { name: 'A synthetic first question', exact: true }).click();
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: /I understand this question may go/ })).not.toBeChecked();
   expect(replies).toBe(1);
   expect(logins).toBe(1);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   await expect(recent).toHaveCount(0);
   expect(replies).toBe(1);
+});
+
+test('390px signed-in phone keeps the composer and bottom navigation usable with no model call', async ({ page }, testInfo) => {
+  let paid = 0;
+  await page.route('**/v1/readiness', route => route.fulfill({ json: {
+    checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' },
+  } }));
+  await page.route('**/api/v1/auth/login', route =>
+    route.fulfill({ json: { token: 'phone-fixture', user: { email: 'phone@example.invalid' } } }));
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().includes('/api/v1/luqi-core')) paid++;
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/#/chat');
+  await page.locator('details.luqi-chat-signin-inline > summary').click();
+  await page.getByLabel('Email', { exact: true }).fill('phone@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('Synthetic-Phone-Password-2026!');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByLabel('Your question')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Mobile chat navigation' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('luqichat-mobile-signedin.png'), fullPage: true });
+  expect(paid).toBe(0);
 });
