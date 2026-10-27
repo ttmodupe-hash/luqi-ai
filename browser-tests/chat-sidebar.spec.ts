@@ -76,10 +76,10 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
   const rail = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
   const recent = rail.getByRole('group', { name: 'Chats from this tab' });
-  await expect(recent.getByRole('button', { name: 'A synthetic first question' })).toBeVisible();
+  await expect(recent.getByRole('button', { name: 'A synthetic first question', exact: true })).toBeVisible();
   await rail.getByRole('button', { name: 'New chat' }).click();
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toHaveCount(0);
-  await recent.getByRole('button', { name: 'A synthetic first question' }).click();
+  await recent.getByRole('button', { name: 'A synthetic first question', exact: true }).click();
   await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: /I understand this question may go/ })).not.toBeChecked();
   expect(replies).toBe(1);
