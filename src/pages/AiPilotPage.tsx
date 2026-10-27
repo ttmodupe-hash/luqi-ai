@@ -17,6 +17,13 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
   const optionalChatWorkspace = useOptionalChatWorkspace();
   const workspace = workspaceMode ? optionalChatWorkspace : null;
+  const previouslySignedIn = useRef(!!session);
+  useEffect(() => {
+    if (workspace && session && !previouslySignedIn.current) {
+      document.getElementById('ai-question')?.focus({ preventScroll: true });
+    }
+    previouslySignedIn.current = !!session;
+  }, [session, workspace]);
   const { region } = useSovereignRegion();
   const [shareRegion, setShareRegion] = useState(false);
   const previousToken = useRef<string | null>(null);
@@ -174,7 +181,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   if (workspace) {
     const canSend = !!session && !checking && available && consent && !!prompt.trim() &&
       !tooLong && !contextTooLong && !busy && !uncertain;
-    return <main className="luqi-chat-canvas" aria-labelledby="luqi-workspace-chat-heading">
+    return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
       <header className="luqi-chat-canvas-header">
         <div>
           <h1 id="luqi-workspace-chat-heading">LUQIChat</h1>
@@ -182,14 +189,14 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div>
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
       </header>
-      <div className="luqi-chat-availability-row">
+      {session && <div className="luqi-chat-availability-row">
         <span role="status">{checking ? 'Checking AI readiness…' :
           available ? 'AI provider configured · real replies depend on live limits' :
             'AI requests paused · no question can be sent'}</span>
         <button type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
           {checking ? 'Checking…' : 'Check availability'}
         </button>
-      </div>
+      </div>}
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
         {!turns.length ? <div className="luqi-chat-welcome">
