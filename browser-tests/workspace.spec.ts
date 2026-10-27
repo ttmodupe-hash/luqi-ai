@@ -24,13 +24,13 @@ test("workspace filters distinguish usable tools from previews without making AI
   });
   await page.goto("/#/");
   await expect(
-    page.getByText("Open LUQI chat and guidance"),
+    page.getByText("Open Luqi chat and guidance"),
   ).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(9);
   // The signed-in trial is one new discoverable card; all existing tools remain.
   await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
     "AI text trial", "Private notes", "Physics lab", "Service status",
-    "African languages", "Content studio", "LUQI practical tools", "Business desk", "Study desk",
+    "African languages", "Content studio", "Luqi practical tools", "Business desk", "Study desk",
   ]);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(8);
@@ -64,7 +64,7 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   // A freshly loaded SPA may not have mounted the keyboard shortcut listener.
   // Wait for real workspace controls before pressing the key, rather than
   // bypassing the keyboard path with a click or programmatic focus.
-  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Luqi workspace home" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search workspace" })).toBeVisible();
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Find your next step" });
@@ -73,7 +73,7 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   await expect(search).toBeFocused();
   await search.fill("travel budget");
   await expect(
-    dialog.getByRole("link", { name: "LUQI practical tools" }),
+    dialog.getByRole("link", { name: "Luqi practical tools" }),
   ).toBeVisible();
   await expect(dialog.getByRole("link")).toHaveCount(1);
   for (let i = 0; i < 5; i++) {
@@ -119,7 +119,7 @@ test("navigation and skip link work at small widths without changing hash routes
   // assertion or programmatically focusing the skip link.
   const skipLink = page.getByRole("link", { name: "Skip to content" });
   await expect(skipLink).toBeAttached();
-  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Luqi workspace home" })).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(skipLink).toBeFocused();
   await page.keyboard.press("Enter");
