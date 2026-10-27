@@ -33,6 +33,7 @@ function Fixture({ extra }: { extra?: React.ReactNode }) {
   </ChatWorkspaceProvider></CustomerSessionProvider></MemoryRouter>;
 }
 async function login() {
+  fireEvent.click(screen.getByText('Prefer to sign in here?'));
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'pilot@example.invalid' } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'synthetic-safe-password-2026' } });
   fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true }));
@@ -94,4 +95,26 @@ it('clears the prior identity’s recent thread before painting the next identit
   const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
   expect(within(sidebar).queryByRole('button', { name: 'Only the first account knows this' })).toBeNull();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
+});
+
+
+it('keeps the dock reachable and lets signed-in users manage many in-tab chats without silent storage', async () => {
+  render(<Fixture />);
+  const dock = screen.getByRole('navigation', { name: 'Mobile chat navigation' });
+  expect(within(dock).getByRole('button', { name: 'Show recent chats' })).toBeTruthy();
+  await login();
+  const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  for (let i = 1; i <= 14; i++) {
+    await ask('Synthetic chat topic ' + i);
+    fireEvent.click(within(sidebar).getByRole('button', { name: 'New chat' }));
+  }
+  expect(within(sidebar).getByText('Showing 12 of 14 in-tab chats.')).toBeTruthy();
+  fireEvent.click(within(sidebar).getByRole('button', { name: /Show more chats/ }));
+  expect(within(sidebar).getByRole('button', { name: 'Synthetic chat topic 1' })).toBeTruthy();
+  fireEvent.click(within(sidebar).getByRole('button', { name: 'Forget Synthetic chat topic 1 from this tab' }));
+  expect(within(sidebar).getByRole('group', { name: 'Forget recent chat' })).toBeTruthy();
+  fireEvent.click(within(sidebar).getByRole('button', { name: 'Remove from tab' }));
+  expect(within(sidebar).queryByRole('button', { name: 'Synthetic chat topic 1' })).toBeNull();
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(14);
+  expect(request.mock.calls.some(([path]) => String(path).includes('/companion/conversations'))).toBe(false);
 });
