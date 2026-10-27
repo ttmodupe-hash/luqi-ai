@@ -134,3 +134,29 @@
 @media (prefers-reduced-motion: reduce) {
   .luqi-chat-rail { transition:none; }
 }
+
+
+/* Preserve a useful conversation viewport on 320px phones without hiding consent. */
+.luqi-chat-availability-row > span { flex: 1; min-width: 150px; }
+.luqi-chat-availability-row > button { flex: none; min-height: 38px; white-space: nowrap; }
+@media(max-width:580px) {
+  .luqi-chat-availability-row { gap: 8px; padding: 11px 0; font-size: 11px; }
+  .luqi-chat-availability-row > span { min-width: 0; }
+  .luqi-chat-availability-row > button { font-size: 11px; padding: 8px 9px; }
+  .luqi-chat-transcript { min-height: 150px; padding: 14px 0 18px; }
+  .luqi-chat-message { padding: 11px 12px; }
+  .luqi-chat-welcome-symbol { margin-bottom: 10px; }
+  .luqi-chat-welcome h2 { font-size: 26px; }
+  .luqi-chat-welcome p { font-size: 12px; line-height: 1.45; margin-bottom: 12px; }
+  .luqi-chat-compose-panel { padding: 10px; }
+  .luqi-chat-compose-panel textarea { min-height: 54px; max-height: 180px; padding: 10px; }
+  .luqi-chat-compose-panel .luqi-chat-consent { margin: 7px 0 5px; gap: 7px; font-size: 11px; }
+  .luqi-chat-compose-details { margin-top: 5px; padding-top: 5px; }
+  .luqi-chat-compose-details summary { min-height: 24px; font-size: 11px; }
+  .luqi-chat-compose-actions { gap: 6px; margin-top: 6px; }
+  .luqi-chat-compose-actions .luqi-chat-limit { flex-basis: auto; font-size: 10px; }
+  .luqi-chat-compose-actions button { padding: 8px 12px; min-height: 40px; font-size: 12px; }
+  .luqi-chat-new-in-composer { display: none !important; }
+  .luqi-chat-canvas-header { padding: 5px 0 12px; }
+  .luqi-chat-canvas-header h1 { font-size: 20px; }
+}
