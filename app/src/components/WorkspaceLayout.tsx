@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
+import ChatSidebar from "./ChatSidebar";
 import { findWorkspaceTools } from "./workspace-catalog";
 import { useOptionalCustomerSession } from "../providers/customer-session";
 import "../workspace.css";
@@ -16,6 +17,7 @@ const navigation = [
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const isChatWorkspace = location.pathname === "/chat";
   const customer = useOptionalCustomerSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -51,7 +53,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   }, [searchOpen]);
   const results = findWorkspaceTools(query);
   return (
-    <div className="luqi-shell">
+    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"}>
       <Toaster />
       <a
         className="luqi-skip"
@@ -65,6 +67,18 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
+      {isChatWorkspace ? (
+        <div className="luqi-chat-shell">
+          <ChatSidebar />
+          <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
+            {customer?.expired && <p role="status" className="luqi-info">
+              Your session ended. <Link to="/login">Sign in again</Link> to use your LUQI account.
+            </p>}
+            {children}
+          </div>
+        </div>
+      ) : (
+        <>
       <header
         className="luqi-header"
         onKeyDown={(event) => {
@@ -169,6 +183,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         </nav>
         <span>© {new Date().getFullYear()} LUQI AI</span>
       </footer>
+        </>
+      )}
       <dialog
         ref={dialog}
         className="luqi-search-dialog"
