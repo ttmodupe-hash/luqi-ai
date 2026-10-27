@@ -47,7 +47,7 @@ async function ask(question: string) {
 }
 it('renders a two-panel chat-first layout and real service shortcuts without an AI call', async () => {
   render(<Fixture />);
-  const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
   expect(within(sidebar).getByRole('navigation', { name: 'Jump into LUQI services' })).toBeTruthy();
   expect(within(sidebar).getByRole('link', { name: 'Business desk' }).getAttribute('href')).toBe('/business-desk');
   expect(within(sidebar).getByRole('link', { name: 'Private notes' }).getAttribute('href')).toBe('/companion');
@@ -60,7 +60,7 @@ it('shows only confirmed in-tab chats and selecting one never repeats metered in
   await login();
   expect(screen.queryByText('Unverified or fabricated chat')).toBeNull();
   await ask('My verified first question');
-  const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
   const history = within(sidebar).getByRole('group', { name: 'Chats from this tab' });
   expect(within(history).getByRole('button', { name: 'My verified first question' })).toBeTruthy();
   fireEvent.click(within(sidebar).getByRole('button', { name: 'New chat' }));
@@ -74,7 +74,7 @@ it('removes confirmed chats immediately on sign-out and never loads private note
   render(<Fixture />);
   await login();
   await ask('Private first account question');
-  const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
   fireEvent.click(within(sidebar).getByRole('button', { name: 'Sign out' }));
   expect(screen.queryByText('Verified response to Private first account question')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Private first account question' })).toBeNull();
@@ -92,7 +92,7 @@ it('clears the prior identity’s recent thread before painting the next identit
   await ask('Only the first account knows this');
   fireEvent.click(screen.getByRole('button', { name: 'Account two' }));
   expect(screen.queryByText('Verified response to Only the first account knows this')).toBeNull();
-  const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
   expect(within(sidebar).queryByRole('button', { name: 'Only the first account knows this' })).toBeNull();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
 });
@@ -103,7 +103,7 @@ it('keeps the dock reachable and lets signed-in users manage many in-tab chats w
   const dock = screen.getByRole('navigation', { name: 'Mobile chat navigation' });
   expect(within(dock).getByRole('button', { name: 'Show recent chats' })).toBeTruthy();
   await login();
-  const sidebar = screen.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
   for (let i = 1; i <= 14; i++) {
     await ask('Synthetic chat topic ' + i);
     fireEvent.click(within(sidebar).getByRole('button', { name: 'New chat' }));
