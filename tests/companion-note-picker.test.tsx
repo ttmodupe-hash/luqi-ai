@@ -42,7 +42,9 @@ it('loads only after a click, selects a user-authored short note, and never send
   const select = await screen.findByRole('button', { name: 'Select this note' });
   expect(screen.queryByText('This should not be selectable')).toBeNull();
   fireEvent.click(select);
-  expect(picked).toHaveBeenCalledExactlyOnceWith({
+  expect(picked).toHaveBeenCalledTimes(2); // Clear stale selection when opening a conversation.
+  expect(picked).toHaveBeenNthCalledWith(1, null);
+  expect(picked).toHaveBeenLastCalledWith({
     conversationId: 5, messageId: 7, title: 'Preferences', content: 'I prefer concise explanations.',
   });
   expect(request).toHaveBeenCalledTimes(2);
