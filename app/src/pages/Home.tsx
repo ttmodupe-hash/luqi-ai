@@ -48,12 +48,12 @@ export default function Home() {
               <em>A lot of possibility.</em>
             </h1>
             <p className="luqi-hero-description">
-              Tell LUQI what you need — from visiting Africa to learning,
+              Tell Luqi what you need — from visiting Africa to learning,
               creating and growing an idea. Start with a question, not a menu.
             </p>
             <div className="luqi-hero-actions">
               <Link className="luqi-primary" to="/chat">
-                Ask LUQI <ArrowUpRight size={19} aria-hidden="true" />
+                Ask Luqi <ArrowUpRight size={19} aria-hidden="true" />
               </Link>
               <Link className="luqi-secondary" to="/join">
                 Create account <ArrowUpRight size={18} aria-hidden="true" />
@@ -70,9 +70,9 @@ export default function Home() {
                 Explore tools <ArrowRight size={18} aria-hidden="true" />
               </a>
             </div>
-            <p className="luqi-hero-onboarding">New to LUQI? <Link to="/start">Get started</Link> with a guided introduction.</p>
+            <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
             <p className="luqi-hero-footnote">
-              <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your LUQI sign-in, explicit consent and shared limits.
+              <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your Luqi sign-in, explicit consent and shared limits.
             </p>
           </div>
           <HeroAiChatConsole />
