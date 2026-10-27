@@ -49,14 +49,12 @@ it('restores a validated session once and hides private tools until confirmation
   expect(mocks.restore).toHaveBeenCalledOnce();
 });
 
-it('manual sign-in wins over any late restore of another account', async () => {
+it('switching accounts after a verified restore clears the former identity', async () => {
   mocks.hasHint.mockReturnValue(true);
   let resolve!: (v: typeof signedIn) => void;
   mocks.restore.mockImplementation(() => new Promise(r => { resolve = r; }));
   render(<CustomerSessionProvider><Panel /></CustomerSessionProvider>);
-  // Expose only a synthetic controller for an external, legitimate sign-in.
-  // An automatic restore cannot replace the new account after it arrives.
-  // Simulate it through a descendant while the old request is outstanding.
+  // A deliberate account switch must immediately drop the earlier identity.
   await act(async () => { resolve(signedIn); });
   fireEvent.click(screen.getByRole('button', { name: 'Sign in new account' }));
   expect(screen.getByText('new@example.invalid')).toBeTruthy();
