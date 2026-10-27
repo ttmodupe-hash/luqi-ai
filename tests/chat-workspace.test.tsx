@@ -48,10 +48,10 @@ async function ask(question: string) {
 it('renders a two-panel chat-first layout and real service shortcuts without an AI call', async () => {
   render(<Fixture />);
   const sidebar = await screen.findByRole('complementary', { name: 'LUQIChat sidebar' });
-  expect(within(sidebar).getByRole('navigation', { name: 'Jump into LUQI services' })).toBeTruthy();
+  expect(within(sidebar).getByRole('navigation', { name: 'Jump into Luqi services' })).toBeTruthy();
   expect(within(sidebar).getByRole('link', { name: 'Business desk' }).getAttribute('href')).toBe('/business-desk');
   expect(within(sidebar).getByRole('link', { name: 'Private notes' }).getAttribute('href')).toBe('/companion');
-  expect(screen.getByRole('heading', { name: 'LUQIChat' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Luqi Chat' })).toBeTruthy();
   expect(within(sidebar).getByText(/history is not saved automatically/i)).toBeTruthy();
   expect(request.mock.calls.some(([path]) => path === '/api/v1/luqi-core')).toBe(false);
 });

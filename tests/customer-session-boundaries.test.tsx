@@ -114,7 +114,7 @@ it('aborts a pending Chat request when its session expires and never shows a lat
   await act(async () => { oldReply(Response.json({ status: 'success', response: 'Expired account late reply', provider: 'gemini', provider_model: 'fixture-model' })); });
   expect(screen.queryByText('Expired account late reply')).toBeNull();
   expect(screen.queryByLabelText('Your question')).toBeNull();
-  expect(screen.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Sign in to your Luqi account' })).toBeTruthy();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
 });
 
