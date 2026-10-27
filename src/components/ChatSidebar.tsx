@@ -32,7 +32,7 @@ export default function ChatSidebar() {
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
   useEffect(() => { setConfirmForget(null); setShown(12); }, [customer?.session?.token]);
   useEffect(() => {
-    if (mobileOpen && mobileSection === 'recents') recentAnchor.current?.scrollIntoView({ block: 'start' });
+    if (mobileOpen && mobileSection === 'recents') recentAnchor.current?.scrollIntoView?.({ block: 'start' });
   }, [mobileOpen, mobileSection]);
   useEffect(() => {
     if (!mobileOpen) return;
