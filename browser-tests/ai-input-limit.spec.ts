@@ -19,13 +19,13 @@ test('AI trial retains over-limit input and sends an intact corrected question',
     return route.continue();
   });
   await page.goto('/#/ai-trial');
-  await expect(page.getByText(/Provider access is configured/)).toBeVisible();
+  await expect(page.getByText(/AI provider configured/)).toBeVisible();
   await page.getByLabel('Email', { exact: true }).fill('input-browser@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-Input-Password-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   const question = page.getByLabel('Your question', { exact: true });
   await question.fill(overlong);
-  await page.getByRole('checkbox').check();
+  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
   await expect(question).toHaveValue(overlong);
   await expect(question).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByText(/It will not be sent or shortened automatically/)).toBeVisible();
@@ -36,6 +36,6 @@ test('AI trial retains over-limit input and sends an intact corrected question',
   await question.fill(' '.repeat(100) + accepted + '\n'.repeat(100));
   await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
   await page.getByRole('button', { name: 'Send question' }).click();
-  await expect(page.getByRole('heading', { name: 'AI reply' })).toBeVisible();
+  await expect(page.getByText('Synthetic intact-input reply', { exact: true })).toBeVisible();
   expect(calls).toBe(1);
 });
