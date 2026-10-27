@@ -35,7 +35,7 @@ function tokenSignature(random: string, userId: number, passwordHash: string): s
     .digest('hex');
 }
 
-function sameOriginIntent(c: Context, intent: 'restore' | 'logout'): boolean {
+export function trustedResumeIntent(c: Context, intent: 'login' | 'signup' | 'restore' | 'logout'): boolean {
   if (c.req.header(INTENT) !== intent) return false;
   const site = c.req.header('sec-fetch-site');
   if (site && site !== 'same-origin' && site !== 'none') return false;
@@ -107,7 +107,7 @@ export const customerResumeRoutes = new Hono();
 
 customerResumeRoutes.get('/session', async c => {
   c.header('Cache-Control', 'no-store'); c.header('Pragma', 'no-cache');
-  if (!sameOriginIntent(c, 'restore')) return c.json({ code: 'AUTH_CSRF_REJECTED' }, 403);
+  if (!trustedResumeIntent(c, 'restore')) return c.json({ code: 'AUTH_CSRF_REJECTED' }, 403);
   if (!customerResumeEnabled()) { clearResumeCookies(c); return c.body(null, 204); }
   const cookie = parseCookie(getCookie(c, COOKIE));
   if (!cookie) { clearResumeCookies(c); return c.json({ code: 'AUTH_REQUIRED' }, 401); }
@@ -135,7 +135,7 @@ customerResumeRoutes.get('/session', async c => {
 
 customerResumeRoutes.post('/logout', async c => {
   c.header('Cache-Control', 'no-store'); c.header('Pragma', 'no-cache');
-  if (!sameOriginIntent(c, 'logout')) return c.json({ code: 'AUTH_CSRF_REJECTED' }, 403);
+  if (!trustedResumeIntent(c, 'logout')) return c.json({ code: 'AUTH_CSRF_REJECTED' }, 403);
   const cookie = parseCookie(getCookie(c, COOKIE));
   if (!cookie) { clearResumeCookies(c); return c.body(null, 204); }
   try {
