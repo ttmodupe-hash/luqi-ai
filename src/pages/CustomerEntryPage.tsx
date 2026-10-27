@@ -16,7 +16,7 @@ export default function CustomerEntryPage({ initialMode = 'signin' }: { initialM
   if (location.search) return <Navigate to={location.pathname} replace />;
   if (session) return <Navigate to="/chat" replace />;
   return <main className="luqi-info" aria-labelledby="luqi-account-entry-heading">
-    <p className="luqi-eyebrow">ONE Luqi ACCOUNT</p>
+    <p className="luqi-eyebrow">One Luqi account</p>
     <h1 id="luqi-account-entry-heading">Welcome to Luqi</h1>
     <p>Sign in or create one account, then go straight to Chat. Notes are optional.
       Signing in does not send a question to an AI provider or activate a subscription.</p>
