@@ -30,7 +30,8 @@ async function get(path, limit) {
     method: "GET", cache: "no-store", credentials: "omit", redirect: "error",
     headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(15_000),
   });
-  return { status: response.status, cache: response.headers.get("Cache-Control"), text: await read(response, limit) };
+  return { status: response.status, cache: response.headers.get("Cache-Control"),
+    contentType: response.headers.get("Content-Type"), text: await read(response, limit) };
 }
 function verify(ok) {
   if (!ok) throw new Error("Unexpected production response");
@@ -67,6 +68,14 @@ const checks = [
     ["/api/system/diagnostics-ledger", "LEGACY_OPERATION_UNAVAILABLE"],
     ["/api/v1/intelligence/corporate-report/release-probe", "LEGACY_OPERATION_UNAVAILABLE"],
   ].map(([path, code]) => ({ name: "Retired surface " + path, path, status: 503, code, private: true })),
+  // Synthetic names cannot be real customer files; never request actual
+  // credential paths or read private data during post-deployment acceptance.
+  ...[
+    "/.luqi-boundary-sentinel",
+    "/__luqi_boundary_sentinel__.env",
+    "/assets/__luqi_boundary_sentinel__.js",
+  ].map(path => ({ name: "Static fallback denial " + path, path, status: 404,
+    private: true, notFound: true })),
   ...[
     ["/api/trpc/ping", 200, '"ok":true'],
     ["/api/trpc/archive.listThreads", 503, "TRPC_PROCEDURE_UNAVAILABLE"],
@@ -94,6 +103,8 @@ for (let start = 0; start < checks.length; start += 3) {
     if (check.status !== undefined) verify(result.status === check.status);
     if (check.private) verify(result.cache === "no-store");
     if (check.code) verify(JSON.parse(result.text).code === check.code);
+    if (check.notFound) verify(result.contentType?.startsWith("application/json") &&
+      JSON.parse(result.text).error === "Not Found");
     if (check.accept) verify(check.accept(JSON.parse(result.text), result.status));
     if (check.contains) verify(result.text.includes(check.contains));
   })));
