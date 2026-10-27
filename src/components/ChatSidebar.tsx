@@ -15,7 +15,7 @@ const shortcuts = [
   { path: '/content-studio', label: 'Content studio', icon: PenLine },
   { path: '/ask', label: 'Africa & travel guide', icon: Globe2 },
   { path: '/companion', label: 'Private notes', icon: BookOpen },
-  { path: '/omega-tasks', label: 'Omega tools', icon: Compass },
+  { path: '/omega-tasks', label: 'LUQI tools', icon: Compass },
 ] as const;
 
 export default function ChatSidebar() {
