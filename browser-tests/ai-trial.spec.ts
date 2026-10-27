@@ -36,6 +36,6 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await expect(page.getByText('Synthetic provider reply')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   expect(calls).toBe(1);
 });
