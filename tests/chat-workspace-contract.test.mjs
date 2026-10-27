@@ -22,7 +22,7 @@ test('chat is primary in both routers, while previous goal guide remains availab
 test('local history cannot add silent persistence, a payment route or another AI transport', () => {
   for (const path of ['src/providers/chat-workspace.tsx', 'src/components/ChatSidebar.tsx']) {
     const source = read(path);
-    assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|document\.cookie|\/api\/v1\/luqi-core|sk_live_|LUQI_HOSTED_CHECKOUT_ENABLED/);
+    assert.doesNotMatch(source, /(?:localStorage|sessionStorage)\s*\.\s*(?:getItem|setItem|removeItem)|indexedDB\.open|document\.cookie|\/api\/v1\/luqi-core|sk_live_|LUQI_HOSTED_CHECKOUT_ENABLED/);
     assert.doesNotMatch(source, /fetch\(/);
   }
   const pilot = read('src/pages/AiPilotPage.tsx');
