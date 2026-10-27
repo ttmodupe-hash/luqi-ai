@@ -263,3 +263,27 @@
   .luqi-chat-canvas-guest .luqi-chat-login { margin:6px auto 0; }
   .luqi-chat-canvas-header { padding-top:3px; }
 }
+
+/* Optional companion support stays inside the existing consented Chat surface. */
+.luqi-chat-companion-mode { display:flex; align-items:flex-start; gap:9px; padding:9px 0 2px; color:#dcead7; font-size:12px; line-height:1.55; }
+.luqi-chat-companion-mode input { margin-top:3px; flex:none; }
+.luqi-chat-compose-details .luqi-chat-companion-personalise { margin:11px 0; padding:11px 12px; border:1px solid #536b57; border-radius:13px; background:#16251b; }
+.luqi-chat-companion-personalise > summary { color:#dcefcf; font-weight:650; }
+.luqi-chat-companion-share { display:flex!important; align-items:flex-start; gap:9px; padding:10px; margin:9px 0!important; border:1px solid #789473; border-radius:9px; background:#203a27; }
+.luqi-chat-companion-share input { margin-top:4px; flex:none; }
+.luqi-companion-notes { min-width:0; margin:8px 0; font-size:12px; color:#d8e7d3; }
+.luqi-companion-notes p { margin:8px 0; line-height:1.55; overflow-wrap:anywhere; }
+.luqi-companion-note-actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
+.luqi-companion-note-actions a { color:#e4f4d6; text-decoration:underline; }
+.luqi-companion-notes button { border:1px solid #657e63; border-radius:9px; padding:8px 11px; min-height:39px; max-width:100%; background:#27402c; color:#edf9e6; text-align:left; }
+.luqi-companion-notes button:disabled { opacity:.55; cursor:not-allowed; }
+.luqi-companion-note-list { display:flex; flex-wrap:wrap; gap:6px; padding:10px 0; max-height:190px; overflow-y:auto; }
+.luqi-companion-note-list button[aria-pressed=true], .luqi-companion-note-message button[aria-pressed=true] { background:#53734e; border-color:#b9deb0; }
+.luqi-companion-note-messages { display:grid; gap:8px; padding:6px 0; max-height:280px; overflow-y:auto; }
+.luqi-companion-note-message, .luqi-companion-note-selected { min-width:0; padding:9px; border:1px solid #435b47; border-radius:9px; background:#1d3023; }
+.luqi-companion-note-message p, .luqi-companion-note-selected p { white-space:pre-wrap; }
+.luqi-companion-note-selected { margin-top:10px; border-color:#95b68a; }
+@media (max-width:580px) {
+  .luqi-chat-compose-details .luqi-chat-companion-personalise { padding:8px; }
+  .luqi-companion-note-actions { align-items:stretch; }
+}
