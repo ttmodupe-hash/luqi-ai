@@ -255,7 +255,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           </span>
           {uncertain ? <button type="button" onClick={() => {
             setUncertain(false); setPrompt(''); setNotice('');
-          }}>Start a new question</button> : <button type="button" disabled={busy} onClick={newChat}>New chat</button>}
+          }}>Start a new question</button> : <button type="button" className="luqi-chat-new-in-composer" disabled={busy} onClick={newChat}>New chat</button>}
           <button type="submit" disabled={!canSend}>
             <Send size={16} aria-hidden="true" /> {busy ? 'Waiting…' : 'Send question'}
           </button>
