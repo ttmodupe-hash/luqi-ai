@@ -100,6 +100,6 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
       <p className="luqi-access-help">Do not post your email, password, one-time codes or account details in a public issue. Opening this help does not send an email or change your account.</p>
       {!busy && <a className="luqi-access-switch" href="#/contact">Read account recovery guidance</a>}
     </details>}
-    <p className="luqi-access-help">Your Luqi sign-in works across Chat, Notes and Omega in this tab. Reloading or closing the tab signs you out. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
+    <p className="luqi-access-help">Your Luqi sign-in works across Chat, Notes and Omega in this tab. Secure account restoration will be available on trusted devices when enabled; otherwise a reload may require signing in again. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
   </section>;
 }
