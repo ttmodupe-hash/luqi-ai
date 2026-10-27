@@ -81,7 +81,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   expect(logins).toBe(1);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   await expect(recent).toHaveCount(0);
   expect(replies).toBe(1);
 });
