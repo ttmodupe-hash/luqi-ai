@@ -66,7 +66,8 @@ async function allowedPair(c: PoolConnection, owner: number, peer: number, stude
   const sameSchool = eligibility(a.role) === 'verified_student' && a.role === b.role;
   const bothAdults = eligibility(a.role) === 'verified_adult' && eligibility(b.role) === 'verified_adult';
   if (studentLock ? !sameSchool : !bothAdults) deny();
-  const blocked = await query(c, 'SELECT owner_id FROM luqi_p2p_blocks_v1 WHERE (owner_id=? AND peer_id=?) OR (owner_id=? AND peer_id=?) LIMIT 1 FOR UPDATE', [owner, peer, peer, owner]);
+  // MySQL 8.4 FOR SHARE needs only SELECT; immutable blocks never get UPDATE grants.
+  const blocked = await query(c, 'SELECT owner_id FROM luqi_p2p_blocks_v1 WHERE (owner_id=? AND peer_id=?) OR (owner_id=? AND peer_id=?) LIMIT 1 FOR SHARE', [owner, peer, peer, owner]);
   if (blocked.length) deny();
 }
 async function owned(c: PoolConnection, actor: number, id: string, active = false) {
@@ -127,7 +128,7 @@ export class SovereignP2PEngine {
       const row = await owned(c,actor,p.circleId,true);
       const peer = Number(row.owner_id) === actor ? Number(row.peer_id) : Number(row.owner_id);
       if (p.senderId !== actor || p.recipientId !== peer || p.timestamp.length !== 24) deny();
-      const [existing] = await query(c, 'SELECT * FROM luqi_p2p_messages_v1 WHERE id=? FOR UPDATE', [p.messageId]);
+      const [existing] = await query(c, 'SELECT * FROM luqi_p2p_messages_v1 WHERE id=? FOR SHARE', [p.messageId]);
       if (existing) {
         if (existing.circle_id !== p.circleId || Number(existing.sender_id) !== actor || Number(existing.recipient_id) !== peer ||
             existing.iv !== p.iv || existing.ciphertext !== p.ciphertext || existing.client_timestamp !== p.timestamp) throw new P2PError('P2P_CONFLICT');

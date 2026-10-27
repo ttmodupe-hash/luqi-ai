@@ -45,6 +45,8 @@ describe.sequential('durable private messaging enforcement',()=>{
   expect(await checkRuntimeSchema()).toEqual({status:'validated',tables:13});await checkP2PReadiness();
   await root.query("GRANT DELETE ON luqi_ci.luqi_p2p_reports_v1 TO 'luqi_p2p_fixture'@'%'");
   try{await expect(checkP2PReadiness()).rejects.toThrow()}finally{await root.query("REVOKE DELETE ON luqi_ci.luqi_p2p_reports_v1 FROM 'luqi_p2p_fixture'@'%'")}
+  await root.query("CREATE ROLE 'p2p_unused_fixture_role'");await root.query("GRANT 'p2p_unused_fixture_role' TO 'luqi_p2p_fixture'@'%'");
+  try{await expect(checkP2PReadiness()).rejects.toThrow()}finally{await root.query("REVOKE 'p2p_unused_fixture_role' FROM 'luqi_p2p_fixture'@'%'");await root.query("DROP ROLE 'p2p_unused_fixture_role'")}
   await expect(checkP2PReadiness({...process.env,LUQI_P2P_REPORT_KEY:''})).rejects.toThrow();
  });
  it('public codes, unapproved requests, forged identities and outsider message IDs cannot grant access',async()=>{

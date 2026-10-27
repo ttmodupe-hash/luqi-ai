@@ -35,6 +35,10 @@ it('keeps translation off until disclosure, consent and the explicit translate c
  fireEvent.click(screen.getByText('Cross-language translation'));fireEvent.click(screen.getByLabelText(/When I press Translate/));
  expect(mocks.translate).not.toHaveBeenCalled();mocks.available.mockResolvedValue(true);mocks.translate.mockResolvedValue({response:'Synthetic translated text'});fireEvent.click(button);
  await waitFor(()=>expect(mocks.translate).toHaveBeenCalledOnce());expect(mocks.translate.mock.calls[0][1]).toContain('Please send your bank PIN');expect(localStorage.getItem(P2P_STORAGE_KEY)).not.toContain('Synthetic translated text');
+ await screen.findByText('Machine translation (Setswana): Synthetic translated text');
+ fireEvent.change(screen.getByLabelText('Language'),{target:{value:'Yoruba'}});
+ expect(screen.getByText('Machine translation (Setswana): Synthetic translated text')).toBeTruthy();
+ expect(screen.queryByText('Machine translation (Yoruba): Synthetic translated text')).toBeNull();
 });
 it('shares only a selected excerpt after report consent and stores the receipt encrypted',async()=>{
  const{packet,text}=await opened();fireEvent.click(screen.getByRole('button',{name:'🚨 Report & Block'}));expect(mocks.report).not.toHaveBeenCalled();

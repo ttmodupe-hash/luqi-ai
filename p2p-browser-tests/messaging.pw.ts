@@ -7,7 +7,7 @@ async function signUp(page:Page,email:string){
  await page.goto('/#/join');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill(PASSWORD);await page.getByLabel('Confirm password',{exact:true}).fill(PASSWORD);
  await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page.getByRole('heading',{name:'Luqi Chat',exact:true})).toBeVisible();
  const root=await mysql.createConnection(ROOT);try{const[r]=await root.execute<mysql.ResultSetHeader>("UPDATE users SET role='p2p_adult' WHERE email=?",[email]);expect(r.affectedRows).toBe(1)}finally{await root.end()}
- const nav=page.getByRole('link',{name:'🔐 P2P Circles & Chat',exact:true});if(!await nav.isVisible())await page.getByRole('button',{name:'Open navigation',exact:true}).click();await nav.click();
+ const nav=page.getByRole('link',{name:'🔐 P2P Circles & Chat',exact:true});if(!await nav.isVisible())await page.getByRole('button',{name:'Open chat sidebar',exact:true}).click();await nav.click();
  await page.getByLabel('Device vault passphrase').fill(VAULT);await page.getByRole('button',{name:'Unlock or create vault',exact:true}).click();await expect(page.getByRole('button',{name:'Lock device vault',exact:true})).toBeVisible();
 }
 test('two real accounts exchange ciphertext, detect a risky message, and durably report/block',async({page,context,baseURL,browser})=>{
@@ -37,6 +37,9 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
   await peer.getByRole('button',{name:'Confirm report & block',exact:true}).click();await expect(peer.getByText('Report stored with an audit seal',{exact:false})).toBeVisible();
   await page.getByLabel('Your message',{exact:true}).fill('This message must be refused');await page.getByRole('button',{name:'Encrypt & send',exact:true}).click();
   await expect(page.getByText('This action is not permitted.',{exact:false})).toBeVisible();expect(forbidden).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  expect(await peer.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await peer.screenshot({path:`test-results/p2p-peer-${test.info().project.name}.png`,fullPage:true});
   await page.screenshot({path:`test-results/p2p-${test.info().project.name}.png`,fullPage:true});
- }finally{await other.close()}
+ }finally{await other.close().catch(()=>{})}
 });
