@@ -9,8 +9,8 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it('identifies all six Omega domains without claiming live providers or worker activity', () => {
   const request = vi.fn(); vi.stubGlobal('fetch', request);
   render(<OmegaDomainGuide />);
-  fireEvent.click(screen.getByText('Explore all six Omega areas and what is available'));
-  const list = screen.getByRole('list', { name: 'Omega Six capability availability' });
+  fireEvent.click(screen.getByText('Explore the six Luqi service areas and what is available'));
+  const list = screen.getByRole('list', { name: 'Luqi service capability availability' });
   expect(within(list).getAllByRole('listitem')).toHaveLength(6);
   expect(within(list).getAllByText('Local calculation available')).toHaveLength(2);
   expect(within(list).getAllByText('Not available to customers')).toHaveLength(4);
