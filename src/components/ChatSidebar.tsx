@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { BookOpen, BriefcaseBusiness, ChevronLeft, ChevronRight, CircleHelp, Compass,
-  FolderOpen, Globe2, GraduationCap, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen,
+  Globe2, GraduationCap, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen,
   PenLine, Plus, Search, ShieldCheck, X } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import { useOptionalCustomerSession } from '../providers/customer-session';
