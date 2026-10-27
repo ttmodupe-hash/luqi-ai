@@ -19,6 +19,7 @@ export class CheckFailure extends Error {
     const allowed = ['AUTH_REQUIRED','AUTH_UNAVAILABLE','AUTH_RATE_LIMITED','AUTH_THROTTLE_UNAVAILABLE',
       'AI_PROVIDER_UNAVAILABLE','AI_BUDGET_STORE_UNAVAILABLE','AI_PROVIDER_BUDGET_EXHAUSTED',
       'AI_USER_DAILY_QUOTA_EXHAUSTED','AI_DISABLED','BILLING_NOT_APPROVED','AI_BUDGET_CONFIGURATION_INVALID',
+      'AI_REPLY_INCOMPLETE','AI_RESPONSE_BLOCKED','AI_RESPONSE_INVALID',
       'CONVERSATION_STORAGE_UNAVAILABLE','PASSWORD_CHANGE_UNAVAILABLE','ACCOUNT_RECOVERY_ASSISTED_ONLY'];
     this.code = allowed.includes(code) ? code : null;
   }
@@ -39,15 +40,16 @@ export async function boundedJson(response, limit = 131072) {
   } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }
 export async function runAcceptance({ expectedCommit, writesApproved = false, paidApproved = false,
-  request = fetch } = {}) {
-  if (!SHA.test(expectedCommit ?? '') || writesApproved !== true || typeof paidApproved !== 'boolean') {
+  provider = 'auto', request = fetch } = {}) {
+  if (!SHA.test(expectedCommit ?? '') || writesApproved !== true || typeof paidApproved !== 'boolean' ||
+      !['auto', 'openai'].includes(provider)) {
     throw new CheckFailure('explicit_approval_and_revision_required');
   }
   const marker = 'luqi-acceptance-' + randomUUID();
   const email = marker + '@example.invalid';
   let currentPassword = password(); let token; let oldToken; let noteId;
   let writeAttempted = false; let passwordOutcomeUncertain = false;
-  const report = { format: 'luqi.synthetic-production-acceptance.v1', expectedCommit,
+  const report = { format: 'luqi.synthetic-production-acceptance.v1', expectedCommit, requestedProvider: provider,
     startedAt: new Date().toISOString(), syntheticAccountId: null, checks: [],
     providerRequestSubmitted: false, providerReplyVerified: false,
     billingReconciliation: 'not_verified', cleanup: { notes: 'not_created', sessions: 'not_created' },
@@ -134,11 +136,13 @@ export async function runAcceptance({ expectedCommit, writesApproved = false, pa
       await revision('expected_revision_before_paid_request');
       const challenge = 'LUQI-' + randomBytes(12).toString('hex');
       report.providerRequestSubmitted = true;
-      // One gateway request only. Existing server fallback may independently
-      // reserve a second provider attempt. Never replay a failed/lost response.
+      // One gateway request only. Explicit OpenAI mode skips Gemini entirely;
+      // default mode may reserve a fallback. Never replay a failed/lost response.
       const reply = await call('one_budgeted_ai_reply', '/api/v1/luqi-core', { method: 'POST', bearer: token,
-        body: { user_input: 'Connection test. Reply only with this exact text: ' + challenge, language: 'English' } });
+        body: { user_input: 'Connection test. Reply only with this exact text: ' + challenge, language: 'English',
+          ...(provider === 'openai' ? { provider } : {}) } });
       if (reply.status !== 'success' || !['gemini','openai'].includes(reply.provider) ||
+          (provider === 'openai' && reply.provider !== 'openai') ||
           typeof reply.provider_model !== 'string' || !/^[a-zA-Z0-9.\-]{1,80}$/.test(reply.provider_model) ||
           typeof reply.response !== 'string' || reply.response.trim() !== challenge) fail('one_budgeted_ai_reply');
       report.providerReplyVerified = true; report.provider = reply.provider; report.model = reply.provider_model;
@@ -190,7 +194,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         process.env.GITHUB_RUN_ATTEMPT !== '1' || process.env.LUQI_ACCEPTANCE_WRITES !== 'owner-approved-synthetic-only' ||
         !['one-request','none'].includes(process.env.LUQI_ACCEPTANCE_AI)) throw new CheckFailure('explicit_runner_approval_required');
     const result = await runAcceptance({ expectedCommit: process.env.LUQI_EXPECTED_COMMIT, writesApproved: true,
-      paidApproved: process.env.LUQI_ACCEPTANCE_AI === 'one-request' });
+      paidApproved: process.env.LUQI_ACCEPTANCE_AI === 'one-request',
+      provider: process.env.LUQI_ACCEPTANCE_PROVIDER ?? 'auto' });
     console.log(JSON.stringify(result, null, 2));
     if (!result.success) process.exitCode = 1;
   } catch { console.error('Production acceptance refused or failed; no credentials or raw responses logged.'); process.exitCode = 1; }
