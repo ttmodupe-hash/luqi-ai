@@ -153,11 +153,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       } else if (code === 'AI_INPUT_TOO_LARGE' || code === 'INVALID_INPUT') {
         setNotice('Your question could not be sent as entered. Shorten or correct it; no provider attempt was started.');
       } else if (code === 'AI_RESPONSE_BLOCKED') {
-        setNotice('The provider declined the request or withheld its reply. No further provider was tried after that decision. The attempt may still count toward your allowance.');
+        setNotice('LUQI couldn't answer this request. We won't automatically send it elsewhere. The attempt may still count toward your usage limit.');
       } else if (code === 'AI_REPLY_INCOMPLETE') {
-        setNotice('The provider stopped before completing a reply. Unfinished text was not shown and no automatic continuation was requested. The attempt may still count toward your allowance. Try a shorter question.');
+        setNotice('LUQI couldn't finish this answer. Nothing incomplete was displayed, and we won't send another request without your approval. This attempt may still count toward your usage limit. You can try a shorter question.');
       } else if (code === 'AI_RESPONSE_INVALID') {
-        setNotice('The provider reply could not be verified. It was not shown or retried automatically. The attempt may still count toward your allowance.');
+        setNotice('LUQI couldn't verify a complete answer, so it wasn't displayed or retried automatically. This attempt may still count toward your usage limit.');
       } else if (code === 'AI_USER_DAILY_QUOTA_EXHAUSTED') setNotice('Your daily allowance of 20 provider attempts has been reached. Try another UTC day.');
       else if (code === 'AI_PROVIDER_BUDGET_EXHAUSTED') setNotice('The monthly provider allowance has been reached. No further attempt was started on that provider.');
       else setNotice('AI replies are unavailable. Failed provider attempts may still count toward the allowance.');
@@ -180,12 +180,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <h1 id="luqi-workspace-chat-heading">LUQIChat</h1>
           <p>Your AI conversation, with useful tools one click away.</p>
         </div>
-        <span className="luqi-chat-canvas-tag">Limited text pilot</span>
+        <span className="luqi-chat-canvas-tag">Early access</span>
       </header>
       <div className="luqi-chat-availability-row">
-        <span role="status">{checking ? 'Checking AI readiness…' :
-          available ? 'AI provider configured · real replies depend on live limits' :
-            'AI requests paused · no question can be sent'}</span>
+        <span role="status">{checking ? 'Checking LUQI availability…' :
+          available ? 'LUQI is available for questions · usage limits apply' :
+            'LUQI replies are temporarily unavailable'}</span>
         <button type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
           {checking ? 'Checking…' : 'Check availability'}
         </button>
@@ -339,13 +339,13 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><SafePilotText text={answer.response} /></p>
-        <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
+        <details><summary>Response technology</summary><p>AI provider: {answer.provider} · Model: {answer.provider_model}</p></details>
         {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real LUQI tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
       </section>}
     </>}
     <details className="luqi-chat-details">
       <summary>How Chat works</summary>
-      <p>Gemini answers first, with OpenAI as a separately limited fallback. A fallback uses another provider attempt. This is an experimental text-only trial. No browsing, sources, tools, files, voice or autonomous actions are enabled. African-language accuracy has not been independently evaluated.</p>
+      <p>LUQI uses Google Gemini for initial generation and may use OpenAI as a separately limited fallback. A fallback uses another provider attempt. This is an experimental text-only trial. No browsing, sources, tools, files, voice or autonomous actions are enabled. African-language accuracy has not been independently evaluated.</p>
       <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up: up to four recent turns, shortened to 350 characters each. Request formatting uses the rest of the 6000-character input limit. Your private notes and account email are never attached.</p>
       <p>Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them. New chat clears this conversation and provider consent while keeping you signed in. Your LUQI login works across customer tools in this tab; a full reload ends it.</p>
     </details>
