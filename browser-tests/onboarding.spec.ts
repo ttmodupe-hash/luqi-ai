@@ -72,7 +72,8 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   await page.getByRole('button', { name: 'Open chat sidebar' }).click();
   await expect(page.getByRole('complementary', { name: 'LUQIChat sidebar' })
     .getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Close chat sidebar' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Open chat sidebar' })).toHaveAttribute('aria-expanded', 'false');
   await expect(page.getByLabel('Your question')).toBeVisible();
   // Notes are optional, and entering them reuses the same account without another login.
   await page.getByRole('link', { name: 'Open saved private notes' }).click();
