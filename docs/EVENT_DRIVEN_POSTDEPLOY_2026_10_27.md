@@ -6,7 +6,7 @@ The current canonical Railway service is `kind-spontaneity / production / web`. 
 ## Event split
 - `push: main` remains on both workflows, but runs **offline syntax/contract tests only**. This is safe to include in pre-deployment CI.
 - `pull_request` continues path-scoped offline checks. `workflow_dispatch` preserves a manual, exact-main post-deploy acceptance path.
-- `status` events from GitHub are filtered to a **successful** `kind-spontaneity - web` commit status on the current `main` SHA. A bounded offline verifier checks GitHub repository, main branch membership, HTTPS Railway origin, project, service, environment and deployment ID before either live script can run.
+- `status` events from GitHub are filtered to a **successful** `kind-spontaneity - web` commit status whose SHA exactly equals GitHub's current default-branch `GITHUB_SHA`. GitHub's `status.branches` list is capped at 10 and may omit `main`; it is *not* a safe mandatory branch-membership check. The bounded offline verifier instead enforces current HEAD SHA, repository, HTTPS Railway origin, project, service, environment and deployment ID.
 - Other Railway projects, failures, partial builds, unrelated statuses and stale commits cannot trigger live production release acceptance.
 - These status-driven workflows rely on Railway publishing the expected GitHub status event. **Do not claim that trigger is operational until a real canonical production deployment has actually emitted it and the exact-revision public and TLS checks pass**. A manual dispatch remains available when needed.
 
@@ -18,3 +18,6 @@ The current canonical Railway service is `kind-spontaneity / production / web`. 
 - Never send account data, payment secrets, provider bills or customer prompts to public issue comments, CI logs or workflow inputs. Merchant collection stays disabled and the AI budget remains USD100/month: Gemini USD60 / OpenAI USD40.
 
 See [Railway Wait for CI](https://docs.railway.com/deployments/github-autodeploys#wait-for-ci), [GitHub status event](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#status), and [tracker #202](https://github.com/ttmodupe-hash/luqi-ai/issues/202).
+
+## 27 October acceptance correction
+The first real canonical status event exercised the new workflow but was rejected by the original conservative guard before any live GET. To avoid mistaking truncated GitHub branch metadata for authority, the validator now uses current default-branch HEAD equality and preserves every project/service/environment/deployment check. It emits a fixed reason code on future rejection, never a raw webhook payload or private URL. This fix remains **unaccepted operationally** until a new real status event reaches and passes the live probes.
