@@ -13,7 +13,7 @@ const navigation = [
   ["/chat", "Chat"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
-  ["/omega-tasks", "LUQI tools"],
+  ["/omega-tasks", "Luqi tools"],
   ["/content-studio", "Create"],
   ["/start", "Start here"],
 ] as const;
@@ -74,7 +74,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <RouteLoadBoundary><ChatSidebar /></RouteLoadBoundary>
           <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
             {customer?.expired && <p role="status" className="luqi-info">
-              Your session ended. <Link to="/login">Sign in again</Link> to use your LUQI account.
+              Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
             </p>}
             {children}
           </div>
@@ -91,10 +91,10 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         }}
       >
         <div className="luqi-header-inner">
-          <Link to="/" className="luqi-brand" aria-label="LUQI workspace home">
+          <Link to="/" className="luqi-brand" aria-label="Luqi workspace home">
             <img className="luqi-brand-symbol" src="/luqi-mark.svg" alt="" aria-hidden="true" width="36" height="36" />
             <span>
-              LUQI<span className="luqi-brand-ai">AI</span>
+              Luqi<span className="luqi-brand-ai">AI</span>
             </span>
           </Link>
           <nav aria-label="Primary navigation" className="luqi-desktop-nav">
@@ -117,10 +117,10 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <kbd>⌘ K</kbd>
             </button>
             <Link className="luqi-account-link" to="/chat">
-              Ask LUQI <ArrowUpRight size={16} aria-hidden="true" />
+              Ask Luqi <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
             {customer?.session && <button type="button" className="luqi-header-signout"
-              aria-label="Log out of LUQI" onClick={customer.signOut}>Sign out</button>}
+              aria-label="Log out of Luqi" onClick={customer.signOut}>Sign out</button>}
             <button
               ref={menuButton}
               className="luqi-menu-button"
@@ -156,22 +156,22 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               </NavLink>
             ))}
             {customer?.session && <button type="button" className="luqi-mobile-signout"
-              aria-label="Log out of LUQI" onClick={() => { customer.signOut(); setMenuOpen(false); }}>
-              Sign out of LUQI
+              aria-label="Log out of Luqi" onClick={() => { customer.signOut(); setMenuOpen(false); }}>
+              Sign out of Luqi
             </button>}
           </nav>
         )}
       </header>
       <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
         {customer?.expired && <p role="status" className="luqi-info">
-          Your session ended. <Link to="/login">Sign in again</Link> to use your LUQI account.
+          Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
         </p>}
         {children}
       </div>
       <footer className="luqi-footer">
         <div>
           <Link to="/" className="luqi-footer-brand">
-            LUQI AI
+            Luqi
           </Link>
           <p>Room for curiosity. Built with Africa in mind.</p>
         </div>
@@ -183,7 +183,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <Link to="/pricing">Plans</Link>
           <Link to="/payments">Payments</Link>
         </nav>
-        <span>© {new Date().getFullYear()} LUQI AI</span>
+        <span>© {new Date().getFullYear()} Luqi</span>
       </footer>
         </>
       )}
