@@ -1,6 +1,7 @@
 /** Read-only contract for the enabled web runtime, not a migration engine.
  * No row contents, credentials, or raw driver errors enter diagnostics.
  */
+import { P2P_RUNTIME_TABLES } from './p2pContracts';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 
@@ -130,6 +131,7 @@ Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
     const settings = parseMySqlConnectionSettings(environment);
     if (!settings) return { status: 'unconfigured', tables: 0 };
     const contracts = { ...RUNTIME_TABLES,
+      ...(environment.LUQI_P2P_ENABLED === 'true' ? P2P_RUNTIME_TABLES : {}),
       ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
       ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
     connection = await mysql.createConnection({ ...settings, connectTimeout: 4_000 });

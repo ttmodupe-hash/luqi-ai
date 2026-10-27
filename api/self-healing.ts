@@ -6,6 +6,9 @@ import { errorLogs, healingPatches, systemMetrics, agentActivityLog, benchmarkFe
 import { eq, desc, and, gte, sql, count } from "drizzle-orm";
 import { orchestrateRequest, getOrchestratorStatus } from "./services/orchestrator";
 
+// Empty legacy supervisor output retains a typed shape; route policy still denies access.
+interface SupervisorAgentSummary { name:string; status:string; activityCount24h:number; failureRate:number; lastActivity:Date|null }
+
 export const selfHealingRouter = createRouter({
   logError: publicQuery
     .input(z.object({
@@ -347,7 +350,7 @@ export const selfHealingRouter = createRouter({
     return {
       timestamp: new Date(),
       overallStatus: "healthy",
-      agents: [],
+      agents: [] as SupervisorAgentSummary[],
       systemIntegrity: { errorLogTable: true, patchTable: true, metricsTable: true, activityTable: true },
       recommendations: [],
     };
@@ -416,7 +419,7 @@ export const selfHealingRouter = createRouter({
       supervisor: {
         timestamp: new Date(),
         overallStatus: "healthy",
-        agents: [],
+        agents: [] as SupervisorAgentSummary[],
         systemIntegrity: { errorLogTable: true, patchTable: true, metricsTable: true, activityTable: true },
         recommendations: [],
       },

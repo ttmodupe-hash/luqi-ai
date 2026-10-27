@@ -14,6 +14,7 @@ captureLuqiInstallPrompt();
 
 const navigation = [
   ["/chat", "Chat"],
+  ["/p2p", "🔐 P2P Circles & Chat"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
   ["/omega-tasks", "Luqi tools"],

@@ -6,7 +6,7 @@ import { CustomerSessionProvider } from "./providers/customer-session";
 import { ChatWorkspaceProvider } from "./providers/chat-workspace";
 import { SovereignRegionProvider } from "./providers/sovereign-region";
 import ServiceStatusPage from "./pages/ServiceStatusPage";
-import { Routes, Route as RouterRoute, Navigate } from "react-router";
+import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
@@ -21,6 +21,8 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.
+const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
+const AdminSovereignPortal = lazy(() => import("./components/AdminSovereignPortal"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
@@ -39,6 +41,10 @@ const ExperientialEducationPage = lazyQueryPage(() => import("./pages/Experienti
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  if (location.pathname.startsWith("/admin") || (typeof window !== "undefined" && window.location.hostname.toLowerCase().startsWith("admin."))) {
+    return <div className="min-h-screen bg-slate-950 text-slate-100"><RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary></div>;
+  }
   return <CustomerSessionProvider><ChatWorkspaceProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></ChatWorkspaceProvider></CustomerSessionProvider>;
 }
 
@@ -52,6 +58,8 @@ export default function App() {
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
+        <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
+        <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />
         <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />
@@ -103,6 +111,8 @@ export default function App() {
         <RouterRoute path="/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/contact" element={<ContactPage />} />
         <RouterRoute path="/consumer-rights" element={<ConsumerRightsAssistant />} />
+        <RouterRoute path="/admin" element={<AdminSovereignPortal />} />
+        <RouterRoute path="/admin/knowledge-grading" element={<AdminSovereignPortal />} />
         <RouterRoute path="*" element={<NotFoundPage />} />
       </Routes>
     </AppLayout>
