@@ -69,7 +69,7 @@ test('successful LUQI registration enters Chat directly, never Notes or paid AI'
   await page.getByLabel('Confirm password', { exact: true }).fill('Synthetic-Password-2026!');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page).toHaveURL(/#\/chat$/);
-  await expect(page.getByRole('heading', { name: 'Chat with LUQI', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
   await expect(page.getByLabel('Your question')).toBeVisible();
   expect(registrations).toHaveLength(1);
   expect(paid).toHaveLength(0);
