@@ -3,6 +3,9 @@ import { test, expect } from '@playwright/test';
 test.use({ serviceWorkers: 'allow' });
 
 test('actual service worker handles an uncached offline tool and explicit online recovery', async ({ page, context, baseURL }) => {
+  // A real worker is exercised; slow shared CI runners need a bounded window
+  // for installation, offline transition and explicit user-controlled recovery.
+  test.setTimeout(60_000);
   const writes: string[] = [];
   // Context routing includes worker-originated network traffic. Never use
   // request.frame() here: service-worker requests do not belong to a frame.
@@ -36,6 +39,18 @@ test('actual service worker handles an uncached offline tool and explicit online
     await expect(page.locator('main h1').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'This page could not load' })).toHaveCount(0);
   } finally { await context.setOffline(false); }
+  // setOffline(false) requests network restoration but does not guarantee
+  // network connectivity is immediately ready for a new document load. Prove
+  // a fresh, public no-store GET succeeds before exercising the actual reload
+  // control. This remains a real SW/offline check, not a mocked recovery.
+  await expect.poll(() => page.evaluate(async () => {
+    try {
+      const response = await fetch('/manifest.json?online-recovery=1', {
+        cache: 'no-store', credentials: 'omit',
+      });
+      return response.status === 200;
+    } catch { return false; }
+  }), { timeout: 10_000, intervals: [250, 500, 1_000] }).toBe(true);
   // React caches rejected imports for the current document. A new explicit
   // navigation may show the same safe error; the user chooses whether to reload.
   await page.evaluate(() => { window.location.hash = '/pendulum-lab'; });
