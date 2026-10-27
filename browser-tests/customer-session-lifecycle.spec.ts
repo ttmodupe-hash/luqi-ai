@@ -33,12 +33,14 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await page.getByLabel('Password', { exact: true }).fill('fixture-password-2026');
   await page.getByLabel('Confirm password', { exact: true }).fill('fixture-password-2026');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Chat with LUQI', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
   expect(paid).toHaveLength(0);
   await page.getByLabel('Your question').fill('Synthetic first account question');
-  await page.getByRole('checkbox', { name: /I understand my question goes/ }).check();
+  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
   await page.getByRole('button', { name: 'Send question', exact: true }).click();
   await expect(page.getByText('Synthetic first account Chat reply')).toBeVisible();
+  // Change to the preserved local guide without reloading the shared signed-in tab.
+  await page.getByRole('link', { name: 'Explore Africa and plan a goal locally' }).click();
   await page.getByLabel('What would you like help with?').fill('Help me plan my visit to Cape Town');
   await page.getByRole('button', { name: 'Find my next step', exact: true }).click();
   await page.getByRole('button', { name: 'Use my question in AI Chat' }).click();
@@ -75,7 +77,7 @@ test('expiry clears Chat and the shared header without another request or reload
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
   await page.getByLabel('Your question').fill('An unsent private draft');
-  await page.getByRole('checkbox', { name: /I understand my question goes/ }).check();
+  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
   await page.clock.fastForward(61_000);
   await expect(page.getByText(/Your session ended/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();

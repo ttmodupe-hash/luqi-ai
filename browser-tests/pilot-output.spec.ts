@@ -25,7 +25,7 @@ for (const [code, status, message] of [
     await page.getByLabel('Password', { exact: true }).fill('Fixture-Password-2026!');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByLabel('Your question', { exact: true }).fill('Synthetic question');
-    await page.getByRole('checkbox').check();
+    await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
     await page.getByRole('button', { name: 'Send question' }).click();
     await expect(page.getByRole('alert')).toContainText(message);
     await expect(page.getByRole('alert')).toContainText('attempt may still count');
@@ -35,7 +35,8 @@ for (const [code, status, message] of [
     await page.getByLabel('Your question', { exact: true }).fill('A shorter draft');
     expect(calls).toBe(1); expect(unexpected).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.getByRole('button', { name: 'Open chat sidebar' }).click();
+    await page.getByRole('complementary', { name: 'LUQIChat sidebar' }).getByRole('button', { name: 'Sign out', exact: true }).click();
     expect(calls).toBe(1);
   });
 }

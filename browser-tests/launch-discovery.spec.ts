@@ -15,8 +15,8 @@ async function isolate(page: Page, baseURL: string) {
 }
 async function trialPage(page: Page, writes: string[]) {
   await expect(page).toHaveURL(/#\/chat$/);
-  await expect(page.getByRole('heading', { name: 'Try a question with LUQI' })).toBeVisible();
-  await expect(page.getByText(/Live replies remain subject to provider availability/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByText(/AI provider configured/)).toBeVisible();
   await expect(page.locator('#ai-question')).toHaveCount(0);
   expect(writes).toEqual([]);
 }
