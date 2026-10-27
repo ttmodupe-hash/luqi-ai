@@ -109,7 +109,8 @@
   .luqi-chat-mobile-bar a { color:#f0f4eb; font-size:18px; font-weight:750; letter-spacing:-.04em; }
   .luqi-chat-mobile-bar a span { color:#c8e6ae; }
   .luqi-chat-backdrop { display:block; position:fixed; inset:0; z-index:38; width:100%; height:100%; border:0; background:#0009; }
-  .luqi-chat-rail { position:fixed; z-index:39; inset:0 auto 0 0; width:min(300px,86vw); height:100dvh; transform:translateX(-105%); transition:transform .16s ease; }
+  .luqi-chat-rail { position:fixed; z-index:39; inset:0 auto 0 0; width:min(300px,86vw); height:100dvh; transform:translateX(-105%); visibility:hidden; transition:transform .16s ease; }
+  .luqi-chat-rail-open { visibility:visible; }
   .luqi-chat-rail-open { transform:translateX(0); }
   .luqi-chat-rail-collapse { display:none; }
   .luqi-chat-rail-compact .luqi-chat-rail-recent, .luqi-chat-rail-compact .luqi-chat-rail-section-label,
