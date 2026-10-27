@@ -6,18 +6,14 @@ import { Hono } from 'hono';
 import { bootstrapDatabase } from '../db/bootstrap';
 import { checkRuntimeSchema } from '../db/runtimeSchema';
 import { WEB_RUNTIME_GRANTS } from '../db/runtimeRole';
-import { restCompat } from '../api/rest-compat';
-import { customerResumeRoutes } from '../api/services/customerResume';
-import { accountSecurity } from '../api/account-security';
-import { closeDb } from '../api/queries/connection';
 import { closeAuthThrottle } from '../api/services/authThrottle';
+import { resetAccountPassword } from '../api/services/accountRecovery';
 import { getSignedSessionDigest } from '../api/lib/userToken';
 const ROOT = 'mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci';
 const RUNTIME = 'mysql://luqi_session_fixture:session-fixture-only-password@127.0.0.1:3306/luqi_ci';
 const ORIGIN = 'https://app.luqi-ai.com';
 const PASSWORD = 'Synthetic-Session-Password-2026!';
-const app = new Hono().route('/api/v1/auth', customerResumeRoutes)
-  .route('/api/v1/account', accountSecurity).route('/', restCompat);
+let app: Hono, closeDb: (() => Promise<void>) | undefined;
 let root: Pool, seq = 0;
 function post(path: string, body = {}, cookie = '', intent = 'restore', token?: string) {
   return app.request(ORIGIN + path, { method: 'POST', headers: {
@@ -52,9 +48,20 @@ beforeAll(async () => {
   }
   vi.stubEnv('DATABASE_URL', RUNTIME); vi.stubEnv('JWT_SECRET', 'synthetic-session-mysql-only-secret-with-over-32-characters');
   vi.stubEnv('LUQI_CUSTOMER_RESUME_ENABLED', 'true'); vi.stubEnv('NODE_ENV', 'test');
+  // The connection module resolves its identity at import time. Import the HTTP
+  // runtime ONLY after switching from the operator setup to the restricted role.
+  const [{ restCompat }, { customerResumeRoutes }, { accountSecurity }, connection] = await Promise.all([
+    import('../api/rest-compat'), import('../api/services/customerResume'), import('../api/account-security'),
+    import('../api/queries/connection'),
+  ]);
+  closeDb = connection.closeDb;
+  const [identity] = await connection.getPersistentMySqlPool().query<RowDataPacket[]>('SELECT CURRENT_USER() AS identity');
+  expect(identity[0].identity).toBe('luqi_session_fixture@%');
+  app = new Hono().route('/api/v1/auth', customerResumeRoutes)
+    .route('/api/v1/account', accountSecurity).route('/', restCompat);
 }, 60_000);
 beforeEach(async () => { await root.query('DELETE FROM auth_attempt_windows'); });
-afterAll(async () => { await closeAuthThrottle(); await closeDb(); await root?.end(); vi.unstubAllEnvs(); });
+afterAll(async () => { await closeAuthThrottle(); await closeDb?.(); await root?.end(); vi.unstubAllEnvs(); });
 describe.sequential('real InnoDB device session acceptance', () => {
   it('validates exact schema, owner linkage and least privilege; rejects a DELETE grant', async () => {
     expect(await checkRuntimeSchema()).toEqual({ status: 'validated', tables: 9 });
@@ -62,6 +69,14 @@ describe.sequential('real InnoDB device session acceptance', () => {
     try { await expect(checkRuntimeSchema()).rejects.toThrow('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE'); }
     finally { await root.query("REVOKE DELETE ON luqi_ci.customer_device_sessions_v1 FROM 'luqi_session_fixture'@'%'"); }
     expect(await checkRuntimeSchema()).toEqual({ status: 'validated', tables: 9 });
+  });
+  it('rejects a changed digest collation and missing owner foreign key', async () => {
+    await root.query('ALTER TABLE customer_device_sessions_v1 MODIFY token_digest CHAR(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL');
+    try { await expect(checkRuntimeSchema()).rejects.toThrow('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE'); }
+    finally { await root.query('ALTER TABLE customer_device_sessions_v1 MODIFY token_digest CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL'); }
+    await root.query('ALTER TABLE customer_device_sessions_v1 DROP FOREIGN KEY customer_device_owner_fk');
+    try { await expect(checkRuntimeSchema()).rejects.toThrow('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE'); }
+    finally { await root.query('ALTER TABLE customer_device_sessions_v1 ADD CONSTRAINT customer_device_owner_fk FOREIGN KEY (user_id) REFERENCES users(id)'); }
   });
   it('requires explicit opt-in and never uses cookies to authorize private APIs', async () => {
     const memory = await account(false);
@@ -135,6 +150,13 @@ describe.sequential('real InnoDB device session acceptance', () => {
     expect((await post('/api/v1/account/password', { currentPassword: PASSWORD, newPassword: password }, '', '', owner.token)).status).toBe(200);
     expect((await me(owner.token)).status).toBe(401);
     expect((await rows(owner.user.id)).every(row => row.revoked_at !== null)).toBe(true);
+    expect((await post('/api/v1/auth/session', {}, owner.cookie)).status).toBe(401);
+  }, 30_000);
+  it('operator recovery revokes legacy and device sessions atomically', async () => {
+    const owner = await account();
+    const recovered = await resetAccountPassword(root, owner.user.id, owner.email, 'Operator-Recovered-Synthetic-Password!');
+    expect(recovered.sessionsRevoked).toBe(1);
+    expect((await me(owner.token)).status).toBe(401);
     expect((await post('/api/v1/auth/session', {}, owner.cookie)).status).toBe(401);
   }, 30_000);
   it('fails closed on missing session writes and rolls signup back without leaving an account', async () => {

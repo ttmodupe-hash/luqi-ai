@@ -111,8 +111,8 @@ export async function restoreCustomerSession(
     // Web Locks serialize different tabs. A shared promise also prevents React
     // StrictMode cleanup from aborting and replaying a state-changing refresh.
     const run = () => restoreOnce(request);
-    restoreFlight = typeof navigator !== 'undefined' && navigator.locks
-      ? navigator.locks.request('luqi-customer-session', run) : run();
+    restoreFlight = Promise.resolve(typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('luqi-customer-session', run) : run());
     void restoreFlight.finally(() => { restoreFlight = null; }).catch(() => {});
   }
   const flight = restoreFlight;

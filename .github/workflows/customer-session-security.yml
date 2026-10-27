@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   real-mysql-session-security:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       mysql:
@@ -43,7 +43,7 @@ jobs:
           LUQI_SESSION_BACKUP_FIXTURE: 'true'
         run: bash scripts/ci-mysql-restore.sh
   secure-mobile-browser-sessions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       mysql:
@@ -68,14 +68,27 @@ jobs:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev
       - run: npm run build
+        env:
+          NODE_ENV: production
       - name: Build disposable HTTPS fixture
         run: |
           openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/luqi-session-fixture.key -out /tmp/luqi-session-fixture.crt -days 1 -subj '/CN=127.0.0.1' -addext 'subjectAltName=IP:127.0.0.1'
           chmod 600 /tmp/luqi-session-fixture.key
           npx esbuild scripts/ci-customer-session-server.ts --bundle --platform=node --format=esm --outfile=/tmp/luqi-session-browser.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
-      - run: npx playwright install --with-deps chromium webkit
       - name: Test mobile Chromium and iPhone-sized WebKit with secure cookies
-        run: npx playwright test --config playwright.sessions.config.ts
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          image='mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d'
+          docker run --rm --init --network host --ipc host \
+            -v "$PWD:/work" -w /work \
+            -v /tmp/luqi-session-browser.js:/tmp/luqi-session-browser.js:ro \
+            -v /tmp/luqi-session-fixture.key:/tmp/luqi-session-fixture.key:ro \
+            -v /tmp/luqi-session-fixture.crt:/tmp/luqi-session-fixture.crt:ro \
+            -e LUQI_MYSQL_CI_FIXTURE -e DATABASE_URL -e GITHUB_ACTIONS=true \
+            -e LUQI_AI_PROVIDER_ENABLED=false -e LUQI_AI_BILLING_APPROVED=false \
+            -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            "$image" npx --no-install playwright test --config playwright.sessions.config.ts
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -22,9 +22,11 @@ export async function resetAccountPassword(
   let begun = false;
   try {
     conn = await pool.getConnection();
-    const [engines] = await conn.query<RowDataPacket[]>(
-      "SELECT TABLE_NAME, ENGINE FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('users', 'sessions')");
-    if (engines.length !== 2 || engines.some(row => row.ENGINE !== "InnoDB")) {
+    const withDevices = process.env.LUQI_CUSTOMER_RESUME_ENABLED === 'true';
+    const [engines] = await conn.query<RowDataPacket[]>(withDevices
+      ? "SELECT TABLE_NAME, ENGINE FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('users', 'sessions', 'customer_device_sessions_v1')"
+      : "SELECT TABLE_NAME, ENGINE FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('users', 'sessions')");
+    if (engines.length !== (withDevices ? 3 : 2) || engines.some(row => row.ENGINE !== "InnoDB")) {
       throw new AccountRecoveryError("RECOVERY_UNAVAILABLE");
     }
     await conn.beginTransaction();
@@ -45,7 +47,7 @@ export async function resetAccountPassword(
     const [revoked] = await conn.execute<ResultSetHeader>(
       "DELETE FROM sessions WHERE user_id=?", [userId]);
     let deviceRowsRevoked = 0;
-    if (process.env.LUQI_CUSTOMER_RESUME_ENABLED === 'true') {
+    if (withDevices) {
       const [devices] = await conn.execute<ResultSetHeader>(
         'UPDATE customer_device_sessions_v1 SET revoked_at=CURRENT_TIMESTAMP(3) WHERE user_id=? AND revoked_at IS NULL', [userId]);
       deviceRowsRevoked = devices.affectedRows;

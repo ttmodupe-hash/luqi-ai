@@ -110,6 +110,7 @@ async function validate(connection: Connection, contracts: Record<string, TableC
   for (const [table, contract] of Object.entries(contracts)) {
     if (tables.find(row => row.table_name === table)?.engine?.toLowerCase() !== 'innodb') throw unavailable();
     const fields = columns.filter(row => row.table_name === table);
+    if (table === 'customer_device_sessions_v1' && fields.length !== contract.columns.length) throw unavailable();
     if (contract.columns.some(name => !fields.some(row => row.column_name === name))) throw unavailable();
     for (const [name, expected] of Object.entries(contract.critical ?? {})) {
       const field = fields.find(row => row.column_name === name);
