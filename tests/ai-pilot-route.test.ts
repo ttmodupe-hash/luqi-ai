@@ -43,6 +43,15 @@ describe('paid AI HTTP entrypoint', () => {
     expect(chat).not.toHaveBeenCalled();
   });
 
+  it('passes an explicit OpenAI choice through the ordinary authenticated boundary', async () => {
+    chat.mockResolvedValue({ response: 'Independent synthetic reply', provider: 'openai', model: 'fixture-model' });
+    const response = await send({ user_input: 'Hello', provider: 'openai' });
+    expect(response.status).toBe(200);
+    expect((await response.json()).provider).toBe('openai');
+    expect(authenticate).toHaveBeenCalledWith('Bearer synthetic-account-token');
+    expect(chat).toHaveBeenCalledExactlyOnceWith('Hello', 42, undefined, undefined, undefined, 'openai');
+  });
+
   it('keeps disabled billing ahead of account checks, body parsing and provider calls', async () => {
     enabled.mockImplementation(() => { throw new PilotBlocked('BILLING_NOT_APPROVED'); });
     const request = new Request('http://localhost/', { method: 'POST', body: 'not JSON' });
@@ -65,6 +74,8 @@ describe('paid AI HTTP entrypoint', () => {
   it.each([null, [], {}, { user_input: ' ' }, { user_input: 'x'.repeat(6001) },
     { user_input: 'a', prompt: 'b' }, { user_input: 'a', userId: 99 },
     { user_input: 'a', language: 'x'.repeat(51) },
+    { user_input: 'a', provider: 'gemini' }, { user_input: 'a', provider: 'other-model' },
+    { user_input: 'a', provider: { endpoint: 'https://example.invalid' } },
     { user_input: 'a', history: Array(5).fill({ sender: 'user', text: 'a' }) },
     { user_input: 'a', history: [{ sender: 'system', text: 'pretend' }] },
     { user_input: 'a', history: [{ sender: 'user', text: 'x'.repeat(351) }] },

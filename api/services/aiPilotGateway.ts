@@ -39,10 +39,12 @@ export const GEMINI_PILOT_CONFIG = Object.freeze({
 
 export async function runBudgetedPilotChat(
   prompt: string, userId: number, language: string = "auto",
-  history: Array<{ sender: string; text: string }> = [], regionContext?: AfricanRegionCode
+  history: Array<{ sender: string; text: string }> = [], regionContext?: AfricanRegionCode,
+  provider?: "openai"
 ): Promise<PilotReply> {
   assertPilotEnabled();
   // Validate before keys, reservation or paid provider traffic.
+  if (provider !== undefined && provider !== "openai") throw new PilotUnavailable("INVALID_INPUT");
   if (regionContext !== undefined && !isAfricanRegionCode(regionContext)) throw new PilotUnavailable("AI_REGION_CONTEXT_INVALID");
   const input = buildPilotInput(prompt, language, history);
   // Country text is server-owned; the browser can only select a bounded code.
@@ -53,9 +55,11 @@ export async function runBudgetedPilotChat(
 
   const geminiKey = process.env.LUQI_PILOT_GEMINI_API_KEY;
   const openaiKey = process.env.LUQI_PILOT_OPENAI_API_KEY;
-  if (!geminiKey && !openaiKey) throw new PilotUnavailable("AI_KEYS_NOT_CONFIGURED");
+  if ((!geminiKey && !openaiKey) || (provider === "openai" && !openaiKey)) throw new PilotUnavailable("AI_KEYS_NOT_CONFIGURED");
 
-  if (geminiKey) {
+  // Explicit OpenAI requests exercise the same authenticated, budgeted path
+  // independently. Never induce a Gemini failure or spend on it first.
+  if (geminiKey && provider !== "openai") {
     try {
       await reservePilotAttempt("gemini", userId);
       const client = new GoogleGenAI({ apiKey: geminiKey });

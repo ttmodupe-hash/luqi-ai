@@ -26,6 +26,37 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
+  it('uses only OpenAI and its own reservation when explicitly selected, even with both keys present', async () => {
+    const fetcher = vi.fn(async (url: string) => {
+      expect(url).toBe('https://api.openai.com/v1/responses');
+      expect(reserve.mock.calls).toEqual([['openai', 42]]);
+      return Response.json(openaiReply('Independent reply'));
+    });
+    vi.stubGlobal('fetch', fetcher);
+    expect(await runBudgetedPilotChat('Say hello', 42, 'auto', [], undefined, 'openai')).toEqual({
+      response: 'Independent reply', provider: 'openai', model: PILOT_MODELS.openai,
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('never falls back to Gemini when explicit OpenAI has no key, fails or exhausts its budget', async () => {
+    const fetcher = vi.fn(async () => Response.json({ error: { message: 'PRIVATE-ERROR' } }, { status: 503 }));
+    vi.stubGlobal('fetch', fetcher);
+    vi.stubEnv('LUQI_PILOT_OPENAI_API_KEY', '');
+    await expect(runBudgetedPilotChat('Say hello', 42, 'auto', [], undefined, 'openai'))
+      .rejects.toMatchObject({ code: 'AI_KEYS_NOT_CONFIGURED' });
+    expect(reserve).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
+    vi.stubEnv('LUQI_PILOT_OPENAI_API_KEY', 'fixture-openai');
+    await expect(runBudgetedPilotChat('Say hello', 42, 'auto', [], undefined, 'openai'))
+      .rejects.toMatchObject({ code: 'AI_PROVIDER_UNAVAILABLE' });
+    expect(reserve.mock.calls).toEqual([['openai', 42]]); expect(fetcher).toHaveBeenCalledTimes(1);
+    reserve.mockReset().mockRejectedValue(new PilotBlocked('AI_PROVIDER_BUDGET_EXHAUSTED'));
+    fetcher.mockClear();
+    await expect(runBudgetedPilotChat('Say hello', 42, 'auto', [], undefined, 'openai'))
+      .rejects.toMatchObject({ reason: 'AI_PROVIDER_BUDGET_EXHAUSTED' });
+    expect(reserve.mock.calls).toEqual([['openai', 42]]); expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("reserves first and returns Gemini text with fixed model and output bounds", async () => {
     const fetcher = vi.fn(async (url: string, options: RequestInit) => {
       expect(reserve.mock.calls).toEqual([["gemini", 42]]);
