@@ -3,6 +3,7 @@
  * No provider traffic, browser token storage or automatic POST retry.
  */
 import { z } from 'zod';
+import { withCustomerSessionLock } from './account-request';
 
 export const CUSTOMER_RESUME_HINT = '__Host-luqi_resume_hint';
 const INTENT = 'X-Luqi-Session-Intent';
@@ -111,8 +112,7 @@ export async function restoreCustomerSession(
     // Web Locks serialize different tabs. A shared promise also prevents React
     // StrictMode cleanup from aborting and replaying a state-changing refresh.
     const run = () => restoreOnce(request);
-    restoreFlight = Promise.resolve(typeof navigator !== 'undefined' && navigator.locks
-      ? navigator.locks.request('luqi-customer-session', run) : run());
+    restoreFlight = withCustomerSessionLock(run);
     void restoreFlight.finally(() => { restoreFlight = null; }).catch(() => {});
   }
   const flight = restoreFlight;
@@ -125,7 +125,9 @@ export async function restoreCustomerSession(
   });
 }
 export async function revokeCustomerSession(request: typeof fetch = fetch, token?: string): Promise<void> {
-  const response = await requestSession('/api/v1/auth/logout', 'logout', request, undefined, token);
-  if (response.status !== 204) throw new Error('LOGOUT_UNCONFIRMED');
-  clearCustomerResumeHint();
+  return withCustomerSessionLock(async () => {
+    const response = await requestSession('/api/v1/auth/logout', 'logout', request, undefined, token);
+    if (response.status !== 204) throw new Error('LOGOUT_UNCONFIRMED');
+    clearCustomerResumeHint();
+  });
 }

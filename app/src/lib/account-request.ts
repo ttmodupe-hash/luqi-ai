@@ -1,4 +1,12 @@
 /** One bounded account request. Cancelling cannot undo server-side registration. */
+/** Shared by login, restore and logout. A late cookie response must not
+ * overwrite a newer identity. The lock contains no customer information.
+ */
+export function withCustomerSessionLock<T>(work: () => Promise<T>): Promise<T> {
+  return Promise.resolve(typeof window !== 'undefined' && typeof document !== 'undefined' &&
+    typeof navigator !== 'undefined' && navigator.locks
+    ? navigator.locks.request('luqi-customer-session', work) : work());
+}
 export const ACCOUNT_REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_ACCOUNT_RESPONSE_BYTES = 32 * 1024;
 export type AccountPath = '/api/v1/auth/login' | '/api/v1/auth/register';
@@ -21,6 +29,7 @@ export async function requestAccountJson(
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(abort, ACCOUNT_REQUEST_TIMEOUT_MS);
   const operation = async (): Promise<AccountResult> => {
+    if (controller.signal.aborted) throw interrupted();
     const response = await request(path, {
       // Same-origin cookies are accepted only by the reviewed host-only session
       // issuer. The response's bearer token is still kept only in React memory.
@@ -71,7 +80,7 @@ export async function requestAccountJson(
       cancelReader(); reader.releaseLock(); reader = undefined;
     }
   };
-  try { return await Promise.race([operation(), deadline]); }
+  try { return await Promise.race([withCustomerSessionLock(operation), deadline]); }
   catch { if (controller.signal.aborted) throw interrupted(); throw new Error('Account request failed'); }
   finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }

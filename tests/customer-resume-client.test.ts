@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { requestAccountJson } from '../src/lib/account-request';
 import { CUSTOMER_RESUME_HINT, clearCustomerResumeHint, hasCustomerResumeHint,
   restoreCustomerSession, revokeCustomerSession } from '../src/lib/customer-resume';
 
@@ -97,4 +98,32 @@ describe('one-shot trusted-device session restoration', () => {
     expect(writes).toEqual([expect.stringContaining('Max-Age=0')]);
     expect(writes.join('')).not.toContain(user.token);
   });
+});
+
+
+it('serializes a pending rotation, logout and new login to prevent late cookie overwrite', async () => {
+  cookieText = CUSTOMER_RESUME_HINT + '=1';
+  let release!: (value: Response) => void;
+  let queue = Promise.resolve<unknown>(undefined);
+  const locks = { request: vi.fn((_name: string, work: () => Promise<unknown>) => {
+    const next = queue.then(work); queue = next.catch(() => {}); return next;
+  }) };
+  vi.stubGlobal('navigator', { locks });
+  const paths: string[] = [];
+  const request = vi.fn((path: string) => {
+    paths.push(path);
+    return path.endsWith('/session') ? new Promise<Response>(yes => { release = yes; })
+      : Promise.resolve(path.endsWith('/logout') ? new Response(null, { status: 204 }) : valid());
+  });
+  try {
+    const restoring = restoreCustomerSession(undefined, request);
+    const loggingOut = revokeCustomerSession(request);
+    const loggingIn = requestAccountJson(request, '/api/v1/auth/login', { email: user.user.email, password: 'Synthetic-New-Account-Password!', rememberMe: true });
+    await Promise.resolve(); await Promise.resolve();
+    expect(paths).toEqual(['/api/v1/auth/session']);
+    release(valid());
+    await Promise.all([restoring, loggingOut, loggingIn]);
+    expect(paths).toEqual(['/api/v1/auth/session', '/api/v1/auth/logout', '/api/v1/auth/login']);
+    expect(locks.request).toHaveBeenCalledTimes(3);
+  } finally { vi.unstubAllGlobals(); }
 });
