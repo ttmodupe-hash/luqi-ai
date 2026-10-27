@@ -27,7 +27,7 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
   await page.setViewportSize({ width: 320, height: 820 });
   await page.goto('/#/ai-trial');
   await expect(page).toHaveURL(/#\/chat$/);
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
   await page.locator('details.luqi-chat-signin-inline > summary').click();
   await page.getByLabel('Email', { exact: true }).fill('chat-browser@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-Chat-Password-2026!');
