@@ -35,6 +35,15 @@ export function readApprovedPilotCaps(env: NodeJS.ProcessEnv = process.env) {
   throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
 }
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
+/** Read the selected provider cap at reservation time. Never exceed it. */
+export function hasPilotReservationCapacity(
+  spentCents: number, provider: PilotProvider, env: NodeJS.ProcessEnv = process.env
+): boolean {
+  if (!Number.isSafeInteger(spentCents) || spentCents < 0) {
+    throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
+  }
+  return spentCents + RESERVE_PER_ATTEMPT_CENTS <= readApprovedPilotCaps(env)[provider];
+}
 export const MAX_INPUT_CHARS = MAX_PILOT_INPUT_CHARS;
 export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
 export const MAX_OUTPUT_TOKENS = 512;
@@ -132,7 +141,7 @@ async function reserveOnce(
     if (!Number.isSafeInteger(spent) || spent < 0) {
       throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
     }
-    if (spent + RESERVE_PER_ATTEMPT_CENTS > readApprovedPilotCaps()[provider]) {
+    if (!hasPilotReservationCapacity(spent, provider)) {
       throw new PilotBlocked("AI_PROVIDER_BUDGET_EXHAUSTED");
     }
 
