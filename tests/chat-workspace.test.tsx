@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { CustomerSessionProvider, useCustomerSession } from '../src/providers/customer-session';
 import { ChatWorkspaceProvider } from '../src/providers/chat-workspace';
@@ -117,4 +117,48 @@ it('keeps the dock reachable and lets signed-in users manage many in-tab chats w
   expect(within(sidebar).queryByRole('button', { name: 'Synthetic chat topic 1' })).toBeNull();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(14);
   expect(request.mock.calls.some(([path]) => String(path).includes('/companion/conversations'))).toBe(false);
+});
+
+it('never sends a saved note by merely loading/selecting it and shares it for one explicit reply', async () => {
+  request.mockImplementation(async (path: string, options?: RequestInit) => {
+    if (path === '/v1/readiness') return Response.json({
+      checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' },
+    });
+    if (path === '/api/v1/auth/login') return Response.json({
+      token: 'synthetic-token', user: { email: 'pilot@example.invalid' },
+    });
+    if (path === '/api/v1/companion/conversations?limit=50') return Response.json({
+      conversations: [{ id: 55, title: 'Personal preference', personalityId: 1 }],
+    });
+    if (path === '/api/v1/companion/conversations/55/messages?limit=50') return Response.json({
+      messages: [{ id: 70, role: 'user', content: 'I like numbered steps.', createdAt: null }],
+    });
+    if (path === '/api/v1/luqi-core') return result(JSON.parse(String(options?.body)).user_input);
+    throw new Error('Unexpected synthetic route');
+  });
+  render(<Fixture />);
+  await login();
+  fireEvent.click(screen.getByText('Conversation context, country guide and limits (optional)'));
+  fireEvent.click(screen.getByText('Personalise this reply with one saved private note'));
+  expect(request.mock.calls.some(([path]) => String(path).includes('/companion/conversations'))).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Load my saved notes' }));
+  const conversation = await screen.findByRole('button', { name: 'Personal preference' });
+  fireEvent.click(conversation);
+  fireEvent.click(await screen.findByRole('button', { name: 'Select this note' }));
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  await ask('No note should leave Chat yet.');
+  const first = JSON.parse(String(request.mock.calls.find(([path]) => path === '/api/v1/luqi-core')?.[1]?.body));
+  expect(first.user_input).toBe('No note should leave Chat yet.');
+  const share = screen.getByRole('checkbox', { name: /Include the selected note in this one provider request/ });
+  expect((share as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(share);
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'With my chosen note.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await waitFor(() => expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(2));
+  const paidCalls = request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core');
+  const second = JSON.parse(String(paidCalls[1][1]?.body));
+  expect(second.user_input).toContain('I like numbered steps.');
+  expect(second.user_input).toContain('With my chosen note.');
+  expect((share as HTMLInputElement).checked).toBe(false);
+  expect(request.mock.calls.filter(([path]) => String(path).includes('/companion/conversations')).every(([, opts]) => opts?.method === 'GET')).toBe(true);
 });
