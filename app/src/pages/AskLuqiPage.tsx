@@ -76,11 +76,11 @@ export default function AskLuqiPage() {
   return <main className="luqi-guide">
     <section className="luqi-guide-intro" aria-labelledby="luqi-guide-chat-heading">
       <p className="luqi-guide-overline"><Globe2 size={17} aria-hidden="true" /> AFRICA IN MIND · MADE FOR REAL LIFE</p>
-      <h1 id="luqi-guide-chat-heading">Chat with LUQI</h1>
-      <p>Tell LUQI what you're trying to do. Start with free, private-to-this-tab guidance and follow a working tool — or choose the signed-in AI text trial. You decide before any AI question is sent.</p>
+      <h1 id="luqi-guide-chat-heading">Chat with Luqi</h1>
+      <p>Tell Luqi what you're trying to do. Start with free, private-to-this-tab guidance and follow a working tool — or choose the signed-in AI text trial. You decide before any AI question is sent.</p>
       <div className="luqi-guide-intro-actions" role="group" aria-label="Choose how to start">
         <button type="button" className="luqi-guide-submit" onClick={() => document.getElementById('luqi-guide-need')?.focus()}>
-          Tell LUQI my goal <ArrowRight size={18} aria-hidden="true" />
+          Tell Luqi my goal <ArrowRight size={18} aria-hidden="true" />
         </button>
         <button type="button" className="luqi-guide-secondary" onClick={() => document.getElementById('luqi-guide-ai')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}>
           Go straight to AI Chat <Sparkles size={17} aria-hidden="true" />
@@ -91,7 +91,7 @@ export default function AskLuqiPage() {
     <SovereignRegionBar />
     <section className="luqi-guide-hero" aria-labelledby="luqi-guide-title">
       <p className="luqi-guide-eyebrow"><MessageCircle size={17} aria-hidden="true" /> START WITH YOUR GOAL · NO SIGN-IN REQUIRED</p>
-      <h2 id="luqi-guide-title">Tell LUQI what you need.<br/><em>See a real next step.</em></h2>
+      <h2 id="luqi-guide-title">Tell Luqi what you need.<br/><em>See a real next step.</em></h2>
       <p className="luqi-guide-lede">Whether you're visiting Africa, learning, creating or building a business, describe your goal. This local guide shows a useful path and clearly marks what cannot yet be verified.</p>
       <form onSubmit={guide} className="luqi-guide-form">
         <label htmlFor="luqi-guide-need">What would you like help with?</label>
@@ -148,7 +148,7 @@ export default function AskLuqiPage() {
         <div className="luqi-booking-review-body">
           <p className="luqi-guide-overline">BOOKING TRANSPARENCY</p>
           <h3 id="luqi-booking-review-title">See the real offer before you commit</h3>
-          <p>No verified property, experience or transport offer is connected yet. LUQI cannot display a real booking or accept payment.</p>
+          <p>No verified property, experience or transport offer is connected yet. Luqi cannot display a real booking or accept payment.</p>
           <p>A future verified offer must show provider, authentic photos and location, dates and group size, live availability timestamp, total price and fees in the stated currency, cancellation terms, and who processes payment.</p>
           <strong className="luqi-booking-unavailable">Booking and checkout unavailable</strong>
         </div>
@@ -156,7 +156,7 @@ export default function AskLuqiPage() {
       {(result.kind === 'booking' || result.kind === 'travel') && <section className="luqi-guide-travel" aria-labelledby="luqi-guide-travel-heading">
         <p className="luqi-guide-overline">USEFUL NOW · NOTHING IS RESERVED</p>
         <h3 id="luqi-guide-travel-heading">Prepare an enquiry for a real provider</h3>
-        <p>Write a short brief you can review and copy yourself. LUQI does not search listings, transmit your details, confirm availability or contact anyone.</p>
+        <p>Write a short brief you can review and copy yourself. Luqi does not search listings, transmit your details, confirm availability or contact anyone.</p>
         <form onSubmit={prepareTrip} autoComplete="off">
           <div className="luqi-guide-travel-fields">
             <label>Destination (city, area or country)
@@ -198,9 +198,9 @@ export default function AskLuqiPage() {
       <p>Your selected question can be copied into the AI composer. Signing in, preparing a question or checking readiness does not send a paid inference request.</p>
       <AiPilotPage embedded initialQuestion={aiDraft} />
     </section>
-    <section className="luqi-guide-bottom" aria-label="More ways to use LUQI">
+    <section className="luqi-guide-bottom" aria-label="More ways to use Luqi">
       <h2>Useful tools, connected by your goal.</h2>
-      <p>LUQI connects you to real browser-based tools for study, business, creative work and local calculations. It does not pretend to have live reservations, official data feeds or autonomous agents.</p>
+      <p>Luqi connects you to real browser-based tools for study, business, creative work and local calculations. It does not pretend to have live reservations, official data feeds or autonomous agents.</p>
       <div>
         <Link to="/start">See available tools <ArrowRight size={17} aria-hidden="true" /></Link>
         <Link to="/companion">Open private notes <ArrowRight size={17} aria-hidden="true" /></Link>
