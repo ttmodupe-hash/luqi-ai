@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 
 // Exercise the built frontend. These checks never submit account credentials.
 const aliases = [
-  ['/login', '/login', 'Sign in to your LUQI account'],
-  ['/signin', '/login', 'Sign in to your LUQI account'],
-  ['/sign-in', '/login', 'Sign in to your LUQI account'],
-  ['/register', '/join', 'Create your LUQI account'],
-  ['/signup', '/join', 'Create your LUQI account'],
-  ['/sign-up', '/join', 'Create your LUQI account'],
+  ['/login', '/login', 'Sign in to your Luqi account'],
+  ['/signin', '/login', 'Sign in to your Luqi account'],
+  ['/sign-in', '/login', 'Sign in to your Luqi account'],
+  ['/register', '/join', 'Create your Luqi account'],
+  ['/signup', '/join', 'Create your Luqi account'],
+  ['/sign-up', '/join', 'Create your Luqi account'],
 ] as const;
 
 for (const [alias, target, heading] of aliases) {
@@ -45,7 +45,7 @@ test('switching to signup through an alias clears the previous password', async 
   await page.getByLabel('Email', { exact: true }).fill('fixture@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('non-secret-fixture-password');
   await page.getByRole('button', { name: 'Create an account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Create your LUQI account', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Create your Luqi account', exact: true })).toBeVisible();
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('Confirm password', { exact: true })).toHaveValue('');
 });
@@ -69,7 +69,7 @@ test('successful LUQI registration enters Chat directly, never Notes or paid AI'
   await page.getByLabel('Confirm password', { exact: true }).fill('Synthetic-Password-2026!');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page).toHaveURL(/#\/chat$/);
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
   await expect(page.getByLabel('Your question')).toBeVisible();
   expect(registrations).toHaveLength(1);
   expect(paid).toHaveLength(0);
