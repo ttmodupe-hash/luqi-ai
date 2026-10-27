@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function openCustomerTool(page: Page, label: string) {
+  if (new URL(page.url()).hash.startsWith('#/chat')) {
+    const rail = page.getByRole('navigation', { name: 'Jump into LUQI services' });
+    const target = rail.getByRole('link', { name: label, exact: true });
+    if (!(await target.isVisible())) await page.getByRole('button', { name: 'Open chat sidebar' }).click();
+    await target.click();
+    return;
+  }
   const desktop = page.getByRole('navigation', { name: 'Primary navigation' })
     .getByRole('link', { name: label, exact: true });
   if (await desktop.isVisible()) { await desktop.click(); return; }
@@ -17,7 +24,7 @@ test('visitor finds the chat-first Africa guide on real browser engines without 
       paidRequests.push(request.url());
     }
   });
-  await page.goto('/#/chat');
+  await page.goto('/#/ask');
   await expect(page.getByRole('heading', { name: /Tell LUQI what you need/i })).toBeVisible();
   await expect(page.getByLabel('What would you like help with?')).toBeVisible();
   await page.getByRole('button', { name: 'Find somewhere to stay' }).click();
@@ -28,7 +35,7 @@ test('visitor finds the chat-first Africa guide on real browser engines without 
 });
 
 test('traveller can describe a need and is directed to a real local tool', async ({ page }) => {
-  await page.goto('/#/chat');
+  await page.goto('/#/ask');
   await page.getByLabel('What would you like help with?').fill('Help me prepare for my exam');
   await page.getByRole('button', { name: 'Find my next step' }).click();
   await expect(page.getByRole('heading', { name: 'Make learning more practical' })).toBeVisible();
@@ -41,7 +48,7 @@ test('persistent Ask LUQI link is visible and usable at narrow iPhone width', as
   const chat = page.getByRole('link', { name: 'Ask LUQI' });
   await expect(chat).toBeVisible();
   await chat.click();
-  await expect(page.getByRole('heading', { name: /Tell LUQI what you need/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
 });
 
 
@@ -67,7 +74,7 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
   await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
-  await expect(page.getByText(/Signed in as single-session@example.invalid/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
   await openCustomerTool(page, 'Omega tasks');
   await expect(page.getByRole('heading', { name: 'Tasks are not enabled yet' })).toBeVisible();
   await openCustomerTool(page, 'Private notes');
@@ -87,7 +94,7 @@ test('one goal-first Chat journey leads to optional AI on mobile; Notes remain o
     if (request.method() === 'POST' && /\/api\/v1\/luqi-core(?:\?|$)/.test(request.url())) paid.push(request.url());
   });
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.goto('/#/chat');
+  await page.goto('/#/ask');
   const primary = page.getByRole('heading', { name: 'Chat with LUQI', exact: true });
   const ai = page.getByRole('heading', { name: 'Try a question with LUQI' });
   const local = page.getByRole('heading', { name: /Tell LUQI what you need/ });
@@ -108,7 +115,7 @@ test('visitor can turn a travel goal into a usable provider enquiry without book
   const writes: string[] = [];
   page.on('request', request => { if (request.method() === 'POST') writes.push(request.url()); });
   await page.setViewportSize({ width: 320, height: 740 });
-  await page.goto('/#/chat');
+  await page.goto('/#/ask');
   await page.getByRole('button', { name: 'Find somewhere to stay' }).click();
   await expect(page.getByRole('heading', { name: "Here's a useful way forward" })).toBeVisible();
   await page.getByPlaceholder('Cape Town, South Africa').fill('Cape Town');
@@ -126,7 +133,7 @@ test('a manually selected country opens official links and does not automaticall
   const posts: string[] = [];
   page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
   await page.setViewportSize({ width: 320, height: 760 });
-  await page.goto('/#/chat');
+  await page.goto('/#/ask');
   await page.getByLabel('Country and continental view').selectOption('EAC_KE');
   await expect(page.getByLabel('Country and continental view')).toHaveValue('EAC_KE');
   await expect(page.getByText('Kenya', { exact: true })).toBeVisible();
