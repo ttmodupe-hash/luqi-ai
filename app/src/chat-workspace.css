@@ -248,3 +248,18 @@
 .luqi-saved-notes-list a svg { flex:none; }
 .luqi-saved-notes-list a span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .luqi-chat-rail-compact .luqi-saved-notes-peek { display:none; }
+
+
+/* Guests can reach account actions without crossing a full-height transcript. */
+.luqi-chat-canvas-guest { min-height:0; }
+.luqi-chat-canvas-guest .luqi-chat-transcript { flex:none; min-height:0; }
+@media (max-width:580px) {
+  .luqi-chat-canvas-guest .luqi-chat-transcript { padding:15px 0 12px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome { padding:8px 2px 5px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome-symbol { height:37px; width:37px; border-radius:12px; margin-bottom:8px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome-symbol svg { height:21px; width:21px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome h2 { font-size:25px; margin-bottom:7px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome p { font-size:11px; line-height:1.45; margin-bottom:0; }
+  .luqi-chat-canvas-guest .luqi-chat-login { margin:6px auto 0; }
+  .luqi-chat-canvas-header { padding-top:3px; }
+}
