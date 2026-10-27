@@ -26,7 +26,7 @@ export default function PaymentsPage() {
     {failed && <p role="status">Payment availability could not be confirmed. No payment has been started. Please try again later.</p>}
     {result?.status === 'unavailable' && <section aria-labelledby="payment-unavailable-heading">
       <h2 id="payment-unavailable-heading">Payments are not available yet</h2>
-      <p>There is no active paid offer to purchase here. You can continue using LUQI’s available pilot tools.</p>
+      <p>There is no active paid offer to purchase here. You can continue using Luqi’s available pilot tools.</p>
       <p>No money has been collected by opening this page.</p>
       <Link className="luqi-primary" to="/chat">Go to Chat</Link>
     </section>}
@@ -43,14 +43,14 @@ export default function PaymentsPage() {
       <h3>Taxes and fees</h3><p>{offer.taxesAndFees}</p>
       <h3>Order support</h3><p><a href={`mailto:${offer.supportEmail}`}>{offer.supportEmail}</a></p>
       <p>{isPublicKeyOffer(offer)
-        ? 'A separate checkout page asks for your receipt email before opening Paystack. Confirm the seller and total inside Paystack before paying. Your LUQI login and private notes are not attached.'
-        : 'Paystack handles payment details on its own website. Confirm the seller, service and total there before paying. Your LUQI login and private notes are not attached to the payment link.'}</p>
+        ? 'A separate checkout page asks for your receipt email before opening Paystack. Confirm the seller and total inside Paystack before paying. Your Luqi login and private notes are not attached.'
+        : 'Paystack handles payment details on its own website. Confirm the seller, service and total there before paying. Your Luqi login and private notes are not attached to the payment link.'}</p>
       <p>This purchase does not activate an AI subscription, app credits or extra AI allowance. Follow the seller’s delivery and receipt instructions for this assisted service.</p>
       <label className="block"><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} /> I have reviewed the service, price, delivery and refund details above.</label>
       {reviewed && result?.status === 'available' ? <p><a className="luqi-primary" href={`/api/v1/commerce/checkout?id=${encodeURIComponent(offer.id)}&revision=${result.revision}`} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Continue to Paystack</a></p>
         : <p>Review the offer details to continue to checkout.</p>}
       <p>If the offer changes before checkout opens, return here to review the current details.</p>
-      <p>Returning to LUQI does not confirm a successful payment. Keep the provider’s receipt and use the order support contact if you need help.</p>
+      <p>Returning to Luqi does not confirm a successful payment. Keep the provider’s receipt and use the order support contact if you need help.</p>
     </section>}
     <p><Link to="/pricing">Plans and available tools</Link> · <Link to="/contact">Help and feedback</Link></p>
   </main>;
