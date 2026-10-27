@@ -66,6 +66,10 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
       const request = JSON.parse(options.body as string);
       expect(request.generationConfig.maxOutputTokens).toBe(512);
       expect(request).not.toHaveProperty("tools");
+      const instructions = request.systemInstruction.parts.map((part: { text: string }) => part.text).join('');
+      expect(instructions).toContain('Current capabilities in this Chat: text conversation');
+      expect(instructions).toContain('still in development and are not available in this Chat');
+      expect(instructions).toContain('offer a useful text alternative');
       return Response.json(geminiReply('Sawubona'));
     });
     vi.stubGlobal("fetch", fetcher);
@@ -89,6 +93,10 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
         model: PILOT_MODELS.openai, max_output_tokens: 512, store: false,
         reasoning: { effort: "none" },
       });
+      const instructions = JSON.parse(options.body as string).instructions;
+      expect(instructions).toContain('Current capabilities in this Chat: text conversation');
+      expect(instructions).toContain('still in development and are not available in this Chat');
+      expect(instructions).toContain('offer a useful text alternative');
       return Response.json(openaiReply('Hello'));
     });
     vi.stubGlobal("fetch", fetcher);

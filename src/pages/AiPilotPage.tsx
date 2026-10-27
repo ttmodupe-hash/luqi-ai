@@ -202,7 +202,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         {!turns.length ? <div className="luqi-chat-welcome">
           <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
           <h2>What can LUQI help you with?</h2>
-          <p>Explore ideas, learning and everyday problems with a practical African perspective. Ask a question below, or jump straight into a working tool on the left.</p>
+          <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning.</p>
+          <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
           {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
             {[
               ['Study with LUQI', 'Explain a useful study technique with a simple example.'],
@@ -294,7 +295,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const Subheading = embedded ? 'h3' : 'h2';
   return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
     <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with LUQI</Heading>
-    <p>Get help with writing, studying and ideas. Review the answer: AI can make mistakes.</p>
+    <p>Chat with Luqi for help with writing, studying, ideas and planning. Review the answer: AI can make mistakes.</p>
+    <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
     <p role="status">{checking ? 'Checking AI configuration…' : available
       ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
       : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>
