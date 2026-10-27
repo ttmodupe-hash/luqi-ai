@@ -68,7 +68,7 @@ requests==2.34.2
 numpy==1.26.4
 pandas==2.1.4
 PyJWT==2.15.1
-email-validator==2.2.0
+# No unused email-validator/DNS resolver dependency; application validation does not import it.
 pypdf==6.21.2
 
 # AI Governance & Cloud Storage
