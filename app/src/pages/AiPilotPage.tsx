@@ -201,9 +201,6 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <span role="status">{checking ? 'Checking AI readiness…' :
           available ? 'AI provider configured · real replies depend on live limits' :
             'AI requests paused · no question can be sent'}</span>
-        <button type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
-          {checking ? 'Checking…' : 'Check availability'}
-        </button>
       </div>}
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
@@ -302,6 +299,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             {contextTooLong && ' · Question and optional context exceed the allowed input'}
             {tooLong && ' · Shorten your question. It will not be sent or shortened automatically.'}
           </span>
+          <button type="button" className="luqi-chat-availability-check" disabled={checking || busy}
+            onClick={() => { void checkAvailability(); }}>
+            {checking ? 'Checking…' : 'Check availability'}
+          </button>
           {uncertain ? <button type="button" onClick={() => {
             setUncertain(false); setPrompt(''); setNotice('');
           }}>Start a new question</button> : <button type="button" className="luqi-chat-new-in-composer" disabled={busy} onClick={newChat}>New chat</button>}
