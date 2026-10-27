@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Compass, Globe2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import AiPilotPage from './AiPilotPage';
+import LuqiPromptCoach from '../components/LuqiPromptCoach';
 import { useCustomerSession } from '../providers/customer-session';
 import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, guideLuqiNeed, MAX_GUIDE_NEED_CHARS } from '../lib/luqi-intent-guide';
 import { buildTravelEnquiry, MAX_TRAVEL_DESTINATION, MAX_TRAVEL_DETAIL } from '../lib/travel-enquiry';
@@ -18,6 +19,7 @@ export default function AskLuqiPage() {
   const [need, setNeed] = useState('');
   const [submitted, setSubmitted] = useState('');
   const [aiDraft, setAiDraft] = useState('');
+  const [coachDraftReady, setCoachDraftReady] = useState(false);
   const [error, setError] = useState('');
   const [trip, setTrip] = useState(emptyTrip);
   const [travelDraft, setTravelDraft] = useState('');
@@ -26,13 +28,14 @@ export default function AskLuqiPage() {
   useLayoutEffect(() => {
     const token = session?.token ?? null;
     if (previousToken.current && previousToken.current !== token) {
-      setNeed(''); setSubmitted(''); setAiDraft(''); setError('');
+      setNeed(''); setSubmitted(''); setAiDraft(''); setCoachDraftReady(false); setError('');
       setTrip(emptyTrip()); setTravelDraft(''); setCopyStatus('');
     }
     previousToken.current = token;
   }, [session?.token]);
 
   const result = guideLuqiNeed(submitted);
+  const urgentNeed = guideLuqiNeed(need)?.kind === 'urgent';
   function clearTravel() { setTrip(emptyTrip()); setTravelDraft(''); setCopyStatus(''); }
   function guide(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,14 +43,14 @@ export default function AskLuqiPage() {
       setError('Describe what you need in 500 characters or fewer.');
       return;
     }
-    setError(''); setSubmitted(need.trim()); clearTravel();
+    setError(''); setSubmitted(need.trim()); setCoachDraftReady(false); clearTravel();
   }
   function selectExample(value: string) {
-    setNeed(value); setSubmitted(value); setError(''); clearTravel();
+    setNeed(value); setSubmitted(value); setError(''); setCoachDraftReady(false); clearTravel();
   }
   function askAi() {
     if (!result || result.kind === 'urgent' || !submitted) return;
-    setAiDraft(submitted);
+    setAiDraft(submitted); setCoachDraftReady(false);
     document.getElementById('luqi-guide-ai')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
   function changeTrip(field: keyof ReturnType<typeof emptyTrip>, value: string) {
@@ -96,7 +99,8 @@ export default function AskLuqiPage() {
       <form onSubmit={guide} className="luqi-guide-form">
         <label htmlFor="luqi-guide-need">What would you like help with?</label>
         <textarea id="luqi-guide-need" value={need} maxLength={MAX_GUIDE_NEED_CHARS} rows={3}
-          onChange={event => { setNeed(event.target.value); setError(''); }}
+          onChange={event => { setNeed(event.target.value); setError(''); setCoachDraftReady(false); }}
+          spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
           placeholder="I'm visiting Cape Town. Help me find a place to stay and check what I'll pay."
           aria-describedby="luqi-guide-privacy" required />
         <div className="luqi-guide-form-bottom">
@@ -106,6 +110,16 @@ export default function AskLuqiPage() {
           </button>
         </div>
         {error && <p role="alert" className="luqi-guide-error">{error}</p>}
+        <p className="luqi-guide-coach-note">Not sure how to ask? The free writing helper below can prepare a clearer draft before you decide whether to sign in. Nothing is sent automatically.</p>
+        {urgentNeed && <p role="alert" className="luqi-guide-error">For urgent safety needs, use official emergency services. The AI writing helper is paused for this request.</p>}
+        <LuqiPromptCoach draft={need} disabled={urgentNeed} focusTargetId="luqi-guide-need"
+          onApply={value => { setNeed(value); setSubmitted(''); setError(''); setCoachDraftReady(false); clearTravel(); }}
+          onUseGuidedDraft={value => {
+            if (urgentNeed) return;
+            setAiDraft(value); setCoachDraftReady(true); setSubmitted(''); setError(''); clearTravel();
+            document.getElementById('luqi-guide-ai')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+          }} />
+        {coachDraftReady && <p role="status" className="luqi-guide-coach-ready">Your reviewed draft is ready in optional AI Chat below. Sign-in and separate consent are required to send it.</p>}
       </form>
       <div className="luqi-guide-examples" aria-label="Try a starting point">
         <span>Try an example</span>

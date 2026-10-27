@@ -1,10 +1,11 @@
 /** Read-only contract for the enabled web runtime, not a migration engine.
  * No row contents, credentials, or raw driver errors enter diagnostics.
  */
+import { P2P_RUNTIME_TABLES } from './p2pContracts';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 
-interface TableContract {
+export interface TableContract {
   columns: readonly string[];
   unique: readonly (readonly string[])[];
   critical?: Record<string, { type: string; collation?: string; nullable?: boolean }>;
@@ -90,7 +91,9 @@ const normalizeType = (type: string) => type.toLowerCase()
   .replace(/\b(tinyint|smallint|mediumint|int|bigint)\(\d+\)/g, '$1');
 const unavailable = () => new Error('MYSQL_RUNTIME_SCHEMA_UNAVAILABLE');
 
-async function validate(connection: Connection, contracts: Record<string, TableContract>): Promise<void> {
+/** SQL metadata/empty projections only. Operator inspection can check structure
+ * separately; the HTTP startup always retains the default privilege checks. */
+export async function validateRuntimeSchemaConnection(connection: Connection, contracts: Record<string, TableContract>, verifySessionPrivileges = true): Promise<void> {
   const names = Object.keys(contracts);
   const placeholders = names.map(() => '?').join(',');
   const query = async (sql: string) => {
@@ -132,6 +135,7 @@ async function validate(connection: Connection, contracts: Record<string, TableC
     await connection.query({ sql: `SELECT ${contract.columns.map(name => `\`${name}\``).join(',')}
       FROM \`${table}\` LIMIT 0`, timeout: 4_000 });
     if (table === 'customer_device_sessions_v1') {
+      if (verifySessionPrivileges) {
       const [roles] = await connection.query<RowDataPacket[]>({ sql: 'SELECT CURRENT_ROLE() AS active_roles', timeout: 4_000 });
       const [grants] = await connection.query<RowDataPacket[]>({ sql: 'SHOW GRANTS', timeout: 4_000 });
       const [database] = await connection.query<RowDataPacket[]>({ sql: 'SELECT DATABASE() AS name', timeout: 4_000 });
@@ -144,6 +148,7 @@ async function validate(connection: Connection, contracts: Record<string, TableC
               (grant.includes(' ON *.* ') || grant.includes(` ON ${schema}.* `))) ||
             (grant.includes('.\`customer_device_sessions_v1\` TO ') &&
               !grant.startsWith(`GRANT SELECT, INSERT, UPDATE ON ${schema}.\`customer_device_sessions_v1\` TO `)))) throw unavailable();
+      }
       const [owners] = await connection.query<RowDataPacket[]>({ sql: `SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
         FROM information_schema.key_column_usage WHERE TABLE_SCHEMA=DATABASE()
         AND TABLE_NAME='customer_device_sessions_v1' AND REFERENCED_TABLE_NAME IS NOT NULL`, timeout: 4_000 });
@@ -153,6 +158,14 @@ async function validate(connection: Connection, contracts: Record<string, TableC
   }
 }
 
+export function runtimeTableContracts(environment: Record<string,string|undefined>): Record<string,TableContract> {
+  return { ...RUNTIME_TABLES,
+    ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { customer_device_sessions_v1: customerResume } : {}),
+    ...(environment.LUQI_P2P_ENABLED === 'true' ? P2P_RUNTIME_TABLES : {}),
+    ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
+    ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
+}
+
 export async function checkRuntimeSchema(environment: Record<string, string | undefined> = process.env):
 Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
   let connection: Connection | undefined;
@@ -160,14 +173,11 @@ Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
   try {
     const settings = parseMySqlConnectionSettings(environment);
     if (!settings) return { status: 'unconfigured', tables: 0 };
-    const contracts = { ...RUNTIME_TABLES,
-      ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { customer_device_sessions_v1: customerResume } : {}),
-      ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
-      ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
+    const contracts = runtimeTableContracts(environment);
     connection = await mysql.createConnection({ ...settings, connectTimeout: 4_000 });
     const activeConnection = connection;
     await Promise.race([
-      validate(activeConnection, contracts),
+      validateRuntimeSchemaConnection(activeConnection, contracts),
       new Promise<never>((_, reject) => {
         deadline = setTimeout(() => { activeConnection.destroy(); reject(unavailable()); }, 8_000);
       }),

@@ -1,0 +1,5 @@
+{
+  "$schema":"https://railway.com/railway.schema.json",
+  "build":{"builder":"DOCKERFILE","dockerfilePath":"ops/Dockerfile.db-check"},
+  "deploy":{"startCommand":"node /work/inspect.js","restartPolicyType":"NEVER","numReplicas":1}
+}

@@ -863,10 +863,15 @@
   padding: 25px 10px;
   font-size: 14px;
 }
-@media (min-width: 1101px) {
+@media (min-width: 1441px) {
   .luqi-mobile-nav {
     display: none;
   }
+}
+/* The full P2P label and signed-in controls need room before desktop navigation fits. */
+@media (max-width: 1440px) {
+  .luqi-desktop-nav { display: none; }
+  .luqi-menu-button { display: flex; }
 }
 @media (max-width: 1100px) {
   .luqi-desktop-nav {

@@ -23,6 +23,7 @@ import OmegaTasksPage from "./pages/OmegaTasksPage";
 
 // Load optional tools only when their route is rendered. Keep account, notes,
 // start/help and release-observed core pages available in the initial bundle.
+const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
@@ -70,6 +71,8 @@ export default function App() {
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
+        <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
+        <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />
         <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />

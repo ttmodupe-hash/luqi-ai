@@ -25,7 +25,17 @@ Canonical Railway project: `kind-spontaneity` (`9f627cb8-3136-4b30-89d2-32ca648a
 5. Complete an approved production-derived restore drill on an encrypted operator workstation, with the feature table explicitly required: `python3 scripts/verify-local-mysql-backup.py --backup <private-export.sql.gz> --sha256 <independently-recorded-hash> --source-kind production-derived --report <new-private-report.json> --require-device-sessions --execute`. Never copy production backups, raw credentials, logs or customer content to public CI. Import/readability alone does not establish source completeness; record both independently.
 6. Retain consumed/revoked rows at least until their original absolute expiry so replay remains detectable. Review aggregate row growth and expiry-index use; purging after expiry is operator-only. Keep encrypted backup retention proportional to policy and account information needs.
 
-The connected Railway OAuth tools expose platform state and variable names, not a SQL connection or credential values. They cannot independently prove current table contents, SQL grants or a production-derived restore. No production migration, grant or flag change is made by this correction.
+The connected Railway OAuth read tools expose platform state and variable names, not a SQL connection or credential values. Direct platform reads cannot prove SQL grants or a production-derived restore. No production migration, grant or flag change is made by this correction.
+
+### 28 October continuation: private metadata inspection
+
+The reconciled candidate uses one grant definition for sessions, P2P, Omega and the project vault. Previously the P2P preflight omitted the session-table grant and would reject the combined configuration. Session and P2P boot/schema checks are now preserved together; both production flags remain OFF.
+
+`ops/Dockerfile.db-check` and `scripts/inspect-release-database.ts` provide a separate, one-shot, read-only checker. It is never an HTTP handler or web startup command. A private Railway service named `luqi-release-db-check` must match the canonical project/environment and an explicitly pinned source commit. Opaque Railway references supply the existing web connection and MySQL operator connection directly inside Railway; credential values are never exported to chat, local files, source, browser or public CI. No public domain or database TCP proxy is needed.
+
+The checker sets both SQL sessions to READ ONLY and reads only schema, zero-row column projections and grants. It compares the actual restricted identity, active roles, existing feature-table metadata and combined expected grant set. Its bounded JSON report contains checks, fixed table names, a schema fingerprint and the source commit; no customer rows, raw grants or secrets. Missing/extra privileges are reported and never repaired. A fresh production report must be recorded before it can count as operational evidence. CI tests use only the exact disposable database and prove inspection does not change its grants.
+
+This checker does not verify backups, report-key recovery, real school/adult eligibility or physical-phone reopening. A successful inspection is not permission to enable either feature; all remaining rollout gates below still apply. Creating or altering production tables/grants is a separate, explicitly reviewed operator step, not part of inspection.
 
 ## Automated evidence and acceptance still required
 

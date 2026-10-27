@@ -14,6 +14,7 @@ import { runtimeLiveness } from './lib/runtimeLiveness';
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
+import { p2p } from './p2p';
 import { accountSecurity } from "./account-security";
 import { customerResumeRoutes } from "./services/customerResume";
 import { hostedCheckout } from "./hosted-checkout";
@@ -116,6 +117,7 @@ app.use("*", async (c, next) => {
 app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/account", accountSecurity);
 app.route("/api/v1/auth", customerResumeRoutes);
+app.route("/api/v1/p2p", p2p);
 app.route("/api/v1/commerce", hostedCheckout);
 app.route("/api/v1/omega/tasks", omegaTasks);
 // Authenticated encrypted project sync is disabled without an explicit rollout flag.
@@ -1267,6 +1269,10 @@ if (env.isProduction) {
     const { checkRuntimeSchema } = await import('../db/runtimeSchema');
     const schema = await checkRuntimeSchema();
     logger.info(schema, 'Database runtime schema preflight');
+    if (process.env.LUQI_P2P_ENABLED === 'true') {
+      const { checkP2PReadiness } = await import('../db/p2pPreflight');
+      await checkP2PReadiness();
+    }
     const { serve } = await import("@hono/node-server");
     const { serveStaticFiles } = await import("./lib/vite");
     serveStaticFiles(app);
