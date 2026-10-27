@@ -10,12 +10,13 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 function mount(entry = '/payments') {
   render(<MemoryRouter initialEntries={[entry]}><Routes><Route path="/payments" element={<PaymentsPage />} /></Routes></MemoryRouter>);
 }
-it('shows honest unavailability with a labelled proposed price and no charge button', async () => {
+it('shows honest unavailability with no unapproved price or charge button', async () => {
   const request = vi.fn(async () => Response.json({ status: 'unavailable' })); vi.stubGlobal('fetch', request);
   mount(); await screen.findByRole('heading', { name: 'Payments are not available yet' });
   expect(screen.getByRole('heading', { name: 'LUQI Assisted Creator Pack' })).toBeTruthy();
-  expect(screen.getByText('R299')).toBeTruthy();
-  expect(screen.getByText(/not yet bookable/)).toBeTruthy();
+  expect(screen.getByText('Not on sale')).toBeTruthy();
+  expect(screen.getByText('No approved purchase price')).toBeTruthy();
+  expect(screen.queryByText('R299')).toBeNull();
   expect(screen.queryByRole('link', { name: 'Continue to Paystack' })).toBeNull();
   expect(request).toHaveBeenCalledTimes(1);
 });

@@ -258,7 +258,7 @@ export default function OmegaTasksPage() {
     <main className="omega-page">
       <header className="omega-heading">
         <p className="luqi-eyebrow">
-          <Layers3 size={16} aria-hidden="true" /> YOUR OMEGA WORKSPACE
+          <Layers3 size={16} aria-hidden="true" /> LUQI PRACTICAL TOOLS
         </p>
         <h1>Tasks, with a clear record.</h1>
         <p>Review your saved calculations, their status and their results.</p>
@@ -344,7 +344,7 @@ export default function OmegaTasksPage() {
             </p>
             <p className="omega-muted">
               Availability is checked after sign-in. Autonomous agents and the
-              other Omega modules are still in development.
+              additional LUQI capabilities are still in development.
             </p>
           </section>
         </div>

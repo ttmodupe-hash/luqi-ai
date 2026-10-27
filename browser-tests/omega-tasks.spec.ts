@@ -53,7 +53,7 @@ test("disabled intake has honest availability, no task reads and no persistent s
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/#/");
   await page
-    .getByRole("link", { name: "Open omega tasks", exact: true })
+    .getByRole("link", { name: /Open luqi practical tools/i })
     .click();
   await expect(
     page.getByRole("heading", { name: "Tasks, with a clear record." }),

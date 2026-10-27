@@ -15,7 +15,7 @@ test('desktop LUQIChat opens sidebar and conversation with usable service shortc
   for (const [name, href] of [
     ['Business desk', '#/business-desk'], ['Study desk', '#/study-desk'],
     ['Content studio', '#/content-studio'], ['Private notes', '#/companion'],
-    ['Omega tools', '#/omega-tasks'],
+    ['LUQI tools', '#/omega-tasks'],
   ]) await expect(services.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
   const left = await rail.boundingBox(), right = await canvas.boundingBox();
   expect(left).not.toBeNull(); expect(right).not.toBeNull();

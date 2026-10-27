@@ -13,7 +13,7 @@ const navigation = [
   ["/chat", "Chat"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
-  ["/omega-tasks", "Omega tasks"],
+  ["/omega-tasks", "LUQI tools"],
   ["/content-studio", "Create"],
   ["/start", "Start here"],
 ] as const;
