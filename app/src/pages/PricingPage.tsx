@@ -4,7 +4,7 @@ import CreatorPackPreview from '../components/CreatorPackPreview';
 export default function PricingPage() {
   return <main className="luqi-info"><p className="luqi-eyebrow">MAKE. LEARN. MOVE YOUR IDEA FORWARD.</p>
     <h1>Plans and availability</h1>
-    <p>Turn an idea into something you can show, understand or build on. Start with LUQI’s working pilot tools.</p>
+    <p>Turn an idea into something you can show, understand or build on. Start with Luqi’s working pilot tools.</p>
     <section><h2>Create a story worth sharing</h2>
       <p>Plan six scenes, explore a 3D animation and export a 90-second silent video from your browser. Download your storyboard, script and captions to keep developing your creation.</p>
       <p>Choose landscape, portrait or square for your next social project. You upload the finished file to your chosen channel.</p>
@@ -24,7 +24,7 @@ export default function PricingPage() {
       <Link className="luqi-primary" to="/companion">Open your private notes</Link>
     </section>
     <section><h2>Prepare for your next customer</h2>
-      <p>Use LUQI Business Desk to create a draft ZAR quotation and check your selling price, gross margin and break-even sales. Export a text draft without uploading customer information or using paid AI.</p>
+      <p>Use Luqi Business Desk to create a draft ZAR quotation and check your selling price, gross margin and break-even sales. Export a text draft without uploading customer information or using paid AI.</p>
       <p>It is a drafting and arithmetic aid, not an invoicing, tax or payment-collection service.</p>
       <Link className="luqi-primary" to="/business-desk">Open the business desk</Link>
     </section>
