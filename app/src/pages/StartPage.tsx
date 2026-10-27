@@ -4,7 +4,7 @@ import { ArrowUpRight, FlaskConical, MessageCircle, Layers3, BriefcaseBusiness, 
 export default function StartPage() {
   return <main className="luqi-start">
     <header className="luqi-start-heading">
-      <p className="luqi-eyebrow">WELCOME TO THE Luqi PILOT</p>
+      <p className="luqi-eyebrow">Welcome to the Luqi pilot</p>
       <h1>A useful place to begin.</h1>
       <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, prepare a client quote, practise flashcards, or save your ideas as notes.</p>
       <p><Link className="luqi-primary" to="/chat">Ask Luqi <ArrowUpRight size={18} aria-hidden="true" /></Link></p>
