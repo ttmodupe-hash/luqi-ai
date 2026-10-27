@@ -8,7 +8,7 @@ test('visitor sees truthful payment availability from Plans without any payment 
   await page.goto('/#/pricing');
   await page.getByRole('link', { name: 'View payment availability', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Payments are not available yet' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'LUQI Assisted Creator Pack' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Assisted Creator Pack' })).toBeVisible();
   await expect(page.getByText('Not on sale', { exact: true })).toBeVisible();
   await expect(page.getByText('No approved purchase price')).toBeVisible();
   await expect(page.getByText('R299', { exact: true })).toHaveCount(0);

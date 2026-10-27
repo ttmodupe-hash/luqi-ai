@@ -17,28 +17,28 @@ test('homepage offers a single-click account entry with working aliases on mobil
   await expect(join).toHaveAttribute('href', '#/join');
   await join.click();
   await expect(page).toHaveURL(/#\/join$/);
-  await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Create your Luqi account' })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toHaveAttribute('type', 'email');
   await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('autocomplete', 'new-password');
   await expect(page.getByRole('button', { name: 'Create account', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 
   await page.getByRole('button', { name: 'Use an existing account' }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account' })).toBeVisible();
   await page.goto('/#/signup');
   await expect(page).toHaveURL(/#\/join$/);
-  await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Create your Luqi account' })).toBeVisible();
   await page.goto('/#/login');
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account' })).toBeVisible();
 });
 
 test('obsolete public login and admin URLs cannot collect credentials or simulate admin access', async ({ page }) => {
   await page.goto('/login.html');
-  await expect(page.getByRole('heading', { name: 'Sign in to LUQI' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to Luqi' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Create account', exact: true })).toHaveAttribute('href', '/#/join');
   await expect(page.locator('form, input[type="password"]')).toHaveCount(0);
   await page.getByRole('link', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Create your Luqi account' })).toBeVisible();
 
   await page.goto('/admin.html');
   await expect(page.getByRole('heading', { name: 'Legacy administration is unavailable' })).toBeVisible();
@@ -55,8 +55,8 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   await expect(page.getByRole('link', { name: 'Try the physics lab', exact: true })).toHaveAttribute('href', '#/pendulum-lab');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: test.info().outputPath('getting-started.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Create your LUQI account' }).click();
-  await expect(page.getByRole('heading', { name: 'Create your LUQI account' })).toBeVisible();
+  await page.getByRole('link', { name: 'Create your Luqi account' }).click();
+  await expect(page.getByRole('heading', { name: 'Create your Luqi account' })).toBeVisible();
   await page.getByLabel('Email', { exact: true }).fill('new-browser@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Synthetic-New-Account-Password-2026!');
   await page.getByLabel('Confirm password', { exact: true }).fill('Synthetic-New-Account-Password-2026!');
@@ -68,9 +68,9 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   });
   await page.route('**/api/v1/companion/conversations**', route => route.fulfill({ json: { conversations: [] } }));
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
   await page.getByRole('button', { name: 'Open chat sidebar' }).click();
-  await expect(page.getByRole('complementary', { name: 'LUQIChat sidebar' })
+  await expect(page.getByRole('complementary', { name: 'Luqi Chat sidebar' })
     .getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Open chat sidebar' })).toHaveAttribute('aria-expanded', 'false');
@@ -80,7 +80,7 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   await expect(page.getByLabel('Conversation title')).toBeVisible();
   expect(registrations).toBe(1);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account' })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
 });
 
