@@ -191,7 +191,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
       <header className="luqi-chat-canvas-header">
         <div>
-          <h1 id="luqi-workspace-chat-heading">LUQIChat</h1>
+          <h1 id="luqi-workspace-chat-heading">Luqi Chat</h1>
           <p>Chat with Luqi, or choose a thoughtful companion conversation. Both use the same protected text gateway.</p>
         </div>
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
@@ -208,12 +208,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
         {!turns.length ? <div className="luqi-chat-welcome">
           <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
-          <h2>What can LUQI help you with?</h2>
+          <h2>What can Luqi help you with?</h2>
           <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning.</p>
           <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
           {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
             {[
-              ['Study with LUQI', 'Explain a useful study technique with a simple example.'],
+              ['Study with Luqi', 'Explain a useful study technique with a simple example.'],
               ['Plan my business', 'Help me plan the first three steps for a small business idea.'],
               ['Write a message', 'Help me draft a friendly response to a customer.'],
               ['Explore Africa', 'What should I research before visiting a new African country?'],
@@ -224,23 +224,23 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div> : <>
           {turns.map((turn, index) => <article key={index}
             className={'luqi-chat-message ' + (turn.sender === 'user' ? 'luqi-chat-message-user' : 'luqi-chat-message-ai')}>
-            <strong>{turn.sender === 'user' ? 'You' : 'LUQIChat'}</strong>
+            <strong>{turn.sender === 'user' ? 'You' : 'Luqi Chat'}</strong>
             <p>{turn.sender === 'user' ? turn.text : <SafePilotText text={turn.text} />}</p>
           </article>)}
           {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
           {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
         </>}
       </section>
-      {!session ? <section className="luqi-chat-login" aria-label="Sign in to LUQIChat">
+      {!session ? <section className="luqi-chat-login" aria-label="Sign in to Luqi Chat">
         <div className="luqi-chat-login-top">
           <span className="luqi-chat-login-orb"><Sparkles size={20} aria-hidden="true" /></span>
           <div>
             <h2>Keep the conversation going</h2>
-            <p>One LUQI sign-in gives you Chat and your other signed-in tools. Just opening Chat does not send a paid AI request.</p>
+            <p>One Luqi sign-in gives you Chat and your other signed-in tools. Just opening Chat does not send a paid AI request.</p>
           </div>
         </div>
         <div className="luqi-chat-login-actions">
-          <Link className="luqi-chat-login-action" to="/login">Sign in to LUQI</Link>
+          <Link className="luqi-chat-login-action" to="/login">Sign in to Luqi</Link>
           <Link className="luqi-chat-login-secondary" to="/join">Create account</Link>
         </div>
         <details className="luqi-chat-signin-inline">
@@ -255,7 +255,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <textarea id="ai-question" rows={2} required value={prompt}
           aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
           disabled={busy || uncertain}
-          placeholder="Ask LUQI about an idea, a study topic, a trip or a challenge…"
+          placeholder="Ask Luqi about an idea, a study topic, a trip or a challenge…"
           onChange={event => setPrompt(event.target.value)} />
         <label className="luqi-chat-companion-mode">
           <input type="checkbox" checked={companionMode} disabled={busy || uncertain}
@@ -283,7 +283,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {turns.length > 0 && <label><input type="checkbox" checked={shareContext} disabled={busy}
             onChange={event => setShareContext(event.target.checked)} /> Include reviewed previous turns in this question (off by default)</label>}
           {shareContext && <ol aria-label="Context to send">{contextPreview.map((turn, index) => <li key={index}>
-            <strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> {turn.text}
+            <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
           </li>)}</ol>}
           {region !== 'PAN_AFRICAN_AU' && <label><input type="checkbox" checked={shareRegion} disabled={busy}
             onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
@@ -318,7 +318,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const Heading = embedded ? 'h2' : 'h1';
   const Subheading = embedded ? 'h3' : 'h2';
   return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
-    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with LUQI</Heading>
+    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with Luqi</Heading>
     <p>Chat with Luqi for help with writing, studying, ideas and planning. Review the answer: AI can make mistakes.</p>
     <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
     <p role="status">{checking ? 'Checking AI configuration…' : available
@@ -339,7 +339,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button>
         </div>
       </section>
-      <section><Subheading>Ask LUQI</Subheading>
+      <section><Subheading>Ask Luqi</Subheading>
         <p>Ask in your own words, or try a starting question. Only your question is sent by default.</p>
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
           {!turns.length && !prompt && <fieldset className="luqi-chat-starters" disabled={busy || uncertain}>
@@ -364,7 +364,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               onChange={event => setShareContext(event.target.checked)} /> Include recent conversation context in this request (optional)</label>
             <p>Off by default. Review the exact preview before including recent messages.</p>
             {shareContext && <details open><summary>Review the conversation context to be sent</summary>
-              <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> {turn.text}</li>)}</ol>
+              <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}</li>)}</ol>
             </details>}
           </div>}
           {region !== 'PAN_AFRICAN_AU' && <label className="block"><input type="checkbox" checked={shareRegion} disabled={busy}
@@ -379,21 +379,21 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       </section>
       {turns.length > 2 && <section aria-label="Earlier conversation turns"><Subheading>Earlier conversation</Subheading>
         <ol>{turns.slice(0, -2).map((turn, index) => <li key={index}>
-          <strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{turn.text}</span>
+          <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{turn.text}</span>
         </li>)}</ol>
       </section>}
       {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><SafePilotText text={answer.response} /></p>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
-        {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real LUQI tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
+        {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real Luqi tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
       </section>}
     </>}
     <details className="luqi-chat-details">
       <summary>How Chat works</summary>
       <p>Gemini answers first, with OpenAI as a separately limited fallback. A fallback uses another provider attempt. This is an experimental text-only trial. No browsing, sources, tools, files, voice or autonomous actions are enabled. African-language accuracy has not been independently evaluated.</p>
       <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up: up to four recent turns, shortened to 350 characters each. Request formatting uses the rest of the 6000-character input limit. Your private notes and account email are never attached.</p>
-      <p>Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them. New chat clears this conversation and provider consent while keeping you signed in. Your LUQI login works across customer tools in this tab; a full reload ends it.</p>
+      <p>Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them. New chat clears this conversation and provider consent while keeping you signed in. Your Luqi login works across customer tools in this tab; a full reload ends it.</p>
     </details>
     <p>Notes are optional. This conversation stays in this page's memory and is not saved to Notes. <Link to="/start">Explore other tools</Link></p>
   </Root>;
