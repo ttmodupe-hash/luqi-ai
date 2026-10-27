@@ -68,6 +68,8 @@ jobs:
         run: node --test tests/pwa-install-contract.test.mjs
       - name: Verify local prompt coaching, typing hints and explicit draft approval
         run: npx vitest run tests/prompt-coach.test.ts tests/prompt-coach-ui.test.tsx
+      - name: Verify public prompt guidance without metered AI calls
+        run: npx vitest run tests/public-prompt-guide.test.tsx
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
