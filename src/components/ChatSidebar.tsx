@@ -54,7 +54,7 @@ export default function ChatSidebar() {
         aria-label={mobileOpen ? 'Close chat sidebar' : 'Open chat sidebar'} onClick={() => setMobileOpen(open => !open)}>
         {mobileOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
       </button>
-      <Link to="/chat" onClick={close}>Luqi<span>Chat</span></Link>
+      <Link to="/chat" onClick={close}>Luqi<span> Chat</span></Link>
       <button type="button" aria-label="New chat" onClick={start}><Plus size={22} aria-hidden="true" /></button>
     </div>
     {mobileOpen && <button className="luqi-chat-backdrop" type="button" aria-label="Dismiss sidebar overlay" onClick={closeWithFocus} />}
@@ -63,7 +63,7 @@ export default function ChatSidebar() {
       <div className="luqi-chat-rail-top">
         <Link to="/" className="luqi-chat-rail-brand" onClick={close} aria-label="Luqi workspace home">
           <img src="/luqi-mark.svg" alt="" aria-hidden="true" width="31" height="31" />
-          <span>Luqi <strong>AI</strong></span>
+          <span>Luqi</span>
         </Link>
         <button type="button" className="luqi-chat-rail-collapse"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
