@@ -3,7 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 async function openCustomerTool(page: Page, label: string) {
   if (new URL(page.url()).hash.startsWith('#/chat')) {
     const rail = page.getByRole('navigation', { name: 'Jump into LUQI services' });
-    const target = rail.getByRole('link', { name: label, exact: true });
+    // The concise LUQIChat shortcut is named Omega tools; legacy global navigation keeps Omega tasks.
+    const sidebarLabel = label === 'Omega tasks' ? 'Omega tools' : label;
+    const target = rail.getByRole('link', { name: sidebarLabel, exact: true });
     if (!(await target.isVisible())) await page.getByRole('button', { name: 'Open chat sidebar' }).click();
     await target.click();
     return;
