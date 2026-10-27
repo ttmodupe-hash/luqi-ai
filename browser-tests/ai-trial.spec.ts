@@ -20,6 +20,7 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   await page.goto('/#/ai-trial');
   await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
   expect(calls).toBe(0);
+  await page.locator('details.luqi-chat-signin-inline > summary').click();
   await page.getByLabel('Email', { exact: true }).fill('trial-browser@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-Trial-Password-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
