@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPilotEnabled, budgetSnapshot, PILOT_CENTS, PILOT_TOTAL_CENTS,
-  RESERVE_PER_ATTEMPT_CENTS, PILOT_USER_DAILY_MAX_ATTEMPTS, utcDay, utcMonth, PilotBlocked
+  RESERVE_PER_ATTEMPT_CENTS, PILOT_USER_DAILY_MAX_ATTEMPTS, utcDay, utcMonth, PilotBlocked,
+  PILOT_EXPANDED_CENTS, readApprovedPilotCaps, hasPilotReservationCapacity
 } from "../api/services/aiPilotBudget";
 import { runBudgetedPilotChat } from "../api/services/aiPilotGateway";
 
@@ -13,6 +14,50 @@ const approvals = {
   LUQI_GEMINI_MONTHLY_USD: "60",
   LUQI_OPENAI_MONTHLY_USD: "40",
 } as const;
+
+const expandedApprovals = {
+  ...approvals,
+  LUQI_AI_MONTHLY_USD: "300",
+  LUQI_GEMINI_MONTHLY_USD: "165",
+  LUQI_OPENAI_MONTHLY_USD: "135",
+} as const;
+
+describe("approved bounded monthly AI pilot allocations", () => {
+  it("accepts the owner-approved $300 / $165 Gemini / $135 OpenAI profile without weakening approval flags", () => {
+    expect(PILOT_EXPANDED_CENTS).toEqual({ gemini: 16500, openai: 13500 });
+    expect(readApprovedPilotCaps(expandedApprovals)).toEqual(PILOT_EXPANDED_CENTS);
+    expect(() => assertPilotEnabled(expandedApprovals)).not.toThrow();
+    expect(budgetSnapshot(25, "openai", expandedApprovals)).toEqual({
+      provider: "openai", monthlyUsd: 135, reservedUsd: 0.25, remainingUsd: 134.75,
+    });
+    expect(() => assertPilotEnabled({ ...expandedApprovals, LUQI_AI_BILLING_APPROVED: "false" }))
+      .toThrowError("BILLING_NOT_APPROVED");
+    expect(() => assertPilotEnabled({ ...expandedApprovals, LUQI_AI_PROVIDER_ENABLED: "false" }))
+      .toThrowError("AI_DISABLED");
+  });
+  it("rejects mixed, partial, inflated or arbitrary allocation profiles", () => {
+    for (const env of [
+      { ...expandedApprovals, LUQI_GEMINI_MONTHLY_USD: "60" },
+      { ...approvals, LUQI_AI_MONTHLY_USD: "300" },
+      { ...expandedApprovals, LUQI_AI_MONTHLY_USD: "301" },
+      { ...expandedApprovals, LUQI_OPENAI_MONTHLY_USD: "136" },
+      { ...expandedApprovals, LUQI_OPENAI_MONTHLY_USD: undefined },
+    ]) {
+      expect(() => assertPilotEnabled(env)).toThrowError("AI_BUDGET_CONFIGURATION_INVALID");
+    }
+  });
+  it("refuses reservations over either exact provider cap and keeps the $0.10 reservation", () => {
+    expect(hasPilotReservationCapacity(5990, "gemini", approvals)).toBe(true);
+    expect(hasPilotReservationCapacity(5991, "gemini", approvals)).toBe(false);
+    expect(hasPilotReservationCapacity(16490, "gemini", expandedApprovals)).toBe(true);
+    expect(hasPilotReservationCapacity(16491, "gemini", expandedApprovals)).toBe(false);
+    expect(hasPilotReservationCapacity(13490, "openai", expandedApprovals)).toBe(true);
+    expect(hasPilotReservationCapacity(13491, "openai", expandedApprovals)).toBe(false);
+    expect(() => hasPilotReservationCapacity(-1, "gemini", expandedApprovals))
+      .toThrowError("AI_BUDGET_STORE_UNAVAILABLE");
+    expect(RESERVE_PER_ATTEMPT_CENTS).toBe(10);
+  });
+});
 
 describe("LUQI $100 monthly AI pilot allocation", () => {
   it("divides the cap into $60 Gemini and $40 OpenAI", () => {

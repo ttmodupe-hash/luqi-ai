@@ -21,7 +21,29 @@ export class PilotBlocked extends Error {
 }
 export const PILOT_CENTS = Object.freeze({ gemini: 6000, openai: 4000 });
 export const PILOT_TOTAL_CENTS = 10000;
+// Approved 27 October 2026 for the existing application ceiling only. Neither
+// profile proves a provider-side hard limit or actual settled provider costs.
+export const PILOT_EXPANDED_CENTS = Object.freeze({ gemini: 16500, openai: 13500 });
+/** Exact, fail-closed approved profiles. Never infer caps from a single env var. */
+export function readApprovedPilotCaps(env: NodeJS.ProcessEnv = process.env) {
+  if (env.LUQI_AI_MONTHLY_USD === "100" &&
+      env.LUQI_GEMINI_MONTHLY_USD === "60" &&
+      env.LUQI_OPENAI_MONTHLY_USD === "40") return PILOT_CENTS;
+  if (env.LUQI_AI_MONTHLY_USD === "300" &&
+      env.LUQI_GEMINI_MONTHLY_USD === "165" &&
+      env.LUQI_OPENAI_MONTHLY_USD === "135") return PILOT_EXPANDED_CENTS;
+  throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+}
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
+/** Read the selected provider cap at reservation time. Never exceed it. */
+export function hasPilotReservationCapacity(
+  spentCents: number, provider: PilotProvider, env: NodeJS.ProcessEnv = process.env
+): boolean {
+  if (!Number.isSafeInteger(spentCents) || spentCents < 0) {
+    throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
+  }
+  return spentCents + RESERVE_PER_ATTEMPT_CENTS <= readApprovedPilotCaps(env)[provider];
+}
 export const MAX_INPUT_CHARS = MAX_PILOT_INPUT_CHARS;
 export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
 export const MAX_OUTPUT_TOKENS = 512;
@@ -42,11 +64,9 @@ export function assertPilotEnabled(env: NodeJS.ProcessEnv = process.env): void {
   if (env.LUQI_AI_BILLING_APPROVED !== "true") {
     throw new PilotBlocked("BILLING_NOT_APPROVED");
   }
-  if (env.LUQI_AI_MONTHLY_USD !== "100" ||
-      env.LUQI_GEMINI_MONTHLY_USD !== "60" ||
-      env.LUQI_OPENAI_MONTHLY_USD !== "40") {
-    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
-  }
+  // Requiring an exact, explicitly approved triplet prevents accidentally
+  // accepting a partial or inflated budget configuration.
+  readApprovedPilotCaps(env);
 }
 
 let pool: Pool | undefined;
@@ -121,7 +141,7 @@ async function reserveOnce(
     if (!Number.isSafeInteger(spent) || spent < 0) {
       throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
     }
-    if (spent + RESERVE_PER_ATTEMPT_CENTS > PILOT_CENTS[provider]) {
+    if (!hasPilotReservationCapacity(spent, provider)) {
       throw new PilotBlocked("AI_PROVIDER_BUDGET_EXHAUSTED");
     }
 
@@ -203,13 +223,19 @@ export async function checkPilotGatewayReadiness(): Promise<
 }
 
 /** For offline tests and account dashboards; provider billing is authoritative. */
-export function budgetSnapshot(reservedCents: number, provider: PilotProvider) {
+export function budgetSnapshot(reservedCents: number, provider: PilotProvider,
+  env: NodeJS.ProcessEnv = process.env) {
   if (!Number.isSafeInteger(reservedCents) || reservedCents < 0) {
     throw new Error("Invalid reservation balance");
   }
+  // The no-configuration form remains useful for historical, offline $100
+  // fixtures. In a configured environment, never report the wrong allowance.
+  const hasConfig = ["LUQI_AI_MONTHLY_USD", "LUQI_GEMINI_MONTHLY_USD", "LUQI_OPENAI_MONTHLY_USD"]
+    .some(name => env[name] !== undefined);
+  const cap = (hasConfig ? readApprovedPilotCaps(env) : PILOT_CENTS)[provider];
   return {
-    provider, monthlyUsd: PILOT_CENTS[provider] / 100,
+    provider, monthlyUsd: cap / 100,
     reservedUsd: reservedCents / 100,
-    remainingUsd: Math.max(0, PILOT_CENTS[provider] - reservedCents) / 100,
+    remainingUsd: Math.max(0, cap - reservedCents) / 100,
   };
 }
