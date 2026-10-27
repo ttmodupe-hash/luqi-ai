@@ -1,0 +1,37 @@
+name: Luqi one-time independent OpenAI production acceptance
+on:
+  push:
+    branches: ['acceptance/one-time-openai-20261027']
+    paths: ['.github/workflows/one-time-openai-20261027.yml']
+permissions:
+  contents: read
+concurrency:
+  group: luqi-one-time-openai-acceptance-20261027
+  cancel-in-progress: false
+jobs:
+  independent-openai-reply:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/acceptance/one-time-openai-20261027' &&
+      github.event.head_commit.message == 'chore(acceptance): one independent authenticated OpenAI probe 2026-10-27' &&
+      github.run_number == 1 &&
+      github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: '8644a9e2a0c91d247901e665712dbadedb887b01'
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify the exact deployed audited probe syntax
+        run: node --check scripts/verify-production-pilot.mjs
+      - name: One synthetic authenticated journey and one independently budgeted OpenAI attempt
+        env:
+          LUQI_EXPECTED_COMMIT: '8644a9e2a0c91d247901e665712dbadedb887b01'
+          LUQI_ACCEPTANCE_WRITES: 'owner-approved-synthetic-only'
+          LUQI_ACCEPTANCE_AI: 'one-request'
+          LUQI_ACCEPTANCE_PROVIDER: 'openai'
+        run: node scripts/verify-production-pilot.mjs
