@@ -231,3 +231,20 @@
   .luqi-chat-caption { font-size:10px; line-height:1.5; }
   .luqi-chat-workspace-links { font-size:11px; gap:10px; margin-top:9px; }
 }
+
+
+/* An explicit, bounded notes preview. A network error never blanks active Chat. */
+.luqi-saved-notes-peek { border-top:1px solid #3d4e3d; margin-top:15px; padding:16px 6px 20px; }
+.luqi-saved-notes-header { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+.luqi-saved-notes-header h3 { display:flex; gap:7px; align-items:center; margin:0; font-size:12px; color:#f0f6eb; font-weight:740; }
+.luqi-saved-notes-header > a { color:#cde5b4; font-size:11px; text-decoration:underline; white-space:nowrap; }
+.luqi-saved-notes-disclaimer, .luqi-saved-notes-status { font-size:11px; color:#b2c4b1; line-height:1.55; margin:10px 1px; }
+.luqi-saved-notes-load, .luqi-saved-notes-error button { display:inline-flex; align-items:center; gap:7px; min-height:39px; margin:7px 0 0; border:1px solid #58745a; background:#283e2e; color:#e6f4dc; border-radius:9px; padding:8px 11px; font-size:11px; font-weight:670; }
+.luqi-saved-notes-error { border:1px solid #9a7744; background:#342c1e; padding:11px; border-radius:10px; }
+.luqi-saved-notes-error p { margin:0; font-size:11px; line-height:1.55; color:#ffdfb9; }
+.luqi-saved-notes-list { display:grid; gap:3px; margin:10px 0; max-height:285px; overflow-y:auto; scrollbar-width:thin; }
+.luqi-saved-notes-list a { display:flex; gap:8px; align-items:center; color:#d7e6d1; border-radius:8px; min-height:38px; padding:6px 8px; font-size:11px; background:#1c2920; }
+.luqi-saved-notes-list a:hover { background:#334b38; color:#fff; }
+.luqi-saved-notes-list a svg { flex:none; }
+.luqi-saved-notes-list a span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.luqi-chat-rail-compact .luqi-saved-notes-peek { display:none; }
