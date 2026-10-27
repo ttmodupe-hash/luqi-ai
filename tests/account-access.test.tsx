@@ -42,7 +42,7 @@ describe('new account access', () => {
     await waitFor(() => expect(accepted).toHaveBeenCalledExactlyOnceWith(session));
     expect(request.mock.calls[0][0]).toBe('/api/v1/auth/register');
     const options = request.mock.calls[0][1];
-    expect(options).toMatchObject({ method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error' });
+    expect(options).toMatchObject({ method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error' });
     expect(JSON.parse(options.body)).toEqual({ email, password });
     expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Confirm password') as HTMLInputElement).value).toBe('');
