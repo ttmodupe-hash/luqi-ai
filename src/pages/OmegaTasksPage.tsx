@@ -258,7 +258,7 @@ export default function OmegaTasksPage() {
     <main className="omega-page">
       <header className="omega-heading">
         <p className="luqi-eyebrow">
-          <Layers3 size={16} aria-hidden="true" /> LUQI PRACTICAL TOOLS
+          <Layers3 size={16} aria-hidden="true" /> Luqi practical tools
         </p>
         <h1>Tasks, with a clear record.</h1>
         <p>Review your saved calculations, their status and their results.</p>
@@ -290,7 +290,7 @@ export default function OmegaTasksPage() {
           >
             <LockKeyhole size={24} aria-hidden="true" />
             <h2>Sign in to your task history</h2>
-            <p>Use your existing LUQI account.</p>
+            <p>Use your existing Luqi account.</p>
             <label>
               Email
               <input
@@ -318,8 +318,8 @@ export default function OmegaTasksPage() {
               {busy ? "Signing in…" : "Sign in"}
             </button>
             <p className="omega-muted">
-              Your LUQI account stays signed in across customer tools in this tab. Reloading or signing out ends the session.
-              Account recovery requires your LUQI administrator.
+              Your Luqi account stays signed in across customer tools in this tab. Reloading or signing out ends the session.
+              Account recovery requires your Luqi administrator.
             </p>
           </form>
           <section
@@ -344,7 +344,7 @@ export default function OmegaTasksPage() {
             </p>
             <p className="omega-muted">
               Availability is checked after sign-in. Autonomous agents and the
-              additional LUQI capabilities are still in development.
+              additional Luqi capabilities are still in development.
             </p>
           </section>
         </div>
@@ -573,7 +573,7 @@ export default function OmegaTasksPage() {
                       )}
                     {confirmRemove && (
                       <section className="omega-confirm" aria-label="Confirm saved task removal">
-                        <h3>Remove this finished task from LUQI?</h3>
+                        <h3>Remove this finished task from Luqi?</h3>
                         <p>
                           This permanently removes the selected finished record from
                           active task storage and frees a queue slot. Backups can

@@ -69,8 +69,8 @@ export default function OmegaLocalCalculators() {
   return (
     <section id="omega-local-tools" className="omega-panel omega-local" aria-labelledby="omega-local-title">
       <span className="omega-badge">Available in your browser</span>
-      <h2 id="omega-local-title">Omega quick calculations</h2>
-      <p>Calculate now without signing in or waiting for a worker. The calculation runs only in this browser tab; it sends no inputs to LUQI, AI providers or third parties and saves no task.</p>
+      <h2 id="omega-local-title">Luqi quick calculations</h2>
+      <p>Calculate now without signing in or waiting for a worker. The calculation runs only in this browser tab; it sends no inputs to Luqi, AI providers or third parties and saves no task.</p>
       <form className="omega-submit" onSubmit={calculate}>
         <label htmlFor="omega-local-type">Choose a local calculation</label>
         <select id="omega-local-type" value={mode} onChange={event => {
@@ -124,9 +124,9 @@ export default function OmegaLocalCalculators() {
           </dl>
         </>}
         <p>{result.value.notice}</p>
-        <p>This result is not saved to your account or the Omega task queue.</p>
+        <p>This result is not saved to your account or the Luqi task queue.</p>
       </div>}
-      <p className="omega-muted">Live weather feeds, official travel/visa information, university and scholarship results, water/sanitation sources, and background Omega workers still require separate integration and acceptance. This calculator does not make those services available.</p>
+      <p className="omega-muted">Live weather feeds, official travel/visa information, university and scholarship results, water/sanitation sources, and background Luqi workers still require separate integration and acceptance. This calculator does not make those services available.</p>
     </section>
   );
 }
