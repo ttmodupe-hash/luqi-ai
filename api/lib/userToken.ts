@@ -24,10 +24,13 @@ function credentialVersion(userId: number, passwordHash: string, secret: string)
     .update(`luqi-credential-v1\0${userId}\0${passwordHash}`).digest("hex");
 }
 
-export function signUserToken(userId: number, passwordHash: string): string {
+export function signUserToken(userId: number, passwordHash: string, sessionDigest?: string): string {
+  if (sessionDigest !== undefined && !/^luqi-rs1-[a-f0-9]{64}$/.test(sessionDigest)) {
+    throw new Error('Invalid customer session binding');
+  }
   if (!Number.isSafeInteger(userId) || userId <= 0) throw new Error("Invalid user ID");
   const secret = getSigningSecret();
-  return jwt.sign({ userId, cv: credentialVersion(userId, passwordHash, secret) }, secret, {
+  return jwt.sign({ userId, cv: credentialVersion(userId, passwordHash, secret), ...(sessionDigest ? { sid: sessionDigest } : {}) }, secret, {
     algorithm: "HS256",
     issuer: LUQI_JWT_ISSUER,
     audience: LUQI_JWT_AUDIENCE,
@@ -48,12 +51,23 @@ function verifiedClaims(token: string, secret: string): jwt.JwtPayload {
       payload.userId <= 0 || payload.iss !== LUQI_JWT_ISSUER ||
       payload.aud !== LUQI_JWT_AUDIENCE ||
       typeof payload.cv !== "string" || !/^[a-f0-9]{64}$/.test(payload.cv) ||
+      (payload.sid !== undefined && (typeof payload.sid !== 'string' ||
+        !/^luqi-rs1-[a-f0-9]{64}$/.test(payload.sid))) ||
       !Number.isSafeInteger(payload.iat) || !Number.isSafeInteger(payload.exp) ||
       payload.iat! > Math.floor(Date.now() / 1000) + 30 ||
       payload.exp! <= payload.iat! || payload.exp! - payload.iat! > 86400) {
     throw new Error("Invalid token claims");
   }
   return payload;
+}
+
+/** Session-bound JWTs are checked against a durable session row on EVERY
+ * protected request. Older bearer-only pilot JWTs keep their original 24h
+ * expiry and are not silently converted into revocable new sessions.
+ */
+export function getSignedSessionDigest(token: string, secret: string = getSigningSecret()): string | null {
+  const digest = verifiedClaims(token, secret).sid;
+  return typeof digest === 'string' ? digest : null;
 }
 
 /** Signature/claim verification alone is not a complete account authorization. */
