@@ -106,6 +106,23 @@ it('keeps the last confirmed reply visible during and after a failed follow-up',
   expect((screen.getByLabelText('Your question') as HTMLTextAreaElement).disabled).toBe(true);
   expect(inference).toHaveBeenCalledTimes(2);
 });
+it('rejects an incomplete provider answer without displaying partial text or retrying the provider', async () => {
+  await login(); draft(); consent();
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByRole('heading', { name: 'AI reply' });
+  inference.mockResolvedValue(Response.json({
+    code: 'AI_REPLY_INCOMPLETE',
+    response: 'INCOMPLETE_SYNTHETIC_FRAGMENT_SHOULD_NOT_RENDER',
+  }, { status: 502 }));
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Please explain the next step' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByText(/The provider stopped before completing a reply/);
+  expect(screen.getByText('<script>fixture</script> Sawubona')).toBeTruthy();
+  expect(screen.queryByText(/INCOMPLETE_SYNTHETIC_FRAGMENT_SHOULD_NOT_RENDER/)).toBeNull();
+  expect(inference).toHaveBeenCalledTimes(2);
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(false);
+});
+
 it('starts a clean chat without ending the account session or carrying over provider consent', async () => {
   await login(); draft(); consent();
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
