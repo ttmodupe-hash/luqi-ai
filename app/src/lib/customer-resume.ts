@@ -1,6 +1,6 @@
-/** One bounded same-origin customer-session restoration or revocation.
- * The only JavaScript-readable cookie is an inert yes/no marker, never a token.
- * Neither method invokes the AI gateway or retries ambiguous requests.
+/** Single bounded same-origin session restore/revoke transport.
+ * Bearer tokens stay in memory; the only readable cookie is a yes/no hint.
+ * No provider traffic, browser token storage or automatic POST retry.
  */
 import { z } from 'zod';
 
@@ -8,94 +8,95 @@ export const CUSTOMER_RESUME_HINT = '__Host-luqi_resume_hint';
 const INTENT = 'X-Luqi-Session-Intent';
 const MAX_BYTES = 8192;
 const TIMEOUT_MS = 12_000;
-const session = z.object({
-  token: z.string().min(1).max(4096),
-  user: z.object({ email: z.string().email().max(254) }),
-}).strict();
-
-export type RestoredCustomerSession = z.infer<typeof session>;
+const account = z.object({ token: z.string().min(1).max(4096),
+  user: z.object({ email: z.string().email().max(254) }) });
+export type RestoredCustomerSession = z.infer<typeof account>;
 
 export function hasCustomerResumeHint(): boolean {
   if (typeof document === 'undefined' || !document.cookie) return false;
   return document.cookie.split(';').some(item => item.trim() === CUSTOMER_RESUME_HINT + '=1');
 }
-
 export function clearCustomerResumeHint() {
   if (typeof document === 'undefined') return;
   document.cookie = CUSTOMER_RESUME_HINT + '=; Max-Age=0; Path=/; Secure; SameSite=Strict';
 }
 
-async function singleSessionRequest(
+type SessionResponse = { status: number; body: unknown };
+async function requestSession(
   path: '/api/v1/auth/session' | '/api/v1/auth/logout',
   method: 'GET' | 'POST', intent: 'restore' | 'logout',
-  request: typeof fetch, externalSignal?: AbortSignal,
-): Promise<Response> {
-  if (externalSignal?.aborted) throw new Error('AUTH_REQUEST_INTERRUPTED');
+  request: typeof fetch, signal?: AbortSignal,
+): Promise<SessionResponse> {
+  const interrupted = () => new Error('AUTH_REQUEST_UNCONFIRMED');
+  if (signal?.aborted) throw interrupted();
   const controller = new AbortController();
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let rejectDeadline!: (reason: Error) => void;
-  const deadline = new Promise<never>((_, reject) => {
-    rejectDeadline = reject;
-  });
-  const abort = () => { controller.abort(); rejectDeadline(new Error('AUTH_REQUEST_INTERRUPTED')); };
-  externalSignal?.addEventListener('abort', abort, { once: true });
+  const deadline = new Promise<never>((_, reject) => { rejectDeadline = reject; });
+  const cancel = () => { if (reader) void reader.cancel().catch(() => {}); };
+  const abort = () => { controller.abort(); cancel(); rejectDeadline(interrupted()); };
+  signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(abort, TIMEOUT_MS);
-  try {
-    const response = await Promise.race([request(path, {
+  const operation = async (): Promise<SessionResponse> => {
+    const response = await request(path, {
       method, cache: 'no-store', credentials: 'same-origin', redirect: 'error',
-      signal: controller.signal, headers: { [INTENT]: intent, Accept: 'application/json' },
-    }), deadline]);
-    if (controller.signal.aborted || response.redirected) throw new Error('AUTH_RESPONSE_UNCONFIRMED');
-    return response;
-  } finally {
-    clearTimeout(timer);
-    externalSignal?.removeEventListener('abort', abort);
-  }
+      signal: controller.signal,
+      headers: { [INTENT]: intent, Accept: 'application/json' },
+    });
+    if (controller.signal.aborted || response.redirected) throw interrupted();
+    if (response.status !== 200 || method === 'POST') {
+      void response.body?.cancel().catch(() => {});
+      return { status: response.status, body: null };
+    }
+    const type = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+    const length = response.headers.get('content-length');
+    if (type !== 'application/json' || !response.body ||
+        (length !== null && (!/^\d+$/.test(length) ||
+          !Number.isSafeInteger(Number(length)) || Number(length) > MAX_BYTES))) {
+      void response.body?.cancel().catch(() => {});
+      throw interrupted();
+    }
+    reader = response.body.getReader();
+    let bytes = 0; const chunks: Uint8Array[] = [];
+    try {
+      for (;;) {
+        if (controller.signal.aborted) throw interrupted();
+        const { done, value } = await reader.read();
+        if (controller.signal.aborted) throw interrupted();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > MAX_BYTES) throw interrupted();
+        chunks.push(value);
+      }
+      const data = new Uint8Array(bytes); let offset = 0;
+      for (const part of chunks) { data.set(part, offset); offset += part.length; }
+      return { status: response.status, body: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data)) };
+    } finally {
+      cancel(); reader?.releaseLock(); reader = undefined;
+    }
+  };
+  try { return await Promise.race([operation(), deadline]); }
+  catch { throw interrupted(); }
+  finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
 
 export async function restoreCustomerSession(
   signal?: AbortSignal, request: typeof fetch = fetch,
 ): Promise<RestoredCustomerSession | null> {
   if (!hasCustomerResumeHint()) return null;
-  const response = await singleSessionRequest('/api/v1/auth/session', 'GET', 'restore', request, signal);
+  const response = await requestSession('/api/v1/auth/session', 'GET', 'restore', request, signal);
   if (response.status === 204 || response.status === 401) {
-    clearCustomerResumeHint();
-    return null;
+    clearCustomerResumeHint(); return null;
   }
   if (response.status !== 200) throw new Error('AUTH_RESTORE_UNAVAILABLE');
-  const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
-  const length = response.headers.get('content-length');
-  if (contentType !== 'application/json' ||
-      (length !== null && (!/^\d+$/.test(length) || Number(length) > MAX_BYTES))) {
-    throw new Error('AUTH_RESPONSE_UNCONFIRMED');
-  }
-  // Stream bound prevents a forged/malformed response exhausting browser memory.
-  if (!response.body) throw new Error('AUTH_RESPONSE_UNCONFIRMED');
-  const reader = response.body.getReader();
-  let bytes = 0; const chunks: Uint8Array[] = [];
-  try {
-    for (;;) {
-      if (signal?.aborted) throw new Error('AUTH_REQUEST_INTERRUPTED');
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytes += value.byteLength;
-      if (bytes > MAX_BYTES) throw new Error('AUTH_RESPONSE_UNCONFIRMED');
-      chunks.push(value);
-    }
-    const data = new Uint8Array(bytes); let i = 0;
-    for (const part of chunks) { data.set(part, i); i += part.length; }
-    const decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(data));
-    return session.parse(decoded);
-  } catch {
-    throw new Error('AUTH_RESPONSE_UNCONFIRMED');
-  } finally {
-    void reader.cancel().catch(() => {});
-    reader.releaseLock();
-  }
+  const parsed = account.safeParse(response.body);
+  if (!parsed.success) throw new Error('AUTH_RESPONSE_UNCONFIRMED');
+  return parsed.data;
 }
 
 export async function revokeCustomerSession(request: typeof fetch = fetch): Promise<void> {
   if (!hasCustomerResumeHint()) return;
-  const response = await singleSessionRequest('/api/v1/auth/logout', 'POST', 'logout', request);
-  if (response.status !== 204 || response.redirected) throw new Error('LOGOUT_UNCONFIRMED');
+  const response = await requestSession('/api/v1/auth/logout', 'POST', 'logout', request);
+  if (response.status !== 204) throw new Error('LOGOUT_UNCONFIRMED');
   clearCustomerResumeHint();
 }
