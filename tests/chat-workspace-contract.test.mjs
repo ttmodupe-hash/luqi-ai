@@ -4,7 +4,7 @@ import { test } from 'node:test';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const files = [
-  'components/ChatSidebar.tsx', 'providers/chat-workspace.tsx',
+  'components/ChatSidebar.tsx', 'components/SavedNotesPeek.tsx', 'providers/chat-workspace.tsx',
   'pages/LuqiChatWorkspacePage.tsx', 'pages/AiPilotPage.tsx',
   'components/WorkspaceLayout.tsx', 'chat-workspace.css',
 ];
@@ -31,4 +31,17 @@ test('local history cannot add silent persistence, a payment route or another AI
   assert.match(pilot, /disabled=\{!canSend\}/);
   assert.match(pilot, /checked=\{consent\}/);
   assert.match(pilot, /setConsent\(false\)/);
+});
+
+test('mobile navigation exposes Chat, Services, Recents and Account without new payment endpoints', () => {
+  const sidebar = read('src/components/ChatSidebar.tsx');
+  assert.match(sidebar, /aria-label="Mobile chat navigation"/);
+  for (const title of ['Browse services', 'Show recent chats', 'Showing ', 'Forget recent chat', 'SavedNotesPeek']) {
+    assert.ok(sidebar.includes(title), 'Missing mobile/history contract: ' + title);
+  }
+  const saved = read('src/components/SavedNotesPeek.tsx');
+  assert.match(saved, /conversationClient\(token\)\.list/);
+  assert.match(saved, /phase === 'error'/);
+  assert.match(saved, /'Try again'|Try again/);
+  assert.doesNotMatch(saved, /localStorage|sessionStorage|indexedDB|fetch\('/);
 });
