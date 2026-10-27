@@ -64,6 +64,8 @@ jobs:
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/authThrottle.ts api/account-security.ts api/private-conversations.ts src/lib/private-conversations.ts src/pages/CompanionPage.tsx src/components/AccountAccessForm.tsx src/pages/CustomerEntryPage.tsx src/pages/StartPage.tsx src/pages/AiPilotPage.tsx src/lib/ai-pilot.ts
       - name: Type-check database operator and runtime preflight
         run: npx tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop db/runtimeSchema.ts db/runtimeRole.ts db/bootstrap.ts scripts/prepare-mysql-schema.ts scripts/prepare-mysql-runtime-role.ts
+      - name: Verify Luqi mobile install contract without network calls
+        run: node --test tests/pwa-install-contract.test.mjs
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
