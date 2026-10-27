@@ -1,0 +1,97 @@
+name: Luqi P2P Security
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  crypto-and-types:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npm run check
+      - run: npx vitest run tests/p2p-crypto.test.ts tests/p2p-shield.test.ts tests/p2p-routes.test.ts tests/p2p-audit.test.ts tests/p2p-page.test.tsx tests/admin-status-ui.test.tsx tests/self-healing-truth.test.ts
+      - run: npm run build
+  real-mysql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npx vitest run tests/p2p-mysql.integration.test.ts --no-file-parallelism
+  two-account-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npm run build
+        env:
+          NODE_ENV: production
+      - name: Prepare isolated HTTPS server
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/luqi-p2p.key -out /tmp/luqi-p2p.crt -days 1 -subj '/CN=127.0.0.1' -addext 'subjectAltName=IP:127.0.0.1'
+          chmod 600 /tmp/luqi-p2p.key
+          npx esbuild scripts/ci-p2p-server.ts --bundle --platform=node --format=esm --outfile=/tmp/luqi-p2p-server.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+      - name: Verify Chromium and iPhone-sized WebKit with real encrypted transport
+        run: |
+          image='mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d'
+          docker run --rm --init --network host --ipc host -v "$PWD:/work" -w /work \
+            -v /tmp/luqi-p2p-server.js:/tmp/luqi-p2p-server.js:ro -v /tmp/luqi-p2p.key:/tmp/luqi-p2p.key:ro -v /tmp/luqi-p2p.crt:/tmp/luqi-p2p.crt:ro \
+            -e LUQI_MYSQL_CI_FIXTURE -e DATABASE_URL -e GITHUB_ACTIONS=true -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            "$image" npx --no-install playwright test --config playwright.p2p.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p2p-browser-evidence
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
