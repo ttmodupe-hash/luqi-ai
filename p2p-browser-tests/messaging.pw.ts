@@ -19,7 +19,7 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
  });
  try{
   const suffix=randomUUID();await signUp(page,`p2p-owner-${suffix}@example.invalid`);await signUp(peer,`p2p-peer-${suffix}@example.invalid`);
-  await page.getByLabel('Topic',{exact:true}).selectOption('1');await page.getByLabel('Student Safety Lock',{exact:true}).uncheck();await page.getByRole('button',{name:'Create private invitation',exact:true}).click();
+  await page.getByRole('combobox',{name:'Topic',exact:true}).selectOption('1');await page.getByLabel('Student Safety Lock',{exact:true}).uncheck();await page.getByRole('button',{name:'Create private invitation',exact:true}).click();
   const invite=page.getByLabel('Private invitation — keep secret');await expect(invite).toBeVisible();const code=await invite.inputValue();
   await peer.getByLabel('Private invitation',{exact:true}).fill(code);await peer.getByRole('button',{name:'Request to join',exact:true}).click();
   await expect(peer.getByText('Join request recorded.',{exact:false})).toBeVisible();await page.getByRole('button',{name:'Refresh circles',exact:true}).click();
