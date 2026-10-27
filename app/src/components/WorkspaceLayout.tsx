@@ -94,7 +94,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <Link to="/" className="luqi-brand" aria-label="Luqi workspace home">
             <img className="luqi-brand-symbol" src="/luqi-mark.svg" alt="" aria-hidden="true" width="36" height="36" />
             <span>
-              Luqi<span className="luqi-brand-ai">AI</span>
+              Luqi
             </span>
           </Link>
           <nav aria-label="Primary navigation" className="luqi-desktop-nav">
