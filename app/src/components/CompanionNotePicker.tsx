@@ -74,9 +74,9 @@ export default function CompanionNotePicker({ token, disabled, selected, onSelec
   function loadOlderMessages() {
     if (!active || !moreMessages || !messages.length || messages.length >= 200) return;
     void guarded(async () => {
-      const page = (await conversationClient(token).messages(active.id, messages.at(0)?.id)).messages;
+      const page = (await conversationClient(token).messages(active.id, messages.at(-1)?.id)).messages;
       if (!mounted.current) return;
-      setMessages(current => [...page.filter(item => !current.some(old => old.id === item.id)), ...current].slice(-200));
+      setMessages(current => [...current, ...page.filter(item => !current.some(old => old.id === item.id))].slice(0, 200));
       setMoreMessages(page.length === 50 && messages.length + page.length < 200);
       setPhase('ready');
     });
