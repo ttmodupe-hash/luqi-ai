@@ -71,8 +71,8 @@ test('password change uses the same controls without making an automatic change 
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   // Successful account sign-in opens Chat, not Notes; navigate without a full reload
   // so the shared in-memory account remains available for password settings.
-  await expect(page.getByRole('heading', { name: 'Chat with LUQI' })).toBeVisible();
-  await page.getByRole('link', { name: 'Open private notes' }).click();
+  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open saved private notes' }).click();
   await page.getByRole('button', { name: 'Change password', exact: true }).click();
   for (const label of ['Current password', 'New password', 'Confirm new password']) {
     const field = page.getByLabel(label, { exact: true }); await field.fill(fixture);
