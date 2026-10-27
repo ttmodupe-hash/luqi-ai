@@ -7,7 +7,7 @@ The canonical LUQI production application is Railway project `kind-spontaneity` 
 
 ## Important limitations
 - **A workflow is not an enforced deployment gate.** Railway's correct service last reported `source.checkSuites: false` (Wait for CI OFF). GitHub branch protection/required checks and real reviewer controls still need authorized setup and a separate read-back acceptance.
-- Other Railway projects also attach failed deployment statuses to this repository's exact commit. Do **not** enable Wait for CI blindly: first scope/remove unrelated deployment integrations and verify Railway's expected required check behavior without risking customer availability.
+- Other Railway projects attach failed **deployment statuses** to the same GitHub commit. Railway's [Wait for CI documentation](https://docs.railway.com/deployments/github-autodeploys#wait-for-ci) explicitly says it evaluates GitHub **Actions check suites** and ignores statuses from other GitHub apps. These stale integrations should be reviewed to reduce failed builds/noise, but their statuses are **not by themselves a Wait-for-CI blocker**. When enabled, any failed GitHub Actions workflow skips deployment; incomplete workflows time out after two hours. Review GitHub App permission updates and workflow behavior before changing the production setting.
 - Successful CI checks are not real user acceptance, merchant activation, money collection, provider-cost reconciliation, security incident resolution, or a production-derived restore drill.
 - The code and checks in the older unmerged PR #265 include additional release-control work; review or reconcile that PR before a later merge to avoid replacing this current branch's controls with stale workflow content.
 
