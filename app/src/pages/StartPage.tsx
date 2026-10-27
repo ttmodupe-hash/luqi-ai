@@ -8,6 +8,7 @@ export default function StartPage() {
       <h1>A useful place to begin.</h1>
       <p>Try a limited AI text question, explore physics, calculate a travel budget or vehicle service date, prepare a client quote, practise flashcards, or save your ideas as notes.</p>
       <p><Link className="luqi-primary" to="/chat">Ask LUQI <ArrowUpRight size={18} aria-hidden="true" /></Link></p>
+      <p><Link to="/install">Install Luqi on your phone</Link> — add the safe web app to your Android or iPhone home screen.</p>
       <p><Link to="/ai-trial">Try the AI text trial</Link> — availability is limited, and your LUQI sign-in works for both Chat and Notes.</p>
       <span className="luqi-start-label"><ShieldCheck size={17} aria-hidden="true" /> Voice and paid plans are not enabled. AI text has a separate limited trial.</span>
     </header>

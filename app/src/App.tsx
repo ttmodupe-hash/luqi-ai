@@ -10,6 +10,7 @@ import { Routes, Route as RouterRoute, Navigate } from "react-router";
 
 import Home from "./pages/Home";
 import StartPage from "./pages/StartPage";
+import InstallAppPage from "./pages/InstallAppPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import TermsPage from "./pages/TermsPage";
@@ -48,6 +49,8 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/install" element={<InstallAppPage />} />
+        <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />

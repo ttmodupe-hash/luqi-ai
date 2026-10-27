@@ -12,6 +12,7 @@ import {
   NotebookPen,
   Search,
   ShieldCheck,
+  Smartphone,
   X,
 } from "lucide-react";
 import HeroAiChatConsole from "../components/HeroAiChatConsole";
@@ -70,6 +71,7 @@ export default function Home() {
                 Explore tools <ArrowRight size={18} aria-hidden="true" />
               </a>
             </div>
+            <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link><span>Android or iPhone · No app store required</span></p>
             <p className="luqi-hero-onboarding">New to LUQI? <Link to="/start">Get started</Link> with a guided introduction.</p>
             <p className="luqi-hero-footnote">
               <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your LUQI sign-in, explicit consent and shared limits.
