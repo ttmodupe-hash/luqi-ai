@@ -93,6 +93,8 @@ jobs:
             test-results/**/plans-availability.png
             test-results/**/chat-ready.png
             test-results/**/chat-recovered.png
+            test-results/**/luqichat-desktop.png
+            test-results/**/luqichat-mobile.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: failure()
