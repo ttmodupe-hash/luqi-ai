@@ -30,7 +30,7 @@ test("workspace filters distinguish usable tools from previews without making AI
   // The signed-in trial is one new discoverable card; all existing tools remain.
   await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
     "AI text trial", "Private notes", "Physics lab", "Service status",
-    "African languages", "Content studio", "Omega tasks", "Business desk", "Study desk",
+    "African languages", "Content studio", "LUQI tools", "Business desk", "Study desk",
   ]);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(8);
@@ -71,7 +71,7 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   await expect(dialog).toBeVisible();
   const search = dialog.getByLabel("Search tools");
   await expect(search).toBeFocused();
-  await search.fill("Omega");
+  await search.fill("LUQI");
   await expect(
     dialog.getByRole("link", { name: "Omega tasks" }),
   ).toBeVisible();
