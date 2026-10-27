@@ -1,0 +1,45 @@
+name: LUQI one-time production AI verification result
+on:
+  push:
+    branches: ['acceptance/one-time-live-ai-f1240c-20261027']
+    paths: ['.github/workflows/one-time-ai-verdict-20261027.yml']
+permissions:
+  contents: read
+  actions: read
+  issues: write
+jobs:
+  publish-safe-verdict:
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/acceptance/one-time-live-ai-f1240c-20261027' &&
+      github.event.head_commit.message == 'chore(acceptance): publish one-time production AI result 2026-10-27' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect the existing run outcome and publish only a redacted verdict to issue 202
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          const repo = process.env.GITHUB_REPOSITORY;
+          const sha = '11e422ebfbf7eb693a5c884672a116d967bf108c';
+          const headers = {Accept: 'application/vnd.github+json',Authorization: 'Bearer '+process.env.GH_TOKEN,'X-GitHub-Api-Version': '2022-11-28'};
+          const list = await fetch('https://api.github.com/repos/'+repo+'/actions/runs?head_sha='+sha+'&per_page=100',{headers,signal:AbortSignal.timeout(15000)});
+          if (!list.ok) throw new Error('Unable to read bounded Actions run metadata');
+          const data = await list.json();
+          const matches = (data.workflow_runs??[]).filter(r => r.name === 'LUQI one-time authenticated production AI reply acceptance' && r.event === 'push' && r.head_sha === sha && r.run_attempt === 1);
+          if (matches.length !== 1) throw new Error('Exact one-time acceptance run not uniquely identified');
+          const run = matches[0];
+          if (run.status !== 'completed') throw new Error('Acceptance run is not terminal');
+          const verdict = run.conclusion === 'success' ? 'PASSED' : 'NOT PASSED';
+          const body = '### 27 Oct 2026 — real authenticated AI reply acceptance (one controlled run)\n\n' +
+            '**Verdict: '+verdict+'**. Exact [GitHub Actions run]('+run.html_url+') on temporary verification branch.\n\n' +
+            'Target deployed main revision: `f1240c04cb890ed3d7a798df184ecfce7534095e`. ' +
+            'The audited `scripts/verify-production-pilot.mjs` requires a unique exact text challenge, authenticated signup/login, one budget-controlled provider gateway request, clean removal of synthetic notes and revocation of the test session. ' +
+            (run.conclusion === 'success' ? 'All required checks returned success; the exact AI reply challenge was verified.' : 'The full audited acceptance did not pass; inspect the linked failed job without publishing private responses.') +
+            '\n\nThis is one production probe, not sustained uptime, independent provider billing reconciliation, OpenAI-specific generation, or broad paid-launch approval. No real customer data or provider credential was written to this public issue.';
+          const out = await fetch('https://api.github.com/repos/'+repo+'/issues/202/comments',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({body}),signal:AbortSignal.timeout(15000)});
+          if (!out.ok) throw new Error('Unable to publish redacted acceptance verdict');
+          console.log('Exact acceptance result recorded on issue #202: '+verdict);
+          NODE
