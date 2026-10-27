@@ -1,4 +1,4 @@
-/** Honest customer-facing status of all six Omega domains.
+/** Honest customer-facing status of all six Luqi service areas.
  * No provider, account, storage or network operations. Source-gated features
  * are unavailable until accepted by a real operator.
  */
@@ -19,9 +19,9 @@ const areas = [
 
 export default function OmegaDomainGuide() {
   return <details className="omega-six">
-    <summary>Explore all six Omega areas and what is available</summary>
+    <summary>Explore all six Luqi service areas and what is available</summary>
     <p className="omega-six-intro">Two local calculations are usable now. The other domains and production workers require verified source data and operational acceptance. A local result is not proof of live data or autonomous AI.</p>
-    <ul className="omega-six-list" aria-label="Omega Six capability availability">
+    <ul className="omega-six-list" aria-label="Luqi capability availability">
       {areas.map(area => <li key={area.id}>
         <h3>{area.name}</h3>
         <p className="omega-six-state">{area.local ? 'Local calculation available' : 'Not available to customers'}</p>
