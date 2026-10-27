@@ -178,3 +178,16 @@ for (const [path, source] of sources) {
   });
 }
 test('both applications use the same public-cache contract', () => assert.equal(sources[0][1], sources[1][1]));
+
+for (const root of ['', 'app/']) {
+  test(`${root || 'root/'}: startup registers one existing public worker, avoiding competing script updates`, async () => {
+    const html = await readFile(new URL('../' + root + 'index.html', import.meta.url), 'utf8');
+    const entry = await readFile(new URL('../' + root + 'src/main.tsx', import.meta.url), 'utf8');
+    const registrations = [...(html + '\n' + entry).matchAll(/serviceWorker\s*\.\s*register\(\s*['"]([^'"]+)['"]/g)];
+    assert.equal(registrations.length, 1, 'One startup owner must register the worker for this scope');
+    const path = registrations[0][1];
+    assert.match(path, /^\/[a-z-]+\.js$/);
+    const worker = await readFile(new URL('../' + root + 'public' + path, import.meta.url), 'utf8');
+    assert.equal(worker, sources[0][1]);
+  });
+}
