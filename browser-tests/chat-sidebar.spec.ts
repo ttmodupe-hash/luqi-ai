@@ -61,6 +61,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   });
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto('/#/chat');
+  await page.locator('details.luqi-chat-signin-inline > summary').click();
   await page.getByLabel('Email', { exact: true }).fill('synthetic@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-passphrase-only-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
