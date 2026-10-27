@@ -13,7 +13,7 @@ import { validNewPassword } from "./lib/passwordPolicy";
 import { AuthThrottleError, reserveAuthenticationAttempt } from "./services/authThrottle";
 import { getSigningSecret, signUserToken, verifyUserToken, verifyUserCredential, getSignedSessionDigest } from "./lib/userToken";
 import { customerResumeEnabled, issueCustomerResumeSession, setResumeCookies, trustedResumeIntent,
-  boundSessionExists } from "./services/customerResume";
+  boundSessionExists, clearResumeCookies, hasResumeCookie, revokePriorResumeCookie } from "./services/customerResume";
 import { eq } from "drizzle-orm";
 import { getDb, getPersistentDb } from "./queries/connection";
 import { users, knowledgeArticles, creditWallets } from "../db/schema";
@@ -460,11 +460,11 @@ const handleSignup = async (c: any) => {
   const password = typeof body.password === "string" ? body.password : "";
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) || null : null;
   const intent = c.req.header('x-luqi-session-intent');
-  if (customerResumeEnabled() && intent &&
-      (!trustedResumeIntent(c, 'signup') || c.req.header('content-type')?.split(';')[0] !== 'application/json')) {
+  if (customerResumeEnabled() && (intent || hasResumeCookie(c) || body.rememberMe === true) &&
+      !trustedResumeIntent(c, 'signup')) {
     return c.json({ code: 'AUTH_CSRF_REJECTED' }, 403);
   }
-  const withResume = customerResumeEnabled() && intent === 'signup';
+  const withResume = customerResumeEnabled() && intent === 'signup' && body.rememberMe === true;
 
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return c.json({ detail: "Valid email is required" }, 400);
@@ -485,16 +485,17 @@ const handleSignup = async (c: any) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
     let userId: number;
-    let issued: { token: string; cookie: string } | null = null;
+    let issued: { token: string; cookie: string; absoluteExpiresAt: Date } | null = null;
     try {
-      if (withResume) {
+      if (customerResumeEnabled() && intent === 'signup') {
         // Atomic signup: a missing session table/grant cannot leave an account
         // created without acknowledging its login on the same transaction.
         const persisted = await db.transaction(async (tx: any) => {
+          await revokePriorResumeCookie(tx, c);
           const [result] = await tx.insert(users).values({ email, passwordHash, name });
           const id = Number(result.insertId);
           if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Invalid user ID');
-          return { id, resumed: await issueCustomerResumeSession(tx, id, passwordHash) };
+          return { id, resumed: withResume ? await issueCustomerResumeSession(tx, id, passwordHash) : null };
         });
         userId = persisted.id; issued = persisted.resumed;
       } else {
@@ -506,7 +507,8 @@ const handleSignup = async (c: any) => {
       throw error;
     }
     if (!Number.isSafeInteger(userId) || userId <= 0) throw new Error('Invalid user ID');
-    if (issued) setResumeCookies(c, issued.cookie);
+    if (issued) setResumeCookies(c, issued.cookie, issued.absoluteExpiresAt);
+    else if (intent === 'signup' || intent === 'login') clearResumeCookies(c);
     return c.json({
       token: issued?.token ?? signUserToken(userId, passwordHash),
       token_type: "bearer",
@@ -528,11 +530,11 @@ const handleLogin = async (c: any) => {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
   const intent = c.req.header('x-luqi-session-intent');
-  if (customerResumeEnabled() && intent &&
-      (!trustedResumeIntent(c, 'login') || c.req.header('content-type')?.split(';')[0] !== 'application/json')) {
+  if (customerResumeEnabled() && (intent || hasResumeCookie(c) || body.rememberMe === true) &&
+      !trustedResumeIntent(c, 'login')) {
     return c.json({ code: 'AUTH_CSRF_REJECTED' }, 403);
   }
-  const withResume = customerResumeEnabled() && intent === 'login';
+  const withResume = customerResumeEnabled() && intent === 'login' && body.rememberMe === true;
   if (!email || !password || email.length > 254 || Buffer.byteLength(password, "utf8") > 72) {
     return c.json({ detail: "Email and password are required" }, 400);
   }
@@ -552,8 +554,12 @@ const handleLogin = async (c: any) => {
     if (!Number.isSafeInteger(userId) || userId <= 0) {
       return c.json({ detail: "Invalid credentials" }, 401);
     }
-    const issued = withResume ? await issueCustomerResumeSession(db, userId, user.passwordHash) : null;
-    if (issued) setResumeCookies(c, issued.cookie);
+    const issued = customerResumeEnabled() && intent === 'login' ? await db.transaction(async (tx: any) => {
+      await revokePriorResumeCookie(tx, c);
+      return withResume ? issueCustomerResumeSession(tx, userId, user.passwordHash) : null;
+    }) : null;
+    if (issued) setResumeCookies(c, issued.cookie, issued.absoluteExpiresAt);
+    else if (intent === 'signup' || intent === 'login') clearResumeCookies(c);
     return c.json({
       token: issued?.token ?? signUserToken(userId, user.passwordHash),
       token_type: "bearer",

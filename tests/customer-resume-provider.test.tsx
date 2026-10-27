@@ -73,3 +73,17 @@ it('keeps a visible warning when server-side logout revocation is uncertain', as
   expect(mocks.clearHint).toHaveBeenCalledOnce();
   expect(mocks.revoke).toHaveBeenCalledOnce();
 });
+
+
+it('a late failed logout cannot warn or clear a newly accepted account', async () => {
+  render(<CustomerSessionProvider><Panel /></CustomerSessionProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in new account' }));
+  mocks.hasHint.mockReturnValue(true);
+  let reject!: (value: Error) => void;
+  mocks.revoke.mockImplementation(() => new Promise((_, no) => { reject = no; }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in new account' }));
+  await act(async () => { reject(new Error('old logout unavailable')); });
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(screen.getByText('new@example.invalid')).toBeTruthy();
+});

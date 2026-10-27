@@ -13,7 +13,7 @@ beforeEach(() => {
   Object.defineProperty(document, 'cookie', {
     configurable: true,
     get: () => cookieText,
-    set: (value: string) => { writes.push(value); if (value.includes('Max-Age=0')) cookieText = ''; },
+    set: (value: string) => { writes.push(value); cookieText = value.includes('Max-Age=0') ? '' : value.split(';')[0]; },
   });
 });
 afterEach(() => { vi.restoreAllMocks(); });
@@ -26,14 +26,14 @@ describe('one-shot trusted-device session restoration', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
-  it('restores only one JSON response over same-origin GET and never calls AI', async () => {
+  it('restores only one JSON response over same-origin POST and never calls AI', async () => {
     cookieText = CUSTOMER_RESUME_HINT + '=1';
     const request = vi.fn(async () => valid());
     expect(await restoreCustomerSession(undefined, request)).toEqual(user);
     expect(request).toHaveBeenCalledOnce();
     const [path, options] = request.mock.calls[0] as unknown as [string, RequestInit];
     expect(path).toBe('/api/v1/auth/session');
-    expect(options).toMatchObject({ method: 'GET', credentials: 'same-origin', redirect: 'error', cache: 'no-store' });
+    expect(options).toMatchObject({ method: 'POST', credentials: 'same-origin', redirect: 'error', cache: 'no-store' });
     expect((options.headers as Record<string, string>)['X-Luqi-Session-Intent']).toBe('restore');
   });
 
@@ -43,8 +43,11 @@ describe('one-shot trusted-device session restoration', () => {
     expect(writes.some(value => value.includes('Max-Age=0'))).toBe(true);
     cookieText = CUSTOMER_RESUME_HINT + '=1'; writes = [];
     await expect(restoreCustomerSession(undefined, async () => new Response(null, { status: 503 }))).rejects.toThrow('AUTH_RESTORE_UNAVAILABLE');
-    expect(writes).toHaveLength(0);
+    expect(writes.at(-1)).toContain('=pending');
     expect(hasCustomerResumeHint()).toBe(true);
+    const request = vi.fn();
+    expect(await restoreCustomerSession(undefined, request)).toBeNull();
+    expect(request).not.toHaveBeenCalled();
   });
 
   it('rejects malformed, redirected, oversized, or incomplete data', async () => {
@@ -55,6 +58,7 @@ describe('one-shot trusted-device session restoration', () => {
       () => new Response('{}', { headers: { 'Content-Type': 'application/json', 'Content-Length': '9000' } }),
       () => new Response('{"token":', { headers: { 'Content-Type': 'application/json' } }),
     ]) {
+      cookieText = CUSTOMER_RESUME_HINT + '=1';
       await expect(restoreCustomerSession(undefined, async () => answer())).rejects.toThrow();
     }
     expect(hasCustomerResumeHint()).toBe(true);
@@ -63,10 +67,14 @@ describe('one-shot trusted-device session restoration', () => {
   it('does not issue a second request on an ambiguous abort, and cannot show a late reply', async () => {
     cookieText = CUSTOMER_RESUME_HINT + '=1';
     const abort = new AbortController();
-    const request = vi.fn(() => new Promise<Response>(() => {}));
+    let resolve!: (value: Response) => void;
+    const request = vi.fn(() => new Promise<Response>(r => { resolve = r; }));
     const pending = restoreCustomerSession(abort.signal, request);
     abort.abort();
     await expect(pending).rejects.toThrow('AUTH_REQUEST_UNCONFIRMED');
+    expect(request).toHaveBeenCalledOnce();
+    resolve(valid());
+    await restoreCustomerSession(undefined, request);
     expect(request).toHaveBeenCalledOnce();
   });
 

@@ -34,7 +34,7 @@ export function signUserToken(userId: number, passwordHash: string, sessionDiges
     algorithm: "HS256",
     issuer: LUQI_JWT_ISSUER,
     audience: LUQI_JWT_AUDIENCE,
-    expiresIn: "24h",
+    expiresIn: sessionDigest ? "15m" : "24h",
   });
 }
 
@@ -58,6 +58,7 @@ function verifiedClaims(token: string, secret: string): jwt.JwtPayload {
       payload.exp! <= payload.iat! || payload.exp! - payload.iat! > 86400) {
     throw new Error("Invalid token claims");
   }
+  if (payload.sid && payload.exp! - payload.iat! > 900) throw new Error('Invalid session token lifetime');
   return payload;
 }
 

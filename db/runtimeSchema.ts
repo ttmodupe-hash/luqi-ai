@@ -7,7 +7,7 @@ import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 interface TableContract {
   columns: readonly string[];
   unique: readonly (readonly string[])[];
-  critical?: Record<string, { type: string; collation?: string }>;
+  critical?: Record<string, { type: string; collation?: string; nullable?: boolean }>;
 }
 const id = { type: 'bigint unsigned' };
 export const RUNTIME_TABLES: Readonly<Record<string, TableContract>> = {
@@ -30,10 +30,6 @@ export const RUNTIME_TABLES: Readonly<Record<string, TableContract>> = {
       'importance', 'created_at'],
     unique: [['id']], critical: { id },
   },
-  // Only required after the operator deliberately enables session restoration
-  // and grants the dedicated web role tightly scoped access to this table.
-  // A missing table or privilege blocks enablement; it never auto-migrates.
-  // Omitted from the ordinary pilot contract while rollout is disabled.
   offline_sync_queue: {
     columns: ['id', 'user_id', 'device_id', 'action', 'payload_json', 'synced', 'synced_at', 'created_at'],
     unique: [['id']], critical: { id },
@@ -60,10 +56,15 @@ export const RUNTIME_TABLES: Readonly<Record<string, TableContract>> = {
   },
 };
 const customerResume: TableContract = {
-  columns: ['id', 'user_id', 'token', 'expires_at', 'created_at'],
-  unique: [['id'], ['token']],
-  critical: { id: { type: 'bigint unsigned' }, token: { type: 'varchar(500)' },
-    expires_at: { type: 'timestamp' } },
+  columns: ['token_digest', 'family_id', 'user_id', 'issued_at', 'last_used_at',
+    'absolute_expires_at', 'idle_expires_at', 'rotation', 'rotated_at', 'revoked_at'],
+  unique: [['token_digest']],
+  critical: { token_digest: { type: 'char(64)', collation: 'ascii_bin' },
+    family_id: { type: 'char(73)', collation: 'ascii_bin' }, user_id: { type: 'bigint unsigned' },
+    issued_at: { type: 'timestamp(3)' }, last_used_at: { type: 'timestamp(3)' },
+    absolute_expires_at: { type: 'timestamp(3)' }, idle_expires_at: { type: 'timestamp(3)' },
+    rotation: { type: 'int unsigned' }, rotated_at: { type: 'timestamp(3)', nullable: true },
+    revoked_at: { type: 'timestamp(3)', nullable: true } },
 };
 const omega: TableContract = {
   columns: ['id', 'owner_id', 'idempotency_key', 'handler', 'handler_version', 'side_effects',
@@ -112,7 +113,7 @@ async function validate(connection: Connection, contracts: Record<string, TableC
     if (contract.columns.some(name => !fields.some(row => row.column_name === name))) throw unavailable();
     for (const [name, expected] of Object.entries(contract.critical ?? {})) {
       const field = fields.find(row => row.column_name === name);
-      if (!field || field.is_nullable !== 'NO' || normalizeType(field.column_type) !== expected.type ||
+      if (!field || field.is_nullable !== (expected.nullable ? 'YES' : 'NO') || normalizeType(field.column_type) !== expected.type ||
           (expected.collation && field.collation_name !== expected.collation)) throw unavailable();
     }
     const keys = new Map<string, RowDataPacket[]>();
@@ -129,6 +130,25 @@ async function validate(connection: Connection, contracts: Record<string, TableC
     // and the actual column resolution without reading private records.
     await connection.query({ sql: `SELECT ${contract.columns.map(name => `\`${name}\``).join(',')}
       FROM \`${table}\` LIMIT 0`, timeout: 4_000 });
+    if (table === 'customer_device_sessions_v1') {
+      const [roles] = await connection.query<RowDataPacket[]>({ sql: 'SELECT CURRENT_ROLE() AS active_roles', timeout: 4_000 });
+      const [grants] = await connection.query<RowDataPacket[]>({ sql: 'SHOW GRANTS', timeout: 4_000 });
+      const [database] = await connection.query<RowDataPacket[]>({ sql: 'SELECT DATABASE() AS name', timeout: 4_000 });
+      const schema = mysql.escapeId(database[0].name);
+      const entries = grants.map(row => String(Object.values(row)[0]));
+      if (roles[0]?.active_roles !== 'NONE' || !entries.some(grant =>
+          grant.startsWith(`GRANT SELECT, INSERT, UPDATE ON ${schema}.\`customer_device_sessions_v1\` TO `)) ||
+          entries.some(grant => grant.includes('WITH GRANT OPTION') ||
+            (!grant.startsWith('GRANT USAGE ON *.* TO ') &&
+              (grant.includes(' ON *.* ') || grant.includes(` ON ${schema}.* `))) ||
+            (grant.includes('.\`customer_device_sessions_v1\` TO ') &&
+              !grant.startsWith(`GRANT SELECT, INSERT, UPDATE ON ${schema}.\`customer_device_sessions_v1\` TO `)))) throw unavailable();
+      const [owners] = await connection.query<RowDataPacket[]>({ sql: `SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+        FROM information_schema.key_column_usage WHERE TABLE_SCHEMA=DATABASE()
+        AND TABLE_NAME='customer_device_sessions_v1' AND REFERENCED_TABLE_NAME IS NOT NULL`, timeout: 4_000 });
+      if (owners.length !== 1 || owners[0].COLUMN_NAME !== 'user_id' ||
+          owners[0].REFERENCED_TABLE_NAME !== 'users' || owners[0].REFERENCED_COLUMN_NAME !== 'id') throw unavailable();
+    }
   }
 }
 
@@ -140,7 +160,7 @@ Promise<{ status: 'validated' | 'unconfigured'; tables: number }> {
     const settings = parseMySqlConnectionSettings(environment);
     if (!settings) return { status: 'unconfigured', tables: 0 };
     const contracts = { ...RUNTIME_TABLES,
-      ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { sessions: customerResume } : {}),
+      ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { customer_device_sessions_v1: customerResume } : {}),
       ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
       ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
     connection = await mysql.createConnection({ ...settings, connectTimeout: 4_000 });

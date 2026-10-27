@@ -38,6 +38,12 @@ function sessionDeadline(token: string, now: number): number {
   } catch { return now; }
 }
 type ActiveSession = { session: AccountSession; deadline: number };
+function hasDeviceBinding(token: string | undefined): boolean {
+  try {
+    const part = token?.split('.')[1];
+    return !!part && /^luqi-rs1-[a-f0-9]{64}$/.test(JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))).sid);
+  } catch { return false; }
+}
 
 export function CustomerSessionProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<ActiveSession | null>(null);
@@ -59,10 +65,12 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     resumeEpoch.current++; restoringRequest.current?.abort(); restoringRequest.current = null;
     // Start this deliberate one-shot request BEFORE clearing the inert hint.
     // The actual credential stays in the HttpOnly cookie and is never read here.
-    const revoke = hasCustomerResumeHint() ? revokeCustomerSession() : null;
+    const revoke = hasCustomerResumeHint() || hasDeviceBinding(current.current?.session.token)
+      ? revokeCustomerSession(fetch, current.current?.session.token) : null;
     clearCustomerResumeHint();
     current.current = null; setActive(null); setExpired(false); setRestoring(false);
-    if (revoke) void revoke.catch(() => setSignOutUnconfirmed(true));
+    const version = resumeEpoch.current;
+    if (revoke) void revoke.catch(() => { if (resumeEpoch.current === version) setSignOutUnconfirmed(true); });
     else setSignOutUnconfirmed(false);
   }, []);
   useEffect(() => {
@@ -81,6 +89,30 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     return () => { controller.abort(); };
   }, [acceptSession]);
   useEffect(() => {
+    if (!active || !hasDeviceBinding(active.session.token)) return;
+    let started = false;
+    const version = resumeEpoch.current;
+    const refresh = () => {
+      if (started || current.current !== active || document.visibilityState === 'hidden' ||
+          active.deadline - Date.now() > 60_000) return;
+      started = true;
+      void restoreCustomerSession().then(value => {
+        if (resumeEpoch.current !== version || current.current !== active) return;
+        if (value && value.user.email === active.session.user.email) acceptSession(value);
+        else { current.current = null; setActive(null); setExpired(true); }
+      }).catch(() => {
+        if (resumeEpoch.current === version && current.current === active) {
+          current.current = null; setActive(null); setExpired(true);
+        }
+      });
+    };
+    const timer = setTimeout(refresh, Math.max(0, active.deadline - Date.now() - 60_000));
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh); };
+  }, [active, acceptSession]);
+  useEffect(() => {
     if (!active) return;
     let timer: ReturnType<typeof setTimeout>;
     const check = () => {
@@ -89,7 +121,19 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
       if (current.current !== active) return;
       const remaining = active.deadline - Date.now();
       if (remaining <= 0) {
-        current.current = null; setActive(null); setExpired(true);
+        if (hasDeviceBinding(active.session.token) && hasCustomerResumeHint()) {
+          const version = resumeEpoch.current;
+          setRestoring(true);
+          void restoreCustomerSession().then(value => {
+            if (resumeEpoch.current !== version || current.current !== active) return;
+            if (value && value.user.email === active.session.user.email) acceptSession(value);
+            else { current.current = null; setActive(null); setExpired(true); }
+          }).catch(() => {
+            if (resumeEpoch.current === version && current.current === active) {
+              current.current = null; setActive(null); setExpired(true);
+            }
+          }).finally(() => { if (resumeEpoch.current === version) setRestoring(false); });
+        } else { current.current = null; setActive(null); setExpired(true); }
       } else timer = setTimeout(check, remaining);
     };
     check();
@@ -102,7 +146,7 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('pageshow', check);
       document.removeEventListener('visibilitychange', check);
     };
-  }, [active]);
+  }, [active, acceptSession]);
   const session = active?.session ?? null;
   const value = useMemo(() => ({ session, expired, restoring, signOutUnconfirmed, acceptSession, signOut }),
     [session, expired, restoring, signOutUnconfirmed, acceptSession, signOut]);

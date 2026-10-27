@@ -23,7 +23,8 @@ export async function prepareRuntimeRole(environment: Record<string, string | un
     const password = environment.LUQI_RUNTIME_DB_PASSWORD ?? '';
     const omegaEnabled = environment.LUQI_OMEGA_WEB_ENABLED === 'true';
     const resumeEnabled = environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true';
-    const sessionGrant: Readonly<Record<string, string>> = resumeEnabled ? { sessions: 'SELECT, INSERT, DELETE' } : {};
+    const sessionGrant: Readonly<Record<string, string>> = resumeEnabled
+      ? { customer_device_sessions_v1: 'SELECT, INSERT, UPDATE' } : {};
     const privateVaultEnabled = environment.LUQI_PROJECT_VAULT_ENABLED === 'true';
     // A previously approved Omega grant is checkable without creating users,
     // modifying grants or running migrations. Provision-new remains core-only.

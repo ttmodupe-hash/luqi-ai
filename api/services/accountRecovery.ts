@@ -44,9 +44,15 @@ export async function resetAccountPassword(
     if (changed.affectedRows !== 1) throw new AccountRecoveryError("RECOVERY_UNAVAILABLE");
     const [revoked] = await conn.execute<ResultSetHeader>(
       "DELETE FROM sessions WHERE user_id=?", [userId]);
+    let deviceRowsRevoked = 0;
+    if (process.env.LUQI_CUSTOMER_RESUME_ENABLED === 'true') {
+      const [devices] = await conn.execute<ResultSetHeader>(
+        'UPDATE customer_device_sessions_v1 SET revoked_at=CURRENT_TIMESTAMP(3) WHERE user_id=? AND revoked_at IS NULL', [userId]);
+      deviceRowsRevoked = devices.affectedRows;
+    }
     await conn.commit();
     begun = false;
-    return { userId, sessionsRevoked: revoked.affectedRows };
+    return { userId, sessionsRevoked: revoked.affectedRows + deviceRowsRevoked };
   } catch (error) {
     if (begun && conn) {
       try { await conn.rollback(); }

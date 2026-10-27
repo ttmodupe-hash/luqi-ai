@@ -2,7 +2,7 @@
 export const ACCOUNT_REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_ACCOUNT_RESPONSE_BYTES = 32 * 1024;
 export type AccountPath = '/api/v1/auth/login' | '/api/v1/auth/register';
-type AccountCredentials = { email: string; password: string };
+type AccountCredentials = { email: string; password: string; rememberMe?: boolean };
 type AccountResult = { ok: true; status: number; body: unknown } |
   { ok: false; status: number; retryAfter?: number };
 
@@ -27,7 +27,8 @@ export async function requestAccountJson(
       method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json',
         'X-Luqi-Session-Intent': path === '/api/v1/auth/login' ? 'login' : 'signup' },
-      body: JSON.stringify({ email: credentials.email, password: credentials.password }),
+      body: JSON.stringify({ email: credentials.email, password: credentials.password,
+        ...(credentials.rememberMe === true ? { rememberMe: true } : {}) }),
     });
     const discard = () => { void response.body?.cancel().catch(() => {}); };
     if (controller.signal.aborted) { discard(); throw interrupted(); }

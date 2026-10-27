@@ -50,7 +50,12 @@ original_query() {
 
 tables="$(query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='luqi_restore_ci' AND table_type='BASE TABLE'")"
 echo "CI restore: restored table count=$tables"
-test "$tables" = "38"
+expected_tables=38
+if [ "${LUQI_SESSION_BACKUP_FIXTURE:-false}" = "true" ]; then expected_tables=39; fi
+test "$tables" = "$expected_tables"
+if [ "${LUQI_SESSION_BACKUP_FIXTURE:-false}" = "true" ]; then
+  test "$(query "SELECT COUNT(*) FROM customer_device_sessions_v1")" -gt 0
+fi
 
 source_accounts="$(original_query "SELECT COUNT(*) FROM users WHERE email='ci-restore@example.invalid'")"
 restored_accounts="$(query "SELECT COUNT(*) FROM users WHERE email='ci-restore@example.invalid'")"

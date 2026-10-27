@@ -168,3 +168,17 @@ it('reports invalid account schema without retaining token-bearing validation er
   request.mockResolvedValue(reply({ token: 'fixture-sensitive-token', user: { email: 'not-an-email' } }));
   await expect(signUp(email, password)).rejects.toThrow('Account response could not be verified');
 });
+
+
+it('requires an unchecked explicit private-device choice before requesting persistence', async () => {
+  request.mockResolvedValue(reply(session));
+  render(<AccountAccessForm onAuthenticated={accepted} />);
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
+  const checkbox = screen.getByRole('checkbox', { name: 'Keep me signed in on this private device' });
+  expect((checkbox as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(checkbox);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true }));
+  await waitFor(() => expect(accepted).toHaveBeenCalledOnce());
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ email, password, rememberMe: true });
+});

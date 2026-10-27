@@ -9,6 +9,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [ambiguous, setAmbiguous] = useState(false);
@@ -42,7 +43,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     const version = epoch.current;
     const controller = new AbortController(); pending.current = controller;
     try {
-      const result = await (mode === 'signup' ? signUp : signIn)(email, password, controller.signal);
+      const result = await (mode === 'signup' ? signUp : signIn)(email, password, controller.signal, rememberMe);
       if (version !== epoch.current) return;
       setPassword(''); setConfirmation('');
       onAuthenticated(result);
@@ -81,6 +82,9 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         <PasswordField label="Confirm password" value={confirmation} onChange={setConfirmation}
           autoComplete="new-password" disabled={busy} describedBy="account-password-help" />
       </>}
+      <label className="block"><input type="checkbox" checked={rememberMe} disabled={busy}
+        onChange={event => setRememberMe(event.target.checked)} /> Keep me signed in on this private device</label>
+      <p className="luqi-access-help">Available after secure restoration is enabled. Up to 24 hours, with sign-in required after 12 hours without a session refresh. Leave this off on shared devices.</p>
       <div className="luqi-access-actions">
         <button className="luqi-primary" disabled={busy || ambiguous || cooling}>
           {busy ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}

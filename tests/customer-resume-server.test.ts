@@ -1,138 +1,110 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
-import bcrypt from 'bcryptjs';
-import { getSignedSessionDigest, verifyUserToken } from '../api/lib/userToken';
-import { customerResumeRoutes, customerSessionDigest, customerResumeEnabled,
-  issueCustomerResumeSession, setResumeCookies, boundSessionExists } from '../api/services/customerResume';
-
+import jwt from 'jsonwebtoken';
+import { getSignedSessionDigest } from '../api/lib/userToken';
+import { customerResumeRoutes, customerSessionDigest, issueCustomerResumeSession,
+  setResumeCookies, boundSessionExists } from '../api/services/customerResume';
 const mocks = vi.hoisted(() => ({ db: vi.fn() }));
 vi.mock('../api/queries/connection', () => ({ getPersistentDb: mocks.db }));
-
 const HASH = '$2b$12$zfjKKga9OGRJtq.1Nn.2BuUuc8UEQsjAq6/dT/IJt7RQzAsPp5yGO';
-const USER = { userId: 7, email: 'pilot@example.invalid', passwordHash: HASH, isActive: true };
-const secret = 'unit-test-resume-secret-with-over-32-safe-characters';
-let rows: unknown[] = [];
-let deleted = 0;
-
-function storage() {
-  return {
-    select: () => ({
-      from: () => ({
-        where: () => ({ limit: async () => rows }),
-        innerJoin: () => ({ where: () => ({ limit: async () => rows }) }),
-      }),
-    }),
-    delete: () => ({ where: async () => { deleted++; } }),
-  };
+const USER = { email: 'pilot@example.invalid', passwordHash: HASH, isActive: true };
+let rows: any[] = [], inserted: any[], updates: any[];
+function storage(): any {
+  const selection = { for: async () => rows, then: (yes: any, no: any) => Promise.resolve(rows).then(yes, no) };
+  const where = () => ({ limit: () => selection });
+  return { select: () => ({ from: () => ({ where, innerJoin: () => ({ where }) }) }),
+    insert: () => ({ values: async (value: any) => { inserted.push(value); } }),
+    update: () => ({ set: (value: any) => ({ where: async () => { updates.push(value); } }) }),
+    transaction: async (work: any) => work(storage()) };
 }
-function request(path: string, cookie: string, intent: 'restore' | 'logout' = 'restore',
-  extras: Record<string, string> = {}) {
-  return customerResumeRoutes.request(path, {
-    method: intent === 'logout' ? 'POST' : 'GET',
-    headers: { host: 'app.luqi-ai.com', Cookie: '__Host-luqi_resume=' + cookie,
-      'x-luqi-session-intent': intent, 'sec-fetch-site': 'same-origin', ...extras },
-  });
+function request(cookie: string, extras: Record<string, string> = {}, path = '/session', intent = 'restore') {
+  return customerResumeRoutes.request('https://app.luqi-ai.com' + path, {
+    method: 'POST', headers: { Host: 'app.luqi-ai.com', Cookie: '__Host-luqi_resume=' + cookie,
+      Origin: 'https://app.luqi-ai.com', 'Content-Type': 'application/json',
+      'x-luqi-session-intent': intent, 'sec-fetch-site': 'same-origin', ...extras }, body: '{}' });
 }
 async function issued() {
-  let stored: any;
-  const store = { insert: () => ({ values: async (value: unknown) => { stored = value; } }) };
-  const token = await issueCustomerResumeSession(store, 7, HASH);
-  return { ...token, stored };
+  const result = await issueCustomerResumeSession(storage(), 7, HASH);
+  rows = [{ ...USER, session: inserted[0] }];
+  return result;
 }
-
 beforeEach(() => {
-  vi.stubEnv('JWT_SECRET', secret);
-  vi.stubEnv('LUQI_CUSTOMER_RESUME_ENABLED', 'true');
-  vi.stubEnv('NODE_ENV', 'production');
-  rows = [USER]; deleted = 0;
-  mocks.db.mockReset().mockImplementation(async () => storage());
+  vi.stubEnv('JWT_SECRET', 'unit-test-resume-secret-with-over-32-safe-characters');
+  vi.stubEnv('LUQI_CUSTOMER_RESUME_ENABLED', 'true'); vi.stubEnv('NODE_ENV', 'production');
+  rows = []; inserted = []; updates = []; mocks.db.mockReset().mockImplementation(async () => storage());
 });
-afterEach(() => { vi.unstubAllEnvs(); });
-
-describe('bounded customer session issuance (synthetic only)', () => {
-  it('does not issue a persistent session without separate flag activation', async () => {
+afterEach(() => vi.unstubAllEnvs());
+describe('device-session security boundaries', () => {
+  it('does not issue device credentials while the flag is off', async () => {
     vi.stubEnv('LUQI_CUSTOMER_RESUME_ENABLED', 'false');
-    const write = vi.fn();
-    expect(customerResumeEnabled()).toBe(false);
-    await expect(issueCustomerResumeSession({ insert: write }, 7, HASH)).rejects.toThrow('RESUME_UNAVAILABLE');
-    expect(write).not.toHaveBeenCalled();
+    await expect(issueCustomerResumeSession(storage(), 7, HASH)).rejects.toThrow('RESUME_UNAVAILABLE');
+    expect(inserted).toHaveLength(0);
   });
-
-  it('stores a digest, never the cookie secret, and binds bearer JWT to that row', async () => {
-    const result = await issued();
-    expect(result.cookie.split('.')).toHaveLength(2);
-    const [random, mac] = result.cookie.split('.');
+  it('stores only a keyed digest of 256 random bits and issues a 15 minute memory token', async () => {
+    const result = await issued(), random = result.cookie.split('.')[0];
     expect(random).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(mac).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.stored.token).toBe(customerSessionDigest(random));
-    expect(JSON.stringify(result.stored)).not.toContain(random);
-    expect(new Date(result.stored.expiresAt).getTime() - Date.now()).toBeGreaterThan(85_000_000);
-    expect(verifyUserToken(result.token)).toBe(7);
-    expect(getSignedSessionDigest(result.token)).toBe(result.stored.token);
+    expect(inserted[0].tokenDigest).toBe(customerSessionDigest(random));
+    expect(JSON.stringify(inserted)).not.toContain(random);
+    expect(getSignedSessionDigest(result.token)).toBe(inserted[0].familyId);
+    const claims = jwt.decode(result.token) as jwt.JwtPayload;
+    expect(claims.exp! - claims.iat!).toBe(900);
+    vi.stubEnv('JWT_SECRET', 'different-test-signing-secret-with-more-than-32-characters');
+    expect(customerSessionDigest(random)).not.toBe(inserted[0].tokenDigest);
   });
-
-  it('sets host-only, secure, strict cookies and never exposes the session via JS', async () => {
-    const result = await issued();
-    const app = new Hono();
-    app.get('/', c => { setResumeCookies(c, result.cookie); return c.text('ok'); });
-    const response = await app.request('/');
-    const cookies = response.headers.getSetCookie();
+  it('sets host-only Strict Secure HttpOnly cookies with a bounded absolute lifetime', async () => {
+    const value = await issued();
+    const app = new Hono().get('/', c => { setResumeCookies(c, value.cookie, value.absoluteExpiresAt); return c.text('ok'); });
+    const cookies = (await app.request('/')).headers.getSetCookie();
     expect(cookies).toHaveLength(2);
-    expect(cookies[0]).toContain('HttpOnly');
-    expect(cookies[0]).toContain('Secure');
-    expect(cookies[0]).toContain('SameSite=Strict');
-    expect(cookies[0]).toContain('Path=/');
-    expect(cookies[0]).not.toContain('Domain=');
-    expect(cookies[1]).toContain('__Host-luqi_resume_hint=1');
-    expect(cookies[1]).not.toContain('HttpOnly');
+    for (const cookie of cookies) { expect(cookie).toContain('Secure'); expect(cookie).toContain('SameSite=Strict');
+      expect(cookie).toContain('Path=/'); expect(cookie).not.toContain('Domain='); }
+    expect(cookies[0]).toContain('HttpOnly'); expect(cookies[1]).not.toContain('HttpOnly');
   });
-
-  it('restores only a validated account with an existing durable record', async () => {
-    const result = await issued();
-    const response = await request('/session', result.cookie);
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.user.email).toBe(USER.email);
-    expect(getSignedSessionDigest(body.token)).toBe(result.stored.token);
-    expect(JSON.stringify(body)).not.toContain(result.cookie);
-    rows = [];
-    const missing = await request('/session', result.cookie);
-    expect(missing.status).toBe(401);
-  });
-
-  it('rejects credential changes, disabled accounts, and transient database failure', async () => {
-    const result = await issued();
-    const changed = await bcrypt.hash('Changed-Synthetic-Only-2026!', 12);
-    rows = [{ ...USER, passwordHash: changed }];
-    expect((await request('/session', result.cookie)).status).toBe(401);
-    rows = [{ ...USER, isActive: false }];
-    expect((await request('/session', result.cookie)).status).toBe(401);
-    mocks.db.mockRejectedValue(new Error('synthetic outage'));
-    const unavailable = await request('/session', result.cookie);
-    expect(unavailable.status).toBe(503);
-    expect(unavailable.headers.getSetCookie()).toHaveLength(0);
-  });
-
-  it('rejects cross-site intent and does not touch session storage', async () => {
-    const result = await issued();
-    expect((await customerResumeRoutes.request('/session', { headers: { Cookie: '__Host-luqi_resume=' + result.cookie } })).status).toBe(403);
-    expect((await request('/session', result.cookie, 'restore', { Origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' })).status).toBe(403);
+  it('rejects GET/HEAD and CSRF variants before touching storage', async () => {
+    for (const method of ['GET', 'HEAD']) expect((await customerResumeRoutes.request('/session', { method })).status).toBe(404);
+    const value = await issued();
+    for (const extra of [{ Origin: '' }, { Origin: 'null' }, { 'sec-fetch-site': '' }, { 'sec-fetch-site': 'none' },
+      { Origin: 'https://app.luqi-ai.com:444' }, { Origin: 'http://app.luqi-ai.com' },
+      { Origin: 'https://evil.example' }, { 'sec-fetch-site': 'same-site' },
+      { 'sec-fetch-site': 'cross-site' }, { 'x-luqi-session-intent': '' }, { 'Content-Type': 'text/plain' }]) {
+      expect((await request(value.cookie, extra)).status, JSON.stringify(extra)).toBe(403);
+    }
+    expect((await request(value.cookie, {}, '/session?redirect=https://evil.example')).status).toBe(403);
     expect(mocks.db).not.toHaveBeenCalled();
   });
-
-  it('revokes the durable row once and never treats an unconfirmed DB error as logout success', async () => {
-    const result = await issued();
-    expect((await request('/logout', result.cookie, 'logout')).status).toBe(204);
-    expect(deleted).toBe(1);
-    mocks.db.mockRejectedValue(new Error('synthetic unavailable'));
-    expect((await request('/logout', result.cookie, 'logout')).status).toBe(503);
+  it('rotates under a transaction without extending absolute expiry or leaking cookie secrets', async () => {
+    const value = await issued();
+    const response = await request(value.cookie);
+    expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(updates[0].rotatedAt).toBeInstanceOf(Date); expect(inserted).toHaveLength(2);
+    expect(inserted[1].familyId).toBe(inserted[0].familyId);
+    expect(inserted[1].tokenDigest).not.toBe(inserted[0].tokenDigest);
+    expect(inserted[1].absoluteExpiresAt).toEqual(inserted[0].absoluteExpiresAt);
+    expect(inserted[1].rotation).toBe(1);
+    expect(JSON.stringify(await response.json())).not.toContain(value.cookie);
   });
-
-  it('refuses future bearer access after row revocation', async () => {
-    const result = await issued();
-    rows = [];
-    expect(await boundSessionExists(result.stored.token, 7)).toBe(false);
-    rows = [{ id: 1 }];
-    expect(await boundSessionExists(result.stored.token, 7)).toBe(true);
+  it.each(['rotatedAt', 'revokedAt', 'absoluteExpiresAt', 'idleExpiresAt'])('rejects %s and revokes its family', async field => {
+    const value = await issued(); rows[0].session[field] = new Date(Date.now() - 1000);
+    expect((await request(value.cookie)).status).toBe(401);
+    expect(updates[0].revokedAt).toBeInstanceOf(Date); expect(inserted).toHaveLength(1);
+  });
+  it('rejects disabled accounts and changed credentials', async () => {
+    const value = await issued(); rows[0].isActive = false;
+    expect((await request(value.cookie)).status).toBe(401);
+    rows[0] = { ...USER, passwordHash: HASH.replace('zfjK', 'afjK'), session: inserted[0] };
+    expect((await request(value.cookie)).status).toBe(401);
+  });
+  it('does not certify restoration or revocation on a database failure', async () => {
+    const value = await issued(); mocks.db.mockRejectedValue(new Error('private-database-diagnostic'));
+    const restore = await request(value.cookie);
+    expect(restore.status).toBe(503); expect(restore.headers.getSetCookie()).toHaveLength(0);
+    expect(await restore.text()).not.toContain('private');
+    expect((await request(value.cookie, {}, '/logout', 'logout')).status).toBe(503);
+  });
+  it('flag rollback invalidates bound bearer access without a database call', async () => {
+    const value = await issued(); vi.stubEnv('LUQI_CUSTOMER_RESUME_ENABLED', 'false');
+    expect(await boundSessionExists(getSignedSessionDigest(value.token)!, 7)).toBe(false);
+    expect(mocks.db).not.toHaveBeenCalled();
+    expect((await request(value.cookie)).status).toBe(204);
   });
 });

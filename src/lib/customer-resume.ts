@@ -14,7 +14,7 @@ export type RestoredCustomerSession = z.infer<typeof account>;
 
 export function hasCustomerResumeHint(): boolean {
   if (typeof document === 'undefined' || !document.cookie) return false;
-  return document.cookie.split(';').some(item => item.trim() === CUSTOMER_RESUME_HINT + '=1');
+  return document.cookie.split(';').some(item => [CUSTOMER_RESUME_HINT + '=1', CUSTOMER_RESUME_HINT + '=pending'].includes(item.trim()));
 }
 export function clearCustomerResumeHint() {
   if (typeof document === 'undefined') return;
@@ -24,8 +24,8 @@ export function clearCustomerResumeHint() {
 type SessionResponse = { status: number; body: unknown };
 async function requestSession(
   path: '/api/v1/auth/session' | '/api/v1/auth/logout',
-  method: 'GET' | 'POST', intent: 'restore' | 'logout',
-  request: typeof fetch, signal?: AbortSignal,
+  intent: 'restore' | 'logout',
+  request: typeof fetch, signal?: AbortSignal, token?: string,
 ): Promise<SessionResponse> {
   const interrupted = () => new Error('AUTH_REQUEST_UNCONFIRMED');
   if (signal?.aborted) throw interrupted();
@@ -39,12 +39,13 @@ async function requestSession(
   const timer = setTimeout(abort, TIMEOUT_MS);
   const operation = async (): Promise<SessionResponse> => {
     const response = await request(path, {
-      method, cache: 'no-store', credentials: 'same-origin', redirect: 'error',
+      method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error',
       signal: controller.signal,
-      headers: { [INTENT]: intent, Accept: 'application/json' },
+      headers: { [INTENT]: intent, Accept: 'application/json', 'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: '{}',
     });
     if (controller.signal.aborted || response.redirected) throw interrupted();
-    if (response.status !== 200 || method === 'POST') {
+    if (response.status !== 200) {
       void response.body?.cancel().catch(() => {});
       return { status: response.status, body: null };
     }
@@ -80,23 +81,51 @@ async function requestSession(
   finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
 
+// Inert latch survives a reload after an uncertain rotation. Never retry that
+// refresh automatically. A new credential-verified login can replace it.
+function markRefreshUncertain() {
+  document.cookie = CUSTOMER_RESUME_HINT + '=pending; Max-Age=86400; Path=/; Secure; SameSite=Strict';
+}
+let restoreFlight: Promise<RestoredCustomerSession | null> | null = null;
+async function restoreOnce(request: typeof fetch): Promise<RestoredCustomerSession | null> {
+  if (!document.cookie.split(';').some(item => item.trim() === CUSTOMER_RESUME_HINT + '=1')) return null;
+  markRefreshUncertain();
+  try {
+    const response = await requestSession('/api/v1/auth/session', 'restore', request);
+    if (response.status === 204 || response.status === 401) {
+      clearCustomerResumeHint(); return null;
+    }
+    if (response.status !== 200) throw new Error('AUTH_RESTORE_UNAVAILABLE');
+    const parsed = account.safeParse(response.body);
+    if (!parsed.success) throw new Error('AUTH_RESPONSE_UNCONFIRMED');
+    document.cookie = CUSTOMER_RESUME_HINT + '=1; Max-Age=86400; Path=/; Secure; SameSite=Strict';
+    return parsed.data;
+  } catch (error) { markRefreshUncertain(); throw error; }
+}
 export async function restoreCustomerSession(
   signal?: AbortSignal, request: typeof fetch = fetch,
 ): Promise<RestoredCustomerSession | null> {
-  if (!hasCustomerResumeHint()) return null;
-  const response = await requestSession('/api/v1/auth/session', 'GET', 'restore', request, signal);
-  if (response.status === 204 || response.status === 401) {
-    clearCustomerResumeHint(); return null;
+  if (signal?.aborted) throw new Error('AUTH_REQUEST_UNCONFIRMED');
+  if (!restoreFlight) {
+    if (!hasCustomerResumeHint()) return null;
+    // Web Locks serialize different tabs. A shared promise also prevents React
+    // StrictMode cleanup from aborting and replaying a state-changing refresh.
+    const run = () => restoreOnce(request);
+    restoreFlight = typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('luqi-customer-session', run) : run();
+    void restoreFlight.finally(() => { restoreFlight = null; }).catch(() => {});
   }
-  if (response.status !== 200) throw new Error('AUTH_RESTORE_UNAVAILABLE');
-  const parsed = account.safeParse(response.body);
-  if (!parsed.success) throw new Error('AUTH_RESPONSE_UNCONFIRMED');
-  return parsed.data;
+  const flight = restoreFlight;
+  if (!signal) return flight;
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(new Error('AUTH_REQUEST_UNCONFIRMED'));
+    signal.addEventListener('abort', abort, { once: true });
+    void flight.then(value => { if (!signal.aborted) resolve(value); }, reject)
+      .finally(() => signal.removeEventListener('abort', abort));
+  });
 }
-
-export async function revokeCustomerSession(request: typeof fetch = fetch): Promise<void> {
-  if (!hasCustomerResumeHint()) return;
-  const response = await requestSession('/api/v1/auth/logout', 'POST', 'logout', request);
+export async function revokeCustomerSession(request: typeof fetch = fetch, token?: string): Promise<void> {
+  const response = await requestSession('/api/v1/auth/logout', 'logout', request, undefined, token);
   if (response.status !== 204) throw new Error('LOGOUT_UNCONFIRMED');
   clearCustomerResumeHint();
 }
