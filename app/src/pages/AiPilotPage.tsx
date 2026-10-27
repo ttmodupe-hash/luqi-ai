@@ -12,6 +12,7 @@ import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import CompanionNotePicker, { type SharedCompanionNote } from '../components/CompanionNotePicker';
+import LuqiPromptCoach from '../components/LuqiPromptCoach';
 import { prepareCompanionQuestion } from '../lib/companion-context';
 import '../chat.css';
 
@@ -200,9 +201,6 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <span role="status">{checking ? 'Checking AI readiness…' :
           available ? 'AI provider configured · real replies depend on live limits' :
             'AI requests paused · no question can be sent'}</span>
-        <button type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
-          {checking ? 'Checking…' : 'Check availability'}
-        </button>
       </div>}
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
@@ -256,7 +254,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
           disabled={busy || uncertain}
           placeholder="Ask Luqi about an idea, a study topic, a trip or a challenge…"
+          spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
           onChange={event => setPrompt(event.target.value)} />
+        <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
+          onApply={value => { setPrompt(value); setConsent(false); }} />
         <label className="luqi-chat-companion-mode">
           <input type="checkbox" checked={companionMode} disabled={busy || uncertain}
             onChange={event => setCompanionMode(event.target.checked)} />
@@ -298,6 +299,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             {contextTooLong && ' · Question and optional context exceed the allowed input'}
             {tooLong && ' · Shorten your question. It will not be sent or shortened automatically.'}
           </span>
+          <button type="button" className="luqi-chat-availability-check" disabled={checking || busy}
+            onClick={() => { void checkAvailability(); }}>
+            {checking ? 'Checking…' : 'Check availability'}
+          </button>
           {uncertain ? <button type="button" onClick={() => {
             setUncertain(false); setPrompt(''); setNotice('');
           }}>Start a new question</button> : <button type="button" className="luqi-chat-new-in-composer" disabled={busy} onClick={newChat}>New chat</button>}
@@ -355,7 +360,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <label className="block" htmlFor="ai-question">Your question</label>
           <textarea id="ai-question" className="luqi-access-input" rows={5}
             aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
-            disabled={busy || uncertain} required value={prompt} onChange={event => setPrompt(event.target.value)} />
+            disabled={busy || uncertain} required value={prompt}
+            spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
+            onChange={event => setPrompt(event.target.value)} />
+          <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
+            onApply={value => { setPrompt(value); setConsent(false); }} />
           <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters.
             {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}
             {contextTooLong && ' Your question plus selected conversation context exceeds the input limit. Shorten the question or turn off context; nothing will be sent.'}</p>

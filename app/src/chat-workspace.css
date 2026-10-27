@@ -287,3 +287,11 @@
   .luqi-chat-compose-details .luqi-chat-companion-personalise { padding:8px; }
   .luqi-companion-note-actions { align-items:stretch; }
 }
+
+/* On narrow phones, an expanded prompt guide must not cover the availability
+   controls, confirmed replies or other page actions. Keep the fixed mobile
+   dock but allow the complete composer to flow and scroll with the document. */
+@media (max-width: 900px) {
+  .luqi-chat-compose-panel { position: relative; bottom: auto; }
+  .luqi-chat-availability-row { scroll-margin-top: 74px; }
+}
