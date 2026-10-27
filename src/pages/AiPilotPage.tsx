@@ -241,6 +241,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <Link className="luqi-chat-login-action" to="/login">Sign in to Luqi</Link>
           <Link className="luqi-chat-login-secondary" to="/join">Create account</Link>
         </div>
+        <p className="luqi-chat-free-guide">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or AI request is needed to prepare a question.</p>
         <details className="luqi-chat-signin-inline">
           <summary>Prefer to sign in here?</summary>
           <AccountAccessForm purpose="ai" onAuthenticated={value => {

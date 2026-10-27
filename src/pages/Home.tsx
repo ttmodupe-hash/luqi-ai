@@ -72,6 +72,7 @@ export default function Home() {
               </a>
             </div>
             <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link><span>Android or iPhone · No app store required</span></p>
+            <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
             <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
             <p className="luqi-hero-footnote">
               <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your Luqi sign-in, explicit consent and shared limits.

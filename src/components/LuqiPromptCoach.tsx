@@ -5,10 +5,16 @@ import {
 } from '../lib/prompt-coach';
 import '../prompt-coach.css';
 
-interface Props { draft: string; disabled: boolean; onApply: (text: string) => void; }
+interface Props {
+  draft: string;
+  disabled: boolean;
+  onApply: (text: string) => void;
+  onUseGuidedDraft?: (text: string) => void;
+  focusTargetId?: string;
+}
 
 /** A non-metered tool: users keep the choice of wording and whether to send. */
-export default function LuqiPromptCoach({ draft, disabled, onApply }: Props) {
+export default function LuqiPromptCoach({ draft, disabled, onApply, onUseGuidedDraft, focusTargetId = 'ai-question' }: Props) {
   const [goal, setGoal] = useState<CoachGoal>('unsure');
   const [style, setStyle] = useState<CoachStyle>('adapt');
   const [language, setLanguage] = useState<CoachLanguage>('same');
@@ -31,13 +37,18 @@ export default function LuqiPromptCoach({ draft, disabled, onApply }: Props) {
     setPreview(proposal);
     setSource(draft);
   }
-  function useWords(words: string) {
+  function useWords(words: string, coached = false) {
     if (disabled) return;
-    onApply(words);
+    if (coached && onUseGuidedDraft) onUseGuidedDraft(words);
+    else onApply(words);
     setPreview(null);
     setSource('');
-    setStatus('Your question was updated. Review it before you agree to send; no AI request was made.');
-    document.getElementById('ai-question')?.focus({ preventScroll: true });
+    setStatus(coached && onUseGuidedDraft
+      ? 'Your guided question is ready in optional AI Chat below. Nothing was sent.'
+      : 'Your wording was updated. Review it before you agree to send; no AI request was made.');
+    if (!coached || !onUseGuidedDraft) {
+      document.getElementById(focusTargetId)?.focus({ preventScroll: true });
+    }
   }
   return <div className="luqi-prompt-helper">
     <p className="luqi-prompt-native">Your phone can suggest spelling while you type. Luqi will not silently change your words or assume English is your language.</p>
@@ -94,7 +105,7 @@ export default function LuqiPromptCoach({ draft, disabled, onApply }: Props) {
           <textarea readOnly rows={6} value={preview ?? ''} />
         </label>
         <div className="luqi-prompt-actions">
-          <button type="button" disabled={disabled} onClick={() => useWords(preview ?? '')}>Use this question</button>
+          <button type="button" disabled={disabled} onClick={() => useWords(preview ?? '', true)}>Use this question</button>
           <button type="button" disabled={disabled} onClick={() => setPreview(null)}>Keep my own words</button>
         </div>
       </div>}
