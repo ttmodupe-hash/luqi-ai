@@ -215,13 +215,26 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
         </>}
       </section>
-      {!session ? <div className="luqi-chat-login">
-        <p>Use one LUQI account for Chat, private notes and your other signed-in services.</p>
-        <AccountAccessForm purpose="ai" onAuthenticated={value => {
-          epoch.current++; acceptSession(value); setNotice(''); setAnswer(null);
-          setTurns([]); setShareContext(false);
-        }} />
-      </div> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); void submit(); }}>
+      {!session ? <section className="luqi-chat-login" aria-label="Sign in to LUQIChat">
+        <div className="luqi-chat-login-top">
+          <span className="luqi-chat-login-orb"><Sparkles size={20} aria-hidden="true" /></span>
+          <div>
+            <h2>Keep the conversation going</h2>
+            <p>One LUQI sign-in gives you Chat and your other signed-in tools. Just opening Chat does not send a paid AI request.</p>
+          </div>
+        </div>
+        <div className="luqi-chat-login-actions">
+          <Link className="luqi-chat-login-action" to="/login">Sign in to LUQI</Link>
+          <Link className="luqi-chat-login-secondary" to="/join">Create account</Link>
+        </div>
+        <details className="luqi-chat-signin-inline">
+          <summary>Prefer to sign in here?</summary>
+          <AccountAccessForm purpose="ai" onAuthenticated={value => {
+            epoch.current++; acceptSession(value); setNotice(''); setAnswer(null);
+            setTurns([]); setShareContext(false);
+          }} />
+        </details>
+      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); void submit(); }}>
         <label className="block" htmlFor="ai-question">Your question</label>
         <textarea id="ai-question" rows={2} required value={prompt}
           aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
