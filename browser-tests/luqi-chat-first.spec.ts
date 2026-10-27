@@ -2,9 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function openCustomerTool(page: Page, label: string) {
   if (new URL(page.url()).hash.startsWith('#/chat')) {
-    const rail = page.getByRole('navigation', { name: 'Jump into LUQI services' });
-    // LUQIChat uses its concise LUQI tools label; the legacy route remains supported.
-    const sidebarLabel = label === 'LUQI tools' ? 'LUQI tools' : label;
+    const rail = page.getByRole('navigation', { name: 'Jump into Luqi services' });
+    // Luqi Chat uses its concise Luqi tools label; the legacy route remains supported.
+    const sidebarLabel = label === 'Luqi tools' ? 'Luqi tools' : label;
     const target = rail.getByRole('link', { name: sidebarLabel, exact: true });
     if (!(await target.isVisible())) await page.getByRole('button', { name: 'Open chat sidebar' }).click();
     await target.click();
@@ -27,7 +27,7 @@ test('visitor finds the chat-first Africa guide on real browser engines without 
     }
   });
   await page.goto('/#/ask');
-  await expect(page.getByRole('heading', { name: /Tell LUQI what you need/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Tell Luqi what you need/i })).toBeVisible();
   await expect(page.getByLabel('What would you like help with?')).toBeVisible();
   await page.getByRole('button', { name: 'Find somewhere to stay' }).click();
   await expect(page.getByRole('heading', { name: 'Know exactly what you are booking' })).toBeVisible();
@@ -44,17 +44,17 @@ test('traveller can describe a need and is directed to a real local tool', async
   await expect(page.getByRole('link', { name: 'Open study desk' })).toHaveAttribute('href', '#/study-desk');
 });
 
-test('persistent Ask LUQI link is visible and usable at narrow iPhone width', async ({ page }) => {
+test('persistent Ask Luqi link is visible and usable at narrow iPhone width', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 690 });
   await page.goto('/#/omega-tasks');
-  const chat = page.getByRole('link', { name: 'Ask LUQI' });
+  const chat = page.getByRole('link', { name: 'Ask Luqi' });
   await expect(chat).toBeVisible();
   await chat.click();
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
 });
 
 
-test('one LUQI login works for private Notes, Chat and Omega without repeated credentials or paid calls', async ({ page }) => {
+test('one Luqi login works for private Notes, Chat and Omega without repeated credentials or paid calls', async ({ page }) => {
   const auth: string[] = [], paid: string[] = [];
   await page.route('**/api/v1/auth/login', route => {
     auth.push(route.request().url());
@@ -74,10 +74,10 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   await page.getByLabel('Password', { exact: true }).fill('synthetic-fixture-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
-  await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
+  await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
-  await openCustomerTool(page, 'LUQI tools');
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
+  await openCustomerTool(page, 'Luqi tools');
   await expect(page.getByRole('heading', { name: 'Tasks are not enabled yet' })).toBeVisible();
   await openCustomerTool(page, 'Private notes');
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
@@ -85,7 +85,7 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   expect(paid).toHaveLength(0);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
+  await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   expect(auth).toHaveLength(1);
 });
@@ -97,9 +97,9 @@ test('one goal-first Chat journey leads to optional AI on mobile; Notes remain o
   });
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto('/#/ask');
-  const primary = page.getByRole('heading', { name: 'Chat with LUQI', exact: true });
-  const ai = page.getByRole('heading', { name: 'Try a question with LUQI' });
-  const local = page.getByRole('heading', { name: /Tell LUQI what you need/ });
+  const primary = page.getByRole('heading', { name: 'Chat with Luqi', exact: true });
+  const ai = page.getByRole('heading', { name: 'Try a question with Luqi' });
+  const local = page.getByRole('heading', { name: /Tell Luqi what you need/ });
   await expect(primary).toBeVisible();
   await expect(ai).toBeVisible();
   await expect(local).toBeVisible();

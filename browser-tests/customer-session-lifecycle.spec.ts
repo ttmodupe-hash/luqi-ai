@@ -33,7 +33,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await page.getByLabel('Password', { exact: true }).fill('fixture-password-2026');
   await page.getByLabel('Confirm password', { exact: true }).fill('fixture-password-2026');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
   expect(paid).toHaveLength(0);
   await page.getByLabel('Your question').fill('Synthetic first account question');
   await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
@@ -45,14 +45,14 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await page.getByRole('button', { name: 'Find my next step', exact: true }).click();
   await page.getByRole('button', { name: 'Use my question in AI Chat' }).click();
   await expect(page.getByLabel('Your question')).toHaveValue('Help me plan my visit to Cape Town');
-  const headerLogout = page.getByRole('button', { name: 'Log out of LUQI', exact: true });
+  const headerLogout = page.getByRole('button', { name: 'Log out of Luqi', exact: true });
   if (await headerLogout.isVisible()) await headerLogout.click();
   else {
     await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
     await page.getByRole('navigation', { name: 'Mobile navigation' })
-      .getByRole('button', { name: 'Log out of LUQI', exact: true }).click();
+      .getByRole('button', { name: 'Log out of Luqi', exact: true }).click();
   }
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account', exact: true })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('What would you like help with?')).toHaveValue('');
   await page.getByLabel('Email', { exact: true }).fill('second@example.invalid');
@@ -66,7 +66,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
   expect(paid).toHaveLength(1);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account', exact: true })).toBeVisible();
   expect(paid).toHaveLength(1);
 });
 
@@ -81,7 +81,7 @@ test('expiry clears Chat and the shared header without another request or reload
   await page.clock.fastForward(61_000);
   await expect(page.getByText(/Your session ended/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Keep the conversation going', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Log out of LUQI', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Log out of Luqi', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Your question')).toHaveCount(0);
   await expect(page.getByText(/Signed in as expiry@example.invalid/)).toHaveCount(0);
 });
