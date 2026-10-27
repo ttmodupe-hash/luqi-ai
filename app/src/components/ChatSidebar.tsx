@@ -5,6 +5,7 @@ import { BookOpen, BriefcaseBusiness, ChevronLeft, ChevronRight, CircleHelp, Com
   PenLine, Plus, Search, ShieldCheck, Trash2, UserRound, X } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import { useOptionalCustomerSession } from '../providers/customer-session';
+import SavedNotesPeek from './SavedNotesPeek';
 import '../chat-workspace.css';
 
 const shortcuts = [
@@ -126,6 +127,7 @@ export default function ChatSidebar() {
           <button type="button" onClick={() => setConfirmForget(null)}>Cancel</button>
         </div>}
       </section>
+      {customer?.session && <SavedNotesPeek key={customer.session.token} token={customer.session.token} onNavigate={close} />}
       <nav className="luqi-chat-rail-bottom" aria-label="Help and account">
         <Link to="/service-status" title="Service status" onClick={close}>
           <ShieldCheck size={18} aria-hidden="true" /><span>Service status</span>
