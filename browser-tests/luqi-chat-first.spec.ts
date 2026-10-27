@@ -3,8 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 async function openCustomerTool(page: Page, label: string) {
   if (new URL(page.url()).hash.startsWith('#/chat')) {
     const rail = page.getByRole('navigation', { name: 'Jump into LUQI services' });
-    // The concise LUQIChat shortcut is named Omega tools; legacy global navigation keeps Omega tasks.
-    const sidebarLabel = label === 'Omega tasks' ? 'Omega tools' : label;
+    // LUQIChat uses its concise LUQI tools label; the legacy route remains supported.
+    const sidebarLabel = label === 'LUQI tools' ? 'LUQI tools' : label;
     const target = rail.getByRole('link', { name: sidebarLabel, exact: true });
     if (!(await target.isVisible())) await page.getByRole('button', { name: 'Open chat sidebar' }).click();
     await target.click();
@@ -77,7 +77,7 @@ test('one LUQI login works for private Notes, Chat and Omega without repeated cr
   await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
-  await openCustomerTool(page, 'Omega tasks');
+  await openCustomerTool(page, 'LUQI tools');
   await expect(page.getByRole('heading', { name: 'Tasks are not enabled yet' })).toBeVisible();
   await openCustomerTool(page, 'Private notes');
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
