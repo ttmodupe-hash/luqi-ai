@@ -52,7 +52,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
     await page.getByRole('navigation', { name: 'Mobile navigation' })
       .getByRole('button', { name: 'Log out of Luqi', exact: true }).click();
   }
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account', exact: true })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await expect(page.getByLabel('What would you like help with?')).toHaveValue('');
   await page.getByLabel('Email', { exact: true }).fill('second@example.invalid');
@@ -66,7 +66,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
   expect(paid).toHaveLength(1);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to your Luqi account', exact: true })).toBeVisible();
   expect(paid).toHaveLength(1);
 });
 

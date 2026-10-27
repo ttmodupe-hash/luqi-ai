@@ -26,7 +26,7 @@ test('first user registers, saves, reloads, signs in, exports and deletes owned 
   const registration = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/register'));
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   expect((await registration).status()).toBe(201);
-  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open saved private notes' })).toBeVisible();
   await page.getByRole('link', { name: 'Open saved private notes' }).click();
   await expect(page.getByLabel('Conversation title')).toBeVisible();
@@ -100,7 +100,7 @@ test('a user changes a known password, signs in again and keeps saved notes', as
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open saved private notes' })).toBeVisible();
   await page.getByRole('link', { name: 'Open saved private notes' }).click();
   await expect(page.getByLabel('Conversation title')).toBeVisible();

@@ -7,7 +7,7 @@ test('desktop Luqi Chat opens sidebar and conversation with usable service short
   page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto('/#/chat');
-  const rail = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  const rail = page.getByRole('complementary', { name: 'Luqi Chat sidebar' });
   const canvas = page.getByRole('heading', { name: 'Luqi Chat', exact: true });
   await expect(rail).toBeVisible(); await expect(canvas).toBeVisible();
   await expect(rail.getByRole('button', { name: 'New chat' })).toBeVisible();
@@ -73,14 +73,14 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   await page.getByLabel('Your question').fill('A synthetic first question');
   await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
   await page.getByRole('button', { name: 'Send question' }).click();
-  await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
-  const rail = page.getByRole('complementary', { name: 'LUQIChat sidebar' });
+  await expect(page.getByText('Synthetic Luqi confirmed answer')).toBeVisible();
+  const rail = page.getByRole('complementary', { name: 'Luqi Chat sidebar' });
   const recent = rail.getByRole('group', { name: 'Chats from this tab' });
   await expect(recent.getByRole('button', { name: 'A synthetic first question', exact: true })).toBeVisible();
   await rail.getByRole('button', { name: 'New chat' }).click();
   await expect(page.getByText('Synthetic Luqi confirmed answer')).toHaveCount(0);
   await recent.getByRole('button', { name: 'A synthetic first question', exact: true }).click();
-  await expect(page.getByText('Synthetic LUQI confirmed answer')).toBeVisible();
+  await expect(page.getByText('Synthetic Luqi confirmed answer')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: /I understand this question may go/ })).not.toBeChecked();
   expect(replies).toBe(1);
   expect(logins).toBe(1);

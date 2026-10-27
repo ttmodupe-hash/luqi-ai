@@ -50,7 +50,7 @@ test('persistent Ask Luqi link is visible and usable at narrow iPhone width', as
   const chat = page.getByRole('link', { name: 'Ask Luqi' });
   await expect(chat).toBeVisible();
   await chat.click();
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
 });
 
 
@@ -74,9 +74,9 @@ test('one Luqi login works for private Notes, Chat and Omega without repeated cr
   await page.getByLabel('Password', { exact: true }).fill('synthetic-fixture-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
-  await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
+  await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'LUQIChat', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
   await openCustomerTool(page, 'Luqi tools');
   await expect(page.getByRole('heading', { name: 'Tasks are not enabled yet' })).toBeVisible();
   await openCustomerTool(page, 'Private notes');
@@ -85,7 +85,7 @@ test('one Luqi login works for private Notes, Chat and Omega without repeated cr
   expect(paid).toHaveLength(0);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await page.getByRole('link', { name: 'Ask LUQI', exact: true }).click();
+  await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   expect(auth).toHaveLength(1);
 });

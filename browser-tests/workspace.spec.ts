@@ -64,7 +64,7 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   // A freshly loaded SPA may not have mounted the keyboard shortcut listener.
   // Wait for real workspace controls before pressing the key, rather than
   // bypassing the keyboard path with a click or programmatic focus.
-  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Luqi workspace home" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search workspace" })).toBeVisible();
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Find your next step" });
@@ -119,7 +119,7 @@ test("navigation and skip link work at small widths without changing hash routes
   // assertion or programmatically focusing the skip link.
   const skipLink = page.getByRole("link", { name: "Skip to content" });
   await expect(skipLink).toBeAttached();
-  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Luqi workspace home" })).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(skipLink).toBeFocused();
   await page.keyboard.press("Enter");
