@@ -225,7 +225,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <label className="block" htmlFor="ai-question">Your question</label>
         <textarea id="ai-question" rows={2} required value={prompt}
           aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
-          disabled={busy || uncertain} maxLength={MAX_PILOT_QUESTION_CHARS + 1}
+          disabled={busy || uncertain}
           placeholder="Ask LUQI about an idea, a study topic, a trip or a challenge…"
           onChange={event => setPrompt(event.target.value)} />
         <label className="luqi-chat-consent">
@@ -251,7 +251,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <span id="ai-question-limit" className="luqi-chat-limit">
             {questionLength}/{MAX_PILOT_QUESTION_CHARS} characters
             {contextTooLong && ' · Question and optional context exceed the allowed input'}
-            {tooLong && ' · Shorten before sending'}
+            {tooLong && ' · Shorten your question. It will not be sent or shortened automatically.'}
           </span>
           {uncertain ? <button type="button" onClick={() => {
             setUncertain(false); setPrompt(''); setNotice('');
