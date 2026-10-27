@@ -8,7 +8,7 @@ import '../chat-workspace.css';
 export default function LuqiChatWorkspacePage() {
   return <div className="luqi-chat-main">
     <AiPilotPage embedded workspaceMode />
-    <nav className="luqi-chat-workspace-links" aria-label="More LUQI support">
+    <nav className="luqi-chat-workspace-links" aria-label="More Luqi support">
       <Link to="/ask">Explore Africa and plan a goal locally</Link>
       <Link to="/companion">Open saved private notes</Link>
       <Link to="/service-status">Check availability</Link>

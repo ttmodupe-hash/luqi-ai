@@ -112,7 +112,7 @@ export default function ContentStudioPage() {
     }
   }
   return <main className="luqi-studio">
-    <div className="luqi-studio-heading"><p className="luqi-eyebrow">LUQI CONTENT STUDIO · LOCAL CREATION</p><h1>Create. Explain. Make it clear.</h1>
+    <div className="luqi-studio-heading"><p className="luqi-eyebrow">Luqi Content Studio · Local creation</p><h1>Create. Explain. Make it clear.</h1>
       <p>Six scenes, ninety seconds. Original 3D motion graphics, an editable story and a time-based learning view. Download your storyboard before leaving; reopen that file here to continue editing later.</p></div>
     <StudioDraftImport disabled={recording} onBusyChange={busy => { setDraftBusy(busy); if (busy) setPlaying(false); }}
       onRestore={draft => {
@@ -154,6 +154,6 @@ export default function ContentStudioPage() {
       {clip && <div><video src={clip.url} controls aria-label="Completed local animation" /><a className="luqi-primary" href={clip.url} download={`luqi-showcase-90s-${clip.format}.${clip.extension}`}>Download 90-second video (.{clip.extension})</a></div>}
     </section>
     <section className="luqi-studio-responsibility"><h2>Support that keeps you in control.</h2><p>Use examples your audience can relate to. Distinguish evidence from opinion and invite a counterexample. Obtain permission for music, images, voices and guests. Check the rules for the audience’s country before publishing.</p>
-      <p>LUQI does not file tax returns, act as a chartered accountant or publish on your behalf here. Those workflows need a verified identity, a specific mandate, the relevant professional review and approval of the final action.</p><Link to="/ai-trial">Check the separate signed-in text trial</Link><span> · </span><Link to="/privacy">Privacy information</Link></section>
+      <p>Luqi does not file tax returns, act as a chartered accountant or publish on your behalf here. Those workflows need a verified identity, a specific mandate, the relevant professional review and approval of the final action.</p><Link to="/ai-trial">Check the separate signed-in text trial</Link><span> · </span><Link to="/privacy">Privacy information</Link></section>
   </main>;
 }

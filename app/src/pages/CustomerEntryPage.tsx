@@ -3,7 +3,7 @@ import AccountAccessForm from '../components/AccountAccessForm';
 import { useCustomerSession } from '../providers/customer-session';
 
 /**
- * Registration and login belong to the LUQI account, not to the Notes vault.
+ * Registration and login belong to the Luqi account, not to the Notes vault.
  * Accept the already-validated account session, then open Chat without another
  * authentication request, automatic AI inference, or browser token storage.
  */
@@ -16,8 +16,8 @@ export default function CustomerEntryPage({ initialMode = 'signin' }: { initialM
   if (location.search) return <Navigate to={location.pathname} replace />;
   if (session) return <Navigate to="/chat" replace />;
   return <main className="luqi-info" aria-labelledby="luqi-account-entry-heading">
-    <p className="luqi-eyebrow">ONE LUQI ACCOUNT</p>
-    <h1 id="luqi-account-entry-heading">Welcome to LUQI</h1>
+    <p className="luqi-eyebrow">One Luqi account</p>
+    <h1 id="luqi-account-entry-heading">Welcome to Luqi</h1>
     <p>Sign in or create one account, then go straight to Chat. Notes are optional.
       Signing in does not send a question to an AI provider or activate a subscription.</p>
     <AccountAccessForm initialMode={initialMode} purpose="account" onAuthenticated={value => {
