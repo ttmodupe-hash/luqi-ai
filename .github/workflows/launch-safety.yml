@@ -23,3 +23,5 @@ jobs:
         run: node --test tests/public-cache.test.mjs
       - name: Verify discoverability and mirrored UI without providers or dependencies
         run: node --experimental-strip-types --test tests/launch-discovery.test.mjs
+      - name: Verify full main-push Web Build and read-only checkout
+        run: node --test tests/main-web-build-trigger.test.mjs
