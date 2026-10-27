@@ -9,10 +9,14 @@ import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 import { guideLuqiNeed } from '../lib/luqi-intent-guide';
 import SafePilotText from '../components/SafePilotText';
+import { Send, Sparkles } from 'lucide-react';
+import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import '../chat.css';
 
-export default function AiPilotPage({ embedded = false, initialQuestion = '' }: { embedded?: boolean; initialQuestion?: string } = {}) {
+export default function AiPilotPage({ embedded = false, initialQuestion = '', workspaceMode = false }: { embedded?: boolean; initialQuestion?: string; workspaceMode?: boolean } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const optionalChatWorkspace = useOptionalChatWorkspace();
+  const workspace = workspaceMode ? optionalChatWorkspace : null;
   const { region } = useSovereignRegion();
   const [shareRegion, setShareRegion] = useState(false);
   const previousToken = useRef<string | null>(null);
@@ -38,6 +42,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   const pending = useRef<AbortController | null>(null);
   const availabilityPending = useRef<AbortController | null>(null);
   const mounted = useRef(false);
+  const selectionSeen = useRef<number | null>(null);
 
   // A transient startup failure must not force a reload (and lose the session).
   // Only this public GET is repeatable. Never replay an AI request or clear its
@@ -70,6 +75,20 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
     previousToken.current = token;
   }, [session?.token]);
 
+  // Switching recent chats cancels any pending response and clears old consent.
+  // The history is limited to confirmed replies in this tab, never storage.
+  useLayoutEffect(() => {
+    if (!workspace || selectionSeen.current === workspace.selectionVersion) return;
+    selectionSeen.current = workspace.selectionVersion;
+    const wasPending = locked.current;
+    epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+    setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
+    setTurns(workspace.activeThread?.turns ?? []);
+    setShareContext(false); setShareRegion(false); setConsent(false);
+    setBusy(false); setUncertain(false);
+    setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
+  }, [workspace?.selectionVersion]);
+
   useEffect(() => {
     mounted.current = true;
     void checkAvailability();
@@ -93,6 +112,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   }
   function newChat() {
     if (locked.current) return;
+    if (workspace) { workspace.startNewChat(); return; }
     epoch.current++;
     setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
     setConsent(false); setShareRegion(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
@@ -122,6 +142,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
           return next.slice(-8);
         });
         setPrompt('');
+        workspace?.recordConfirmedReply(submittedQuestion, result);
       }
     } catch (error) {
       if (epoch.current !== version) return;
@@ -150,6 +171,104 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '' }: 
   // never from model output or an untrusted tool command. No tool runs automatically.
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
+  if (workspace) {
+    const canSend = !!session && !checking && available && consent && !!prompt.trim() &&
+      !tooLong && !contextTooLong && !busy && !uncertain;
+    return <main className="luqi-chat-canvas" aria-labelledby="luqi-workspace-chat-heading">
+      <header className="luqi-chat-canvas-header">
+        <div>
+          <h1 id="luqi-workspace-chat-heading">LUQIChat</h1>
+          <p>Your AI conversation, with useful tools one click away.</p>
+        </div>
+        <span className="luqi-chat-canvas-tag">Limited text pilot</span>
+      </header>
+      <div className="luqi-chat-availability-row">
+        <span role="status">{checking ? 'Checking AI readiness…' :
+          available ? 'AI provider configured · real replies depend on live limits' :
+            'AI requests paused · no question can be sent'}</span>
+        <button type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
+          {checking ? 'Checking…' : 'Check availability'}
+        </button>
+      </div>
+      {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
+      <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
+        {!turns.length ? <div className="luqi-chat-welcome">
+          <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
+          <h2>What can LUQI help you with?</h2>
+          <p>Explore ideas, learning and everyday problems with a practical African perspective. Ask a question below, or jump straight into a working tool on the left.</p>
+          {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
+            {[
+              ['Study with LUQI', 'Explain a useful study technique with a simple example.'],
+              ['Plan my business', 'Help me plan the first three steps for a small business idea.'],
+              ['Write a message', 'Help me draft a friendly response to a customer.'],
+              ['Explore Africa', 'What should I research before visiting a new African country?'],
+            ].map(([label, text]) => <button type="button" key={label} disabled={busy || uncertain}
+              onClick={() => { setPrompt(text); document.getElementById('ai-question')?.focus(); }}>{label}</button>)}
+          </div>}
+        </div> : <>
+          {turns.map((turn, index) => <article key={index}
+            className={'luqi-chat-message ' + (turn.sender === 'user' ? 'luqi-chat-message-user' : 'luqi-chat-message-ai')}>
+            <strong>{turn.sender === 'user' ? 'You' : 'LUQIChat'}</strong>
+            <p>{turn.sender === 'user' ? turn.text : <SafePilotText text={turn.text} />}</p>
+          </article>)}
+          {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
+          {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
+        </>}
+      </section>
+      {!session ? <div className="luqi-chat-login">
+        <p>Use one LUQI account for Chat, private notes and your other signed-in services.</p>
+        <AccountAccessForm purpose="ai" onAuthenticated={value => {
+          epoch.current++; acceptSession(value); setNotice(''); setAnswer(null);
+          setTurns([]); setShareContext(false);
+        }} />
+      </div> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); void submit(); }}>
+        <label className="block" htmlFor="ai-question">Your question</label>
+        <textarea id="ai-question" rows={2} required value={prompt}
+          aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
+          disabled={busy || uncertain} maxLength={MAX_PILOT_QUESTION_CHARS + 1}
+          placeholder="Ask LUQI about an idea, a study topic, a trip or a challenge…"
+          onChange={event => setPrompt(event.target.value)} />
+        <label className="luqi-chat-consent">
+          <input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} />
+          <span>I understand this question may go to Gemini or OpenAI within the trial limits. I'll use non-sensitive content.</span>
+        </label>
+        <details className="luqi-chat-compose-details">
+          <summary>Conversation context, country guide and limits (optional)</summary>
+          <p>Consent is per request. No private notes, account email, browsing or voice are attached automatically.</p>
+          {turns.length > 0 && <label><input type="checkbox" checked={shareContext} disabled={busy}
+            onChange={event => setShareContext(event.target.checked)} /> Include reviewed previous turns in this question (off by default)</label>}
+          {shareContext && <ol aria-label="Context to send">{contextPreview.map((turn, index) => <li key={index}>
+            <strong>{turn.sender === 'user' ? 'You' : 'LUQI'}:</strong> {turn.text}
+          </li>)}</ol>}
+          {region !== 'PAN_AFRICAN_AU' && <label><input type="checkbox" checked={shareRegion} disabled={busy}
+            onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
+          <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
+          <p>20 provider attempts per account per UTC day, maximum 512 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
+          <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. Nothing is saved in private notes.</p>
+          <Link to="/privacy">Privacy and provider information</Link>
+        </details>
+        <div className="luqi-chat-compose-actions">
+          <span id="ai-question-limit" className="luqi-chat-limit">
+            {questionLength}/{MAX_PILOT_QUESTION_CHARS} characters
+            {contextTooLong && ' · Question and optional context exceed the allowed input'}
+            {tooLong && ' · Shorten before sending'}
+          </span>
+          {uncertain ? <button type="button" onClick={() => {
+            setUncertain(false); setPrompt(''); setNotice('');
+          }}>Start a new question</button> : <button type="button" disabled={busy} onClick={newChat}>New chat</button>}
+          <button type="submit" disabled={!canSend}>
+            <Send size={16} aria-hidden="true" /> {busy ? 'Waiting…' : 'Send question'}
+          </button>
+        </div>
+      </form>}
+      <p className="luqi-chat-caption">
+        Only verified replies appear here. A timeout is never retried automatically.
+        This in-tab history is cleared on sign-out or reload; it is not cloud-saved.
+        <Link to="/service-status"> Service status</Link> · <Link to="/privacy">Privacy</Link>
+      </p>
+    </main>;
+  }
+
   const Root = embedded ? 'section' : 'main';
   const Heading = embedded ? 'h2' : 'h1';
   const Subheading = embedded ? 'h3' : 'h2';
