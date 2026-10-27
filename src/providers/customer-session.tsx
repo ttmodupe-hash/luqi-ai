@@ -106,7 +106,19 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
   const session = active?.session ?? null;
   const value = useMemo(() => ({ session, expired, restoring, signOutUnconfirmed, acceptSession, signOut }),
     [session, expired, restoring, signOutUnconfirmed, acceptSession, signOut]);
-  return <CustomerSessionContext.Provider value={value}>{children}</CustomerSessionContext.Provider>;
+  return <CustomerSessionContext.Provider value={value}>
+    {restoring
+      ? <main role="status" aria-live="polite" style={{ padding: '2rem', minHeight: '60vh' }}>
+          Checking your secure Luqi sign-in… No AI request is being sent.
+        </main>
+      : <>
+          {signOutUnconfirmed && <p role="alert" style={{ padding: '1rem', border: '1px solid #946c36' }}>
+            This device has cleared its account view, but server sign-out could not be verified.
+            Do not assume the previous session was revoked. Contact verified Luqi support if you suspect unauthorised access.
+          </p>}
+          {children}
+        </>}
+  </CustomerSessionContext.Provider>;
 }
 
 export function useCustomerSession(): CustomerSessionContextValue {
