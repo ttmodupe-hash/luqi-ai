@@ -25,3 +25,5 @@ jobs:
         run: node --experimental-strip-types --test tests/launch-discovery.test.mjs
       - name: Verify full main-push Web Build and read-only checkout
         run: node --test tests/main-web-build-trigger.test.mjs
+      - name: Verify event-driven post-deployment acceptance is restricted to canonical Railway
+        run: node --test tests/canonical-railway-status.test.mjs
