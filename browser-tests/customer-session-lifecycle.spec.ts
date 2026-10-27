@@ -80,7 +80,7 @@ test('expiry clears Chat and the shared header without another request or reload
   await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
   await page.clock.fastForward(61_000);
   await expect(page.getByText(/Your session ended/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sign in to your LUQI account', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Log out of LUQI', exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Your question')).toHaveCount(0);
   await expect(page.getByText(/Signed in as expiry@example.invalid/)).toHaveCount(0);
