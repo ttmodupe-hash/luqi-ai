@@ -67,7 +67,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   return <section className="luqi-access" aria-labelledby="account-access-heading">
     <p className="luqi-eyebrow">YOUR OWN SPACE</p>
     <h2 id="account-access-heading">{mode === 'signup' ? 'Create your Luqi account' : 'Sign in to your Luqi account'}</h2>
-    <p>{purpose === 'account' ? 'Use one Luqi account for Chat, Omega task history and optional private notes. Signing in does not automatically send a question to an AI provider.' : purpose === 'ai' ? 'Use your Luqi account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
+    <p>{purpose === 'account' ? 'Use one Luqi account for Chat, Luqi task history and optional private notes. Signing in does not automatically send a question to an AI provider.' : purpose === 'ai' ? 'Use your Luqi account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"
