@@ -30,7 +30,8 @@ jobs:
       (github.event.state == 'success' &&
        github.event.context == 'kind-spontaneity - web' &&
        github.event.sha == github.sha &&
-       startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7'))
+       startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7') &&
+       contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22'))
     runs-on: ubuntu-latest
     timeout-minutes: 11
     steps:
