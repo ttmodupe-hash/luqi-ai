@@ -28,8 +28,8 @@ test('search no longer incorrectly declares the text trial disabled', async () =
   assert.match(content, /signed-in trial with availability checks/);
 });
 
-test('LUQI local budget and vehicle tools are discoverable without implying active workers', () => {
-  const matches = findWorkspaceTools('LUQI travel budget', 'ready');
+test('Luqi local budget and vehicle tools are discoverable without implying active workers', () => {
+  const matches = findWorkspaceTools('Luqi travel budget', 'ready');
   assert.equal(matches.length, 1);
   assert.equal(matches[0].id, 'agents');
   assert.equal(matches[0].path, '/omega-tasks');
