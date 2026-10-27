@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { isCanonicalRailwaySuccessStatus } from '../scripts/check-canonical-railway-status.mjs';
+import { isCanonicalRailwaySuccessStatus, canonicalRailwayStatusReason } from '../scripts/check-canonical-railway-status.mjs';
 
 const sha = 'a'.repeat(40);
 const valid = {
@@ -15,10 +15,16 @@ const domain = readFileSync(new URL('../.github/workflows/custom-domain-https.ym
 
 test('accepts only a production Railway success for the exact current main revision', () => {
   assert.equal(isCanonicalRailwaySuccessStatus(valid, sha), true);
+  assert.equal(canonicalRailwayStatusReason(valid, sha), 'accepted');
+  // GitHub status webhook branches[] is a truncated hint, not reliable main-HEAD evidence.
+  for (const branches of [[], null, [{ name: 'unrelated' }]]) {
+    assert.equal(isCanonicalRailwaySuccessStatus({ ...valid, branches }, sha), true);
+  }
+  assert.equal(canonicalRailwayStatusReason({ ...valid, sha: 'b'.repeat(40) }, sha), 'not-current-main');
+  assert.equal(canonicalRailwayStatusReason({ ...valid, repository: { full_name: 'other/repo' } }, sha), 'wrong-repository');
   const changed = [
     { state: 'pending' }, { state: 'failure' }, { context: 'fabulous-stillness - web' },
     { sha: 'b'.repeat(40) }, { repository: { full_name: 'somewhere/else' } },
-    { branches: [{ name: 'release' }] }, { branches: [] }, { branches: null },
     { target_url: valid.target_url.replace('https://railway.com', 'http://railway.com') },
     { target_url: valid.target_url.replace('railway.com', 'railway.com.example') },
     { target_url: valid.target_url.replace('9f627cb8-3136-4b30-89d2-32ca648a1e5f', 'f9da0f15-a36d-4663-88ca-1149f28fbaa2') },
