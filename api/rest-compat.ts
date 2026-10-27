@@ -490,7 +490,7 @@ const handleSignup = async (c: any) => {
       if (withResume) {
         // Atomic signup: a missing session table/grant cannot leave an account
         // created without acknowledging its login on the same transaction.
-        const persisted = await db.transaction(async tx => {
+        const persisted = await db.transaction(async (tx: any) => {
           const [result] = await tx.insert(users).values({ email, passwordHash, name });
           const id = Number(result.insertId);
           if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Invalid user ID');
