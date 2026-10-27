@@ -7,21 +7,30 @@ on:
       - "scripts/verify-custom-domain.mjs"
       - "tests/custom-domain-https.test.mjs"
       - ".github/workflows/custom-domain-https.yml"
+      - "scripts/check-canonical-railway-status.mjs"
+      - "tests/canonical-railway-status.test.mjs"
   # Verify every production source revision, not only edits to this workflow.
   # Concurrency cancels the previous revision if another merge supersedes it.
   push:
     branches: [main]
+  status:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: luqi-custom-https-${{ github.ref }}
+  group: luqi-custom-https-${{ github.event_name }}-${{ github.ref }}-${{ github.event.context || 'none' }}
   cancel-in-progress: true
 
 jobs:
   verify-custom-https:
+    if: >-
+      github.event_name != 'status' ||
+      (github.event.state == 'success' &&
+       github.event.context == 'kind-spontaneity - web' &&
+       github.event.sha == github.sha &&
+       startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7'))
     runs-on: ubuntu-latest
     timeout-minutes: 11
     steps:
@@ -35,9 +44,18 @@ jobs:
         run: node --check scripts/verify-custom-domain.mjs
       - name: Exercise custom-domain contract with offline fixtures
         run: node --test tests/custom-domain-https.test.mjs
+      - name: Verify canonical event and event-ordering contracts with no network
+        run: |
+          node --check scripts/check-canonical-railway-status.mjs
+          node --test tests/canonical-railway-status.test.mjs
+      - name: Reject foreign, stale or unsuccessful Railway status events
+        if: github.event_name == 'status'
+        env:
+          LUQI_MAIN_SHA: ${{ github.sha }}
+        run: node scripts/check-canonical-railway-status.mjs
       - name: Verify live custom domain after matching public Railway revision
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'status' || github.event_name == 'workflow_dispatch'
         env:
           LUQI_VERIFY_PUBLIC: "true"
-          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || github.sha }}
         run: node scripts/verify-custom-domain.mjs
