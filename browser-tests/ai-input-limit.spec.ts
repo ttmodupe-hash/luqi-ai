@@ -19,7 +19,7 @@ test('AI trial retains over-limit input and sends an intact corrected question',
     return route.continue();
   });
   await page.goto('/#/ai-trial');
-  await expect(page.getByText(/AI provider configured/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
   await page.locator('details.luqi-chat-signin-inline > summary').click();
   await page.getByLabel('Email', { exact: true }).fill('input-browser@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-Input-Password-2026!');
