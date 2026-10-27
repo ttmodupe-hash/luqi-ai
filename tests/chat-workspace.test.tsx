@@ -40,7 +40,7 @@ async function login() {
 }
 async function ask(question: string) {
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: question } });
-  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand this question may go/i }));
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await screen.findByText('Verified response to ' + question);
 }
@@ -66,7 +66,7 @@ it('shows only confirmed in-tab chats and selecting one never repeats metered in
   expect(screen.queryByText('Verified response to My verified first question')).toBeNull();
   fireEvent.click(within(history).getByRole('button', { name: 'My verified first question' }));
   await screen.findByText('Verified response to My verified first question');
-  expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
+  expect((screen.getByRole('checkbox', { name: /I understand this question may go/i }) as HTMLInputElement).checked).toBe(false);
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
 });
 it('removes confirmed chats immediately on sign-out and never loads private notes', async () => {
