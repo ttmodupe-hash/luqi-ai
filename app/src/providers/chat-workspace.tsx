@@ -52,15 +52,10 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setSelectionVersion(version => version + 1);
   }, []);
   const selectThread = useCallback((id: string) => {
-    if (!token || tokenAtPaint.current !== token) return;
-    setThreads(current => {
-      if (current.some(chat => chat.id === id)) {
-        setActiveId(id);
-        setSelectionVersion(version => version + 1);
-      }
-      return current;
-    });
-  }, [token]);
+    if (!token || tokenAtPaint.current !== token || !threads.some(chat => chat.id === id)) return;
+    setActiveId(id);
+    setSelectionVersion(version => version + 1);
+  }, [token, threads]);
   const recordConfirmedReply = useCallback((question: string, reply: PilotReply) => {
     if (!token || tokenAtPaint.current !== token || !question.trim()) return;
     const safeQuestion = question.trim().slice(0, 6000);
