@@ -67,10 +67,10 @@ export const workspaceTools = [
   },
   {
     id: "agents",
-    title: "LUQI practical tools",
+    title: "Luqi practical tools",
     category: "Travel and vehicle calculations",
     description:
-      "Use LUQI's travel budget and vehicle service schedule calculators now, directly in your browser without an account or paid AI. The separate saved task queue and workers are not activated.",
+      "Use Luqi's travel budget and vehicle service schedule calculators now, directly in your browser without an account or paid AI. The separate saved task queue and workers are not activated.",
     status: "Local · no account",
     ready: true,
     path: "/omega-tasks",

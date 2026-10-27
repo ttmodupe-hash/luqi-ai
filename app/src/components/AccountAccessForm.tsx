@@ -53,7 +53,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         setCooldown(error.retryAfter ?? 30);
         setNotice('Too many authentication attempts. We will not retry automatically.');
       } else if (mode === 'signup' && error instanceof ConversationError && error.status === 409) {
-        setNotice('An account already uses this email. Use an existing account to sign in. Password recovery currently requires the LUQI administrator.');
+        setNotice('An account already uses this email. Use an existing account to sign in. Password recovery currently requires the Luqi administrator.');
       } else if (mode === 'signup' && error instanceof ConversationError && error.status === 400) {
         setNotice('Check your email and the password requirements, then try again.');
       } else if (mode === 'signup') uncertainSignup();
@@ -66,8 +66,8 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   }
   return <section className="luqi-access" aria-labelledby="account-access-heading">
     <p className="luqi-eyebrow">YOUR OWN SPACE</p>
-    <h2 id="account-access-heading">{mode === 'signup' ? 'Create your LUQI account' : 'Sign in to your LUQI account'}</h2>
-    <p>{purpose === 'account' ? 'Use one LUQI account for Chat, Omega task history and optional private notes. Signing in does not automatically send a question to an AI provider.' : purpose === 'ai' ? 'Use your LUQI account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
+    <h2 id="account-access-heading">{mode === 'signup' ? 'Create your Luqi account' : 'Sign in to your Luqi account'}</h2>
+    <p>{purpose === 'account' ? 'Use one Luqi account for Chat, Luqi task history and optional private notes. Signing in does not automatically send a question to an AI provider.' : purpose === 'ai' ? 'Use your Luqi account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"
@@ -96,10 +96,10 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     </button>
     {mode === 'signin' && <details className="mt-4 rounded-lg border border-slate-600 p-3">
       <summary className="cursor-pointer font-semibold">Forgot your password?</summary>
-      <p className="luqi-access-help">Automatic password-reset emails are unavailable in this pilot. For a forgotten password, reply privately through your existing LUQI pilot invitation or verified administrator conversation. Account ownership must be checked before a reset.</p>
+      <p className="luqi-access-help">Automatic password-reset emails are unavailable in this pilot. For a forgotten password, reply privately through your existing Luqi pilot invitation or verified administrator conversation. Account ownership must be checked before a reset.</p>
       <p className="luqi-access-help">Do not post your email, password, one-time codes or account details in a public issue. Opening this help does not send an email or change your account.</p>
       {!busy && <a className="luqi-access-switch" href="#/contact">Read account recovery guidance</a>}
     </details>}
-    <p className="luqi-access-help">Your LUQI sign-in works across Chat, Notes and Omega in this tab. Reloading or closing the tab signs you out. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
+    <p className="luqi-access-help">Your Luqi sign-in works across Chat, Notes and Omega in this tab. Reloading or closing the tab signs you out. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
   </section>;
 }

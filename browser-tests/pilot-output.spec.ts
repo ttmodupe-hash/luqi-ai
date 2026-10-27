@@ -37,7 +37,7 @@ for (const [code, status, message] of [
     expect(calls).toBe(1); expect(unexpected).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.getByRole('button', { name: 'Open chat sidebar' }).click();
-    await page.getByRole('complementary', { name: 'LUQIChat sidebar' }).getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.getByRole('complementary', { name: 'Luqi Chat sidebar' }).getByRole('button', { name: 'Sign out', exact: true }).click();
     expect(calls).toBe(1);
   });
 }

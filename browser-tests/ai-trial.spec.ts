@@ -18,7 +18,7 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   });
   await page.setViewportSize({ width: 320, height: 820 });
   await page.goto('/#/ai-trial');
-  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
   expect(calls).toBe(0);
   await page.locator('details.luqi-chat-signin-inline > summary').click();
   await page.getByLabel('Email', { exact: true }).fill('trial-browser@example.invalid');
@@ -32,7 +32,7 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   expect(calls).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.getByRole('button', { name: 'Open chat sidebar' }).click();
-  await page.getByRole('complementary', { name: 'LUQIChat sidebar' }).getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('complementary', { name: 'Luqi Chat sidebar' }).getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await expect(page.getByText('Synthetic provider reply')).toHaveCount(0);
   await page.reload();

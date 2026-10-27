@@ -10,7 +10,7 @@ export function HeroAiChatConsole() {
       aria-labelledby="chat-availability-heading"
     >
       <div className="luqi-chat-top">
-        <span className="luqi-mini-label">LUQI ASSISTANT</span>
+        <span className="luqi-mini-label">Luqi ASSISTANT</span>
         <span className="luqi-paused">
           Text trial
         </span>
@@ -19,16 +19,16 @@ export function HeroAiChatConsole() {
         <MessageCircle size={34} strokeWidth={1.4} />
       </div>
       <h2 id="chat-availability-heading">
-        Tell LUQI what you need.<br />
+        Tell Luqi what you need.<br />
         Find your next step.
       </h2>
       <p>
-        Ask LUQI to explain a topic, shape an idea or help draft a message. Create one account, open Chat and choose when to send your question. AI text requires consent and has shared spending limits.
+        Ask Luqi to explain a topic, shape an idea or help draft a message. Create one account, open Chat and choose when to send your question. AI text requires consent and has shared spending limits.
       </p>
       <SovereignRegionBar compact />
       <div className="luqi-chat-bottom">
-        <span>Open LUQI chat and guidance</span>
-        <Link to="/chat" aria-label="Open LUQI chat and guidance">
+        <span>Open Luqi chat and guidance</span>
+        <Link to="/chat" aria-label="Open Luqi chat and guidance">
           <ArrowUpRight size={21} aria-hidden="true" />
         </Link>
       </div>

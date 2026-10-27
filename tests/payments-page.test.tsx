@@ -13,7 +13,7 @@ function mount(entry = '/payments') {
 it('shows honest unavailability with no unapproved price or charge button', async () => {
   const request = vi.fn(async () => Response.json({ status: 'unavailable' })); vi.stubGlobal('fetch', request);
   mount(); await screen.findByRole('heading', { name: 'Payments are not available yet' });
-  expect(screen.getByRole('heading', { name: 'LUQI Assisted Creator Pack' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Luqi Assisted Creator Pack' })).toBeTruthy();
   expect(screen.getByText('Not on sale')).toBeTruthy();
   expect(screen.getByText('No approved purchase price')).toBeTruthy();
   expect(screen.queryByText('R299')).toBeNull();
