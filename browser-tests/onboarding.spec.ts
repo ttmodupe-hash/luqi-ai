@@ -68,11 +68,11 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   });
   await page.route('**/api/v1/companion/conversations**', route => route.fulfill({ json: { conversations: [] } }));
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Chat with LUQI' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'LUQIChat' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
   await expect(page.getByLabel('Your question')).toBeVisible();
   // Notes are optional, and entering them reuses the same account without another login.
-  await page.getByRole('link', { name: 'Open private notes' }).click();
+  await page.getByRole('link', { name: 'Open saved private notes' }).click();
   await expect(page.getByLabel('Conversation title')).toBeVisible();
   expect(registrations).toBe(1);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
