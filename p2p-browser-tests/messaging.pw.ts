@@ -39,6 +39,7 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
   await expect(page.getByText('This action is not permitted.',{exact:false})).toBeVisible();expect(forbidden).toEqual([]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   expect(await peer.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await peer.evaluate(()=>window.scrollTo(0,0));await page.evaluate(()=>window.scrollTo(0,0));
   await peer.screenshot({path:`test-results/p2p-peer-${test.info().project.name}.png`,fullPage:true});
   await page.screenshot({path:`test-results/p2p-${test.info().project.name}.png`,fullPage:true});
  }finally{await other.close().catch(()=>{})}
