@@ -112,7 +112,7 @@ export default function ContentStudioPage() {
     }
   }
   return <main className="luqi-studio">
-    <div className="luqi-studio-heading"><p className="luqi-eyebrow">Luqi CONTENT STUDIO · LOCAL CREATION</p><h1>Create. Explain. Make it clear.</h1>
+    <div className="luqi-studio-heading"><p className="luqi-eyebrow">Luqi Content Studio · Local creation</p><h1>Create. Explain. Make it clear.</h1>
       <p>Six scenes, ninety seconds. Original 3D motion graphics, an editable story and a time-based learning view. Download your storyboard before leaving; reopen that file here to continue editing later.</p></div>
     <StudioDraftImport disabled={recording} onBusyChange={busy => { setDraftBusy(busy); if (busy) setPlaying(false); }}
       onRestore={draft => {
