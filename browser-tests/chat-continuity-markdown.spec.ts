@@ -33,11 +33,11 @@ test('Luqi understands an opted-in short correction and displays safe Markdown a
   await page.getByLabel('Password', { exact: true }).fill('synthetic-password-2026');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Your question').fill('What is required for ani to have its own studio?');
-  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByRole('heading', { name: 'Equipment & Hardware' })).toBeVisible();
   await expect(page.getByText('Powerful Computer:')).toBeVisible();
-  await expect(page.locator('hr')).toHaveCount(1);
+  await expect(page.locator('.luqi-chat-richtext hr')).toHaveCount(1);
   await expect(page.getByRole('checkbox', { name: /Keep recent conversation context/i })).not.toBeChecked();
   await page.getByRole('checkbox', { name: /Keep recent conversation context/i }).check();
   await page.getByLabel('Your question').fill('For an AI?');
