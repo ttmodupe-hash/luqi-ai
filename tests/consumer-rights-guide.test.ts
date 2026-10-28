@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { isUnbudgetedAiRoute } from '../api/lib/legacyAiRoutes';
 import {
   CONSUMER_GUIDE_RECHECK_AFTER, CONSUMER_GUIDE_REVIEWED_ON,
-  CONSUMER_ISSUES, CONSUMER_SOURCES, MAX_CONSUMER_STORY_LENGTH,
+  CONSUMER_ISSUES, CONSUMER_QUICK, CONSUMER_SOURCES, MAX_CONSUMER_STORY_LENGTH,
+  detectConsumerCategory,
   consumerGuideIsCurrent, consumerSourcesFor, makeConsumerDraft, prepareConsumerStory,
   type DisputeType,
 } from '../src/lib/consumer-rights-guide';
@@ -92,5 +93,31 @@ describe('consumer rights guide, zero-provider fallback', () => {
     expect(consumerGuideIsCurrent(new Date('2026-11-02T23:59:59+02:00'))).toBe(true);
     expect(consumerGuideIsCurrent(new Date('2026-11-03T00:00:00+02:00'))).toBe(false);
     expect(consumerGuideIsCurrent(new Date('wrong'))).toBe(false);
+  });
+});
+
+describe('consumer immediate help without automatic case assessment', () => {
+  it('provides bounded three-step guidance across every existing legal category', () => {
+    for (const [key,guide] of Object.entries(CONSUMER_QUICK)) {
+      expect(CONSUMER_ISSUES).toHaveProperty(key);
+      expect(guide.steps).toHaveLength(3);
+      expect(guide.steps.every(step => step.length > 28)).toBe(true);
+    }
+    expect(CONSUMER_QUICK.ONLINE_SCAM.steps.join(' ')).toMatch(/bank’s official fraud channel/);
+  });
+  it('recognises concrete problems but avoids routing broad financial or academic questions', () => {
+    const cases: Array<[string, string|null]> = [
+      ['My online order delivery is delayed again','ONLINE_SCAM'],
+      ['My bank has an unauthorised debit order','UNAUTHORIZED_DEBIT_ORDER'],
+      ['I bought a faulty phone from a store','DEFECTIVE_GOODS'],
+      ['Vodacom double charged my mobile bill','TELCO_BILLING_DISPUTE'],
+      ['An organisation disclosed my personal information without permission','POPIA_DATA_BREACH'],
+      ['My booking cancellation fee is unfair','UNFAIR_CANCELLATION'],
+      ['A mashonisa has my bank card','MASHONISA_ILLEGAL_LOAN'],
+      ['My debt review is a scam','DEBT_REVIEW_TRAP'],
+      ['Can we study the economy?',null],['I need a refund',null],
+      ['x'.repeat(501),null],
+    ];
+    for (const [question,expected] of cases) expect(detectConsumerCategory(question)).toBe(expected);
   });
 });

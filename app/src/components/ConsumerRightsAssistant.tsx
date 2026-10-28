@@ -1,7 +1,7 @@
 import React, { useState, type FormEvent } from 'react';
 import {
   CONSUMER_GUIDE_RECHECK_AFTER, CONSUMER_GUIDE_REVIEWED_ON,
-  CONSUMER_ISSUES, CONSUMER_SOURCES, MAX_CONSUMER_STORY_LENGTH,
+  CONSUMER_ISSUES, CONSUMER_QUICK, CONSUMER_SOURCES, MAX_CONSUMER_STORY_LENGTH,
   consumerGuideIsCurrent, consumerSourcesFor, makeConsumerDraft, prepareConsumerStory,
   type DisputeType,
 } from '../lib/consumer-rights-guide';
@@ -90,6 +90,22 @@ export const ConsumerRightsAssistant: React.FC = () => {
           If you are threatened or believe a payment is being stolen, contact your bank or the appropriate emergency
           authorities promptly using independently verified contact details. Do not wait for this guide.
         </p>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-cyan-700 bg-slate-900 p-4" aria-labelledby="consumer-quick-title">
+        <h2 id="consumer-quick-title" className="text-xl font-semibold">Quick consumer help — three first steps</h2>
+        <p className="text-sm">Choose the issue that fits best. These immediate, general steps do not need an account, a complaint narrative or a model request.</p>
+        <div role="group" aria-label="Choose a consumer concern" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {categories.map(category => <button type="button" key={category.value} aria-pressed={type === category.value}
+            className={'rounded-lg border px-3 py-3 text-left text-sm font-semibold ' + (type === category.value
+              ? 'border-cyan-300 bg-cyan-900' : 'border-slate-500 bg-slate-800')}
+            onClick={() => { setType(category.value); clearResult(); }}>{category.label}</button>)}
+        </div>
+        <h3 className="font-semibold">{CONSUMER_QUICK[type].title}</h3>
+        <ol className="list-inside list-decimal space-y-2 text-sm leading-relaxed">
+          {CONSUMER_QUICK[type].steps.map((step,i) => <li key={i}>{step}</li>)}
+        </ol>
+        <p className="text-xs text-slate-300">Check the original sources below. If the dated legal review has expired, these are not refreshed legal findings.</p>
       </section>
 
       <section className="space-y-2" aria-labelledby="consumer-review-date">

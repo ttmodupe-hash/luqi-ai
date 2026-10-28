@@ -283,3 +283,64 @@ export function makeConsumerDraft(organisation: string, story: string): string {
     '[Your name — add only when you are ready to send]',
   ].join('\n');
 }
+
+/** Three immediately useful local steps; never a verdict or complaint submission. */
+export interface ConsumerQuickGuide { title: string; steps: readonly [string,string,string]; }
+export const CONSUMER_QUICK: Readonly<Record<DisputeType, ConsumerQuickGuide>> = {
+  UNSURE: { title:'Find the correct consumer help',
+    steps:['Identify whether your issue involves goods, services, banking, communications, credit or privacy.',
+      'Keep the supplier’s written terms, receipts and complaint reference without posting personal details here.',
+      'Check the correct official regulator or ombud before assuming a refund or legal remedy.'] },
+  DEFECTIVE_GOODS: { title:'Faulty goods — three first steps',
+    steps:['Record when the item was delivered and what failed. Do not use an unsafe product.',
+      'Write to the supplier with proof of purchase and ask what remedy and legal basis they propose.',
+      'Review CPA sections 55–56 and relevant exceptions; seek CGSO or NCC guidance if unresolved.'] },
+  UNFAIR_CANCELLATION: { title:'Cancellation fee — three first steps',
+    steps:['Keep the actual booking or contract terms, cancellation date and communications.',
+      'Request a written breakdown of the cancellation charge rather than assuming it is unlawful.',
+      'Check whether the CPA or a specialist regulator applies, including exceptions and any time limit.'] },
+  ONLINE_SCAM: { title:'Late online delivery or suspected scam — three first steps',
+    steps:['Save the advertised delivery promise, order reference and courier updates without sharing private identifiers.',
+      'Request a firm written delivery or refund response from the merchant using verified contact details.',
+      'If a payment may be fraudulent, call your bank’s official fraud channel promptly; check CGSO or NCC if appropriate.'] },
+  UNAUTHORIZED_DEBIT_ORDER: { title:'Disputed bank debit — three first steps',
+    steps:['Contact your bank promptly using its official channel. Do not share your PIN or login with Luqi.',
+      'Ask the bank for the mandate, dispute procedure, transaction reference and written decision.',
+      'If unresolved, check the National Financial Ombud’s banking complaint scope and any applicable deadline.'] },
+  POPIA_DATA_BREACH: { title:'Personal information concern — three first steps',
+    steps:['Keep non-sensitive evidence of the marketing, disclosure or data handling that concerns you.',
+      'Contact the organisation’s privacy or information officer when safe and request an explanation.',
+      'Check the Information Regulator’s official POPIA complaints process; do not upload another person’s records.'] },
+  TELCO_BILLING_DISPUTE: { title:'Mobile or internet billing — three first steps',
+    steps:['Record the disputed provider bill, service and applicable contract terms.',
+      'Report the dispute to the licensed service provider and request a reference number.',
+      'Check ICASA’s consumer complaint procedure and referral conditions; device retail disputes may differ.'] },
+  MASHONISA_ILLEGAL_LOAN: { title:'Lender or withheld bank card — three first steps',
+    steps:['Prioritise safety if threatened. Contact the bank immediately if a card or PIN is compromised.',
+      'Keep the agreement and verify the lender’s status without confronting an unsafe person.',
+      'Contact the National Credit Regulator and seek qualified help; Luqi cannot determine criminal liability.'] },
+  DEBT_REVIEW_TRAP: { title:'Debt-review concern — three first steps',
+    steps:['Request the debt-counselling application, consent records and any existing court order.',
+      'Check the counsellor with the National Credit Regulator and seek a written explanation.',
+      'Obtain qualified advice before trying to alter a debt-review status or court order.'] },
+};
+/** Conservative recognition: ambiguous questions remain ordinary Chat, never auto-classified. */
+export function detectConsumerCategory(value: unknown): DisputeType | null {
+  if (typeof value !== 'string' || !value.trim() || value.length > 500) return null;
+  const q = value.toLowerCase();
+  if (/\b(debt review|debt counselling|debt counselor|debt counsellor)\b/u.test(q) &&
+      /\b(trap|scam|without consent|wrong|problem|illegal|dispute|remove|fraud)\b/u.test(q)) return 'DEBT_REVIEW_TRAP';
+  if (/\b(mashonisa|loan shark|illegal lender|withheld bank card)\b/u.test(q)) return 'MASHONISA_ILLEGAL_LOAN';
+  if (/\b(debit order|bank debit|unauthori[sz]ed bank|unknown bank transaction|disputed bank transaction)\b/u.test(q)) return 'UNAUTHORIZED_DEBIT_ORDER';
+  if (/\b(popia|personal information|data breach|unwanted marketing|privacy complaint)\b/u.test(q) &&
+      /\b(complain|breach|leaked|misuse|spam|marketing|disclose|sold|unwanted|rights|problem)\b/u.test(q)) return 'POPIA_DATA_BREACH';
+  if (/\b(mobile|cellular|telco|internet|vodacom|mtn|telkom|network)\b/u.test(q) &&
+      /\b(bill|billing|charged|overcharge|contract dispute|unexpected charge|complaint)\b/u.test(q)) return 'TELCO_BILLING_DISPUTE';
+  if (/\b(online order|online purchase|delivery|courier|parcel|package|merchant)\b/u.test(q) &&
+      /\b(delayed|late|not arrived|undelivered|never arrived|missing|scam|fraud|refund|three times|wrong)\b/u.test(q)) return 'ONLINE_SCAM';
+  if (/\b(cancellation|cancelled|canceling|cancelling|booking)\b/u.test(q) &&
+      /\b(fee|penalty|unfair|refund|charge|refused|dispute)\b/u.test(q)) return 'UNFAIR_CANCELLATION';
+  if (/\b(defective|faulty|broken|warranty|repair|replacement|refund)\b/u.test(q) &&
+      /\b(goods|product|item|appliance|shop|store|seller|purchase|retailer|phone)\b/u.test(q)) return 'DEFECTIVE_GOODS';
+  return null;
+}
