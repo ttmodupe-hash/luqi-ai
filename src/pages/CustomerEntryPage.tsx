@@ -24,7 +24,6 @@ export default function CustomerEntryPage({ initialMode = 'signin' }: { initialM
       acceptSession(value);
       navigate('/chat', { replace: true });
     }} />
-    <p>Chat uses a limited AI text trial with separate consent and usage limits.
-      You can also <Link to="/start">explore free tools</Link> without signing in.</p>
+    <p>Not ready to create an account? <Link to="/try">Try three real Luqi replies first</Link>. Your guest allowance is separate and limited. You can also <Link to="/start">explore free local tools</Link> without signing in.</p>
   </main>;
 }
