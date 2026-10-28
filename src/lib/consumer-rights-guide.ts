@@ -333,7 +333,7 @@ export function detectConsumerCategory(value: unknown): DisputeType | null {
   if (/\b(mashonisa|loan shark|illegal lender|withheld bank card)\b/u.test(q)) return 'MASHONISA_ILLEGAL_LOAN';
   if (/\b(debit order|bank debit|unauthori[sz]ed bank|unknown bank transaction|disputed bank transaction)\b/u.test(q)) return 'UNAUTHORIZED_DEBIT_ORDER';
   if (/\b(popia|personal information|data breach|unwanted marketing|privacy complaint)\b/u.test(q) &&
-      /\b(complain|breach|leaked|misuse|spam|marketing|disclose|sold|unwanted|rights|problem)\b/u.test(q)) return 'POPIA_DATA_BREACH';
+      /\b(complain|breach|leaked|misuse|spam|marketing|disclos(?:e|ed|ure|ing)|sold|unwanted|rights|problem)\b/u.test(q)) return 'POPIA_DATA_BREACH';
   if (/\b(mobile|cellular|telco|internet|vodacom|mtn|telkom|network)\b/u.test(q) &&
       /\b(bill|billing|charged|overcharge|contract dispute|unexpected charge|complaint)\b/u.test(q)) return 'TELCO_BILLING_DISPUTE';
   if (/\b(online order|online purchase|delivery|courier|parcel|package|merchant)\b/u.test(q) &&
