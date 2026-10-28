@@ -2,7 +2,7 @@
 export const ACCOUNT_REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_ACCOUNT_RESPONSE_BYTES = 32 * 1024;
 export type AccountPath = '/api/v1/auth/login' | '/api/v1/auth/register';
-type AccountCredentials = { email: string; password: string };
+type AccountCredentials = { email: string; password: string; name?: string };
 type AccountResult = { ok: true; status: number; body: unknown } |
   { ok: false; status: number; retryAfter?: number };
 
@@ -24,7 +24,9 @@ export async function requestAccountJson(
     const response = await request(path, {
       method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ email: credentials.email, password: credentials.password }),
+      body: JSON.stringify({ email: credentials.email, password: credentials.password,
+        ...(path === '/api/v1/auth/register' && typeof credentials.name === 'string' && credentials.name.trim()
+          ? { name: credentials.name.trim().slice(0, 120) } : {}) }),
     });
     const discard = () => { void response.body?.cancel().catch(() => {}); };
     if (controller.signal.aborted) { discard(); throw interrupted(); }

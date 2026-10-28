@@ -98,14 +98,14 @@ export function conversationClient(token: string, request: typeof fetch = fetch)
 }
 
 const accountSession = z.object({ token: z.string().min(1).max(4096),
-  user: z.object({ email: z.string().email().max(254) }) });
+  user: z.object({ email: z.string().email().max(254), name: z.string().max(255).nullable().optional() }) });
 export type AccountSession = z.infer<typeof accountSession>;
 export const validAccountPassword = (password: string) => password.length >= 12 &&
   new TextEncoder().encode(password).length <= 72;
 
-async function accountRequest(path: AccountPath, email: string, password: string, signal?: AbortSignal): Promise<AccountSession> {
+async function accountRequest(path: AccountPath, email: string, password: string, signal?: AbortSignal, name?: string): Promise<AccountSession> {
   const normalized = email.trim().toLowerCase();
-  const response = await requestAccountJson(fetch, path, { email: normalized, password }, signal);
+  const response = await requestAccountJson(fetch, path, { email: normalized, password, ...(path.endsWith('/register') && name?.trim() ? { name: name.trim().slice(0, 120) } : {}) }, signal);
   if (!response.ok) throw new ConversationError(response.status, response.retryAfter);
   const parsed = accountSession.safeParse(response.body);
   if (!parsed.success || parsed.data.user.email.toLowerCase() !== normalized) {
@@ -116,5 +116,5 @@ async function accountRequest(path: AccountPath, email: string, password: string
 export const signIn = (email: string, password: string, signal?: AbortSignal) =>
   accountRequest('/api/v1/auth/login', email, password, signal);
 // Registration is a write: never retry an ambiguous response automatically.
-export const signUp = (email: string, password: string, signal?: AbortSignal) =>
-  accountRequest('/api/v1/auth/register', email, password, signal);
+export const signUp = (email: string, password: string, signal?: AbortSignal, name?: string) =>
+  accountRequest('/api/v1/auth/register', email, password, signal, name);

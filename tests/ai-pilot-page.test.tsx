@@ -43,7 +43,7 @@ it('requires explicit provider acknowledgement and sends only the entered questi
   expect(screen.getByText('<script>fixture</script> Sawubona')).toBeTruthy();
   expect(document.querySelector('main script')).toBeNull();
   expect(inference).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ user_input: 'Say hello in isiZulu' });
+  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ language: 'English', user_input: 'Say hello in isiZulu' });
 });
 it('keeps submission disabled when the pilot is paused', async () => {
   available = false; await login(); draft(); consent();
@@ -207,14 +207,14 @@ it('keeps an over-limit draft intact and blocks both button and form submission'
 });
 it('allows a padded draft when the exact trimmed question fits and sends only that question', async () => {
   await login(); consent();
-  const accepted = 'x'.repeat(MAX_PILOT_QUESTION_CHARS - 8) + 'END-TEST';
+  const accepted = 'x'.repeat(MAX_PILOT_QUESTION_CHARS - 11) + 'END-TEST';
   const draft = ' '.repeat(100) + accepted + '\n'.repeat(100);
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: draft } });
   expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await screen.findByRole('heading', { name: 'AI reply' });
   expect(inference).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ user_input: accepted });
+  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ language: 'English', user_input: accepted });
 });
 
 it('reports pre-spend input failure without a charged-attempt warning or clearing the draft', async () => {
@@ -231,13 +231,13 @@ it('keeps conversation in memory and sends follow-up context only with explicit 
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await screen.findByRole('heading', { name: 'AI reply' });
   expect(inference).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ user_input: 'Say hello in isiZulu' });
+  expect(JSON.parse(inference.mock.calls[0][0].body)).toEqual({ language: 'English', user_input: 'Say hello in isiZulu' });
 
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'What about Durban?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await waitFor(() => expect(inference).toHaveBeenCalledTimes(2));
   await screen.findByRole('heading', { name: 'Earlier conversation' });
-  expect(JSON.parse(inference.mock.calls[1][0].body)).toEqual({ user_input: 'What about Durban?' });
+  expect(JSON.parse(inference.mock.calls[1][0].body)).toEqual({ language: 'English', user_input: 'What about Durban?' });
 
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'How do I plan my visit?' } });
   fireEvent.click(screen.getByRole('checkbox', { name: /Include recent conversation context/ }));
@@ -255,7 +255,7 @@ it('keeps conversation in memory and sends follow-up context only with explicit 
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'One more follow-up without context' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await waitFor(() => expect(inference).toHaveBeenCalledTimes(4));
-  expect(JSON.parse(inference.mock.calls[3][0].body)).toEqual({ user_input: 'One more follow-up without context' });
+  expect(JSON.parse(inference.mock.calls[3][0].body)).toEqual({ language: 'English', user_input: 'One more follow-up without context' });
 
   fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
   expect(screen.queryByText(/Earlier conversation/)).toBeNull();
