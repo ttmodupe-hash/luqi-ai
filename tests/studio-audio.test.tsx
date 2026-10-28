@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import React, { useState } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { browserMixedRecordingType, browserVoiceRecordingType,
   prepareStudioAudioMix, selectRecordingType, STUDIO_AUDIO_FILE_MAX_BYTES,
   STUDIO_VIDEO_AUDIO_TYPES, validateStudioAudioFile } from '../src/lib/studio-audio';
@@ -106,6 +106,41 @@ describe('Studio audio permissions and rights UI', () => {
     expect(screen.getByRole('button', { name: 'Record my voiceover' })).toBeTruthy();
     expect(getUserMedia).not.toHaveBeenCalled();
     expect(net).not.toHaveBeenCalled();
+  });
+  it('stops a late microphone grant when a permission prompt is backgrounded', async () => {
+    const network = vi.fn(); vi.stubGlobal('fetch', network);
+    let grant!: (stream: MediaStream) => void;
+    const stop = vi.fn(), start = vi.fn();
+    const getUserMedia = vi.fn(() => new Promise<MediaStream>(resolve => { grant = resolve; }));
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+    class RecorderFixture {
+      static isTypeSupported() { return true; }
+      start = start;
+      stop = vi.fn();
+    }
+    vi.stubGlobal('MediaRecorder', RecorderFixture);
+    const prior = Object.getOwnPropertyDescriptor(document, 'hidden');
+    let hidden = false;
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    try {
+      render(<Harness />);
+      fireEvent.click(screen.getByRole('button', { name: 'Record my voiceover' }));
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      hidden = true;
+      fireEvent(document, new Event('visibilitychange'));
+      expect(screen.getByText(/permission was interrupted when this tab was hidden/)).toBeTruthy();
+      await act(async () => {
+        grant({ getTracks: () => [{ stop }] } as unknown as MediaStream);
+        await Promise.resolve();
+      });
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(start).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Record my voiceover' })).toBeTruthy();
+      expect(network).not.toHaveBeenCalled();
+    } finally {
+      if (prior) Object.defineProperty(document, 'hidden', prior);
+      else Reflect.deleteProperty(document, 'hidden');
+    }
   });
   it('requires rights confirmation and allows bounded local import with volume', () => {
     const { create } = fakeUrl(); const net = vi.fn(); vi.stubGlobal('fetch', net);

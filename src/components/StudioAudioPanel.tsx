@@ -29,6 +29,7 @@ export default function StudioAudioPanel({ audio, onChange, disabled, clipSecond
   const [narrationUrl, setNarrationUrl] = useState('');
   const [musicUrl, setMusicUrl] = useState('');
   const mic = useRef<MicRun | null>(null), active = useRef(true), epoch = useRef(0);
+  const pendingPermission = useRef(false);
   const assets = useRef(audio); assets.current = audio;
 
   function stopMic(discard = false) {
@@ -43,11 +44,23 @@ export default function StudioAudioPanel({ audio, onChange, disabled, clipSecond
   useEffect(() => {
     active.current = true;
     const stopOnHide = () => {
-      if (document.hidden && mic.current) { stopMic(true); setNotice('Microphone recording discarded because this tab was hidden.'); }
+      if (!document.hidden) return;
+      // Permission can resolve after the page is backgrounded. Invalidate the
+      // outstanding user gesture so a late grant cannot begin capture.
+      if (pendingPermission.current) {
+        epoch.current++;
+        pendingPermission.current = false;
+        setAskingPermission(false);
+        setNotice('Microphone permission was interrupted when this tab was hidden. Return and click Record again.');
+      }
+      if (mic.current) {
+        stopMic(true);
+        setNotice('Microphone recording discarded because this tab was hidden.');
+      }
     };
     document.addEventListener('visibilitychange', stopOnHide);
     return () => {
-      active.current = false; epoch.current++;
+      active.current = false; epoch.current++; pendingPermission.current = false;
       document.removeEventListener('visibilitychange', stopOnHide);
       stopMic(true);
     };
@@ -70,13 +83,23 @@ export default function StudioAudioPanel({ audio, onChange, disabled, clipSecond
       setNotice('Microphone recording is not available in this browser. You may use a supported audio file instead.');
       return;
     }
+    if (document.hidden) {
+      setNotice('Return to this tab before starting a microphone recording.');
+      return;
+    }
     const request = ++epoch.current;
+    pendingPermission.current = true;
     setAskingPermission(true);
     let stream: MediaStream | null = null;
     try {
       // Only user clicking this button requests access; no recording on page entry.
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
-      if (!active.current || request !== epoch.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      if (!active.current || request !== epoch.current || document.hidden) {
+        stream.getTracks().forEach(t => t.stop());
+        if (active.current && request === epoch.current && document.hidden)
+          setNotice('Recording was cancelled because the tab is hidden. Return and click Record again.');
+        return;
+      }
       const media = new MediaRecorder(stream, { mimeType: selected, audioBitsPerSecond: 96_000 });
       const run: MicRun = { media, stream, chunks: [], bytes: 0, discard: false,
         timer: setTimeout(() => { if (media.state === 'recording') media.stop(); }, clipSeconds * 1000) };
@@ -110,18 +133,27 @@ export default function StudioAudioPanel({ audio, onChange, disabled, clipSecond
       media.start(1000); setVoiceRecording(true); onRecordingChange(true);
       setNotice('Recording microphone audio locally. Stop to keep it, or discard. The microphone closes automatically.');
     } catch {
-      const run = mic.current;
-      if (run) {
-        run.discard = true; clearTimeout(run.timer);
-        try { if (run.media.state !== 'inactive') run.media.stop(); } catch { /* Already stopped. */ }
-        mic.current = null;
+      // A late rejection from an invalidated permission prompt must never
+      // cancel a newer recording.
+      if (request === epoch.current) {
+        const run = mic.current;
+        if (run) {
+          run.discard = true; clearTimeout(run.timer);
+          try { if (run.media.state !== 'inactive') run.media.stop(); } catch { /* Already stopped. */ }
+          mic.current = null;
+        }
+        if (active.current) {
+          setVoiceRecording(false); onRecordingChange(false);
+          setNotice('Microphone access or recording was blocked. Check browser permission and use HTTPS, or import a recording.');
+        }
       }
       stream?.getTracks().forEach(t => t.stop());
-      if (active.current) {
-        setVoiceRecording(false); onRecordingChange(false);
-        setNotice('Microphone access or recording was blocked. Check browser permission and use HTTPS, or import a recording.');
+    } finally {
+      if (active.current && request === epoch.current) {
+        pendingPermission.current = false;
+        setAskingPermission(false);
       }
-    } finally { if (active.current && request === epoch.current) setAskingPermission(false); }
+    }
   }
   function importMusic(file: File) {
     if (disabled || voiceRecording || !rights) {
