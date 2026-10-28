@@ -14,6 +14,7 @@ import { EVIDENCE_CASES, detectEvidenceTopic } from '../lib/comparative-evidence
 import ConsumerQuickCard from '../components/ConsumerQuickCard';
 import DriverQuickCard from '../components/DriverQuickCard';
 import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
+import { detectOpportunityIntent } from '../lib/opportunity-sources';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
@@ -163,6 +164,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (detectDriverMode(prompt)) { navigate('/driver-rights'); return; }
     if (detectConsumerCategory(prompt)) { navigate('/consumer-rights'); return; }
     if (detectEvidenceTopic(prompt)) { navigate('/comparative-evidence'); return; }
+    if (detectOpportunityIntent(prompt)) { navigate('/opportunities'); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
@@ -224,7 +226,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const driverMode = detectDriverMode(prompt);
   const consumerCategory = !driverMode ? detectConsumerCategory(prompt) : null;
   const evidenceTopic = !driverMode && !consumerCategory ? detectEvidenceTopic(prompt) : null;
-  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : null;
+  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && detectOpportunityIntent(prompt);
+  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : opportunityIntent ? '/opportunities' : null;
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -250,6 +253,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <p><Link to="/driver-rights" className="text-cyan-200 underline underline-offset-2">Roadside help: free South African driver rights (no sign-in or AI request)</Link></p>
         <p><Link to="/consumer-rights" className="text-cyan-200 underline underline-offset-2">Consumer rights: three-step guidance and complaint preparation</Link></p>
         <p><Link to="/comparative-evidence" className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
+        <p><Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
       </div>
       {languageControl}
       {personalWelcome}
@@ -264,6 +268,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       {driverMode && <DriverQuickCard mode={driverMode} />}
       {consumerCategory && <ConsumerQuickCard category={consumerCategory} />}
+      {opportunityIntent && <section aria-label="Free opportunity quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Luqi Opportunity Compass — start with official sources</h2>
+        <ol className="list-inside list-decimal space-y-2 text-sm"><li>Choose your province and opportunity type.</li><li>Read the official advertiser’s post, requirements and deadline.</li><li>Apply directly through its verified instructions. Never pay someone to secure a public job.</li></ol>
+        <Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Explore opportunities in Luqi</Link>
+        <p className="text-xs text-slate-300">This is an official source directory, not a confirmed live vacancy or a paid AI request.</p>
+      </section>
       {evidenceTopic && <section aria-label="Comparative evidence quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Explore a scholarly comparison with Luqi</h2>
         <p className="text-sm">Selected topic: {EVIDENCE_CASES.find(item => item.id === evidenceTopic)?.title}. Compare traditional accounts, scientific evidence, manuscripts and interpretations without ranking faiths. No provider call is made.</p>
@@ -352,7 +362,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
-            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : busy ? 'Waiting for a reply…' : 'Send question'}>
+            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
             <Send size={18} aria-hidden="true" /><span>{localGuidePath ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
           </button>
         </div>
