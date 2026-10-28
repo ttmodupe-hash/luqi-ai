@@ -247,3 +247,84 @@ export default function KhoroSpatialVisionLab() {
           </div>
         </div>}
       </section>
+
+      <section className="luqi-spatial-results" aria-label="Spatial analysis and controls">
+        {mode === 'SERIAL_AUDIT' ? <>
+          <h2>Serial-only asset review · local</h2>
+          <p>Manually mark a device serial label or mask a possible IMEI/barcode area. This mode makes <strong>no AI provider request</strong> and does not automatically read text.</p>
+          <label>Optional serial text (typed by you)
+            <input type="text" maxLength={80} autoComplete="off" value={serialText}
+              onChange={event => setSerialText(event.target.value)} placeholder="Type only the device serial" />
+          </label>
+          {possibleImei(serialText) && <p role="alert" className="luqi-spatial-warning">
+            This 15-digit number resembles an IMEI. Do not treat it as a verified device serial.
+          </p>}
+          {manual.length > 0 && <ul aria-label="Manual regions">{manual.map((item, index) =>
+            <li key={index}>{item.label} · rectangle {index + 1}</li>)}</ul>}
+          <p>Green outlines mean a region was marked manually, not that an identifier was verified. A black mask changes only the local preview; check the entire image for other private identifiers.</p>
+        </> : <>
+          <h2>{mode === 'EXAM_3D' ? 'Learn from the visible problem' : 'Review visible contract terms'}</h2>
+          <p>{mode === 'EXAM_3D'
+            ? 'Luqi can suggest regions and explain visible questions, but answers and coordinates need checking.'
+            : 'Use a sample or anonymised contract only. Luqi highlights terms for review, not definitive legal rights or debt amounts.'}</p>
+          {!session ? <AccountAccessForm purpose="account" onAuthenticated={acceptSession} /> : <>
+            <p className="luqi-spatial-signed-in">Signed in to Luqi. <button type="button" onClick={signOut}>Sign out</button></p>
+            <label>AI provider (one explicit attempt)
+              <select value={provider} disabled={busy || uncertain} onChange={event => {
+                setProvider(event.target.value as SpatialProvider); setConsent(false); setResult(null);
+              }}>
+                <option value="gemini">Gemini · configured server model</option>
+                <option value="openai">OpenAI · configured server model</option>
+              </select>
+            </label>
+            <label>Explanation language
+              <select value={language} disabled={busy || uncertain} onChange={event => {
+                setLanguage(event.target.value); setConsent(false); setResult(null);
+              }}>
+                {LANGUAGES.map(item => <option key={item.code} value={item.name}>{item.nativeName}</option>)}
+              </select>
+            </label>
+            {!ready && <p role="status" className="luqi-spatial-warning">AI readiness is not confirmed. Local image tools remain available.</p>}
+            <p className="luqi-spatial-disclosure">Only the locally re-encoded JPEG, selected mode and language are sent to the chosen provider after approval. Do not upload faces, account numbers, IMEI labels, confidential workplace documents or unredacted contracts. Each attempt reserves $0.20 from Luqi's existing AI allocation; this is not a provider invoice. No automatic fallback.</p>
+            <label className="luqi-spatial-consent"><input type="checkbox" checked={consent}
+              disabled={busy || uncertain || !ready} onChange={event => setConsent(event.target.checked)} />
+              I agree to send this reviewed image to {provider === 'gemini' ? 'Gemini' : 'OpenAI'} for one AI analysis.</label>
+            <button type="button" className="luqi-spatial-primary"
+              disabled={!photo || !consent || !ready || busy || preparing || uncertain}
+              onClick={() => { void analyse(); }}>{busy ? 'Analysing…' : 'Analyse selected image'}</button>
+            {busy && <button type="button" className="luqi-spatial-secondary" onClick={() => {
+              epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+              setBusy(false); setUncertain(true);
+              setNotice('Cancelled locally. A provider attempt may still count. No automatic retry.');
+            }}>Cancel local wait</button>}
+            {uncertain && <button type="button" className="luqi-spatial-secondary" onClick={() => {
+              setUncertain(false); setConsent(false);
+              setNotice('A new attempt needs separate consent and another budget reservation.');
+            }}>Start a new request</button>}
+          </>}
+          {result && <div className="luqi-spatial-analysis" aria-label="AI-suggested analysis">
+            <h3>AI-suggested regions · {result.provider}</h3>
+            <p className="luqi-spatial-model">Model reported: {result.provider_model}. Not independently verified.</p>
+            <h4>{result.analysis.sceneType}</h4>
+            <p>{result.analysis.summary}</p>
+            {regions.length ? <ol>{regions.map((region, index) =>
+              <li key={index}><strong>{index + 1}. {region.label}</strong> · {region.category}
+                <p>{region.insight}</p></li>)}</ol> : <p>No reliable regions were suggested. Try a clearer image.</p>}
+            {result.analysis.limitations.length > 0 && <p>Limitations: {result.analysis.limitations.join(' · ')}</p>}
+            <p><strong>Next step:</strong> {result.analysis.nextStep}</p>
+          </div>}
+        </>}
+      </section>
+    </div>}
+    {notice && <p className="luqi-spatial-notice" role="status">{notice}</p>}
+    {!photo && <div className="luqi-spatial-empty">
+      <h2>Start with a photo</h2>
+      <p>Everything begins locally. Choose a sample image to inspect it in 2D or a rotatable illustrative relief.</p>
+    </div>}
+    <div className="luqi-spatial-bottom-links">
+      <Link to="/visual-tutor">Visual Tutor</Link>
+      <Link to="/chat">Luqi Chat</Link>
+      <Link to="/privacy">Privacy</Link>
+    </div>
+  </main>;
+}
