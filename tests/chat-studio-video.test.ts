@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isVideoCreationRequest, proposeStudioVideo } from '../src/lib/video-plan';
+import { isVideoApprovalMessage, isVideoCreationRequest, proposeStudioVideo } from '../src/lib/video-plan';
 import { sceneAt, sceneAtForDuration, studioDuration, subtitles, episodeOutline, storyboardJson } from '../src/lib/content-studio';
 import { parseStudioDraft, serializeStudioDraft } from '../src/lib/studio-draft';
 
@@ -13,6 +13,14 @@ describe('reviewed local Chat-to-Studio video contract', () => {
     expect(isVideoCreationRequest('Do not create a video; I only need a summary')).toBe(false);
     expect(proposeStudioVideo('Hello', confirmed)).toBeNull();
     expect(proposeStudioVideo(goal, '')).toBeNull();
+  });
+  it('recognises explicit user approval phrases but never implicit approval or model instructions', () => {
+    for (const phrase of ['Approve the plan', 'yes, go ahead', 'I am happy with this video plan', 'generate the video now']) {
+      expect(isVideoApprovalMessage(phrase)).toBe(true);
+    }
+    for (const phrase of ['I have a question', 'Maybe we should change something', 'Sure, but explain again', 'Hello']) {
+      expect(isVideoApprovalMessage(phrase)).toBe(false);
+    }
   });
   it('makes a truthful toddler gravity sequence instead of the generic pendulum', () => {
     const plan = proposeStudioVideo(goal, confirmed)!;
