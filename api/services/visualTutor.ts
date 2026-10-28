@@ -1,7 +1,7 @@
 import { GoogleGenAI, MediaResolution } from '@google/genai';
 import { buildPilotInput, PilotInputError } from '../../src/lib/pilot-input';
 import { GEMINI_PILOT_CONFIG, PilotUnavailable, type PilotReply } from './aiPilotGateway';
-import { assertPilotEnabled, reservePilotAttempt } from './aiPilotBudget';
+import { assertPilotEnabled, MAX_OUTPUT_TOKENS, reservePilotAttempt } from './aiPilotBudget';
 import { PILOT_MODELS } from './pilotModels';
 import { readGeminiText } from './pilotOutput';
 
@@ -65,7 +65,8 @@ export async function runVisualTutor(question: string, image: string, userId: nu
     model: PILOT_MODELS.gemini,
     contents: [{ role: 'user', parts: [{ text: input },
       { inlineData: { mimeType: 'image/jpeg', data: image } }] }],
-    config: { ...GEMINI_PILOT_CONFIG, systemInstruction: VISUAL_TUTOR_POLICY,
+    config: { ...GEMINI_PILOT_CONFIG, maxOutputTokens: MAX_OUTPUT_TOKENS,
+      systemInstruction: VISUAL_TUTOR_POLICY,
       mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW },
   });
   return { response: readGeminiText(result), provider: 'gemini', model: PILOT_MODELS.gemini };
