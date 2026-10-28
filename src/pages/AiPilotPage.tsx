@@ -15,9 +15,22 @@ import CompanionNotePicker, { type SharedCompanionNote } from '../components/Com
 import LuqiPromptCoach from '../components/LuqiPromptCoach';
 import { prepareCompanionQuestion } from '../lib/companion-context';
 import '../chat.css';
+import LanguageSelectorDropdown from '../components/LanguageSelectorDropdown';
+import LuqiPersonalWelcome from '../components/LuqiPersonalWelcome';
+import { getStoredLanguage, LANGUAGES } from '../lib/languages';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '', workspaceMode = false }: { embedded?: boolean; initialQuestion?: string; workspaceMode?: boolean } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const [language, setLanguage] = useState(getStoredLanguage);
+  useEffect(() => {
+    const change = (event: Event) => {
+      const code = (event as CustomEvent).detail?.language?.code;
+      const selected = LANGUAGES.find(item => item.code === code);
+      if (selected) setLanguage(selected);
+    };
+    window.addEventListener('luqi:language-changed', change);
+    return () => window.removeEventListener('luqi:language-changed', change);
+  }, []);
   const optionalChatWorkspace = useOptionalChatWorkspace();
   const workspace = workspaceMode ? optionalChatWorkspace : null;
   const previouslySignedIn = useRef(!!session);
@@ -41,6 +54,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [companionMode, setCompanionMode] = useState(false);
   const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
   const [shareNote, setShareNote] = useState(false);
+  const languageControl = <div><LanguageSelectorDropdown compact />
+    <p>Reply language: {language.nativeName}. AI language accuracy can vary.</p></div>;
+  const personalWelcome = session ? <LuqiPersonalWelcome key={session.user.email}
+    name={session.user.name} language={language} disabled={busy || uncertain} /> : null;
   // Changing a country invalidates prior optional provider-processing approval.
   useEffect(() => { setShareRegion(false); }, [region]);
   const questionLength = prompt.trim().length;
@@ -48,7 +65,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const contextPreview = shareContext ? previewPilotHistory(turns) : [];
   const contextTooLong = (() => {
     if (!prompt.trim() || tooLong) return false;
-    try { buildPilotInput(prepareCompanionQuestion(prompt.trim(), companionMode, shareNote ? selectedNote?.content : undefined), 'auto', contextPreview); return false; }
+    try { buildPilotInput(prepareCompanionQuestion(prompt.trim(), companionMode, shareNote ? selectedNote?.content : undefined), language.name, contextPreview); return false; }
     catch { return true; }
   })();
   const epoch = useRef(0); const locked = useRef(false);
@@ -145,7 +162,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion);
+      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name);
       if (epoch.current === version) {
         setAnswer(result);
         setTurns(previous => {
@@ -197,6 +214,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div>
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
       </header>
+      {languageControl}
+      {personalWelcome}
       {session && <div className="luqi-chat-availability-row">
         <span role="status">{checking ? 'Checking AI readiness…' :
           available ? 'AI provider configured · real replies depend on live limits' :
@@ -327,6 +346,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with Luqi</Heading>
     <p>Chat with Luqi for help with writing, studying, ideas and planning. Review the answer: AI can make mistakes.</p>
     <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
+    {languageControl}
+    {personalWelcome}
     <p role="status">{checking ? 'Checking AI configuration…' : available
       ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
       : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>

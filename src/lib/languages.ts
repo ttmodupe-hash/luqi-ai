@@ -45,8 +45,9 @@ export function setStoredLanguage(language: LanguageInfo): void {
   const selected = LANGUAGES.find(({code}) => code === language.code) ?? LANGUAGES[0];
   try {
     localStorage.setItem(STORAGE_KEY, selected.code);
-    window.dispatchEvent(new CustomEvent("luqi:language-changed", { detail: { language: selected } }));
+
   } catch {
-    // Unavailable storage does not prevent use of the current selection.
+    // The current tab can still use the preference when storage is unavailable.
   }
+  window.dispatchEvent(new CustomEvent("luqi:language-changed", { detail: { language: selected } }));
 }

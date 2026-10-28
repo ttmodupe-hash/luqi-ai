@@ -18,19 +18,19 @@ export async function pilotAvailability(signal: AbortSignal, request: typeof fet
 }
 
 /** Caller cancellation plus an independent deadline; never retry a paid POST. */
-export async function askPilot(token: string, prompt: string, signal: AbortSignal, request: typeof fetch = fetch, history: PilotConversationTurn[] = [], regionContext?: AfricanRegionCode): Promise<PilotReply> {
+export async function askPilot(token: string, prompt: string, signal: AbortSignal, request: typeof fetch = fetch, history: PilotConversationTurn[] = [], regionContext?: AfricanRegionCode, language = 'auto'): Promise<PilotReply> {
   const question = prompt.trim();
   if (!token || token.length > 4096 || !question || question.length > 6000) throw new PilotChatError('INVALID_INPUT');
   if (regionContext !== undefined && !isAfricanRegionCode(regionContext)) throw new PilotChatError('INVALID_INPUT');
   try {
     // Same normalization and complete input limit as the server and UI counter.
-    buildPilotInput(question, 'auto', history);
+    buildPilotInput(question, language, history);
     const response = await requestPilotJson(request, '/api/v1/luqi-core', {
       method: 'POST', signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       // Only explicit, user-reviewed conversation turns may be included.
       // Never attach private notes, account email or saved history automatically.
-      body: JSON.stringify({ user_input: question, ...(history.length ? { history } : {}),
+      body: JSON.stringify({ user_input: question, ...(language !== 'auto' ? { language } : {}), ...(history.length ? { history } : {}),
         ...(regionContext && regionContext !== 'PAN_AFRICAN_AU' ? { regionContext } : {}) }),
     });
     if (response.status === 401) throw new PilotChatError('AUTH_REQUIRED');
