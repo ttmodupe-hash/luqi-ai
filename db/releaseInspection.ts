@@ -33,7 +33,7 @@ export async function inspectReleaseDatabase(environment:Record<string,string|un
   try{
     operator=await open(settings.operator);runtime=await open(settings.runtime);
     const owner=operator,web=runtime;
-    const [identity]=await query(web,'SELECT CURRENT_USER() AS identity,CURRENT_ROLE() AS roles');
+    const [identity]=await query(web,'SELECT CURRENT_USER() AS identity,CURRENT_ROLE() AS roles,VERSION() AS version');
     const at=String(identity?.identity??'').lastIndexOf('@');
     if(at<1||String(identity.identity).slice(0,at)!==settings.runtime.user)throw Error('RELEASE_INSPECTION_UNAVAILABLE');
     const account=mysql.escapeId(settings.runtime.user)+'@'+mysql.escapeId(String(identity.identity).slice(at+1));
@@ -54,9 +54,15 @@ export async function inspectReleaseDatabase(environment:Record<string,string|un
       runtimeAccess[name]=await safeCheck(()=>validateRuntimeSchemaConnection(web,contracts));}
     const tables=['customer_device_sessions_v1','luqi_p2p_circles_v1','luqi_p2p_blocks_v1','luqi_p2p_messages_v1','luqi_p2p_audit_head_v1','luqi_p2p_reports_v1'];
     const present=await query(owner,'SELECT TABLE_NAME AS name FROM information_schema.tables WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?,?,?,?,?) ORDER BY TABLE_NAME',tables);
+    let p2pAuditHeadValid=false;
+    if(present.some(t=>t.name==='luqi_p2p_audit_head_v1')){
+      const head=await query(owner,'SELECT seal FROM luqi_p2p_audit_head_v1 WHERE id=1');
+      p2pAuditHeadValid=head.length===1&&/^[a-f0-9]{64}$/.test(head[0].seal);
+    }
     const fingerprint=await query(owner,'SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLLATION_NAME FROM information_schema.columns WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (?,?,?,?,?,?) ORDER BY TABLE_NAME,ORDINAL_POSITION',tables);
     return {format:'luqi.release-db-inspection.v1',recordedAt:new Date().toISOString(),sourceCommit:environment.RAILWAY_GIT_COMMIT_SHA??'disposable-ci',
       readOnly:true,customerRowsRead:false,productionFlagsChanged:false,identity:'dedicated_web',activeRolesNone:identity.roles==='NONE',
+      serverVersion:String(identity.version).match(/^\d+\.\d+\.\d+/)?.[0]??'unavailable',p2pAuditHeadValid,
       featureTablesPresent:present.map(t=>t.name),featureSchemaFingerprint:createHash('sha256').update(JSON.stringify(fingerprint)).digest('hex'),
       structure,runtimeAccess,combinedGrants:{valid:missing.length===0&&unexpected===0&&identity.roles==='NONE',missingTables:missing,unexpectedGrantCount:unexpected}};
   }catch{throw Error('RELEASE_INSPECTION_UNAVAILABLE')}
