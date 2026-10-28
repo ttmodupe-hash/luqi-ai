@@ -20,6 +20,9 @@ type ChatWorkspaceValue = {
   /** Provider acknowledgement is memory-only and scoped to the signed-in account. */
   providerAcknowledged: boolean;
   setProviderAcknowledged: (approved: boolean) => void;
+  /** Reviewed recent turns are shared only after the account's first provider acknowledgement. */
+  followUpContextEnabled: boolean;
+  setFollowUpContextEnabled: (enabled: boolean) => void;
   startNewChat: () => void;
   selectThread: (id: string) => void;
   forgetThread: (id: string) => void;
@@ -38,6 +41,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectionVersion, setSelectionVersion] = useState(0);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [contextEnabled, setContextEnabled] = useState(true);
 
   // Hide a former identity synchronously during render and clear before paint.
   // Session expiry, sign-out and account switching all use this same boundary.
@@ -50,6 +54,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setThreads([]);
     setActiveId(null);
     setAcknowledged(false);
+    setContextEnabled(true);
     setSelectionVersion(version => version + 1);
   }, [token]);
 
@@ -59,6 +64,11 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setAcknowledged(approved === true);
   }, [token]);
   const providerAcknowledged = owned ? acknowledged : false;
+  const followUpContextEnabled = owned && acknowledged && contextEnabled;
+  const setFollowUpContextEnabled = useCallback((enabled: boolean) => {
+    if (!token || tokenAtPaint.current !== token) return;
+    setContextEnabled(enabled === true);
+  }, [token]);
 
   const startNewChat = useCallback(() => {
     setActiveId(null);
@@ -97,8 +107,10 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   const activeThread = visibleThreads.find(chat => chat.id === activeId) ?? null;
   const value = useMemo<ChatWorkspaceValue>(() => ({
     threads: visibleThreads, activeThread, selectionVersion, providerAcknowledged, setProviderAcknowledged,
+    followUpContextEnabled, setFollowUpContextEnabled,
     startNewChat, selectThread, forgetThread, recordConfirmedReply,
   }), [visibleThreads, activeThread, selectionVersion, providerAcknowledged, setProviderAcknowledged,
+    followUpContextEnabled, setFollowUpContextEnabled,
     startNewChat, selectThread, forgetThread, recordConfirmedReply]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
