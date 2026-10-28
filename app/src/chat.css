@@ -26,3 +26,16 @@
 .luqi-chat-richtext pre { overflow-x:auto; white-space:pre; font-size:.8rem; padding:12px;
   border:1px solid #36577e; border-radius:10px; background:#09182e; }
 .luqi-chat-richtext code { font-family:ui-monospace, monospace; font-size:.85em; }
+
+
+/* Follow-up context is an explicit, visible opt-in, not a hidden automatic send. */
+.luqi-chat-continuity { margin:12px 0; border:1px solid #446b96; background:#102843;
+  border-radius:12px; padding:12px; min-width:0; }
+.luqi-chat-continuity label { display:flex; align-items:flex-start; gap:10px;
+  color:#e3f0ff; font-size:13px; line-height:1.5; }
+.luqi-chat-continuity input { flex:none; width:17px; height:17px; margin-top:3px; accent-color:#66aaff; }
+.luqi-chat-continuity p { color:#bfd3ef; font-size:12px; line-height:1.5; margin:6px 0; }
+.luqi-chat-continuity details { color:#d9eaff; font-size:12px; overflow-wrap:anywhere; }
+.luqi-chat-continuity summary { min-height:32px; cursor:pointer; }
+.luqi-chat-continuity ol { margin:5px 0; padding-left:20px; }
+.luqi-chat-continuity li { margin:5px 0; }
