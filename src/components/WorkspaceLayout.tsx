@@ -15,6 +15,7 @@ captureLuqiInstallPrompt();
 
 const navigation = [
   ["/chat", "Chat"],
+  ["/spatial-vision", "👁️ Spatial Vision"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
   ["/omega-tasks", "Luqi tools"],

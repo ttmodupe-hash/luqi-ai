@@ -1,7 +1,9 @@
 /** Explicit denylist for pre-budget AI endpoints.
- * The ONLY live model entrypoint permitted during the $100 pilot is
- * POST /api/v1/luqi-core, protected by authentication, daily user quotas
- * and monthly provider budgets. Never silently bypass the pilot gateway.
+ * Only individually reviewed budgeted entrypoints are permitted:
+ * /api/v1/luqi-core (text), /api/v1/visual-tutor (one crop), and
+ * /api/v1/spatial-vision (one crop, explicit provider). All require the same
+ * authenticated daily-user and monthly-provider reservation ledger.
+ * Never silently bypass the pilot gateway.
  * These routes may be restored individually after security/FinOps review.
  */
 const legacyPaidPostPaths = new Set([

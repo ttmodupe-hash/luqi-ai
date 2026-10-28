@@ -49,9 +49,11 @@ for (const [name, { findWorkspaceTools: find, workspaceTools: tools }] of [['roo
   });
   check('trial results retain sign-in and availability limitations', () => {
     const results = find('consent GEMINI', 'ready');
-    assert.deepEqual(ids(results), ['ai-trial']);
-    assert.equal(results[0].status, 'Limited trial · sign-in required');
-    assert.match(results[0].description, /Availability is checked before sending/);
+    assert.deepEqual(ids(results), ['spatial-vision', 'ai-trial']);
+    assert.equal(results[0].status, 'Limited trial · sign-in and image consent');
+    assert.match(results[0].description, /model-estimated boxes/);
+    assert.equal(results[1].status, 'Limited trial · sign-in required');
+    assert.match(results[1].description, /Availability is checked before sending/);
   });
   check('literal punctuation is not interpreted as a regex or markup', () => {
     for (const query of ['.*', '[', '^.*$', '<script>', "' OR 1=1", '(a+)+$']) assert.deepEqual(find(query), []);

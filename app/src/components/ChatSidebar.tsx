@@ -12,6 +12,7 @@ const shortcuts = [
   { path: '/chat', label: 'Luqi Chat', icon: MessageCircle },
   { path: '/business-desk', label: 'Business desk', icon: BriefcaseBusiness },
   { path: '/study-desk', label: 'Study desk', icon: GraduationCap },
+  { path: '/spatial-vision', label: 'Spatial Vision & 3D Lab', icon: Compass },
   { path: '/content-studio', label: 'Content studio', icon: PenLine },
   { path: '/ask', label: 'Africa & travel guide', icon: Globe2 },
   { path: '/companion', label: 'Private notes', icon: BookOpen },

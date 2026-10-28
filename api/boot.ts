@@ -30,6 +30,7 @@ import { SuperIntelligenceOrchestrator, GlobalLedger } from "./services/superCor
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { aiPilot } from "./ai-pilot";
 import { visualTutor } from "./visual-tutor";
+import { spatialVision } from "./spatial-vision";
 import { checkPilotCredentials } from "./services/pilotCredentialCheck";
 import { checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { isUnbudgetedAiRoute } from "./lib/legacyAiRoutes";
@@ -178,6 +179,7 @@ app.route("/", restCompat);
 // The budgeted text trial is isolated from all legacy provider routes.
 app.route('/api/v1/luqi-core', aiPilot);
 app.route('/api/v1/visual-tutor', visualTutor);
+app.route('/api/v1/spatial-vision', spatialVision);
 
 // 2. Consumer Rights Legal & Dispute Action Plan Endpoint
 app.post('/api/v1/consumer-rights', async (c) => {

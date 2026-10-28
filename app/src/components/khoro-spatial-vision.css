@@ -1,0 +1,47 @@
+/* Luqi Spatial Vision: local-first, accessible, mobile-width layout. */
+.luqi-spatial { max-width:1150px; margin:0 auto; padding:clamp(16px,3vw,32px); color:#eaf2ff; background:#08162a; border-radius:18px; }
+.luqi-spatial h1 { font-size:clamp(1.6rem,3vw,2.4rem); line-height:1.2; color:#f2f7ff; margin:.4rem 0; }
+.luqi-spatial h2 { font-size:1.12rem; font-weight:750; color:#f0f6ff; margin:0 0 .65rem; }
+.luqi-spatial h3 { font-size:.95rem; font-weight:700; color:#c6ddff; margin:.9rem 0 .4rem; }
+.luqi-spatial p { line-height:1.6; color:#c2d2e9; font-size:.89rem; margin:.5rem 0; }
+.luqi-spatial a { color:#a7d0ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-spatial .luqi-eyebrow { font-size:.72rem; color:#a8cbff; letter-spacing:.1em; font-weight:750; }
+.luqi-spatial-caution { border-left:3px solid #e1b25f; background:#1d2940; padding:.8rem 1rem; border-radius:8px; }
+.luqi-spatial-account { margin:1rem 0; }
+.luqi-spatial button { border:1px solid #42618a; border-radius:9px; background:#183453; color:#edf6ff; padding:.6rem .85rem; min-height:42px; cursor:pointer; }
+.luqi-spatial button:hover:not(:disabled) { background:#285078; }
+.luqi-spatial button:disabled { opacity:.5; cursor:not-allowed; }
+.luqi-spatial input, .luqi-spatial textarea, .luqi-spatial select { font:inherit; }
+.luqi-spatial select, .luqi-spatial textarea { width:100%; margin-top:.3rem; padding:.65rem; border:1px solid #4b6993; border-radius:9px; color:#f2f7ff; background:#0c1b31; }
+.luqi-spatial textarea { resize:vertical; min-height:70px; }
+.luqi-spatial label { display:block; color:#d4e4f8; font-size:.84rem; }
+.luqi-spatial input[type="range"] { width:100%; accent-color:#74adff; }
+.luqi-spatial input[type="checkbox"] { accent-color:#60a5fa; width:17px; height:17px; flex:none; }
+.luqi-spatial input[type="file"] { display:block; margin-top:.5rem; max-width:100%; font-size:.8rem; }
+.luqi-spatial-controls { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.85rem; margin:1rem 0; }
+.luqi-spatial-file { padding:.9rem; background:#102440; border:1px solid #2c476d; border-radius:12px; }
+.luqi-spatial-workspace { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem; margin:1.25rem 0; }
+.luqi-spatial-workspace > div, .luqi-spatial-send, .luqi-spatial-results { padding:1rem; background:#0d1f38; border:1px solid #34547e; border-radius:14px; min-width:0; }
+.luqi-spatial-image { position:relative; display:inline-block; max-width:100%; line-height:0; overflow:hidden; border-radius:12px; border:1px solid #365681; }
+.luqi-spatial-image img { display:block; width:100%; max-width:650px; height:auto; }
+.luqi-spatial-selection { position:absolute; border:2px solid #e7c76b; background:rgba(227,193,99,.12); pointer-events:none; }
+.luqi-spatial-box { position:absolute; border:2px solid #71d6ac; pointer-events:none; }
+.luqi-spatial-box-caution { border-color:#fb8d9d; background:rgba(233,78,100,.08); }
+.luqi-spatial-box-info { border-color:#75d3ad; background:rgba(64,177,127,.08); }
+.luqi-spatial-crop-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem 1rem; margin:1rem 0; }
+.luqi-spatial-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin:.8rem 0; }
+.luqi-spatial-check { display:flex!important; align-items:flex-start; gap:.6rem; padding:.6rem 0; line-height:1.55; }
+.luqi-spatial-check input { margin-top:2px; }
+.luqi-spatial-preview { margin-top:.85rem; }
+.luqi-spatial-relief-toggle { margin:.5rem 0; }
+.luqi-spatial-relief canvas { width:100%; max-width:640px; height:auto; border:1px solid #48638b; border-radius:10px; }
+.luqi-spatial-relief-controls { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.luqi-spatial-send { margin:1rem 0; }
+.luqi-spatial-send-button { background:#2469ca!important; border-color:#75b2ff!important; font-weight:750; }
+.luqi-spatial-results ul { list-style:disc; padding-left:1.25rem; }
+.luqi-spatial-results li { margin:.6rem 0; }
+.luqi-spatial-notice { border-left:3px solid #e3b45c; padding:.8rem; background:#202e43; }
+.luqi-spatial footer { padding:1.2rem 0 .2rem; }
+.luqi-spatial :focus-visible { outline:3px solid #9cc8ff; outline-offset:3px; }
+@media(max-width:780px) { .luqi-spatial-controls,.luqi-spatial-workspace { grid-template-columns:1fr; } }
+@media(max-width:450px) { .luqi-spatial { border-radius:0; padding:14px; } .luqi-spatial-crop-controls { grid-template-columns:1fr; } .luqi-spatial-workspace > div { padding:.75rem; } }

@@ -2,7 +2,7 @@
 export const MAX_PILOT_RESPONSE_BYTES = 65_536;
 export const PILOT_READINESS_TIMEOUT_MS = 10_000;
 export const PILOT_REPLY_TIMEOUT_MS = 45_000;
-type PilotPath = '/v1/readiness' | '/api/v1/luqi-core' | '/api/v1/visual-tutor';
+type PilotPath = '/v1/readiness' | '/api/v1/luqi-core' | '/api/v1/visual-tutor' | '/api/v1/spatial-vision';
 type PilotJsonResult = { ok: boolean; status: number; body: unknown };
 
 const failureStatuses = {
@@ -25,7 +25,7 @@ export function pilotFailureCode(status: number, body: unknown): string {
 export async function requestPilotJson(
   request: typeof fetch, path: PilotPath, init: RequestInit,
 ): Promise<PilotJsonResult> {
-  if (path !== '/v1/readiness' && path !== '/api/v1/luqi-core' && path !== '/api/v1/visual-tutor') throw new Error('Invalid pilot request');
+  if (path !== '/v1/readiness' && path !== '/api/v1/luqi-core' && path !== '/api/v1/visual-tutor' && path !== '/api/v1/spatial-vision') throw new Error('Invalid pilot request');
   const parent = init.signal;
   const aborted = () => new DOMException('AI trial request interrupted', 'AbortError');
   if (parent?.aborted) throw aborted();

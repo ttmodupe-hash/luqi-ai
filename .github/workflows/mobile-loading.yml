@@ -46,12 +46,12 @@ jobs:
             // reviewed Chat, Ask, Login and merchant-hosted payment-availability
             // entries. The reviewed Luqi PWA install and download-alias routes
             // are also allowed. Gated P2P routes and the packaged private admin
-            // entry and consented visual tutor are reviewed additions; every older
+            // entry, consented visual tutor and budgeted Spatial Vision lab are reviewed additions; every older
             // route and iframe stays required.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-desk', '/chat', '/circles', '/consumer-rights', '/download', '/install', '/login', '/p2p', '/payments', '/rights-guide', '/study-desk', '/visual-tutor']
-              : ['/ask', '/business-desk', '/chat', '/circles', '/download', '/install', '/login', '/p2p', '/payments', '/rights-guide', '/study-desk', '/visual-tutor'];
+              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-desk', '/chat', '/circles', '/consumer-rights', '/download', '/install', '/login', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/visual-tutor']
+              : ['/ask', '/business-desk', '/chat', '/circles', '/download', '/install', '/login', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),
