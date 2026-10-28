@@ -141,7 +141,7 @@ export default function ContentStudioPage() {
         if (active.current) return;
         setScenes(draft.scenes.map(scene => ({ ...scene }))); setFormat(draft.aspect);
         setLength(draft.length); setGravity(draft.gravity); setYaw(draft.yaw);
-        setSceneSeconds(draft.sceneSeconds); setMotion(draft.visualTheme); setApprovedGoal('');
+        setSceneSeconds(draft.sceneSeconds ?? 15); setMotion(draft.visualTheme ?? 'pendulum'); setApprovedGoal('');
         seek(0); setClip(null);
         setMessage('Saved storyboard restored. Download your edited storyboard before leaving.');
       }} />
