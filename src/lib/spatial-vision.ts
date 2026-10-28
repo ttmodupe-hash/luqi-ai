@@ -129,5 +129,5 @@ export function cropWithMasks(image: HTMLImageElement, region: CropRegion,
 
 /** Only redact display of IMEI-like sequences; image redaction must happen before upload. */
 export function redactImeiLikeText(value: string): string {
-  return value.replace(/\b(?:\d[\s-]?){14,16}\b/g, '[identifier withheld]');
+  return value.replace(/\b\d(?:[\s-]?\d){13,15}\b/g, '[identifier withheld]');
 }
