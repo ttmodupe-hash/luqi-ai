@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episodeOutline,
-  pendulumPeriod, sceneAt, storyboardJson, subtitles, studioDuration,
+  pendulumPeriod, sceneAtForDuration, storyboardJson, subtitles, studioDuration,
   type StudioFormat, type StudioScene, type StudioMotion, type StudioSceneSeconds } from '../lib/content-studio';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import '../content-studio.css';
@@ -32,7 +32,7 @@ export default function ContentStudioPage() {
   const [clip, setClip] = useState<{ url: string; extension: string; format: StudioFormat } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null), position = useRef(0), active = useRef<Recording | null>(null), mounted = useRef(true);
   const clipSeconds = studioDuration(sceneSeconds);
-  const dimensions = STUDIO_FORMATS[format], selected = sceneAt(time, sceneSeconds);
+  const dimensions = STUDIO_FORMATS[format], selected = sceneAtForDuration(time, sceneSeconds);
   const editingLocked = recording || draftBusy;
   function cancelRecording() {
     const run = active.current; if (!run) return;
