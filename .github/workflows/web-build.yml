@@ -77,7 +77,7 @@ jobs:
       - name: Type-check visual tutor API and photo selection
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/visualTutor.ts api/visual-tutor.ts src/lib/visual-tutor.ts src/pages/VisualTutorPage.tsx
       - name: Verify local Spatial Vision mathematics, privacy and page behavior
-        run: npx vitest run tests/spatial-vision.test.ts tests/spatial-vision-page.test.tsx
+        run: npx vitest run tests/spatial-vision.test.ts tests/spatial-vision-mask.test.ts tests/spatial-vision-page.test.tsx
       - name: Type-check Spatial Vision lab and deterministic helpers
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/KhoroSpatialVisionLab.tsx src/lib/spatial-vision.ts
       - name: Run integrity gate
