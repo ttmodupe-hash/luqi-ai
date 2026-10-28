@@ -8,8 +8,10 @@ import '../content-studio.css';
 import { browserRecordingType } from '../lib/recording-support';
 import StudioDraftImport from '../components/StudioDraftImport';
 import { serializeStudioDraft } from '../lib/studio-draft';
+import StudioAudioPanel, { type StudioAudioAssets } from '../components/StudioAudioPanel';
+import { browserMixedRecordingType, prepareStudioAudioMix, type StudioAudioMix } from '../lib/studio-audio';
 
-interface Recording { media: MediaRecorder; stream: MediaStream; chunks: Blob[]; started: number; discard: boolean; timer: ReturnType<typeof setTimeout>; bytes: number }
+interface Recording { media: MediaRecorder; stream: MediaStream; chunks: Blob[]; started: number; discard: boolean; timer: ReturnType<typeof setTimeout>; bytes: number; audioMix: StudioAudioMix | null }
 function saveText(name: string, body: string, type: string) {
   const url = URL.createObjectURL(new Blob([body], { type }));
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click();
@@ -22,29 +24,36 @@ export default function ContentStudioPage() {
   const [recordingType] = useState(browserRecordingType);
   const [scenes, setScenes] = useState<StudioScene[]>(() => approvedPlan ? approvedPlan.scenes.map(scene => ({ ...scene })) : SHOWCASE_SCENES.map(s => ({ ...s })));
   const [draftBusy, setDraftBusy] = useState(false);
+  const [audio, setAudio] = useState<StudioAudioAssets>({ narration: null, music: null, musicVolume: .25 });
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [audioPreparing, setAudioPreparing] = useState(false);
+  const audioEpoch = useRef(0);
   const [format, setFormat] = useState<StudioFormat>('landscape');
   const [sceneSeconds, setSceneSeconds] = useState<StudioSceneSeconds>(approvedPlan?.sceneSeconds ?? 15);
   const [motion, setMotion] = useState<StudioMotion>(approvedPlan?.theme ?? 'pendulum');
   const [approvedGoal, setApprovedGoal] = useState(approvedPlan?.goal ?? '');
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [recording, setRecording] = useState(false);
   const [length, setLength] = useState(2.5), [gravity, setGravity] = useState(9.81), [yaw, setYaw] = useState(28);
-  const [message, setMessage] = useState(approvedPlan ? 'Your reviewed Chat plan is loaded. Luqi will try to record the silent local video automatically where this browser supports it.' : 'Your draft stays in this page. Download it before leaving.');
+  const [message, setMessage] = useState(approvedPlan ? 'Your approved Chat draft is loaded. A silent first export starts automatically when supported; add your own audio later and record again.' : 'Your storyboard and chosen audio stay in this tab. Download them before leaving.');
   const [clip, setClip] = useState<{ url: string; extension: string; format: StudioFormat } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null), position = useRef(0), active = useRef<Recording | null>(null), mounted = useRef(true);
   const clipSeconds = studioDuration(sceneSeconds);
   const dimensions = STUDIO_FORMATS[format], selected = sceneAtForDuration(time, sceneSeconds);
-  const editingLocked = recording || draftBusy;
+  const editingLocked = recording || draftBusy || voiceBusy || audioPreparing;
+  const hasAudio = Boolean(audio.narration || audio.music);
+  const availableVideoType = hasAudio ? browserMixedRecordingType() : recordingType;
   function cancelRecording() {
     const run = active.current; if (!run) return;
     run.discard = true; clearTimeout(run.timer);
     if (run.media.state !== 'inactive') run.media.stop();
     run.stream.getTracks().forEach(track => track.stop());
+    run.audioMix?.stop();
     active.current = null; setRecording(false); setPlaying(false);
     setMessage('Export cancelled. The partial recording was discarded; your storyboard is still here.');
   }
   useEffect(() => { mounted.current = true; return () => {
-    mounted.current = false; const run = active.current;
-    if (run) { run.discard = true; clearTimeout(run.timer); if (run.media.state !== 'inactive') run.media.stop(); run.stream.getTracks().forEach(t => t.stop()); }
+    mounted.current = false; audioEpoch.current++; const run = active.current;
+    if (run) { run.discard = true; clearTimeout(run.timer); if (run.media.state !== 'inactive') run.media.stop(); run.stream.getTracks().forEach(t => t.stop()); run.audioMix?.stop(); }
   }; }, []);
   useEffect(() => {
     // The click in Chat explicitly approved generation. The route does not
@@ -53,7 +62,7 @@ export default function ContentStudioPage() {
     const frame = requestAnimationFrame(() => {
       if (!mounted.current) return;
       chatWorkspace?.clearStudioPlan();
-      if (recordingType) record();
+      if (recordingType) void record();
       else setMessage('Approved video storyboard loaded. Recording is unsupported here; preview and download the script or storyboard instead.');
     });
     return () => cancelAnimationFrame(frame);
@@ -92,17 +101,28 @@ export default function ContentStudioPage() {
       setMessage('Download prepared. Review your content before sharing it.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Complete the storyboard before exporting.'); }
   }
-  function record() {
-    if (active.current || draftBusy) return;
-    let stream: MediaStream | undefined;
+  async function record() {
+    if (active.current || draftBusy || voiceBusy || audioPreparing) return;
+    let stream: MediaStream | undefined, mix: StudioAudioMix | null = null;
+    const request = ++audioEpoch.current;
+    setAudioPreparing(true);
     try {
       storyboardJson(scenes, format, length, gravity, sceneSeconds, motion, yaw);
-      if (!canvas.current?.captureStream || typeof MediaRecorder === 'undefined') throw new Error('Video export is unavailable in this browser. Download the storyboard and script instead.');
-      const mimeType = browserRecordingType();
-      if (!mimeType) throw new Error('No supported video encoder. Download the storyboard and script instead.');
-      stream = canvas.current.captureStream(24);
-      const media = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000 });
-      const run: Recording = { media, stream, chunks: [], started: performance.now(), discard: false, bytes: 0,
+      if (!canvas.current?.captureStream || typeof MediaRecorder === 'undefined')
+        throw new Error('Video recording is unavailable in this browser. Download the storyboard and script instead.');
+      // Never export a silent file when the user explicitly selected audio.
+      const mimeType = hasAudio ? browserMixedRecordingType() : browserRecordingType();
+      if (!mimeType) throw new Error(hasAudio
+        ? 'This browser cannot encode audio with video. Try another browser or export the soundtrack separately.'
+        : 'No supported video encoder. Download the storyboard and script instead.');
+      mix = await prepareStudioAudioMix(audio.narration, audio.music, audio.musicVolume, clipSeconds);
+      if (!mounted.current || request !== audioEpoch.current) { mix?.stop(); return; }
+      const video = canvas.current.captureStream(24);
+      stream = mix ? new MediaStream([...video.getVideoTracks(), mix.track]) : video;
+      const media = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3_000_000,
+        ...(mix ? { audioBitsPerSecond: 128_000 } : {}) });
+      const run: Recording = { media, stream, audioMix: mix, chunks: [], started: performance.now(),
+        discard: false, bytes: 0,
         timer: setTimeout(() => { if (media.state !== 'inactive') media.stop(); }, clipSeconds * 1000) };
       media.ondataavailable = event => {
         if (event.data.size && !run.discard) {
@@ -113,37 +133,49 @@ export default function ContentStudioPage() {
       };
       media.onerror = () => { cancelRecording(); if (mounted.current) setMessage('The video encoder failed. No completed clip was created.'); };
       media.onstop = () => {
-        clearTimeout(run.timer); run.stream.getTracks().forEach(track => track.stop());
+        clearTimeout(run.timer); run.stream.getTracks().forEach(track => track.stop()); run.audioMix?.stop();
         if (active.current === run) active.current = null;
         if (!mounted.current || run.discard) return;
         setPlaying(false); setRecording(false);
-        if (!run.bytes || performance.now() - run.started < clipSeconds * 1000 - 500 || position.current < clipSeconds - 1) { setMessage('The recording ended early. No completed ' + clipSeconds + '-second clip was created.'); return; }
+        if (!run.bytes || performance.now() - run.started < clipSeconds * 1000 - 500 ||
+            position.current < clipSeconds - 1) {
+          setMessage('The recording ended early. No completed ' + clipSeconds + '-second clip was created.'); return;
+        }
         const blob = new Blob(run.chunks, { type: media.mimeType });
         position.current = clipSeconds; setTime(clipSeconds);
-        setClip({ url: URL.createObjectURL(blob), format, extension: media.mimeType.startsWith('video/mp4') ? 'mp4' : 'webm' });
-        setMessage('Your silent ' + clipSeconds + '-second animation is ready. Watch it, then download and review it before publishing.');
+        setClip({ url: URL.createObjectURL(blob), format,
+          extension: media.mimeType.startsWith('video/mp4') ? 'mp4' : 'webm' });
+        setMessage(run.audioMix
+          ? 'Your local video with mixed voice/music is ready. Play it and confirm the soundtrack before downloading.'
+          : 'Your silent ' + clipSeconds + '-second animation is ready. Review it before sharing.');
       };
       position.current = 0; setTime(0); setClip(null); active.current = run;
-      media.start(1000); setRecording(true); setPlaying(true);
-      setMessage('Recording ' + clipSeconds + ' seconds locally. Keep this tab visible. Escape or Cancel discards a partial clip. No audio, provider call or social upload is made.');
+      media.start(1000);
+      mix?.start();
+      setRecording(true); setPlaying(true);
+      setMessage('Recording ' + clipSeconds + ' seconds ' + (mix ? 'with a local audio track' : 'silently') +
+        '. Keep this tab visible. Escape or Cancel discards partial work. No provider or publishing call occurs.');
     } catch (error) {
       stream?.getTracks().forEach(track => track.stop());
+      mix?.stop();
       if (active.current) { clearTimeout(active.current.timer); active.current = null; }
       setMessage(error instanceof Error ? error.message : 'Video export could not start.');
+    } finally {
+      if (mounted.current && request === audioEpoch.current) setAudioPreparing(false);
     }
   }
   return <main className="luqi-studio">
     <div className="luqi-studio-heading"><p className="luqi-eyebrow">Luqi Content Studio · Local creation</p><h1>Create. Explain. Make it clear.</h1>
       <p>Six editable scenes and original local motion graphics. Approved Chat videos use a topic-matched illustration when available; other topics use abstract visual cards, not fabricated AI footage. Download the storyboard before leaving so you can continue later.</p></div>
-    {approvedGoal && <section className="luqi-studio-approved" aria-label="Approved Chat project"><h2>Your approved Chat project</h2><p>{approvedGoal}</p><p>All six scene captions are editable. This {clipSeconds}-second video is silent: narration, music and generated film footage are not included.</p><Link to="/chat">Return to Luqi Chat</Link></section>}
-    <StudioDraftImport disabled={recording} onBusyChange={busy => { setDraftBusy(busy); if (busy) setPlaying(false); }}
+    {approvedGoal && <section className="luqi-studio-approved" aria-label="Approved Chat project"><h2>Your approved Chat project</h2><p>{approvedGoal}</p><p>All six scene captions are editable. Add your own recorded voiceover or rights-cleared music below, then export a new version with sound. AI cinematic footage is not yet available.</p><Link to="/chat">Return to Luqi Chat</Link></section>}
+    <StudioDraftImport disabled={recording || voiceBusy || audioPreparing} onBusyChange={busy => { setDraftBusy(busy); if (busy) setPlaying(false); }}
       onRestore={draft => {
         if (active.current) return;
         setScenes(draft.scenes.map(scene => ({ ...scene }))); setFormat(draft.aspect);
         setLength(draft.length); setGravity(draft.gravity); setYaw(draft.yaw);
         setSceneSeconds(draft.sceneSeconds ?? 15); setMotion(draft.visualTheme ?? 'pendulum'); setApprovedGoal('');
-        seek(0); setClip(null);
-        setMessage('Saved storyboard restored. Download your edited storyboard before leaving.');
+        seek(0); setClip(null); setAudio({ narration: null, music: null, musicVolume: .25 });
+        setMessage('Saved storyboard restored. Previous temporary audio was cleared; review before recording.');
       }} />
     <div className="luqi-studio-grid">
       <section className="luqi-studio-stage" aria-label="Animation preview">
@@ -164,14 +196,18 @@ export default function ContentStudioPage() {
         </fieldset>
       </section>
     </div>
+    <StudioAudioPanel audio={audio} onChange={next => { setAudio(next); setClip(null); }}
+      disabled={recording || draftBusy || audioPreparing} clipSeconds={clipSeconds}
+      onRecordingChange={setVoiceBusy} />
     <section className="luqi-studio-export" aria-labelledby="export-heading"><div><h2 id="export-heading">Review. Export. Make it yours.</h2>
-      <p>Video is silent original motion graphics. No generative film footage, voice clone, payment or direct social connection is enabled. Native timing can vary slightly; check the finished duration before publishing. Add your own licensed audio and verify platform requirements before uploading.</p></div>
+      <p>Original motion graphics can be exported silently or with a recorded voiceover and properly licensed music, using the browser's supported codecs. No paid AI generation, voice cloning, payment or social publishing is enabled. Review the actual exported sound, duration and rights before sharing.</p></div>
       <label>Video format<select aria-label="Video format" value={format} disabled={editingLocked} onChange={e => setFormat(e.target.value as StudioFormat)}>{Object.entries(STUDIO_FORMATS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></label>
-      <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={editingLocked || !recordingType} aria-describedby="studio-recording-support" onClick={record}>Record {clipSeconds}-second animation</button>
+      <div className="luqi-studio-actions"><button className="luqi-primary" type="button" disabled={editingLocked || !availableVideoType} aria-describedby="studio-recording-support" onClick={() => { void record(); }}>Record {clipSeconds}-second animation{hasAudio ? ' with sound' : ''}</button>
         {recording && <button type="button" onClick={cancelRecording}>Cancel recording</button>}
         <button type="button" disabled={recording} onClick={() => exportText('storyboard')}>Download storyboard</button><button type="button" disabled={recording} onClick={() => exportText('subtitles')}>Download subtitles</button><button type="button" disabled={recording} onClick={() => exportText('script')}>Download script / podcast outline</button></div>
-      <p id="studio-recording-support">{recordingType
-        ? 'This browser reports a compatible recorder. A successful export still depends on its encoder; review the finished clip.'
+      <p id="studio-recording-support">{availableVideoType
+        ? 'A compatible recorder was detected. If using audio, play the finished export to check sound and synchronisation.'
+        : hasAudio ? 'This browser cannot record video with audio here. Download your separate audio and storyboard, or try a supported browser.'
         : 'Video recording is unavailable in this browser. You can still edit and download your storyboard, subtitles and script.'}</p>
       <p role="status" aria-label="Studio export status" aria-live="polite">{message}</p>
       {clip && <div><video src={clip.url} controls aria-label="Completed local animation" /><a className="luqi-primary" href={clip.url} download={'luqi-showcase-' + clipSeconds + 's-' + clip.format + '.' + clip.extension}>Download {clipSeconds}-second video (.{clip.extension})</a></div>}
