@@ -1233,3 +1233,11 @@
   .luqi-install-actions .luqi-primary, .luqi-install-open { width: 100%; }
   .luqi-hero-app { align-items: flex-start; }
 }
+
+/* Keep the full Spatial Vision tab readable without overflowing the desktop header. */
+@media (min-width: 1441px) and (max-width: 1740px) {
+  .luqi-header-inner { gap: 16px; padding-inline: 22px; }
+  .luqi-desktop-nav { gap: 2px; }
+  .luqi-desktop-nav a { padding: 10px 8px; font-size: 12px; }
+  .luqi-header-actions { gap: 8px; }
+}
