@@ -11,7 +11,7 @@ import {
 } from './spatial-vision-contract';
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
-const MAX_DATA_URL_LENGTH = 466_700;
+const MAX_DATA_URL_LENGTH = 440_000; // <=330 KB of JPEG bytes for slower mobile links
 const JPEG_PREFIX = 'data:image/jpeg;base64,';
 
 function encodeBounded(canvas: HTMLCanvasElement): string {
