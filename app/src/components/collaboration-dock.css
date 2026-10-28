@@ -15,4 +15,6 @@
 .luqi-approved-contacts li span{display:block;font-size:.75rem;color:#afc2dc}
 .luqi-approved-contacts .luqi-collaboration-privacy{font-size:.75rem;color:#b2c3da}
 .luqi-collaboration-session{color:#c7defb}
-@media(max-width:760px){.luqi-collaboration-dock.on-chat{bottom:calc(80px + env(safe-area-inset-bottom))}.on-chat .luqi-collaboration-panel{bottom:calc(140px + env(safe-area-inset-bottom));max-height:calc(100dvh - 172px)}.luqi-collaboration-trigger{font-size:.8rem;padding:10px 13px}}
+.luqi-shell-chat .luqi-chat-main{padding-bottom:92px}
+.luqi-shell .luqi-footer{padding-bottom:80px}
+@media(max-width:760px){.luqi-collaboration-dock.on-chat{bottom:calc(80px + env(safe-area-inset-bottom))}.on-chat .luqi-collaboration-panel{bottom:calc(140px + env(safe-area-inset-bottom));max-height:calc(100dvh - 172px)}.luqi-collaboration-trigger{font-size:.8rem;padding:10px 13px}.luqi-shell-chat .luqi-chat-main{padding-bottom:calc(160px + env(safe-area-inset-bottom))}}
