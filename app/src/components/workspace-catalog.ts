@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "visual-tutor", title: "Visual tutor", category: "Select a photo region and learn",
+    description: "Crop a JPEG or PNG locally and ask for an explanation in your chosen language. Requires sign-in, per-image agreement and the shared AI allowance.",
+    status: "Limited trial · sign-in required", ready: true, path: "/visual-tutor", icon: "academy",
+  },
+  {
     id: "ai-trial",
     title: "AI text trial",
     category: "Ask a question, with clear limits",
