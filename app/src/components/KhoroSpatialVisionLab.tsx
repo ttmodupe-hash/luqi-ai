@@ -213,7 +213,7 @@ export default function KhoroSpatialVisionLab() {
           <button type="button" aria-pressed={viewRelief} onClick={() => setViewRelief(true)}>🧊 2.5D brightness relief</button>
         </div>
         {!viewRelief ? <>
-          <p className="luqi-spatial-hint">Drag a rectangle on the image to mark a local region. Model-suggested boxes appear after an approved analysis.</p>
+          <p className="luqi-spatial-hint">Drag to mark a local annotation. AI analysis sends the entire processed image, not just your rectangle. Suggested boxes appear after approval.</p>
           <div className="luqi-spatial-image-wrap" onPointerDown={event => {
             if (busy || preparing) return;
             dragRef.current = point(event);
@@ -290,7 +290,7 @@ export default function KhoroSpatialVisionLab() {
               </select>
             </label>
             {!ready && <p role="status" className="luqi-spatial-warning">AI readiness is not confirmed. Local image tools remain available.</p>}
-            <p className="luqi-spatial-disclosure">Only the locally re-encoded JPEG, selected mode and language are sent to the chosen provider after approval. Do not upload faces, account numbers, IMEI labels, confidential workplace documents or unredacted contracts. Each attempt reserves $0.20 from Luqi's existing AI allocation; this is not a provider invoice. No automatic fallback.</p>
+            <p className="luqi-spatial-disclosure">Only the entire locally re-encoded JPEG, selected mode and language are sent to the chosen provider after approval; local selection boxes do not crop the upload. Do not upload faces, account numbers, IMEI labels, confidential workplace documents or unredacted contracts. Each attempt reserves $0.20 from Luqi's existing AI allocation; this is not a provider invoice. No automatic fallback.</p>
             <label className="luqi-spatial-consent"><input type="checkbox" checked={consent}
               disabled={busy || uncertain || !ready} onChange={event => setConsent(event.target.checked)} />
               I agree to send this reviewed image to {provider === 'gemini' ? 'Gemini' : 'OpenAI'} for one AI analysis.</label>
