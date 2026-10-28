@@ -32,6 +32,11 @@ export default function ApprovedContactsPanel({ session, close }: {
       <Link to="/login" onClick={close}>Sign in to Luqi</Link>
     </> : <>
       <p className="luqi-collaboration-session">You are signed in to Luqi. Circles uses this same account.</p>
+      <p role="status" aria-label="Messaging availability" className="luqi-collaboration-session">
+        <span aria-hidden="true" style={{color:state==='ready'?'#4ade80':state==='disabled'||state==='unavailable'?'#f87171':'#94a3b8'}}>●</span>{' '}
+        {state==='ready'?'Peer messaging service online':state==='disabled'?'Peer messaging offline':state==='unavailable'?'Peer messaging unreachable':'Checking peer messaging…'}
+        <span> · Service status only; individual members’ presence remains private.</span>
+      </p>
       {state === 'checking' && <p role="status">Checking your approved contacts…</p>}
       {state === 'disabled' && <p role="status">Peer messaging is not available on this release yet. Your Luqi sign-in is still active.</p>}
       {state === 'unavailable' && <p role="status">Your contacts could not be checked. Close and reopen this panel to try again. No message was sent.</p>}
