@@ -23,9 +23,9 @@ test("workspace filters distinguish usable tools from previews without making AI
       requests.push(request.url());
   });
   await page.goto("/#/");
-  await expect(
-    page.getByText("Open Luqi chat and guidance"),
-  ).toBeVisible();
+  await expect(page.getByText("Try Luqi free without registering")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Try Luqi free without registering" }))
+    .toHaveAttribute("href", "#/try");
   await expect(page.getByRole("article")).toHaveCount(11);
   await expect(page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Spatial Vision & 3D Lab" }) })
     .getByRole("link")).toHaveAttribute("href", "#/spatial-vision");
