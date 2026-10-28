@@ -50,7 +50,7 @@ describe('local spatial lab: deterministic math and bounded coordinates', () => 
   });
   it('hides IMEI-like digit sequences in displayed serial-mode replies', () => {
     expect(redactImeiLikeText('IMEI 490154203237518 is not a serial'))
-      .toContain('[identifier withheld]');
+      .toBe('IMEI [identifier withheld] is not a serial');
     expect(redactImeiLikeText('Serial ABC1234')).toBe('Serial ABC1234');
   });
 });
