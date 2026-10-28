@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
+import GuestLuqiPreview from '../components/GuestLuqiPreview';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import { useCustomerSession } from '../providers/customer-session';
 import { useSovereignRegion } from '../providers/sovereign-region';
@@ -257,6 +258,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
         </>}
       </section>
+      {!session && <GuestLuqiPreview />}
       {!session ? <section className="luqi-chat-login" aria-label="Sign in to Luqi Chat">
         <div className="luqi-chat-login-top">
           <span className="luqi-chat-login-orb"><Sparkles size={20} aria-hidden="true" /></span>
