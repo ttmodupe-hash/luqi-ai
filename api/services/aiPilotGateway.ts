@@ -72,7 +72,7 @@ export async function runBudgetedPilotChat(
   // independently. Never induce a Gemini failure or spend on it first.
   if (geminiKey && provider !== "openai") {
     try {
-      await reservePilotAttempt("gemini", userId, new Date(), TEXT_REPLY_RESERVE_CENTS);
+      await reservePilotAttempt("gemini", userId, undefined, TEXT_REPLY_RESERVE_CENTS);
       const client = new GoogleGenAI({ apiKey: geminiKey });
       const result = await client.models.generateContent({
         model: PILOT_MODELS.gemini,
@@ -94,7 +94,7 @@ export async function runBudgetedPilotChat(
 
   if (openaiKey) {
     try {
-      await reservePilotAttempt("openai", userId, new Date(), TEXT_REPLY_RESERVE_CENTS);
+      await reservePilotAttempt("openai", userId, undefined, TEXT_REPLY_RESERVE_CENTS);
       const result = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         redirect: "error", cache: "no-store", credentials: "omit",
