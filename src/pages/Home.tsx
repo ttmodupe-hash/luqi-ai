@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router";
 import {
   ArrowRight,
@@ -15,7 +15,8 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import HeroAiChatConsole from "../components/HeroAiChatConsole";
+// Keep the rich assistant and regional directory outside the initial homepage bundle.
+const HeroAiChatConsole = lazy(() => import("../components/HeroAiChatConsole"));
 import CreatorPackPreview from "../components/CreatorPackPreview";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
@@ -78,7 +79,13 @@ export default function Home() {
               <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your Luqi sign-in, explicit consent and shared limits.
             </p>
           </div>
-          <HeroAiChatConsole />
+          <Suspense fallback={<div className="luqi-chat-card" aria-label="Loading Luqi assistant">
+            <p className="luqi-mini-label">Luqi assistant</p>
+            <h2>Explore Luqi learning and guidance</h2>
+            <Link to="/chat">Open Luqi Chat</Link>
+          </div>}>
+            <HeroAiChatConsole />
+          </Suspense>
         </section>
         <CreatorPackPreview compact />
         <section
