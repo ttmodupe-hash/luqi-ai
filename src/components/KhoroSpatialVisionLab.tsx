@@ -191,6 +191,11 @@ export default function KhoroSpatialVisionLab() {
         <strong>{item.title}</strong><span>{item.detail}</span>
       </button>)}
     </div>
+    {!session && mode !== 'SERIAL_AUDIT' && <section className="luqi-spatial-signin" aria-label="Luqi account access">
+      <h2>Sign in once to request AI image analysis</h2>
+      <p>Local image and 2.5D tools work without an account. Paid model requests use your existing Luqi login.</p>
+      <AccountAccessForm purpose="account" onAuthenticated={acceptSession} />
+    </section>}
     <div className="luqi-spatial-controls">
       <label>Choose a local JPEG or PNG (under 8 MB)
         <input ref={fileRef} type="file" accept="image/jpeg,image/png" disabled={busy || preparing}
@@ -267,7 +272,7 @@ export default function KhoroSpatialVisionLab() {
           <p>{mode === 'EXAM_3D'
             ? 'Luqi can suggest regions and explain visible questions, but answers and coordinates need checking.'
             : 'Use a sample or anonymised contract only. Luqi highlights terms for review, not definitive legal rights or debt amounts.'}</p>
-          {!session ? <AccountAccessForm purpose="account" onAuthenticated={acceptSession} /> : <>
+          {!session ? <p>Sign in above to enable a single approved provider request.</p> : <>
             <p className="luqi-spatial-signed-in">Signed in to Luqi. <button type="button" onClick={signOut}>Sign out</button></p>
             <label>AI provider (one explicit attempt)
               <select value={provider} disabled={busy || uncertain} onChange={event => {
