@@ -2,8 +2,9 @@
 import { detectDriverMode } from './driver-rights';
 import { detectConsumerCategory } from './consumer-rights-guide';
 import { detectEvidenceTopic } from './comparative-evidence';
+import { detectOpportunityIntent } from './opportunity-sources';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
+export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -23,6 +24,10 @@ export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
   driver: [
     'Stop safely before reading or touching a phone; never ignore lawful traffic directions.',
     'Open the free South African driver-rights guide for source-linked steps and official reporting contacts.',
+  ],
+  opportunity: [
+    'Choose your province and the type of jobs, internships, funding or learning opportunity you want to explore.',
+    'Open the original dated agency or programme page and confirm requirements and deadlines before applying.',
   ],
   urgent: [
     'Use official emergency services or an appropriate local help point now.',
@@ -88,6 +93,15 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     nextQuestion: 'When safely stopped, choose the relevant roadside situation in Luqi. Do not type while driving.',
     primaryPath: '/driver-rights', primaryLabel: 'Open driver rights guide',
     caution: 'General South African information, not dispatch or legal advice. Follow lawful instructions and seek help in genuine danger.',
+    bookingPreview: false,
+  },
+  opportunity: {
+    title: 'Find jobs, graduate opportunities, funding and learning',
+    detail: 'Luqi Opportunity Compass offers free official South African source links, a nine-province map and a bounded read-only publisher check. It does not invent job offers, confirm individual vacancies or apply for users.',
+    status: 'local', statusLabel: 'Free official-source directory',
+    nextQuestion: 'Choose your province and the kind of opportunity. Verify the original advertisement, eligibility and closing date.',
+    primaryPath: '/opportunities', primaryLabel: 'Open Luqi Opportunity Compass',
+    caution: 'Publisher links are not live job offers or confirmed eligibility. Never pay someone privately for a government post.',
     bookingPreview: false,
   },
   urgent: {
@@ -208,6 +222,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const kind: GuideKind =
     detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
+    detectOpportunityIntent(input) ? 'opportunity' :
     detectConsumerCategory(input) ? 'consumer' :
     detectEvidenceTopic(input) ? 'comparative' :
     (/\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight|place to stay|where to stay|where can i stay|where should i stay|stay in|stay near)\b/u.test(q)) ? 'booking' :
