@@ -106,6 +106,31 @@ async function owned(c: PoolConnection, actor: number, id: string, active = fals
   return row;
 }
 export class SovereignP2PEngine {
+  static async approvedContacts(actor: number) {
+    return transaction(actor, async (c, user) => {
+      if (eligibility(user.role) === 'verification_needed') return { contacts: [] };
+      const rows = await query(c, 'SELECT id,owner_id,peer_id,student_lock FROM luqi_p2p_circles_v1 WHERE active=1 AND (owner_id=? OR peer_id=?) ORDER BY created_at DESC LIMIT 24 FOR UPDATE', [actor, actor]);
+      const contacts = [];
+      for (const row of rows) {
+        const peer = Number(row.owner_id) === actor ? Number(row.peer_id) : Number(row.owner_id);
+        if (!Number.isSafeInteger(peer) || peer < 1 || peer === actor) continue;
+        try { await allowedPair(c, Number(row.owner_id), Number(row.peer_id), !!row.student_lock); }
+        catch (error) {
+          // Blocks, account disabling and eligibility changes hide the former
+          // contact immediately; database failures must never return stale data.
+          if (error instanceof P2PError && error.code === 'P2P_DENIED') continue;
+          throw error;
+        }
+        const [person] = await query(c, 'SELECT name FROM users WHERE id=?', [peer]);
+        if (!person) continue;
+        const name = typeof person.name === 'string'
+          ? person.name.replace(/[\p{Cc}\p{Cf}]/gu, '').trim().slice(0, 120) : '';
+        contacts.push({ circleId: row.id, userId: peer, name: name || 'Luqi member ' + peer,
+          accountActive: true as const, presence: 'not_shared' as const });
+      }
+      return { contacts };
+    });
+  }
   static async status(actor: number) {
     return transaction(actor, async (c, user) => ({ enabled: true, userId: actor, eligibility: eligibility(user.role),
       blockedPeers: (await query(c, 'SELECT peer_id FROM luqi_p2p_blocks_v1 WHERE owner_id=? LIMIT 100', [actor])).map(r=>Number(r.peer_id)),

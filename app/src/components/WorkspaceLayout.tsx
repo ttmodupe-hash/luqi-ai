@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router";
 import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
 import RouteLoadBoundary from "./RouteLoadBoundary";
+import CollaborationDock from './CollaborationDock';
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
 const ChatSidebar = lazy(() => import("./ChatSidebar"));
 import { findWorkspaceTools } from "./workspace-catalog";
@@ -14,7 +15,6 @@ captureLuqiInstallPrompt();
 
 const navigation = [
   ["/chat", "Chat"],
-  ["/p2p", "🔐 P2P Circles & Chat"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
   ["/omega-tasks", "Luqi tools"],
@@ -193,6 +193,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       </footer>
         </>
       )}
+      <CollaborationDock />
       <dialog
         ref={dialog}
         className="luqi-search-dialog"
