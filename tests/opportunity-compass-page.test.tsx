@@ -12,7 +12,7 @@ it('shows official youth and government opportunities without login, coordinates
  show();expect(screen.getByRole('heading',{name:/Opportunity Compass/})).toBeTruthy();
  expect(screen.getAllByRole('button',{name:/Select /}).length).toBe(9);
  expect(screen.getByText(/No province selected/)).toBeTruthy();
- expect(screen.getByText(/NSFAS 2027/)).toBeTruthy();
+ expect(screen.getByText('2027 NSFAS applications')).toBeTruthy();
  expect(request).not.toHaveBeenCalled();
 });
 it('selects a province without pretending sources have verified job coordinates',()=>{
