@@ -7,6 +7,10 @@ test('Luqi understands an opted-in short correction and displays safe Markdown a
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) { unexpected.push(url.origin); return route.abort(); }
+    // A single first-party GET is the visible Luqi connectivity check, not a provider call.
+    if (url.pathname === '/v1/health' && route.request().method() === 'GET') {
+      return route.fulfill({status:200,json:{status:'ok'}});
+    }
     if (url.pathname === '/v1/readiness') return route.fulfill({ json: {
       checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' },
     } });

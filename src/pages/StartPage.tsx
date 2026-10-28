@@ -54,6 +54,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> User-authored flashcards and review dates</li><li><Check aria-hidden="true" /> Export and reopen your deck</li><li><Check aria-hidden="true" /> No subscription or AI required</li></ul>
         <Link className="luqi-primary" to="/study-desk">Open the study desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-opportunities">
+        <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">SOUTH AFRICA FIRST · FREE OFFICIAL SOURCES</p>
+        <h2 id="start-opportunities">Find jobs, bursaries and youth funding.</h2>
+        <p>Explore government posts, graduate programmes, sponsorship and support through official links and a nine-province discovery map.</p>
+        <ul><li><Check aria-hidden="true" /> Direct agency links</li><li><Check aria-hidden="true" /> No assumed vacancies</li><li><Check aria-hidden="true" /> No account or AI payment</li></ul>
+        <Link className="luqi-primary" to="/opportunities">Explore opportunities <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-driver-rights">
         <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
         <p className="luqi-card-kicker">FREE · NO ACCOUNT OR AI CHARGE</p>

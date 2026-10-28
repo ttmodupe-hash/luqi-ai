@@ -102,3 +102,13 @@ describe('comparative and consumer fast-help routes', () => {
     expect(guideLuqiNeed('Study South African history for an exam')?.kind).toBe('study');
   });
 });
+
+describe('opportunity discovery routed to a real free source directory',()=>{
+ it('recognises government jobs and funding without inventing matches',()=>{
+  const r=guideLuqiNeed('Find government jobs in Gauteng');
+  expect(r?.kind).toBe('opportunity');
+  expect(r?.primaryPath).toBe('/opportunities');
+  expect(r?.detail).toMatch(/does not invent job offers/);
+  expect(guideLuqiNeed('Study South African history for an exam')?.kind).toBe('study');
+ });
+});

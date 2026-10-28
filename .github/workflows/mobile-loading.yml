@@ -51,8 +51,8 @@ jobs:
             // route and iframe stays required.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/driver-rights', '/install', '/login', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/try', '/visual-tutor']
-              : ['/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/download', '/driver-rights', '/install', '/login', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/try', '/visual-tutor'];
+              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/driver-rights', '/install', '/login', '/opportunities', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/try', '/visual-tutor']
+              : ['/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/download', '/driver-rights', '/install', '/login', '/opportunities', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/try', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),

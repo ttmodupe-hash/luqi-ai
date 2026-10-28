@@ -48,3 +48,10 @@ it('shares only a selected excerpt after report consent and stores the receipt e
  await screen.findByText(/Report stored with an audit seal/);expect(mocks.report).toHaveBeenCalledExactlyOnceWith({messageId:packet.messageId,reason:'SCAM_SOLICITATION',evidence:text,consent:true});
  expect(localStorage.getItem(P2P_STORAGE_KEY)).not.toContain(text);expect(localStorage.getItem(P2P_STORAGE_KEY)).not.toContain('7c751a93');
 });
+
+it('shows red for a disabled messaging service without claiming a member is offline',async()=>{
+ mocks.session={token:'synthetic',user:{email}};draw();
+ await screen.findByText('Messaging offline');
+ expect(screen.getByRole('status',{name:'Peer messaging connection'}).querySelector('.p2p-offline')).not.toBeNull();
+ expect(screen.getByText(/This does not reveal another member’s status/)).toBeTruthy();
+});

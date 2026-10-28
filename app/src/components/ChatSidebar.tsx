@@ -10,6 +10,7 @@ import '../chat-workspace.css';
 
 const shortcuts = [
   { path: '/chat', label: 'Luqi Chat', icon: MessageCircle },
+  { path: '/opportunities', label: 'Opportunities', icon: Compass },
   { path: '/business-desk', label: 'Business desk', icon: BriefcaseBusiness },
   { path: '/study-desk', label: 'Study desk', icon: GraduationCap },
   { path: '/content-studio', label: 'Content studio', icon: PenLine },

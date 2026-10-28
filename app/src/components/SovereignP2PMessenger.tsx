@@ -9,6 +9,7 @@ import { P2P_STORAGE_KEY,newSalt,newSecret,encode64,decode64,vaultOwner,vaultKey
 import { inspectForPredatoryScams } from '../lib/p2p-shield';
 import { askPilot,pilotAvailability } from '../lib/ai-pilot';
 import './sovereign-p2p.css';
+import ConnectionStatusBadge from './ConnectionStatusBadge';
 const localCircle=z.object({id:p2pId,secret:z.string().regex(/^[A-Za-z0-9_-]{43}$/),inviteToken:z.string().regex(/^[A-Za-z0-9_-]{43}$/),name:z.string().max(100),category:p2pCategory});
 const vaultSchema=z.object({circles:z.array(localCircle).max(24),messages:z.array(p2pMessage.extend({text:z.string().max(6000),delivery:z.enum(['accepted','uncertain']).optional()})).max(200),
   blocked:z.array(z.number().int().positive()).max(100),reports:z.array(z.object({reportId:p2pId,sha256AuditSeal:z.string().length(64),timestamp:z.string()})).max(100)}).strict();
@@ -20,6 +21,7 @@ export default function SovereignP2PMessenger() {
   const {session}=useCustomerSession();
   return <main className="p2p-shell"><header className="p2p-heading"><p className="luqi-eyebrow">PEOPLE, WITH PERMISSION</p>
     <h1>🔐 P2P Circles &amp; Chat</h1><p>Private, mutually approved peer conversations. Public circle labels never grant access.</p></header>
+    <ConnectionStatusBadge />
     {!session?<section className="p2p-card"><h2>Your own Luqi account</h2><p>Sign in to check messaging availability. No peers, invitations or messages are created automatically.</p>
       <Link className="luqi-primary" to="/login">Sign in to Luqi</Link><PresetList/></section>
       :<Messenger key={session.user.email} session={session}/>}
@@ -30,6 +32,8 @@ function Messenger({session}:{session:AccountSession}){
   const api=p2pClient(session.token);
   const [status,setStatus]=useState<P2PStatus|null>(null),[access,setAccess]=useState<VaultAccess|null>(null);
   const [passphrase,setPassphrase]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
+  const [serviceOnline,setServiceOnline]=useState<'checking'|'online'|'offline'>('checking');
+  const [autoRefresh,setAutoRefresh]=useState(false);
   const [selected,setSelected]=useState(''),[preset,setPreset]=useState(0),[customName,setCustomName]=useState('');
   const [studentLock,setStudentLock]=useState(true),[invitation,setInvitation]=useState(''),[shownInvite,setShownInvite]=useState('');
   const [text,setText]=useState(''),[verified,setVerified]=useState(false),[code,setCode]=useState('');
@@ -47,8 +51,19 @@ function Messenger({session}:{session:AccountSession}){
   async function action(work:()=>Promise<void>){if(locked.current)return;locked.current=true;setBusy(true);setNotice('');
     try{await work()}catch(e){if(alive.current)setNotice(e instanceof Error?e.message:'Action could not be confirmed.')}
     finally{locked.current=false;if(alive.current)setBusy(false)}}
-  async function refreshStatus(){const value=await api.status();if(alive.current)setStatus(value)}
-  useEffect(()=>{const check=api.status();void check.then(value=>{if(alive.current)setStatus(value)}).catch(()=>{if(alive.current)setNotice('Messaging availability could not be checked. No message was sent.')});},[session.token]);
+  async function refreshStatus(){const value=await api.status();if(alive.current){setStatus(value);setServiceOnline(value.enabled?'online':'offline')}}
+  useEffect(()=>{
+    const check=()=>{
+      if(!navigator.onLine){if(alive.current){setServiceOnline('offline');setStatus(null)}return;}
+      void api.status().then(value=>{if(alive.current){setStatus(value);setServiceOnline(value.enabled?'online':'offline')}})
+        .catch(()=>{if(alive.current){setStatus(null);setServiceOnline('offline');setNotice('Messaging availability could not be checked. No message was sent.')}});
+    };
+    const offline=()=>{if(alive.current){setStatus(null);setServiceOnline('offline')}};
+    check();
+    const clock=setInterval(()=>{if(!document.hidden)check()},60_000);
+    window.addEventListener('offline',offline);window.addEventListener('online',check);
+    return()=>{clearInterval(clock);window.removeEventListener('offline',offline);window.removeEventListener('online',check)};
+  },[session.token]);
   useEffect(()=>{let cancelled=false;setVerified(false);setCode('');setTranslationConsent(false);setTranslations({});setText('');
     if(local)void safetyCode(local.id,local.secret).then(value=>{if(alive.current&&!cancelled)setCode(value)}).catch(()=>{if(alive.current&&!cancelled)setNotice('Safety code could not be verified.');});
     return()=>{cancelled=true};},[selected,local?.secret]);
@@ -112,7 +127,23 @@ function Messenger({session}:{session:AccountSession}){
   function lock(){accessRef.current=null;setAccess(null);setText('');setTranslations({});setShownInvite('');setInvitation('');setPassphrase('');setVerified(false);setNotice('Device vault locked.');}
   const warning=inspectForPredatoryScams(text);
   const pending=activeMessages.some(m=>m.senderId===status?.userId&&m.delivery==='uncertain');
-  return <><p role="status" className="p2p-notice">{notice||(!status?'Checking messaging availability…':!status.enabled?'Peer messaging is not available on this release yet. No messages have been sent.':'Private messaging service is available.')}</p>
+  // User-enabled inbox polling only while the encrypted vault and approved
+  // circle remain open. Not a push connection or peer presence signal.
+  useEffect(()=>{
+    if(!autoRefresh||!status?.enabled||!local||!current?.active||!verified||blocked||!access)return;
+    const poll=setInterval(()=>{
+      if(document.hidden||locked.current||busy)return;
+      void action(receive);
+    },60_000);
+    return()=>clearInterval(poll);
+  },[autoRefresh,selected,status?.enabled,current?.active,local?.secret,verified,blocked,busy,access?.revision]);
+  return <>
+    <p role="status" aria-label="Peer messaging connection" className="p2p-notice">
+      <span aria-hidden="true" className={'p2p-connection-dot '+(serviceOnline==='online'?'p2p-online':serviceOnline==='offline'?'p2p-offline':'p2p-checking')}>●</span>
+      <strong>{serviceOnline==='online'?'Messaging online':serviceOnline==='offline'?'Messaging offline':'Checking messaging service'}</strong>
+      <span> · Green means the messaging service responded; red means disabled or unreachable. This does not reveal another member’s status.</span>
+    </p>
+    <p role="status" className="p2p-notice">{notice||(!status?'Checking messaging availability…':!status.enabled?'Peer messaging is not available on this release yet. No messages have been sent.':'Private messaging service is available.')}</p>
     {status&&<p>Your messaging account ID: {status.userId}. <button type="button" disabled={busy} onClick={()=>void action(refreshStatus)}>Refresh circles</button></p>}
     <div className="p2p-grid"><aside className="p2p-card"><h2>Mutual handshake circles</h2><PresetList/>
       {!eligible&&status?.enabled&&<p>Contact eligibility needs verification. Students can connect only within the same verified school cohort; adults need verified adult status.</p>}
@@ -140,6 +171,10 @@ function Messenger({session}:{session:AccountSession}){
         {current?.requestedBy&&current.ownerId===status?.userId&&!current.active&&<button disabled={busy||!verified} onClick={()=>void action(async()=>{await api.confirm(current.id);await refreshStatus()})}>Approve account {current.requestedBy}</button>}
         {current?.active&&<div className="p2p-actions"><button disabled={busy||!verified||blocked} onClick={()=>void action(receive)}>Refresh messages</button>
           <button disabled={busy||blocked} onClick={()=>void action(block)}>🚫 Block Peer</button></div>}
+        {current?.active&&<label className="p2p-refresh-option"><input type="checkbox" checked={autoRefresh} disabled={busy||blocked||!verified}
+          onChange={event=>setAutoRefresh(event.target.checked)}/>
+          Refresh approved messages every 60 seconds while this tab and encrypted vault are open. No background notifications or read receipts.</label>}
+        <p className="p2p-peer-privacy">Peer presence is not shared. No member is shown as “offline” simply because their status is private.</p>
         {blocked&&<p role="alert">This peer is blocked. Previous messages stay in the encrypted vault for your records. Incoming messages are hidden.</p>}
         <div className="p2p-stream" aria-label="Private messages">{activeMessages.map(m=>{const risk=inspectForPredatoryScams(m.text);return <article key={m.messageId} className={m.senderId===status?.userId?'p2p-mine':''}>
           <small>Account {m.senderId} · {new Date(m.timestamp).toLocaleString()} · {m.delivery==='uncertain'?'Service acceptance unconfirmed':'Accepted by service'}</small><p>{m.text}</p>

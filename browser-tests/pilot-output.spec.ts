@@ -10,6 +10,7 @@ for (const [code, status, message] of [
     await page.route('**/*', route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== new URL(baseURL!).origin) { unexpected.push('external'); return route.abort(); }
+      if (url.pathname === '/v1/health' && request.method() === 'GET') return route.fulfill({status:200,json:{status:'ok'}});
       if (url.pathname === '/v1/readiness') return route.fulfill({ json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } } });
       if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'output@example.invalid' } } });
       if (url.pathname === '/api/v1/luqi-core') {

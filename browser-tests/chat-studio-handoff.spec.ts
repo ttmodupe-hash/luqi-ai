@@ -10,6 +10,10 @@ test('approved toddler gravity idea flows from Luqi Chat into a real 30-second l
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) { requests.push(url.origin); return route.abort(); }
+    // A single first-party GET is the visible Luqi connectivity check, not a provider call.
+    if (url.pathname === '/v1/health' && route.request().method() === 'GET') {
+      return route.fulfill({status:200,json:{status:'ok'}});
+    }
     if (url.pathname === '/v1/readiness') return route.fulfill({
       json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } },
     });
@@ -86,6 +90,10 @@ test('a confirmed video reply does not create a video until separately approved'
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) return route.abort();
+    // A single first-party GET is the visible Luqi connectivity check, not a provider call.
+    if (url.pathname === '/v1/health' && route.request().method() === 'GET') {
+      return route.fulfill({status:200,json:{status:'ok'}});
+    }
     if (url.pathname === '/v1/readiness') return route.fulfill({ json: {
       checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' },
     } });
