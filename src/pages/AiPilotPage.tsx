@@ -347,7 +347,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {region !== 'PAN_AFRICAN_AU' && <label><input type="checkbox" checked={shareRegion} disabled={busy}
             onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
           <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
-          <p>20 provider attempts per account per UTC day, maximum 512 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
+          <p>20 provider attempts per account per UTC day, maximum 1024 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
           <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. AI replies are not automatically saved as private notes or long-term memories.</p>
           <p>Provider acknowledgement lasts for this signed-in tab only. Optional notes, country and conversation context require separate approval for every request.</p>
           <Link to="/privacy">Privacy and provider information</Link>
@@ -386,7 +386,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       </button>
       {!checking && !available && <p>Your sign-in and question stay here while you check again. This check does not send a question.</p>}
     </div>
-    <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 512 tokens.</p>
+    <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 1024 tokens.</p>
     {notice && <p role="alert">{notice}</p>}
     {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); }} /> : <>
       <section><p>Signed in as {session.user.email}.</p>
