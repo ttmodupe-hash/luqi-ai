@@ -191,7 +191,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       } else if (code === 'AI_RESPONSE_BLOCKED') {
         setNotice('The provider declined the request or withheld its reply. No further provider was tried after that decision. The attempt may still count toward your allowance.');
       } else if (code === 'AI_REPLY_INCOMPLETE') {
-        setNotice('The provider stopped before completing a reply. Unfinished text was not shown and no automatic continuation was requested. The attempt may still count toward your allowance. Try a shorter question.');
+        setNotice('The provider stopped before completing a reply. Unfinished text was not shown and no automatic continuation was requested. The attempt may still count toward your allowance. You can ask for a brief first part in a new question.');
       } else if (code === 'AI_RESPONSE_INVALID') {
         setNotice('The provider reply could not be verified. It was not shown or retried automatically. The attempt may still count toward your allowance.');
       } else if (code === 'AI_USER_DAILY_QUOTA_EXHAUSTED') setNotice('Your daily allowance of 20 provider attempts has been reached. Try another UTC day.');
