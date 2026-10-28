@@ -1,5 +1,5 @@
-/** Durable, fail-closed monthly AI spend reservations for pilot chat only.
- * Reserves a deliberately padded 10 US cents BEFORE each text-only call.
+/** Durable, fail-closed monthly AI spend reservations for pilot chat and the bounded visual tutor.
+ * Reserves a deliberately padded 10 US cents BEFORE each bounded provider call.
  * This is a conservative application allocation, not an external billing cap.
  * Uses atomic MySQL row locking across app replicas. Failed calls retain their
  * reservation, to avoid double-spend after ambiguous network failures.

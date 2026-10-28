@@ -1,4 +1,4 @@
-/** The sole paid HTTP entrypoint: authenticate, bound, validate, then reserve. */
+/** The text-only paid HTTP entrypoint: authenticate, bound, validate, then reserve. */
 import { Hono } from 'hono';
 import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { bodyLimit } from 'hono/body-limit';

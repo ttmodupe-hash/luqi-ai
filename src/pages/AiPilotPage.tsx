@@ -234,7 +234,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
           <h2>What can Luqi help you with?</h2>
           <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning.</p>
-          <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
+          <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> Voice, other file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
           {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
             {[
               ['Study with Luqi', 'Explain a useful study technique with a simple example.'],
@@ -374,7 +374,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
     <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with Luqi</Heading>
     <p>Chat with Luqi for help with writing, studying, ideas and planning. Review the answer: AI can make mistakes.</p>
-    <p>Voice, file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
+    <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> Voice, other file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
     {languageControl}
     {personalWelcome}
     <p role="status">{checking ? 'Checking AI configuration…' : available
