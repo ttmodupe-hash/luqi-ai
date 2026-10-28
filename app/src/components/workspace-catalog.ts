@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "spatial-vision", title: "Luqi Spatial Vision & 3D Lab", category: "Crop, explain and explore images",
+    description: "Prepare a small image locally, choose Gemini or experimental OpenAI, and review model-estimated boxes. Includes an illustrative 2.5D brightness viewer, not true depth reconstruction.",
+    status: "Limited trial · sign-in and image consent", ready: true, path: "/spatial-vision", icon: "academy",
+  },
+  {
     id: "visual-tutor", title: "Visual tutor", category: "Select a photo region and learn",
     description: "Crop a JPEG or PNG locally and ask for an explanation in your chosen language. Requires sign-in, per-image agreement and the shared AI allowance.",
     status: "Limited trial · sign-in required", ready: true, path: "/visual-tutor", icon: "academy",
