@@ -120,12 +120,12 @@ export default function VisualTutorPage() {
         <form onSubmit={event => { event.preventDefault(); void submit(); }}>
           <label>Your question<textarea className="luqi-access-input" maxLength={2000} disabled={busy}
             value={question} onChange={event => setQuestion(event.target.value)} placeholder="What is visible here, and how does it work?" /></label>
-          <label>Reply language<select className="luqi-access-input" disabled={busy} value={language}
+          <label htmlFor="visual-language">Reply language</label><select id="visual-language" className="luqi-access-input" disabled={busy} value={language}
             onChange={event => { setLanguage(event.target.value); setConsent(false); }}>
             {LANGUAGES.map(item => <option key={item.code} value={item.name}>{item.nativeName}</option>)}
-          </select></label>
+          </select>
           <p>Only this preview and your question go to Google Gemini. Luqi does not save this photo or reply to your notes. Provider processing follows Google's API terms; no zero-retention promise is made. Language accuracy can vary.</p>
-          <p>One attempt reserves $0.10 from your existing AI allowance, including failures. This is a spending reservation, not the settled provider charge.</p>
+          <p>Each attempt counts toward your daily AI request limit and reserves $0.10 from Luqi's shared monthly AI budget, including failures. Provider charges are tracked separately.</p>
           <label className="luqi-visual-consent"><input type="checkbox" checked={consent} disabled={busy || uncertain}
             onChange={event => setConsent(event.target.checked)} />I agree to send this selected image and question to Google Gemini for this request.</label>
           <button className="luqi-primary" disabled={!ready || !consent || !question.trim() || busy || uncertain}>{busy ? 'Explaining…' : 'Explain selected image'}</button>
