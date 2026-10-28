@@ -171,3 +171,82 @@ export default function KhoroSpatialVisionLab() {
             <button type="button" disabled={busy} onClick={clearImage}>Clear image</button>
           </div>
         </div>
+
+        {preview && <div className="luqi-spatial-preview">
+          <h2>Review exactly what would be sent</h2>
+          <div className="luqi-spatial-image luqi-spatial-preview-image">
+            <img src={preview} alt="Selected local JPEG preview for optional provider analysis" />
+            {reply?.analysis.entities.map((entity, index) => {
+              const [ymin, xmin, ymax, xmax] = entity.box_2d;
+              return <div key={index}
+                className={'luqi-spatial-box ' + (entity.category === 'IMEI_REJECTED' || entity.category === 'CONTRACT_TERM'
+                  ? 'luqi-spatial-box-caution' : 'luqi-spatial-box-info')}
+                style={{ top: `${ymin / 10}%`, left: `${xmin / 10}%`,
+                  width: `${(xmax - xmin) / 10}%`, height: `${(ymax - ymin) / 10}%` }}
+                title={entity.label} aria-hidden="true" />;
+            })}
+          </div>
+          <p>Rectangles are model suggestions. A green box is not verified OCR; a red box is not a legal finding.</p>
+          <button type="button" className="luqi-spatial-relief-toggle"
+            onClick={() => setRelief(value => !value)}>{relief ? 'Hide 2.5D illustration' : 'Explore 2.5D brightness relief'}</button>
+          {relief && <div className="luqi-spatial-relief">
+            <canvas ref={reliefRef} width={640} height={380} role="img"
+              aria-label="Illustrative brightness-based rotatable point cloud, not measured depth" />
+            <div className="luqi-spatial-relief-controls">
+              <label>Tilt X ({tilt}°)<input type="range" min="-60" max="60" value={tilt}
+                onChange={event => setTilt(Number(event.target.value))} /></label>
+              <label>Spin Y ({spin}°)<input type="range" min="-75" max="75" value={spin}
+                onChange={event => setSpin(Number(event.target.value))} /></label>
+            </div>
+            <p>This illustration uses pixel brightness, not a learned depth model. Do not use it to measure distances or identify damage.</p>
+          </div>}
+        </div>}
+      </section>}
+      {preview && <form className="luqi-spatial-send" onSubmit={event => { event.preventDefault(); void submit(); }}>
+        <h2>Ask Luqi about this crop</h2>
+        <label>Question
+          <textarea maxLength={500} value={question} disabled={busy || uncertain} rows={2}
+            onChange={event => { setQuestion(event.target.value); setConsent(false); }} />
+        </label>
+        {mode === 'SERIAL_AUDIT' && <label className="luqi-spatial-check">
+          <input type="checkbox" checked={serialConfirmed} disabled={busy || uncertain || whole(crop)}
+            onChange={event => { setSerialConfirmed(event.target.checked); setConsent(false); }} />
+          I reviewed the crop and excluded visible IMEI and other private identifiers.
+          {whole(crop) && ' Select a smaller region first.'}
+        </label>}
+        <p>The selected JPEG and question go only to your chosen provider after Send. No automatic fallback or storage in Luqi notes. An image containing an IMEI could still be sent if you crop incorrectly.</p>
+        <p>Each attempt uses the existing shared daily allowance and reserves $0.10 from the selected provider's approved application allocation. This is not the actual provider invoice.</p>
+        <label className="luqi-spatial-check"><input type="checkbox" checked={consent} disabled={busy || uncertain}
+          onChange={event => setConsent(event.target.checked)} />
+          I agree to send this selected crop and question to {provider === 'gemini' ? 'Gemini' : 'OpenAI'} for this request.
+        </label>
+        <button type="submit" className="luqi-spatial-send-button" disabled={!sendReady}>
+          {busy ? 'Analysing…' : 'Analyse selected crop'}
+        </button>
+        {busy && <button type="button" onClick={() => {
+          epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+          setBusy(false); setUncertain(true);
+          setNotice('Cancelled locally. A provider attempt may still count toward your allowance.');
+        }}>Cancel request</button>}
+      </form>}
+      {uncertain && <button type="button" className="luqi-spatial-reset" onClick={() => {
+        setUncertain(false); setConsent(false); setSerialConfirmed(false);
+        setNotice('Review the crop and approve a new attempt. No request is retried automatically.');
+      }}>Prepare a new attempt</button>}
+      {reply && <section className="luqi-spatial-results" aria-label="Model-estimated spatial analysis">
+        <h2>Luqi's image reading</h2>
+        <p>Provider: {reply.provider} · {reply.provider_model}. Model-estimated boxes are not independently verified.</p>
+        <h3>What is visible</h3><SafePilotText text={reply.analysis.summary} />
+        <h3>Explanation and next checks</h3><SafePilotText text={reply.analysis.guidance} />
+        <h3>Suggested regions ({reply.analysis.entities.length})</h3>
+        <ul>{reply.analysis.entities.map((entity, index) => <li key={index}>
+          <strong>{entity.label}</strong> · {entity.category.replaceAll('_', ' ')}
+          <p>{entity.insight}</p>
+        </li>)}</ul>
+        <p><strong>Uncertainty:</strong> {reply.analysis.limitations}</p>
+      </section>}
+      {notice && <p role="status" className="luqi-spatial-notice">{notice}</p>}
+    </>}
+    <footer><Link to="/visual-tutor">Visual tutor</Link> · <Link to="/chat">Luqi Chat</Link> · <Link to="/privacy">Privacy</Link></footer>
+  </main>;
+}
