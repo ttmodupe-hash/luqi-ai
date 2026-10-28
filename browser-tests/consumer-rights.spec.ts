@@ -50,3 +50,14 @@ test('consumer story stays local and options link to original regulators on a 32
     .toBeLessThanOrEqual(viewport.width + 1);
   expect(unexpected, 'consumer complaint preparation must never post user stories to an API').toEqual([]);
 });
+
+test('consumer first steps do not require a personal story or provider request', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
+  await page.goto('/#/consumer-rights');
+  await page.getByRole('region', { name: 'Quick consumer help — three first steps' })
+    .getByRole('button', { name: 'Online order / suspected scam' }).click();
+  await expect(page.getByRole('heading', { name: 'Late online delivery or suspected scam — three first steps' })).toBeVisible();
+  await expect(page.getByText(/Save the advertised delivery promise/)).toBeVisible();
+  expect(posts).toEqual([]);
+});

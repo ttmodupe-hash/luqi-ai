@@ -98,3 +98,14 @@ it('refuses to prepare detailed guidance after its source review has expired', (
   expect(screen.getByRole('link', { name: /National Consumer Commission.*Lodging/ })).toBeTruthy();
   expect(requests).not.toHaveBeenCalled();
 });
+
+it('shows source-aware first-step guidance without asking for a personal story or network access', () => {
+  show();
+  const section = screen.getByRole('region', { name: 'Quick consumer help — three first steps' });
+  expect(within(section).getAllByRole('listitem')).toHaveLength(3);
+  fireEvent.click(within(section).getByRole('button',{name:'Mobile / internet billing'}));
+  expect(within(section).getByText(/Report the dispute to the licensed service provider/)).toBeTruthy();
+  expect((screen.getByLabelText('What kind of problem is it?') as HTMLSelectElement).value)
+    .toBe('TELCO_BILLING_DISPUTE');
+  expect(requests).not.toHaveBeenCalled();
+});

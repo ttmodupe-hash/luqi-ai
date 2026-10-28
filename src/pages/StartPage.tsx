@@ -70,11 +70,19 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Direct links to original sources</li><li><Check aria-hidden="true" /> Shows when source summaries need rechecking</li><li><Check aria-hidden="true" /> No personal story, AI call or submission required</li></ul>
         <Link className="luqi-primary" to="/rights-guide">Open the rights guide <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-comparative-evidence">
+        <span className="luqi-tool-icon luqi-icon-study"><GraduationCap aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">FREE SOURCE-LINKED READING · NO ACCOUNT</p>
+        <h2 id="start-comparative-evidence">Compare faith, history and science.</h2>
+        <p>Explore seven source-linked questions across religion, African heritage, manuscripts and scientific methods without a paid model request.</p>
+        <ul><li><Check aria-hidden="true" /> Four distinct evidence layers</li><li><Check aria-hidden="true" /> Direct museum and academic citations</li><li><Check aria-hidden="true" /> No scoring or judging religions</li></ul>
+        <Link className="luqi-primary" to="/comparative-evidence">Open comparative evidence guide <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-consumer-rights">
         <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
         <p className="luqi-card-kicker">FREE LOCAL GUIDANCE · NO AI CALL OR ACCOUNT</p>
         <h2 id="start-consumer-rights">Understand your consumer options.</h2>
-        <p>Describe an anonymised consumer concern, choose its category, review official complaint sources and prepare an editable factual message.</p>
+        <p>Read three immediate steps before sharing a personal story, then find official complaint sources and optionally prepare an editable factual message.</p>
         <ul><li><Check aria-hidden="true" /> No story uploads or automatic email</li><li><Check aria-hidden="true" /> Sector-specific routes and source links</li><li><Check aria-hidden="true" /> General information, not a legal verdict</li></ul>
         <Link className="luqi-primary" to="/consumer-rights">Open the consumer guide <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
