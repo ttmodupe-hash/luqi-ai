@@ -96,7 +96,7 @@ export default function ContentStudioPage() {
     if (active.current || draftBusy) return;
     let stream: MediaStream | undefined;
     try {
-      storyboardJson(scenes, format, length, gravity, sceneSeconds, motion);
+      storyboardJson(scenes, format, length, gravity, sceneSeconds, motion, yaw);
       if (!canvas.current?.captureStream || typeof MediaRecorder === 'undefined') throw new Error('Video export is unavailable in this browser. Download the storyboard and script instead.');
       const mimeType = browserRecordingType();
       if (!mimeType) throw new Error('No supported video encoder. Download the storyboard and script instead.');
