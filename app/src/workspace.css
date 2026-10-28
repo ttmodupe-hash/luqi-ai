@@ -569,7 +569,12 @@
   background: #ebeee4;
   color: #5c674f;
   border-radius: 20px;
-  white-space: nowrap;
+  /* Long pilot labels must wrap beside the fixed-size tool icon at 320px. */
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-align: right;
 }
 .luqi-status-ready {
   background: #edf3e3;
