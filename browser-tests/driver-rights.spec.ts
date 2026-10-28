@@ -57,15 +57,18 @@ test('signed-in roadside wording produces a 3-step local card, never a paid requ
   await page.route('**/v1/readiness', route => route.fulfill({
     json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } },
   }));
+  await page.route('**/api/v1/companion/conversations?*', route =>
+    route.fulfill({ json: { conversations: [] } }));
   page.on('request', request => {
     if (request.method() === 'POST' && /\/api\/v1\/luqi-core/.test(request.url())) paid.push(request.url());
   });
-  await page.goto('/#/login');
+  // Use the same signed-in Notes -> Chat navigation accepted by Luqi's
+  // existing single-login tests, never a page reload or moving login link.
+  await page.goto('/#/companion');
   await page.getByLabel('Email', { exact: true }).fill('driver.fixture@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('synthetic-test-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  // Customer sessions are intentionally tab-memory only. Follow the real SPA
-  // navigation path: a full page.goto would erase the test login on reload.
+  await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
   await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
   await expect(page).toHaveURL(/#\/chat$/);
   await page.getByLabel('Your question').fill('Luqi, I am being pulled over');
