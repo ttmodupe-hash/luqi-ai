@@ -11,18 +11,19 @@ import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-route
 
 // Pages
 import Home from "./pages/Home";
-import StartPage from "./pages/StartPage";
-import PricingPage from "./pages/PricingPage";
+const StartPage = lazy(() => import("./pages/StartPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import ContactPage from "./pages/ContactPage";
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-const OmegaTasksPage = lazy(() => import('./pages/OmegaTasksPage'));
+import OmegaTasksPage from './pages/OmegaTasksPage';
 
 // Load optional tools only when their route is rendered. Keep account, notes,
-// start/help and release-observed core pages available in the initial bundle.
+// the release-observed core pages available in the initial bundle. Informational
+// help, privacy, and pricing routes load only when visited.
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
