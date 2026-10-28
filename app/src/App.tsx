@@ -17,7 +17,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-import OmegaTasksPage from "./pages/OmegaTasksPage";
+const OmegaTasksPage = lazy(() => import('./pages/OmegaTasksPage'));
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.
