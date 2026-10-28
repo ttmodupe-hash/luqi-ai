@@ -35,18 +35,26 @@ export function readApprovedPilotCaps(env: NodeJS.ProcessEnv = process.env) {
   throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
 }
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
+/** A longer text reply reserves twice the existing short/visual attempt amount.
+ * These are conservative ledger reservations, NOT settled provider invoices. */
+export const TEXT_REPLY_RESERVE_CENTS = 20;
 /** Read the selected provider cap at reservation time. Never exceed it. */
 export function hasPilotReservationCapacity(
-  spentCents: number, provider: PilotProvider, env: NodeJS.ProcessEnv = process.env
+  spentCents: number, provider: PilotProvider, env: NodeJS.ProcessEnv = process.env,
+  reservationCents: number = RESERVE_PER_ATTEMPT_CENTS
 ): boolean {
+  if (reservationCents !== RESERVE_PER_ATTEMPT_CENTS &&
+      reservationCents !== TEXT_REPLY_RESERVE_CENTS) {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
   if (!Number.isSafeInteger(spentCents) || spentCents < 0) {
     throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
   }
-  return spentCents + RESERVE_PER_ATTEMPT_CENTS <= readApprovedPilotCaps(env)[provider];
+  return spentCents + reservationCents <= readApprovedPilotCaps(env)[provider];
 }
 export const MAX_INPUT_CHARS = MAX_PILOT_INPUT_CHARS;
 export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
-export const MAX_OUTPUT_TOKENS = 512;
+export const MAX_OUTPUT_TOKENS = 1024;
 
 export function utcDay(now: Date = new Date()): string {
   if (Number.isNaN(now.getTime())) throw new Error("Invalid clock");
@@ -103,7 +111,8 @@ function isTransientSqlConflict(error: unknown): boolean {
 }
 
 async function reserveOnce(
-  provider: PilotProvider, userId: number, period: string, day: string
+  provider: PilotProvider, userId: number, period: string, day: string,
+  reservationCents: number
 ): Promise<void> {
   let conn: Awaited<ReturnType<Pool["getConnection"]>> | undefined;
   let begun = false;
@@ -141,7 +150,7 @@ async function reserveOnce(
     if (!Number.isSafeInteger(spent) || spent < 0) {
       throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
     }
-    if (!hasPilotReservationCapacity(spent, provider)) {
+    if (!hasPilotReservationCapacity(spent, provider, process.env, reservationCents)) {
       throw new PilotBlocked("AI_PROVIDER_BUDGET_EXHAUSTED");
     }
 
@@ -150,7 +159,7 @@ async function reserveOnce(
       [day, userId]);
     await conn.execute(
       "UPDATE ai_pilot_monthly_spend SET reserved_cents=reserved_cents+? WHERE month_utc=? AND provider=?",
-      [RESERVE_PER_ATTEMPT_CENTS, period, provider]);
+      [reservationCents, period, provider]);
     await conn.commit();
     begun = false;
   } catch (error) {
@@ -172,9 +181,14 @@ async function reserveOnce(
 
 /** Reserve before any external AI invocation; never refund a possible spend. */
 export async function reservePilotAttempt(
-  provider: PilotProvider, userId: number, now: Date = new Date()
+  provider: PilotProvider, userId: number, now: Date = new Date(),
+  reservationCents: number = RESERVE_PER_ATTEMPT_CENTS
 ): Promise<void> {
   assertPilotEnabled();
+  if (reservationCents !== RESERVE_PER_ATTEMPT_CENTS &&
+      reservationCents !== TEXT_REPLY_RESERVE_CENTS) {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
   if (provider !== "gemini" && provider !== "openai") {
     throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
   }
@@ -185,7 +199,7 @@ export async function reservePilotAttempt(
   const day = utcDay(now);
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      await reserveOnce(provider, userId, period, day);
+      await reserveOnce(provider, userId, period, day, reservationCents);
       return;
     } catch (error) {
       if (!(error instanceof TransientReservationConflict)) throw error;
