@@ -37,6 +37,7 @@ const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
+const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
 const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
@@ -76,6 +77,7 @@ export default function App() {
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
+        <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
         <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
         {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
