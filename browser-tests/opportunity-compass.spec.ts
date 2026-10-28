@@ -11,7 +11,7 @@ test('Opportunity Compass is useful at 320px without private data or unapproved 
   await page.getByRole('button',{name:'Select Gauteng'}).click();
   await expect(page.getByRole('status').filter({hasText:'Selected Gauteng'})).toBeVisible();
   await page.getByLabel('Opportunity category').selectOption('sponsorship');
-  await expect(page.getByText('National Arts Council calls')).toBeVisible();
+  await expect(page.getByRole('heading',{name:'National Arts Council calls'})).toBeVisible();
   await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   expect(posts).toEqual([]);
