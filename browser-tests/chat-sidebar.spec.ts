@@ -60,7 +60,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   });
   await page.route('**/api/v1/luqi-core', route => {
     replies++;
-    expect(route.request().postDataJSON()).toEqual({ user_input: 'A synthetic first question' });
+    expect(route.request().postDataJSON()).toEqual({ language: 'English', user_input: 'A synthetic first question' });
     return route.fulfill({ json: { status: 'success', response: 'Synthetic Luqi confirmed answer',
       provider: 'gemini', provider_model: 'fixture-model' } });
   });
@@ -71,7 +71,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   await page.getByLabel('Password', { exact: true }).fill('Fixture-passphrase-only-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Your question').fill('A synthetic first question');
-  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByText('Synthetic Luqi confirmed answer')).toBeVisible();
   const rail = page.getByRole('complementary', { name: 'Luqi Chat sidebar' });
@@ -81,7 +81,8 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   await expect(page.getByText('Synthetic Luqi confirmed answer')).toHaveCount(0);
   await recent.getByRole('button', { name: 'A synthetic first question', exact: true }).click();
   await expect(page.getByText('Synthetic Luqi confirmed answer')).toBeVisible();
-  await expect(page.getByRole('checkbox', { name: /I understand this question may go/ })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /I understand AI text may go/ })).toHaveCount(0);
+  await expect(page.getByText(/AI text sharing approved for this signed-in tab/)).toBeVisible();
   expect(replies).toBe(1);
   expect(logins).toBe(1);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);

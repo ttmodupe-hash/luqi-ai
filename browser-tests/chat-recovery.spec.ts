@@ -17,7 +17,7 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
     if (url.pathname === '/api/v1/luqi-core') {
       calls++;
       if (calls === 2) return route.abort();
-      expect(request.postDataJSON()).toEqual({ user_input: question });
+      expect(request.postDataJSON()).toEqual({ language: 'English', user_input: question });
       return route.fulfill({ json: { status: 'success', response: 'Synthetic confirmed study reply',
         provider: 'gemini', provider_model: 'fixture-model' } });
     }
@@ -34,12 +34,12 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Your question', { exact: true }).fill(question);
   await expect(page.getByLabel('Your question', { exact: true })).toHaveValue(question);
-  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
   expect(calls).toBe(0);
 
   available = true;
-  await page.getByRole('button', { name: 'Check availability' }).click();
+  await page.getByRole('button', { name: 'Retry readiness' }).click();
   await expect(page.getByRole('button', { name: 'Send question' })).toBeEnabled();
   await expect(page.getByLabel('Your question', { exact: true })).toHaveValue(question);
   expect(checks).toBe(2); expect(calls).toBe(0);
@@ -52,8 +52,7 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByText(/The reply could not be confirmed/)).toBeVisible();
   await expect(page.getByText('Synthetic confirmed study reply', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Check availability' }).click();
-  await expect(page.getByText(/AI provider configured/)).toBeVisible();
+  await expect(page.getByText(/AI text gateway configured/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
   expect(calls).toBe(2);
 
@@ -61,7 +60,8 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
   await expect(page.getByLabel('Your question', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Your question', { exact: true })).toHaveValue('');
   await expect(page.getByText('Synthetic confirmed study reply', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('checkbox', { name: /I understand this question may go/ })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /I understand AI text may go/ })).toHaveCount(0);
+  await expect(page.getByText(/AI text sharing approved for this signed-in tab/)).toBeVisible();
   expect(calls).toBe(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.getByLabel('Your question', { exact: true }).scrollIntoViewIfNeeded();

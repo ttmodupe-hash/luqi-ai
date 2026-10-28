@@ -10,7 +10,7 @@ export function withCustomerSessionLock<T>(work: () => Promise<T>): Promise<T> {
 export const ACCOUNT_REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_ACCOUNT_RESPONSE_BYTES = 32 * 1024;
 export type AccountPath = '/api/v1/auth/login' | '/api/v1/auth/register';
-type AccountCredentials = { email: string; password: string; rememberMe?: boolean };
+type AccountCredentials = { email: string; password: string; name?: string; rememberMe?: boolean };
 type AccountResult = { ok: true; status: number; body: unknown } |
   { ok: false; status: number; retryAfter?: number };
 
@@ -37,6 +37,8 @@ export async function requestAccountJson(
       headers: { 'Content-Type': 'application/json', Accept: 'application/json',
         'X-Luqi-Session-Intent': path === '/api/v1/auth/login' ? 'login' : 'signup' },
       body: JSON.stringify({ email: credentials.email, password: credentials.password,
+        ...(path === '/api/v1/auth/register' && typeof credentials.name === 'string' && credentials.name.trim()
+          ? { name: credentials.name.trim().slice(0, 120) } : {}),
         ...(credentials.rememberMe === true ? { rememberMe: true } : {}) }),
     });
     const discard = () => { void response.body?.cancel().catch(() => {}); };

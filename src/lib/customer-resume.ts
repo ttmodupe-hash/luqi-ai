@@ -10,7 +10,7 @@ const INTENT = 'X-Luqi-Session-Intent';
 const MAX_BYTES = 8192;
 const TIMEOUT_MS = 12_000;
 const account = z.object({ token: z.string().min(1).max(4096),
-  user: z.object({ email: z.string().email().max(254) }) });
+  user: z.object({ email: z.string().email().max(254), name: z.string().max(120).optional() }) });
 export type RestoredCustomerSession = z.infer<typeof account>;
 
 export function hasCustomerResumeHint(): boolean {

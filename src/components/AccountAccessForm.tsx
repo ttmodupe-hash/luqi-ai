@@ -6,6 +6,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai' | 'account'; onAuthenticated: (session: AccountSession) => void;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -43,7 +44,9 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     const version = epoch.current;
     const controller = new AbortController(); pending.current = controller;
     try {
-      const result = await (mode === 'signup' ? signUp : signIn)(email, password, controller.signal, rememberMe);
+      const result = await (mode === 'signup'
+        ? signUp(email, password, controller.signal, name, rememberMe)
+        : signIn(email, password, controller.signal, rememberMe));
       if (version !== epoch.current) return;
       setPassword(''); setConfirmation('');
       onAuthenticated(result);
@@ -71,6 +74,9 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     <p>{purpose === 'account' ? 'Use one Luqi account for Chat, Omega task history and optional private notes. Signing in does not automatically send a question to an AI provider.' : purpose === 'ai' ? 'Use your Luqi account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
+      {mode === 'signup' && <label className="block">What should Luqi call you? (optional)
+        <input className="luqi-access-input" autoComplete="given-name" maxLength={120} disabled={busy}
+          value={name} onChange={event => setName(event.target.value)} /></label>}
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"
         inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
         maxLength={254} required disabled={busy} value={email} onChange={event => setEmail(event.target.value)} /></label>

@@ -7,7 +7,7 @@ import { customerResumeRoutes, customerSessionDigest, issueCustomerResumeSession
 const mocks = vi.hoisted(() => ({ db: vi.fn() }));
 vi.mock('../api/queries/connection', () => ({ getPersistentDb: mocks.db }));
 const HASH = '$2b$12$zfjKKga9OGRJtq.1Nn.2BuUuc8UEQsjAq6/dT/IJt7RQzAsPp5yGO';
-const USER = { email: 'pilot@example.invalid', passwordHash: HASH, isActive: true };
+const USER = { email: 'pilot@example.invalid', name: 'Naledi', passwordHash: HASH, isActive: true };
 let rows: any[] = [], inserted: any[], updates: any[];
 function storage(): any {
   const selection = { for: async () => rows, then: (yes: any, no: any) => Promise.resolve(rows).then(yes, no) };
@@ -81,7 +81,9 @@ describe('device-session security boundaries', () => {
     expect(inserted[1].tokenDigest).not.toBe(inserted[0].tokenDigest);
     expect(inserted[1].absoluteExpiresAt).toEqual(inserted[0].absoluteExpiresAt);
     expect(inserted[1].rotation).toBe(1);
-    expect(JSON.stringify(await response.json())).not.toContain(value.cookie);
+    const body = await response.json();
+    expect(body.user).toEqual({ email: USER.email, name: 'Naledi' });
+    expect(JSON.stringify(body)).not.toContain(value.cookie);
   });
   it.each(['rotatedAt', 'revokedAt', 'absoluteExpiresAt', 'idleExpiresAt'])('rejects %s and revokes its family', async field => {
     const value = await issued(); rows[0].session[field] = new Date(Date.now() - 1000);

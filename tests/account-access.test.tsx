@@ -169,6 +169,15 @@ it('reports invalid account schema without retaining token-bearing validation er
   await expect(signUp(email, password)).rejects.toThrow('Account response could not be verified');
 });
 
+it('registers the optional preferred name and retains the returned account name', async () => {
+  setup();
+  fireEvent.change(screen.getByLabelText('What should Luqi call you? (optional)'), { target: { value: 'Naledi' } });
+  request.mockResolvedValue(reply({ ...session, user: { email, name: 'Naledi' } }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create account', exact: true }));
+  await waitFor(() => expect(accepted).toHaveBeenCalled());
+  expect(JSON.parse(request.mock.calls[0][1].body).name).toBe('Naledi');
+  expect(accepted.mock.calls[0][0].user.name).toBe('Naledi');
+});
 
 it('requires an unchecked explicit private-device choice before requesting persistence', async () => {
   request.mockResolvedValue(reply(session));

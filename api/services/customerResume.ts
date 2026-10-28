@@ -127,7 +127,7 @@ customerResumeRoutes.post('/session', async c => {
   try {
     const db = await getPersistentDb();
     const issued = await db.transaction(async (tx: any) => {
-      const [row] = await tx.select({ session: customerDeviceSessions, email: users.email,
+      const [row] = await tx.select({ session: customerDeviceSessions, email: users.email, name: users.name,
         passwordHash: users.passwordHash, isActive: users.isActive })
         .from(customerDeviceSessions).innerJoin(users, eq(customerDeviceSessions.userId, users.id))
         .where(eq(customerDeviceSessions.tokenDigest, cookie.digest)).limit(1).for('update');
@@ -149,11 +149,12 @@ customerResumeRoutes.post('/session', async c => {
       await tx.update(customerDeviceSessions).set({ rotatedAt: now, lastUsedAt: now })
         .where(eq(customerDeviceSessions.tokenDigest, cookie.digest));
       await tx.insert(customerDeviceSessions).values(next.row);
-      return { ...next, email: row.email };
+      return { ...next, email: row.email, name: row.name };
     });
     if (!issued) { clearResumeCookies(c); return c.json({ code: 'AUTH_REQUIRED' }, 401); }
     setResumeCookies(c, issued.cookie, issued.absoluteExpiresAt);
-    return c.json({ token: issued.token, user: { email: issued.email } });
+    return c.json({ token: issued.token, user: { email: issued.email,
+      ...(issued.name ? { name: issued.name.slice(0, 120) } : {}) } });
   } catch {
     // A failed commit acknowledgement may follow a successful rotation. No retry.
     return c.json({ code: 'AUTH_UNAVAILABLE' }, 503);

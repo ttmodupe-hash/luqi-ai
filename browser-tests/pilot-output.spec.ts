@@ -13,7 +13,7 @@ for (const [code, status, message] of [
       if (url.pathname === '/v1/readiness') return route.fulfill({ json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } } });
       if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'output@example.invalid' } } });
       if (url.pathname === '/api/v1/luqi-core') {
-        calls++; expect(request.postDataJSON()).toEqual({ user_input: 'Synthetic question' });
+        calls++; expect(request.postDataJSON()).toEqual({ language: 'English', user_input: 'Synthetic question' });
         return route.fulfill({ status, json: { status: 'unavailable', code, message: 'PRIVATE-DIAGNOSTIC', response: 'PRIVATE-PARTIAL' } });
       }
       if (request.method() !== 'GET' || /^\/(api|v1)\//.test(url.pathname)) { unexpected.push(url.pathname); return route.abort(); }
@@ -26,7 +26,7 @@ for (const [code, status, message] of [
     await page.getByLabel('Password', { exact: true }).fill('Fixture-Password-2026!');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByLabel('Your question', { exact: true }).fill('Synthetic question');
-    await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+    await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
     await page.getByRole('button', { name: 'Send question' }).click();
     await expect(page.getByRole('alert')).toContainText(message);
     await expect(page.getByRole('alert')).toContainText('attempt may still count');

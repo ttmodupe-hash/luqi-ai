@@ -2,6 +2,7 @@ import { useEffect,useRef,useState } from 'react';
 import { Link } from 'react-router';
 import { z } from 'zod';
 import { useCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import type { AccountSession } from '../lib/private-conversations';
 import { P2P_PRESETS,p2pCategory,p2pId,p2pMessage,type P2PStatus,type P2PCircle,type P2PMessagePacket } from '../../contracts/p2p';
 import { p2pClient } from '../lib/p2p-client';
@@ -22,7 +23,7 @@ export default function SovereignP2PMessenger() {
     <h1>🔐 P2P Circles &amp; Chat</h1><p>Private, mutually approved peer conversations. Public circle labels never grant access.</p></header>
     {!session?<section className="p2p-card"><h2>Your own Luqi account</h2><p>Sign in to check messaging availability. No peers, invitations or messages are created automatically.</p>
       <Link className="luqi-primary" to="/login">Sign in to Luqi</Link><PresetList/></section>
-      :<Messenger key={session.user.email} session={session}/>}
+      :<Messenger key={customerSessionBoundary(session)} session={session}/>}
   </main>;
 }
 function PresetList(){return <ul className="p2p-presets">{P2P_PRESETS.map(x=><li key={x.code}><strong>{x.name}</strong><code>{x.code}</code><span>Public topic label · private invitation required</span></li>)}</ul>}

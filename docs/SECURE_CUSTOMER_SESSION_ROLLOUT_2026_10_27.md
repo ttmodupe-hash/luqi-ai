@@ -2,6 +2,22 @@
 
 27 October 2026. PR #315 addresses issue #312. **Draft; production restoration remains disabled.**
 
+### 28 October: current Chat integration
+
+The owner again requested no repeated login while using Luqi and collaboration tools.
+This candidate now includes the deployed midnight-blue Chat, preferred account name
+and language controls from main `cb5e2533`. Signup accepts the preferred name and
+the separate explicit private-device choice together. A verified restore retains
+the saved name. Short-lived token rotation within the same signed device family
+preserves the in-tab conversation and provider acknowledgement; a fresh family,
+another account, sign-out or reload still clears them. Suspended-tab restoration
+hides private controls while retaining their mounted drafts until the result is
+known. Cookies do not authorize messaging, presence or paid inference.
+
+The operational holds below remain open. This change updates the disabled
+candidate; it does not enable production restoration or messaging, claim physical
+phone acceptance, or weaken replay, expiry, CSRF or account-isolation checks.
+
 ## Reviewed implementation
 
 - Persistence requires the unchecked **Keep me signed in on this private device** choice, the explicit JSON boolean `rememberMe: true`, a verified login/signup, and `LUQI_CUSTOMER_RESUME_ENABLED=true`. Existing clients and unremembered logins retain memory-only 24-hour bearer behaviour.

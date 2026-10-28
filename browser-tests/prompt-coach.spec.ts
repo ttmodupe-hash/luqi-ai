@@ -31,6 +31,7 @@ test('a rough question is corrected and improved locally before one explicit pro
   await input.fill('I need plese help with my business');
   await expect(input).toHaveAttribute('spellcheck', 'true');
   await expect(input).toHaveAttribute('autocorrect', 'on');
+  await page.locator('details.luqi-chat-compose-more > summary').click();
   await expect(page.getByText(/Possible English spelling/)).toBeVisible();
   await page.getByRole('button', { name: 'Apply suggestion' }).click();
   await expect(input).toHaveValue('I need please help with my business');
@@ -43,9 +44,9 @@ test('a rough question is corrected and improved locally before one explicit pro
   expect(calls).toBe(0);
   await page.getByRole('button', { name: 'Use this question' }).click();
   await expect(input).toHaveValue(/practical next steps/);
-  const consent = page.getByRole('checkbox', { name: /I understand this question may go/ });
+  const consent = page.getByRole('checkbox', { name: /I understand AI text may go/ });
   await expect(consent).not.toBeChecked();
-  await consent.check();
+  await consent.click();
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByText('Synthetic safe answer')).toBeVisible();
   expect(calls).toBe(1);
