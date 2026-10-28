@@ -41,7 +41,8 @@ async function login() {
 }
 async function ask(question: string) {
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: question } });
-  fireEvent.click(screen.getByRole('checkbox', { name: /I understand this question may go/i }));
+  const firstUseConsent = screen.queryByRole('checkbox', { name: /I understand AI text may go/i });
+  if (firstUseConsent) fireEvent.click(firstUseConsent);
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
   await screen.findByText('Verified response to ' + question);
 }
@@ -67,7 +68,8 @@ it('shows only confirmed in-tab chats and selecting one never repeats metered in
   expect(screen.queryByText('Verified response to My verified first question')).toBeNull();
   fireEvent.click(within(history).getByRole('button', { name: 'My verified first question', exact: true }));
   await screen.findByText('Verified response to My verified first question');
-  expect((screen.getByRole('checkbox', { name: /I understand this question may go/i }) as HTMLInputElement).checked).toBe(false);
+  expect(screen.queryByRole('checkbox', { name: /I understand AI text may go/i })).toBeNull();
+  expect(screen.getByText(/AI text sharing approved for this signed-in tab/)).toBeTruthy();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
 });
 it('removes confirmed chats immediately on sign-out and never loads private notes', async () => {
@@ -138,6 +140,7 @@ it('never sends a saved note by merely loading/selecting it and shares it for on
   });
   render(<Fixture />);
   await login();
+  fireEvent.click(screen.getByText('More options: companion, context and writing help'));
   fireEvent.click(screen.getByText('Conversation context, country guide and limits (optional)'));
   fireEvent.click(screen.getByText('Personalise this reply with one saved private note'));
   expect(request.mock.calls.some(([path]) => String(path).includes('/companion/conversations'))).toBe(false);
@@ -161,4 +164,60 @@ it('never sends a saved note by merely loading/selecting it and shares it for on
   expect(second.user_input).toContain('With my chosen note.');
   expect((share as HTMLInputElement).checked).toBe(false);
   expect(request.mock.calls.filter(([path]) => String(path).includes('/companion/conversations')).every(([, opts]) => opts?.method === 'GET')).toBe(true);
+});
+
+it('requires first-use provider acknowledgement but not repeated checkboxes for each new chat', async () => {
+  render(<Fixture />);
+  await login();
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'First approved message' } });
+  const send = screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement;
+  expect(send.disabled).toBe(true);
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  const approval = screen.getByRole('checkbox', { name: /I understand AI text may go/i });
+  fireEvent.click(approval);
+  expect(screen.queryByRole('checkbox', { name: /I understand AI text may go/i })).toBeNull();
+  expect(send.disabled).toBe(false);
+  fireEvent.click(send);
+  await screen.findByText('Verified response to First approved message');
+  const rail = await screen.findByRole('complementary', { name: 'Luqi Chat sidebar' });
+  fireEvent.click(within(rail).getByRole('button', { name: 'New chat' }));
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Second approved message' } });
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByText('Verified response to Second approved message');
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Change consent' }));
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole('checkbox', { name: /I understand AI text may go/i })).toBeTruthy();
+});
+
+it('sends on Enter only after approval and treats Shift+Enter as a newline', async () => {
+  render(<Fixture />);
+  await login();
+  const input = screen.getByLabelText('Your question') as HTMLTextAreaElement;
+  fireEvent.change(input, { target: { value: 'Keyboard fixture message' } });
+  fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand AI text may go/i }));
+  fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', shiftKey: true });
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+  await screen.findByText('Verified response to Keyboard fixture message');
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(1);
+  expect(screen.queryByRole('button', { name: 'Check availability' })).toBeNull();
+  expect(screen.getAllByRole('link', { name: 'Service status' }).length).toBeGreaterThan(0);
+});
+
+it('does not reuse first-account provider approval when the signed-in account changes', async () => {
+  render(<Fixture extra={<Switch />} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Account one' }));
+  await screen.findByLabelText('Your question');
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand AI text may go/i }));
+  expect(screen.getByText(/AI text sharing approved for this signed-in tab/)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Account two' }));
+  const input = screen.getByLabelText('Your question');
+  fireEvent.change(input, { target: { value: 'Second account must consent' } });
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole('checkbox', { name: /I understand AI text may go/i })).toBeTruthy();
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
 });

@@ -27,7 +27,7 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   await expect(page.getByRole('heading', { name: 'Hello, Naledi.' })).toBeVisible();
   await page.getByLabel('Your question', { exact: true }).fill('Say hello in isiZulu');
   await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
-  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByText('Synthetic provider reply', { exact: true })).toBeVisible();
   expect(calls).toBe(1);

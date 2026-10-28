@@ -295,3 +295,125 @@
   .luqi-chat-compose-panel { position: relative; bottom: auto; }
   .luqi-chat-availability-row { scroll-margin-top: 74px; }
 }
+
+/* Chat-first composer: calmer midnight-blue styling and a clear Send action.
+   These rules are scoped to Chat, not the public site or other customer tools. */
+.luqi-shell-chat { background:#071326; color:#e9f1ff; }
+.luqi-shell-chat .luqi-chat-shell > .luqi-page-content {
+  background:radial-gradient(ellipse at 65% 2%,rgba(41,89,170,.16),transparent 54%),#071326;
+}
+.luqi-shell-chat .luqi-chat-rail { background:#0a172b; border-right-color:#243a5c; scrollbar-color:#49628a transparent; }
+.luqi-shell-chat .luqi-chat-rail-top { border-bottom-color:#294062; }
+.luqi-shell-chat .luqi-chat-rail-primary button:hover,
+.luqi-shell-chat .luqi-chat-rail-services a:hover,
+.luqi-shell-chat .luqi-chat-rail-threads button:hover { background:#1a3152; }
+.luqi-shell-chat .luqi-chat-canvas-header { border-bottom-color:#263e60; }
+.luqi-shell-chat .luqi-chat-canvas-header h1,
+.luqi-shell-chat .luqi-chat-welcome h2 { color:#f1f6ff; }
+.luqi-shell-chat .luqi-chat-canvas-header p,
+.luqi-shell-chat .luqi-chat-welcome p { color:#b8cbea; }
+.luqi-shell-chat .luqi-chat-canvas-tag { background:#142a48; color:#b8d6ff; border-color:#3b5b8b; }
+.luqi-shell-chat .luqi-chat-welcome-symbol { color:#bba7ff; background:#192c50; border-color:#415b8c; }
+.luqi-shell-chat .luqi-chat-quick-prompts button { background:#10223c; border-color:#304c77; color:#e5efff; }
+.luqi-shell-chat .luqi-chat-quick-prompts button:hover { background:#203a60; }
+.luqi-shell-chat .luqi-chat-message-user { background:#1a3157; border-color:#4166a0; }
+.luqi-shell-chat .luqi-chat-message-ai { background:#0c1b32; border-color:#263e63; }
+.luqi-shell-chat .luqi-chat-message strong { color:#b9d8ff; }
+.luqi-shell-chat .luqi-chat-availability-row { color:#b8cdec; }
+.luqi-shell-chat .luqi-chat-availability-row button { background:#152c4a; border-color:#3d5b85; color:#dcecff; }
+.luqi-shell-chat .luqi-chat-availability-row a { color:#9ac8ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-shell-chat .luqi-chat-compose-panel {
+  padding:16px; border-radius:20px;
+  border:1px solid #35527b;
+  background:linear-gradient(145deg,#101f37,#0a172b);
+  box-shadow:0 18px 42px rgba(0,0,0,.36);
+}
+.luqi-shell-chat .luqi-chat-composer-label { display:block; font-size:12px; color:#bed1ef; margin-bottom:8px; }
+.luqi-shell-chat .luqi-chat-compose-input {
+  display:flex; align-items:flex-end; gap:9px; padding:8px;
+  border:1px solid #3a5886; border-radius:16px;
+  background:#08162a; transition:border-color .15s ease,box-shadow .15s ease;
+}
+.luqi-shell-chat .luqi-chat-compose-input:focus-within {
+  border-color:#73a7ff; box-shadow:0 0 0 2px rgba(87,145,240,.24);
+}
+.luqi-shell-chat .luqi-chat-compose-input textarea {
+  flex:1; min-width:0; min-height:56px; max-height:210px; padding:10px;
+  border:0; border-radius:9px; background:transparent; color:#f4f8ff;
+  resize:vertical; font-size:16px; line-height:1.5;
+}
+.luqi-shell-chat .luqi-chat-compose-input textarea:focus-visible { outline:none; }
+.luqi-shell-chat .luqi-chat-compose-input textarea::placeholder { color:#9eb7d8; }
+.luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  min-width:92px; min-height:45px; padding:10px 13px; flex:none;
+  border:1px solid #65a6ff; border-radius:12px;
+  color:#fff; background:linear-gradient(135deg,#297cf0,#1c5cc9);
+  font-size:13px; font-weight:750; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send:not(:disabled):hover { background:#397fff; }
+.luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send:disabled { opacity:.48; cursor:not-allowed; }
+.luqi-shell-chat .luqi-chat-compose-meta {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  gap:4px 12px; margin:9px 2px 0; font-size:11px; color:#adc2df;
+}
+.luqi-shell-chat .luqi-chat-compose-meta .luqi-chat-limit { color:#adc2df; font-size:11px; }
+.luqi-shell-chat .luqi-chat-keyboard-hint { color:#8ea9cf; }
+.luqi-shell-chat .luqi-chat-first-consent {
+  display:flex; gap:10px; align-items:flex-start;
+  margin:12px 0 6px; padding:12px; border:1px solid #3c5880;
+  border-radius:12px; background:#162946; font-size:12px; line-height:1.55;
+}
+.luqi-shell-chat .luqi-chat-first-consent input { flex:none; margin-top:3px; accent-color:#4a98ff; width:17px; height:17px; }
+.luqi-shell-chat .luqi-chat-first-consent a,
+.luqi-shell-chat .luqi-chat-consent-confirmed button { color:#a8d1ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-shell-chat .luqi-chat-consent-privacy { margin:2px 0 4px; font-size:11px; }
+.luqi-shell-chat .luqi-chat-consent-privacy a { color:#a8d1ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-shell-chat .luqi-chat-consent-confirmed {
+  display:flex; align-items:center; flex-wrap:wrap; gap:7px 13px;
+  margin:9px 0 4px; font-size:11px; line-height:1.5; color:#afc9e7;
+}
+.luqi-shell-chat .luqi-chat-consent-confirmed button {
+  border:0; background:transparent; padding:4px 0; font-size:11px; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-consent-confirmed button:disabled { opacity:.5; }
+.luqi-shell-chat .luqi-chat-compose-more { margin-top:7px; padding-top:7px; border-top:1px solid #293f60; }
+.luqi-shell-chat .luqi-chat-compose-more > summary {
+  cursor:pointer; padding:7px 2px; color:#b5d4fa; font-size:12px; min-height:33px;
+}
+.luqi-shell-chat .luqi-chat-compose-more[open] { padding-bottom:8px; }
+.luqi-shell-chat .luqi-chat-compose-more .luqi-chat-companion-mode { color:#d4e3f9; }
+.luqi-shell-chat .luqi-chat-compose-details { border-color:#2f486a; }
+.luqi-shell-chat .luqi-chat-compose-details summary { color:#bedaff; }
+.luqi-shell-chat .luqi-chat-compose-footer {
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+  gap:9px; margin-top:6px; color:#91acd0; font-size:11px;
+}
+.luqi-shell-chat .luqi-chat-compose-footer .luqi-chat-compose-secondary {
+  min-height:34px; border:0; background:transparent; color:#b8d6ff;
+  font-size:12px; padding:5px 4px; text-decoration:underline;
+  text-underline-offset:3px; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-compose-footer button:disabled { opacity:.5; cursor:not-allowed; }
+.luqi-shell-chat .luqi-chat-caption { color:#a0b7d5; }
+.luqi-shell-chat .luqi-chat-caption a,
+.luqi-shell-chat .luqi-chat-workspace-links a { color:#a9ceff; }
+.luqi-shell-chat .luqi-chat-login { background:linear-gradient(145deg,#112542,#0b1a30); border-color:#35537d; }
+.luqi-shell-chat .luqi-chat-login-top h2 { color:#f0f6ff; }
+.luqi-shell-chat .luqi-chat-login-top p { color:#bed0e9; }
+.luqi-shell-chat .luqi-chat-login-orb { background:#1b3558; border-color:#42689b; color:#b8d4ff; }
+.luqi-shell-chat .luqi-chat-login-action { background:#3287ed; border-color:#3287ed; color:#fff; }
+.luqi-shell-chat .luqi-chat-login-secondary { background:#182e4b; border-color:#3d5b84; color:#e8f3ff; }
+.luqi-shell-chat .luqi-chat-mobile-bar { background:#0d1c34; border-bottom-color:#29446a; }
+.luqi-shell-chat .luqi-chat-mobile-dock { background:rgba(9,24,44,.98); border-top-color:#314e78; }
+.luqi-shell-chat .luqi-chat-mobile-dock > a[aria-current=page] { background:#204a82; color:#fff; }
+.luqi-chat-main :focus-visible, .luqi-chat-rail :focus-visible { outline-color:#8fc0ff; }
+@media(max-width:580px) {
+  .luqi-shell-chat .luqi-chat-compose-panel { padding:11px; border-radius:16px; }
+  .luqi-shell-chat .luqi-chat-compose-input { padding:5px; gap:5px; }
+  .luqi-shell-chat .luqi-chat-compose-input textarea { min-height:52px; padding:9px; font-size:16px; }
+  .luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send { min-width:68px; min-height:43px; padding:9px; }
+  .luqi-shell-chat .luqi-chat-keyboard-hint { display:none; }
+  .luqi-shell-chat .luqi-chat-compose-footer .luqi-chat-new-in-composer { display:inline-flex!important; }
+  .luqi-shell-chat .luqi-chat-first-consent { padding:9px; font-size:11px; }
+}

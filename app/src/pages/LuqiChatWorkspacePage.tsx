@@ -11,7 +11,7 @@ export default function LuqiChatWorkspacePage() {
     <nav className="luqi-chat-workspace-links" aria-label="More Luqi support">
       <Link to="/ask">Explore Africa and plan a goal locally</Link>
       <Link to="/companion">Open saved private notes</Link>
-      <Link to="/service-status">Check availability</Link>
+      <Link to="/service-status">Service status</Link>
     </nav>
   </div>;
 }
