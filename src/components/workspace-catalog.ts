@@ -1,5 +1,11 @@
 export const workspaceTools = [
   {
+    id: "spatial-vision", title: "Spatial Vision & 3D Lab",
+    category: "On-device image exploration and optional Gemini visual explanation",
+    description: "Crop and mask photos locally, explore an illustrative 2.5D point cloud, inspect edge-detail candidates and calculate loan examples. Optional image AI requires sign-in, reviewed crop and per-request agreement. No true depth or semantic masks.",
+    status: "Local · limited AI", ready: true, path: "/spatial-vision", icon: "academy",
+  },
+  {
     id: "visual-tutor", title: "Visual tutor", category: "Select a photo region and learn",
     description: "Crop a JPEG or PNG locally and ask for an explanation in your chosen language. Requires sign-in, per-image agreement and the shared AI allowance.",
     status: "Limited trial · sign-in required", ready: true, path: "/visual-tutor", icon: "academy",
