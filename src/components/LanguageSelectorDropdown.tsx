@@ -4,7 +4,7 @@ import {
   type LanguageInfo,
   getStoredLanguage,
   setStoredLanguage,
-} from "@/lib/languages";
+} from "../lib/languages";
 import { Globe, Check, ChevronDown, Search } from "lucide-react";
 
 interface LanguageSelectorDropdownProps {
