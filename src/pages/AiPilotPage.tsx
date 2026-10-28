@@ -13,6 +13,7 @@ import { detectConsumerCategory } from '../lib/consumer-rights-guide';
 import { EVIDENCE_CASES, detectEvidenceTopic } from '../lib/comparative-evidence';
 import ConsumerQuickCard from '../components/ConsumerQuickCard';
 import DriverQuickCard from '../components/DriverQuickCard';
+import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
@@ -244,6 +245,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div>
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
       </header>
+      <div className="px-3"><ConnectionStatusBadge /></div>
       <div className="space-y-1 px-3 text-sm">
         <p><Link to="/driver-rights" className="text-cyan-200 underline underline-offset-2">Roadside help: free South African driver rights (no sign-in or AI request)</Link></p>
         <p><Link to="/consumer-rights" className="text-cyan-200 underline underline-offset-2">Consumer rights: three-step guidance and complaint preparation</Link></p>
