@@ -86,3 +86,93 @@ export default function KhoroSpatialVisionLab() {
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   const epoch = useRef(0), locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
+
+  const clear = () => {
+    epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+    setPhoto(''); setSelection(null); setManual([]); setSerialText('');
+    setResult(null); setConsent(false); setNotice(''); setBusy(false);
+    setPreparing(false); setUncertain(false); setViewRelief(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+  useLayoutEffect(() => { clear(); }, [session?.token]);
+  useEffect(() => {
+    const controller = new AbortController();
+    pilotAvailability(controller.signal).then(value => {
+      if (!controller.signal.aborted) setReady(value);
+    }).catch(() => { if (!controller.signal.aborted) setReady(false); });
+    return () => { controller.abort(); epoch.current++; pending.current?.abort(); };
+  }, []);
+  useEffect(() => {
+    if (!viewRelief || !photo || !canvasRef.current) return;
+    return drawIllustrativeRelief(canvasRef.current, photo, tilt, spin);
+  }, [viewRelief, photo, tilt, spin]);
+
+  async function choosePhoto(file: File | undefined) {
+    if (!file || busy || locked.current) return;
+    clear();
+    const version = epoch.current;
+    setPreparing(true);
+    try {
+      const next = await prepareSpatialPhoto(file, enhance);
+      if (epoch.current === version) setPhoto(next);
+    } catch (error) {
+      if (epoch.current === version) setNotice(error instanceof Error ? error.message : 'Photo processing failed.');
+    } finally { if (epoch.current === version) setPreparing(false); }
+  }
+  function point(event: PointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) / rect.width * 1000,
+      y: (event.clientY - rect.top) / rect.height * 1000 };
+  }
+  function finishSelection(event: PointerEvent<HTMLDivElement>) {
+    const start = dragRef.current;
+    dragRef.current = null;
+    if (!start) return;
+    const end = point(event);
+    if (Math.abs(end.x - start.x) < 8 || Math.abs(end.y - start.y) < 8) return;
+    try { setSelection(boxFromPoints(start.x, start.y, end.x, end.y)); }
+    catch { setNotice('Choose a larger rectangular region.'); }
+  }
+  function switchMode(next: SpatialMode) {
+    if (busy || preparing) return;
+    setMode(next); setResult(null); setConsent(false); setUncertain(false);
+    setSelection(null); setManual([]); setSerialText(''); setNotice('');
+  }
+  async function burnMask() {
+    if (!selection || !photo || busy) return;
+    const version = epoch.current;
+    setPreparing(true);
+    try {
+      const masked = await redactSpatialPhoto(photo, selection);
+      if (epoch.current === version) {
+        setPhoto(masked); setSelection(null); setResult(null); setConsent(false);
+        setManual(previous => [...previous, { box: selection, label: 'Possible IMEI (manual)' }].slice(-8));
+        setNotice('Black rectangle burned into the local preview. The original photo on your device is unchanged.');
+      }
+    } catch { if (epoch.current === version) setNotice('Could not mask this region.'); }
+    finally { if (epoch.current === version) setPreparing(false); }
+  }
+  async function analyse() {
+    if (!session || !ready || !photo || mode === 'SERIAL_AUDIT' ||
+        !consent || busy || preparing || uncertain || locked.current) return;
+    locked.current = true; setBusy(true); setConsent(false); setResult(null); setNotice('');
+    const version = epoch.current, controller = new AbortController(); pending.current = controller;
+    try {
+      const reply = await askSpatialVision(session.token, mode, provider, photo, language, true, controller.signal);
+      if (epoch.current === version) setResult(reply);
+    } catch (error) {
+      if (epoch.current !== version) return;
+      const code = error instanceof PilotChatError ? error.code : 'RESPONSE_UNCONFIRMED';
+      if (code === 'AUTH_REQUIRED') { signOut(); return; }
+      const beforeProvider = ['INVALID_INPUT', 'AI_INPUT_TOO_LARGE', 'AI_DISABLED',
+        'BILLING_NOT_APPROVED', 'AI_KEYS_NOT_CONFIGURED', 'AI_PROVIDER_BUDGET_EXHAUSTED',
+        'AI_USER_DAILY_QUOTA_EXHAUSTED', 'AI_BUDGET_STORE_UNAVAILABLE', 'LOCAL_ONLY'].includes(code);
+      setUncertain(!beforeProvider);
+      setNotice(beforeProvider
+        ? 'Analysis did not start. Check your account, chosen provider and available allowance.'
+        : 'The reply was not confirmed. The attempt may count toward your allowance. No automatic retry was made.');
+    } finally {
+      if (epoch.current === version) { pending.current = null; locked.current = false; setBusy(false); }
+    }
+  }
+  const regions = result?.analysis.regions ?? [];
