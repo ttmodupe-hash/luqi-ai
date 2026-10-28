@@ -12,7 +12,7 @@ export function HeroAiChatConsole() {
       <div className="luqi-chat-top">
         <span className="luqi-mini-label">Luqi assistant</span>
         <span className="luqi-paused">
-          Text trial
+          Guest preview
         </span>
       </div>
       <div className="luqi-assistant-symbol" aria-hidden="true">
@@ -23,12 +23,12 @@ export function HeroAiChatConsole() {
         Find your next step.
       </h2>
       <p>
-        Ask Luqi to explain a topic, shape an idea or help draft a message. Create one account, open Chat and choose when to send your question. AI text requires consent and has shared spending limits.
+        Try up to three real replies from Luqi without registering. Ask a useful question, see how Luqi can help, and create one account when you want more. AI text requires consent and is subject to a shared guest limit.
       </p>
       <SovereignRegionBar compact />
       <div className="luqi-chat-bottom">
-        <span>Open Luqi chat and guidance</span>
-        <Link to="/chat" aria-label="Open Luqi chat and guidance">
+        <span>Try Luqi free without registering</span>
+        <Link to="/try" aria-label="Try Luqi free without registering">
           <ArrowUpRight size={21} aria-hidden="true" />
         </Link>
       </div>

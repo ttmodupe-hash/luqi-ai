@@ -53,11 +53,14 @@ export default function Home() {
               creating and growing an idea. Start with a question, not a menu.
             </p>
             <div className="luqi-hero-actions">
-              <Link className="luqi-primary" to="/chat">
-                Ask Luqi <ArrowUpRight size={19} aria-hidden="true" />
+              <Link className="luqi-primary" to="/try">
+                Try Luqi free <ArrowUpRight size={19} aria-hidden="true" />
               </Link>
               <Link className="luqi-secondary" to="/join">
                 Create account <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+              <Link className="luqi-secondary" to="/chat">
+                Already registered? Chat <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
               <a
                 className="luqi-secondary"

@@ -29,6 +29,7 @@ import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { aiPilot } from "./ai-pilot";
+import { guestTrial } from "./guest-trial";
 import { visualTutor } from "./visual-tutor";
 import { spatialVision } from "./spatial-vision";
 import { checkPilotCredentials } from "./services/pilotCredentialCheck";
@@ -178,6 +179,8 @@ app.route("/", restCompat);
 
 // The budgeted text trial is isolated from all legacy provider routes.
 app.route('/api/v1/luqi-core', aiPilot);
+// Anonymous introductory text is separately metered, same-origin and cookie-bound.
+app.route('/api/v1/guest-chat', guestTrial);
 app.route('/api/v1/visual-tutor', visualTutor);
 app.route('/api/v1/spatial-vision', spatialVision);
 
