@@ -1,11 +1,11 @@
-import type { StudioFormat, StudioScene } from './content-studio';
+import type { StudioFormat, StudioScene, StudioMotion, StudioSceneSeconds } from './content-studio';
 
 /** Local-only storyboard files. No upload, account, provider or persistent storage. */
 export const MAX_STUDIO_DRAFT_BYTES = 32 * 1024;
 export const STUDIO_DRAFT_READ_TIMEOUT_MS = 8_000;
 export type StudioDraft = {
   scenes: StudioScene[]; aspect: StudioFormat; length: number; gravity: number;
-  yaw: number; legacyCamera: boolean;
+  yaw: number; legacyCamera: boolean; sceneSeconds: StudioSceneSeconds; visualTheme: StudioMotion;
 };
 const invalid = () => new Error('This is not a supported LUQI storyboard. Your current draft is unchanged.');
 const record = (value: unknown): value is Record<string, unknown> =>
@@ -24,39 +24,50 @@ export function parseStudioDraft(source: string): StudioDraft {
   try { value = JSON.parse(source); } catch { throw invalid(); }
   if (!record(value)) throw invalid();
   const legacy = value.format === 'luqi.storyboard.v1';
+  const modern = value.format === 'luqi.storyboard.v3';
   const keys = ['format', 'durationSeconds', 'aspect', 'audio', 'rendering', 'publishing', 'simulation', 'scenes'];
   if (!legacy) keys.push('cameraYawDegrees');
-  if ((!legacy && value.format !== 'luqi.storyboard.v2') || !exactKeys(value, keys) ||
-      value.durationSeconds !== 90 || value.audio !== 'none' ||
+  if (modern) keys.push('sceneSeconds', 'visualTheme');
+  const sceneSeconds: StudioSceneSeconds = modern && value.sceneSeconds === 5 ? 5 : 15;
+  if ((!legacy && !modern && value.format !== 'luqi.storyboard.v2') || !exactKeys(value, keys) ||
+      (modern && ![5, 15].includes(value.sceneSeconds as number)) ||
+      (modern && !['pendulum', 'gravity', 'story'].includes(value.visualTheme as string)) ||
+      value.durationSeconds !== sceneSeconds * 6 || value.audio !== 'none' ||
       value.rendering !== 'local_original_motion_graphics' || value.publishing !== 'not_connected' ||
       !['landscape', 'portrait', 'square'].includes(value.aspect as string)) throw invalid();
   const simulation = value.simulation;
   if (!record(simulation) || !exactKeys(simulation, ['model', 'lengthMetres', 'gravityMetresPerSecondSquared']) ||
-      simulation.model !== 'small_angle_pendulum' || !bounded(simulation.lengthMetres, .5, 4) ||
+      (simulation.model !== 'small_angle_pendulum' && !(modern && simulation.model === 'local_illustration')) ||
+      !bounded(simulation.lengthMetres, .5, 4) ||
       !bounded(simulation.gravityMetresPerSecondSquared, 1, 20) ||
       (!legacy && !bounded(value.cameraYawDegrees, -80, 80))) throw invalid();
   if (!Array.isArray(value.scenes) || value.scenes.length !== 6) throw invalid();
   const scenes: StudioScene[] = value.scenes.map((scene: unknown, index: number) => {
     if (!record(scene) || !exactKeys(scene, ['title', 'caption', 'question', 'startSeconds', 'durationSeconds']) ||
         !text(scene.title, 64) || !text(scene.caption, 240) || !text(scene.question, 140) ||
-        scene.startSeconds !== index * 15 || scene.durationSeconds !== 15) throw invalid();
+        scene.startSeconds !== index * sceneSeconds || scene.durationSeconds !== sceneSeconds) throw invalid();
     // Copy only reviewed primitive fields. Never merge untrusted objects into state.
     return { title: scene.title, caption: scene.caption, question: scene.question };
   });
   return { scenes, aspect: value.aspect as StudioFormat, length: simulation.lengthMetres,
     gravity: simulation.gravityMetresPerSecondSquared, yaw: legacy ? 28 : value.cameraYawDegrees as number,
-    legacyCamera: legacy };
+    legacyCamera: legacy, sceneSeconds, visualTheme: modern ? value.visualTheme as StudioMotion : 'pendulum' };
 }
 
 /** v2 preserves the camera too; v1 files are still accepted with an explicit default. */
 export function serializeStudioDraft(scenes: readonly StudioScene[], aspect: StudioFormat,
-  length: number, gravity: number, yaw: number): string {
-  const source = JSON.stringify({ format: 'luqi.storyboard.v2', durationSeconds: 90, aspect,
+  length: number, gravity: number, yaw: number, sceneSeconds: StudioSceneSeconds = 15,
+  visualTheme: StudioMotion = 'pendulum'): string {
+  const modern = visualTheme !== 'pendulum' || sceneSeconds !== 15;
+  const source = JSON.stringify({ format: modern ? 'luqi.storyboard.v3' : 'luqi.storyboard.v2',
+    durationSeconds: sceneSeconds * 6, aspect,
+    ...(modern ? { sceneSeconds, visualTheme } : {}),
     audio: 'none', rendering: 'local_original_motion_graphics', publishing: 'not_connected',
-    simulation: { model: 'small_angle_pendulum', lengthMetres: length, gravityMetresPerSecondSquared: gravity },
+    simulation: { model: modern && visualTheme !== 'pendulum' ? 'local_illustration' : 'small_angle_pendulum',
+      lengthMetres: length, gravityMetresPerSecondSquared: gravity },
     cameraYawDegrees: yaw,
     scenes: scenes.map((scene, index) => ({ title: scene.title, caption: scene.caption, question: scene.question,
-      startSeconds: index * 15, durationSeconds: 15 })) }, null, 2);
+      startSeconds: index * sceneSeconds, durationSeconds: sceneSeconds })) }, null, 2);
   parseStudioDraft(source);
   return source;
 }
