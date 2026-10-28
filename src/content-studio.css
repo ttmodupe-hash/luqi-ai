@@ -43,3 +43,22 @@
 .luqi-studio-approved p { color:#d0ead9; font-size:13px; margin:8px 0; }
 .luqi-studio-approved a { color:#d5efae; text-decoration:underline; text-underline-offset:3px; }
 @media(max-width:640px){.luqi-studio-approved{padding:15px;}}
+
+
+/* Phase-one audio: explicit microphone consent and rights-checked local soundtracks. */
+.luqi-studio-audio { margin-top:24px; padding:28px; background:#15251d; border:1px solid #496a54; border-radius:18px; min-width:0; overflow-wrap:anywhere; }
+.luqi-studio-audio h2 { color:#edf7e5; margin-bottom:8px; }
+.luqi-studio-audio h3 { color:#e3efcf; font-size:17px; margin:6px 0 10px; }
+.luqi-studio-audio p { font-size:13px; margin:8px 0 12px; }
+.luqi-studio-audio-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin:18px 0; }
+.luqi-studio-audio-grid > div { min-width:0; border:1px solid #456048; border-radius:13px; padding:16px; }
+.luqi-studio-audio-actions { display:flex; flex-wrap:wrap; gap:9px; }
+.luqi-studio-audio-actions button { flex:0 1 auto; }
+.luqi-studio-rights { display:flex!important; flex-direction:row!important; align-items:flex-start; gap:12px!important; margin:15px 0; font-size:13px!important; }
+.luqi-studio-rights input[type=checkbox] { flex:0 0 auto; width:19px!important; height:19px; min-width:19px; margin:2px 0 0; accent-color:#b8e29c; }
+.luqi-studio-audio-preview { display:grid; gap:8px; padding:10px 0; }
+.luqi-studio-audio-preview audio { display:block; max-width:100%; width:100%; min-height:44px; }
+.luqi-studio-audio-preview a { color:#cfeca7; text-decoration:underline; text-underline-offset:3px; }
+.luqi-studio-audio-preview label { margin-top:8px; }
+.luqi-studio-audio .luqi-studio-audio-footnote { color:#abbfb1; font-size:12px; }
+@media(max-width:750px) { .luqi-studio-audio { padding:20px 16px; } .luqi-studio-audio-grid { grid-template-columns:minmax(0,1fr); gap:12px; } .luqi-studio-audio-grid > div { padding:12px; } .luqi-studio-audio-actions button { width:100%; } }
