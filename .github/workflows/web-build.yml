@@ -76,6 +76,10 @@ jobs:
         run: npx vitest run tests/visual-tutor-transport.test.ts tests/visual-tutor-route.test.ts tests/visual-tutor-client.test.ts
       - name: Type-check visual tutor API and photo selection
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/visualTutor.ts api/visual-tutor.ts src/lib/visual-tutor.ts src/pages/VisualTutorPage.tsx
+      - name: Verify budgeted Spatial Vision and evidence-aware academy contracts
+        run: npx vitest run tests/spatial-vision-route.test.ts tests/spatial-vision-gateway.test.ts tests/spatial-vision-client.test.ts tests/pan-african-intellectual-pathways.test.ts
+      - name: Type-check Spatial Vision route, provider and mobile React component
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/spatial-vision.ts api/services/spatialVision.ts src/lib/spatial-vision.ts src/components/KhoroSpatialVisionLab.tsx
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
