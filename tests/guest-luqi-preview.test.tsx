@@ -16,7 +16,7 @@ it('offers three meaningful local guidance results before registration with zero
     'Help me plan a trip to South Africa',
     'Help me study for an exam',
   ]) {
-    fireEvent.change(screen.getByLabelText(/What would you like/i), { target: { value: question } });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: question } });
     fireEvent.click(screen.getByRole('button', { name: 'Explore with Luqi' }));
   }
   expect(within(screen.getByRole('list', { name: 'Your guest guide results' })).getAllByRole('listitem').length).toBeGreaterThanOrEqual(3);
