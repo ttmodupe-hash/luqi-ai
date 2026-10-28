@@ -29,7 +29,7 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
   it('uses only OpenAI and its own reservation when explicitly selected, even with both keys present', async () => {
     const fetcher = vi.fn(async (url: string) => {
       expect(url).toBe('https://api.openai.com/v1/responses');
-      expect(reserve.mock.calls).toEqual([['openai', 42]]);
+      expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]);
       return Response.json(openaiReply('Independent reply'));
     });
     vi.stubGlobal('fetch', fetcher);
@@ -49,22 +49,22 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
     vi.stubEnv('LUQI_PILOT_OPENAI_API_KEY', 'fixture-openai');
     await expect(runBudgetedPilotChat('Say hello', 42, 'auto', [], undefined, 'openai'))
       .rejects.toMatchObject({ code: 'AI_PROVIDER_UNAVAILABLE' });
-    expect(reserve.mock.calls).toEqual([['openai', 42]]); expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]); expect(fetcher).toHaveBeenCalledTimes(1);
     reserve.mockReset().mockRejectedValue(new PilotBlocked('AI_PROVIDER_BUDGET_EXHAUSTED'));
     fetcher.mockClear();
     await expect(runBudgetedPilotChat('Say hello', 42, 'auto', [], undefined, 'openai'))
       .rejects.toMatchObject({ reason: 'AI_PROVIDER_BUDGET_EXHAUSTED' });
-    expect(reserve.mock.calls).toEqual([['openai', 42]]); expect(fetcher).not.toHaveBeenCalled();
+    expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]); expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("reserves first and returns Gemini text with fixed model and output bounds", async () => {
     const fetcher = vi.fn(async (url: string, options: RequestInit) => {
-      expect(reserve.mock.calls).toEqual([["gemini", 42]]);
+      expect(reserve.mock.calls).toEqual([["gemini", 42, undefined, 20]]);
       expect(url).toBe(`https://generativelanguage.googleapis.com/v1beta/models/${PILOT_MODELS.gemini}:generateContent`);
       expect(options.method).toBe("POST");
       expect(new Headers(options.headers).get("x-server-timeout")).toBe("20");
       const request = JSON.parse(options.body as string);
-      expect(request.generationConfig.maxOutputTokens).toBe(512);
+      expect(request.generationConfig.maxOutputTokens).toBe(1024);
       expect(request).not.toHaveProperty("tools");
       const instructions = request.systemInstruction.parts.map((part: { text: string }) => part.text).join('');
       expect(instructions).toContain('Current capabilities in this Chat: text conversation');
@@ -82,15 +82,15 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
   it("does not retry a Gemini 503 and reserves independently before OpenAI fallback", async () => {
     const fetcher = vi.fn(async (url: string, options: RequestInit) => {
       if (url.includes("googleapis")) {
-        expect(reserve.mock.calls).toEqual([["gemini", 42]]);
+        expect(reserve.mock.calls).toEqual([["gemini", 42, undefined, 20]]);
         return Response.json({ error: { code: 503, message: "fixture failure" } }, { status: 503 });
       }
-      expect(reserve.mock.calls).toEqual([["gemini", 42], ["openai", 42]]);
+      expect(reserve.mock.calls).toEqual([["gemini", 42, undefined, 20], ["openai", 42, undefined, 20]]);
       expect(url).toBe("https://api.openai.com/v1/responses");
       expect(options).toMatchObject({ method: "POST", redirect: "error", cache: "no-store", credentials: "omit" });
       expect(options.signal).toBeInstanceOf(AbortSignal);
       expect(JSON.parse(options.body as string)).toMatchObject({
-        model: PILOT_MODELS.openai, max_output_tokens: 512, store: false,
+        model: PILOT_MODELS.openai, max_output_tokens: 1024, store: false,
         reasoning: { effort: "none" },
       });
       const instructions = JSON.parse(options.body as string).instructions;
@@ -118,7 +118,7 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
     // arms a JS timer. Its explicit 20s deadline must trigger this fallback.
     await vi.advanceTimersByTimeAsync(20_001);
     expect((await answer).provider).toBe("openai");
-    expect(reserve.mock.calls).toEqual([["gemini", 42], ["openai", 42]]);
+    expect(reserve.mock.calls).toEqual([["gemini", 42, undefined, 20], ["openai", 42, undefined, 20]]);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
@@ -149,7 +149,7 @@ describe('complete paid input boundary', () => {
     const prompt = 'p'.repeat(room - 8) + 'END-TEST';
     const expected = buildPilotInput(prompt, language, history);
     const fetcher = vi.fn(async (_url: string, options: RequestInit) => {
-      expect(reserve.mock.calls).toEqual([[provider, 42]]);
+      expect(reserve.mock.calls).toEqual([[provider, 42, undefined, 20]]);
       const body = JSON.parse(options.body as string);
       const sent = provider === 'gemini' ? body.contents[0].parts[0].text : body.input;
       expect(sent).toBe(expected); expect(sent.length).toBe(6000);
@@ -183,13 +183,13 @@ describe('provider output must be complete before it is presented as an answer',
       content: { role: 'model', parts: [{ text: 'PRIVATE-PARTIAL-OUTPUT' }] } }] }));
     vi.stubGlobal('fetch', fetcher);
     await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code });
-    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['gemini', 42]]);
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['gemini', 42, undefined, 20]]);
   });
   it('Gemini prompt filtering without candidates does not fall through to another provider', async () => {
     const fetcher = vi.fn(async () => Response.json({ promptFeedback: { blockReason: 'SAFETY' } }));
     vi.stubGlobal('fetch', fetcher);
     await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code: 'AI_RESPONSE_BLOCKED' });
-    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['gemini', 42]]);
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['gemini', 42, undefined, 20]]);
   });
   it.each([
     ['incomplete', 'max_output_tokens', 'AI_REPLY_INCOMPLETE'],
@@ -201,7 +201,7 @@ describe('provider output must be complete before it is presented as an answer',
       incomplete_details: reason ? { reason } : null };
     const fetcher = vi.fn(async () => Response.json(response)); vi.stubGlobal('fetch', fetcher);
     await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code });
-    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42]]);
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]);
   });
   it('OpenAI refusal is not a transport outage', async () => {
     vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', '');
@@ -209,6 +209,6 @@ describe('provider output must be complete before it is presented as an answer',
       role: 'assistant', status: 'completed', content: [{ type: 'refusal', refusal: 'PRIVATE-REFUSAL' }] }] }));
     vi.stubGlobal('fetch', fetcher);
     await expect(runBudgetedPilotChat('Synthetic question', 42)).rejects.toMatchObject({ code: 'AI_RESPONSE_BLOCKED' });
-    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42]]);
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]);
   });
 });

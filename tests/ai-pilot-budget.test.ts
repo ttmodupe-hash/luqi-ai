@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPilotEnabled, budgetSnapshot, PILOT_CENTS, PILOT_TOTAL_CENTS,
-  RESERVE_PER_ATTEMPT_CENTS, PILOT_USER_DAILY_MAX_ATTEMPTS, utcDay, utcMonth, PilotBlocked,
+  RESERVE_PER_ATTEMPT_CENTS, TEXT_REPLY_RESERVE_CENTS, MAX_OUTPUT_TOKENS, MAX_TEXT_OUTPUT_TOKENS,
+  PILOT_USER_DAILY_MAX_ATTEMPTS, utcDay, utcMonth, PilotBlocked,
   PILOT_EXPANDED_CENTS, readApprovedPilotCaps, hasPilotReservationCapacity
 } from "../api/services/aiPilotBudget";
 import { runBudgetedPilotChat } from "../api/services/aiPilotGateway";
@@ -56,6 +57,15 @@ describe("approved bounded monthly AI pilot allocations", () => {
     expect(() => hasPilotReservationCapacity(-1, "gemini", expandedApprovals))
       .toThrowError("AI_BUDGET_STORE_UNAVAILABLE");
     expect(RESERVE_PER_ATTEMPT_CENTS).toBe(10);
+    expect(TEXT_REPLY_RESERVE_CENTS).toBe(20);
+    expect(MAX_OUTPUT_TOKENS).toBe(512);
+    expect(MAX_TEXT_OUTPUT_TOKENS).toBe(1024);
+    expect(hasPilotReservationCapacity(16480, "gemini", expandedApprovals, TEXT_REPLY_RESERVE_CENTS)).toBe(true);
+    expect(hasPilotReservationCapacity(16481, "gemini", expandedApprovals, TEXT_REPLY_RESERVE_CENTS)).toBe(false);
+    expect(hasPilotReservationCapacity(13480, "openai", expandedApprovals, TEXT_REPLY_RESERVE_CENTS)).toBe(true);
+    expect(hasPilotReservationCapacity(13481, "openai", expandedApprovals, TEXT_REPLY_RESERVE_CENTS)).toBe(false);
+    expect(() => hasPilotReservationCapacity(0, "gemini", expandedApprovals, 100))
+      .toThrowError("AI_BUDGET_CONFIGURATION_INVALID");
   });
 });
 
