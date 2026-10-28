@@ -87,3 +87,18 @@ describe('LUQI local intent guidance', () => {
     }
   });
 });
+
+describe('comparative and consumer fast-help routes', () => {
+  it('recognises a consumer dispute before generic booking suggestions', () => {
+    expect(guideLuqiNeed('My online order delivery is delayed again')?.primaryPath).toBe('/consumer-rights');
+    expect(guideLuqiNeed('Vodacom double charged my mobile bill')?.kind).toBe('consumer');
+    expect(guideLuqiNeed('Where should I stay in Durban?')?.kind).toBe('booking');
+  });
+  it('routes named comparative scholarship and keeps ordinary study requests intact', () => {
+    const guide = guideLuqiNeed('Did the council of Nicaea choose the Bible?');
+    expect(guide?.kind).toBe('comparative');
+    expect(guide?.primaryPath).toBe('/comparative-evidence');
+    expect(guide?.detail).toMatch(/without ranking religions/);
+    expect(guideLuqiNeed('Study South African history for an exam')?.kind).toBe('study');
+  });
+});

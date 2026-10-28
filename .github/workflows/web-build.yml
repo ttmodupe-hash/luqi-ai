@@ -38,6 +38,10 @@ jobs:
         run: npx vitest run tests/consumer-rights-guide.test.ts tests/consumer-rights-page.test.tsx
       - name: Type-check consumer-rights source registry and safe story interface
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/consumer-rights-guide.ts src/components/ConsumerRightsAssistant.tsx
+      - name: Verify comparative evidence source and privacy boundaries
+        run: npx vitest run tests/comparative-evidence.test.ts tests/comparative-evidence-page.test.tsx
+      - name: Type-check comparative evidence and local consumer/Chat routing
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/comparative-evidence.ts src/pages/ComparativeEvidencePage.tsx src/lib/consumer-rights-guide.ts src/components/ConsumerQuickCard.tsx src/lib/luqi-intent-guide.ts src/pages/AiPilotPage.tsx
       - name: Verify offline AI cost review does not certify bills
         run: node --test tests/provider-cost-review.test.mjs
       - name: Verify retired static authentication entrypoints
