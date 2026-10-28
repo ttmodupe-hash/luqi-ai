@@ -53,7 +53,9 @@ test('signed-in Luqi shows local consumer and evidence advice without charging a
   await expect(page.getByRole('heading', { name: 'Luqi consumer help — three first steps' })).toBeVisible();
   await page.getByRole('button', { name: 'Open free consumer rights guide' }).click();
   await expect(page).toHaveURL(/#\/consumer-rights$/);
-  await page.goto('/#/chat');
+  // Preserve the authenticated single-tab Luqi session by navigating inside the SPA.
+  await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
+  await expect(page).toHaveURL(/#\/chat$/);
   await page.getByLabel('Your question').fill('Did the Council of Nicaea choose the Bible?');
   await expect(page.getByRole('heading', { name: 'Explore a scholarly comparison with Luqi' })).toBeVisible();
   await page.getByRole('button', { name: 'Open free comparative evidence guide' }).click();
