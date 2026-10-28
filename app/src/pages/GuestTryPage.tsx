@@ -97,7 +97,7 @@ export default function GuestTryPage() {
         }
         return;
       }
-      setTurns(old => [...old, { sender: 'user', text: question }, { sender: 'ai', text: value.response as string }].slice(-6));
+      setTurns(old => [...old, { sender: 'user' as const, text: question }, { sender: 'ai' as const, text: value.response as string }].slice(-6));
       setPrompt('');
       const remaining = value.remaining as number;
       setTrial({ enabled: remaining > 0, remaining, limit: 3, reason: remaining ? 'ready' : 'complete' });
