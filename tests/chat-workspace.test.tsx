@@ -44,7 +44,8 @@ async function ask(question: string) {
   const firstUseConsent = screen.queryByRole('checkbox', { name: /I understand AI text may go/i });
   if (firstUseConsent) fireEvent.click(firstUseConsent);
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
-  await screen.findByText('Verified response to ' + question);
+  await within(screen.getByRole('region', { name: 'Confirmed conversation in this tab' }))
+    .findByText('Verified response to ' + question);
 }
 it('renders a two-panel chat-first layout and real service shortcuts without an AI call', async () => {
   render(<Fixture />);
@@ -220,4 +221,50 @@ it('does not reuse first-account provider approval when the signed-in account ch
   expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getByRole('checkbox', { name: /I understand AI text may go/i })).toBeTruthy();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+});
+
+
+it('shares recent conversation on every follow-up only after one visible opt-in, and resets on new chat', async () => {
+  render(<Fixture />);
+  await login();
+  await ask('What is required for ani to have its own studio?');
+  const enabled = screen.getByRole('checkbox', { name: /Keep recent conversation context with my follow-up/i }) as HTMLInputElement;
+  expect(enabled.checked).toBe(false);
+  fireEvent.click(enabled);
+  expect(enabled.checked).toBe(true);
+  await ask('For an AI?');
+  const calls = request.mock.calls.filter(([url]) => url === '/api/v1/luqi-core');
+  expect(calls).toHaveLength(2);
+  const first = JSON.parse(String(calls[0][1].body));
+  const second = JSON.parse(String(calls[1][1].body));
+  expect(first.history).toBeUndefined();
+  expect(second.history).toEqual([
+    { sender: 'user', text: 'What is required for ani to have its own studio?' },
+    { sender: 'ai', text: 'Verified response to What is required for ani to have its own studio?' },
+  ]);
+  expect(enabled.checked).toBe(true);
+  await ask('Please continue with the AI Studio design.');
+  const third = JSON.parse(String(request.mock.calls.filter(([url]) => url === '/api/v1/luqi-core')[2][1].body));
+  expect(third.history).toHaveLength(4);
+  expect(third.history[2]).toEqual({ sender: 'user', text: 'For an AI?' });
+  const sidebar = await screen.findByRole('complementary', { name: 'Luqi Chat sidebar' });
+  fireEvent.click(within(sidebar).getByRole('button', { name: 'New chat' }));
+  await ask('An unrelated new chat');
+  const fourth = JSON.parse(String(request.mock.calls.filter(([url]) => url === '/api/v1/luqi-core')[3][1].body));
+  expect(fourth.history).toBeUndefined();
+  expect(request.mock.calls.some(([url]) => String(url).includes('/companion/conversations'))).toBe(false);
+});
+
+it('does not share context from a prior account, even if the first account opted in', async () => {
+  render(<Fixture extra={<Switch />} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Account one' }));
+  await screen.findByLabelText('Your question');
+  await ask('First account context');
+  fireEvent.click(screen.getByRole('checkbox', { name: /Keep recent conversation context/i }));
+  fireEvent.click(screen.getByRole('button', { name: 'Account two' }));
+  await ask('Second account separate question');
+  const calls = request.mock.calls.filter(([url]) => url === '/api/v1/luqi-core');
+  expect(calls).toHaveLength(2);
+  const second = JSON.parse(String(calls[1][1].body));
+  expect(second.history).toBeUndefined();
 });

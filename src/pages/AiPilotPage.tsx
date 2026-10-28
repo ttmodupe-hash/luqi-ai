@@ -162,7 +162,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     // fails. The next successful reply replaces it; errors never erase it.
     locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
-    setShareContext(false); setShareRegion(false); setShareNote(false);
+    if (!workspace) setShareContext(false); // Visible workspace consent persists within this chat.
+    setShareRegion(false); setShareNote(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
@@ -249,7 +250,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {turns.map((turn, index) => <article key={index}
             className={'luqi-chat-message ' + (turn.sender === 'user' ? 'luqi-chat-message-user' : 'luqi-chat-message-ai')}>
             <strong>{turn.sender === 'user' ? 'You' : 'Luqi Chat'}</strong>
-            <p>{turn.sender === 'user' ? turn.text : <SafePilotText text={turn.text} />}</p>
+            {turn.sender === 'user' ? <p>{turn.text}</p> :
+              <div className="luqi-chat-richtext"><SafePilotText text={turn.text} /></div>}
           </article>)}
           {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
           {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
@@ -316,6 +318,17 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             onClick={() => workspace.setProviderAcknowledged(false)}>Change consent</button>
         </p>}
         {!workspace.providerAcknowledged && <p className="luqi-chat-consent-privacy"><Link to="/privacy">Privacy information</Link></p>}
+        {workspace.providerAcknowledged && <div className="luqi-chat-continuity">
+          <label><input type="checkbox" checked={shareContext} disabled={busy || uncertain}
+            onChange={event => setShareContext(event.target.checked)} />
+            Keep recent conversation context with my follow-up messages (this chat only)
+          </label>
+          <p>Optional: enable once to help Luqi understand corrections such as “for an AI?”. Only up to four bounded messages from this chat go to the chosen provider; you can turn this off at any time.</p>
+          {shareContext && <details><summary>Review the context included with your next question</summary>
+            <ol>{contextPreview.map((turn, index) => <li key={index}>
+              <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
+            </li>)}</ol></details>}
+        </div>}
         <details className="luqi-chat-compose-more">
           <summary>More options: companion, context and writing help</summary>
           <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
@@ -327,7 +340,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </label>
           <details className="luqi-chat-compose-details">
           <summary>Conversation context, country guide and limits (optional)</summary>
-          <p>Only this message is sent by default. Private notes, account email, browsing and voice are not attached automatically.</p>
+          <p>Prior chat context is shared only when you enable the visible continuity option. Private notes, account email, browsing and voice are not attached automatically.</p>
           <details className="luqi-chat-companion-personalise">
             <summary>Personalise this reply with one saved private note</summary>
             <CompanionNotePicker key={session.token} token={session.token} disabled={busy || uncertain}
@@ -339,17 +352,13 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             </label>}
             <p>No private note is sent merely by loading, selecting or saving it. A reply requires provider acknowledgement and your separate Send action.</p>
           </details>
-          {turns.length > 0 && <label><input type="checkbox" checked={shareContext} disabled={busy}
-            onChange={event => setShareContext(event.target.checked)} /> Include reviewed previous turns in this question (off by default)</label>}
-          {shareContext && <ol aria-label="Context to send">{contextPreview.map((turn, index) => <li key={index}>
-            <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
-          </li>)}</ol>}
+
           {region !== 'PAN_AFRICAN_AU' && <label><input type="checkbox" checked={shareRegion} disabled={busy}
             onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
           <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
           <p>20 provider attempts per account per UTC day, maximum 1024 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
           <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. AI replies are not automatically saved as private notes or long-term memories.</p>
-          <p>Provider acknowledgement lasts for this signed-in tab only. Optional notes, country and conversation context require separate approval for every request.</p>
+          <p>Provider acknowledgement lasts for this signed-in tab only. Recent conversation continuity is a separate, switchable opt-in for this chat. Optional notes and country context still require approval per request.</p>
           <Link to="/privacy">Privacy and provider information</Link>
           </details>
         </details>
@@ -444,7 +453,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       </section>}
       {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
-        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><SafePilotText text={answer.response} /></p>
+        <div className="luqi-chat-richtext"><SafePilotText text={answer.response} /></div>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
         {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real Luqi tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
       </section>}

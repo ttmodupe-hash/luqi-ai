@@ -11,3 +11,31 @@
 
 .luqi-chat-next-step { margin: 20px 0 4px; padding: 16px 18px; border-radius: 12px; border-left: 3px solid #c9e6ad; background: #203829; color: #e2edd9; line-height: 1.7; }
 .luqi-chat-next-step a { font-weight: 730; color: #e4f5c9; text-underline-offset: 3px; }
+
+
+/* Render model Markdown using safe React elements, never raw injected HTML. */
+.luqi-chat-richtext { max-width:100%; overflow-wrap:anywhere; line-height:1.65; }
+.luqi-chat-richtext p { margin:.3em 0 .9em; white-space:pre-wrap; }
+.luqi-chat-richtext h2 { font-size:1.16rem; font-weight:750; margin:1.1em 0 .5em; line-height:1.35; }
+.luqi-chat-richtext h3 { font-size:1.06rem; font-weight:720; margin:1em 0 .45em; }
+.luqi-chat-richtext h4 { font-size:1rem; font-weight:680; margin:.9em 0 .4em; }
+.luqi-chat-richtext ul, .luqi-chat-richtext ol { padding-left:1.45rem; margin:.4em 0 1em; list-style:revert; }
+.luqi-chat-richtext li { margin:.38em 0; padding-left:.1em; }
+.luqi-chat-richtext strong { font-weight:750; }
+.luqi-chat-richtext hr { border:0; border-top:1px solid #577192; margin:1.1em 0; }
+.luqi-chat-richtext pre { overflow-x:auto; white-space:pre; font-size:.8rem; padding:12px;
+  border:1px solid #36577e; border-radius:10px; background:#09182e; }
+.luqi-chat-richtext code { font-family:ui-monospace, monospace; font-size:.85em; }
+
+
+/* Follow-up context is an explicit, visible opt-in, not a hidden automatic send. */
+.luqi-chat-continuity { margin:12px 0; border:1px solid #446b96; background:#102843;
+  border-radius:12px; padding:12px; min-width:0; }
+.luqi-chat-continuity label { display:flex; align-items:flex-start; gap:10px;
+  color:#e3f0ff; font-size:13px; line-height:1.5; }
+.luqi-chat-continuity input { flex:none; width:17px; height:17px; margin-top:3px; accent-color:#66aaff; }
+.luqi-chat-continuity p { color:#bfd3ef; font-size:12px; line-height:1.5; margin:6px 0; }
+.luqi-chat-continuity details { color:#d9eaff; font-size:12px; overflow-wrap:anywhere; }
+.luqi-chat-continuity summary { min-height:32px; cursor:pointer; }
+.luqi-chat-continuity ol { margin:5px 0; padding-left:20px; }
+.luqi-chat-continuity li { margin:5px 0; }
