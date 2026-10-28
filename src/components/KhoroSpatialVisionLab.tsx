@@ -79,3 +79,95 @@ export default function KhoroSpatialVisionLab() {
     img.src = preview;
     return () => { cancelled = true; };
   }, [preview, relief, tilt, spin]);
+
+  async function submit() {
+    if (!session || !ready || !consent || !preview || !question.trim() || question.length > 500 ||
+        (mode === 'SERIAL_AUDIT' && (!serialConfirmed || whole(crop))) ||
+        busy || preparing || uncertain || locked.current) return;
+    locked.current = true; setBusy(true); setNotice(''); setReply(null); setConsent(false);
+    const version = epoch.current, controller = new AbortController(); pending.current = controller;
+    try {
+      const result = await askSpatialVision(session.token, question, preview, mode, language, provider,
+        serialConfirmed, controller.signal);
+      if (epoch.current === version) setReply(result);
+    } catch (error) {
+      if (epoch.current !== version) return;
+      const code = error instanceof PilotChatError ? error.code : 'RESPONSE_UNCONFIRMED';
+      if (code === 'AUTH_REQUIRED') { signOut(); return; }
+      const rejected = ['INVALID_INPUT', 'AI_INPUT_TOO_LARGE', 'AI_DISABLED', 'BILLING_NOT_APPROVED',
+        'AI_PROVIDER_BUDGET_EXHAUSTED', 'AI_USER_DAILY_QUOTA_EXHAUSTED', 'AI_BUDGET_STORE_UNAVAILABLE'].includes(code);
+      setUncertain(!rejected);
+      setNotice(rejected ? 'No provider attempt started. Check your crop, consent and allowance.'
+        : 'A complete analysis was not confirmed. The attempt may count toward your allowance. No automatic retry was made.');
+    } finally {
+      if (epoch.current === version) { pending.current = null; locked.current = false; setBusy(false); }
+    }
+  }
+  const sendReady = !!session && ready && consent && !!preview && !!question.trim() &&
+    question.length <= 500 && !busy && !preparing && !uncertain &&
+    (mode !== 'SERIAL_AUDIT' || (serialConfirmed && !whole(crop)));
+  const modeHelp = MODES.find(item => item.id === mode)?.help;
+
+  return <main className="luqi-spatial" aria-labelledby="spatial-title">
+    <header>
+      <p className="luqi-eyebrow">LUQI · VISUAL LEARNING LAB</p>
+      <h1 id="spatial-title">Spatial Vision & 2.5D Lab</h1>
+      <p>Explore exam diagrams, visible contract terms and hardware labels. KHORO works inside Luqi; no separate login.</p>
+      <p className="luqi-spatial-caution">Model boxes are estimates, not verified segmentation. The rotatable brightness relief is an illustration, not a measured depth map or real 3D reconstruction.</p>
+    </header>
+    {!session ? <AccountAccessForm purpose="account" onAuthenticated={acceptSession} /> : <>
+      <p className="luqi-spatial-account">Signed in as {session.user.name || session.user.email}. <button type="button" onClick={signOut}>Sign out</button></p>
+      {!ready && <p role="status">The AI image gateway is not currently configured as ready. You can still explore images locally.</p>}
+      <div className="luqi-spatial-controls">
+        <label>Scan mode
+          <select value={mode} disabled={busy} onChange={event => {
+            setMode(event.target.value as SpatialMode); setReply(null); setConsent(false); setSerialConfirmed(false);
+          }}>{MODES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
+        </label>
+        <label>Vision provider
+          <select value={provider} disabled={busy} onChange={event => {
+            setProvider(event.target.value as SpatialProvider); setConsent(false); setReply(null);
+          }}>
+            <option value="gemini">Gemini (existing visual pilot)</option>
+            <option value="openai">OpenAI gpt-4o (experimental)</option>
+          </select>
+        </label>
+        <label>Explanation language
+          <select value={language} disabled={busy} onChange={event => {
+            setLanguage(event.target.value); setConsent(false); setReply(null);
+          }}>{LANGUAGES.map(item => <option key={item.code} value={item.name}>{item.nativeName}</option>)}</select>
+        </label>
+      </div>
+      <p>{modeHelp} Provider availability is configuration-only, not proof of a complete answer.</p>
+      <label className="luqi-spatial-file">Choose a JPEG or PNG (up to 8 MB)
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png" disabled={busy || preparing}
+          onChange={event => { void loadPhoto(event.target.files?.[0]); }} />
+      </label>
+      {preparing && <p role="status">Preparing the selected image on your device…</p>}
+      {photo && <section aria-label="Local crop and preview" className="luqi-spatial-workspace">
+        <div>
+          <h2>Select the region to analyse</h2>
+          <p>Crop locally before any upload. For hardware serials, exclude IMEI, personal and company identifiers.</p>
+          <div className="luqi-spatial-image">
+            <img ref={imageRef} src={photo} alt="Local image for crop selection" draggable={false} />
+            <div className="luqi-spatial-selection" style={{
+              left: `${crop.x}%`, top: `${crop.y}%`, width: `${crop.width}%`, height: `${crop.height}%`,
+            }} aria-hidden="true" />
+          </div>
+          <div className="luqi-spatial-crop-controls">
+            {(['x', 'y', 'width', 'height'] as const).map(key => <label key={key}>
+              {{ x: 'Left', y: 'Top', width: 'Width', height: 'Height' }[key]} ({Math.round(crop[key])}%)
+              <input type="range" min={key === 'x' || key === 'y' ? 0 : 1}
+                max={key === 'x' || key === 'y' ? 99 : 100} value={crop[key]} disabled={busy}
+                onChange={event => changeCrop({ ...crop, [key]: Number(event.target.value) })} />
+            </label>)}
+          </div>
+          <label className="luqi-spatial-check"><input type="checkbox" checked={enhance} disabled={busy}
+            onChange={event => { setEnhance(event.target.checked); setPreview(''); setConsent(false); }} />
+            Optional local contrast enhancement (may obscure fine text)</label>
+          <div className="luqi-spatial-actions">
+            <button type="button" disabled={busy} onClick={() => changeCrop(WHOLE_IMAGE)}>Whole photo</button>
+            <button type="button" disabled={busy || preparing} onClick={() => { void prepareCrop(); }}>Prepare selected crop</button>
+            <button type="button" disabled={busy} onClick={clearImage}>Clear image</button>
+          </div>
+        </div>
