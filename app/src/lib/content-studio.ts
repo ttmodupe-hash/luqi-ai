@@ -48,13 +48,15 @@ function validate(scenes: readonly StudioScene[]) {
       s.caption.length > 240 || !s.question.trim() || s.question.length > 140)) throw new Error('Complete all six bounded scenes before export.');
 }
 export function storyboardJson(scenes: readonly StudioScene[], format: StudioFormat, length: number, gravity: number,
-  sceneSeconds: StudioSceneSeconds = 15, motion: StudioMotion = 'pendulum'): string {
+  sceneSeconds: StudioSceneSeconds = 15, motion: StudioMotion = 'pendulum', yaw = 28): string {
   validate(scenes); pendulumPeriod(length, gravity);
-  return JSON.stringify({ format: motion === 'pendulum' && sceneSeconds === 15 ? 'luqi.storyboard.v1' : 'luqi.storyboard.v3',
+  const modern = motion !== 'pendulum' || sceneSeconds !== 15;
+  return JSON.stringify({ format: modern ? 'luqi.storyboard.v3' : 'luqi.storyboard.v1',
     durationSeconds: studioDuration(sceneSeconds), aspect: format,
-    ...(motion !== 'pendulum' || sceneSeconds !== 15 ? { sceneSeconds, visualTheme: motion } : {}),
+    ...(modern ? { sceneSeconds, visualTheme: motion, cameraYawDegrees: yaw } : {}),
     audio: 'none', rendering: 'local_original_motion_graphics', publishing: 'not_connected',
-    simulation: { model: 'small_angle_pendulum', lengthMetres: length, gravityMetresPerSecondSquared: gravity },
+    simulation: { model: modern && motion !== 'pendulum' ? 'local_illustration' : 'small_angle_pendulum',
+      lengthMetres: length, gravityMetresPerSecondSquared: gravity },
     scenes: scenes.map((s, i) => ({ ...s, startSeconds: i * sceneSeconds, durationSeconds: sceneSeconds })) }, null, 2);
 }
 const stamp = (seconds: number) => `00:${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')},000`;
