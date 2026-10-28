@@ -8,7 +8,7 @@ import { buildPilotInput } from "../../src/lib/pilot-input";
 import { buildKhoroContinentalSystemPrompt, isAfricanRegionCode, type AfricanRegionCode } from "../../src/services/panAfricanSovereignEngine";
 import { readGeminiText, readOpenAiText, readProviderJson, PilotOutputError } from "./pilotOutput";
 import {
-  assertPilotEnabled, MAX_OUTPUT_TOKENS,
+  assertPilotEnabled, MAX_OUTPUT_TOKENS, TEXT_REPLY_RESERVE_CENTS,
   PilotBlocked, reservePilotAttempt
 } from "./aiPilotBudget";
 
@@ -25,7 +25,7 @@ Answer the user's actual question accurately and respectfully.
 People should not need prompt-engineering skills or perfect spelling to talk to Luqi. Interpret ordinary requests charitably without assuming a person's identity, location, ability, or intent.
 When a useful answer is possible, offer a practical first response. If an essential detail is missing, ask one focused clarifying question rather than inventing facts.
 Consider reasonable alternatives and trade-offs when helpful. Preserve the user's chosen language and meaning; do not silently recast African words as English.
-Give concise, complete answers. For a broad task, offer a useful first part and let the user choose whether to continue.
+Give useful, complete answers within the available reply budget. Prioritise the direct answer and key steps over long introductions. For a broad task, finish a clearly bounded first part and invite the user to request the next part. Never abruptly end a sentence or claim an unfinished reply was complete.
 Preserve African linguistic and historical specificity, rather than treating Africa as a monolith.
 Do not assert unverified legal, medical, financial, travel or current facts.
 Say when information is uncertain and recommend authoritative sources for consequential questions.
@@ -72,7 +72,7 @@ export async function runBudgetedPilotChat(
   // independently. Never induce a Gemini failure or spend on it first.
   if (geminiKey && provider !== "openai") {
     try {
-      await reservePilotAttempt("gemini", userId);
+      await reservePilotAttempt("gemini", userId, new Date(), TEXT_REPLY_RESERVE_CENTS);
       const client = new GoogleGenAI({ apiKey: geminiKey });
       const result = await client.models.generateContent({
         model: PILOT_MODELS.gemini,
@@ -94,7 +94,7 @@ export async function runBudgetedPilotChat(
 
   if (openaiKey) {
     try {
-      await reservePilotAttempt("openai", userId);
+      await reservePilotAttempt("openai", userId, new Date(), TEXT_REPLY_RESERVE_CENTS);
       const result = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         redirect: "error", cache: "no-store", credentials: "omit",
