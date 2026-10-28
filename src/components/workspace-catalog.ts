@@ -36,6 +36,11 @@ export const workspaceTools = [
     status: "Free · no account", ready: true, path: "/comparative-evidence", icon: "academy",
   },
   {
+    id: "opportunity-compass", title: "Opportunity Compass · Jobs & Funding", category: "South African youth government vacancies and grants",
+    description: "Free government, graduate, bursary, sponsorship and youth support source directory, nine-province map and read-only publisher health check. Verify each opening and requirements with the agency.",
+    status: "Free official sources · no account", ready: true, path: "/opportunities", icon: "business",
+  },
+  {
     id: "notes",
     title: "Private notes",
     category: "Your ideas, kept together",
