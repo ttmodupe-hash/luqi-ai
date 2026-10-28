@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isVideoCreationRequest, proposeStudioVideo } from '../src/lib/video-plan';
-import { sceneAt, studioDuration, subtitles, episodeOutline, storyboardJson } from '../src/lib/content-studio';
+import { sceneAt, sceneAtForDuration, studioDuration, subtitles, episodeOutline, storyboardJson } from '../src/lib/content-studio';
 import { parseStudioDraft, serializeStudioDraft } from '../src/lib/studio-draft';
 
 const goal = 'I want to create a video explaining the laws of gravity for my 2 year old child.';
@@ -23,8 +23,9 @@ describe('reviewed local Chat-to-Studio video contract', () => {
     expect(plan.scenes).toHaveLength(6);
     expect(plan.scenes[1].caption).toMatch(/gravity pulls/i);
     expect(plan.scenes[4].title).toMatch(/apple/i);
-    expect(sceneAt(5, plan.sceneSeconds)).toBe(1);
-    expect(sceneAt(30, plan.sceneSeconds)).toBe(5);
+    expect(sceneAtForDuration(5, plan.sceneSeconds)).toBe(1);
+    expect(sceneAtForDuration(30, plan.sceneSeconds)).toBe(5);
+    expect([0, 15, 75, 90].map(sceneAt)).toEqual([0, 1, 5, 5]);
     expect(subtitles(plan.scenes, plan.sceneSeconds)).toContain('00:00:25,000 --> 00:00:30,000');
     expect(episodeOutline(plan.scenes, plan.sceneSeconds)).toContain('30-second script');
   });
