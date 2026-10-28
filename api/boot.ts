@@ -74,7 +74,9 @@ app.use("/*", async (c, next) => {
   c.header("X-XSS-Protection", "1; mode=block");
   c.header("Referrer-Policy", c.req.path === '/paystack-checkout.html' || c.req.path.startsWith('/api/v1/commerce/')
     ? 'no-referrer' : 'strict-origin-when-cross-origin');
-  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  // First-party Studio may request a microphone only after a user clicks Record;
+  // cross-origin frames, camera and geolocation remain denied.
+  c.header("Permissions-Policy", "camera=(), microphone=(self), geolocation=()");
   if (process.env.NODE_ENV === "production") {
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
