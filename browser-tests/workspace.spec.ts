@@ -26,17 +26,17 @@ test("workspace filters distinguish usable tools from previews without making AI
   await expect(page.getByText("Try Luqi free without registering")).toBeVisible();
   await expect(page.getByRole("link", { name: "Try Luqi free without registering" }))
     .toHaveAttribute("href", "#/try");
-  await expect(page.getByRole("article")).toHaveCount(11);
+  await expect(page.getByRole("article")).toHaveCount(12);
   await expect(page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Spatial Vision & 3D Lab" }) })
     .getByRole("link")).toHaveAttribute("href", "#/spatial-vision");
   // The signed-in trial is one new discoverable card; all existing tools remain.
   await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
-    "Spatial Vision & 3D Lab", "Visual tutor", "AI text trial", "Private notes", "Physics lab", "Service status",
+    "Spatial Vision & 3D Lab", "Visual tutor", "AI text trial", "Driver rights & traffic stops", "Private notes", "Physics lab", "Service status",
     "African languages", "Content studio", "Luqi practical tools", "Business desk", "Study desk",
   ]);
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(10);
-  await expect(page.getByRole("article").getByRole("link")).toHaveCount(10);
+  await expect(page.getByRole("article")).toHaveCount(11);
+  await expect(page.getByRole("article").getByRole("link")).toHaveCount(11);
   await expect(page.getByRole("article").filter({ has: page.getByRole("heading", { name: "AI text trial", exact: true }) }).getByText("Limited trial · sign-in required", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "In development", exact: true })
@@ -48,14 +48,14 @@ test("workspace filters distinguish usable tools from previews without making AI
     page.getByRole("heading", { name: "No tools match your search." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Show all tools" }).click();
-  await expect(page.getByRole("article")).toHaveCount(11);
+  await expect(page.getByRole("article")).toHaveCount(12);
   await page.getByLabel("Filter workspace tools").fill("  PHYSICS  ");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("article").getByRole("heading", { name: "Physics lab" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear tool search" }).click();
-  await expect(page.getByRole("article")).toHaveCount(11);
+  await expect(page.getByRole("article")).toHaveCount(12);
   expect(requests).toEqual([]);
 });
 
