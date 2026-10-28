@@ -21,6 +21,17 @@ export const p2pStatus = z.object({ enabled: z.boolean(), userId: z.number().int
   blockedPeers: z.array(z.number().int().positive().safe()).max(100),
   eligibility: z.enum(['verified_adult', 'verified_student', 'verification_needed']), circles: z.array(p2pCircle).max(24) });
 export type P2PStatus = z.infer<typeof p2pStatus>;
+/** A current mutual contact only. No online/offline/last-seen information is
+ * collected or disclosed by this contract. Account-active is not presence. */
+export const p2pApprovedContact = z.object({
+  circleId: p2pId, userId: z.number().int().positive().safe(),
+  name: z.string().min(1).max(120), accountActive: z.literal(true),
+  presence: z.literal('not_shared'),
+}).strict();
+export const p2pApprovedContacts = z.object({
+  contacts: z.array(p2pApprovedContact).max(24),
+}).strict();
+export type P2PApprovedContact = z.infer<typeof p2pApprovedContact>;
 export const p2pReportInput = z.object({ messageId: p2pId, reason: p2pReason,
   evidence: z.string().min(1).max(2000), consent: z.literal(true) }).strict();
 export const p2pReportReceipt = z.object({ reportId: p2pId, previousSeal: z.string().regex(/^[a-f0-9]{64}$/),

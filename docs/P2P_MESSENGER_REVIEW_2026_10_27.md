@@ -18,7 +18,7 @@
 
 ## Scope and honest capabilities
 
-`/#/p2p` is lazy-loaded and linked as **🔐 P2P Circles & Chat** in desktop/mobile navigation. `/#/circles` is a fixed alias. The three named study/cooperative/trade codes and a custom-name option are present. **The first implementation supports two-person peer circles, not multi-member group chat.** A larger group protocol, membership changes, removal and key rotation need separate design/review.
+`/#/p2p` is lazy-loaded and linked from the bottom-right **Circles & Chat** panel on desktop/mobile. `/#/circles` is a fixed alias. The panel uses the shared Luqi login and lists only current mutually approved contacts when transport is enabled; no live presence is exposed. See `APPROVED_COLLABORATION_2026_10_28.md` for the privacy contract and remaining discovery/group work. The three named study/cooperative/trade codes and a custom-name option are present. **The first implementation supports two-person peer circles, not multi-member group chat.** A larger group protocol, membership changes, removal and key rotation need separate design/review.
 
 A new private invitation contains a random routing token and random message-key material. The service receives only the token, stores its keyed digest, and never receives the peer encryption key. The owner approves the requesting authenticated account after comparing account identity and a SHA-256 safety code out of band. Both participants explicitly acknowledge comparison before sending or decrypting newly retrieved messages. The circle key is derived with HKDF-SHA256 bound to the circle UUID, so different circles have different encryption keys even if raw invitation material is mistakenly reused.
 

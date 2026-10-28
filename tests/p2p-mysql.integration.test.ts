@@ -41,6 +41,30 @@ beforeAll(async()=>{
 beforeEach(async()=>{owner=await account();peer=await account();outsider=await account();moderator=await account('p2p_moderator')});
 afterAll(async()=>{await closeDb?.();await root?.end();vi.unstubAllEnvs()});
 describe.sequential('durable private messaging enforcement',()=>{
+ it('lists only current mutual contacts and never exposes online, login times or email',async()=>{
+  await pair();
+  await root.execute('UPDATE users SET name=? WHERE id=?',['Naledi',peer.id]);
+  const result=await(await request(owner,'/contacts')).json();
+  expect(result.contacts).toHaveLength(1);
+  expect(result.contacts[0]).toMatchObject({userId:peer.id,name:'Naledi',accountActive:true,presence:'not_shared'});
+  expect(Object.keys(result.contacts[0]).sort()).toEqual(['accountActive','circleId','name','presence','userId']);
+  expect((await(await request(outsider,'/contacts')).json()).contacts).toEqual([]);
+  await root.execute('UPDATE users SET is_active=0 WHERE id=?',[peer.id]);
+  expect((await(await request(owner,'/contacts')).json()).contacts).toEqual([]);
+  await root.execute('UPDATE users SET is_active=1 WHERE id=?',[peer.id]);
+  expect((await request(peer,'/block',{peerId:owner.id})).status).toBe(200);
+  expect((await(await request(owner,'/contacts')).json()).contacts).toEqual([]);
+ });
+ it('hides pending contacts and former approvals after eligibility changes',async()=>{
+  const id=crypto.randomUUID(),inviteToken=Buffer.alloc(32,++seq%250).toString('base64url');
+  await request(owner,'/circles',{id,inviteToken,studentLock:false,name:'Pending',category:'custom'});
+  await request(peer,'/join',{id,inviteToken});
+  expect((await(await request(owner,'/contacts')).json()).contacts).toEqual([]);
+  await request(owner,'/confirm',{id});
+  expect((await(await request(owner,'/contacts')).json()).contacts).toHaveLength(1);
+  await root.execute('UPDATE users SET role=? WHERE id=?',['user',peer.id]);
+  expect((await(await request(owner,'/contacts')).json()).contacts).toEqual([]);
+ });
  it('accepts exact read-only schema/grant preflight and rejects DELETE or missing keys',async()=>{
   expect(await checkRuntimeSchema()).toEqual({status:'validated',tables:13});await checkP2PReadiness();
   await root.query("GRANT DELETE ON luqi_ci.luqi_p2p_reports_v1 TO 'luqi_p2p_fixture'@'%'");

@@ -20,7 +20,7 @@ jobs:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
       - run: npm run check
-      - run: npx vitest run tests/p2p-crypto.test.ts tests/p2p-shield.test.ts tests/p2p-routes.test.ts tests/p2p-audit.test.ts tests/p2p-transactions.test.ts tests/p2p-page.test.tsx tests/p2p-parity.test.ts tests/admin-status-ui.test.tsx tests/self-healing-truth.test.ts
+      - run: npx vitest run tests/p2p-crypto.test.ts tests/p2p-shield.test.ts tests/p2p-routes.test.ts tests/p2p-audit.test.ts tests/p2p-transactions.test.ts tests/p2p-page.test.tsx tests/p2p-parity.test.ts tests/approved-contacts-panel.test.tsx tests/admin-status-ui.test.tsx tests/self-healing-truth.test.ts
       - run: npm run build
   real-mysql:
     runs-on: ubuntu-24.04

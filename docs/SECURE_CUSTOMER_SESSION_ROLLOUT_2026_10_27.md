@@ -5,8 +5,9 @@
 ### 28 October: current Chat integration
 
 The owner again requested no repeated login while using Luqi and collaboration tools.
-This candidate now includes the deployed midnight-blue Chat, preferred account name
-and language controls from main `cb5e2533`. Signup accepts the preferred name and
+This candidate now includes the deployed midnight-blue Chat, bottom-right Circles
+panel, preferred account name and language controls from main `6c1cedb0`.
+Signup accepts the preferred name and
 the separate explicit private-device choice together. A verified restore retains
 the saved name. Short-lived token rotation within the same signed device family
 preserves the in-tab conversation and provider acknowledgement; a fresh family,
