@@ -21,6 +21,7 @@ import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
 import OmegaTasksPage from "./pages/OmegaTasksPage";
 
+const KhoroSpatialVisionLab = React.lazy(() => import("./components/KhoroSpatialVisionLab"));
 // Load optional tools only when their route is rendered. Keep account, notes,
 // start/help and release-observed core pages available in the initial bundle.
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
@@ -73,6 +74,7 @@ export default function App() {
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
         <RouterRoute path="/visual-tutor" element={<VisualTutorPage />} />
+        <RouterRoute path="/spatial-vision" element={<KhoroSpatialVisionLab />} />
         <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
         <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
