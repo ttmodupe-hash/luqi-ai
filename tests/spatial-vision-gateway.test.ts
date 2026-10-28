@@ -27,7 +27,7 @@ const openai = (text: string) => ({ status: 'completed',
     content: [{ type: 'output_text', text }] }] });
 
 beforeEach(() => {
-  vi.resetAllMocks(); vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', 'fixture-gemini');
+  vi.clearAllMocks(); vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', 'fixture-gemini');
   vi.stubEnv('LUQI_PILOT_OPENAI_API_KEY', 'fixture-openai');
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
