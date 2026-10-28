@@ -318,7 +318,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             onClick={() => workspace.setProviderAcknowledged(false)}>Change consent</button>
         </p>}
         {!workspace.providerAcknowledged && <p className="luqi-chat-consent-privacy"><Link to="/privacy">Privacy information</Link></p>}
-        {turns.length > 0 && workspace.providerAcknowledged && <div className="luqi-chat-continuity">
+        {workspace.providerAcknowledged && <div className="luqi-chat-continuity">
           <label><input type="checkbox" checked={shareContext} disabled={busy || uncertain}
             onChange={event => setShareContext(event.target.checked)} />
             Keep recent conversation context with my follow-up messages (this chat only)
