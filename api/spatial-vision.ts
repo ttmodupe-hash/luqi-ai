@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
 import { spatialMode, spatialProvider } from '../src/lib/spatial-vision-contract';
+import { LANGUAGES } from '../src/lib/languages';
 import { PilotInputError } from '../src/lib/pilot-input';
 import { PilotUnavailable } from './services/aiPilotGateway';
 import { assertPilotEnabled, PilotBlocked } from './services/aiPilotBudget';
@@ -16,7 +17,7 @@ import { runSpatialVision } from './services/spatialVision';
 const input = z.object({
   mode: spatialMode,
   provider: spatialProvider,
-  language: z.string().trim().min(1).max(50),
+  language: z.string().trim().min(1).max(50).refine(value => LANGUAGES.some(item => item.name === value)),
   consent: z.literal(true),
   image: z.object({
     mimeType: z.literal('image/jpeg'),
