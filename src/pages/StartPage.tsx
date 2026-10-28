@@ -54,6 +54,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> User-authored flashcards and review dates</li><li><Check aria-hidden="true" /> Export and reopen your deck</li><li><Check aria-hidden="true" /> No subscription or AI required</li></ul>
         <Link className="luqi-primary" to="/study-desk">Open the study desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-driver-rights">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">FREE · NO ACCOUNT OR AI CHARGE</p>
+        <h2 id="start-driver-rights">Know your rights at a traffic stop.</h2>
+        <p>Stay safe, understand police powers, identify red flags for bribes, and check South African road law with original source links.</p>
+        <ul><li><Check aria-hidden="true" /> Immediate three-step roadside guide</li><li><Check aria-hidden="true" /> Explains exceptions to searches and fines</li><li><Check aria-hidden="true" /> Source dates and official reporting contacts</li></ul>
+        <Link className="luqi-primary" to="/driver-rights">Open driver rights guide <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-rights">
         <span className="luqi-tool-icon luqi-icon-study"><Scale aria-hidden="true" /></span>
         <p className="luqi-card-kicker">FREE SOURCE-LINKED INFORMATION · NO ACCOUNT</p>

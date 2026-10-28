@@ -1,6 +1,7 @@
 /** A local, source-truthful starting point; NOT AI inference or live travel search. */
+import { detectDriverMode } from './driver-rights';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'consumer' | 'general';
+export type GuideKind = 'driver' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'consumer' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -17,6 +18,10 @@ export interface GuideRecommendation {
 
 /** Honest, deterministic next steps. Not search results, a booking service or an AI plan. */
 export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
+  driver: [
+    'Stop safely before reading or touching a phone; never ignore lawful traffic directions.',
+    'Open the free South African driver-rights guide for source-linked steps and official reporting contacts.',
+  ],
   urgent: [
     'Use official emergency services or an appropriate local help point now.',
     'Do not rely on a booking screen or this experimental AI chat for an emergency.',
@@ -70,6 +75,15 @@ export const GUIDE_EXAMPLES = [
 ] as const;
 
 const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
+  driver: {
+    title: 'South African driver safety and traffic stop rights',
+    detail: 'Read three immediate safety steps and source-linked explanations for officer identification, vehicle searches, fines, sobriety tests and reporting corruption. No account, AI request or incident upload occurs.',
+    status: 'local', statusLabel: 'Free on-device guide',
+    nextQuestion: 'When safely stopped, choose the relevant roadside situation in Luqi. Do not type while driving.',
+    primaryPath: '/driver-rights', primaryLabel: 'Open driver rights guide',
+    caution: 'General South African information, not dispatch or legal advice. Follow lawful instructions and seek help in genuine danger.',
+    bookingPreview: false,
+  },
   urgent: {
     title: 'Your safety comes first',
     detail: 'For an immediate emergency, contact local emergency services or an official nearby help point. LUQI does not provide emergency dispatch, verified live alerts or guaranteed response times.',
@@ -177,6 +191,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   if (typeof input !== 'string' || !input.trim() || input.length > MAX_GUIDE_NEED_CHARS) return null;
   const q = input.trim().toLowerCase();
   const kind: GuideKind =
+    detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
     (/\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight|place to stay|where to stay|where can i stay|where should i stay|stay in|stay near)\b/u.test(q)) ? 'booking' :
     /\b(asylum|refugee|refugees|refugee status|immigration|home affairs|asylum seeker|residence permit)\b/u.test(q) ? 'rights' :

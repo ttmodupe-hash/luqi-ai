@@ -28,6 +28,8 @@ export default function RightsGuidePage() {
           Explore source-linked general information and find qualified help. This page does not assess eligibility,
           submit an asylum application, calculate appeal deadlines or replace a legal professional.
         </p>
+        <p className="text-sm">Looking for traffic stops instead? <Link to="/driver-rights"
+          className="text-cyan-300 underline underline-offset-2">Open Luqi's free South African driver rights guide</Link>.</p>
       </header>
 
       <section className="space-y-2 rounded-xl border border-amber-500/60 bg-amber-950/30 p-4" aria-label="Important legal information notice">

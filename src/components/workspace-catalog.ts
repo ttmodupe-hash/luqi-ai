@@ -21,6 +21,11 @@ export const workspaceTools = [
     icon: "status",
   },
   {
+    id: "driver-rights", title: "Driver rights & traffic stops", category: "South African traffic stop law and roadside safety",
+    description: "Free source-linked South African driver guidance: police ID, roadblocks, searches, fines and corruption reporting. Safe roadside quick-reference and legal review dates; no account or AI calls.",
+    status: "Free · no account", ready: true, path: "/driver-rights", icon: "status",
+  },
+  {
     id: "notes",
     title: "Private notes",
     category: "Your ideas, kept together",

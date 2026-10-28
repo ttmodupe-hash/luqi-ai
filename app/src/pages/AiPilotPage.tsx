@@ -8,6 +8,8 @@ import { AFRICAN_REGIONAL_PROFILES } from '../services/panAfricanSovereignEngine
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 import { guideLuqiNeed } from '../lib/luqi-intent-guide';
+import { detectDriverMode } from '../lib/driver-rights';
+import DriverQuickCard from '../components/DriverQuickCard';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
@@ -154,6 +156,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
   async function submit() {
+    if (detectDriverMode(prompt)) { navigate('/driver-rights'); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
@@ -211,6 +214,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const latestVideoQuestion = turns.at(-2)?.sender === 'user' ? turns.at(-2)!.text : '';
   const videoPlan = answer && latestVideoQuestion ? proposeStudioVideo(latestVideoQuestion, answer.response) : null;
   const typedVideoApproval = !!videoPlan && isVideoApprovalMessage(prompt);
+  // A local roadside answer must never require consent or billable inference.
+  const driverMode = detectDriverMode(prompt);
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -219,7 +224,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     navigate('/content-studio');
   }
   if (workspace) {
-    const canSend = typedVideoApproval ? !!session && !busy && !uncertain :
+    const canSend = driverMode ? !busy && !uncertain && !tooLong :
+      typedVideoApproval ? !!session && !busy && !uncertain :
       !!session && !checking && available && consentGranted && !!prompt.trim() &&
       !tooLong && !contextTooLong && !busy && !uncertain;
     return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
@@ -230,6 +236,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div>
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
       </header>
+      <p className="px-3 text-sm"><Link to="/driver-rights" className="text-cyan-200 underline underline-offset-2">
+        Roadside help: free South African driver rights (no sign-in or AI request)</Link></p>
       {languageControl}
       {personalWelcome}
       {session && <div className="luqi-chat-availability-row">
@@ -241,6 +249,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <Link to="/service-status">Service status</Link>
       </div>}
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
+      {driverMode && <DriverQuickCard mode={driverMode} />}
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
         {!turns.length ? <div className="luqi-chat-welcome">
           <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
@@ -305,7 +314,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             setTurns([]); setShareContext(false);
           }} />
         </details>
-      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
+      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (driverMode) navigate('/driver-rights'); else if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
         <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
         <div className="luqi-chat-compose-input">
           <textarea id="ai-question" rows={2} required value={prompt}
@@ -320,12 +329,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey &&
                   !event.altKey && !event.metaKey && !event.nativeEvent.isComposing &&
                   !event.repeat && canSend) {
-                event.preventDefault(); if (typedVideoApproval) approveVideoPlan(); else void submit();
+                event.preventDefault(); if (driverMode) navigate('/driver-rights'); else if (typedVideoApproval) approveVideoPlan(); else void submit();
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
-            aria-label={busy ? 'Waiting for a reply…' : 'Send question'}>
-            <Send size={18} aria-hidden="true" /><span>{busy ? 'Waiting…' : 'Send'}</span>
+            aria-label={driverMode ? 'Open free driver rights guide' : busy ? 'Waiting for a reply…' : 'Send question'}>
+            <Send size={18} aria-hidden="true" /><span>{driverMode ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
           </button>
         </div>
         <div className="luqi-chat-compose-meta">
