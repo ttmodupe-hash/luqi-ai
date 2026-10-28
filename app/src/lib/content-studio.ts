@@ -80,9 +80,15 @@ function drawIllustrativeMotion(ctx: CanvasRenderingContext2D, w: number, h: num
   if (motion === 'gravity') {
     // Repeat a clearly illustrative drop. The visual does not estimate an
     // actual falling object's trajectory, elasticity or air resistance.
-    const fraction = (phase * 2.2) % 1;
-    const fall = Math.min(1, 1.4 * fraction * fraction);
-    const objectY = upper + (floor - upper - radius) * fall;
+    const fraction = (phase * 1.7) % 1;
+    const top = upper + radius, bottom = floor - radius;
+    // Each scene visibly changes the action: introduce, drop, toss, bounce,
+    // apple drop and final recap. Motion is explanatory, not a physics solver.
+    const progress = scene === 0 ? .15 + .07 * Math.sin(time * 3) :
+      scene === 2 ? 1 - .9 * Math.sin(Math.PI * fraction) :
+      scene === 3 ? 1 - .76 * Math.abs(Math.sin(Math.PI * 3 * fraction)) * (1 - .45 * fraction) :
+      Math.min(1, 1.4 * fraction * fraction);
+    const objectY = top + (bottom - top) * progress;
     ctx.strokeStyle = '#9ee0b7'; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(midX - 150, floor + radius); ctx.lineTo(midX + 150, floor + radius); ctx.stroke();
     ctx.strokeStyle = '#cce9a0'; ctx.lineWidth = 6; ctx.lineCap = 'round';
@@ -96,8 +102,16 @@ function drawIllustrativeMotion(ctx: CanvasRenderingContext2D, w: number, h: num
       ctx.strokeStyle = '#9ee0b7'; ctx.lineWidth = 6;
       ctx.beginPath(); ctx.moveTo(midX, objectY - radius); ctx.lineTo(midX + 14, objectY - radius - 20); ctx.stroke();
     }
+    if (scene === 5) {
+      ctx.fillStyle = '#e97764';
+      ctx.beginPath(); ctx.arc(midX - 94, floor - 18, radius * .7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#9ee0b7'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(midX - 94, floor - radius * .7 - 18);
+      ctx.lineTo(midX - 80, floor - radius * .7 - 31); ctx.stroke();
+    }
     ctx.font = '700 23px sans-serif'; ctx.fillStyle = '#e8f7da';
-    ctx.fillText(scene === 4 ? 'APPLE' : 'BALL', midX - 42, floor + radius + 41);
+    ctx.fillText(scene === 4 ? 'APPLE' : scene === 3 ? 'BOUNCE!' : scene === 2 ? 'UP & DOWN' :
+      scene === 5 ? 'GRAVITY!' : 'BALL', midX - 69, floor + radius + 41);
   } else {
     // General requests receive abstract moving scene cards and real captions,
     // not fake topic-specific AI video or simulated cinematic imagery.
