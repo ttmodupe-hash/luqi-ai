@@ -158,7 +158,11 @@ export default function ContentStudioPage() {
     } catch (error) {
       stream?.getTracks().forEach(track => track.stop());
       mix?.stop();
-      if (active.current) { clearTimeout(active.current.timer); active.current = null; }
+      if (active.current) {
+        const run = active.current; run.discard = true; clearTimeout(run.timer);
+        try { if (run.media.state !== 'inactive') run.media.stop(); } catch { /* Already stopped. */ }
+        active.current = null;
+      }
       setMessage(error instanceof Error ? error.message : 'Video export could not start.');
     } finally {
       if (mounted.current && request === audioEpoch.current) setAudioPreparing(false);
