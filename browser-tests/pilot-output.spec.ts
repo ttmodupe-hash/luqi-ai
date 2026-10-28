@@ -26,7 +26,7 @@ for (const [code, status, message] of [
     await page.getByLabel('Password', { exact: true }).fill('Fixture-Password-2026!');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByLabel('Your question', { exact: true }).fill('Synthetic question');
-    await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+    await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
     await page.getByRole('button', { name: 'Send question' }).click();
     await expect(page.getByRole('alert')).toContainText(message);
     await expect(page.getByRole('alert')).toContainText('attempt may still count');

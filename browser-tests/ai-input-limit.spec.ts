@@ -26,7 +26,7 @@ test('AI trial retains over-limit input and sends an intact corrected question',
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   const question = page.getByLabel('Your question', { exact: true });
   await question.fill(overlong);
-  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await expect(question).toHaveValue(overlong);
   await expect(question).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByText(/It will not be sent or shortened automatically/)).toBeVisible();

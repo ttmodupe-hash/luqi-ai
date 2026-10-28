@@ -36,7 +36,7 @@ test('signup opens real Chat; logout and a different login clear the previous re
   await expect(page.getByRole('heading', { name: 'Luqi Chat', exact: true })).toBeVisible();
   expect(paid).toHaveLength(0);
   await page.getByLabel('Your question').fill('Synthetic first account question');
-  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.getByRole('button', { name: 'Send question', exact: true }).click();
   await expect(page.getByText('Synthetic first account Chat reply')).toBeVisible();
   // Change to the preserved local guide without reloading the shared signed-in tab.
@@ -77,7 +77,7 @@ test('expiry clears Chat and the shared header without another request or reload
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByLabel('Your question')).toBeVisible();
   await page.getByLabel('Your question').fill('An unsent private draft');
-  await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.clock.fastForward(61_000);
   await expect(page.getByText(/Your session ended/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Keep the conversation going', exact: true })).toBeVisible();

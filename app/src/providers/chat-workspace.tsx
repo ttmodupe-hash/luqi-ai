@@ -17,6 +17,9 @@ type ChatWorkspaceValue = {
   threads: ChatThread[];
   activeThread: ChatThread | null;
   selectionVersion: number;
+  /** Provider acknowledgement is memory-only and scoped to the signed-in account. */
+  providerAcknowledged: boolean;
+  setProviderAcknowledged: (approved: boolean) => void;
   startNewChat: () => void;
   selectThread: (id: string) => void;
   forgetThread: (id: string) => void;
@@ -34,6 +37,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectionVersion, setSelectionVersion] = useState(0);
+  const [acknowledged, setAcknowledged] = useState(false);
 
   // Hide a former identity synchronously during render and clear before paint.
   // Session expiry, sign-out and account switching all use this same boundary.
@@ -45,8 +49,16 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     nextId.current = 0;
     setThreads([]);
     setActiveId(null);
+    setAcknowledged(false);
     setSelectionVersion(version => version + 1);
   }, [token]);
+
+  const setProviderAcknowledged = useCallback((approved: boolean) => {
+    // Never carry an earlier account's consent across token changes.
+    if (!token || tokenAtPaint.current !== token) return;
+    setAcknowledged(approved === true);
+  }, [token]);
+  const providerAcknowledged = owned ? acknowledged : false;
 
   const startNewChat = useCallback(() => {
     setActiveId(null);
@@ -84,8 +96,10 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
 
   const activeThread = visibleThreads.find(chat => chat.id === activeId) ?? null;
   const value = useMemo<ChatWorkspaceValue>(() => ({
-    threads: visibleThreads, activeThread, selectionVersion, startNewChat, selectThread, forgetThread, recordConfirmedReply,
-  }), [visibleThreads, activeThread, selectionVersion, startNewChat, selectThread, recordConfirmedReply]);
+    threads: visibleThreads, activeThread, selectionVersion, providerAcknowledged, setProviderAcknowledged,
+    startNewChat, selectThread, forgetThread, recordConfirmedReply,
+  }), [visibleThreads, activeThread, selectionVersion, providerAcknowledged, setProviderAcknowledged,
+    startNewChat, selectThread, forgetThread, recordConfirmedReply]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

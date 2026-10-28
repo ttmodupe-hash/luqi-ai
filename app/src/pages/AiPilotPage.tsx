@@ -46,6 +46,9 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [available, setAvailable] = useState(false);
   const [checking, setChecking] = useState(true);
   const [prompt, setPrompt] = useState(''); const [consent, setConsent] = useState(false);
+  // Workspace approval is explicit once per signed-in tab, never stored.
+  // Every provider attempt still requires the user's Send action.
+  const consentGranted = workspace ? workspace.providerAcknowledged : consent;
   const [answer, setAnswer] = useState<PilotReply | null>(null);
   const [busy, setBusy] = useState(false); const [notice, setNotice] = useState('');
   const [uncertain, setUncertain] = useState(false);
@@ -105,7 +108,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     previousToken.current = token;
   }, [session?.token]);
 
-  // Switching recent chats cancels any pending response and clears old consent.
+  // Switching chats cancels pending work and resets optional sharing.
+  // Provider acknowledgement remains scoped to the same signed-in account.
   // The history is limited to confirmed replies in this tab, never storage.
   useLayoutEffect(() => {
     if (!workspace || selectionSeen.current === workspace.selectionVersion) return;
@@ -114,7 +118,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
     setTurns(workspace.activeThread?.turns ?? []);
-    setShareContext(false); setShareRegion(false); setConsent(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
     setBusy(false); setUncertain(false);
     setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
   }, [workspace?.selectionVersion]);
@@ -148,7 +152,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
   async function submit() {
-    if (!session || !consent || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
+    if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
       shareNote ? selectedNote?.content : undefined);
@@ -204,7 +208,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   if (workspace) {
-    const canSend = !!session && !checking && available && consent && !!prompt.trim() &&
+    const canSend = !!session && !checking && available && consentGranted && !!prompt.trim() &&
       !tooLong && !contextTooLong && !busy && !uncertain;
     return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
       <header className="luqi-chat-canvas-header">
@@ -218,8 +222,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       {personalWelcome}
       {session && <div className="luqi-chat-availability-row">
         <span role="status">{checking ? 'Checking AI readiness…' :
-          available ? 'AI provider configured · real replies depend on live limits' :
-            'AI requests paused · no question can be sent'}</span>
+          available ? 'AI text gateway configured · live replies are not guaranteed' :
+            'AI requests paused · your draft remains in this tab'}</span>
+        {!checking && !available && <button type="button" disabled={busy}
+          onClick={() => { void checkAvailability(); }}>Retry readiness</button>}
+        <Link to="/service-status">Service status</Link>
       </div>}
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
@@ -269,27 +276,58 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           }} />
         </details>
       </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); void submit(); }}>
-        <label className="block" htmlFor="ai-question">Your question</label>
-        <textarea id="ai-question" rows={2} required value={prompt}
-          aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
-          disabled={busy || uncertain}
-          placeholder="Ask Luqi about an idea, a study topic, a trip or a challenge…"
-          spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
-          onChange={event => setPrompt(event.target.value)} />
-        <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
-          onApply={value => { setPrompt(value); setConsent(false); }} />
-        <label className="luqi-chat-companion-mode">
+        <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
+        <div className="luqi-chat-compose-input">
+          <textarea id="ai-question" rows={2} required value={prompt}
+            aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
+            disabled={busy || uncertain}
+            placeholder="Message Luqi…"
+            spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
+            onChange={event => setPrompt(event.target.value)}
+            onKeyDown={event => {
+              // Only a ready, explicitly approved draft can be sent with Enter.
+              // Shift+Enter inserts a newline; IME composition never sends.
+              if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey &&
+                  !event.altKey && !event.metaKey && !event.nativeEvent.isComposing &&
+                  !event.repeat && canSend) {
+                event.preventDefault(); void submit();
+              }
+            }} />
+          <button type="submit" className="luqi-chat-send" disabled={!canSend}
+            aria-label={busy ? 'Waiting for a reply…' : 'Send question'}>
+            <Send size={18} aria-hidden="true" /><span>{busy ? 'Waiting…' : 'Send'}</span>
+          </button>
+        </div>
+        <div className="luqi-chat-compose-meta">
+          <span id="ai-question-limit" className="luqi-chat-limit">
+            {questionLength}/{MAX_PILOT_QUESTION_CHARS} characters
+            {contextTooLong && ' · Question and optional context exceed the allowed input'}
+            {tooLong && ' · Shorten your question. It will not be sent or shortened automatically.'}
+          </span>
+          <span className="luqi-chat-keyboard-hint">Enter to send · Shift+Enter for a new line</span>
+        </div>
+        {!workspace.providerAcknowledged ? <label className="luqi-chat-consent luqi-chat-first-consent">
+          <input type="checkbox" checked={workspace.providerAcknowledged} disabled={busy || uncertain}
+            onChange={event => workspace.setProviderAcknowledged(event.target.checked)} />
+          <span>I understand AI text may go to Gemini or OpenAI within the trial limits. I'll avoid sensitive information.</span>
+        </label> : <p className="luqi-chat-consent-confirmed">
+          <span>AI text sharing approved for this signed-in tab. Each message still needs Send.</span>
+          <button type="button" disabled={busy || uncertain}
+            onClick={() => workspace.setProviderAcknowledged(false)}>Change consent</button>
+        </p>}
+        {!workspace.providerAcknowledged && <p className="luqi-chat-consent-privacy"><Link to="/privacy">Privacy information</Link></p>}
+        <details className="luqi-chat-compose-more">
+          <summary>More options: companion, context and writing help</summary>
+          <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
+            onApply={value => setPrompt(value)} />
+          <label className="luqi-chat-companion-mode">
           <input type="checkbox" checked={companionMode} disabled={busy || uncertain}
             onChange={event => setCompanionMode(event.target.checked)} />
           <span>Companion conversation — ask Luqi to listen thoughtfully and support your thinking (text only, not a person or emergency service).</span>
         </label>
-        <label className="luqi-chat-consent">
-          <input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} />
-          <span>I understand this question may go to Gemini or OpenAI within the trial limits. I'll use non-sensitive content.</span>
-        </label>
-        <details className="luqi-chat-compose-details">
+          <details className="luqi-chat-compose-details">
           <summary>Conversation context, country guide and limits (optional)</summary>
-          <p>Consent is per request. No private notes, account email, browsing or voice are attached automatically.</p>
+          <p>Only this message is sent by default. Private notes, account email, browsing and voice are not attached automatically.</p>
           <details className="luqi-chat-companion-personalise">
             <summary>Personalise this reply with one saved private note</summary>
             <CompanionNotePicker key={session.token} token={session.token} disabled={busy || uncertain}
@@ -299,7 +337,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
                 onChange={event => setShareNote(event.target.checked)} />
               Include the selected note in this one provider request. Off by default; review the note above.
             </label>}
-            <p>No private note is sent merely by loading, selecting or saving it. A reply is sent only after the separate provider-consent and Send question actions.</p>
+            <p>No private note is sent merely by loading, selecting or saving it. A reply requires provider acknowledgement and your separate Send action.</p>
           </details>
           {turns.length > 0 && <label><input type="checkbox" checked={shareContext} disabled={busy}
             onChange={event => setShareContext(event.target.checked)} /> Include reviewed previous turns in this question (off by default)</label>}
@@ -311,24 +349,15 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
           <p>20 provider attempts per account per UTC day, maximum 512 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
           <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. AI replies are not automatically saved as private notes or long-term memories.</p>
+          <p>Provider acknowledgement lasts for this signed-in tab only. Optional notes, country and conversation context require separate approval for every request.</p>
           <Link to="/privacy">Privacy and provider information</Link>
+          </details>
         </details>
-        <div className="luqi-chat-compose-actions">
-          <span id="ai-question-limit" className="luqi-chat-limit">
-            {questionLength}/{MAX_PILOT_QUESTION_CHARS} characters
-            {contextTooLong && ' · Question and optional context exceed the allowed input'}
-            {tooLong && ' · Shorten your question. It will not be sent or shortened automatically.'}
-          </span>
-          <button type="button" className="luqi-chat-availability-check" disabled={checking || busy}
-            onClick={() => { void checkAvailability(); }}>
-            {checking ? 'Checking…' : 'Check availability'}
-          </button>
-          {uncertain ? <button type="button" onClick={() => {
+        <div className="luqi-chat-compose-footer">
+          {uncertain ? <button type="button" className="luqi-chat-compose-secondary" onClick={() => {
             setUncertain(false); setPrompt(''); setNotice('');
-          }}>Start a new question</button> : <button type="button" className="luqi-chat-new-in-composer" disabled={busy} onClick={newChat}>New chat</button>}
-          <button type="submit" disabled={!canSend}>
-            <Send size={16} aria-hidden="true" /> {busy ? 'Waiting…' : 'Send question'}
-          </button>
+          }}>Start a new question</button> : <button type="button" className="luqi-chat-compose-secondary luqi-chat-new-in-composer" disabled={busy} onClick={newChat}>New chat</button>}
+          <span>Text-only pilot · review important answers</span>
         </div>
       </form>}
       <p className="luqi-chat-caption">
