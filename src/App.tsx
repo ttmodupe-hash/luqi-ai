@@ -19,7 +19,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-import OmegaTasksPage from "./pages/OmegaTasksPage";
+const OmegaTasksPage = lazy(() => import('./pages/OmegaTasksPage'));
 
 // Load optional tools only when their route is rendered. Keep account, notes,
 // start/help and release-observed core pages available in the initial bundle.
