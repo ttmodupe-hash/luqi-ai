@@ -39,3 +39,21 @@
 .luqi-chat-continuity summary { min-height:32px; cursor:pointer; }
 .luqi-chat-continuity ol { margin:5px 0; padding-left:20px; }
 .luqi-chat-continuity li { margin:5px 0; }
+
+
+/* Reviewed, explicit Chat-to-Studio handoff. Mobile cards remain readable. */
+.luqi-video-proposal { margin:16px 0 20px; padding:19px; background:#112743; color:#e7f1ff;
+  border:1px solid #41658e; border-radius:16px; min-width:0; }
+.luqi-video-proposal h2 { color:#f3f8ff; font-size:20px; margin:0 0 12px; }
+.luqi-video-proposal p { color:#c7d9f3; line-height:1.65; font-size:13px; overflow-wrap:anywhere; }
+.luqi-video-proposal ol { display:grid; gap:8px; list-style:decimal; padding-left:25px; margin:16px 0; }
+.luqi-video-proposal li { padding:9px 11px; background:#0b1d35; border:1px solid #344d70;
+  border-radius:10px; overflow-wrap:anywhere; }
+.luqi-video-proposal li strong { display:block; color:#f2f8ff; font-size:13px; }
+.luqi-video-proposal li span { display:block; font-size:12px; margin-top:5px; color:#c1d4ee; }
+.luqi-video-proposal-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.luqi-video-proposal-actions button { border:1px solid #739ac7; border-radius:10px; background:#24466e;
+  color:#f3f8ff; padding:12px 14px; min-height:44px; font-weight:650; text-align:left; }
+.luqi-video-proposal-actions button:first-child { background:#2875da; border-color:#76aaff; }
+.luqi-video-proposal-actions button:disabled { opacity:.48; cursor:not-allowed; }
+@media(max-width:580px){.luqi-video-proposal{padding:14px;}.luqi-video-proposal-actions button{width:100%;}}
