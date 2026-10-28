@@ -1241,3 +1241,9 @@
   .luqi-desktop-nav a { padding: 10px 8px; font-size: 12px; }
   .luqi-header-actions { gap: 8px; }
 }
+
+/* New tool cards must not force a horizontal scrollbar on narrow phones. */
+@media (max-width: 390px) {
+  .luqi-tool-card-top { flex-wrap: wrap; }
+  .luqi-status-pill { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+}
