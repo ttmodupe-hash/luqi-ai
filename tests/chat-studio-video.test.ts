@@ -71,7 +71,7 @@ describe('reviewed local Chat-to-Studio video contract', () => {
       { ...file, scenes: file.scenes.map((s: Record<string, unknown>, i: number) => i ? s : { ...s, durationSeconds: 15 }) },
     ]) expect(() => parseStudioDraft(JSON.stringify(replacement))).toThrow();
     const old = parseStudioDraft(serializeStudioDraft(plan.scenes, 'portrait', 2.5, 9.81, 28));
-    expect(old.visualTheme).toBe('pendulum');
-    expect(old.sceneSeconds).toBe(15);
+    expect(old.visualTheme).toBeUndefined();
+    expect(old.sceneSeconds).toBeUndefined();
   });
 });
