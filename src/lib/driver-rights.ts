@@ -179,7 +179,7 @@ export function detectDriverMode(input: unknown): DriverMode | null {
       /\b(searching my car|search my car|vehicle search|search my vehicle)\b/u.test(q)) return 'search';
   if (/\b(i (?:am|m)|i'm|im|we are|i was)\s+(?:being\s+)?arrested\b/u.test(q) ||
       /\b(police|officer|cop)\b.{0,50}\b(arresting me|arrested me)\b/u.test(q)) return 'arrest';
-  if (/\b(traffic fine|traffic ticket|unpaid fines?|speeding fines?|arrest warrant|roadblock fine)\b/u.test(q)) return 'fine';
+  if (/\b(traffic fine|traffic ticket|unpaid (?:traffic )?fines?|speeding fines?|arrest warrant|roadblock fine)\b/u.test(q)) return 'fine';
   if (/\b(pulled over|pulling me over|being pulled over|traffic stop|at a roadblock|stopped by (the )?(?:traffic )?police|officer is stopping me)\b/u.test(q)) return 'stop';
   return null;
 }
