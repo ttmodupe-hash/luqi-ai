@@ -76,3 +76,11 @@ export function matchOpportunitySources(category:OpportunityCategory|'all',audie
   &&(audience==='all'||s.audiences.includes(audience))
   &&(!q||(s.title+' '+s.organisation+' '+s.summary).toLowerCase().includes(q)));
 }
+
+/** Conservative routing for opportunity DISCOVERY, not CV writing or a generic interview. */
+export function detectOpportunityIntent(input:unknown):boolean{
+ if(typeof input!=='string'||!input.trim()||input.length>500)return false;
+ const q=input.toLowerCase();
+ return /\b(government vacancies|government jobs|government posts|public service jobs|public service vacancies|graduate opportunities|graduate internships?|internship opportunities|learnerships?|bursar(?:y|ies)|scholarships?|funding opportunities|youth funding|youth grants?|business grants?|startup funding|sponsorship opportunities|scholarship opportunities|jobs near me|graduate programme|graduate program|find jobs|find a job|opportunities for youth|opportunities for graduates)\b/u.test(q)
+  || /\b(opportunities|funding|sponsor(?:ship)?|government posts?)\b.{0,45}\b(youth|young people|graduate|student|entrepreneur|disab(?:ility|led)|internship|job|programme)\b/u.test(q);
+}

@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {ZA_OPPORTUNITY_SOURCES,PROVINCES,COUNTRY_ANCHORS,CATEGORIES,deadlineState,matchOpportunitySources} from '../src/lib/opportunity-sources';
+import {ZA_OPPORTUNITY_SOURCES,PROVINCES,COUNTRY_ANCHORS,CATEGORIES,deadlineState,matchOpportunitySources,detectOpportunityIntent} from '../src/lib/opportunity-sources';
 describe('free South African opportunity source registry',()=>{
  it('keeps official sources grounded without invented job availability',()=>{
    expect(ZA_OPPORTUNITY_SOURCES.length).toBeGreaterThanOrEqual(12);
@@ -24,4 +24,13 @@ describe('free South African opportunity source registry',()=>{
    expect(matchOpportunitySources('all','entrepreneur','').some(s=>s.id==='youth-business')).toBe(true);
    expect(matchOpportunitySources('government','all','circular').length).toBeGreaterThan(0);
  });
+});
+
+it('routes official youth opportunity discovery but not generic study or legal queries',()=>{
+  expect(detectOpportunityIntent('Luqi find government jobs in Gauteng')).toBe(true);
+  expect(detectOpportunityIntent('graduate opportunities after university')).toBe(true);
+  expect(detectOpportunityIntent('sponsorship opportunities for young artists')).toBe(true);
+  expect(detectOpportunityIntent('I need to prepare for my maths exam')).toBe(false);
+  expect(detectOpportunityIntent('Help me write a CV')).toBe(false);
+  expect(detectOpportunityIntent('x'.repeat(501))).toBe(false);
 });
