@@ -5,7 +5,9 @@ export const MAX_STUDIO_DRAFT_BYTES = 32 * 1024;
 export const STUDIO_DRAFT_READ_TIMEOUT_MS = 8_000;
 export type StudioDraft = {
   scenes: StudioScene[]; aspect: StudioFormat; length: number; gravity: number;
-  yaw: number; legacyCamera: boolean; sceneSeconds: StudioSceneSeconds; visualTheme: StudioMotion;
+  yaw: number; legacyCamera: boolean;
+  /** Only v3 documents have these fields; v1/v2 keep exact legacy shape. */
+  sceneSeconds?: StudioSceneSeconds; visualTheme?: StudioMotion;
 };
 const invalid = () => new Error('This is not a supported LUQI storyboard. Your current draft is unchanged.');
 const record = (value: unknown): value is Record<string, unknown> =>
@@ -51,7 +53,7 @@ export function parseStudioDraft(source: string): StudioDraft {
   });
   return { scenes, aspect: value.aspect as StudioFormat, length: simulation.lengthMetres,
     gravity: simulation.gravityMetresPerSecondSquared, yaw: legacy ? 28 : value.cameraYawDegrees as number,
-    legacyCamera: legacy, sceneSeconds, visualTheme: modern ? value.visualTheme as StudioMotion : 'pendulum' };
+    legacyCamera: legacy, ...(modern ? { sceneSeconds, visualTheme: value.visualTheme as StudioMotion } : {}) };
 }
 
 /** v2 preserves the camera too; v1 files are still accepted with an explicit default. */
