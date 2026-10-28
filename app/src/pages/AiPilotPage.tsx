@@ -249,7 +249,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {turns.map((turn, index) => <article key={index}
             className={'luqi-chat-message ' + (turn.sender === 'user' ? 'luqi-chat-message-user' : 'luqi-chat-message-ai')}>
             <strong>{turn.sender === 'user' ? 'You' : 'Luqi Chat'}</strong>
-            <p>{turn.sender === 'user' ? turn.text : <SafePilotText text={turn.text} />}</p>
+            {turn.sender === 'user' ? <p>{turn.text}</p> :
+              <div className="luqi-chat-richtext"><SafePilotText text={turn.text} /></div>}
           </article>)}
           {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
           {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
@@ -444,7 +445,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       </section>}
       {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
         <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
-        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><SafePilotText text={answer.response} /></p>
+        <div className="luqi-chat-richtext"><SafePilotText text={answer.response} /></div>
         <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
         {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real Luqi tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
       </section>}
