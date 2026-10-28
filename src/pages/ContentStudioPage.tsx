@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { CLIP_SECONDS, SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episodeOutline,
+import { SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episodeOutline,
   pendulumPeriod, sceneAt, storyboardJson, subtitles, studioDuration,
   type StudioFormat, type StudioScene, type StudioMotion, type StudioSceneSeconds } from '../lib/content-studio';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
@@ -25,7 +25,7 @@ export default function ContentStudioPage() {
   const [format, setFormat] = useState<StudioFormat>('landscape');
   const [sceneSeconds, setSceneSeconds] = useState<StudioSceneSeconds>(approvedPlan?.sceneSeconds ?? 15);
   const [motion, setMotion] = useState<StudioMotion>(approvedPlan?.theme ?? 'pendulum');
-  const [approvedGoal] = useState(approvedPlan?.goal ?? '');
+  const [approvedGoal, setApprovedGoal] = useState(approvedPlan?.goal ?? '');
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [recording, setRecording] = useState(false);
   const [length, setLength] = useState(2.5), [gravity, setGravity] = useState(9.81), [yaw, setYaw] = useState(28);
   const [message, setMessage] = useState(approvedPlan ? 'Your reviewed Chat plan is loaded. Luqi will try to record the silent local video automatically where this browser supports it.' : 'Your draft stays in this page. Download it before leaving.');
@@ -141,7 +141,7 @@ export default function ContentStudioPage() {
         if (active.current) return;
         setScenes(draft.scenes.map(scene => ({ ...scene }))); setFormat(draft.aspect);
         setLength(draft.length); setGravity(draft.gravity); setYaw(draft.yaw);
-        setSceneSeconds(draft.sceneSeconds); setMotion(draft.visualTheme);
+        setSceneSeconds(draft.sceneSeconds); setMotion(draft.visualTheme); setApprovedGoal('');
         seek(0); setClip(null);
         setMessage('Saved storyboard restored. Download your edited storyboard before leaving.');
       }} />
