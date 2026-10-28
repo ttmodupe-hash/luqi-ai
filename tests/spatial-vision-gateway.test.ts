@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 const { generateContent } = vi.hoisted(() => ({ generateContent: vi.fn() }));
 vi.mock('@google/genai', async original => ({
   ...await original<typeof import('@google/genai')>(),
-  GoogleGenAI: vi.fn().mockImplementation(() => ({ models: { generateContent } })),
+  GoogleGenAI: class { models = { generateContent }; },
 }));
 vi.mock('../api/services/aiPilotBudget', async original => ({
   ...await original<typeof import('../api/services/aiPilotBudget')>(),
