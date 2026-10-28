@@ -7,12 +7,12 @@ test('Opportunity Compass is useful at 320px without private data or unapproved 
   await page.getByRole('link',{name:'Explore opportunities'}).click();
   await expect(page).toHaveURL(/#\/opportunities$/);
   await expect(page.getByRole('heading',{name:/Opportunity Compass/})).toBeVisible();
-  await expect(page.getByText('2027 NSFAS applications')).toBeVisible();
+  await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toBeVisible();
   await page.getByRole('button',{name:'Select Gauteng'}).click();
   await expect(page.getByRole('status').filter({hasText:'Selected Gauteng'})).toBeVisible();
   await page.getByLabel('Opportunity category').selectOption('sponsorship');
   await expect(page.getByText('National Arts Council calls')).toBeVisible();
-  await expect(page.getByText('2027 NSFAS applications')).toHaveCount(0);
+  await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   expect(posts).toEqual([]);
 });
@@ -38,7 +38,7 @@ test('other country choice does not fabricate 54-country opportunities',async({p
  await page.goto('/#/opportunities');
  await page.getByLabel('Country view').selectOption('KE');
  await expect(page.getByText(/Opportunities for Kenya have not been sourced and reviewed yet/)).toBeVisible();
- await expect(page.getByText('2027 NSFAS applications')).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toHaveCount(0);
 });
 test('Chat links directly to opportunities without a paid provider request',async({page})=>{
  const paid:string[]=[];
