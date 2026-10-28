@@ -33,7 +33,7 @@ jobs:
       - name: Type check isolated public-key checkout
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/paystack-popup.ts src/pages/PaystackCheckoutPage.tsx src/paystack-checkout.tsx api/hosted-checkout.ts api/lib/paymentDocument.ts
       - name: Verify bounded paid-provider transport without external calls
-        run: npx vitest run tests/ai-pilot-transport.test.ts tests/luqi-personal-welcome.test.tsx tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx tests/pilot-conversation.test.ts tests/luqi-guide-page.test.tsx tests/luqi-intent-guide.test.ts
+        run: npx vitest run tests/ai-pilot-transport.test.ts tests/luqi-personal-welcome.test.tsx tests/ai-pilot-client.test.ts tests/ai-pilot-page.test.tsx tests/safe-pilot-markdown.test.tsx tests/pilot-conversation.test.ts tests/luqi-guide-page.test.tsx tests/luqi-intent-guide.test.ts
       - name: Verify local consumer-rights explanations and no-model story handling
         run: npx vitest run tests/consumer-rights-guide.test.ts tests/consumer-rights-page.test.tsx
       - name: Type-check consumer-rights source registry and safe story interface
