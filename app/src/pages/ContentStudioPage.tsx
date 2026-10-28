@@ -153,7 +153,7 @@ export default function ContentStudioPage() {
       media.start(1000);
       mix?.start();
       setRecording(true); setPlaying(true);
-      setMessage('Recording ' + clipSeconds + ' seconds ' + (mix ? 'with a local audio track' : 'silently') +
+      setMessage('Recording ' + clipSeconds + ' seconds locally' + (mix ? ' with mixed audio' : ' (silent)') +
         '. Keep this tab visible. Escape or Cancel discards partial work. No provider or publishing call occurs.');
     } catch (error) {
       stream?.getTracks().forEach(track => track.stop());
