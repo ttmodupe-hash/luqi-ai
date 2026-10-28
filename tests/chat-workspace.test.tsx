@@ -44,7 +44,8 @@ async function ask(question: string) {
   const firstUseConsent = screen.queryByRole('checkbox', { name: /I understand AI text may go/i });
   if (firstUseConsent) fireEvent.click(firstUseConsent);
   fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
-  await screen.findByText('Verified response to ' + question);
+  await within(screen.getByRole('region', { name: 'Confirmed conversation in this tab' }))
+    .findByText('Verified response to ' + question);
 }
 it('renders a two-panel chat-first layout and real service shortcuts without an AI call', async () => {
   render(<Fixture />);
