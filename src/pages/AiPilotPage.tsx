@@ -162,7 +162,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     // fails. The next successful reply replaces it; errors never erase it.
     locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
-    setShareContext(false); setShareRegion(false); setShareNote(false);
+    if (!workspace) setShareContext(false); // Visible workspace consent persists within this chat.
+    setShareRegion(false); setShareNote(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
