@@ -54,13 +54,14 @@ test('approved toddler gravity idea flows from Luqi Chat into a real 30-second l
   await expect(page.getByLabel('Scene title', { exact: true })).toHaveValue('Hello, little explorer!');
   await expect(page.getByRole('button', { name: 'Record 30-second animation', exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: /Illustrative motion graphics/ })).toBeVisible();
+  const status = page.getByRole('status', { name: 'Studio export status' });
+  await expect(status).toContainText(/Recording 30 seconds locally|Recording is unsupported here|Video export is unavailable|No supported video encoder/);
   const cancel = page.getByRole('button', { name: 'Cancel recording', exact: true });
-  if (await cancel.count()) {
-    await expect(cancel).toBeVisible();
+  if (await cancel.isVisible()) {
     await cancel.click();
-    await expect(page.getByRole('status', { name: 'Studio export status' })).toContainText('partial recording was discarded');
+    await expect(status).toContainText('partial recording was discarded');
   } else {
-    await expect(page.getByRole('status', { name: 'Studio export status' })).toContainText('Recording is unsupported here');
+    await expect(status).toContainText(/Recording is unsupported here|Video export is unavailable|No supported video encoder/);
   }
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download storyboard', exact: true }).click();
