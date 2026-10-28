@@ -13,7 +13,7 @@ for (const [code, status, message] of [
       if (url.pathname === '/v1/readiness') return route.fulfill({ json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } } });
       if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'output@example.invalid' } } });
       if (url.pathname === '/api/v1/luqi-core') {
-        calls++; expect(request.postDataJSON()).toEqual({ user_input: 'Synthetic question' });
+        calls++; expect(request.postDataJSON()).toEqual({ language: 'English', user_input: 'Synthetic question' });
         return route.fulfill({ status, json: { status: 'unavailable', code, message: 'PRIVATE-DIAGNOSTIC', response: 'PRIVATE-PARTIAL' } });
       }
       if (request.method() !== 'GET' || /^\/(api|v1)\//.test(url.pathname)) { unexpected.push(url.pathname); return route.abort(); }

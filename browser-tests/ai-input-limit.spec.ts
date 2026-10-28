@@ -3,7 +3,7 @@ import { MAX_PILOT_QUESTION_CHARS } from '../src/lib/pilot-input';
 
 test('AI trial retains over-limit input and sends an intact corrected question', async ({ page, baseURL }) => {
   let calls = 0;
-  const accepted = 'q'.repeat(MAX_PILOT_QUESTION_CHARS - 8) + 'END-TEST';
+  const accepted = 'q'.repeat(MAX_PILOT_QUESTION_CHARS - 11) + 'END-TEST';
   const overlong = accepted + 'EXCESS';
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -12,7 +12,7 @@ test('AI trial retains over-limit input and sends an intact corrected question',
     if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'input-browser@example.invalid' } } });
     if (url.pathname === '/api/v1/luqi-core') {
       calls++;
-      expect(route.request().postDataJSON()).toEqual({ user_input: accepted });
+      expect(route.request().postDataJSON()).toEqual({ language: 'English', user_input: accepted });
       return route.fulfill({ json: { status: 'success', response: 'Synthetic intact-input reply', provider: 'gemini', provider_model: 'fixture-model' } });
     }
     if (/^\/(api|v1)\//.test(url.pathname)) return route.abort();

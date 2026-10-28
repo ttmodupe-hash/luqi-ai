@@ -17,7 +17,7 @@ test('Chat recovers a transient outage, keeps a confirmed reply and starts clean
     if (url.pathname === '/api/v1/luqi-core') {
       calls++;
       if (calls === 2) return route.abort();
-      expect(request.postDataJSON()).toEqual({ user_input: question });
+      expect(request.postDataJSON()).toEqual({ language: 'English', user_input: question });
       return route.fulfill({ json: { status: 'success', response: 'Synthetic confirmed study reply',
         provider: 'gemini', provider_model: 'fixture-model' } });
     }

@@ -6,10 +6,10 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
     const url = new URL(route.request().url());
     if (url.origin !== new URL(baseURL!).origin) return route.abort();
     if (url.pathname === '/v1/readiness') return route.fulfill({ json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } } });
-    if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'trial-browser@example.invalid' } } });
+    if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'trial-browser@example.invalid', name: 'Naledi' } } });
     if (url.pathname === '/api/v1/luqi-core') {
       calls++;
-      expect(route.request().postDataJSON()).toEqual({ user_input: 'Say hello in isiZulu' });
+      expect(route.request().postDataJSON()).toEqual({ language: 'English', user_input: 'Say hello in isiZulu' });
       expect(route.request().headers().authorization).toBe('Bearer synthetic-token');
       return route.fulfill({ json: { status: 'success', response: 'Synthetic provider reply', provider: 'gemini', provider_model: 'fixture-model' } });
     }
@@ -24,6 +24,7 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   await page.getByLabel('Email', { exact: true }).fill('trial-browser@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Fixture-Trial-Password-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Hello, Naledi.' })).toBeVisible();
   await page.getByLabel('Your question', { exact: true }).fill('Say hello in isiZulu');
   await expect(page.getByRole('button', { name: 'Send question' })).toBeDisabled();
   await page.getByRole('checkbox', { name: /I understand this question may go/ }).check();

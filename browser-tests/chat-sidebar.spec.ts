@@ -60,7 +60,7 @@ test('confirmed AI chat appears in in-tab recents and switching does not replay 
   });
   await page.route('**/api/v1/luqi-core', route => {
     replies++;
-    expect(route.request().postDataJSON()).toEqual({ user_input: 'A synthetic first question' });
+    expect(route.request().postDataJSON()).toEqual({ language: 'English', user_input: 'A synthetic first question' });
     return route.fulfill({ json: { status: 'success', response: 'Synthetic Luqi confirmed answer',
       provider: 'gemini', provider_model: 'fixture-model' } });
   });
