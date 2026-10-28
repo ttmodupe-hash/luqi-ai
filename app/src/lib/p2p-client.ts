@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { requestConversationJson } from './conversation-request';
-import { p2pCircle,p2pMessage,p2pStatus,p2pReportReceipt,type P2PMessagePacket } from '../../contracts/p2p';
+import { p2pCircle,p2pMessage,p2pStatus,p2pReportReceipt,p2pApprovedContacts,type P2PMessagePacket } from '../../contracts/p2p';
 export function p2pClient(token:string, request:typeof fetch=fetch) {
   async function call<T>(path:string,schema:z.ZodType<T>,body?:unknown):Promise<T> {
     const response=await requestConversationJson(request,'/api/v1/p2p'+path,{method:body===undefined?'GET':'POST',
@@ -12,6 +12,7 @@ export function p2pClient(token:string, request:typeof fetch=fetch) {
     return schema.parse(response.body);
   }
   return { status:()=>call('/status',p2pStatus),
+    contacts:()=>call('/contacts',p2pApprovedContacts),
     create:(body:unknown)=>call('/circles',z.object({circle:p2pCircle}),body),
     join:(id:string,inviteToken:string)=>call('/join',z.object({requested:z.literal(true),circle:p2pCircle}),{id,inviteToken}),
     confirm:(id:string)=>call('/confirm',z.object({circle:p2pCircle}),{id}),
