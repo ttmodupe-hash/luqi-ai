@@ -29,6 +29,7 @@ const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"))
 const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
+const GuestTryPage = lazy(() => import("./pages/GuestTryPage"));
 const VisualTutorPage = lazy(() => import("./pages/VisualTutorPage"));
 const KhoroSpatialVisionLab = lazy(() => import("./components/KhoroSpatialVisionLab"));
 const LuqiChatWorkspacePage = lazy(() => import("./pages/LuqiChatWorkspacePage"));
@@ -79,6 +80,7 @@ export default function App() {
         <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
         <RouterRoute path="/ask" element={<AskLuqiPage />} />
+        <RouterRoute path="/try" element={<GuestTryPage />} />
         <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
