@@ -61,6 +61,7 @@ describe('reviewed local Chat-to-Studio video contract', () => {
     expect(opened.visualTheme).toBe('gravity');
     expect(opened.sceneSeconds).toBe(5);
     expect(JSON.parse(storyboardJson(plan.scenes, 'landscape', 2.5, 9.81, 5, 'gravity')).durationSeconds).toBe(30);
+    expect(parseStudioDraft(storyboardJson(plan.scenes, 'landscape', 2.5, 9.81, 5, 'gravity')).visualTheme).toBe('gravity');
   });
   it('fails closed on tampered duration, URLs and extra fields while preserving legacy imports', () => {
     const plan = proposeStudioVideo(goal, confirmed)!;
