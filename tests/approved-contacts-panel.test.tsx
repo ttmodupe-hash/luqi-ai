@@ -41,3 +41,11 @@ it('does not load contacts while messaging is disabled or accept unreviewed pres
  await screen.findByText(/Peer messaging is not available/);expect(mocks.contacts).not.toHaveBeenCalled();
  expect(p2pApprovedContacts.safeParse({contacts:[{circleId:crypto.randomUUID(),userId:8,name:'Naledi',accountActive:true,presence:'not_shared',online:true}]}).success).toBe(false);
 });
+
+it('shows a red messaging service marker when the feature is disabled, not a peer presence claim',async()=>{
+ mocks.status.mockResolvedValue({enabled:false});draw();
+ const msg=await screen.findByRole('status',{name:'Messaging availability'});
+ expect(msg.textContent).toContain('Peer messaging offline');
+ expect(msg.textContent).toContain('members’ presence remains private');
+ expect(msg.querySelector('span[aria-hidden]')?.getAttribute('style')).toMatch(/color:\s*rgb\(248,\s*113,\s*113\)|color:\s*#f87171/i);
+});
