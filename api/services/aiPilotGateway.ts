@@ -8,7 +8,7 @@ import { buildPilotInput } from "../../src/lib/pilot-input";
 import { buildKhoroContinentalSystemPrompt, isAfricanRegionCode, type AfricanRegionCode } from "../../src/services/panAfricanSovereignEngine";
 import { readGeminiText, readOpenAiText, readProviderJson, PilotOutputError } from "./pilotOutput";
 import {
-  assertPilotEnabled, MAX_OUTPUT_TOKENS, TEXT_REPLY_RESERVE_CENTS,
+  assertPilotEnabled, MAX_TEXT_OUTPUT_TOKENS, TEXT_REPLY_RESERVE_CENTS,
   PilotBlocked, reservePilotAttempt
 } from "./aiPilotBudget";
 
@@ -41,7 +41,7 @@ Do not invent release dates or promise that an unfinished capability is availabl
 // Export the request contract for offline tests. No provider is invoked by this.
 export const GEMINI_PILOT_CONFIG = Object.freeze({
   systemInstruction: PLAIN_TEXT_POLICY,
-  maxOutputTokens: MAX_OUTPUT_TOKENS,
+  maxOutputTokens: MAX_TEXT_OUTPUT_TOKENS,
   thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
   // One committed reservation covers exactly one transport attempt. Do not
   // rely on changing SDK retry defaults or leave a paid request unbounded.
@@ -102,7 +102,7 @@ export async function runBudgetedPilotChat(
           Authorization: `Bearer ${openaiKey}` },
         body: JSON.stringify({
           model: PILOT_MODELS.openai, instructions,
-          input, max_output_tokens: MAX_OUTPUT_TOKENS,
+          input, max_output_tokens: MAX_TEXT_OUTPUT_TOKENS,
           reasoning: { effort: "none" },
           store: false,
         }),
