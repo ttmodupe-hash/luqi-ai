@@ -37,7 +37,7 @@ test('approved toddler gravity idea flows from Luqi Chat into a real 30-second l
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   const question = 'I want to create a video explaining the laws of gravity for my 2 year old child.';
   await page.getByLabel('Your question').fill(question);
-  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByRole('region', { name: 'Video production proposal' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Proposed video scenes' }).getByRole('listitem')).toHaveCount(6);
@@ -103,10 +103,10 @@ test('a confirmed video reply does not create a video until separately approved'
   await page.goto('/#/chat');
   await page.getByText('Prefer to sign in here?').click();
   await page.getByLabel('Email').fill('video@example.invalid');
-  await page.getByLabel('Password').fill('fixture-Password2026!');
+  await page.getByLabel('Password', { exact: true }).fill('fixture-Password2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Your question').fill('Please create a video about trees for my students.');
-  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByRole('region', { name: 'Video production proposal' })).toBeVisible();
   await page.getByRole('button', { name: 'Change the plan with Luqi' }).click();
