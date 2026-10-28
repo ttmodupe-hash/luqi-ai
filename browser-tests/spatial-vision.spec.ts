@@ -40,7 +40,8 @@ test('spatial lab keeps images local until consent, supports relief and rejects 
   expect(providerCalls).toBe(0);
   await page.getByRole('button', { name: /2.5D brightness relief/ }).click();
   await expect(page.getByRole('img', { name: 'Illustrative rotatable brightness relief' })).toBeVisible();
-  await page.getByRole('slider', { name: /Tilt X/ }).fill('35');
+  await page.getByRole('slider', { name: /Tilt X/ }).focus();
+  await page.getByRole('slider', { name: /Tilt X/ }).press('ArrowRight');
   expect(providerCalls).toBe(0);
   await page.getByRole('button', { name: '2D image' }).click();
   await page.getByLabel('Email', { exact: true }).fill('spatial@example.invalid');
