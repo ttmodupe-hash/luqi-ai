@@ -11,7 +11,9 @@ export default defineConfig({
   // real-worker cases in the unchanged Chromium suite, not false WebKit proof.
   testIgnore: ['**/mobile-loading-worker.spec.ts', '**/public-cache-worker.spec.ts'],
   timeout: 30_000,
-  globalTimeout: 6 * 60_000,
+  // The expanded verified journey set needs slightly more than six minutes;
+  // retain every test and leave the workflow's eight-minute step limit intact.
+  globalTimeout: 7 * 60_000,
   workers: 2,
   maxFailures: 10,
   retries: 0,
