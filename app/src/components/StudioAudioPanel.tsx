@@ -110,8 +110,17 @@ export default function StudioAudioPanel({ audio, onChange, disabled, clipSecond
       media.start(1000); setVoiceRecording(true); onRecordingChange(true);
       setNotice('Recording microphone audio locally. Stop to keep it, or discard. The microphone closes automatically.');
     } catch {
+      const run = mic.current;
+      if (run) {
+        run.discard = true; clearTimeout(run.timer);
+        try { if (run.media.state !== 'inactive') run.media.stop(); } catch { /* Already stopped. */ }
+        mic.current = null;
+      }
       stream?.getTracks().forEach(t => t.stop());
-      setNotice('Microphone access or recording was blocked. Check browser permission and use HTTPS, or import a recording.');
+      if (active.current) {
+        setVoiceRecording(false); onRecordingChange(false);
+        setNotice('Microphone access or recording was blocked. Check browser permission and use HTTPS, or import a recording.');
+      }
     } finally { if (active.current && request === epoch.current) setAskingPermission(false); }
   }
   function importMusic(file: File) {
@@ -147,7 +156,7 @@ export default function StudioAudioPanel({ audio, onChange, disabled, clipSecond
         {narrationUrl && <div className="luqi-studio-audio-preview">
           <p>Review your voiceover before export.</p>
           <audio controls src={narrationUrl} preload="metadata" aria-label="Recorded voiceover preview" />
-          <a href={narrationUrl} download={'luqi-my-voiceover.' + (audio.narration?.type.startsWith('audio/mp4') ? 'm4a' : 'webm')}>Download recorded voiceover</a>
+          <a href={narrationUrl} download={'luqi-my-voiceover.' + (audio.narration?.type.startsWith('audio/mp4') ? 'm4a' : audio.narration?.type.startsWith('audio/ogg') ? 'ogg' : 'webm')}>Download recorded voiceover</a>
         </div>}
       </div>
       <div>
