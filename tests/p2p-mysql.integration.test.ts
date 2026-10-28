@@ -77,6 +77,20 @@ describe.sequential('durable private messaging enforcement',()=>{
   expect((await fresh.request('/api/v1/p2p/circles/'+p.id+'/messages',{headers:{Authorization:'Bearer '+owner.token}})).status).toBe(403);
   expect((await(await request(peer,'/status')).json()).blockedPeers).toContain(owner.id);
  });
+ it('accepts simultaneous sends from both peers without losing or duplicating encrypted packets',async()=>{
+  const p=await pair(),packets=[];
+  for(let round=0;round<4;round++){
+   const left=packet(p.id),right=packet(p.id,peer,owner);packets.push(left,right);
+   const responses=await Promise.all([request(owner,'/messages',left),request(peer,'/messages',right)]);
+   expect(responses.map(r=>r.status)).toEqual([201,201]);
+  }
+  const received=await(await request(peer,'/circles/'+p.id+'/messages')).json();
+  expect(received.messages).toHaveLength(packets.length);
+  expect(new Set(received.messages.map((m:{messageId:string})=>m.messageId))).toEqual(new Set(packets.map(m=>m.messageId)));
+  expect((await request(owner,'/messages',packets[0])).status).toBe(201);
+  const[stored]=await root.query<RowDataPacket[]>('SELECT COUNT(*) AS n FROM luqi_p2p_messages_v1 WHERE circle_id=?',[p.id]);
+  expect(Number(stored[0].n)).toBe(packets.length);
+ });
  it('admits only matching verified student cohorts and blocks adult, other-school and unknown accounts',async()=>{
   const student=await account('p2p_student:school-a'),classmate=await account('p2p_student:school-a'),other=await account('p2p_student:school-b'),unknown=await account('user');
   const p=await pair(student,classmate,true);expect((await request(student,'/messages',packet(p.id,student,classmate))).status).toBe(201);

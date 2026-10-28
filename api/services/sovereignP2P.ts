@@ -44,17 +44,43 @@ async function query(connection: Pick<PoolConnection, 'query'>, sql: string, val
 }
 async function transaction<T>(actor: number, work: (c: PoolConnection, user: RowDataPacket) => Promise<T>): Promise<T> {
   reportKey();
-  const c = await getPersistentMySqlPool().getConnection(); let begun = false;
-  try {
-    await c.beginTransaction(); begun = true;
-    const [user] = await query(c, 'SELECT id,role,is_active FROM users WHERE id=? FOR UPDATE', [actor]);
-    if (!user || Number(user.is_active) !== 1) deny();
-    const result = await work(c, user); await c.commit(); begun = false; return result;
-  } catch (error) {
-    if (begun) await c.rollback();
-    if (error instanceof P2PError) throw error;
-    throw new P2PError('P2P_UNAVAILABLE');
-  } finally { c.release(); }
+  // InnoDB can choose either peer as a deadlock victim during concurrent sends.
+  // Only replay database work after a confirmed full rollback, with a fresh
+  // account/role/block check. Never replay an uncertain COMMIT or HTTP request.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let c: PoolConnection;
+    try { c = await getPersistentMySqlPool().getConnection(); }
+    catch { throw new P2PError('P2P_UNAVAILABLE'); }
+    let begun = false, commitStarted = false, discard = false;
+    try {
+      await c.beginTransaction(); begun = true;
+      const [user] = await query(c, 'SELECT id,role,is_active FROM users WHERE id=? FOR UPDATE', [actor]);
+      if (!user || Number(user.is_active) !== 1) deny();
+      const result = await work(c, user);
+      commitStarted = true;
+      await c.commit();
+      return result;
+    } catch (error) {
+      let rolledBack = false;
+      if (begun) {
+        try { await c.rollback(); rolledBack = true; }
+        catch { discard = true; }
+      }
+      const failure = error && typeof error === 'object' ? error as { code?: unknown; errno?: unknown; fatal?: unknown } : {};
+      const conflict = failure.code === 'ER_LOCK_DEADLOCK' || failure.errno === 1213 ||
+        failure.code === 'ER_LOCK_WAIT_TIMEOUT' || failure.errno === 1205;
+      discard ||= !rolledBack || commitStarted || failure.fatal === true;
+      if (!rolledBack || commitStarted || !conflict || discard || attempt === 2) {
+        if (error instanceof P2PError) throw error;
+        throw new P2PError('P2P_UNAVAILABLE');
+      }
+    } finally {
+      if (discard) c.destroy(); else c.release();
+    }
+    // Release all locks/connections before the short, bounded contention delay.
+    await new Promise(resolve => setTimeout(resolve, 10 * (attempt + 1)));
+  }
+  throw new P2PError('P2P_UNAVAILABLE');
 }
 const circle = (r: RowDataPacket): P2PCircle => ({ id: r.id, name: r.name, category: r.category,
   ownerId: Number(r.owner_id), peerId: r.peer_id == null ? null : Number(r.peer_id),
