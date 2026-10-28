@@ -9,15 +9,15 @@ import ServiceStatusPage from "./pages/ServiceStatusPage";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 import Home from "./pages/Home";
-import StartPage from "./pages/StartPage";
-import PricingPage from "./pages/PricingPage";
+const StartPage = lazy(() => import("./pages/StartPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import ContactPage from "./pages/ContactPage";
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-const OmegaTasksPage = lazy(() => import('./pages/OmegaTasksPage'));
+import OmegaTasksPage from './pages/OmegaTasksPage';
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.
