@@ -14,7 +14,7 @@ export const EVIDENCE_SOURCES: readonly EvidenceSource[] = [
   source('morocco-dating','Thermoluminescence and ESR dating of Jebel Irhoud','Nature','https://www.nature.com/articles/nature22335'),
   source('flood-old','Old Babylonian flood narrative tablet','British Museum','https://www.britishmuseum.org/collection/object/W_1889-0426-234'),
   source('flood-gilgamesh','Gilgamesh tablet XI flood narrative','British Museum','https://www.britishmuseum.org/collection/object/W_SM-1881'),
-  source('nicaea','Historical evidence about Nicaea and the New Testament canon','Journal of Early Christian History','https://www.tandfonline.com/doi/full/10.1080/21692327.2025.2564797'),
+  source('nicaea','Historical evidence about Nicaea and the New Testament canon','International Journal of Philosophy and Theology','https://www.tandfonline.com/doi/full/10.1080/21692327.2025.2564797'),
   source('quran','Birmingham Qur’an manuscript dating and conservation','University of Birmingham','https://www.birmingham.ac.uk/facilities/cadbury/birmingham-quran-mingana-collection/birmingham-quran/research-and-conservation'),
   source('maat','Ancient Egyptian figure of Maat','Metropolitan Museum of Art','https://www.metmuseum.org/art/collection/search/545360'),
   source('meditation','Meditation and mindfulness research limits','US NCCIH','https://www.nccih.nih.gov/health/meditation-and-mindfulness-effectiveness-and-safety'),
