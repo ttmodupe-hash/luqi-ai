@@ -21,7 +21,8 @@ export default function CollaborationDock() {
     <button ref={trigger} type="button" className="luqi-collaboration-trigger"
       aria-label="Open Circles & Chat" aria-haspopup="dialog" aria-expanded={open}
       aria-controls="luqi-collaboration-panel" onClick={() => setOpen(true)}>
-      <MessageCircle size={20} aria-hidden="true" /><span>Circles &amp; Chat</span>
+      <MessageCircle size={20} aria-hidden="true" /><span className="luqi-collaboration-full-label">Circles &amp; Chat</span>
+      <span className="luqi-collaboration-short-label">Circles</span>
     </button>
     <dialog ref={dialog} id="luqi-collaboration-panel" className="luqi-collaboration-panel"
       aria-labelledby="luqi-collaboration-title" onCancel={() => setOpen(false)}

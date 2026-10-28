@@ -8,7 +8,8 @@ proof that a person is online now.
 
 ## Implemented in this change
 
-- A bottom-right launcher across customer tools, above the mobile Chat dock.
+- A bottom-right launcher across customer tools, in a reserved right-hand slot
+  of the mobile Chat dock so it cannot cover the composer or support links.
   The contact view is loaded only when opened, and closing it returns keyboard
   focus to the launcher. It does not submit a draft or call a model.
 - The existing shared Luqi account is used. Navigation to Circles uses the
