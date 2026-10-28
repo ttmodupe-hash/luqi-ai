@@ -273,7 +273,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <ol className="list-inside list-decimal space-y-2 text-sm"><li>Choose your province and opportunity type.</li><li>Read the official advertiser’s post, requirements and deadline.</li><li>Apply directly through its verified instructions. Never pay someone to secure a public job.</li></ol>
         <Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Explore opportunities in Luqi</Link>
         <p className="text-xs text-slate-300">This is an official source directory, not a confirmed live vacancy or a paid AI request.</p>
-      </section>
+      </section>}
       {evidenceTopic && <section aria-label="Comparative evidence quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Explore a scholarly comparison with Luqi</h2>
         <p className="text-sm">Selected topic: {EVIDENCE_CASES.find(item => item.id === evidenceTopic)?.title}. Compare traditional accounts, scientific evidence, manuscripts and interpretations without ranking faiths. No provider call is made.</p>
