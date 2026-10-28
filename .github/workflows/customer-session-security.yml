@@ -46,6 +46,33 @@ jobs:
           set -e
           test "$code" -eq 1
           test "$(cat /tmp/luqi-inspect-denial.log)" = RELEASE_INSPECTION_UNAVAILABLE
+  private-feature-setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npm run check
+      - run: npx vitest run tests/release-feature-setup.integration.test.ts --no-file-parallelism
   real-mysql-session-security:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
