@@ -26,6 +26,16 @@ export const workspaceTools = [
     status: "Free · no account", ready: true, path: "/driver-rights", icon: "status",
   },
   {
+    id: "consumer-rights", title: "Consumer rights & complaint help", category: "South African retail, banking and service disputes",
+    description: "Free three-step guidance, official sector sources and local editable complaint drafts. No account, paid AI or automatic filing.",
+    status: "Free · no account", ready: true, path: "/consumer-rights", icon: "status",
+  },
+  {
+    id: "comparative-evidence", title: "Faith, history & scientific evidence", category: "Comparative religion and scholarly verification",
+    description: "Seven curated studies distinguishing faith narratives, scientific methods, manuscripts and historical interpretation, with source links and no religion rankings.",
+    status: "Free · no account", ready: true, path: "/comparative-evidence", icon: "academy",
+  },
+  {
     id: "notes",
     title: "Private notes",
     category: "Your ideas, kept together",
