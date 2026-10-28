@@ -1,7 +1,9 @@
 /** A local, source-truthful starting point; NOT AI inference or live travel search. */
 import { detectDriverMode } from './driver-rights';
+import { detectConsumerCategory } from './consumer-rights-guide';
+import { detectEvidenceTopic } from './comparative-evidence';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'consumer' | 'general';
+export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -57,8 +59,12 @@ export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
     'For personal cases or deadlines, contact qualified help without sharing your details here.',
   ],
   consumer: [
-    'Identify the company, product and issue without entering account details.',
-    'Check the source-linked options and prepare a factual draft for your own review.',
+    'Identify the issue and read three immediate consumer steps without entering private details.',
+    'Check sector-specific source links and prepare a factual draft for your own review.',
+  ],
+  comparative: [
+    'Choose a curated question about traditions, manuscripts or scientific evidence.',
+    'Compare a tradition, measurable evidence, documentary history and interpretations.',
   ],
   general: [
     'State the outcome you want and one constraint that matters.',
@@ -159,6 +165,15 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     caution: 'General information only. Check jurisdiction, deadlines and original law with a qualified adviser for a disputed case.',
     bookingPreview: false,
   },
+  comparative: {
+    title: 'Compare faith, history and scientific evidence',
+    detail: 'Luqi has seven local, dated studies with academic and institutional links. Compare physical evidence, textual history and interpretations without ranking religions or invoking paid AI.',
+    status: 'local', statusLabel: 'Free source-linked study',
+    nextQuestion: 'Which specific question would you like to examine? The curated sources are not live academic retrieval.',
+    primaryPath: '/comparative-evidence', primaryLabel: 'Open comparative evidence guide',
+    caution: 'Traditions and scholarly interpretations vary. Empirical methods do not establish metaphysical truth; check original sources for contested claims.',
+    bookingPreview: false,
+  },
   general: {
     title: 'Start with what matters to you',
     detail: 'LUQI can guide you to existing tools and offers a separate signed-in, consent-based AI text trial. It is not yet a fully integrated multi-turn, browsing or action-taking assistant.',
@@ -193,6 +208,8 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const kind: GuideKind =
     detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
+    detectConsumerCategory(input) ? 'consumer' :
+    detectEvidenceTopic(input) ? 'comparative' :
     (/\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight|place to stay|where to stay|where can i stay|where should i stay|stay in|stay near)\b/u.test(q)) ? 'booking' :
     /\b(asylum|refugee|refugees|refugee status|immigration|home affairs|asylum seeker|residence permit)\b/u.test(q) ? 'rights' :
     /\b(consumer rights|refund|warranty|defective|faulty goods|debit order|unfair cancellation|popia|debt review|retailer complaint|consumer complaint)\b/u.test(q) ? 'consumer' :
