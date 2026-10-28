@@ -19,7 +19,12 @@ export const STUDIO_FORMATS: Record<StudioFormat, { width: number; height: numbe
   portrait: { width: 720, height: 1280, label: '9:16 portrait · TikTok / WhatsApp' },
   square: { width: 900, height: 900, label: '1:1 square · Facebook' },
 };
-export function sceneAt(seconds: number, sceneSeconds: StudioSceneSeconds = 15): number {
+export function sceneAt(seconds: number): number {
+  return Math.min(5, Math.max(0, Math.floor((Number.isFinite(seconds) ? seconds : 0) / SCENE_SECONDS)));
+}
+/** Separate named helper keeps sceneAt usable as an Array.map callback, where
+ * JavaScript supplies the array index as the second argument. */
+export function sceneAtForDuration(seconds: number, sceneSeconds: StudioSceneSeconds): number {
   return Math.min(5, Math.max(0, Math.floor((Number.isFinite(seconds) ? seconds : 0) / sceneSeconds)));
 }
 export function pendulumPeriod(length: number, gravity: number): number {
@@ -132,7 +137,7 @@ function drawIllustrativeMotion(ctx: CanvasRenderingContext2D, w: number, h: num
 export function drawStudioFrame(ctx: CanvasRenderingContext2D, width: number, height: number, time: number,
   scenes: readonly StudioScene[], length: number, gravity: number, yaw: number,
   sceneSeconds: StudioSceneSeconds = 15, motion: StudioMotion = 'pendulum') {
-  const s = scenes[sceneAt(time, sceneSeconds)], portrait = height > width, scale = width / (portrait ? 720 : 1280);
+  const s = scenes[sceneAtForDuration(time, sceneSeconds)], portrait = height > width, scale = width / (portrait ? 720 : 1280);
   ctx.save(); ctx.scale(scale, scale);
   const w = width / scale, h = height / scale;
   const background = ctx.createLinearGradient(0, 0, w, h);
@@ -201,14 +206,14 @@ export function drawStudioFrame(ctx: CanvasRenderingContext2D, width: number, he
   ball.addColorStop(0, '#ffdf97'); ball.addColorStop(.6, '#e2b66c'); ball.addColorStop(1, '#92642f');
   ctx.fillStyle = ball; ctx.beginPath(); ctx.arc(bp[0], bp[1], 20, 0, Math.PI * 2); ctx.fill();
   } else {
-    drawIllustrativeMotion(ctx, w, h, time, sceneSeconds, sceneAt(time, sceneSeconds), motion, portrait);
+    drawIllustrativeMotion(ctx, w, h, time, sceneSeconds, sceneAtForDuration(time, sceneSeconds), motion, portrait);
   }
   const promptY = h - (portrait ? 235 : 135);
   text(s.question, 48, promptY, w - 96, '20px sans-serif', '#d0eeaa', 29);
   ctx.fillStyle = '#9db6a7'; ctx.font = '15px sans-serif';
   ctx.fillText(motion === 'pendulum' ? `3D small-angle model  ·  L ${length.toFixed(1)} m  ·  T ≈ ${pendulumPeriod(length, gravity).toFixed(2)} s` :
     motion === 'gravity' ? 'ORIGINAL 2D ILLUSTRATION  ·  GRAVITY PULLS DOWN' : 'ORIGINAL ABSTRACT MOTION GRAPHICS  ·  REVIEW THE SCRIPT', 48, h - 74);
-  ctx.fillText(`SCENE ${sceneAt(time, sceneSeconds) + 1} / 6  ·  ${Math.floor(time).toString().padStart(2, '0')} / ${studioDuration(sceneSeconds)} s  ·  ORIGINAL LUQI MOTION GRAPHICS`, 48, h - 43);
+  ctx.fillText(`SCENE ${sceneAtForDuration(time, sceneSeconds) + 1} / 6  ·  ${Math.floor(time).toString().padStart(2, '0')} / ${studioDuration(sceneSeconds)} s  ·  ORIGINAL LUQI MOTION GRAPHICS`, 48, h - 43);
   ctx.fillStyle = '#294c3d'; ctx.fillRect(48, h - 24, w - 96, 3);
   ctx.fillStyle = '#cce9a0'; ctx.fillRect(48, h - 24, (w - 96) * Math.min(1, time / studioDuration(sceneSeconds)), 3);
   ctx.restore();
