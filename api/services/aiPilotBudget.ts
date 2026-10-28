@@ -54,7 +54,8 @@ export function hasPilotReservationCapacity(
 }
 export const MAX_INPUT_CHARS = MAX_PILOT_INPUT_CHARS;
 export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
-export const MAX_OUTPUT_TOKENS = 1024;
+export const MAX_OUTPUT_TOKENS = 512; // Existing Visual Tutor / image routes unchanged.
+export const MAX_TEXT_OUTPUT_TOKENS = 1024; // Chat only.
 
 export function utcDay(now: Date = new Date()): string {
   if (Number.isNaN(now.getTime())) throw new Error("Invalid clock");
