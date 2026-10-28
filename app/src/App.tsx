@@ -29,6 +29,7 @@ const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
 const VisualTutorPage = lazy(() => import("./pages/VisualTutorPage"));
+const KhoroSpatialVisionLab = lazy(() => import("./components/KhoroSpatialVisionLab"));
 const LuqiChatWorkspacePage = lazy(() => import("./pages/LuqiChatWorkspacePage"));
 const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
@@ -60,6 +61,7 @@ export default function App() {
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
         <RouterRoute path="/visual-tutor" element={<VisualTutorPage />} />
+        <RouterRoute path="/spatial-vision" element={<KhoroSpatialVisionLab />} />
         <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
         <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
         <RouterRoute path="/payments" element={<PaymentsPage />} />
