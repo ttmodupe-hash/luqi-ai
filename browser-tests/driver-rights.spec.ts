@@ -64,7 +64,10 @@ test('signed-in roadside wording produces a 3-step local card, never a paid requ
   await page.getByLabel('Email', { exact: true }).fill('driver.fixture@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('synthetic-test-password');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.goto('/#/chat');
+  // Customer sessions are intentionally tab-memory only. Follow the real SPA
+  // navigation path: a full page.goto would erase the test login on reload.
+  await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
+  await expect(page).toHaveURL(/#\/chat$/);
   await page.getByLabel('Your question').fill('Luqi, I am being pulled over');
   await expect(page.getByRole('heading', { name: 'Luqi roadside safety — three immediate steps' })).toBeVisible();
   await expect(page.getByText(/Do not use your phone while driving/)).toBeVisible();
