@@ -318,6 +318,17 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             onClick={() => workspace.setProviderAcknowledged(false)}>Change consent</button>
         </p>}
         {!workspace.providerAcknowledged && <p className="luqi-chat-consent-privacy"><Link to="/privacy">Privacy information</Link></p>}
+        {turns.length > 0 && workspace.providerAcknowledged && <div className="luqi-chat-continuity">
+          <label><input type="checkbox" checked={shareContext} disabled={busy || uncertain}
+            onChange={event => setShareContext(event.target.checked)} />
+            Keep recent conversation context with my follow-up messages (this chat only)
+          </label>
+          <p>Optional: enable once to help Luqi understand corrections such as “for an AI?”. Only up to four bounded messages from this chat go to the chosen provider; you can turn this off at any time.</p>
+          {shareContext && <details><summary>Review the context included with your next question</summary>
+            <ol>{contextPreview.map((turn, index) => <li key={index}>
+              <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
+            </li>)}</ol></details>}
+        </div>}
         <details className="luqi-chat-compose-more">
           <summary>More options: companion, context and writing help</summary>
           <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
@@ -329,7 +340,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </label>
           <details className="luqi-chat-compose-details">
           <summary>Conversation context, country guide and limits (optional)</summary>
-          <p>Only this message is sent by default. Private notes, account email, browsing and voice are not attached automatically.</p>
+          <p>Prior chat context is shared only when you enable the visible continuity option. Private notes, account email, browsing and voice are not attached automatically.</p>
           <details className="luqi-chat-companion-personalise">
             <summary>Personalise this reply with one saved private note</summary>
             <CompanionNotePicker key={session.token} token={session.token} disabled={busy || uncertain}
@@ -341,17 +352,13 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             </label>}
             <p>No private note is sent merely by loading, selecting or saving it. A reply requires provider acknowledgement and your separate Send action.</p>
           </details>
-          {turns.length > 0 && <label><input type="checkbox" checked={shareContext} disabled={busy}
-            onChange={event => setShareContext(event.target.checked)} /> Include reviewed previous turns in this question (off by default)</label>}
-          {shareContext && <ol aria-label="Context to send">{contextPreview.map((turn, index) => <li key={index}>
-            <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
-          </li>)}</ol>}
+
           {region !== 'PAN_AFRICAN_AU' && <label><input type="checkbox" checked={shareRegion} disabled={busy}
             onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
           <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
           <p>20 provider attempts per account per UTC day, maximum 1024 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
           <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. AI replies are not automatically saved as private notes or long-term memories.</p>
-          <p>Provider acknowledgement lasts for this signed-in tab only. Optional notes, country and conversation context require separate approval for every request.</p>
+          <p>Provider acknowledgement lasts for this signed-in tab only. Recent conversation continuity is a separate, switchable opt-in for this chat. Optional notes and country context still require approval per request.</p>
           <Link to="/privacy">Privacy and provider information</Link>
           </details>
         </details>
