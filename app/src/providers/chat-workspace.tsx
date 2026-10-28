@@ -41,7 +41,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectionVersion, setSelectionVersion] = useState(0);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [contextEnabled, setContextEnabled] = useState(true);
+  const [contextEnabled, setContextEnabled] = useState(false);
 
   // Hide a former identity synchronously during render and clear before paint.
   // Session expiry, sign-out and account switching all use this same boundary.
@@ -54,7 +54,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setThreads([]);
     setActiveId(null);
     setAcknowledged(false);
-    setContextEnabled(true);
+    setContextEnabled(false);
     setSelectionVersion(version => version + 1);
   }, [token]);
 
