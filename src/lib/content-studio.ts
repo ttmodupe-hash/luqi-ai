@@ -1,6 +1,9 @@
 /** Local, original motion graphics. No account, provider or publishing client. */
 export const CLIP_SECONDS = 90;
 export const SCENE_SECONDS = 15;
+export type StudioSceneSeconds = 5 | 15;
+export type StudioMotion = 'pendulum' | 'gravity' | 'story';
+export const studioDuration = (sceneSeconds: StudioSceneSeconds = 15) => sceneSeconds * 6;
 export interface StudioScene { title: string; caption: string; question: string }
 export const SHOWCASE_SCENES: readonly StudioScene[] = [
   { title: 'Make room for curiosity.', caption: 'LUQI brings your ideas, hands-on learning and original motion graphics into one workspace.', question: 'What would you like to understand or create?' },
@@ -18,6 +21,11 @@ export const STUDIO_FORMATS: Record<StudioFormat, { width: number; height: numbe
 };
 export function sceneAt(seconds: number): number {
   return Math.min(5, Math.max(0, Math.floor((Number.isFinite(seconds) ? seconds : 0) / SCENE_SECONDS)));
+}
+/** Separate named helper keeps sceneAt usable as an Array.map callback, where
+ * JavaScript supplies the array index as the second argument. */
+export function sceneAtForDuration(seconds: number, sceneSeconds: StudioSceneSeconds): number {
+  return Math.min(5, Math.max(0, Math.floor((Number.isFinite(seconds) ? seconds : 0) / sceneSeconds)));
 }
 export function pendulumPeriod(length: number, gravity: number): number {
   if (!Number.isFinite(length) || length < .5 || length > 4 || !Number.isFinite(gravity) || gravity < 1 || gravity > 20) throw new Error('Invalid simulation parameters');
@@ -39,28 +47,99 @@ function validate(scenes: readonly StudioScene[]) {
   if (scenes.length !== 6 || scenes.some(s => !s.title.trim() || s.title.length > 64 || !s.caption.trim() ||
       s.caption.length > 240 || !s.question.trim() || s.question.length > 140)) throw new Error('Complete all six bounded scenes before export.');
 }
-export function storyboardJson(scenes: readonly StudioScene[], format: StudioFormat, length: number, gravity: number): string {
+export function storyboardJson(scenes: readonly StudioScene[], format: StudioFormat, length: number, gravity: number,
+  sceneSeconds: StudioSceneSeconds = 15, motion: StudioMotion = 'pendulum', yaw = 28): string {
   validate(scenes); pendulumPeriod(length, gravity);
-  return JSON.stringify({ format: 'luqi.storyboard.v1', durationSeconds: CLIP_SECONDS, aspect: format,
+  const modern = motion !== 'pendulum' || sceneSeconds !== 15;
+  return JSON.stringify({ format: modern ? 'luqi.storyboard.v3' : 'luqi.storyboard.v1',
+    durationSeconds: studioDuration(sceneSeconds), aspect: format,
+    ...(modern ? { sceneSeconds, visualTheme: motion, cameraYawDegrees: yaw } : {}),
     audio: 'none', rendering: 'local_original_motion_graphics', publishing: 'not_connected',
-    simulation: { model: 'small_angle_pendulum', lengthMetres: length, gravityMetresPerSecondSquared: gravity },
-    scenes: scenes.map((s, i) => ({ ...s, startSeconds: i * SCENE_SECONDS, durationSeconds: SCENE_SECONDS })) }, null, 2);
+    simulation: { model: modern && motion !== 'pendulum' ? 'local_illustration' : 'small_angle_pendulum',
+      lengthMetres: length, gravityMetresPerSecondSquared: gravity },
+    scenes: scenes.map((s, i) => ({ ...s, startSeconds: i * sceneSeconds, durationSeconds: sceneSeconds })) }, null, 2);
 }
 const stamp = (seconds: number) => `00:${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')},000`;
-export function subtitles(scenes: readonly StudioScene[]): string {
+export function subtitles(scenes: readonly StudioScene[], sceneSeconds: StudioSceneSeconds = 15): string {
   validate(scenes);
-  return scenes.map((s, i) => `${i + 1}\n${stamp(i * 15)} --> ${stamp((i + 1) * 15)}\n${s.title}\n${s.caption.replace(/\r?\n/g, ' ')}\n`).join('\n');
+  return scenes.map((s, i) => `${i + 1}\n${stamp(i * sceneSeconds)} --> ${stamp((i + 1) * sceneSeconds)}\n${s.title}\n${s.caption.replace(/\r?\n/g, ' ')}\n`).join('\n');
 }
-export function episodeOutline(scenes: readonly StudioScene[]): string {
+export function episodeOutline(scenes: readonly StudioScene[], sceneSeconds: StudioSceneSeconds = 15): string {
   validate(scenes);
-  return 'LUQI · 90-second script / podcast outline\nNarration draft only; no audio has been generated.\n\n' + scenes.map((s, i) =>
-    `${i * 15}–${(i + 1) * 15}s · ${s.title}\n${s.caption}\nHost / learning question: ${s.question}\n`).join('\n') +
+  return 'LUQI · ' + studioDuration(sceneSeconds) + '-second script / podcast outline\nNarration draft only; no audio has been generated.\n\n' + scenes.map((s, i) =>
+    `${i * sceneSeconds}–${(i + 1) * sceneSeconds}s · ${s.title}\n${s.caption}\nHost / learning question: ${s.question}\n`).join('\n') +
     '\nBefore publication: verify facts and local rules; obtain rights and guest consent; identify opinion, uncertainty and synthetic material. Tax/accounting submissions require a separate authorized workflow and professional review.\n';
 }
 
+
+/** Original lightweight 2D illustrations, not AI-generated footage or semantic images.
+ * The gravity animation changes for each scene rather than reusing the pendulum.
+ */
+function drawIllustrativeMotion(ctx: CanvasRenderingContext2D, w: number, h: number,
+  time: number, sceneSeconds: StudioSceneSeconds, scene: number,
+  motion: Exclude<StudioMotion, 'pendulum'>, portrait: boolean) {
+  const midX = portrait ? w / 2 : w * .77;
+  const upper = portrait ? h * .40 : h * .24;
+  const floor = portrait ? h * .76 : h * .68;
+  const radius = portrait ? 46 : 39;
+  const phase = (time % sceneSeconds) / sceneSeconds;
+  ctx.save();
+  if (motion === 'gravity') {
+    // Repeat a clearly illustrative drop. The visual does not estimate an
+    // actual falling object's trajectory, elasticity or air resistance.
+    const fraction = (phase * 1.7) % 1;
+    const top = upper + radius, bottom = floor - radius;
+    // Each scene visibly changes the action: introduce, drop, toss, bounce,
+    // apple drop and final recap. Motion is explanatory, not a physics solver.
+    const progress = scene === 0 ? .15 + .07 * Math.sin(time * 3) :
+      scene === 2 ? 1 - .9 * Math.sin(Math.PI * fraction) :
+      scene === 3 ? 1 - .76 * Math.abs(Math.sin(Math.PI * 3 * fraction)) * (1 - .45 * fraction) :
+      Math.min(1, 1.4 * fraction * fraction);
+    const objectY = top + (bottom - top) * progress;
+    ctx.strokeStyle = '#9ee0b7'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(midX - 150, floor + radius); ctx.lineTo(midX + 150, floor + radius); ctx.stroke();
+    ctx.strokeStyle = '#cce9a0'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(midX + 112, upper + 20); ctx.lineTo(midX + 112, floor - 55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(midX + 98, floor - 72); ctx.lineTo(midX + 112, floor - 54);
+    ctx.lineTo(midX + 126, floor - 72); ctx.stroke();
+    const fill = scene === 4 ? '#e97764' : scene === 3 ? '#d7b6f5' : '#ffcf6a';
+    ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(midX, objectY, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = '#fff1cd'; ctx.stroke();
+    if (scene === 4) {
+      ctx.strokeStyle = '#9ee0b7'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(midX, objectY - radius); ctx.lineTo(midX + 14, objectY - radius - 20); ctx.stroke();
+    }
+    if (scene === 5) {
+      ctx.fillStyle = '#e97764';
+      ctx.beginPath(); ctx.arc(midX - 94, floor - 18, radius * .7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#9ee0b7'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(midX - 94, floor - radius * .7 - 18);
+      ctx.lineTo(midX - 80, floor - radius * .7 - 31); ctx.stroke();
+    }
+    ctx.font = '700 23px sans-serif'; ctx.fillStyle = '#e8f7da';
+    ctx.fillText(scene === 4 ? 'APPLE' : scene === 3 ? 'BOUNCE!' : scene === 2 ? 'UP & DOWN' :
+      scene === 5 ? 'GRAVITY!' : 'BALL', midX - 69, floor + radius + 41);
+  } else {
+    // General requests receive abstract moving scene cards and real captions,
+    // not fake topic-specific AI video or simulated cinematic imagery.
+    const offset = 25 * Math.sin(time * 2);
+    for (let index = 0; index < 3; index++) {
+      const y = upper + index * (portrait ? 112 : 90);
+      ctx.fillStyle = ['#81b8ef', '#a3e3ba', '#f2d19a'][index];
+      ctx.globalAlpha = .75;
+      ctx.beginPath(); ctx.roundRect(midX - 110 + offset * (index - 1), y, 220, 65, 19); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.font = '700 22px sans-serif'; ctx.fillStyle = '#f0f8ff';
+    ctx.fillText('IDEA ' + (scene + 1) + ' OF 6', midX - 100, floor + 30);
+  }
+  ctx.restore();
+}
+
 export function drawStudioFrame(ctx: CanvasRenderingContext2D, width: number, height: number, time: number,
-  scenes: readonly StudioScene[], length: number, gravity: number, yaw: number) {
-  const s = scenes[sceneAt(time)], portrait = height > width, scale = width / (portrait ? 720 : 1280);
+  scenes: readonly StudioScene[], length: number, gravity: number, yaw: number,
+  sceneSeconds: StudioSceneSeconds = 15, motion: StudioMotion = 'pendulum') {
+  const s = scenes[sceneAtForDuration(time, sceneSeconds)], portrait = height > width, scale = width / (portrait ? 720 : 1280);
   ctx.save(); ctx.scale(scale, scale);
   const w = width / scale, h = height / scale;
   const background = ctx.createLinearGradient(0, 0, w, h);
@@ -105,6 +184,7 @@ export function drawStudioFrame(ctx: CanvasRenderingContext2D, width: number, he
   }
   const endTitle = text(s.title, textX, textY, textWidth, `600 ${titleSize}px sans-serif`, '#f2f6e9', titleSize * 1.19);
   text(s.caption, textX, endTitle + 22, textWidth, `${captionSize}px sans-serif`, '#becfc2', captionSize * 1.5);
+  if (motion === 'pendulum') {
   const centerX = portrait ? w / 2 : w * .76, centerY = portrait ? h * .62 : h * .49;
   const unit = portrait ? 100 : 105, originY = 1.6;
   function p(point: readonly number[]) {
@@ -127,12 +207,16 @@ export function drawStudioFrame(ctx: CanvasRenderingContext2D, width: number, he
   const bp = p(bob), ball = ctx.createRadialGradient(bp[0] - 6, bp[1] - 7, 1, bp[0], bp[1], 20);
   ball.addColorStop(0, '#ffdf97'); ball.addColorStop(.6, '#e2b66c'); ball.addColorStop(1, '#92642f');
   ctx.fillStyle = ball; ctx.beginPath(); ctx.arc(bp[0], bp[1], 20, 0, Math.PI * 2); ctx.fill();
+  } else {
+    drawIllustrativeMotion(ctx, w, h, time, sceneSeconds, sceneAtForDuration(time, sceneSeconds), motion, portrait);
+  }
   const promptY = h - (portrait ? 235 : 135);
   text(s.question, 48, promptY, w - 96, '20px sans-serif', '#d0eeaa', 29);
   ctx.fillStyle = '#9db6a7'; ctx.font = '15px sans-serif';
-  ctx.fillText(`3D small-angle model  ·  L ${length.toFixed(1)} m  ·  T ≈ ${pendulumPeriod(length, gravity).toFixed(2)} s`, 48, h - 74);
-  ctx.fillText(`SCENE ${sceneAt(time) + 1} / 6  ·  ${Math.floor(time).toString().padStart(2, '0')} / 90 s  ·  ORIGINAL LUQI MOTION GRAPHICS`, 48, h - 43);
+  ctx.fillText(motion === 'pendulum' ? `3D small-angle model  ·  L ${length.toFixed(1)} m  ·  T ≈ ${pendulumPeriod(length, gravity).toFixed(2)} s` :
+    motion === 'gravity' ? 'ORIGINAL 2D ILLUSTRATION  ·  GRAVITY PULLS DOWN' : 'ORIGINAL ABSTRACT MOTION GRAPHICS  ·  REVIEW THE SCRIPT', 48, h - 74);
+  ctx.fillText(`SCENE ${sceneAtForDuration(time, sceneSeconds) + 1} / 6  ·  ${Math.floor(time).toString().padStart(2, '0')} / ${studioDuration(sceneSeconds)} s  ·  ORIGINAL LUQI MOTION GRAPHICS`, 48, h - 43);
   ctx.fillStyle = '#294c3d'; ctx.fillRect(48, h - 24, w - 96, 3);
-  ctx.fillStyle = '#cce9a0'; ctx.fillRect(48, h - 24, (w - 96) * Math.min(1, time / 90), 3);
+  ctx.fillStyle = '#cce9a0'; ctx.fillRect(48, h - 24, (w - 96) * Math.min(1, time / studioDuration(sceneSeconds)), 3);
   ctx.restore();
 }
