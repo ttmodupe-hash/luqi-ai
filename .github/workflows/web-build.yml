@@ -76,6 +76,10 @@ jobs:
         run: npx vitest run tests/visual-tutor-transport.test.ts tests/visual-tutor-route.test.ts tests/visual-tutor-client.test.ts
       - name: Type-check visual tutor API and photo selection
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/visualTutor.ts api/visual-tutor.ts src/lib/visual-tutor.ts src/pages/VisualTutorPage.tsx
+      - name: Verify Spatial Vision auth, dual-engine budget and normalized region boundaries
+        run: npx vitest run tests/spatial-vision-contract.test.ts tests/spatial-vision-route.test.ts tests/spatial-vision-provider.test.ts tests/spatial-vision-client.test.ts
+      - name: Type-check Spatial Vision backend and mobile-safe component
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/spatialVision.ts api/spatial-vision.ts src/lib/spatial-vision.ts src/components/KhoroSpatialVisionLab.tsx
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
@@ -175,7 +179,7 @@ jobs:
                 throw new Error("Frontend shared helper diverged: " + name);
               }
             }
-            for (const name of ["components/WorkspaceLayout.tsx", "components/HeroAiChatConsole.tsx", "components/workspace-catalog.ts", "pages/Home.tsx", "pages/ServiceStatusPage.tsx", "pages/PendulumLabPage.tsx", "workspace.css", "omega-tasks.css", "pages/OmegaTasksPage.tsx", "lib/omega-tasks.ts", "components/OmegaSubmissionForm.tsx", "pages/ArchiveVaultPage.tsx", "components/AccountAccessForm.tsx", "components/AccountPasswordForm.tsx", "components/ConsumerRightsAssistant.tsx", "lib/consumer-rights-guide.ts", "lib/account-security.ts", "pages/StartPage.tsx", "pages/RightsGuidePage.tsx", "lib/rights-source-guide.ts", "pages/AiPilotPage.tsx", "pages/ContentStudioPage.tsx", "pages/MultimodalHubPage.tsx", "pages/VideoStudioPage.tsx", "lib/content-studio.ts", "content-studio.css", "lib/ai-pilot.ts", "pages/CompanionPage.tsx", "lib/private-conversations.ts", "pages/PricingPage.tsx", "pages/PrivacyPage.tsx", "pages/TermsPage.tsx", "pages/ContactPage.tsx"]) {
+            for (const name of ["components/WorkspaceLayout.tsx", "components/HeroAiChatConsole.tsx", "components/workspace-catalog.ts", "pages/Home.tsx", "pages/ServiceStatusPage.tsx", "pages/PendulumLabPage.tsx", "workspace.css", "omega-tasks.css", "pages/OmegaTasksPage.tsx", "lib/omega-tasks.ts", "components/OmegaSubmissionForm.tsx", "pages/ArchiveVaultPage.tsx", "components/AccountAccessForm.tsx", "components/AccountPasswordForm.tsx", "components/ConsumerRightsAssistant.tsx", "lib/consumer-rights-guide.ts", "lib/account-security.ts", "pages/StartPage.tsx", "pages/RightsGuidePage.tsx", "lib/rights-source-guide.ts", "pages/AiPilotPage.tsx", "pages/ContentStudioPage.tsx", "pages/MultimodalHubPage.tsx", "pages/VideoStudioPage.tsx", "lib/content-studio.ts", "content-studio.css", "lib/ai-pilot.ts", "pages/CompanionPage.tsx", "lib/private-conversations.ts", "pages/PricingPage.tsx", "pages/PrivacyPage.tsx", "pages/TermsPage.tsx", "pages/ContactPage.tsx", "components/KhoroSpatialVisionLab.tsx", "lib/spatial-vision.ts", "lib/spatial-vision-contract.ts", "spatial-vision.css"]) {
               if (fs.readFileSync("src/" + name, "utf8") !== fs.readFileSync("app/src/" + name, "utf8")) throw new Error("Workspace frontend diverged: " + name);
             }
             console.log("Both frontend source trees have the same shared helpers and workspace UI.");

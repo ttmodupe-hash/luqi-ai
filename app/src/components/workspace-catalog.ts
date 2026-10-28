@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "spatial-vision", title: "Spatial Vision & 3D Lab", category: "Inspect images and regions locally",
+    description: "Process a photo on your device, explore illustrative 2.5D relief, mark serial labels locally, or request a signed-in, budgeted Gemini/OpenAI visual explanation. AI boxes are approximate, not verified masks.",
+    status: "Local tools + limited signed-in AI pilot", ready: true, path: "/spatial-vision", icon: "academy",
+  },
+  {
     id: "visual-tutor", title: "Visual tutor", category: "Select a photo region and learn",
     description: "Crop a JPEG or PNG locally and ask for an explanation in your chosen language. Requires sign-in, per-image agreement and the shared AI allowance.",
     status: "Limited trial · sign-in required", ready: true, path: "/visual-tutor", icon: "academy",
