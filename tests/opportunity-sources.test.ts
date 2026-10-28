@@ -34,3 +34,11 @@ it('routes official youth opportunity discovery but not generic study or legal q
   expect(detectOpportunityIntent('Help me write a CV')).toBe(false);
   expect(detectOpportunityIntent('x'.repeat(501))).toBe(false);
 });
+
+it('takes real source verification questions into guided Luqi opportunity help',()=>{
+  expect(detectOpportunityIntent('Luqi how do I apply for a government job?')).toBe(true);
+  expect(detectOpportunityIntent('Which Z83 documents are required for a government vacancy?')).toBe(true);
+  expect(detectOpportunityIntent('NSFAS application closing date and guidelines')).toBe(true);
+  expect(detectOpportunityIntent('I am studying the history of the Z83 form')).toBe(false);
+  expect(detectOpportunityIntent('Help me draft a general CV')).toBe(false);
+});
