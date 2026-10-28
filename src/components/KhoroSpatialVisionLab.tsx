@@ -146,7 +146,7 @@ export default function KhoroSpatialVisionLab() {
       const masked = await redactSpatialPhoto(photo, selection);
       if (epoch.current === version) {
         setPhoto(masked); setSelection(null); setResult(null); setConsent(false);
-        setManual(previous => [...previous, { box: selection, label: 'Possible IMEI (manual)' }].slice(-8));
+        setManual(previous => [...previous, { box: selection, label: 'Possible IMEI (manual)' } satisfies LocalRegion].slice(-8));
         setNotice('Black rectangle burned into the local preview. The original photo on your device is unchanged.');
       }
     } catch { if (epoch.current === version) setNotice('Could not mask this region.'); }
@@ -229,7 +229,7 @@ export default function KhoroSpatialVisionLab() {
           {mode === 'SERIAL_AUDIT' && <div className="luqi-spatial-local-actions">
             <button type="button" disabled={!selection || preparing} onClick={() => {
               if (!selection) return;
-              setManual(previous => [...previous, { box: selection, label: 'Serial region (manual)' }].slice(-8));
+              setManual(previous => [...previous, { box: selection, label: 'Serial region (manual)' } satisfies LocalRegion].slice(-8));
               setSelection(null);
             }}>Mark serial region</button>
             <button type="button" disabled={!selection || preparing} onClick={() => { void burnMask(); }}>
