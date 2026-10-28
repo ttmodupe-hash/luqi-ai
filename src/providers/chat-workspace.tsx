@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PilotReply } from '../lib/ai-pilot';
 import type { PilotConversationTurn } from '../lib/pilot-conversation';
+import type { StudioVideoPlan } from '../lib/video-plan';
 import { useCustomerSession } from './customer-session';
 
 /** Confirmed text replies only. No localStorage, cookies, indexedDB, URL
@@ -24,6 +25,10 @@ type ChatWorkspaceValue = {
   selectThread: (id: string) => void;
   forgetThread: (id: string) => void;
   recordConfirmedReply: (question: string, reply: PilotReply) => void;
+  /** An explicitly approved, memory-only handoff to the existing Content Studio. */
+  pendingStudioPlan: StudioVideoPlan | null;
+  stageStudioPlan: (plan: StudioVideoPlan) => boolean;
+  clearStudioPlan: () => void;
 };
 const Context = createContext<ChatWorkspaceValue | null>(null);
 const MAX_CHATS = 100; // Bounded in-tab recents; never advertised as a cloud archive.
@@ -38,6 +43,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectionVersion, setSelectionVersion] = useState(0);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [pendingStudioPlan, setPendingStudioPlan] = useState<StudioVideoPlan | null>(null);
 
   // Hide a former identity synchronously during render and clear before paint.
   // Session expiry, sign-out and account switching all use this same boundary.
@@ -50,6 +56,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setThreads([]);
     setActiveId(null);
     setAcknowledged(false);
+    setPendingStudioPlan(null);
     setSelectionVersion(version => version + 1);
   }, [token]);
 
@@ -94,12 +101,20 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
     setActiveId(targetId);
   }, [token, activeId, visibleThreads]);
 
+  const stageStudioPlan = useCallback((plan: StudioVideoPlan) => {
+    // Never transfer another account's drafts; no browser storage or URL payload.
+    if (!token || tokenAtPaint.current !== token || plan.scenes.length !== 6) return false;
+    setPendingStudioPlan(plan);
+    return true;
+  }, [token]);
+  const clearStudioPlan = useCallback(() => setPendingStudioPlan(null), []);
   const activeThread = visibleThreads.find(chat => chat.id === activeId) ?? null;
   const value = useMemo<ChatWorkspaceValue>(() => ({
     threads: visibleThreads, activeThread, selectionVersion, providerAcknowledged, setProviderAcknowledged,
     startNewChat, selectThread, forgetThread, recordConfirmedReply,
+    pendingStudioPlan: owned ? pendingStudioPlan : null, stageStudioPlan, clearStudioPlan,
   }), [visibleThreads, activeThread, selectionVersion, providerAcknowledged, setProviderAcknowledged,
-    startNewChat, selectThread, forgetThread, recordConfirmedReply]);
+    startNewChat, selectThread, forgetThread, recordConfirmedReply, owned, pendingStudioPlan, stageStudioPlan, clearStudioPlan]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
