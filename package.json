@@ -19,6 +19,7 @@
     "build:recovery": "esbuild scripts/reset-account-password.ts --platform=node --bundle --format=esm --outfile=dist/reset-account-password.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "build:database": "esbuild scripts/prepare-mysql-schema.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-schema.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild scripts/prepare-mysql-runtime-role.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-runtime-role.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "db:check": "node dist/prepare-mysql-schema.js --check",
+    "p2p:preflight": "esbuild scripts/run-p2p-preflight.ts --platform=node --bundle --format=esm --outfile=dist/p2p-preflight.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node dist/p2p-preflight.js",
     "db:apply": "node dist/prepare-mysql-schema.js --apply",
     "build:checkout": "vite build --config vite.checkout.config.ts"
   },
