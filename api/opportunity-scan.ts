@@ -36,7 +36,7 @@ async function smallHtml(response:Response):Promise<string|null> {
 export async function scanOfficialOpportunitySources(
  fetcher:typeof fetch=fetch,now:Date=new Date()):Promise<ScoutSnapshot>{
  const checkedAt=now.toISOString();
- const sources=await Promise.all(SCOUT_TARGETS.map(async target:Promise<ScoutResult>=>{
+ const sources=await Promise.all(SCOUT_TARGETS.map(async (target):Promise<ScoutResult>=>{
    try{
      const controller=new AbortController();
      const timeout=setTimeout(()=>controller.abort(),4500);
