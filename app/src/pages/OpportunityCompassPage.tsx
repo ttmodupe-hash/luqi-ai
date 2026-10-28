@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import OpportunityVerificationPanel from '../components/OpportunityVerificationPanel';
 import {
  CATEGORIES,COUNTRY_ANCHORS,PROVINCES,OPPORTUNITY_REVIEWED_ON,
  deadlineState,matchOpportunitySources,
@@ -108,6 +109,7 @@ export default function OpportunityCompassPage(){
            {item.deadline&&<p className="text-sm font-medium">{deadlineState(item.deadline,today)==='deadline-passed'?'Published deadline has passed':'Dated call — check official deadline'}: {item.deadline}. Verify its official notice before applying.</p>}
            {item.notice&&<p className="text-xs text-amber-200">{item.notice}</p>}
            <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline underline-offset-2">Read the official source</a>
+           <OpportunityVerificationPanel source={item}/>
          </article>)}
        </div>
        {!results.length&&<p className="text-sm text-slate-300">No curated publisher source matches these filters. That does not mean opportunities do not exist. Try all categories or the national government directory.</p>}
