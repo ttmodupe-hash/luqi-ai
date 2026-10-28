@@ -176,3 +176,74 @@ export default function KhoroSpatialVisionLab() {
     }
   }
   const regions = result?.analysis.regions ?? [];
+
+  return <main className="luqi-spatial" aria-label="Luqi Spatial Vision and 3D Lab">
+    <div className="luqi-spatial-intro">
+      <p className="luqi-spatial-eyebrow">LUQI · KHORO VISUAL REASONING PILOT</p>
+      <h1>👁️ Spatial Vision &amp; 3D Lab</h1>
+      <p>Explore an image on your phone, mark regions, or request an AI-assisted explanation. No photo leaves this browser unless you explicitly approve one analysis.</p>
+      <p className="luqi-spatial-caveat">AI boxes are approximate suggestions, not verified object masks. The 3D view is an illustrative brightness relief, not measured depth. No guaranteed OCR or legal verdicts.</p>
+    </div>
+    <div className="luqi-spatial-modes" role="group" aria-label="Scan mode">
+      {modes.map(item => <button type="button" key={item.value} disabled={busy || preparing}
+        aria-pressed={mode === item.value} className={mode === item.value ? 'selected' : ''}
+        onClick={() => switchMode(item.value)}>
+        <strong>{item.title}</strong><span>{item.detail}</span>
+      </button>)}
+    </div>
+    <div className="luqi-spatial-controls">
+      <label>Choose a local JPEG or PNG (under 8 MB)
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png" disabled={busy || preparing}
+          onChange={event => { void choosePhoto(event.target.files?.[0]); }} />
+      </label>
+      <label className="luqi-spatial-check"><input type="checkbox" checked={enhance} disabled={busy || preparing}
+        onChange={event => setEnhance(event.target.checked)} /> Enhance contrast before preview</label>
+      <button type="button" className="luqi-spatial-secondary" onClick={clear} disabled={busy || preparing}>Clear image</button>
+      {preparing && <span role="status">Preparing the image locally…</span>}
+    </div>
+    {photo && <div className="luqi-spatial-grid">
+      <section className="luqi-spatial-image-panel" aria-label="Local image and visual regions">
+        <div className="luqi-spatial-view-tabs">
+          <button type="button" aria-pressed={!viewRelief} onClick={() => setViewRelief(false)}>2D image</button>
+          <button type="button" aria-pressed={viewRelief} onClick={() => setViewRelief(true)}>🧊 2.5D brightness relief</button>
+        </div>
+        {!viewRelief ? <>
+          <p className="luqi-spatial-hint">Drag a rectangle on the image to mark a local region. Model-suggested boxes appear after an approved analysis.</p>
+          <div className="luqi-spatial-image-wrap" onPointerDown={event => {
+            if (busy || preparing) return;
+            dragRef.current = point(event);
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }} onPointerUp={finishSelection} onPointerCancel={() => { dragRef.current = null; }}>
+            <img ref={imageRef} src={photo} draggable={false} alt="Locally re-encoded image for spatial review" />
+            {regions.map((region, index) => <div key={index} className="luqi-spatial-region luqi-spatial-region-ai"
+              style={boxStyle(region.box_2d)} title={region.label} aria-label={'AI-suggested: ' + region.label}>
+              <span>{index + 1}</span>
+            </div>)}
+            {manual.map((region, index) => <div key={index}
+              className={region.label === 'Possible IMEI (manual)' ? 'luqi-spatial-region luqi-spatial-region-redacted' : 'luqi-spatial-region luqi-spatial-region-manual'}
+              style={boxStyle(region.box)} aria-label={region.label} />)}
+            {selection && <div className="luqi-spatial-region luqi-spatial-region-selected"
+              style={boxStyle(selection)} aria-label="Manually selected region" />}
+          </div>
+          {selection && <p className="luqi-spatial-hint">Selected region: top {selection[0]}, left {selection[1]}, bottom {selection[2]}, right {selection[3]} (0–1000).</p>}
+          {mode === 'SERIAL_AUDIT' && <div className="luqi-spatial-local-actions">
+            <button type="button" disabled={!selection || preparing} onClick={() => {
+              if (!selection) return;
+              setManual(previous => [...previous, { box: selection, label: 'Serial region (manual)' }].slice(-8));
+              setSelection(null);
+            }}>Mark serial region</button>
+            <button type="button" disabled={!selection || preparing} onClick={() => { void burnMask(); }}>
+              Mask selected IMEI/barcode area locally
+            </button>
+          </div>}
+        </> : <div className="luqi-spatial-relief">
+          <p>This is a brightness-extruded point display for exploration, not an inferred depth map or a measured 3D reconstruction.</p>
+          <canvas ref={canvasRef} width={640} height={380} role="img" aria-label="Illustrative rotatable brightness relief" />
+          <div className="luqi-spatial-sliders">
+            <label>Tilt X ({tilt}°)<input type="range" min="-60" max="60" value={tilt}
+              onChange={event => setTilt(Number(event.target.value))} /></label>
+            <label>Spin Y ({spin}°)<input type="range" min="-75" max="75" value={spin}
+              onChange={event => setSpin(Number(event.target.value))} /></label>
+          </div>
+        </div>}
+      </section>
