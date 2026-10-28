@@ -221,3 +221,69 @@ it('does not reuse first-account provider approval when the signed-in account ch
   expect(screen.getByRole('checkbox', { name: /I understand AI text may go/i })).toBeTruthy();
   expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
 });
+
+function syntheticTextFile(name: string, content: string, type = 'text/plain') {
+  const file = new File([content], name, { type });
+  Object.defineProperty(file, 'arrayBuffer', {
+    value: async () => new TextEncoder().encode(content).buffer,
+  });
+  return file;
+}
+async function attachTextFile(file: File) {
+  fireEvent.change(screen.getByLabelText('Choose a text document'), { target: { files: [file] } });
+  await screen.findByRole('region', { name: 'Local document preview' });
+}
+it('reads a local text attachment without a network request and sends it only after separate approval', async () => {
+  render(<Fixture />);
+  await login();
+  await attachTextFile(syntheticTextFile('fixture-private.txt', 'SYNTHETIC_DOCUMENT_TEXT_123'));
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  expect(screen.getByText(/Local text only/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'What is the topic?' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand AI text may go/i }));
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByText('Verified response to What is the topic?');
+  const first = JSON.parse(String(request.mock.calls.find(([path]) => path === '/api/v1/luqi-core')?.[1]?.body));
+  expect(first.user_input).toBe('What is the topic?');
+  const share = screen.getByRole('checkbox', { name: /Include this reviewed text with my next question/ });
+  expect((share as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(screen.getByText('Review all document text before sharing'));
+  expect(screen.getByText('SYNTHETIC_DOCUMENT_TEXT_123')).toBeTruthy();
+  fireEvent.click(share);
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Summarise this document.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await waitFor(() => expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(2));
+  const second = JSON.parse(String(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')[1][1]?.body));
+  expect(second.user_input).toContain('SYNTHETIC_DOCUMENT_TEXT_123');
+  expect(second.user_input).not.toContain('fixture-private.txt');
+  expect(screen.queryByRole('region', { name: 'Local document preview' })).toBeNull();
+});
+
+it('rejects unsupported PDF without a provider call and clears private document on account switch', async () => {
+  render(<Fixture extra={<Switch />} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Account one' }));
+  await screen.findByLabelText('Your question');
+  fireEvent.change(screen.getByLabelText('Choose a text document'), {
+    target: { files: [syntheticTextFile('fixture.pdf', 'PDF_BYTES', 'application/pdf')] },
+  });
+  await screen.findByText(/PDF and Word support is still in development/);
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  await attachTextFile(syntheticTextFile('one-account.txt', 'FIRST_ACCOUNT_PRIVATE_FIXTURE'));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Include this reviewed text with my next question/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Account two' }));
+  expect(screen.queryByText('FIRST_ACCOUNT_PRIVATE_FIXTURE')).toBeNull();
+  expect(screen.queryByRole('region', { name: 'Local document preview' })).toBeNull();
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+});
+
+it('blocks sending an opted-in document that exceeds the complete provider input limit', async () => {
+  render(<Fixture />);
+  await login();
+  await attachTextFile(syntheticTextFile('large.txt', 'A'.repeat(4000)));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Include this reviewed text with my next question/ }));
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'B'.repeat(2500) } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand AI text may go/i }));
+  expect((screen.getByRole('button', { name: 'Send question' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  expect(screen.getByText(/Question and optional context exceed the allowed input/)).toBeTruthy();
+});
