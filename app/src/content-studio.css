@@ -35,3 +35,11 @@
 .luqi-studio-responsibility a { color: #d0eeaa; text-decoration: underline; text-underline-offset: 4px; }
 @media (max-width: 1000px) { .luqi-studio-grid { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .luqi-studio { padding: 30px 16px 48px; } .luqi-studio-editor, .luqi-studio-export, .luqi-studio-responsibility { padding: 20px 16px; } .luqi-studio-physics { grid-template-columns: 1fr; gap: 8px; } .luqi-studio-transport { padding: 14px; } .luqi-studio-actions button { width: 100%; } }
+
+/* Approved Chat plan: inline, same account and no external media requests. */
+.luqi-studio-approved { margin:0 0 25px; padding:18px 22px; background:#183b32;
+  border:1px solid #6aa395; border-radius:15px; overflow-wrap:anywhere; }
+.luqi-studio-approved h2 { font-size:19px; color:#e6f8e9; }
+.luqi-studio-approved p { color:#d0ead9; font-size:13px; margin:8px 0; }
+.luqi-studio-approved a { color:#d5efae; text-decoration:underline; text-underline-offset:3px; }
+@media(max-width:640px){.luqi-studio-approved{padding:15px;}}
