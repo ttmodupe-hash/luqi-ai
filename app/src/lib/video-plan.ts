@@ -24,6 +24,14 @@ export function isVideoCreationRequest(value: unknown): value is string {
     /\b(?:create|make|generate|produce|build|plan|want|would like|turn|explain|show)\b/.test(text);
 }
 
+/** A short, explicit approval typed in Chat does not spend another model call.
+ * Do not infer approval from an arbitrary positive comment or model reply.
+ */
+export function isVideoApprovalMessage(text: unknown): boolean {
+  if (typeof text !== 'string' || text.length > 160) return false;
+  return /^(?:(?:yes|okay|ok)[,! ]+)?(?:i\s+)?(?:approve(?: the (?:video )?plan)?|approved|looks good(?: to me)?|i(?:'m| am) happy with (?:the|this) (?:video )?plan|go ahead(?: and (?:make|create|generate) (?:the )?video)?|create the video now|generate the video now)[.! ]*$/i.test(text.trim());
+}
+
 // The confirmed Chat answer may offer exactly six reviewed scene lines.
 // This is plain text only; it never executes links, models or provider commands.
 function scenesFromAnswer(reply: string): StudioScene[] | null {
