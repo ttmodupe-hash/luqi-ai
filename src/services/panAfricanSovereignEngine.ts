@@ -171,6 +171,7 @@ export function buildKhoroContinentalSystemPrompt(code: AfricanRegionCode, langu
     'Selected view: ' + profile.country + '. Region context: ' + profile.regionContext + '. Currency context: ' + profile.currency + '.',
     'Language preference: ' + lang + '. Do not claim proficiency or authoritative translation without independent evaluation.',
     'Reason: distinguish root causes from surface symptoms, assumptions from evidence, and compute numbers transparently when possible.',
+    'When asked about African intellectual history, attribute arguments to their authors, distinguish evidence from interpretation and disputed claims, and avoid racial essentialism, unsupported mental-health cures or invented citations.',
     'For legal, tax, credit, medical, exams or current travel matters, do not assert specific applicability, court rulings or live facts without verified sources. Say when information is unverified and suggest checking primary official text.',
     'Curated starting points (not fetched or checked during this AI request): ' + sources + '. Never fabricate citations.',
     'For African trade: AfCFTA does NOT make all goods tariff free; eligibility depends on tariff schedules, origin rules, permits and corridor. PAPSS is NOT available at every bank or for every route. Never claim a transfer was made.',
@@ -178,4 +179,40 @@ export function buildKhoroContinentalSystemPrompt(code: AfricanRegionCode, langu
     'End complex strategic explanations with a single practical question testing an assumption, not a mandatory question for emergencies.',
     'Do not request government ID, account credentials, bank data, secret keys or private health case notes. Respect the user and avoid pan-African stereotyping.',
   ].join('\n');
+}
+
+/** Opt-in educational reading paths, not clinical treatment or a single official
+ * history of Africa. These titles are starting points for checking primary works.
+ * Nothing here authorizes a provider call, and no user profile is inferred. */
+export const PAN_AFRICAN_STUDY_PATHWAYS = [
+  {
+    id: 'welsing',
+    title: 'Frances Cress Welsing and the nine areas of activity',
+    description: 'Examine her account of social institutions, colorism and structural racism, and assess its claims critically.',
+    primaryReading: 'Frances Cress Welsing, The Isis Papers: The Keys to the Colors',
+    evidenceNote: 'Her psychological and racial theories are contested and must not be presented as established clinical science or a cure.',
+    starterPrompt: 'Explain Frances Cress Welsing\'s nine areas of human activity as her own framework. Distinguish her arguments from independently established evidence, discuss major criticisms, avoid racial generalisations or claims of psychological cures, and give one constructive example for education or community wellbeing.',
+  },
+  {
+    id: 'diop',
+    title: 'Cheikh Anta Diop and African historical scholarship',
+    description: 'Explore African antiquity, Egyptology, linguistics, archaeology and how historical claims are tested.',
+    primaryReading: 'Cheikh Anta Diop, The African Origin of Civilization: Myth or Reality',
+    evidenceNote: 'Distinguish Diop\'s influential arguments, archaeological findings and ongoing scholarly disagreements. Avoid universal origin claims.',
+    starterPrompt: 'Introduce Cheikh Anta Diop\'s contributions to African history and Egyptology. Explain the types of archaeological, linguistic and historical evidence used, which interpretations remain debated, and how a learner can evaluate sources independently.',
+  },
+  {
+    id: 'wilson',
+    title: 'Amos N. Wilson and economic self-reliance',
+    description: 'Study institutional capacity, cooperative ownership, practical budgeting and locally rooted enterprise.',
+    primaryReading: 'Amos N. Wilson, Blueprint for Black Power',
+    evidenceNote: 'Treat Wilson\'s political-economic programme as a perspective, not a proven financial return or instruction to exclude others.',
+    starterPrompt: 'Explain Amos N. Wilson\'s arguments about economic and institutional independence. Compare them with other development approaches and give a practical, inclusive example of budgeting, cooperative governance and risk controls for a small African business.',
+  },
+] as const;
+
+export type PanAfricanStudyId = typeof PAN_AFRICAN_STUDY_PATHWAYS[number]['id'];
+export function getPanAfricanStudyPrompt(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  return PAN_AFRICAN_STUDY_PATHWAYS.find(path => path.id === value)?.starterPrompt ?? null;
 }
