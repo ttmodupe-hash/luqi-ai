@@ -31,6 +31,10 @@ test('AI text trial requires sign-in and acknowledgement, fences sign-out and en
   await page.getByRole('button', { name: 'Send question' }).click();
   await expect(page.getByText('Synthetic provider reply', { exact: true })).toBeVisible();
   expect(calls).toBe(1);
+  await page.getByRole('button', { name: 'Choose Luqi language (English)', exact: true }).click();
+  await page.getByRole('button', { name: /Setswana/ }).click();
+  await expect(page.getByRole('heading', { name: 'Dumela, Naledi.' })).toBeVisible();
+  expect(calls).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.getByRole('button', { name: 'Open chat sidebar' }).click();
   await page.getByRole('complementary', { name: 'Luqi Chat sidebar' }).getByRole('button', { name: 'Sign out' }).click();

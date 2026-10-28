@@ -91,6 +91,7 @@ export default function LanguageSelectorDropdown({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-amber-500/50 transition-all text-xs font-medium shadow-xs hover:shadow-amber-500/10 focus:outline-hidden focus:ring-2 focus:ring-amber-500/40"
+        aria-label={`Choose Luqi language (${currentLang.nativeName})`}
         aria-haspopup="true"
         aria-expanded={isOpen}
         title={`Active Language: ${currentLang.nativeName} (${currentLang.name}) — 22 Languages Supported`}
@@ -115,13 +116,13 @@ export default function LanguageSelectorDropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-slate-900 border border-slate-700/90 shadow-2xl shadow-black/80 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] sm:w-80 rounded-2xl bg-slate-900 border border-slate-700/90 shadow-2xl shadow-black/80 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
           <div className="p-3 border-b border-slate-800 bg-slate-950/70">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200">
                 <Globe className="w-4 h-4 text-amber-400" />
-                <span>Global Language Gateway</span>
+                <span>Reply language</span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold">
                 22 Languages
@@ -193,8 +194,8 @@ export default function LanguageSelectorDropdown({
 
           {/* Footer note */}
           <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 text-[10px] text-slate-500 flex items-center justify-between px-3">
-            <span>Synchronized across STEM & Voice Studio</span>
-            <span className="font-mono text-amber-400/80">Offline Capable</span>
+            <span>Used for your next Luqi reply</span>
+            <span className="font-mono text-amber-400/80">Your choice</span>
           </div>
         </div>
       )}
