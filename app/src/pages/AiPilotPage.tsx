@@ -8,7 +8,7 @@ import { AFRICAN_REGIONAL_PROFILES } from '../services/panAfricanSovereignEngine
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 import { guideLuqiNeed } from '../lib/luqi-intent-guide';
-import { proposeStudioVideo } from '../lib/video-plan';
+import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
@@ -209,6 +209,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   // never from model output or an untrusted tool command. No tool runs automatically.
   const latestVideoQuestion = turns.at(-2)?.sender === 'user' ? turns.at(-2)!.text : '';
   const videoPlan = answer && latestVideoQuestion ? proposeStudioVideo(latestVideoQuestion, answer.response) : null;
+  const typedVideoApproval = !!videoPlan && isVideoApprovalMessage(prompt);
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -217,7 +218,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     navigate('/content-studio');
   }
   if (workspace) {
-    const canSend = !!session && !checking && available && consentGranted && !!prompt.trim() &&
+    const canSend = typedVideoApproval ? !!session && !busy && !uncertain :
+      !!session && !checking && available && consentGranted && !!prompt.trim() &&
       !tooLong && !contextTooLong && !busy && !uncertain;
     return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
       <header className="luqi-chat-canvas-header">
@@ -268,7 +270,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             <ol aria-label="Proposed video scenes">{videoPlan.scenes.map((scene, index) => <li key={index}>
               <strong>{scene.title}</strong><span>{scene.caption}</span>
             </li>)}</ol>
-            <p>Does this plan work? You can change it in Chat before approving, or edit every scene in Studio. Approving transfers only this reviewed proposal within the current signed-in tab.</p>
+            <p>Does this plan work? You can ask for changes, or type “approve the plan” and Send to open Studio without another AI charge. You can still edit every scene in Studio.</p>
             <div className="luqi-video-proposal-actions">
               <button type="button" disabled={busy || uncertain} onClick={approveVideoPlan}>Approve and generate silent video in Studio</button>
               <button type="button" disabled={busy || uncertain} onClick={() => {
@@ -300,7 +302,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             setTurns([]); setShareContext(false);
           }} />
         </details>
-      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); void submit(); }}>
+      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
         <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
         <div className="luqi-chat-compose-input">
           <textarea id="ai-question" rows={2} required value={prompt}
@@ -315,7 +317,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey &&
                   !event.altKey && !event.metaKey && !event.nativeEvent.isComposing &&
                   !event.repeat && canSend) {
-                event.preventDefault(); void submit();
+                event.preventDefault(); if (typedVideoApproval) approveVideoPlan(); else void submit();
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
