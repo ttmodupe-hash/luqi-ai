@@ -30,7 +30,7 @@ test('read-only publisher monitor is only called after visitor clicks and never 
  expect(requests).toEqual([]);
  await page.getByRole('button',{name:'Check official source pages'}).click();
  await expect(page.getByText(/Publisher-page check completed/)).toBeVisible();
- await expect(page.getByText(/Circular 38 of 2026/)).toBeVisible();
+ await expect(page.getByRole('region',{name:'Official opportunity source monitor'}).getByText(/Circular 38 of 2026/)).toBeVisible();
  expect(requests).toEqual(['GET']);
  await expect(page.getByText(/does not mean an advertised position is open/)).toBeVisible();
 });
