@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, Navigate } from 'react-router';
+import { useCustomerSession } from '../providers/customer-session';
 import { ArrowRight, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import SafePilotText from '../components/SafePilotText';
 import '../guest-trial.css';
@@ -35,6 +36,7 @@ function isTrial(value: unknown): value is Trial {
  * issued and validated by the server.
  */
 export default function GuestTryPage() {
+  const { session } = useCustomerSession();
   const [trial, setTrial] = useState<Trial>(unavailable);
   const [checking, setChecking] = useState(true);
   const [prompt, setPrompt] = useState('');
@@ -61,9 +63,9 @@ export default function GuestTryPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    if (!session) void refresh();
     return () => { pending.current?.abort(); };
-  }, [refresh]);
+  }, [refresh, session]);
 
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,6 +111,8 @@ export default function GuestTryPage() {
     }
   }
 
+  // Existing customers should use their own governed allowance, not the guest pool.
+  if (session) return <Navigate to="/chat" replace />;
   return <main className="luqi-guest-trial" aria-labelledby="luqi-guest-heading">
     <div className="luqi-guest-intro">
       <p className="luqi-eyebrow"><Sparkles size={16} aria-hidden="true" /> TRY LUQI WITHOUT REGISTERING</p>
