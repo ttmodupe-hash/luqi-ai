@@ -48,3 +48,34 @@ test('Chat links directly to opportunities without a paid provider request',asyn
  await expect(page).toHaveURL(/#\/opportunities$/);
  expect(paid).toEqual([]);
 });
+
+test('Luqi explains government application steps with original Z83 source, locally at 320px',async({page})=>{
+ await page.setViewportSize({width:320,height:740});
+ const unwanted:string[]=[];
+ page.on('request',request=>{
+   if(request.method()!=='GET'||/\/api\/v1\/(?:luqi-core|guest-chat)/.test(request.url()))unwanted.push(request.url());
+ });
+ await page.goto('/#/opportunities');
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Public Service Vacancy Circular 38 of 2026'})});
+ await card.getByText('How to verify and apply with Luqi').click();
+ await expect(card.getByRole('region',{name:'Verify the original opportunity'})).toBeVisible();
+ await expect(card.getByRole('region',{name:'Official application steps'})).toBeVisible();
+ await expect(card.getByRole('link',{name:/DPSA public service vacancy instructions and current Z83/}))
+   .toHaveAttribute('href','https://www.dpsa.gov.za/newsroom/psvc/');
+ await card.getByRole('textbox',{name:/Your question/}).fill('How do I apply?');
+ await card.getByRole('button',{name:'Luqi, explain the verified steps'}).click();
+ await expect(card.getByRole('status').getByText(/advertising department, not DPSA/)).toBeVisible();
+ await expect(card.getByRole('status').getByRole('link',{name:'Check the official source for this answer'}))
+   .toHaveAttribute('href',/dpsa.gov.za/);
+ expect(unwanted).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});
+test('Luqi explains a dated NSFAS source without claiming an open application',async({page})=>{
+ await page.goto('/#/opportunities');
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'2027 NSFAS applications'})});
+ await card.getByText('How to verify and apply with Luqi').click();
+ await card.getByRole('textbox',{name:/Your question/}).fill('Is it still open?');
+ await card.getByRole('button',{name:'Luqi, explain the verified steps'}).click();
+ await expect(card.getByRole('status').getByText(/not proof the portal is accepting submissions now/)).toBeVisible();
+ await expect(card.getByRole('status').getByText(/2026-10-31/)).toBeVisible();
+});
