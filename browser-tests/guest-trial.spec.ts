@@ -5,17 +5,25 @@ test('three genuine guest Chat turns before signup, zero provider calls before c
   const unexpected: string[] = [];
   const questions: string[] = [];
   let count = 0;
-  const fixtureCookie = 'luqi_guest_trial_v1=fixture-only-not-a-real-auth-cookie; Path=/api/v1/guest-chat; HttpOnly; SameSite=Strict';
+  // Intercepted requests may not expose network-owned Cookie headers, even via allHeaders().
+  // Seed the browser's real HttpOnly cookie jar for this synthetic trial;
+  // server-side cookie issuance and signature checks have separate unit coverage.
+  await page.context().addCookies([{
+    name: 'luqi_guest_trial_v1', value: 'fixture-only-not-a-real-auth-cookie',
+    url: origin + '/api/v1/guest-chat', httpOnly: true,
+    sameSite: 'Strict', secure: origin.startsWith('https:'),
+  }]);
   await page.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) { unexpected.push(url.origin); return route.abort(); }
     if (url.pathname === '/api/v1/guest-chat' && route.request().method() === 'GET') return route.fulfill({
-      headers: { 'set-cookie': fixtureCookie, 'cache-control': 'no-store' },
+      headers: { 'cache-control': 'no-store' },
       json: { enabled: count < 3, remaining: 3 - count, limit: 3, reason: count < 3 ? 'ready' : 'complete' },
     });
     if (url.pathname === '/api/v1/guest-chat' && route.request().method() === 'POST') {
-      const requestHeaders = await route.request().allHeaders();
-      expect(requestHeaders.cookie).toContain('luqi_guest_trial_v1=');
+      const cookies = await page.context().cookies(origin);
+      expect(cookies.some(cookie => cookie.name === 'luqi_guest_trial_v1' &&
+        cookie.httpOnly && cookie.sameSite === 'Strict')).toBe(true);
       const data = route.request().postDataJSON();
       questions.push(data.prompt);
       count++;
