@@ -33,6 +33,9 @@ test('spatial lab keeps images local until consent, supports relief and rejects 
   });
   await page.goto('/#/spatial-vision');
   await expect(page.getByRole('heading', { name: /Spatial Vision & 3D Lab/ })).toBeVisible();
+  await page.getByLabel('Email', { exact: true }).fill('spatial@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('Synthetic-password-2026!');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByLabel(/Choose a local JPEG or PNG/).setInputFiles({
     name: 'synthetic-diagram.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(VISUAL_JPEG, 'base64'),
   });
@@ -44,9 +47,6 @@ test('spatial lab keeps images local until consent, supports relief and rejects 
   await page.getByRole('slider', { name: /Tilt X/ }).press('ArrowRight');
   expect(providerCalls).toBe(0);
   await page.getByRole('button', { name: '2D image' }).click();
-  await page.getByLabel('Email', { exact: true }).fill('spatial@example.invalid');
-  await page.getByLabel('Password', { exact: true }).fill('Synthetic-password-2026!');
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Analyse selected image' })).toBeDisabled();
   await page.getByRole('checkbox', { name: /I agree to send this reviewed image/ }).check();
   await page.getByRole('button', { name: 'Analyse selected image' }).click();
