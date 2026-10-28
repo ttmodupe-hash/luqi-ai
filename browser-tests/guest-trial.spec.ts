@@ -14,7 +14,8 @@ test('three genuine guest Chat turns before signup, zero provider calls before c
       json: { enabled: count < 3, remaining: 3 - count, limit: 3, reason: count < 3 ? 'ready' : 'complete' },
     });
     if (url.pathname === '/api/v1/guest-chat' && route.request().method() === 'POST') {
-      expect(route.request().headers().cookie).toContain('luqi_guest_trial_v1=');
+      const requestHeaders = await route.request().allHeaders();
+      expect(requestHeaders.cookie).toContain('luqi_guest_trial_v1=');
       const data = route.request().postDataJSON();
       questions.push(data.prompt);
       count++;
