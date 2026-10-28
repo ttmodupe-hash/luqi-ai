@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
 import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
 import { useCustomerSession } from '../providers/customer-session';
@@ -8,6 +8,7 @@ import { AFRICAN_REGIONAL_PROFILES } from '../services/panAfricanSovereignEngine
 import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 import { guideLuqiNeed } from '../lib/luqi-intent-guide';
+import { proposeStudioVideo } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
@@ -21,6 +22,7 @@ import { getStoredLanguage, LANGUAGES } from '../lib/languages';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '', workspaceMode = false }: { embedded?: boolean; initialQuestion?: string; workspaceMode?: boolean } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const navigate = useNavigate();
   const [language, setLanguage] = useState(getStoredLanguage);
   useEffect(() => {
     const change = (event: Event) => {
@@ -205,8 +207,15 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
 
   // The next-step link comes only from the customer's own verified question,
   // never from model output or an untrusted tool command. No tool runs automatically.
+  const latestVideoQuestion = turns.at(-2)?.sender === 'user' ? turns.at(-2)!.text : '';
+  const videoPlan = answer && latestVideoQuestion ? proposeStudioVideo(latestVideoQuestion, answer.response) : null;
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
-  const actionablePath = nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
+  const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
+  function approveVideoPlan() {
+    // This is the user's separate approval of the displayed storyboard, never an AI tool call.
+    if (!workspace || !videoPlan || busy || uncertain || !workspace.stageStudioPlan(videoPlan)) return;
+    navigate('/content-studio');
+  }
   if (workspace) {
     const canSend = !!session && !checking && available && consentGranted && !!prompt.trim() &&
       !tooLong && !contextTooLong && !busy && !uncertain;
@@ -252,6 +261,22 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             <p>{turn.sender === 'user' ? turn.text : <SafePilotText text={turn.text} />}</p>
           </article>)}
           {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
+          {videoPlan && <section className="luqi-video-proposal" aria-label="Video production proposal">
+            <h2>Here's how Luqi will make your video</h2>
+            <p><strong>{videoPlan.audience}</strong> · {videoPlan.sceneSeconds * 6} seconds · {videoPlan.theme === 'gravity' ? 'Animated gravity demonstration' : 'Illustrative story graphics'}</p>
+            <p>{videoPlan.explanation} The current Studio exports silent videos with captions; it does not yet generate a spoken voice, cinematic scenes or music.</p>
+            <ol aria-label="Proposed video scenes">{videoPlan.scenes.map((scene, index) => <li key={index}>
+              <strong>{scene.title}</strong><span>{scene.caption}</span>
+            </li>)}</ol>
+            <p>Does this plan work? You can change it in Chat before approving, or edit every scene in Studio. Approving transfers only this reviewed proposal within the current signed-in tab.</p>
+            <div className="luqi-video-proposal-actions">
+              <button type="button" disabled={busy || uncertain} onClick={approveVideoPlan}>Approve and generate silent video in Studio</button>
+              <button type="button" disabled={busy || uncertain} onClick={() => {
+                setPrompt('Please revise this video plan: ' + videoPlan.goal + '. My changes: ');
+                document.getElementById('ai-question')?.focus();
+              }}>Change the plan with Luqi</button>
+            </div>
+          </section>}
           {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
         </>}
       </section>
