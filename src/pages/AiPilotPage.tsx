@@ -9,11 +9,13 @@ import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
 import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
 import { guideLuqiNeed } from '../lib/luqi-intent-guide';
 import SafePilotText from '../components/SafePilotText';
-import { Send, Sparkles } from 'lucide-react';
+import { Paperclip, Send, Sparkles } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import CompanionNotePicker, { type SharedCompanionNote } from '../components/CompanionNotePicker';
 import LuqiPromptCoach from '../components/LuqiPromptCoach';
 import { prepareCompanionQuestion } from '../lib/companion-context';
+import { prepareLocalTextAttachment, withReviewedDocument, type LocalTextAttachment,
+  type LocalTextAttachmentError } from '../lib/local-text-attachment';
 import '../chat.css';
 import LanguageSelectorDropdown from '../components/LanguageSelectorDropdown';
 import LuqiPersonalWelcome from '../components/LuqiPersonalWelcome';
@@ -57,6 +59,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [companionMode, setCompanionMode] = useState(false);
   const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
   const [shareNote, setShareNote] = useState(false);
+  const [localDocument, setLocalDocument] = useState<LocalTextAttachment | null>(null);
+  const [shareDocument, setShareDocument] = useState(false);
+  const [documentBusy, setDocumentBusy] = useState(false);
+  const [documentNotice, setDocumentNotice] = useState('');
   const languageControl = <div><LanguageSelectorDropdown compact />
     <p>Reply language: {language.nativeName}. AI language accuracy can vary.</p></div>;
   const personalWelcome = session ? <LuqiPersonalWelcome key={session.user.email}
@@ -68,7 +74,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const contextPreview = shareContext ? previewPilotHistory(turns) : [];
   const contextTooLong = (() => {
     if (!prompt.trim() || tooLong) return false;
-    try { buildPilotInput(prepareCompanionQuestion(prompt.trim(), companionMode, shareNote ? selectedNote?.content : undefined), language.name, contextPreview); return false; }
+    try {
+      const question = prepareCompanionQuestion(prompt.trim(), companionMode, shareNote ? selectedNote?.content : undefined);
+      buildPilotInput(shareDocument && localDocument ? withReviewedDocument(question, localDocument) : question,
+        language.name, contextPreview);
+      return false;
+    }
     catch { return true; }
   })();
   const epoch = useRef(0); const locked = useRef(false);
@@ -104,6 +115,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
       setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
       setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
+      setLocalDocument(null); setShareDocument(false); setDocumentNotice(''); setDocumentBusy(false);
     }
     previousToken.current = token;
   }, [session?.token]);
@@ -119,6 +131,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
     setTurns(workspace.activeThread?.turns ?? []);
     setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setLocalDocument(null); setShareDocument(false); setDocumentNotice(''); setDocumentBusy(false);
     setBusy(false); setUncertain(false);
     setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
   }, [workspace?.selectionVersion]);
@@ -143,6 +156,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
     setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setLocalDocument(null); setShareDocument(false); setDocumentNotice(''); setDocumentBusy(false);
   }
   function newChat() {
     if (locked.current) return;
@@ -150,19 +164,44 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     epoch.current++;
     setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
     setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+    setLocalDocument(null); setShareDocument(false); setDocumentNotice(''); setDocumentBusy(false);
+  }
+  async function loadTextDocument(file: File | undefined) {
+    if (!file || !session || locked.current || uncertain) return;
+    const version = epoch.current;
+    const token = session.token;
+    setLocalDocument(null); setShareDocument(false); setDocumentNotice(''); setDocumentBusy(true);
+    try {
+      const next = await prepareLocalTextAttachment(file);
+      if (epoch.current === version && session.token === token) setLocalDocument(next);
+    } catch (error) {
+      if (epoch.current !== version || session.token !== token) return;
+      const code = (error as Partial<LocalTextAttachmentError>)?.code;
+      setDocumentNotice(code === 'UNSUPPORTED_FORMAT'
+        ? 'Chat currently accepts only TXT, Markdown and CSV. PDF and Word support is still in development.'
+        : code === 'FILE_TOO_LARGE' || code === 'TEXT_TOO_LONG'
+        ? 'This text document is too long for the protected Chat limit. Please select a shorter file.'
+        : 'The text document could not be read safely. Nothing was sent.');
+    } finally {
+      if (epoch.current === version && session.token === token) setDocumentBusy(false);
+    }
   }
   async function submit() {
-    if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
+    if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain ||
+        documentBusy || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
-    const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
+    const preparedQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
       shareNote ? selectedNote?.content : undefined);
+    const documentWasShared = shareDocument && !!localDocument;
+    const actualProviderQuestion = documentWasShared
+      ? withReviewedDocument(preparedQuestion, localDocument!) : preparedQuestion;
     const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
     const approvedRegion = shareRegion && region !== 'PAN_AFRICAN_AU' ? region : undefined;
     // Keep the last confirmed reply visible while a follow-up is pending or
     // fails. The next successful reply replaces it; errors never erase it.
     locked.current = true; setBusy(true); setNotice('');
     // Sharing is a one-request decision; subsequent prompts default to no context.
-    setShareContext(false); setShareRegion(false); setShareNote(false);
+    setShareContext(false); setShareRegion(false); setShareNote(false); setShareDocument(false);
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
@@ -178,6 +217,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           return next.slice(-8);
         });
         setPrompt('');
+        if (documentWasShared) setLocalDocument(null);
+        setDocumentNotice('');
         workspace?.recordConfirmedReply(submittedQuestion, result);
       }
     } catch (error) {
@@ -209,7 +250,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const actionablePath = nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   if (workspace) {
     const canSend = !!session && !checking && available && consentGranted && !!prompt.trim() &&
-      !tooLong && !contextTooLong && !busy && !uncertain;
+      !tooLong && !contextTooLong && !documentBusy && !busy && !uncertain;
     return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
       <header className="luqi-chat-canvas-header">
         <div>
@@ -234,7 +275,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
           <h2>What can Luqi help you with?</h2>
           <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning.</p>
-          <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> Voice, other file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
+          <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> You can attach a small TXT, Markdown or CSV document below and review its text before sharing. PDF, Word, voice and live web research are still in development.</p>
           {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
             {[
               ['Study with Luqi', 'Explain a useful study technique with a simple example.'],
@@ -278,6 +319,16 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); void submit(); }}>
         <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
         <div className="luqi-chat-compose-input">
+          <label className="luqi-chat-attach-text" title="Attach a local TXT, Markdown or CSV file">
+            <Paperclip size={17} aria-hidden="true" /><span>Attach</span>
+            <input type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+              aria-label="Choose a text document" disabled={busy || uncertain || documentBusy}
+              onChange={event => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                void loadTextDocument(file);
+              }} />
+          </label>
           <textarea id="ai-question" rows={2} required value={prompt}
             aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
             disabled={busy || uncertain}
@@ -306,6 +357,23 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           </span>
           <span className="luqi-chat-keyboard-hint">Enter to send · Shift+Enter for a new line</span>
         </div>
+        {documentBusy && <p role="status" className="luqi-chat-doc-note">Reading selected text on this device…</p>}
+        {documentNotice && <p role="alert" className="luqi-chat-doc-note">{documentNotice}</p>}
+        {localDocument && <section className="luqi-chat-document" aria-label="Local document preview">
+          <p><strong>{localDocument.name}</strong> · Local text only · {localDocument.text.length} characters</p>
+          <details>
+            <summary>Review all document text before sharing</summary>
+            <pre>{localDocument.text}</pre>
+          </details>
+          <label className="luqi-chat-document-consent">
+            <input type="checkbox" checked={shareDocument} disabled={busy || uncertain}
+              onChange={event => setShareDocument(event.target.checked)} />
+            Include this reviewed text with my next question. Nothing is sent when I select a file.
+          </label>
+          <button type="button" className="luqi-chat-document-remove" disabled={busy}
+            onClick={() => { setLocalDocument(null); setShareDocument(false); setDocumentNotice(''); }}>Remove file</button>
+          <p>Do not attach passwords, ID numbers or sensitive records. Only the reviewed text, not the file, is sent when you choose Send.</p>
+        </section>}
         {!workspace.providerAcknowledged ? <label className="luqi-chat-consent luqi-chat-first-consent">
           <input type="checkbox" checked={workspace.providerAcknowledged} disabled={busy || uncertain}
             onChange={event => workspace.setProviderAcknowledged(event.target.checked)} />
@@ -386,7 +454,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       </button>
       {!checking && !available && <p>Your sign-in and question stay here while you check again. This check does not send a question.</p>}
     </div>
-    <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 1024 tokens.</p>
+    <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 512 tokens.</p>
     {notice && <p role="alert">{notice}</p>}
     {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); }} /> : <>
       <section><p>Signed in as {session.user.email}.</p>

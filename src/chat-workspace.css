@@ -417,3 +417,44 @@
   .luqi-shell-chat .luqi-chat-compose-footer .luqi-chat-new-in-composer { display:inline-flex!important; }
   .luqi-shell-chat .luqi-chat-first-consent { padding:9px; font-size:11px; }
 }
+
+/* Reviewed local text attachment: no background upload or file persistence. */
+.luqi-shell-chat .luqi-chat-attach-text {
+  position:relative; display:inline-flex; flex:none; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px;
+  min-height:46px; min-width:54px; padding:4px 6px;
+  border-radius:11px; color:#b9d5fa; border:1px solid #365780;
+  background:#142942; font-size:10px; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-attach-text:focus-within { outline:2px solid #9bc7ff; outline-offset:2px; }
+.luqi-shell-chat .luqi-chat-attach-text:has(input:disabled) { opacity:.5; cursor:not-allowed; }
+.luqi-shell-chat .luqi-chat-attach-text input[type=file] {
+  position:absolute; width:1px; height:1px; overflow:hidden; opacity:0;
+  inset:auto; padding:0; border:0;
+}
+.luqi-shell-chat .luqi-chat-document {
+  padding:11px; margin:9px 0; border:1px solid #3b5d86;
+  border-radius:13px; background:#12263e; color:#e5f0ff;
+  font-size:12px; line-height:1.5;
+}
+.luqi-shell-chat .luqi-chat-document strong { color:#d5e9ff; overflow-wrap:anywhere; }
+.luqi-shell-chat .luqi-chat-document details { margin:8px 0; }
+.luqi-shell-chat .luqi-chat-document summary { cursor:pointer; color:#b9d8ff; }
+.luqi-shell-chat .luqi-chat-document pre {
+  margin:8px 0; padding:10px; max-height:230px; overflow:auto;
+  border-radius:8px; border:1px solid #355171; background:#08182a;
+  color:#dbeaff; font:12px/1.5 ui-monospace,monospace; white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.luqi-shell-chat .luqi-chat-document-consent { display:flex; align-items:flex-start; gap:8px; }
+.luqi-shell-chat .luqi-chat-document-consent input { flex:none; margin-top:3px; accent-color:#4b9fff; }
+.luqi-shell-chat .luqi-chat-document-remove {
+  margin:6px 0; border:1px solid #47658a; border-radius:9px;
+  background:#182e49; color:#dcecff; padding:5px 10px;
+}
+.luqi-shell-chat .luqi-chat-document p:last-child { color:#a9c4e7; font-size:11px; }
+.luqi-shell-chat .luqi-chat-doc-note { font-size:12px; color:#d8c4a3; }
+@media(max-width:580px) {
+  .luqi-shell-chat .luqi-chat-attach-text { min-width:43px; min-height:43px; padding:4px; }
+  .luqi-shell-chat .luqi-chat-attach-text span { display:none; }
+}
