@@ -20,7 +20,7 @@ export default function TownshipEconomyPage(){
   const text=townshipActionPlanText(sector,goal,municipality);
   const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download='luqi-township-enterprise-plan.txt';
-  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   setNotice('Action plan saved on this device. This is not a funding application, permit or submission.');
  }
  return <main className="mx-auto max-w-6xl min-w-0 space-y-6 px-3 py-7 text-slate-100 sm:px-6 sm:py-10" aria-labelledby="township-economy-heading">
