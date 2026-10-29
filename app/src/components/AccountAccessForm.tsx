@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useEffect, useRef, useState } from 'react';
 import { ConversationError, signIn, signUp, validAccountPassword, type AccountSession } from '../lib/private-conversations';
 import PasswordField from './PasswordField';
