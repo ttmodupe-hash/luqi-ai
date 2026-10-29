@@ -8,7 +8,7 @@ import { isSensitivePublicPath, isSpaNavigationPath, serveStaticFiles } from "..
 // static file server. No production data or network calls are used.
 vi.mock("@hono/node-server/serve-static", () => ({
   serveStatic: (options: { path?: string }): MiddlewareHandler => async (c, next) => {
-    if (options.path === "/index.html") return c.html("<h1>Public account shell fixture</h1>");
+    if (options.path === "/index.html" || c.req.path === "/index.html") return c.html("<h1>Public account shell fixture</h1>");
     if (c.req.path === "/.env" || c.req.path === "/service-account.json")
       return c.text("SYNTHETIC_SECRET_DO_NOT_SERVE");
     if (c.req.path === "/manifest.json") return c.json({ name: "Luqi" });
