@@ -40,7 +40,7 @@ export default function MunicipalServicesPage(){
   </header>
   <section aria-label="Find municipal authority" className="space-y-4 rounded-xl border border-slate-700 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Find your local government</h2>
-   <p className="text-sm text-slate-300">South Africa has eight metropolitan, 44 district and 205 local municipalities. Our search is a dated transcription of names from the official government contact directory. Because directory records can lag boundary or naming changes, the live government directory remains authoritative.</p>
+   <p className="text-sm text-slate-300">South Africa has eight metropolitan, 44 district and 205 local municipalities. The live government contact directory currently shows 255 names; this indexed pilot supplements it with Collins Chabane and JB Marks from other original government notices. Check the latest directory and municipality itself for boundaries and contact changes.</p>
    <div className="grid gap-3 sm:grid-cols-2">
     <label className="text-sm font-medium">Province
      <select aria-label="Municipality province" value={province} onChange={e=>{setProvince(e.target.value as ProvinceCode|'all');setChosen(null);setShowCount(15);}} className={style}>
@@ -70,6 +70,7 @@ export default function MunicipalServicesPage(){
      <h3 className="text-lg font-semibold">{chosen.name}</h3>
      <p className="text-sm text-slate-300">{PROVINCE_NAMES[chosen.province]} · {chosen.type} municipality. Selection is manual; Luqi has not checked your address against official boundaries.</p>
      <a className="inline-block text-cyan-200 underline" target="_blank" rel="noopener noreferrer" href={MUNICIPAL_DIRECTORY_URL}>Open government directory to verify municipal contact and website</a>
+     {chosen.supplementaryEvidenceUrl&&<a className="inline-block text-cyan-200 underline" target="_blank" rel="noopener noreferrer" href={chosen.supplementaryEvidenceUrl}>Supplementary official government evidence for this municipality</a>}
    </section>}
    <p className="text-xs text-slate-300">Directory names reviewed {MUNICIPAL_REVIEWED_ON}. {isMunicipalReviewFresh(new Date())?'':'Review period passed: verify current names, boundaries and links directly.'}</p>
   </section>
