@@ -59,3 +59,25 @@ test('missed compulsory briefing and past tender deadlines are never promoted as
  await card.getByRole('button',{name:'Prepare bidder worksheet for this tender'}).click();
  await expect(page.getByRole('status',{name:'Tender preparation readiness'})).toContainText('Past compulsory briefing');
 });
+
+test('on-demand tender monitor checks only fixed first-party GET and never claims an open bid',async({page})=>{
+ const methods:string[]=[];
+ await page.route('**/api/v1/tender-watch',route=>{
+  methods.push(route.request().method());
+  const ids=['dsbd-msme-market-access','dsbd-localisation-evaluation','ekurhuleni-ps-f-02',
+   'gcis-sasl-012','tshwane-gpm04','tshwane-hd01','ekurhuleni-ps-redp17','ekurhuleni-aws08'];
+  const date='2026-10-29T08:00:00Z';
+  return route.fulfill({json:{status:'publisher-pages-checked',scope:'fixed_official_tender_pages',checkedAt:date,
+   notices:ids.map(id=>({id,checkedAt:date,note:'not_live_bid_availability',
+    state:id==='ekurhuleni-ps-f-02'?'reference-visible':'listing-only'}))}});
+ });
+ await page.goto('/#/tenders');
+ expect(methods).toEqual([]);
+ await page.getByRole('button',{name:'Check tender notice sources'}).click();
+ const region=page.getByRole('region',{name:'Official tender source monitor'});
+ await expect(region.getByText(/Source text checked/)).toBeVisible();
+ const bond=page.getByRole('article').filter({has:page.getByRole('heading',{name:/Lead bond arranger/})});
+ await expect(bond.getByText(/Tender number and closing date appear on the source/)).toBeVisible();
+ await expect(bond.getByText(/Source-listed; issuer confirmation required/)).toBeVisible();
+ expect(methods).toEqual(['GET']);
+});
