@@ -38,6 +38,7 @@ const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
 const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
 const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
@@ -79,6 +80,9 @@ export default function App() {
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
+        <RouterRoute path="/social-support" element={<SocialSupportPage />} />
+        <RouterRoute path="/sassa" element={<SocialSupportPage defaultAgency="sassa" />} />
+        <RouterRoute path="/uif" element={<SocialSupportPage defaultAgency="uif" />} />
         <RouterRoute path="/tenders" element={<TenderDeskPage />} />
         <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
