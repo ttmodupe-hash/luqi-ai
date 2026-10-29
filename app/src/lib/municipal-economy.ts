@@ -342,7 +342,7 @@ export const MUNICIPAL_SERVICES:readonly MunicipalService[]=[
 ];
 export function detectMunicipalIntent(value:unknown):boolean{
  if(typeof value!=='string'||!value.trim()||value.length>500)return false;
- return /\b(?:municipalit(?:y|ies)|municipal services?|local council|local government|ward committee|indigent register|free basic (?:electricity|water|services)|municipal bill|municipal account|municipal rates|water outage|electricity outage|potholes?|streetlights?|refuse collection|waste collection|business licen[sc]e|hawker permit|trading permit|municipal zoning|municipal tender|municipal jobs|service delivery protest)\b/i.test(value);
+ return /\b(?:municipalit(?:y|ies)|municipal\b|municipal services?|local council|local government|ward committee|indigent register|free basic (?:electricity|water|services)|municipal bill|municipal account|municipal rates|water outage|electricity outage|potholes?|streetlights?|refuse collection|waste collection|business licen[sc]e|hawker permit|trading permit|municipal zoning|municipal tender|municipal jobs|service delivery protest)\b/i.test(value);
 }
 export function detectTownshipEconomyIntent(value:unknown):boolean{
  if(typeof value!=='string'||!value.trim()||value.length>500)return false;
