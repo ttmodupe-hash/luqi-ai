@@ -42,7 +42,7 @@ describe('new account access', () => {
     await waitFor(() => expect(accepted).toHaveBeenCalledExactlyOnceWith(session));
     expect(request.mock.calls[0][0]).toBe('/api/v1/auth/register');
     const options = request.mock.calls[0][1];
-    expect(options).toMatchObject({ method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error' });
+    expect(options).toMatchObject({ method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error' });
     expect(JSON.parse(options.body)).toEqual({ email, password });
     expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Confirm password') as HTMLInputElement).value).toBe('');
@@ -177,4 +177,17 @@ it('registers the optional preferred name and retains the returned account name'
   await waitFor(() => expect(accepted).toHaveBeenCalled());
   expect(JSON.parse(request.mock.calls[0][1].body).name).toBe('Naledi');
   expect(accepted.mock.calls[0][0].user.name).toBe('Naledi');
+});
+
+it('requires an unchecked explicit private-device choice before requesting persistence', async () => {
+  request.mockResolvedValue(reply(session));
+  render(<AccountAccessForm onAuthenticated={accepted} />);
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
+  const checkbox = screen.getByRole('checkbox', { name: 'Keep me signed in on this private device' });
+  expect((checkbox as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(checkbox);
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true }));
+  await waitFor(() => expect(accepted).toHaveBeenCalledOnce());
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ email, password, rememberMe: true });
 });
