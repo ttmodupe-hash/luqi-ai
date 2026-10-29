@@ -1,0 +1,163 @@
+name: LUQI Device Session Security
+on:
+  pull_request:
+    branches: [main]
+    paths: ['api/**', 'db/**', 'src/**', 'app/src/**', 'tests/**', 'scripts/**', 'session-browser-tests/**', 'playwright.sessions.config.ts', '.github/workflows/customer-session-security.yml']
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-release-inspection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npm run check
+      - run: npx vitest run tests/release-grants.test.ts tests/release-db-inspection.integration.test.ts --no-file-parallelism
+      - name: Build the private one-shot image
+        run: docker build -f ops/Dockerfile.db-check -t luqi-db-inspect:ci .
+      - name: Image refuses missing scope without attempting SQL
+        run: |
+          set +e
+          docker run --rm --network none luqi-db-inspect:ci > /tmp/luqi-inspect-denial.log 2>&1
+          code=$?
+          set -e
+          test "$code" -eq 1
+          test "$(cat /tmp/luqi-inspect-denial.log)" = RELEASE_INSPECTION_UNAVAILABLE
+  private-feature-setup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npm run check
+      - run: npx vitest run tests/release-feature-setup.integration.test.ts --no-file-parallelism
+  real-mysql-session-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify real rotation, replay, revocation, grants and password rollback
+        run: npx vitest run tests/customer-resume-mysql.integration.test.ts --no-file-parallelism
+      - name: Seed known recovery counters after synthetic session traffic
+        env:
+          LUQI_SESSION_BACKUP_FIXTURE: 'true'
+        run: npx vitest run tests/mysql-backup-fixture.integration.test.ts
+      - name: Verify device-session rows survive an isolated full database restore
+        env:
+          LUQI_SESSION_BACKUP_FIXTURE: 'true'
+        run: bash scripts/ci-mysql-restore.sh
+  secure-mobile-browser-sessions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - run: npm run build
+        env:
+          NODE_ENV: production
+      - name: Build disposable HTTPS fixture
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/luqi-session-fixture.key -out /tmp/luqi-session-fixture.crt -days 1 -subj '/CN=127.0.0.1' -addext 'subjectAltName=IP:127.0.0.1'
+          chmod 600 /tmp/luqi-session-fixture.key
+          npx esbuild scripts/ci-customer-session-server.ts --bundle --platform=node --format=esm --outfile=/tmp/luqi-session-browser.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+      - name: Test mobile Chromium and iPhone-sized WebKit with secure cookies
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          image='mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d'
+          docker run --rm --init --network host --ipc host \
+            -v "$PWD:/work" -w /work \
+            -v /tmp/luqi-session-browser.js:/tmp/luqi-session-browser.js:ro \
+            -v /tmp/luqi-session-fixture.key:/tmp/luqi-session-fixture.key:ro \
+            -v /tmp/luqi-session-fixture.crt:/tmp/luqi-session-fixture.crt:ro \
+            -e LUQI_MYSQL_CI_FIXTURE -e DATABASE_URL -e GITHUB_ACTIONS=true \
+            -e LUQI_AI_PROVIDER_ENABLED=false -e LUQI_AI_BILLING_APPROVED=false \
+            -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            "$image" npx --no-install playwright test --config playwright.sessions.config.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: device-session-browser-failures
+          path: test-results/
+          retention-days: 7

@@ -39,7 +39,7 @@ describe("ephemeral backup seed fixture", () => {
       ["login_subject", "a".repeat(64), 7, 1792747200]);
 
     const [tables] = await pool.query<RowDataPacket[]>("SHOW TABLES");
-    expect(tables).toHaveLength(38);
+    expect(tables).toHaveLength(process.env.LUQI_SESSION_BACKUP_FIXTURE === 'true' ? 39 : 38);
     const [user] = await pool.execute<RowDataPacket[]>(
       "SELECT email, is_active FROM users WHERE id=?", [userId]);
     expect(user[0].email).toBe("ci-restore@example.invalid");
