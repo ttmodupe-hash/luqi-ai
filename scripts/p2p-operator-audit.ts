@@ -29,6 +29,6 @@ export async function checkP2POperatorTestCohort(environment:Record<string,strin
   });
   // This aggregate is only a prerequisite. Manual verified-age and moderation
   // sign-off remain separately compulsory; absence fails closed.
-  return evaluateP2PTestCohort(rows);
+  return evaluateP2PTestCohort(rows.map(row=>({role:row.role,n:row.n})));
  }finally{await c.end().catch(()=>c.destroy());}
 }
