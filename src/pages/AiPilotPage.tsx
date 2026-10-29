@@ -16,6 +16,7 @@ import DriverQuickCard from '../components/DriverQuickCard';
 import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
 import { detectOpportunityIntent } from '../lib/opportunity-sources';
 import { detectTenderIntent } from '../lib/tender-sources';
+import { detectMunicipalIntent,detectTownshipEconomyIntent } from '../lib/municipal-economy';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
@@ -165,6 +166,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (detectDriverMode(prompt)) { navigate('/driver-rights'); return; }
     if (detectConsumerCategory(prompt)) { navigate('/consumer-rights'); return; }
     if (detectEvidenceTopic(prompt)) { navigate('/comparative-evidence'); return; }
+    if (detectTownshipEconomyIntent(prompt)) { navigate('/township-economy'); return; }
+    if (detectMunicipalIntent(prompt)) { navigate('/municipalities'); return; }
     if (detectTenderIntent(prompt)) { navigate('/tenders'); return; }
     if (detectOpportunityIntent(prompt)) { navigate('/opportunities'); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
@@ -228,9 +231,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const driverMode = detectDriverMode(prompt);
   const consumerCategory = !driverMode ? detectConsumerCategory(prompt) : null;
   const evidenceTopic = !driverMode && !consumerCategory ? detectEvidenceTopic(prompt) : null;
-  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && detectTenderIntent(prompt);
-  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !tenderIntent && detectOpportunityIntent(prompt);
-  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
+  const townshipIntent = !driverMode && !consumerCategory && !evidenceTopic && detectTownshipEconomyIntent(prompt);
+  const municipalIntent = !driverMode && !consumerCategory && !evidenceTopic && !townshipIntent && detectMunicipalIntent(prompt);
+  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && !townshipIntent && !municipalIntent && detectTenderIntent(prompt);
+  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !townshipIntent && !municipalIntent && !tenderIntent && detectOpportunityIntent(prompt);
+  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : townshipIntent ? '/township-economy' : municipalIntent ? '/municipalities' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -258,6 +263,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <p><Link to="/comparative-evidence" className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
         <p><Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
         <p><Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
+        <p><Link to="/municipalities" className="text-cyan-200 underline underline-offset-2">Municipal services, permits, rates and indigent support: find your council</Link></p>
+        <p><Link to="/township-economy" className="text-cyan-200 underline underline-offset-2">Township economy: spaza, business permits, funding and local plans</Link></p>
       </div>
       {languageControl}
       {personalWelcome}
@@ -272,6 +279,16 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       {driverMode && <DriverQuickCard mode={driverMode} />}
       {consumerCategory && <ConsumerQuickCard category={consumerCategory} />}
+      {municipalIntent && <section aria-label="Free municipal service guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Find your municipality and service</h2>
+        <p className="text-sm">Choose a council using the government directory. Check local rates, service complaints, indigent relief and trading permits, without entering private account data.</p>
+        <Link to="/municipalities" className="text-cyan-200 underline underline-offset-2">Open municipal support</Link>
+      </section>}
+      {townshipIntent && <section aria-label="Free township economy guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Township and rural enterprise planning</h2>
+        <p className="text-sm">Build a local action plan, confirm municipal trading rules, and explore original TREP and Spaza Fund guidance. Funding is not guaranteed and loan products may be repayable.</p>
+        <Link to="/township-economy" className="text-cyan-200 underline underline-offset-2">Open free township business planner</Link>
+      </section>}
       {tenderIntent && <section aria-label="Free tender preparation guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Luqi Tender Desk — prepare with human control</h2>
         <p className="text-sm">Find the original tender notice, review eligibility and SBD/MBD documents, draft your answers locally and approve pricing and declarations yourself. Final submission and signatures are not automated.</p>
@@ -371,7 +388,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
-            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : tenderIntent ? 'Open free tender desk' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
+            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : townshipIntent ? 'Open free township business guide' : municipalIntent ? 'Open free municipal guide' : tenderIntent ? 'Open free tender desk' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
             <Send size={18} aria-hidden="true" /><span>{localGuidePath ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
           </button>
         </div>
