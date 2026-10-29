@@ -41,6 +41,8 @@ const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
 const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
+const MunicipalServicesPage = lazy(() => import("./pages/MunicipalServicesPage"));
+const TownshipEconomyPage = lazy(() => import("./pages/TownshipEconomyPage"));
 const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
@@ -94,6 +96,10 @@ export default function App() {
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
         <RouterRoute path="/tenders" element={<TenderDeskPage />} />
+        <RouterRoute path="/municipalities" element={<MunicipalServicesPage />} />
+        <RouterRoute path="/municipal-services" element={<Navigate to="/municipalities" replace />} />
+        <RouterRoute path="/township-economy" element={<TownshipEconomyPage />} />
+        <RouterRoute path="/township-business" element={<Navigate to="/township-economy" replace />} />
         <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
         {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
