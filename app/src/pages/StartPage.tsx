@@ -62,6 +62,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Direct agency links</li><li><Check aria-hidden="true" /> No assumed vacancies</li><li><Check aria-hidden="true" /> No account or AI payment</li></ul>
         <Link className="luqi-primary" to="/opportunities">Explore opportunities <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-social-support">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">SASSA AND UIF · FREE OFFICIAL SOURCE GUIDANCE</p>
+        <h2 id="start-social-support">Get guidance on grants and UIF claims.</h2>
+        <p>Understand SASSA and UIF requirements, the current claims portals, help with delays and appeal channels without entering private information into Luqi.</p>
+        <ul><li><Check aria-hidden="true" /> Original South African government references</li><li><Check aria-hidden="true" /> Current UIF Online instead of retired employee uFiling</li><li><Check aria-hidden="true" /> No paid AI, account or applications submitted</li></ul>
+        <Link className="luqi-primary" to="/social-support">Open SASSA &amp; UIF support <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-tenders">
         <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
         <p className="luqi-card-kicker">PUBLIC PROCUREMENT · FREE LOCAL DRAFTING</p>
