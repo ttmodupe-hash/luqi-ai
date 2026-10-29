@@ -3,6 +3,7 @@
  * No provider keys, model inference, user profiles, indexing or outside URLs from requests.
  */
 import { Hono } from 'hono';
+import {cachedIndividualAdvertScan} from './services/opportunityNoticeWatcher';
 
 export const SCOUT_TARGETS = [
  {id:'gov-jobs',url:'https://www.gov.za/government-jobs-week'},
@@ -76,5 +77,11 @@ opportunityWatch.get('/',async c=>{
    return c.json(snapshot);
  }
  return c.json(cache.snapshot);
+});
+// Strictly no user-supplied URLs, names or query filters. Cached read-only checks.
+opportunityWatch.get('/notices',async c=>{
+ c.header('Cache-Control','no-store');
+ if(Object.keys(c.req.query()).length)return c.json({code:'INVALID_INPUT'},400);
+ return c.json(await cachedIndividualAdvertScan());
 });
 opportunityWatch.all('*',c=>c.json({code:'OPPORTUNITY_ROUTE_NOT_FOUND'},404));
