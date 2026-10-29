@@ -4,8 +4,9 @@ import { detectConsumerCategory } from './consumer-rights-guide';
 import { detectEvidenceTopic } from './comparative-evidence';
 import { detectOpportunityIntent } from './opportunity-sources';
 import { detectTenderIntent } from './tender-sources';
+import { detectSocialSupportIntent,socialSupportPathForInput } from './social-support-sources';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
+export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'social' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -29,6 +30,11 @@ export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
   opportunity: [
     'Choose your province and the type of jobs, internships, funding or learning opportunity you want to explore.',
     'Open the original dated agency or programme page and confirm requirements and deadlines before applying.',
+  ],
+  social: [
+    'Choose SASSA social grants or UIF unemployment benefits without sharing personal identifiers with Luqi.',
+    'Read the original agency guidance and use the current official portal or office for sensitive applications.',
+    'Contact the government department about case status, appeals, deadlines or documents; Luqi cannot read a private claim.',
   ],
   tender: [
     'Find the exact government tender through its official procurement publisher and download its original documents and addenda.',
@@ -109,6 +115,15 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     primaryPath: '/opportunities', primaryLabel: 'Open Luqi Opportunity Compass',
     caution: 'Publisher links are not live job offers or confirmed eligibility. Never pay someone privately for a government post.',
     bookingPreview: false,
+  },
+  social: {
+    title: 'SASSA grants and UIF claims guidance',
+    detail: 'Luqi provides free, manually reviewed SASSA and UIF public information, official application and appeals links and safer next steps. Personal eligibility, private claim status and payment dates cannot be checked here. New UIF employee claims use UIF Online, not legacy uFiling.',
+    status:'local', statusLabel:'Free original-source public guide',
+    nextQuestion:'Choose a SASSA grant or UIF benefit, then verify the current rules and application channel with the government agency.',
+    primaryPath:'/social-support',primaryLabel:'Open SASSA and UIF guide',
+    caution:'Do not enter identity numbers, OTPs, health records, bank details or case credentials into Luqi. We do not approve grants or file benefit claims.',
+    bookingPreview:false,
   },
   tender: {
     title: 'Find public tenders and prepare an authorised bid with Luqi',
@@ -237,6 +252,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const kind: GuideKind =
     detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
+    detectSocialSupportIntent(input) ? 'social' :
     detectTenderIntent(input) ? 'tender' :
     detectOpportunityIntent(input) ? 'opportunity' :
     detectConsumerCategory(input) ? 'consumer' :
@@ -251,5 +267,6 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
     (/\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|transport|taxi|train|bus|shuttle|directions|route|commute|sightseeing|restaurant|dining|eat|attraction|experience|museum|beach|africa)\b/u.test(q) || mentionsAfricanDestination(q)) ? 'travel' :
     /\b(business|customer)\b/u.test(q) ? 'business' :
     'general';
-  return { kind, ...recommendations[kind] };
+  const target=kind==='social'?socialSupportPathForInput(input):null;
+  return { kind, ...recommendations[kind], ...(target?{primaryPath:target,primaryLabel:target==='/uif'?'Open UIF support':'Open SASSA support'}:{}) };
 }
