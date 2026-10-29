@@ -67,6 +67,19 @@ export function serveStaticFiles(app: Hono<any>): void {
     await next();
   });
 
+  // The public SPA shell must be revalidated on a user-approved reload;
+  // its hashed JS/CSS versions change on every deployment. This still permits
+  // the existing bounded service-worker offline shell cache, which rejects
+  // no-cache/no-store but accepts max-age=0, must-revalidate.
+  app.use("*", async (c, next) => {
+    await next();
+    const publicShell = c.req.path === "/index.html" || isSpaNavigationPath(c.req.path);
+    if (c.req.method === "GET" && publicShell && c.res.status === 200 &&
+        c.res.headers.get("Content-Type")?.toLowerCase().startsWith("text/html")) {
+      c.header("Cache-Control", "public, max-age=0, must-revalidate");
+    }
+  });
+
   app.get("*", serveStatic({ root: "./dist/public" }));
   // Missing payment and teaching documents must not become the account SPA.
   app.get("/paystack-checkout.html", notFound);

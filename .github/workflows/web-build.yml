@@ -108,6 +108,10 @@ jobs:
         run: npx vitest run tests/prompt-coach.test.ts tests/prompt-coach-ui.test.tsx
       - name: Verify public prompt guidance without metered AI calls
         run: npx vitest run tests/public-prompt-guide.test.tsx
+      - name: Check public version detection, user-approved refresh and protected lazy-import recovery
+        run: npx vitest run tests/public-release-update.test.tsx tests/route-load-boundary.test.tsx
+      - name: Strictly check public update banner, bounded source fetch and error boundary
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/public-release-update.ts src/components/PublicReleaseUpdateNotice.tsx src/components/RouteLoadBoundary.tsx src/components/WorkspaceLayout.tsx api/lib/vite.ts
       - name: Verify static-file security and existing lab fallback
         run: npx vitest run tests/static-file-security.test.ts tests/lab-static-fallback.test.ts
       - name: Verify visual tutor consent, image bounds and one-reservation transport

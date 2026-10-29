@@ -70,6 +70,16 @@ describe("public static-file security boundary", () => {
     const response = await server().request(path);
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Public account shell fixture");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=0, must-revalidate");
+  });
+
+  it("does not give immutable cache lifetime to the index shell or change cached CSS/JS", async () => {
+    const page = await server().request("/index.html");
+    expect(page.status).toBe(200);
+    expect(page.headers.get("Cache-Control")).toBe("public, max-age=0, must-revalidate");
+    const chunk = await server().request("/assets/index-test.js");
+    expect(chunk.status).toBe(200);
+    expect(chunk.headers.get("Cache-Control")).not.toBe("public, max-age=0, must-revalidate");
   });
 
   it.each(["/manifest.json", "/assets/index-test.js", "/.well-known/assetlinks.json", "/login.html"])
