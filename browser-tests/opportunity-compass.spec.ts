@@ -79,3 +79,46 @@ test('Luqi explains a dated NSFAS source without claiming an open application',a
  await expect(card.getByRole('status').getByText(/not proof the portal is accepting submissions now/)).toBeVisible();
  await expect(card.getByRole('status').getByText(/2026-10-31/)).toBeVisible();
 });
+
+
+test('the real province map filters reviewed individual adverts, and never markets withdrawn posts',async({page})=>{
+  const paid:string[]=[];page.on('request',req=>{if(req.method()==='POST')paid.push(req.url());});
+  await page.setViewportSize({width:320,height:740});
+  await page.goto('/#/opportunities');
+  const records=page.getByRole('region',{name:'Individual government job matches'});
+  await expect(records.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})).toBeVisible();
+  await page.getByRole('button',{name:'Select Gauteng'}).click();
+  await expect(records.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})).toBeVisible();
+  await expect(records.getByRole('heading',{name:'Client Service Officer: COID'})).toHaveCount(0);
+  await page.getByRole('button',{name:'Select Eastern Cape'}).click();
+  await expect(records.getByRole('heading',{name:'Office Administrator'})).toBeVisible();
+  await expect(records.getByRole('heading',{name:'Personnel Officer: Human Resources Management'})).toHaveCount(0);
+  await records.getByLabel(/Include withdrawn posts/).check();
+  const withdrawn=records.getByRole('article').filter({has:records.getByRole('heading',{name:'Personnel Officer: Human Resources Management'})});
+  await expect(withdrawn.getByText(/Withdrawn by the employer/)).toBeVisible();
+  await expect(withdrawn.getByRole('link',{name:'Official withdrawal notice'})).toHaveAttribute('href',/labour.gov.za\/erratum-withdrawal/);
+  expect(paid).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});
+test('fixed job evidence checker is requested only on demand and cannot certify active hiring',async({page})=>{
+ const calls:string[]=[];await page.route('**/api/v1/opportunity-watch/notices',route=>{
+  calls.push(route.request().method());
+  return route.fulfill({json:{checkedAt:'2026-10-29T08:00:00Z',scope:'fixed_official_individual_adverts_only',checks:[
+   {id:'labour-gp-carletonville-clerk',reference:'HR4/4/4/09/47',state:'reference-and-deadline-found',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-mp-sabie-coid',reference:'HR4/4/7/97',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-mp-ict',reference:'HR 4/4/7/96',state:'content-unconfirmed',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-ec-office-administrator',reference:'HR4/4/1/105',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-kzn-employer-services',reference:'HR4/4/9/29',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'cogta-gp-scm',reference:'SSCMDSPR',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-ec-withdrawn-personnel',reference:'HR4/4/1/13',state:'withdrawn',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'}
+  ]}});
+ });
+ await page.goto('/#/opportunities');const region=page.getByRole('region',{name:'Individual government job matches'});
+ expect(calls).toEqual([]);
+ await region.getByRole('button',{name:'Recheck published job notices'}).click();
+ await expect(region.getByText(/Publisher text check complete/)).toBeVisible();
+ const carletonville=region.getByRole('article').filter({has:region.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})});
+ await expect(carletonville.getByText(/matching reference and deadline/)).toBeVisible();
+ await expect(carletonville.getByText(/current acceptance status must be confirmed/)).toBeVisible();
+ expect(calls).toEqual(['GET']);
+});
