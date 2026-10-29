@@ -161,7 +161,7 @@ test("navigation and skip link work at small widths without changing hash routes
   await expect(page).toHaveURL(/#\/$/);
   await page.screenshot({
     path: test.info().outputPath("small-workspace.png"),
-    fullPage: true,
+    fullPage: false,
   });
 });
 
