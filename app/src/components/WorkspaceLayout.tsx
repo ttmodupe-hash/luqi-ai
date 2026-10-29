@@ -17,6 +17,8 @@ const navigation = [
   ["/chat", "Chat"],
   ["/opportunities", "Opportunities"],
   ["/tenders", "Tenders"],
+  ["/municipalities", "Municipal services"],
+  ["/township-economy", "Township business"],
   ["/spatial-vision", "👁️ Spatial Vision & 3D Lab"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
