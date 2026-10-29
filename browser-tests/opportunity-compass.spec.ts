@@ -132,11 +132,11 @@ test('new official internship and learnership cards disclose pay units and evide
  await page.goto('/#/opportunities');
  const board=page.getByRole('region',{name:'Individual government job matches'});
  const kouga=board.getByRole('article').filter({hasText:'Town Planner Internship'});
- await expect(kouga.getByText(/Advertised salary: R10,000 per month/)).toBeVisible();
+ await expect(kouga.getByText(/Advertised salary: R10\\s*000 per month/)).toBeVisible();
  await expect(kouga.getByText(/current acceptance status must be confirmed/)).toBeVisible();
  await expect(kouga.getByRole('link',{name:'Original government advert'})).toHaveAttribute('href','https://www.kouga.gov.za/vacancy/town-planner-internship');
  const learn=board.getByRole('article').filter({hasText:'Basic Traffic Officers Diploma Learnership 2026\/27'});
- await expect(learn.getByText(/Advertised stipend: R5,000 per month/)).toBeVisible();
+ await expect(learn.getByText(/Advertised stipend: R5\\s*000 per month/)).toBeVisible();
  await expect(learn.getByText(/exact cutoff time unconfirmed/)).toBeVisible();
  expect(posts).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
