@@ -83,7 +83,7 @@ export function townshipActionPlanText(sector:TownshipSector,goal:TownshipGoal,m
  const s=TOWNSHIP_SECTORS.find(x=>x.id===sector)?.title||'Township enterprise';
  const g=TOWNSHIP_GOALS.find(x=>x.id===goal)?.title||'Support';
  const lines=buildTownshipActionPlan(sector,goal,municipality);
- return ['LUQI · TOWNSHIP BUSINESS ACTION PLAN', 'Reviewed: '+TOWNSHIP_REVIEWED_ON,
+ return ['Luqi · Township business action plan', 'Reviewed: '+TOWNSHIP_REVIEWED_ON,
   'Sector: '+s,'Goal: '+g,municipality?'Selected municipality: '+municipality:'',
   'Guide only. Not a funding award or a licence. Confirm all requirements with issuers.','',
   ...lines.map((t,i)=>(i+1)+'. '+t),'',
