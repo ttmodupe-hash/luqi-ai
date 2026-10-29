@@ -28,7 +28,7 @@ export default function MunicipalServicesPage(){
   const blob=new Blob([draft],{type:'text/plain;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');link.href=url;link.download='luqi-municipal-checklist.txt';
-  document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   setDownloadMessage('Checklist created on your device. This is not a submitted service request.');
  }
  return <main className="mx-auto max-w-6xl min-w-0 space-y-6 px-3 py-7 text-slate-100 sm:px-6 sm:py-10" aria-labelledby="municipal-heading">
