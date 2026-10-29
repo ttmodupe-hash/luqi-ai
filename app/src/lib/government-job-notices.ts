@@ -15,7 +15,7 @@ export type NoticeLevel='grade12'|'tertiary';
 export interface GovernmentJobNotice{
  id:string;reference:string;title:string;employer:string;province:ProvinceCode;
  centre:string;city:string|null;level:NoticeLevel;requirements:string;experience:string;
- annualSalaryZar:number;sourceUrl:string;reviewedOn:string;
+ annualSalaryZar?:number;monthlyPayZar?:number;payLabel?:'salary'|'stipend';opportunityKind?:'post'|'internship'|'learnership';publishedOn?:string;sourceUrl:string;reviewedOn:string;
  closingDate:string;walkInCutoffSast:string|null;remoteCutoffSast:string|null;
  applicationInstructions:string;additionalSource?:string;
  withdrawnEvidenceUrl?:string;
@@ -60,6 +60,25 @@ export const VERIFIED_GOVERNMENT_ADVERTS: readonly GovernmentJobNotice[]=[
   reviewedOn:defaultReview,closingDate:'2026-10-30',walkInCutoffSast:null,remoteCutoffSast:null,
   applicationInstructions:'The department advert directs emailed applications to its published recruitment address, with the current Z83 and comprehensive CV. It states the date but does not establish a cutoff time; confirm directly.',
   additionalSource:'https://www.dpsa.gov.za/newsroom/psvc/'},
+
+ {id:'kouga-ec-town-planner-intern',reference:'263/2026',title:'Town Planner Internship',employer:'Kouga Local Municipality',province:'EC',centre:'Kouga Local Municipality',city:null,
+  level:'tertiary',opportunityKind:'internship',requirements:'Relevant town planning qualification at NQF level 6 or higher; computer literacy; town and regional planning knowledge; able to speak, read and write at least two of Afrikaans, English and isiXhosa. SACPLAN registration is an advantage; preference to Kouga residents.',
+  experience:'No specified minimum years of experience in the original municipal notice.',
+  monthlyPayZar:10000,payLabel:'salary',sourceUrl:'https://www.kouga.gov.za/vacancy/town-planner-internship',
+  reviewedOn:defaultReview,publishedOn:'2026-10-28',closingDate:'2026-11-06',walkInCutoffSast:null,remoteCutoffSast:'12:00',
+  applicationInstructions:'Get the official municipal application form and submit it with a detailed CV, qualification copies, ID and driver licence copy as ONE PDF to recruitment@kouga.gov.za before 12:00 SAST. The publisher says multiple PDFs are disqualifying.'},
+ {id:'mp-traffic-officer-learnership',reference:'DCSSL/05/2026',title:'Basic Traffic Officers Diploma Learnership 2026/27',employer:'Mpumalanga Department of Community Safety, Security and Liaison',province:'MP',centre:'Mpumalanga Traffic Training College at Mkhuhlu (Calcutta)',city:'Mkhuhlu',
+  level:'grade12',opportunityKind:'learnership',requirements:'Grade 12, at least a Code B driving licence, South African citizenship, no criminal record, physical and medical fitness. Programme is directed to youth residing in Mpumalanga; shortlisted applicants face driving and competency assessments.',
+  experience:'The department does not specify prior employment experience as a minimum in the reviewed learnership notice.',
+  monthlyPayZar:5000,payLabel:'stipend',sourceUrl:'https://www.mpg.gov.za/vacancies/traffic-learnership-department-community-safety-security-and-liaison',
+  reviewedOn:defaultReview,closingDate:'2026-10-30',walkInCutoffSast:null,remoteCutoffSast:null,
+  applicationInstructions:'The government listing confirms 30 October 2026 but does not state a closing hour. Open its current official advert attachment to follow the corrected online application link, complete the new Z83 and upload a detailed CV. Do not use an obsolete application link or assume an hour.'},
+ {id:'labour-gp-bronkhorstspruit-ies',reference:'HR4/4/4/08/04',title:'Client Service Officer: Inspection and Enforcement Service',employer:labour,province:'GP',centre:'Bronkhorstspruit Labour Centre',city:'Bronkhorstspruit',
+  level:'grade12',opportunityKind:'post',requirements:'Grade 12 / Matric; skills listed include communication, interviewing, computer literacy, problem-solving and interpretation of relevant labour legislation and guidelines.',
+  experience:'The official department advert explicitly states no previous work experience is required.',
+  annualSalaryZar:280278,sourceUrl:'https://www.labour.gov.za/client-service-officer-inspection-and-enforcement-service',
+  reviewedOn:defaultReview,publishedOn:'2026-10-23',closingDate:'2026-11-06',walkInCutoffSast:'16:00',remoteCutoffSast:'23:59',
+  applicationInstructions:'Use the official ESSA online application service (new Z83 and CV as one attachment) or hand-deliver at 40 Botha Street, Cilliers Building, Bronkhorstspruit Labour Centre. Quote HR4/4/4/08/04. Walk-in closes 16:00 and online 23:59 SAST.'},
  {id:'labour-ec-withdrawn-personnel',reference:'HR4/4/1/13',title:'Personnel Officer: Human Resources Management',employer:labour,province:'EC',centre:'East London Provincial Office',city:'East London',
   level:'grade12',requirements:'Grade 12 plus a certificate in the human resources field, according to the original advertisement.',
   experience:'Employer requirements need rechecking; this post has been explicitly withdrawn.',
