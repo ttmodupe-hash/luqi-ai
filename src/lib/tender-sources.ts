@@ -33,7 +33,7 @@ export const TENDER_OFFICIAL_SOURCES:readonly TenderSource[]=[
 ];
 export interface TenderNotice{
  id:string;title:string;issuer:string;province:ProvinceCode|null;
- reference:string|null;publishedOn:string;deadlineDate:string;
+ reference:string|null;publishedOn:string|null;deadlineDate:string;
  deadlineTimeSast:string;officialUrl:string;method:TenderMethod;
  briefingDate:string|null;briefingMandatory:boolean;
  category:string;details:string;specialCondition:string|null;
@@ -41,14 +41,14 @@ export interface TenderNotice{
 }
 export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
  {id:'dsbd-msme-market-access',title:'Study on enhancing MSME access to regional and continental markets',
-  issuer:'Department of Small Business Development',province:'GP',reference:null,publishedOn:'2026-10-23',
+  issuer:'Department of Small Business Development',province:null,reference:null,publishedOn:'2026-10-23',
   deadlineDate:'2026-11-02',deadlineTimeSast:'11:00',officialUrl:'https://www.dsbd.gov.za/tenders/',
   method:'confirm-original',briefingDate:null,briefingMandatory:false,category:'Professional research / SME',
   details:'The DSBD tender page links to the RFQ Market Access Study specification and annexures. The listing does not show a reference number; retrieve the actual RFQ before preparing a final response.',
   specialCondition:'Confirm the required format and submission address in the linked RFQ; the website displays a physical bid box for hard-copy tenders but individual RFQs may differ.',
   sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Source listing only: exact RFQ document and reference must be checked before bidding.'},
  {id:'dsbd-localisation-evaluation',title:'Implementation evaluation of MSME-focused localisation policy',
-  issuer:'Department of Small Business Development',province:'GP',reference:null,publishedOn:'2026-10-21',
+  issuer:'Department of Small Business Development',province:null,reference:null,publishedOn:'2026-10-21',
   deadlineDate:'2026-11-02',deadlineTimeSast:'11:00',officialUrl:'https://www.dsbd.gov.za/tenders/',
   method:'confirm-original',briefingDate:null,briefingMandatory:false,category:'Professional research / SME',
   details:'The department links the MSME localisation policy RFQ documents. Tender reference is not provided on the public index.',
@@ -63,7 +63,7 @@ export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
   specialCondition:'The official advert names Golden Heights Building, 141 Victoria Street, Germiston as the physical sealed-envelope bid box. A briefing was listed on 14 October; confirm whether attendance was mandatory.',
   sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Tender page currently published; check addenda, qualification and original bidding documents.'},
  {id:'gcis-sasl-012',title:'South African Sign Language interpreting and voice-over services (600 hours)',
-  issuer:'Government Communication and Information System',province:'GP',reference:'RFQ 012 2026/2027',publishedOn:'2026-10-29',
+  issuer:'Government Communication and Information System',province:null,reference:'RFQ 012 2026/2027',publishedOn:null,
   deadlineDate:'2026-11-06',deadlineTimeSast:'11:00',
   officialUrl:'https://www.gcis.gov.za/content/latest-tenders',
   method:'confirm-original',briefingDate:'2026-10-30',briefingMandatory:false,category:'Language / accessibility services',
@@ -71,7 +71,7 @@ export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
   specialCondition:'Noncompulsory briefing listed for 30 October 2026. Download the specification to verify exact submission method and attachments.',
   sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Official GCIS listing with dated RFQ; not an eligibility or acceptance guarantee.'},
  {id:'tshwane-gpm04',title:'Electrical maintenance, repairs and compliance certificates for city facilities',
-  issuer:'City of Tshwane',province:'GP',reference:'GPM 04-2026/27',publishedOn:'2026-10-29',
+  issuer:'City of Tshwane',province:'GP',reference:'GPM 04-2026/27',publishedOn:null,
   deadlineDate:'2026-11-06',deadlineTimeSast:'10:00',
   officialUrl:'https://www.tshwane.gov.za/?p=104421',method:'confirm-original',
   briefingDate:'2026-10-12',briefingMandatory:true,category:'Construction / electrical services',
@@ -79,7 +79,7 @@ export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
   specialCondition:'Official notice states CIDB 3EB or higher and a compulsory briefing on 12 October 2026, which has passed. Do not assume bidders who missed the briefing remain eligible.',
   sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Past compulsory briefing: do not treat as an actionable opportunity without explicit procuring-entity confirmation.'},
  {id:'tshwane-hd01',title:'Municipal laundry services over a three-year period',
-  issuer:'City of Tshwane',province:'GP',reference:'HD 01-2026/27',publishedOn:'2026-10-29',
+  issuer:'City of Tshwane',province:'GP',reference:'HD 01-2026/27',publishedOn:null,
   deadlineDate:'2026-11-09',deadlineTimeSast:'10:00',
   officialUrl:'https://www.tshwane.gov.za/?p=104421',method:'confirm-original',
   briefingDate:null,briefingMandatory:false,category:'Cleaning / laundry services',
