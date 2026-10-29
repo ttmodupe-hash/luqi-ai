@@ -41,6 +41,26 @@ export const workspaceTools = [
     status: "Free official sources · no account", ready: true, path: "/opportunities", icon: "business",
   },
   {
+    id: "social-support", title: "SASSA & UIF Support", category: "South African social grants and unemployment benefits",
+    description: "Free source-linked SASSA grant and UIF claim information. Guides to official applications, status, appeals and contact channels. No private account access, IDs or AI charge.",
+    status: "Free official-source guidance · no account", ready: true, path: "/social-support", icon: "status",
+  },
+  {
+    id: "municipal-services", title: "Municipal Services · Find Your Council", category: "All nine South African provinces and local government",
+    description: "Search government-listed municipality names, choose water, rates, indigent relief, business permits or local development and download a private request checklist. No council account integration, claim of outage reporting or paid AI.",
+    status: "Free original-source guidance · no account", ready: true, path: "/municipalities", icon: "status",
+  },
+  {
+    id: "township-economy", title: "Township & Rural Business Support", category: "Small enterprise, spaza, market traders and informal economy",
+    description: "Free local business action plans, municipal trade compliance, source-verified TREP and Spaza Fund starting points, and tender/market-readiness checklists. No guaranteed loan or automatic application.",
+    status: "Free business planning · no account", ready: true, path: "/township-economy", icon: "business",
+  },
+  {
+    id: "visa-entry", title: "Visa & Entry Guide · Africa", category: "Official travel and immigration entry information",
+    description: "Source-linked South Africa, Kenya, Nigeria, Egypt and Cameroon visa/ETA guidance. Choose passport nationality, purpose and dates; no approval guarantees, personal documents, paid AI or live government integration.",
+    status: "Five-country official-source guide · no account", ready: true, path: "/visa-entry", icon: "business",
+  },
+  {
     id: "tenders", title: "Tender Desk · Find & Prepare Bids", category: "South African government procurement and small business",
     description: "Free official tender listings, SBD/MBD form guidance, local editable bid-preparation worksheet, missing-document checks and mandatory human approval. No automatic portal submission.",
     status: "Local preparation · no account", ready: true, path: "/tenders", icon: "business",

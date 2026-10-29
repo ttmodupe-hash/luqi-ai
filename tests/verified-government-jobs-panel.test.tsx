@@ -37,3 +37,17 @@ it('filters stated academic requirement and warns it cannot determine eligibilit
  expect(screen.queryByRole('heading',{name:'Field ICT Technician'})).toBeNull();
  expect(screen.getByText(/not your personal eligibility/)).toBeTruthy();
 });
+
+it('distinguishes monthly stipend and municipal salary from annual public-service pay',()=>{
+ render(<VerifiedGovernmentJobsPanel province="MP"/>);
+ expect(screen.getByRole('heading',{name:'Basic Traffic Officers Diploma Learnership 2026/27'})).toBeTruthy();
+ expect(screen.getByText(/Advertised stipend:.*per month/)).toBeTruthy();
+ cleanup();
+ render(<VerifiedGovernmentJobsPanel province="EC"/>);
+ expect(screen.getByRole('heading',{name:'Town Planner Internship'})).toBeTruthy();
+ expect(screen.getByText(/Advertised salary:.*per month/)).toBeTruthy();
+ cleanup();
+ render(<VerifiedGovernmentJobsPanel province="GP"/>);
+ expect(screen.getByRole('heading',{name:'Client Service Officer: Inspection and Enforcement Service'})).toBeTruthy();
+ expect(screen.getAllByText(/annually \(verify original\)/).length).toBeGreaterThan(0);
+});

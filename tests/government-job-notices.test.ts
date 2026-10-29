@@ -3,8 +3,8 @@ import{VERIFIED_GOVERNMENT_ADVERTS,assessGovernmentJobStatus,matchGovernmentAdve
 describe('source-backed individual South African government adverts',()=>{
 it('carries unique exact references, primary HTTPS job URLs, source review dates, and actual provinces',()=>{
  const refs=new Set<string>();const ids=new Set<string>();
- const allowed=new Set(['www.labour.gov.za','www.cogta.gov.za']);
- expect(VERIFIED_GOVERNMENT_ADVERTS.length).toBeGreaterThanOrEqual(7);
+ const allowed=new Set(['www.labour.gov.za','www.cogta.gov.za','www.kouga.gov.za','www.mpg.gov.za']);
+ expect(VERIFIED_GOVERNMENT_ADVERTS.length).toBeGreaterThanOrEqual(10);
  for(const j of VERIFIED_GOVERNMENT_ADVERTS){
    expect(ids.has(j.id)).toBe(false);ids.add(j.id);
    expect(refs.has(j.reference)).toBe(false);refs.add(j.reference);
@@ -12,6 +12,7 @@ it('carries unique exact references, primary HTTPS job URLs, source review dates
    expect(new URL(j.sourceUrl).protocol).toBe('https:');
    expect(j.reviewedOn).toBe('2026-10-29');
    expect(j.requirements.length).toBeGreaterThan(42);
+   expect((j.annualSalaryZar!==undefined&&j.annualSalaryZar>0)!==(j.monthlyPayZar!==undefined&&j.monthlyPayZar>0)).toBe(true);
    expect(j.closingDate).toMatch(/^2026-(10|11)-\d\d$/);
  }
 });
@@ -37,5 +38,18 @@ it('expires stored review freshness without treating last scrape as open',()=>{
  expect(isJobNoticeReviewFresh(j,new Date('2026-10-29T09:00:00+02:00'))).toBe(true);
  expect(isJobNoticeReviewFresh(j,new Date('2026-11-03T09:00:00+02:00'))).toBe(false);
  expect(assessGovernmentJobStatus(j,new Date('2027-01-01T09:00:00+02:00'))).toBe('deadline-passed');
+});
+
+it('carries official learnership and municipal internship in the correct provinces and handles expiry',()=>{
+ const kouga=VERIFIED_GOVERNMENT_ADVERTS.find(x=>x.reference==='263/2026')!;
+ const learn=VERIFIED_GOVERNMENT_ADVERTS.find(x=>x.reference==='DCSSL/05/2026')!;
+ const ies=VERIFIED_GOVERNMENT_ADVERTS.find(x=>x.reference==='HR4/4/4/08/04')!;
+ expect(kouga.province).toBe('EC');expect(kouga.monthlyPayZar).toBe(10000);
+ expect(learn.province).toBe('MP');expect(learn.monthlyPayZar).toBe(5000);
+ expect(ies.province).toBe('GP');expect(ies.annualSalaryZar).toBe(280278);
+ expect(kouga.publishedOn).toBe('2026-10-28');
+ expect(assessGovernmentJobStatus(kouga,new Date('2026-11-06T12:01:00+02:00'))).toBe('deadline-passed');
+ expect(assessGovernmentJobStatus(learn,new Date('2026-10-31T00:00:00+02:00'))).toBe('deadline-passed');
+ expect(matchGovernmentAdverts({province:'MP',level:'grade12',query:'DCSSL',includeHistory:false,now:new Date('2026-10-29T12:00:00+02:00')}).map(x=>x.reference)).toContain('DCSSL/05/2026');
 });
 });

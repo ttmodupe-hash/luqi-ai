@@ -62,6 +62,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Direct agency links</li><li><Check aria-hidden="true" /> No assumed vacancies</li><li><Check aria-hidden="true" /> No account or AI payment</li></ul>
         <Link className="luqi-primary" to="/opportunities">Explore opportunities <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-social-support">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">SASSA AND UIF · FREE OFFICIAL SOURCE GUIDANCE</p>
+        <h2 id="start-social-support">Get guidance on grants and UIF claims.</h2>
+        <p>Understand SASSA and UIF requirements, the current claims portals, help with delays and appeal channels without entering private information into Luqi.</p>
+        <ul><li><Check aria-hidden="true" /> Original South African government references</li><li><Check aria-hidden="true" /> Current UIF Online instead of retired employee uFiling</li><li><Check aria-hidden="true" /> No paid AI, account or applications submitted</li></ul>
+        <Link className="luqi-primary" to="/social-support">Open SASSA &amp; UIF support <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-tenders">
         <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
         <p className="luqi-card-kicker">PUBLIC PROCUREMENT · FREE LOCAL DRAFTING</p>
@@ -69,6 +77,30 @@ export default function StartPage() {
         <p>Explore official procurement notices, draft responses and check the original tender forms. You retain control over pricing, declarations, signatures and submission.</p>
         <ul><li><Check aria-hidden="true" /> Original government sources</li><li><Check aria-hidden="true" /> SBD/MBD preparation checklist</li><li><Check aria-hidden="true" /> No account, paid AI or automatic filing</li></ul>
         <Link className="luqi-primary" to="/tenders">Open Tender Desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
+      <section className="luqi-start-card" aria-labelledby="start-municipal-services">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">MUNICIPAL SUPPORT · NINE PROVINCES · FREE</p>
+        <h2 id="start-municipal-services">Find your municipality and the right service.</h2>
+        <p>Look up official government-listed councils and prepare safe next steps for water, bills, indigent relief, potholes, permits and ward participation.</p>
+        <ul><li><Check aria-hidden="true" /> Government original-source directory</li><li><Check aria-hidden="true" /> No private municipal account access</li><li><Check aria-hidden="true" /> Device-only request checklist</li></ul>
+        <Link className="luqi-primary" to="/municipalities">Open municipal services <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
+      <section className="luqi-start-card" aria-labelledby="start-township-economy">
+        <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">TOWNSHIP AND RURAL BUSINESS · FREE PLANNING</p>
+        <h2 id="start-township-economy">Grow your community business.</h2>
+        <p>Plan a spaza, food stall, salon, artisan service or workshop; check municipal trading rules and original TREP, Spaza Fund, youth and procurement sources.</p>
+        <ul><li><Check aria-hidden="true" /> Plain-language business action plan</li><li><Check aria-hidden="true" /> No invented grants or guaranteed approval</li><li><Check aria-hidden="true" /> No AI charge or automatic applications</li></ul>
+        <Link className="luqi-primary" to="/township-economy">Explore township economy support <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
+      <section className="luqi-start-card" aria-labelledby="start-visa-entry">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">OFFICIAL VISA SOURCES · FIVE AFRICAN DESTINATIONS</p>
+        <h2 id="start-visa-entry">Check visa and entry requirements before travelling.</h2>
+        <p>Choose passport nationality, travel purpose and dates; see reviewed immigration authorities without providing a passport number or using a paid AI request.</p>
+        <ul><li><Check aria-hidden="true" /> Direct government links</li><li><Check aria-hidden="true" /> Source review dates and uncertainties</li><li><Check aria-hidden="true" /> No application or payments collected</li></ul>
+        <Link className="luqi-primary" to="/visa-entry">Explore Visa &amp; Entry <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
       <section className="luqi-start-card" aria-labelledby="start-driver-rights">
         <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>

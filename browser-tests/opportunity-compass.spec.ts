@@ -110,6 +110,9 @@ test('fixed job evidence checker is requested only on demand and cannot certify 
    {id:'labour-ec-office-administrator',reference:'HR4/4/1/105',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
    {id:'labour-kzn-employer-services',reference:'HR4/4/9/29',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
    {id:'cogta-gp-scm',reference:'SSCMDSPR',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'kouga-ec-town-planner-intern',reference:'263/2026',state:'reference-and-deadline-found',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'mp-traffic-officer-learnership',reference:'DCSSL/05/2026',state:'content-unconfirmed',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-gp-bronkhorstspruit-ies',reference:'HR4/4/4/08/04',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
    {id:'labour-ec-withdrawn-personnel',reference:'HR4/4/1/13',state:'withdrawn',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'}
   ]}});
  });
@@ -121,4 +124,26 @@ test('fixed job evidence checker is requested only on demand and cannot certify 
  await expect(carletonville.getByText(/matching reference and deadline/)).toBeVisible();
  await expect(carletonville.getByText(/current acceptance status must be confirmed/)).toBeVisible();
  expect(calls).toEqual(['GET']);
+});
+
+test('new official internship and learnership cards disclose pay units and evidence limits on a 320px phone',async({page})=>{
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.setViewportSize({width:320,height:740});
+ await page.goto('/#/opportunities');
+ const board=page.getByRole('region',{name:'Individual government job matches'});
+ const kouga=board.getByRole('article').filter({hasText:'Town Planner Internship'});
+ const salary=kouga.getByText(/Advertised salary:/);
+  await expect(salary).toContainText('per month');
+  const salaryText=await salary.innerText();
+  expect(salaryText.match(/R([0-9\s.,\u00a0\u202f]+)/)?.[1]?.replace(/[^0-9]/g,'')).toBe('10000');
+ await expect(kouga.getByText(/current acceptance status must be confirmed/)).toBeVisible();
+ await expect(kouga.getByRole('link',{name:'Original government advert'})).toHaveAttribute('href','https://www.kouga.gov.za/vacancy/town-planner-internship');
+ const learn=board.getByRole('article').filter({hasText:'Basic Traffic Officers Diploma Learnership 2026\/27'});
+ const stipend=learn.getByText(/Advertised stipend:/);
+  await expect(stipend).toContainText('per month');
+  const stipendText=await stipend.innerText();
+  expect(stipendText.match(/R([0-9\s.,\u00a0\u202f]+)/)?.[1]?.replace(/[^0-9]/g,'')).toBe('5000');
+ await expect(learn.getByText(/exact cutoff time unconfirmed/)).toBeVisible();
+ expect(posts).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
 });

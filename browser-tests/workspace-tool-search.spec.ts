@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { workspaceTools } from '../src/components/workspace-catalog';
 
 // Search acceptance is local-only and never signs into a real account.
 async function prepare(page: Page, baseURL: string | undefined) {
@@ -29,7 +30,7 @@ test('mobile search announces visible available-tool counts without network acce
   const forbidden = await prepare(page, baseURL);
   const status = page.locator('.luqi-tool-count');
   const search = page.getByLabel('Filter workspace tools', { exact: true });
-  await expect(status).toContainText('16 matching tools');
+  await expect(status).toContainText(`${workspaceTools.length} matching tools`);
   await expect(search).toHaveAttribute('type', 'search');
   await expect(search).toHaveAttribute('enterkeyhint', 'search');
   await search.fill('STUDIO content');
@@ -41,7 +42,7 @@ test('mobile search announces visible available-tool counts without network acce
   await page.getByRole('button', { name: 'Ready to use', exact: true }).click();
   await expect(status).toContainText('No matching tools');
   await page.getByRole('button', { name: 'Show all tools', exact: true }).click();
-  await expect(status).toContainText('16 matching tools');
+  await expect(status).toContainText(`${workspaceTools.length} matching tools`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await expectLocalOnly(page, forbidden);
 });
@@ -101,7 +102,7 @@ test('320px search handles literal input and recovers with the keyboard without 
   const reset = page.getByRole('button', { name: 'Show all tools', exact: true });
   await reset.focus(); await page.keyboard.press('Enter');
   await expect(search).toHaveValue('');
-  await expect(page.locator('.luqi-tool-card')).toHaveCount(16);
+  await expect(page.locator('.luqi-tool-card')).toHaveCount(workspaceTools.length);
   await search.fill('  STUDIO   content  ');
   await expect(page.locator('.luqi-tool-card')).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);

@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, MAX_GUIDE_NEED_CHARS, guideLuqiNeed } from '../src/lib/luqi-intent-guide';
 
 describe('LUQI local intent guidance', () => {
+
+  it('routes SASSA and UIF public support locally without paid inference or personal eligibility claims',()=>{
+    const sassa=guideLuqiNeed('I need help checking my SASSA SRD grant')!;
+    expect(sassa.kind).toBe('social');expect(sassa.primaryPath).toBe('/sassa');
+    expect(sassa.detail).toMatch(/no|cannot|not/i);
+    const uif=guideLuqiNeed('How do I claim UIF online?')!;
+    expect(uif.kind).toBe('social');expect(uif.primaryPath).toBe('/uif');
+    expect(uif.caution).toMatch(/Do not enter identity numbers/);
+    expect(guideLuqiNeed('Looking for business grants for entrepreneurs')?.primaryPath).toBe('/opportunities');
+  });
+
   it('does not fabricate bookings, prices, availability or payments', () => {
     for (const need of [
       'Book a hotel in Cape Town for two people',
@@ -120,4 +131,24 @@ it('routes procurement questions to a real local human-controlled tender desk',(
  expect(r?.detail).toMatch(/mandatory applicant approval/);
  expect(r?.detail).toMatch(/does not access CSD accounts/);
  expect(guideLuqiNeed('Find government jobs in Gauteng')?.kind).toBe('opportunity');
+});
+
+it('routes local government and township enterprise questions to free first-party help instead of paid inference',()=>{
+ const muni=guideLuqiNeed('Help with municipal electricity and rates')!;
+ expect(muni.kind).toBe('municipal');expect(muni.primaryPath).toBe('/municipalities');
+ expect(muni.detail).toMatch(/does not report faults/);
+ const township=guideLuqiNeed('I need funding for my spaza shop in a township')!;
+ expect(township.kind).toBe('township');expect(township.primaryPath).toBe('/township-economy');
+ expect(township.caution).toMatch(/repayment|repayable|Loan/i);
+ expect(guideLuqiNeed('Where can I find the DPSA vacancy circular?')?.kind).toBe('opportunity');
+ expect(guideLuqiNeed('Help me study for my CCNA exam')?.kind).toBe('study');
+});
+
+it('routes visa requirements to the official guide without mistaking card payments for immigration',()=>{
+ const visa=guideLuqiNeed('Does a South African passport need a visa to Egypt?')!;
+ expect(visa.kind).toBe('visa');
+ expect(visa.primaryPath).toBe('/visa-entry');
+ expect(visa.caution).toMatch(/passport numbers or biometrics/);
+ expect(guideLuqiNeed('I am visiting a hotel in Nairobi and need a visa')?.kind).toBe('visa');
+ expect(guideLuqiNeed('Pay my booking by Visa card')?.kind).not.toBe('visa');
 });

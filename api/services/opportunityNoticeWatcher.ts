@@ -13,7 +13,7 @@ export function verifiedDateVariants(date:string):readonly string[]{
  const m=/^(20\d\d)-(\d\d)-(\d\d)$/.exec(date);
  if(!m||Number(m[2])<1||Number(m[2])>12)return[];
  const month=MONTHS[Number(m[2])-1];
- return [m[3]+month+m[1],String(Number(m[3]))+month+m[1]];
+ return [m[3]+month+m[1],String(Number(m[3]))+month+m[1],m[3]+month.slice(0,3)+m[1],String(Number(m[3]))+month.slice(0,3)+m[1]];
 }
 function normalizedText(value:string):string{
  return value.toLowerCase().replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
@@ -45,7 +45,7 @@ export async function probeIndividualAdvert(job:GovernmentJobNotice,fetcher:type
  if(job.withdrawnEvidenceUrl)return{id:job.id,reference:job.reference,checkedAt,state:'withdrawn',note};
  try{
   const url=new URL(job.sourceUrl);
-  if(url.protocol!=='https:'||!['www.labour.gov.za','www.cogta.gov.za'].includes(url.hostname))
+  if(url.protocol!=='https:'||!['www.labour.gov.za','www.cogta.gov.za','www.kouga.gov.za','www.mpg.gov.za'].includes(url.hostname))
     return{id:job.id,reference:job.reference,checkedAt,state:'publisher-unavailable',note};
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),4500);
   try{

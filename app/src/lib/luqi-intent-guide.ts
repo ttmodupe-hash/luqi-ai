@@ -3,9 +3,12 @@ import { detectDriverMode } from './driver-rights';
 import { detectConsumerCategory } from './consumer-rights-guide';
 import { detectEvidenceTopic } from './comparative-evidence';
 import { detectOpportunityIntent } from './opportunity-sources';
-import { detectTenderIntent } from './tender-sources';
+
+import { detectMunicipalIntent,detectTownshipEconomyIntent } from './municipal-economy';
+import { detectVisaEntryIntent } from './visa-entry-sources';import { detectTenderIntent } from './tender-sources';
+import { detectSocialSupportIntent,socialSupportPathForInput } from './social-support-sources';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
+export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'municipal' | 'township' | 'visa' | 'social' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -29,6 +32,26 @@ export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
   opportunity: [
     'Choose your province and the type of jobs, internships, funding or learning opportunity you want to explore.',
     'Open the original dated agency or programme page and confirm requirements and deadlines before applying.',
+  ],
+  social: [
+    'Choose SASSA social grants or UIF unemployment benefits without sharing personal identifiers with Luqi.',
+    'Read the original agency guidance and use the current official portal or office for sensitive applications.',
+    'Contact the government department about case status, appeals, deadlines or documents; Luqi cannot read a private claim.',
+  ],
+  municipal: [
+    'Identify the correct municipality through the official national directory; do not infer responsibility from GPS alone.',
+    'Read the current local by-law, tariff, service standard or application instructions for your question.',
+    'Prepare a non-sensitive request checklist and contact the municipality through its official channel.',
+  ],
+  township: [
+    'Choose your business activity and goal, including licensing, formalisation, skills, market access or funding.',
+    'Check the relevant municipality’s trading rules and the precise official programme terms.',
+    'Use Luqi to create a local checklist, then apply on the original issuer portal; never assume approval.',
+  ],
+  visa: [
+    'Choose your passport nationality and destination without sharing passport numbers or personal documents.',
+    'Check the original destination-government page for the correct category, purpose, port and dates.',
+    'Apply only through the genuine government immigration service or embassy; Luqi cannot submit or approve visas.',
   ],
   tender: [
     'Find the exact government tender through its official procurement publisher and download its original documents and addenda.',
@@ -109,6 +132,40 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     primaryPath: '/opportunities', primaryLabel: 'Open Luqi Opportunity Compass',
     caution: 'Publisher links are not live job offers or confirmed eligibility. Never pay someone privately for a government post.',
     bookingPreview: false,
+  },
+  social: {
+    title: 'SASSA grants and UIF claims guidance',
+    detail: 'Luqi provides free, manually reviewed SASSA and UIF public information, official application and appeals links and safer next steps. Personal eligibility, private claim status and payment dates cannot be checked here. New UIF employee claims use UIF Online, not legacy uFiling.',
+    status:'local', statusLabel:'Free original-source public guide',
+    nextQuestion:'Choose a SASSA grant or UIF benefit, then verify the current rules and application channel with the government agency.',
+    primaryPath:'/social-support',primaryLabel:'Open SASSA and UIF guide',
+    caution:'Do not enter identity numbers, OTPs, health records, bank details or case credentials into Luqi. We do not approve grants or file benefit claims.',
+    bookingPreview:false,
+  },
+  municipal: {
+    title: 'Find your municipality and official services',
+    detail: 'Luqi provides a searchable original-government municipality directory, source-linked steps for water, billing, free basic services, business permits and local participation, plus an on-device checklist. It does not report faults, hold council accounts or confirm service status.',
+    status:'local',statusLabel:'Free municipal information',
+    nextQuestion:'Choose a municipality or province and a service category; confirm jurisdiction and the current local policy.',
+    primaryPath:'/municipalities',primaryLabel:'Open municipal services',
+    caution:'Municipalities determine actual service responsibilities, tariffs and permit rules. Do not enter private accounts, IDs or banking details into Luqi.',bookingPreview:false,
+  },
+  township: {
+    title: 'Grow a township or rural business with source-linked help',
+    detail: 'Use a free local action planner for spaza, food, beauty, trades, manufacturing, recycling or services, with municipal licensing, official DSBD/TREP programme sources and National Treasury tender links. A programme announcement is not an open grant or finance offer.',
+    status:'local',statusLabel:'Free local business guidance',
+    nextQuestion:'Choose your activity and the goal: registration, trading permit, verified funding, buyers or skills.',
+    primaryPath:'/township-economy',primaryLabel:'Open township business support',
+    caution:'Loan and blended-finance products may require repayment and proper licensing. Check the official programme window and never share private tax PINs or bank details.',bookingPreview:false,
+  },
+  visa: {
+    title: 'Visa and entry guidance from African immigration authorities',
+    detail: 'Luqi offers a free five-country guide for South Africa, Kenya, Nigeria, Egypt and Cameroon. Choose passport nationality, travel purpose and dates to see reviewed original government links and cautions. This is not a live government eligibility query or application.',
+    status:'local',statusLabel:'Original-source immigration guidance',
+    nextQuestion:'Which passport nationality, destination, travel purpose and travel dates apply? Enter no passport number or case information.',
+    primaryPath:'/visa-entry',primaryLabel:'Open Visa & Entry Guide',
+    caution:'Entry permissions and exemptions depend on passport, purpose, port and valid dates. Official authorities decide eligibility. Never put credentials, passport numbers or biometrics into Luqi.',
+    bookingPreview:false,
   },
   tender: {
     title: 'Find public tenders and prepare an authorised bid with Luqi',
@@ -237,6 +294,10 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const kind: GuideKind =
     detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
+    detectSocialSupportIntent(input) ? 'social' :
+    detectVisaEntryIntent(input) ? 'visa' :
+    detectTownshipEconomyIntent(input) ? 'township' :
+    detectMunicipalIntent(input) ? 'municipal' :
     detectTenderIntent(input) ? 'tender' :
     detectOpportunityIntent(input) ? 'opportunity' :
     detectConsumerCategory(input) ? 'consumer' :
@@ -251,5 +312,6 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
     (/\b(travel|travelling|traveling|trip|tourist|tourism|visit|visiting|vacation|holiday|passport|visa|border|airport|itinerary|safari|transport|taxi|train|bus|shuttle|directions|route|commute|sightseeing|restaurant|dining|eat|attraction|experience|museum|beach|africa)\b/u.test(q) || mentionsAfricanDestination(q)) ? 'travel' :
     /\b(business|customer)\b/u.test(q) ? 'business' :
     'general';
-  return { kind, ...recommendations[kind] };
+  const target=kind==='social'?socialSupportPathForInput(input):null;
+  return { kind, ...recommendations[kind], ...(target?{primaryPath:target,primaryLabel:target==='/uif'?'Open UIF support':'Open SASSA support'}:{}) };
 }

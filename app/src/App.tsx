@@ -38,7 +38,11 @@ const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
 const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
+const MunicipalServicesPage = lazy(() => import("./pages/MunicipalServicesPage"));
+const TownshipEconomyPage = lazy(() => import("./pages/TownshipEconomyPage"));
+const VisaEntryGuidePage = lazy(() => import("./pages/VisaEntryGuidePage"));
 const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
@@ -79,7 +83,16 @@ export default function App() {
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
+        <RouterRoute path="/social-support" element={<SocialSupportPage />} />
+        <RouterRoute path="/sassa" element={<SocialSupportPage defaultAgency="sassa" />} />
+        <RouterRoute path="/uif" element={<SocialSupportPage defaultAgency="uif" />} />
         <RouterRoute path="/tenders" element={<TenderDeskPage />} />
+        <RouterRoute path="/municipalities" element={<MunicipalServicesPage />} />
+        <RouterRoute path="/municipal-services" element={<Navigate to="/municipalities" replace />} />
+        <RouterRoute path="/township-economy" element={<TownshipEconomyPage />} />
+        <RouterRoute path="/visa-entry" element={<VisaEntryGuidePage />} />
+        <RouterRoute path="/visa" element={<Navigate to="/visa-entry" replace />} />
+        <RouterRoute path="/township-business" element={<Navigate to="/township-economy" replace />} />
         <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
         {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}

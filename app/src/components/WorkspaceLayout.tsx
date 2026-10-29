@@ -16,7 +16,11 @@ captureLuqiInstallPrompt();
 const navigation = [
   ["/chat", "Chat"],
   ["/opportunities", "Opportunities"],
+  ["/social-support", "SASSA & UIF"],
   ["/tenders", "Tenders"],
+  ["/municipalities", "Municipal services"],
+  ["/township-economy", "Township business"],
+  ["/visa-entry", "Visa & Entry"],
   ["/spatial-vision", "👁️ Spatial Vision & 3D Lab"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
