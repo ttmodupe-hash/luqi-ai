@@ -113,6 +113,58 @@ for (const [path, source] of sources) {
       assert.equal(h.buckets.get(name)?.size ?? 0, 0);
     });
   }
+  test(`${path}: previously verified old JS/CSS remain loadable after exact origin 404/410`, async () => {
+    let retired = false;
+    const js = '/assets/KhoroSpatialVisionLab-older123.js';
+    const css = '/assets/KhoroSpatialVisionLab-older456.css';
+    const h = harness(source, async request => {
+      const pathname = new URL(request.url).pathname;
+      if (pathname === js) return retired
+        ? new Response('old JS deleted from deployment', { status: 404 })
+        : text('export const safePublicChunk = 1;', { 'Cache-Control': 'public, max-age=300' });
+      if (pathname === css) return retired
+        ? new Response('old CSS deleted from deployment', { status: 410 })
+        : new Response('.lab{display:block}', { headers: {
+          'Content-Type': 'text/css', 'Cache-Control': 'public, max-age=300',
+        } });
+      return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    });
+    assert.equal((await h.dispatch(js)).status, 200);
+    assert.equal((await h.dispatch(css)).status, 200);
+    assert.equal(h.buckets.get(name)?.size, 2);
+    retired = true;
+    const restoredJs = await h.dispatch(js);
+    assert.equal(restoredJs.status, 200);
+    assert.equal(await restoredJs.text(), 'export const safePublicChunk = 1;');
+    const restoredCss = await h.dispatch(css);
+    assert.equal(restoredCss.status, 200);
+    assert.equal(await restoredCss.text(), '.lab{display:block}');
+    assert.equal(h.buckets.get(name).size, 2, '404/410 must not evict previously verified assets');
+    assert.equal((await h.dispatch('/assets/NotDownloaded-older789.js')).status, 404);
+    assert.equal(h.buckets.get(name).size, 2, 'no false-success file or cache write');
+  });
+  test(`${path}: private, wrong-MIME or unverified chunks never return after origin 404`, async () => {
+    const h = harness(source, async () => new Response('Not Found', { status: 404 }));
+    const cache = await h.caches.open(name);
+    for (const [suffix, headers] of [
+      ['private', { 'Content-Type': 'text/javascript', 'Cache-Control': 'private, max-age=300' }],
+      ['wrong-type', { 'Content-Type': 'text/html' }],
+      ['vary-cookie', { 'Content-Type': 'text/javascript', 'Vary': 'Cookie' }],
+    ]) {
+      const key = '/assets/Old-' + suffix + '-123.js';
+      await cache.put(key, text('do not leak fixture', headers));
+      assert.equal((await h.dispatch(key)).status, 404);
+    }
+    assert.equal((await h.dispatch('/assets/NoCache-123.css')).status, 404);
+  });
+  test(`${path}: cached scripts do not disguise a real origin 500`, async () => {
+    let down = false;
+    const key = '/assets/Old-Critical-123.js';
+    const h = harness(source, async () => down ? new Response('error', { status: 500 }) : text());
+    assert.equal((await h.dispatch(key)).status, 200);
+    down = true;
+    assert.equal((await h.dispatch(key)).status, 500);
+  });
   test(`${path}: storage access and quota failures do not discard a live response`, async () => {
     for (const failure of ['storageUnavailable', 'putUnavailable']) {
       const h = harness(source); h[failure]();
