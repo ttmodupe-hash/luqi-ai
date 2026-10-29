@@ -1,0 +1,44 @@
+import {test,expect} from '@playwright/test';
+test('municipalities: mobile 320px province search, chosen council and free action steps',async({page})=>{
+ await page.setViewportSize({width:320,height:740});
+ const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await page.goto('/#/municipalities');
+ await expect(page.getByRole('heading',{name:'Find your municipality. Get practical support.'})).toBeVisible();
+ await page.getByLabel('Municipality province').selectOption('GP');
+ await page.getByLabel('Search municipality names').fill('Tshwane');
+ await page.getByRole('button',{name:/City of Tshwane Metropolitan Municipality/}).click();
+ await expect(page.getByRole('heading',{name:'City of Tshwane Metropolitan Municipality'})).toBeVisible();
+ await page.getByLabel('Municipal service topic').selectOption('indigent');
+ await expect(page.getByRole('heading',{name:'Indigent register and free basic services'})).toBeVisible();
+ await expect(page.getByLabel('Prepared municipal checklist')).toHaveValue(/City of Tshwane Metropolitan Municipality/);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(posts).toEqual([]);
+});
+test('township economy: mobile local-business guidance and original DSBD funding context',async({page})=>{
+ await page.setViewportSize({width:320,height:740});
+ const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await page.goto('/#/township-economy');
+ await expect(page.getByRole('heading',{name:'Build your business. Find the right official support.'})).toBeVisible();
+ await expect(page.getByText(/up to R3 million, 5% interest/)).toBeVisible();
+ await page.getByLabel('Township business sector').selectOption('food');
+ await page.getByLabel('Township support goal').selectOption('licence');
+ await page.getByLabel('Business province').selectOption('GP');
+ await page.getByLabel('Business municipality').selectOption('City of Tshwane Metropolitan Municipality');
+ await expect(page.getByText(/Certificate of Acceptability requirements/)).toBeVisible();
+ await expect(page.getByText(/business support guide|This is not a registered lender/i).first()).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(posts).toEqual([]);
+});
+test('Start and Chat expose municipality and township guidance without account or provider calls',async({page})=>{
+ const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await page.goto('/#/start');
+ await page.getByRole('link',{name:/Open municipal services/}).click();
+ await expect(page).toHaveURL(/#\/municipalities$/);
+ await page.goto('/#/start');
+ await page.getByRole('link',{name:/Explore township economy support/}).click();
+ await expect(page).toHaveURL(/#\/township-economy$/);
+ await page.goto('/#/chat');
+ await page.getByRole('link',{name:/Township economy: spaza, business permits/}).click();
+ await expect(page).toHaveURL(/#\/township-economy$/);
+ expect(posts).toEqual([]);
+});
