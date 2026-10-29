@@ -3,7 +3,8 @@
  * A signed token is not sufficient: the user must still exist in persistent
  * MySQL, preventing deleted accounts or volatile demo users from spending.
  */
-import { verifyUserToken, verifyUserCredential } from "../lib/userToken";
+import { verifyUserToken, verifyUserCredential, getSignedSessionDigest } from "../lib/userToken";
+import { boundSessionExists } from "./customerResume";
 import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
 import { getPersistentDb } from "../queries/connection";
@@ -42,8 +43,17 @@ export async function authenticatePilotUser(authHeader: string | undefined): Pro
     if (!user || user.isActive !== true) {
       throw new PilotAuthError("AUTH_REQUIRED");
     }
-    try { verifyUserCredential(authHeader!.slice(7), userId, user.passwordHash); }
-    catch { throw new PilotAuthError("AUTH_REQUIRED"); }
+    let sid: string | null;
+    try {
+      verifyUserCredential(authHeader!.slice(7), userId, user.passwordHash);
+      sid = getSignedSessionDigest(authHeader!.slice(7));
+    } catch { throw new PilotAuthError("AUTH_REQUIRED"); }
+    if (sid) {
+      let active: boolean;
+      try { active = await boundSessionExists(sid, userId); }
+      catch { throw new PilotAuthError("AUTH_UNAVAILABLE"); }
+      if (!active) throw new PilotAuthError("AUTH_REQUIRED");
+    }
   } catch (e) {
     if (e instanceof PilotAuthError) throw e;
     throw new PilotAuthError("AUTH_UNAVAILABLE");
