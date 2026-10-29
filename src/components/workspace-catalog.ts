@@ -41,6 +41,11 @@ export const workspaceTools = [
     status: "Free official sources · no account", ready: true, path: "/opportunities", icon: "business",
   },
   {
+    id: "social-support", title: "SASSA & UIF Support", category: "South African social grants and unemployment benefits",
+    description: "Free source-linked SASSA grant and UIF claim information. Guides to official applications, status, appeals and contact channels. No private account access, IDs or AI charge.",
+    status: "Free official-source guidance · no account", ready: true, path: "/social-support", icon: "status",
+  },
+  {
     id: "tenders", title: "Tender Desk · Find & Prepare Bids", category: "South African government procurement and small business",
     description: "Free official tender listings, SBD/MBD form guidance, local editable bid-preparation worksheet, missing-document checks and mandatory human approval. No automatic portal submission.",
     status: "Local preparation · no account", ready: true, path: "/tenders", icon: "business",
