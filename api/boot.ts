@@ -16,6 +16,7 @@ import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
 import { p2p } from './p2p';
 import { opportunityWatch } from './opportunity-scan';
+import { tenderWatch } from './tender-watch';
 import { accountSecurity } from "./account-security";
 import { hostedCheckout } from "./hosted-checkout";
 import { omegaTasks } from "./omega-tasks";
@@ -123,6 +124,7 @@ app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/account", accountSecurity);
 app.route("/api/v1/p2p", p2p);
 app.route("/api/v1/opportunity-watch", opportunityWatch);
+app.route("/api/v1/tender-watch", tenderWatch);
 app.route("/api/v1/commerce", hostedCheckout);
 app.route("/api/v1/omega/tasks", omegaTasks);
 // Authenticated encrypted project sync is disabled without an explicit rollout flag.

@@ -62,6 +62,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Direct agency links</li><li><Check aria-hidden="true" /> No assumed vacancies</li><li><Check aria-hidden="true" /> No account or AI payment</li></ul>
         <Link className="luqi-primary" to="/opportunities">Explore opportunities <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-tenders">
+        <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">PUBLIC PROCUREMENT · FREE LOCAL DRAFTING</p>
+        <h2 id="start-tenders">Find government tenders. Prepare bids with Luqi.</h2>
+        <p>Explore official procurement notices, draft responses and check the original tender forms. You retain control over pricing, declarations, signatures and submission.</p>
+        <ul><li><Check aria-hidden="true" /> Original government sources</li><li><Check aria-hidden="true" /> SBD/MBD preparation checklist</li><li><Check aria-hidden="true" /> No account, paid AI or automatic filing</li></ul>
+        <Link className="luqi-primary" to="/tenders">Open Tender Desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-driver-rights">
         <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
         <p className="luqi-card-kicker">FREE · NO ACCOUNT OR AI CHARGE</p>

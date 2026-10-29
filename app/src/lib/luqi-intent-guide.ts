@@ -3,8 +3,9 @@ import { detectDriverMode } from './driver-rights';
 import { detectConsumerCategory } from './consumer-rights-guide';
 import { detectEvidenceTopic } from './comparative-evidence';
 import { detectOpportunityIntent } from './opportunity-sources';
+import { detectTenderIntent } from './tender-sources';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
+export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -28,6 +29,11 @@ export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
   opportunity: [
     'Choose your province and the type of jobs, internships, funding or learning opportunity you want to explore.',
     'Open the original dated agency or programme page and confirm requirements and deadlines before applying.',
+  ],
+  tender: [
+    'Find the exact government tender through its official procurement publisher and download its original documents and addenda.',
+    'Use the Luqi Tender Desk to prepare a factual, editable response and highlight documents the issuer requires.',
+    'Have an authorised applicant review eligibility, pricing, declarations, signatures and deadline, then submit through the official channel.',
   ],
   urgent: [
     'Use official emergency services or an appropriate local help point now.',
@@ -103,6 +109,15 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     primaryPath: '/opportunities', primaryLabel: 'Open Luqi Opportunity Compass',
     caution: 'Publisher links are not live job offers or confirmed eligibility. Never pay someone privately for a government post.',
     bookingPreview: false,
+  },
+  tender: {
+    title: 'Find public tenders and prepare an authorised bid with Luqi',
+    detail: 'Luqi Tender Desk shows reviewed original tender sources and a local bid-preparation worksheet with missing-item checks, original-form guidance and mandatory applicant approval. It does not access CSD accounts, sign declarations, fill issuer PDFs or submit bids on anyone’s behalf.',
+    status:'local', statusLabel:'Free bidder-controlled preparation',
+    nextQuestion:'Find the specific tender, download all original documents, and review mandatory conditions before preparing the human-controlled response.',
+    primaryPath:'/tenders',primaryLabel:'Open Luqi Tender Desk',
+    caution:'An advert may be withdrawn or changed. Only the procuring authority can accept a bid; no automated portal submission or credential-sharing is available.',
+    bookingPreview:false,
   },
   urgent: {
     title: 'Your safety comes first',
@@ -222,6 +237,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
   const kind: GuideKind =
     detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
+    detectTenderIntent(input) ? 'tender' :
     detectOpportunityIntent(input) ? 'opportunity' :
     detectConsumerCategory(input) ? 'consumer' :
     detectEvidenceTopic(input) ? 'comparative' :
