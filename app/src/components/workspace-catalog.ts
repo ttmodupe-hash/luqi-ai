@@ -46,6 +46,16 @@ export const workspaceTools = [
     status: "Free official-source guidance · no account", ready: true, path: "/social-support", icon: "status",
   },
   {
+    id: "municipal-services", title: "Municipal Services · Find Your Council", category: "All nine South African provinces and local government",
+    description: "Search government-listed municipality names, choose water, rates, indigent relief, business permits or local development and download a private request checklist. No council account integration, claim of outage reporting or paid AI.",
+    status: "Free original-source guidance · no account", ready: true, path: "/municipalities", icon: "status",
+  },
+  {
+    id: "township-economy", title: "Township & Rural Business Support", category: "Small enterprise, spaza, market traders and informal economy",
+    description: "Free local business action plans, municipal trade compliance, source-verified TREP and Spaza Fund starting points, and tender/market-readiness checklists. No guaranteed loan or automatic application.",
+    status: "Free business planning · no account", ready: true, path: "/township-economy", icon: "business",
+  },
+  {
     id: "tenders", title: "Tender Desk · Find & Prepare Bids", category: "South African government procurement and small business",
     description: "Free official tender listings, SBD/MBD form guidance, local editable bid-preparation worksheet, missing-document checks and mandatory human approval. No automatic portal submission.",
     status: "Local preparation · no account", ready: true, path: "/tenders", icon: "business",

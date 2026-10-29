@@ -78,6 +78,22 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Original government sources</li><li><Check aria-hidden="true" /> SBD/MBD preparation checklist</li><li><Check aria-hidden="true" /> No account, paid AI or automatic filing</li></ul>
         <Link className="luqi-primary" to="/tenders">Open Tender Desk <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-municipal-services">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">MUNICIPAL SUPPORT · NINE PROVINCES · FREE</p>
+        <h2 id="start-municipal-services">Find your municipality and the right service.</h2>
+        <p>Look up official government-listed councils and prepare safe next steps for water, bills, indigent relief, potholes, permits and ward participation.</p>
+        <ul><li><Check aria-hidden="true" /> Government original-source directory</li><li><Check aria-hidden="true" /> No private municipal account access</li><li><Check aria-hidden="true" /> Device-only request checklist</li></ul>
+        <Link className="luqi-primary" to="/municipalities">Open municipal services <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
+      <section className="luqi-start-card" aria-labelledby="start-township-economy">
+        <span className="luqi-tool-icon luqi-icon-business"><BriefcaseBusiness aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">TOWNSHIP AND RURAL BUSINESS · FREE PLANNING</p>
+        <h2 id="start-township-economy">Grow your community business.</h2>
+        <p>Plan a spaza, food stall, salon, artisan service or workshop; check municipal trading rules and original TREP, Spaza Fund, youth and procurement sources.</p>
+        <ul><li><Check aria-hidden="true" /> Plain-language business action plan</li><li><Check aria-hidden="true" /> No invented grants or guaranteed approval</li><li><Check aria-hidden="true" /> No AI charge or automatic applications</li></ul>
+        <Link className="luqi-primary" to="/township-economy">Explore township economy support <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-driver-rights">
         <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
         <p className="luqi-card-kicker">FREE · NO ACCOUNT OR AI CHARGE</p>
