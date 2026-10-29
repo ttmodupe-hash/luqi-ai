@@ -56,6 +56,11 @@ export const workspaceTools = [
     status: "Free business planning · no account", ready: true, path: "/township-economy", icon: "business",
   },
   {
+    id: "visa-entry", title: "Visa & Entry Guide · Africa", category: "Official travel and immigration entry information",
+    description: "Source-linked South Africa, Kenya, Nigeria, Egypt and Cameroon visa/ETA guidance. Choose passport nationality, purpose and dates; no approval guarantees, personal documents, paid AI or live government integration.",
+    status: "Five-country official-source guide · no account", ready: true, path: "/visa-entry", icon: "business",
+  },
+  {
     id: "tenders", title: "Tender Desk · Find & Prepare Bids", category: "South African government procurement and small business",
     description: "Free official tender listings, SBD/MBD form guidance, local editable bid-preparation worksheet, missing-document checks and mandatory human approval. No automatic portal submission.",
     status: "Local preparation · no account", ready: true, path: "/tenders", icon: "business",

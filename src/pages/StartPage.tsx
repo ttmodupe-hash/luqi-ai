@@ -94,6 +94,14 @@ export default function StartPage() {
         <ul><li><Check aria-hidden="true" /> Plain-language business action plan</li><li><Check aria-hidden="true" /> No invented grants or guaranteed approval</li><li><Check aria-hidden="true" /> No AI charge or automatic applications</li></ul>
         <Link className="luqi-primary" to="/township-economy">Explore township economy support <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
+      <section className="luqi-start-card" aria-labelledby="start-visa-entry">
+        <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
+        <p className="luqi-card-kicker">OFFICIAL VISA SOURCES · FIVE AFRICAN DESTINATIONS</p>
+        <h2 id="start-visa-entry">Check visa and entry requirements before travelling.</h2>
+        <p>Choose passport nationality, travel purpose and dates; see reviewed immigration authorities without providing a passport number or using a paid AI request.</p>
+        <ul><li><Check aria-hidden="true" /> Direct government links</li><li><Check aria-hidden="true" /> Source review dates and uncertainties</li><li><Check aria-hidden="true" /> No application or payments collected</li></ul>
+        <Link className="luqi-primary" to="/visa-entry">Explore Visa &amp; Entry <ArrowUpRight size={18} aria-hidden="true" /></Link>
+      </section>
       <section className="luqi-start-card" aria-labelledby="start-driver-rights">
         <span className="luqi-tool-icon luqi-icon-business"><ShieldCheck aria-hidden="true" /></span>
         <p className="luqi-card-kicker">FREE · NO ACCOUNT OR AI CHARGE</p>
