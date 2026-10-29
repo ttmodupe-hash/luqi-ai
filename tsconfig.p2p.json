@@ -26,6 +26,8 @@
     "app/src/components/SovereignP2PMessenger.tsx",
     "app/src/components/P2PAbuseLedger.tsx",
     "src/App.tsx",
-    "app/src/App.tsx"
+    "app/src/App.tsx",
+    "scripts/inspect-release-database.ts",
+    "scripts/prepare-release-feature-storage.ts"
   ]
 }
