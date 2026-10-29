@@ -1,8 +1,10 @@
 /**
  * Official South African national local-government directory, manually transcribed 29 Oct 2026.
  * Directory: https://www.gov.za/about-government/contact-directory/provincial-local-government
- * These are NAMES, not municipality account integrations, service availability, or verified GPS.
- * The government describes 257 municipalities overall; a directory's visible list may differ.
+ * The official directory visibly lists 255 names. Two further current municipalities
+ * (Collins Chabane in Limpopo and JB Marks in North West) are independently grounded
+ * in original government notices; together these give 257 names, not account integrations.
+ * Never infer property/service jurisdiction, live service availability or GPS.
  */
 import type { ProvinceCode } from './opportunity-sources';
 export const MUNICIPAL_REVIEWED_ON='2026-10-29';
@@ -22,7 +24,7 @@ export const TSHWANE_LICENCE_GUIDE='https://www.tshwane.gov.za/?p=81721';
 export const CAPE_TOWN_LICENCE_GUIDE='https://www.capetown.gov.za/work-and-business/doing-business-in-the-city/business-compliance-permits-and-licences/business-licences-and-permits/';
 
 export type MunicipalType='metropolitan'|'district'|'local';
-export interface Municipality { name:string; province:ProvinceCode; type:MunicipalType; directoryUrl:string; }
+export interface Municipality { name:string; province:ProvinceCode; type:MunicipalType; directoryUrl:string; supplementaryEvidenceUrl?:string; }
 const municipalityNames:Record<ProvinceCode,string>={
  EC:`Alfred Nzo District Municipality
 Amahlathi Local Municipality
@@ -284,13 +286,19 @@ export const PROVINCE_NAMES:Record<ProvinceCode,string>={
  EC:'Eastern Cape',FS:'Free State',GP:'Gauteng',KZN:'KwaZulu-Natal',LP:'Limpopo',
  MP:'Mpumalanga',NW:'North West',NC:'Northern Cape',WC:'Western Cape',
 };
-export const MUNICIPALITIES:readonly Municipality[]=(Object.entries(municipalityNames) as [ProvinceCode,string][])
+const directoryMunicipalities:Municipality[]=(Object.entries(municipalityNames) as [ProvinceCode,string][])
  .flatMap(([province,list])=>list.split('\n').map(raw=>{
   const name=raw.trim();
   const type:MunicipalType=/Metropolitan Municipality$/.test(name)||name==='City of Ekurhuleni'?'metropolitan':
    /District Municipality$/.test(name)?'district':'local';
   return {name,province,type,directoryUrl:MUNICIPAL_DIRECTORY_URL};
  }));
+export const MUNICIPALITIES:readonly Municipality[]=[...directoryMunicipalities,
+ {name:'Collins Chabane Local Municipality',province:'LP',type:'local',directoryUrl:MUNICIPAL_DIRECTORY_URL,
+ supplementaryEvidenceUrl:'https://www.gov.za/links/local-government'},
+ {name:'JB Marks Local Municipality',province:'NW',type:'local',directoryUrl:MUNICIPAL_DIRECTORY_URL,
+ supplementaryEvidenceUrl:'https://www.gov.za/news/media-advisories/government-activities/deputy-minister-sello-seitlholo-conducts-oversight-0'},
+];
 export function filterMunicipalities(province:ProvinceCode|null,query:string,limit=30):Municipality[]{
  const q=(typeof query==='string'?query.toLocaleLowerCase().trim().slice(0,80):'');
  return MUNICIPALITIES.filter(m=>(!province||m.province===province)&&
