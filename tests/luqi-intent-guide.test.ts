@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, MAX_GUIDE_NEED_CHARS, guideLuqiNeed } from '../src/lib/luqi-intent-guide';
 
 describe('LUQI local intent guidance', () => {
+
+  it('routes SASSA and UIF public support locally without paid inference or personal eligibility claims',()=>{
+    const sassa=guideLuqiNeed('I need help checking my SASSA SRD grant')!;
+    expect(sassa.kind).toBe('social');expect(sassa.primaryPath).toBe('/sassa');
+    expect(sassa.detail).toMatch(/no|cannot|not/i);
+    const uif=guideLuqiNeed('How do I claim UIF online?')!;
+    expect(uif.kind).toBe('social');expect(uif.primaryPath).toBe('/uif');
+    expect(uif.caution).toMatch(/Do not enter identity numbers/);
+    expect(guideLuqiNeed('Looking for youth-business grant funding')?.primaryPath).toBe('/opportunities');
+  });
+
   it('does not fabricate bookings, prices, availability or payments', () => {
     for (const need of [
       'Book a hotel in Cape Town for two people',
