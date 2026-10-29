@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import OpportunityVerificationPanel from '../components/OpportunityVerificationPanel';
+import VerifiedGovernmentJobsPanel from '../components/VerifiedGovernmentJobsPanel';
 import {
  CATEGORIES,COUNTRY_ANCHORS,PROVINCES,OPPORTUNITY_REVIEWED_ON,
  deadlineState,matchOpportunitySources,
@@ -67,7 +68,7 @@ export default function OpportunityCompassPage(){
    {country==='ZA'&&<>
      <section className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-label="Choose a South African province">
        <h2 className="text-xl font-semibold">Explore South Africa by province</h2>
-       <p className="text-sm text-slate-300">Choose a province to guide your search on the official services. This interactive map is schematic: the markers are provinces, not verified job locations or travel directions. Luqi does not read GPS.</p>
+       <p className="text-sm text-slate-300">Choose a province to filter the reviewed individual job notices below, as well as guide your official-source search. This schematic map shows provinces, not exact job-site coordinates or travel routes. Luqi does not read GPS.</p>
        <div className="relative mx-auto w-full max-w-2xl overflow-hidden rounded-xl border border-slate-700 bg-slate-950" style={{aspectRatio:'1.5'}}>
          <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
            <path d="M 9 56 L 16 35 L 28 20 L 47 20 L 53 9 L 68 10 L 72 23 L 91 35 L 90 53 L 82 69 L 67 84 L 50 93 L 30 96 L 21 91 L 17 75 Z" fill="#123a39" stroke="#64b4aa" strokeWidth="1.2"/>
@@ -83,6 +84,7 @@ export default function OpportunityCompassPage(){
        <p role="status" className="text-sm text-cyan-200">{chosenProvince?'Selected '+chosenProvince.name+'. Check provincial posts in the DPSA vacancy circular and search your area in SA Youth.':'No province selected. Showing national starting points for all nine provinces.'}</p>
        {province&&<button type="button" className="rounded border border-slate-500 px-3 py-2 text-sm" onClick={()=>setProvince(null)}>All South Africa</button>}
      </section>
+     <VerifiedGovernmentJobsPanel province={province}/>
      <section className="space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-label="Find official opportunity sources">
        <h2 className="text-xl font-semibold">Find a trusted starting point</h2>
        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
