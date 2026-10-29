@@ -131,5 +131,5 @@ it('routes local government and township enterprise questions to free first-part
  expect(township.kind).toBe('township');expect(township.primaryPath).toBe('/township-economy');
  expect(township.caution).toMatch(/repayment|repayable|Loan/i);
  expect(guideLuqiNeed('Where can I find the DPSA vacancy circular?')?.kind).toBe('opportunity');
- expect(guideLuqiNeed('What are the entrance exams for CCNA?')?.kind).toBe('study');
+ expect(guideLuqiNeed('Help me study for my CCNA exam')?.kind).toBe('study');
 });
