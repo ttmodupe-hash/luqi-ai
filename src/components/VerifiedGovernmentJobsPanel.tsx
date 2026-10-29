@@ -46,7 +46,7 @@ export default function VerifiedGovernmentJobsPanel({province}:{province:Provinc
  return <section className="space-y-4 rounded-xl border border-cyan-700 bg-slate-900 p-4" aria-label="Individual government job matches">
   <div className="space-y-2">
    <p className="text-xs font-bold uppercase tracking-wide text-cyan-300">Luqi verified-source job board · first pilot</p>
-   <h2 className="text-2xl font-semibold">Real government adverts, with references</h2>
+   <h2 className="text-2xl font-semibold">Real public-sector posts, internships and learnerships</h2>
    <p className="text-sm text-slate-200">Individual notices copied only from original government publishers, reviewed 29 October 2026. This is a limited curated set, not every government vacancy. No official application is sent through Luqi and we do not determine anyone's eligibility.</p>
    <p className="text-xs text-amber-200">Important: a published advert may be closed or withdrawn without the original page disappearing. No listing here should be treated as a guaranteed open vacancy. Always recheck with the advertising department.</p>
   </div>
@@ -91,7 +91,11 @@ export default function VerifiedGovernmentJobsPanel({province}:{province:Provinc
      <p className="text-xs font-semibold uppercase text-cyan-300">{job.employer} · {job.province}</p>
      <h3 className="text-lg font-semibold">{job.title}</h3>
      <p className="text-sm">Reference: <strong>{job.reference}</strong> · {job.centre}</p>
-     <p className="text-sm text-slate-200">Advertised pay: R{job.annualSalaryZar.toLocaleString('en-ZA')} annually (verify original)</p>
+     {job.opportunityKind&&<p className="text-xs text-cyan-200">Advert type: {job.opportunityKind}</p>}
+     {job.publishedOn&&<p className="text-xs text-slate-300">Publisher date: {job.publishedOn} · Luqi source review: {job.reviewedOn}</p>}
+     {job.monthlyPayZar!==undefined?<p className="text-sm text-slate-200">Advertised {job.payLabel==='stipend'?'stipend':'salary'}: R{job.monthlyPayZar.toLocaleString('en-ZA')} per month (verify original)</p>
+      :job.annualSalaryZar!==undefined?<p className="text-sm text-slate-200">Advertised salary: R{job.annualSalaryZar.toLocaleString('en-ZA')} annually (verify original)</p>
+      :<p className="text-sm text-slate-200">Advertised remuneration: confirm with issuer</p>}
      <p className="text-sm text-slate-200"><strong>Requirements:</strong> {job.requirements}</p>
      <p className="text-xs text-slate-300">{job.experience}</p>
      <p className="text-sm"><strong>Published closing date:</strong> {job.closingDate}
