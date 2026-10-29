@@ -20,6 +20,7 @@ const navigation = [
   ["/tenders", "Tenders"],
   ["/municipalities", "Municipal services"],
   ["/township-economy", "Township business"],
+  ["/visa-entry", "Visa & Entry"],
   ["/spatial-vision", "👁️ Spatial Vision & 3D Lab"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],

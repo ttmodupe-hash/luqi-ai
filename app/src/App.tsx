@@ -42,6 +42,7 @@ const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
 const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
 const MunicipalServicesPage = lazy(() => import("./pages/MunicipalServicesPage"));
 const TownshipEconomyPage = lazy(() => import("./pages/TownshipEconomyPage"));
+const VisaEntryGuidePage = lazy(() => import("./pages/VisaEntryGuidePage"));
 const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
@@ -89,6 +90,8 @@ export default function App() {
         <RouterRoute path="/municipalities" element={<MunicipalServicesPage />} />
         <RouterRoute path="/municipal-services" element={<Navigate to="/municipalities" replace />} />
         <RouterRoute path="/township-economy" element={<TownshipEconomyPage />} />
+        <RouterRoute path="/visa-entry" element={<VisaEntryGuidePage />} />
+        <RouterRoute path="/visa" element={<Navigate to="/visa-entry" replace />} />
         <RouterRoute path="/township-business" element={<Navigate to="/township-economy" replace />} />
         <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
         {/* Fixed local aliases only: no return URL, credential or query forwarding. */}

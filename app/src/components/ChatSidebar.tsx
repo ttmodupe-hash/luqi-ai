@@ -15,6 +15,7 @@ const shortcuts = [
   { path: '/tenders', label: 'Tenders & bids', icon: BriefcaseBusiness },
   { path: '/municipalities', label: 'Municipal services', icon: ShieldCheck },
   { path: '/township-economy', label: 'Township economy', icon: BriefcaseBusiness },
+  { path: '/visa-entry', label: 'Visa & Entry', icon: Globe2 },
   { path: '/business-desk', label: 'Business desk', icon: BriefcaseBusiness },
   { path: '/study-desk', label: 'Study desk', icon: GraduationCap },
   { path: '/content-studio', label: 'Content studio', icon: PenLine },
