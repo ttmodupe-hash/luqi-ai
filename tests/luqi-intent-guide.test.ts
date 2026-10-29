@@ -112,3 +112,12 @@ describe('opportunity discovery routed to a real free source directory',()=>{
   expect(guideLuqiNeed('Study South African history for an exam')?.kind).toBe('study');
  });
 });
+
+it('routes procurement questions to a real local human-controlled tender desk',()=>{
+ const r=guideLuqiNeed('Help me complete SBD 4 and find government tenders');
+ expect(r?.kind).toBe('tender');
+ expect(r?.primaryPath).toBe('/tenders');
+ expect(r?.detail).toMatch(/mandatory applicant approval/);
+ expect(r?.detail).toMatch(/does not access CSD accounts/);
+ expect(guideLuqiNeed('Find government jobs in Gauteng')?.kind).toBe('opportunity');
+});
