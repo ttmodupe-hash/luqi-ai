@@ -16,6 +16,7 @@ import DriverQuickCard from '../components/DriverQuickCard';
 import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
 import { detectOpportunityIntent } from '../lib/opportunity-sources';
 import { detectTenderIntent } from '../lib/tender-sources';
+import { socialSupportPathForInput } from '../lib/social-support-sources';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
@@ -165,6 +166,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (detectDriverMode(prompt)) { navigate('/driver-rights'); return; }
     if (detectConsumerCategory(prompt)) { navigate('/consumer-rights'); return; }
     if (detectEvidenceTopic(prompt)) { navigate('/comparative-evidence'); return; }
+    const publicSupportPath = socialSupportPathForInput(prompt);
+    if (publicSupportPath) { navigate(publicSupportPath); return; }
     if (detectTenderIntent(prompt)) { navigate('/tenders'); return; }
     if (detectOpportunityIntent(prompt)) { navigate('/opportunities'); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
@@ -228,9 +231,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const driverMode = detectDriverMode(prompt);
   const consumerCategory = !driverMode ? detectConsumerCategory(prompt) : null;
   const evidenceTopic = !driverMode && !consumerCategory ? detectEvidenceTopic(prompt) : null;
-  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && detectTenderIntent(prompt);
-  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !tenderIntent && detectOpportunityIntent(prompt);
-  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
+  const socialPath = !driverMode && !consumerCategory && !evidenceTopic ? socialSupportPathForInput(prompt) : null;
+  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && detectTenderIntent(prompt);
+  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !tenderIntent && detectOpportunityIntent(prompt);
+  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : socialPath ? socialPath : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -258,6 +262,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <p><Link to="/comparative-evidence" className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
         <p><Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
         <p><Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
+        <p><Link to="/social-support" className="text-cyan-200 underline underline-offset-2">SASSA grants, UIF claims, status and appeals: free official support</Link></p>
       </div>
       {languageControl}
       {personalWelcome}
@@ -272,6 +277,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       {driverMode && <DriverQuickCard mode={driverMode} />}
       {consumerCategory && <ConsumerQuickCard category={consumerCategory} />}
+      {socialPath && <section aria-label="Free social benefit support guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Luqi public benefits guide — government sources</h2>
+        <p className="text-sm">See official SASSA or UIF rules, current portals, documents, status and appeals. Never share identity numbers, OTPs, bank details or passwords with Luqi. Luqi cannot file or inspect a claim.</p>
+        <Link to={socialPath} className="text-cyan-200 underline underline-offset-2">Open free {socialPath==='/uif'?'UIF':'SASSA'} support guide</Link>
+      </section>}
       {tenderIntent && <section aria-label="Free tender preparation guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Luqi Tender Desk — prepare with human control</h2>
         <p className="text-sm">Find the original tender notice, review eligibility and SBD/MBD documents, draft your answers locally and approve pricing and declarations yourself. Final submission and signatures are not automated.</p>
