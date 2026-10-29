@@ -18,6 +18,7 @@ import { p2p } from './p2p';
 import { opportunityWatch } from './opportunity-scan';
 import { tenderWatch } from './tender-watch';
 import { accountSecurity } from "./account-security";
+import { customerResumeRoutes } from "./services/customerResume";
 import { hostedCheckout } from "./hosted-checkout";
 import { omegaTasks } from "./omega-tasks";
 import { privateProjectVault } from "./private-project-vault";
@@ -122,6 +123,7 @@ app.use("*", async (c, next) => {
 
 app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/account", accountSecurity);
+app.route("/api/v1/auth", customerResumeRoutes);
 app.route("/api/v1/p2p", p2p);
 app.route("/api/v1/opportunity-watch", opportunityWatch);
 app.route("/api/v1/tender-watch", tenderWatch);
