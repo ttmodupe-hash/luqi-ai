@@ -4,10 +4,11 @@ import { detectConsumerCategory } from './consumer-rights-guide';
 import { detectEvidenceTopic } from './comparative-evidence';
 import { detectOpportunityIntent } from './opportunity-sources';
 
-import { detectMunicipalIntent,detectTownshipEconomyIntent } from './municipal-economy';import { detectTenderIntent } from './tender-sources';
+import { detectMunicipalIntent,detectTownshipEconomyIntent } from './municipal-economy';
+import { detectVisaEntryIntent } from './visa-entry-sources';import { detectTenderIntent } from './tender-sources';
 import { detectSocialSupportIntent,socialSupportPathForInput } from './social-support-sources';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'municipal' | 'township' | 'social' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
+export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'municipal' | 'township' | 'visa' | 'social' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -46,6 +47,11 @@ export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
     'Choose your business activity and goal, including licensing, formalisation, skills, market access or funding.',
     'Check the relevant municipality’s trading rules and the precise official programme terms.',
     'Use Luqi to create a local checklist, then apply on the original issuer portal; never assume approval.',
+  ],
+  visa: [
+    'Choose your passport nationality and destination without sharing passport numbers or personal documents.',
+    'Check the original destination-government page for the correct category, purpose, port and dates.',
+    'Apply only through the genuine government immigration service or embassy; Luqi cannot submit or approve visas.',
   ],
   tender: [
     'Find the exact government tender through its official procurement publisher and download its original documents and addenda.',
@@ -151,6 +157,15 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
     nextQuestion:'Choose your activity and the goal: registration, trading permit, verified funding, buyers or skills.',
     primaryPath:'/township-economy',primaryLabel:'Open township business support',
     caution:'Loan and blended-finance products may require repayment and proper licensing. Check the official programme window and never share private tax PINs or bank details.',bookingPreview:false,
+  },
+  visa: {
+    title: 'Visa and entry guidance from African immigration authorities',
+    detail: 'Luqi offers a free five-country guide for South Africa, Kenya, Nigeria, Egypt and Cameroon. Choose passport nationality, travel purpose and dates to see reviewed original government links and cautions. This is not a live government eligibility query or application.',
+    status:'local',statusLabel:'Original-source immigration guidance',
+    nextQuestion:'Which passport nationality, destination, travel purpose and travel dates apply? Enter no passport number or case information.',
+    primaryPath:'/visa-entry',primaryLabel:'Open Visa & Entry Guide',
+    caution:'Entry permissions and exemptions depend on passport, purpose, port and valid dates. Official authorities decide eligibility. Never put credentials, passport numbers or biometrics into Luqi.',
+    bookingPreview:false,
   },
   tender: {
     title: 'Find public tenders and prepare an authorised bid with Luqi',
@@ -280,6 +295,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
     detectDriverMode(input) ? 'driver' :
     /\b(emergency|ambulance|police|fire emergency|in danger|urgent help|medical emergency)\b/u.test(q) ? 'urgent' :
     detectSocialSupportIntent(input) ? 'social' :
+    detectVisaEntryIntent(input) ? 'visa' :
     detectTownshipEconomyIntent(input) ? 'township' :
     detectMunicipalIntent(input) ? 'municipal' :
     detectTenderIntent(input) ? 'tender' :
