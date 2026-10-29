@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router";
 import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
 import RouteLoadBoundary from "./RouteLoadBoundary";
+import PublicReleaseUpdateNotice from "./PublicReleaseUpdateNotice";
 import CollaborationDock from './CollaborationDock';
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
 const ChatSidebar = lazy(() => import("./ChatSidebar"));
@@ -81,6 +82,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
+      <PublicReleaseUpdateNotice />
       {isChatWorkspace ? (
         <div className="luqi-chat-shell">
           <RouteLoadBoundary><ChatSidebar /></RouteLoadBoundary>
