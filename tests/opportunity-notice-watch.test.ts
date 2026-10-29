@@ -40,4 +40,21 @@ describe('bounded official individual-post source checks',()=>{
   expect(JSON.stringify(r)).not.toMatch(/applications open|eligible|job is open/i);
   expect(verifiedDateVariants('2026-11-06')).toContain('06November2026');
  });
+
+ it('matches a municipality date abbreviated as Nov without declaring recruitment live',async()=>{
+  const kouga=VERIFIED_GOVERNMENT_ADVERTS.find(x=>x.reference==='263/2026')!;
+  const r=await probeIndividualAdvert(kouga,(async()=>new Response(
+    '<html>KOUGA MUNICIPALITY NOTICE NO. 263/2026. Closing Date: 06 Nov 2026</html>',
+    {headers:{'content-type':'text/html'}})) as typeof fetch);
+  expect(r.state).toBe('reference-and-deadline-found');
+  expect(r.note).toBe('text_evidence_only_not_live_availability');
+  expect(verifiedDateVariants('2026-11-06')).toContain('06Nov2026');
+ });
+ it('does not promote a learnership directory date to a verified full advert',async()=>{
+  const learning=VERIFIED_GOVERNMENT_ADVERTS.find(x=>x.reference==='DCSSL/05/2026')!;
+  const r=await probeIndividualAdvert(learning,(async()=>new Response(
+   '<html>Traffic Learnership in Department of Community Safety. Closing date: 30 October, 2026. Download advert.</html>',
+   {headers:{'content-type':'text/html'}})) as typeof fetch);
+  expect(r.state).toBe('content-unconfirmed');
+ });
 });
