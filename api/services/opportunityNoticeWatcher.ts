@@ -4,15 +4,9 @@
  * No applicant input, arbitrary URL, secrets, AI call, job scraping corpus,
  * paid API, user identity or application upload.
  */
-import {VERIFIED_GOVERNMENT_ADVERTS,type GovernmentJobNotice} from '../../src/lib/government-job-notices';
+import {VERIFIED_GOVERNMENT_ADVERTS,type GovernmentJobNotice,type IndividualNoticeCheck,type IndividualNoticeSnapshot} from '../../src/lib/government-job-notices';
 export type NoticePageState='reference-and-deadline-found'|'content-unconfirmed'|'publisher-unavailable'|'withdrawn';
-export interface IndividualNoticeCheck{
- id:string;reference:string;checkedAt:string;state:NoticePageState;
- note:'text_evidence_only_not_live_availability';
-}
-export interface IndividualNoticeSnapshot{
- checkedAt:string;scope:'fixed_official_individual_adverts_only';checks:IndividualNoticeCheck[];
-}
+export type {IndividualNoticeCheck,IndividualNoticeSnapshot} from '../../src/lib/government-job-notices';
 const MAX_DOCUMENT_BYTES=256_000;
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'] as const;
 export function verifiedDateVariants(date:string):readonly string[]{

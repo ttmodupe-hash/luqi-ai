@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {PROVINCES,type ProvinceCode} from '../lib/opportunity-sources';
 import {VERIFIED_GOVERNMENT_ADVERTS,assessGovernmentJobStatus,isJobNoticeReviewFresh,
  matchGovernmentAdverts,type GovernmentJobNotice,type JobLevelFilter} from '../lib/government-job-notices';
-import type {IndividualNoticeCheck,IndividualNoticeSnapshot} from '../../api/services/opportunityNoticeWatcher';
+import type {IndividualNoticeSnapshot} from '../lib/government-job-notices';
 
 const allowedStates=new Set(['reference-and-deadline-found','content-unconfirmed','publisher-unavailable','withdrawn']);
 function validatedSnapshot(data:unknown):IndividualNoticeSnapshot{

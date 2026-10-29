@@ -95,3 +95,13 @@ export function isJobNoticeReviewFresh(job:GovernmentJobNotice,now:Date):boolean
  const at=Date.parse(job.reviewedOn+'T23:59:59+02:00');
  return Number.isFinite(now.getTime())&&now.getTime()<=at+48*60*60*1000;
 }
+
+/** Shared read-only API contract: no private data and no inference capability. */
+export type IndividualNoticeCheck={
+ id:string;reference:string;checkedAt:string;
+ state:'reference-and-deadline-found'|'content-unconfirmed'|'publisher-unavailable'|'withdrawn';
+ note:'text_evidence_only_not_live_availability';
+};
+export type IndividualNoticeSnapshot={
+ checkedAt:string;scope:'fixed_official_individual_adverts_only';checks:IndividualNoticeCheck[];
+};
