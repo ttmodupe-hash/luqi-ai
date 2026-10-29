@@ -7,6 +7,8 @@ import {EMPTY_TENDER_DRAFT,EMPTY_TENDER_APPROVALS,TENDER_HUMAN_GATES,TENDER_DOCU
  assessTenderDraft,buildTenderWorksheet,detectTenderDocumentMentions,tenderDraftFileName,
  type TenderDraft,type TenderHumanGate,type TenderHumanApprovals} from '../lib/tender-workflow';
 
+type TenderCheck={id:string;state:'reference-visible'|'listing-only'|'content-unconfirmed'|'publisher-unavailable';checkedAt:string;note:'not_live_bid_availability'};
+type TenderCheckResponse={status:'publisher-pages-checked';scope:'fixed_official_tender_pages';checkedAt:string;notices:TenderCheck[]};
 const inputStyle='mt-2 block w-full min-w-0 rounded-lg border border-slate-500 bg-slate-950 p-3 text-white';
 const fieldStyle='block min-w-0 text-sm text-slate-100';
 function saveTextFile(name:string,value:string){
@@ -27,6 +29,9 @@ export default function TenderDeskPage(){
  const [province,setProvince]=useState<ProvinceCode|null>(null);
  const [query,setQuery]=useState('');
  const [showHistory,setShowHistory]=useState(false);
+ const [checkingSources,setCheckingSources]=useState(false);
+ const [sourceMonitor,setSourceMonitor]=useState<TenderCheckResponse|null>(null);
+ const [sourceMessage,setSourceMessage]=useState('');
  const [selectedId,setSelectedId]=useState<string|null>(null);
  const [draft,setDraft]=useState<TenderDraft>(EMPTY_TENDER_DRAFT);
  const [approvals,setApprovals]=useState<TenderHumanApprovals>(EMPTY_TENDER_APPROVALS);
@@ -37,6 +42,32 @@ export default function TenderDeskPage(){
  const chosen=CURATED_TENDER_NOTICES.find(n=>n.id===selectedId)||null;
  const readiness=chosen?assessTenderDraft(chosen,draft,approvals,now):null;
  const notes=detectTenderDocumentMentions(draft.termsExcerpt);
+ async function checkTenderSources(){
+  if(checkingSources)return;
+  setCheckingSources(true);setSourceMessage('Checking fixed original tender pages; this does not confirm applications remain open.');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  try{
+   const response=await fetch('/api/v1/tender-watch',{method:'GET',credentials:'omit',redirect:'error',
+    cache:'no-store',signal:controller.signal,headers:{Accept:'application/json'}});
+   if(!response.ok)throw Error('TENDER_SOURCE_MONITOR_UNAVAILABLE');
+   const data:unknown=await response.json();
+   if(!data||typeof data!=='object')throw Error('INVALID_TENDER_MONITOR');
+   const d=data as TenderCheckResponse;
+   const states=['reference-visible','listing-only','content-unconfirmed','publisher-unavailable'];
+   const ids=new Set<string>();
+   if(d.status!=='publisher-pages-checked'||d.scope!=='fixed_official_tender_pages'||
+      !Array.isArray(d.notices)||d.notices.length!==CURATED_TENDER_NOTICES.length||
+      d.notices.some(n=>!n||ids.has(n.id)||!states.includes(n.state)||
+       !CURATED_TENDER_NOTICES.some(source=>source.id===n.id)||n.note!=='not_live_bid_availability'||!ids.add(n.id))){
+    throw Error('INVALID_TENDER_MONITOR');
+   }
+   setSourceMonitor(d);
+   setSourceMessage('Source text checked. Even a matching tender number and date are NOT proof that bids are still being accepted.');
+  }catch{
+   setSourceMonitor(null);
+   setSourceMessage('Official tender checks could not be verified. Open the original procuring entity links directly.');
+  }finally{clearTimeout(timer);setCheckingSources(false);}
+ }
  function pick(notice:TenderNotice){
   setSelectedId(notice.id);
   setDraft({...EMPTY_TENDER_DRAFT,tenderReference:notice.reference||''});
@@ -109,6 +140,15 @@ export default function TenderDeskPage(){
       <p className="text-sm"><strong>Tender / RFQ:</strong> {n.reference||'Not supplied on issuer index — check original document'}</p>
       <p className="text-sm"><strong>Closing:</strong> {n.deadlineDate}, {n.deadlineTimeSast} South African time</p>
       <p className="text-xs text-slate-300">{n.details}</p>
+      {sourceMonitor?.notices.find(x=>x.id===n.id)&&<p className="text-xs text-cyan-200">
+       Publisher check: {sourceMonitor.notices.find(x=>x.id===n.id)?.state==='reference-visible'?
+       'Tender number and closing date appear on the source (not proof of current acceptance).':
+       sourceMonitor.notices.find(x=>x.id===n.id)?.state==='listing-only'?
+       'Source listing checked; exact tender number remains to verify.':
+       sourceMonitor.notices.find(x=>x.id===n.id)?.state==='content-unconfirmed'?
+       'Original reference/deadline could not be confirmed from the page.':
+       'Source page unavailable.'}
+      </p>}
       {n.specialCondition&&<p className="text-sm text-amber-200">{n.specialCondition}</p>}
       {status==='past-deadline'?<p className="font-semibold text-red-200">Published closing time passed. Historical only.</p>
        :status==='mandatory-briefing-review'?<p className="font-semibold text-red-200">Past compulsory briefing. Verify attendance and eligibility with the issuer before bidding.</p>
@@ -122,6 +162,16 @@ export default function TenderDeskPage(){
     })}
    </div>
    {!notices.length&&<p className="text-sm text-slate-300">No reviewed notice matches. This does not mean there are no tenders: use the live National Treasury source above.</p>}
+  </section>
+  <section aria-label="Official tender source monitor" className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
+   <h2 className="text-xl font-semibold">Luqi Tender Watch · bounded evidence check</h2>
+   <p className="text-sm text-slate-300">Checks reviewed original government tender pages for published reference and closing-date text only. This free, read-only automation does not collect a bidder’s details, confirm eligibility, file applications or guarantee that any tender remains open.</p>
+   <button type="button" onClick={()=>{void checkTenderSources()}} disabled={checkingSources}
+    className="rounded-lg border border-cyan-400 px-4 py-3 font-medium disabled:opacity-50">
+    {checkingSources?'Checking publisher pages…':'Check tender notice sources'}
+   </button>
+   {sourceMessage&&<p role="status" className="text-sm">{sourceMessage}</p>}
+   {sourceMonitor&&<p className="text-xs text-slate-300">Checked: {new Date(sourceMonitor.checkedAt).toLocaleString('en-ZA')}. A page matching a tender number is not proof of an open bid or a tender award.</p>}
   </section>
   <section aria-label="Luqi assisted tender preparation" className="space-y-4 rounded-xl border border-cyan-700 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Luqi bid-preparation assistant</h2>
