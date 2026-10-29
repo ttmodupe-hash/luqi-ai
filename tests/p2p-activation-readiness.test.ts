@@ -25,8 +25,20 @@ describe('P2P activation requires verified prerequisites',()=>{
  });
  it('successful read-only checks do not imply enabled messaging or verified people',async()=>{
    const preflight=vi.fn(async()=>{});
-   const state=await assessP2PActivation({DATABASE_URL:'private',LUQI_P2P_REPORT_KEY:key},preflight);
+   const cohort=vi.fn(async()=>({moderatorPresent:true,mutualTestPairPresent:true}));
+   const state=await assessP2PActivation({DATABASE_URL:'private',LUQI_P2P_REPORT_KEY:key},preflight,cohort);
    expect(state).toEqual({status:'ready_for_two_device_test',note:'database_and_key_preflight_only'});
-   expect(preflight).toHaveBeenCalledOnce();
+   expect(preflight).toHaveBeenCalledOnce();expect(cohort).toHaveBeenCalledOnce();
  });
+});
+
+it('operator audit blocks absent moderator, missing paired test users, and unavailable audits',async()=>{
+ const preflight=vi.fn(async()=>{});
+ const env={DATABASE_URL:'private',LUQI_P2P_REPORT_KEY:key};
+ expect(await assessP2PActivation(env,preflight,async()=>({moderatorPresent:false,mutualTestPairPresent:true})))
+  .toEqual({status:'blocked',reason:'moderator_not_ready'});
+ expect(await assessP2PActivation(env,preflight,async()=>({moderatorPresent:true,mutualTestPairPresent:false})))
+  .toEqual({status:'blocked',reason:'test_pair_not_ready'});
+ expect(await assessP2PActivation(env,preflight,async()=>{throw Error('secret-db-message');}))
+  .toEqual({status:'blocked',reason:'operator_audit_unavailable'});
 });
