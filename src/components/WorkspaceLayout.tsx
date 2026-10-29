@@ -18,6 +18,8 @@ const navigation = [
   ["/opportunities", "Opportunities"],
   ["/social-support", "SASSA & UIF"],
   ["/tenders", "Tenders"],
+  ["/municipalities", "Municipal services"],
+  ["/township-economy", "Township business"],
   ["/spatial-vision", "👁️ Spatial Vision & 3D Lab"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],

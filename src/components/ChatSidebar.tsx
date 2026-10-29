@@ -13,6 +13,8 @@ const shortcuts = [
   { path: '/opportunities', label: 'Opportunities', icon: Compass },
   { path: '/social-support', label: 'SASSA & UIF', icon: ShieldCheck },
   { path: '/tenders', label: 'Tenders & bids', icon: BriefcaseBusiness },
+  { path: '/municipalities', label: 'Municipal services', icon: ShieldCheck },
+  { path: '/township-economy', label: 'Township economy', icon: BriefcaseBusiness },
   { path: '/business-desk', label: 'Business desk', icon: BriefcaseBusiness },
   { path: '/study-desk', label: 'Study desk', icon: GraduationCap },
   { path: '/content-studio', label: 'Content studio', icon: PenLine },
