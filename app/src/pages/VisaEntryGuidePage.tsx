@@ -21,9 +21,9 @@ const initial:VisaQuery={
 export default function VisaEntryGuidePage(){
  const [query,setQuery]=useState<VisaQuery>(initial);
  const [downloaded,setDownloaded]=useState('');
- const update=<K extends keyof VisaQuery>(field:K,value:VisaQuery[K])=>{
+ function update<K extends keyof VisaQuery>(field:K,value:VisaQuery[K]){
   setQuery(previous=>({...previous,[field]:value}));setDownloaded('');
- };
+ }
  const reviewed=isVisaReviewFresh(new Date());
  const guidance=evaluateVisaEntry(query,new Date());
  const destination=VISA_DESTINATIONS.find(x=>x.id===query.destination)!;
