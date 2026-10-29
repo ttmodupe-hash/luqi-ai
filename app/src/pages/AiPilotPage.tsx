@@ -16,6 +16,7 @@ import DriverQuickCard from '../components/DriverQuickCard';
 import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
 import { detectOpportunityIntent } from '../lib/opportunity-sources';
 import { detectTenderIntent } from '../lib/tender-sources';
+import { detectVisaEntryIntent } from '../lib/visa-entry-sources';
 import { detectMunicipalIntent,detectTownshipEconomyIntent } from '../lib/municipal-economy';
 import { socialSupportPathForInput } from '../lib/social-support-sources';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
@@ -169,6 +170,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (detectEvidenceTopic(prompt)) { navigate('/comparative-evidence'); return; }
     const publicSupportPath = socialSupportPathForInput(prompt);
     if (publicSupportPath) { navigate(publicSupportPath); return; }
+    if (detectVisaEntryIntent(prompt)) { navigate('/visa-entry'); return; }
     if (detectTownshipEconomyIntent(prompt)) { navigate('/township-economy'); return; }
     if (detectMunicipalIntent(prompt)) { navigate('/municipalities'); return; }
     if (detectTenderIntent(prompt)) { navigate('/tenders'); return; }
@@ -235,11 +237,12 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const consumerCategory = !driverMode ? detectConsumerCategory(prompt) : null;
   const evidenceTopic = !driverMode && !consumerCategory ? detectEvidenceTopic(prompt) : null;
   const socialPath = !driverMode && !consumerCategory && !evidenceTopic ? socialSupportPathForInput(prompt) : null;
-  const townshipIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && detectTownshipEconomyIntent(prompt);
-  const municipalIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !townshipIntent && detectMunicipalIntent(prompt);
-  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !townshipIntent && !municipalIntent && detectTenderIntent(prompt);
-  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !townshipIntent && !municipalIntent && !tenderIntent && detectOpportunityIntent(prompt);
-  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : socialPath ? socialPath : townshipIntent ? '/township-economy' : municipalIntent ? '/municipalities' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
+  const visaIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && detectVisaEntryIntent(prompt);
+  const townshipIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && detectTownshipEconomyIntent(prompt);
+  const municipalIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && !townshipIntent && detectMunicipalIntent(prompt);
+  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && !townshipIntent && !municipalIntent && detectTenderIntent(prompt);
+  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && !townshipIntent && !municipalIntent && !tenderIntent && detectOpportunityIntent(prompt);
+  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : socialPath ? socialPath : visaIntent ? '/visa-entry' : townshipIntent ? '/township-economy' : municipalIntent ? '/municipalities' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -269,6 +272,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <p><Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
         <p><Link to="/municipalities" className="text-cyan-200 underline underline-offset-2">Municipal services, permits, rates and indigent support: find your council</Link></p>
         <p><Link to="/township-economy" className="text-cyan-200 underline underline-offset-2">Township economy: spaza, business permits, funding and local plans</Link></p>
+        <p><Link to="/visa-entry" className="text-cyan-200 underline underline-offset-2">Visa & Entry: review official South African and African immigration sources</Link></p>
         <p><Link to="/social-support" className="text-cyan-200 underline underline-offset-2">SASSA grants, UIF claims, status and appeals: free official support</Link></p>
       </div>
       {languageControl}
@@ -288,6 +292,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <h2 className="font-semibold">Luqi public benefits guide — government sources</h2>
         <p className="text-sm">See official SASSA or UIF rules, current portals, documents, status and appeals. Never share identity numbers, OTPs, bank details or passwords with Luqi. Luqi cannot file or inspect a claim.</p>
         <Link to={socialPath} className="text-cyan-200 underline underline-offset-2">Open free {socialPath==='/uif'?'UIF':'SASSA'} support guide</Link>
+      </section>}
+      {visaIntent && <section aria-label="Free visa and entry guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Visa and entry — verify with the real government</h2>
+        <p className="text-sm">Choose passport nationality, destination and purpose. Read official visa/ETA guidance and review dates without uploading documents or making a paid AI request. Entry and eligibility are not guaranteed.</p>
+        <Link to="/visa-entry" className="text-cyan-200 underline underline-offset-2">Open Visa &amp; Entry Guide</Link>
       </section>}
       {municipalIntent && <section aria-label="Free municipal service guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Find your municipality and service</h2>
@@ -398,7 +407,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
-            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : socialPath ? 'Open free SASSA and UIF guide' : townshipIntent ? 'Open free township business guide' : municipalIntent ? 'Open free municipal guide' : tenderIntent ? 'Open free tender desk' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
+            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : socialPath ? 'Open free SASSA and UIF guide' : visaIntent ? 'Open free Visa & Entry guide' : townshipIntent ? 'Open free township business guide' : municipalIntent ? 'Open free municipal guide' : tenderIntent ? 'Open free tender desk' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
             <Send size={18} aria-hidden="true" /><span>{localGuidePath ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
           </button>
         </div>
