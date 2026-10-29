@@ -15,6 +15,7 @@ import ConsumerQuickCard from '../components/ConsumerQuickCard';
 import DriverQuickCard from '../components/DriverQuickCard';
 import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
 import { detectOpportunityIntent } from '../lib/opportunity-sources';
+import { detectTenderIntent } from '../lib/tender-sources';
 import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
 import SafePilotText from '../components/SafePilotText';
 import { Send, Sparkles } from 'lucide-react';
@@ -164,6 +165,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (detectDriverMode(prompt)) { navigate('/driver-rights'); return; }
     if (detectConsumerCategory(prompt)) { navigate('/consumer-rights'); return; }
     if (detectEvidenceTopic(prompt)) { navigate('/comparative-evidence'); return; }
+    if (detectTenderIntent(prompt)) { navigate('/tenders'); return; }
     if (detectOpportunityIntent(prompt)) { navigate('/opportunities'); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
@@ -226,8 +228,9 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const driverMode = detectDriverMode(prompt);
   const consumerCategory = !driverMode ? detectConsumerCategory(prompt) : null;
   const evidenceTopic = !driverMode && !consumerCategory ? detectEvidenceTopic(prompt) : null;
-  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && detectOpportunityIntent(prompt);
-  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : opportunityIntent ? '/opportunities' : null;
+  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && detectTenderIntent(prompt);
+  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !tenderIntent && detectOpportunityIntent(prompt);
+  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
   const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
   const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
   function approveVideoPlan() {
@@ -254,6 +257,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <p><Link to="/consumer-rights" className="text-cyan-200 underline underline-offset-2">Consumer rights: three-step guidance and complaint preparation</Link></p>
         <p><Link to="/comparative-evidence" className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
         <p><Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
+        <p><Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
       </div>
       {languageControl}
       {personalWelcome}
@@ -268,6 +272,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
       {driverMode && <DriverQuickCard mode={driverMode} />}
       {consumerCategory && <ConsumerQuickCard category={consumerCategory} />}
+      {tenderIntent && <section aria-label="Free tender preparation guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Luqi Tender Desk — prepare with human control</h2>
+        <p className="text-sm">Find the original tender notice, review eligibility and SBD/MBD documents, draft your answers locally and approve pricing and declarations yourself. Final submission and signatures are not automated.</p>
+        <Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Open free Tender Desk</Link>
+      </section>}
       {opportunityIntent && <section aria-label="Free opportunity quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Luqi Opportunity Compass — start with official sources</h2>
         <ol className="list-inside list-decimal space-y-2 text-sm"><li>Choose your province and opportunity type.</li><li>Read the official advertiser’s post, requirements and deadline.</li><li>Apply directly through its verified instructions. Never pay someone to secure a public job.</li></ol>
@@ -362,7 +371,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
-            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
+            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : tenderIntent ? 'Open free tender desk' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
             <Send size={18} aria-hidden="true" /><span>{localGuidePath ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
           </button>
         </div>
