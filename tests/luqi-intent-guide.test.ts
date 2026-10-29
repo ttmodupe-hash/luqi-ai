@@ -10,7 +10,7 @@ describe('LUQI local intent guidance', () => {
     const uif=guideLuqiNeed('How do I claim UIF online?')!;
     expect(uif.kind).toBe('social');expect(uif.primaryPath).toBe('/uif');
     expect(uif.caution).toMatch(/Do not enter identity numbers/);
-    expect(guideLuqiNeed('Looking for youth-business grant funding')?.primaryPath).toBe('/opportunities');
+    expect(guideLuqiNeed('Looking for business grants for entrepreneurs')?.primaryPath).toBe('/opportunities');
   });
 
   it('does not fabricate bookings, prices, availability or payments', () => {
