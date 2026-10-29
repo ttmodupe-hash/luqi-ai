@@ -18,7 +18,7 @@ it('shows official youth and government opportunities without login, coordinates
 it('selects a province without pretending sources have verified job coordinates',()=>{
  show();fireEvent.click(screen.getByRole('button',{name:'Select Gauteng'}));
  expect(screen.getByText(/Selected Gauteng/)).toBeTruthy();
- expect(screen.getByText(/markers are provinces, not verified job locations/)).toBeTruthy();
+ expect(screen.getByText(/schematic map shows provinces, not exact job-site coordinates/)).toBeTruthy();
  expect(request).not.toHaveBeenCalled();
 });
 it('filters categories and audiences while keeping eligibility undecided',()=>{
