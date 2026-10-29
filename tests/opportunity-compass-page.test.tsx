@@ -33,3 +33,11 @@ it('keeps expansion countries clearly unverified',()=>{
  expect(screen.queryByText('National Arts Council calls')).toBeNull();
  expect(request).not.toHaveBeenCalled();
 });
+
+it('uses the province map to filter individual official job notices, not just directories',()=>{
+  show();
+  fireEvent.click(screen.getByRole('button',{name:'Select Gauteng'}));
+  expect(screen.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})).toBeTruthy();
+  expect(screen.queryByRole('heading',{name:'Client Service Officer: COID'})).toBeNull();
+  expect(request).not.toHaveBeenCalled();
+});
