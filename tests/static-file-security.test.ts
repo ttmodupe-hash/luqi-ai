@@ -8,7 +8,7 @@ import { isSensitivePublicPath, isSpaNavigationPath, serveStaticFiles } from "..
 // static file server. No production data or network calls are used.
 vi.mock("@hono/node-server/serve-static", () => ({
   serveStatic: (options: { path?: string }): MiddlewareHandler => async (c, next) => {
-    if (options.path === "/index.html") return c.html("<h1>Public account shell fixture</h1>");
+    if (options.path === "/index.html" || c.req.path === "/index.html") return c.html("<h1>Public account shell fixture</h1>");
     if (c.req.path === "/.env" || c.req.path === "/service-account.json")
       return c.text("SYNTHETIC_SECRET_DO_NOT_SERVE");
     if (c.req.path === "/manifest.json") return c.json({ name: "Luqi" });
@@ -70,6 +70,16 @@ describe("public static-file security boundary", () => {
     const response = await server().request(path);
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Public account shell fixture");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=0, must-revalidate");
+  });
+
+  it("does not give immutable cache lifetime to the index shell or change cached CSS/JS", async () => {
+    const page = await server().request("/index.html");
+    expect(page.status).toBe(200);
+    expect(page.headers.get("Cache-Control")).toBe("public, max-age=0, must-revalidate");
+    const chunk = await server().request("/assets/index-test.js");
+    expect(chunk.status).toBe(200);
+    expect(chunk.headers.get("Cache-Control")).not.toBe("public, max-age=0, must-revalidate");
   });
 
   it.each(["/manifest.json", "/assets/index-test.js", "/.well-known/assetlinks.json", "/login.html"])
