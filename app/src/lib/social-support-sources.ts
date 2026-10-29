@@ -77,6 +77,10 @@ export function isSocialSupportReviewFresh(now:Date):boolean{
  return Number.isFinite(now.getTime())&&now.getTime()<=Date.parse(SOCIAL_SUPPORT_RECHECK_AFTER+'T23:59:59+02:00');
 }
 /** Strong programme-specific words only. General bursaries and business funding remain in Opportunity Compass. */
+export function socialSupportPathForInput(input:unknown):'/sassa'|'/uif'|null{
+ if(!detectSocialSupportIntent(input))return null;
+ return /\b(?:uif|ufiling|unemployment insurance fund|unemployment benefits?|uif claim|uif contributions?)\b/i.test(String(input))?'/uif':'/sassa';
+}
 export function detectSocialSupportIntent(input:unknown):boolean{
  if(typeof input!=='string'||input.length>500)return false;
  return /\b(?:sassa|srd grant|social relief of distress|older persons? grant|old age pension|child support grant|foster child grant|disability grant|care dependency grant|grant.in.aid|unemployment insurance fund|uif|uif online|ufiling|unemployment benefits?|uif claim|uif contributions?)\b/i.test(input);
