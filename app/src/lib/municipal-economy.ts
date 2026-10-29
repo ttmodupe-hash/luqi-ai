@@ -24,7 +24,7 @@ export const CAPE_TOWN_LICENCE_GUIDE='https://www.capetown.gov.za/work-and-busin
 export type MunicipalType='metropolitan'|'district'|'local';
 export interface Municipality { name:string; province:ProvinceCode; type:MunicipalType; directoryUrl:string; }
 const municipalityNames:Record<ProvinceCode,string>={
- EC:\`Alfred Nzo District Municipality
+ EC:`Alfred Nzo District Municipality
 Amahlathi Local Municipality
 Amathole District Municipality
 Blue Crane Route Local Municipality
@@ -62,8 +62,8 @@ Senqu Local Municipality
 Sunday's River Valley Local Municipality
 Umzimvubu Local Municipality
 Walter Sisulu Local Municipality
-Winnie Madikizela-Mandela Local Municipality\`,
- FS:\`Dihlabeng Local Municipality
+Winnie Madikizela-Mandela Local Municipality`,
+ FS:`Dihlabeng Local Municipality
 Fezile Dabi District Municipality
 Kopanong Local Municipality
 Lejweleputswa District Municipality
@@ -85,8 +85,8 @@ Setsoto Local Municipality
 Thabo Mofutsanyana District Municipality
 Tokologo Local Municipality
 Tswelopele Local Municipality
-Xhariep District Municipality\`,
- GP:\`City of Ekurhuleni
+Xhariep District Municipality`,
+ GP:`City of Ekurhuleni
 City of Johannesburg Metropolitan Municipality
 City of Tshwane Metropolitan Municipality
 Emfuleni Local Municipality
@@ -96,8 +96,8 @@ Midvaal Local Municipality
 Mogale City Local Municipality
 Rand West City Local Municipality
 Sedibeng District Municipality
-West Rand District Municipality\`,
- KZN:\`AbaQulusi Local Municipality
+West Rand District Municipality`,
+ KZN:`AbaQulusi Local Municipality
 Alfred Duma Local Municipality
 Amajuba District Municipality
 Big 5 Hlabisa Local Municipality (The)
@@ -150,8 +150,8 @@ uMzinyathi District Municipality
 Umzumbe Local Municipality
 uPhongolo Local Municipality
 uThukela District Municipality
-Zululand District Municipality\`,
- LP:\`Ba-Phalaborwa Local Municipality
+Zululand District Municipality`,
+ LP:`Ba-Phalaborwa Local Municipality
 Bela-Bela Local Municipality
 Blouberg Local Municipality
 Capricorn District Municipality
@@ -176,8 +176,8 @@ Sekhukhune District Municipality
 Thabazimbi Local Municipality
 Thulamela Local Municipality
 Vhembe District Municipality
-Waterberg District Municipality\`,
- MP:\`Bushbuckridge Local Municipality
+Waterberg District Municipality`,
+ MP:`Bushbuckridge Local Municipality
 Chief Albert Luthuli Local Municipality
 City of Mbombela Local Municipality
 Dipaleseng Local Municipality
@@ -196,8 +196,8 @@ Pixley Ka Seme Local Municipality
 Steve Tshwete Local Municipality
 Thaba Chweu Local Municipality
 Thembisile Hani Local Municipality
-Victor Khanye Local Municipality\`,
- NW:\`Bojanala Platinum District Municipality
+Victor Khanye Local Municipality`,
+ NW:`Bojanala Platinum District Municipality
 City of Matlosana Local Municipality
 Ditsobotla Local Municipality
 Dr Kenneth Kaunda District Municipality
@@ -217,8 +217,8 @@ Ngaka Modiri Molema District Municipality
 Ramotshere Moiloa Local Municipality
 Ratlou Local Municipality
 Rustenburg Local Municipality
-Tswaing Local Municipality\`,
- NC:\`!Kheis Local Municipality
+Tswaing Local Municipality`,
+ NC:`!Kheis Local Municipality
 Dawid Kruiper Local Municipality
 Dikgatlong Local Municipality
 Emthanjeni Local Municipality
@@ -248,8 +248,8 @@ Thembelihle Local Municipality
 Tsantsabane Local Municipality
 Ubuntu Local Municipality
 Umsobomvu Local Municipality
-ZF Mgcawu District Municipality\`,
- WC:\`Beaufort West Local Municipality
+ZF Mgcawu District Municipality`,
+ WC:`Beaufort West Local Municipality
 Bergrivier Local Municipality
 Bitou Local Municipality
 Breede Valley Local Municipality
@@ -278,7 +278,7 @@ Swartland Local Municipality
 Swellendam Local Municipality
 Theewaterskloof Local Municipality
 West Coast District Municipality
-Witzenberg Local Municipality\`
+Witzenberg Local Municipality`
 };
 export const PROVINCE_NAMES:Record<ProvinceCode,string>={
  EC:'Eastern Cape',FS:'Free State',GP:'Gauteng',KZN:'KwaZulu-Natal',LP:'Limpopo',
