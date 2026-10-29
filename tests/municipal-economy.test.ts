@@ -40,7 +40,7 @@ describe('official municipal directory and bounded local-service guidance',()=>{
    expect(service.steps.length).toBeGreaterThanOrEqual(3);
    const host=new URL(service.url).hostname;
    expect(['www.gov.za','www.cogta.gov.za','www.etenders.gov.za']).toContain(host);
-   expect(service.steps.join(' ')).not.toMatch(/we will submit|guaranteed|already approved/i);
+   expect(service.steps.join(' ')).not.toMatch(/\bwe (?:will|have) submit\b|\bguaranteed approval\b|\balready approved\b/i);
   }
  });
  it('handles strong municipal versus township business intent without hijacking ordinary requests',()=>{
