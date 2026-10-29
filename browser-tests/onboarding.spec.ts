@@ -54,7 +54,12 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   await expect(page.getByText('Voice and paid plans are not enabled. AI text has a separate limited trial.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Try the physics lab', exact: true })).toHaveAttribute('href', '#/pendulum-lab');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: test.info().outputPath('getting-started.png'), fullPage: true });
+  // The expanding Luqi Start catalogue exceeds WebKit's 32767px full-page
+  // screenshot limit on narrow devices. Preserve two viewport captures rather
+  // than failing an otherwise valid account-registration acceptance.
+  await page.screenshot({ path: test.info().outputPath('getting-started.png'), fullPage: false });
+  await page.getByRole('link', { name: /Explore Visa & Entry/ }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: test.info().outputPath('getting-started-services.png'), fullPage: false });
   await page.getByRole('link', { name: 'Create your Luqi account' }).click();
   await expect(page.getByRole('heading', { name: 'Create your Luqi account' })).toBeVisible();
   await page.getByLabel('Email', { exact: true }).fill('new-browser@example.invalid');
