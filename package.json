@@ -35,7 +35,7 @@
     "@capacitor/ios": "^8.4.2",
     "@capacitor/splash-screen": "^8.0.2",
     "@google/genai": "^2.19.0",
-    "@hono/node-server": "^1.14.3",
+    "@hono/node-server": "2.1.5",
     "@hono/vite-dev-server": "^0.19.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^5.22.0",
@@ -139,6 +139,7 @@
     "@esbuild-kit/core-utils": {
       "esbuild": "$esbuild"
     },
-    "postcss-selector-parser": "^7.1.6"
+    "postcss-selector-parser": "^7.1.6",
+    "@hono/node-server": "2.1.5"
   }
 }
