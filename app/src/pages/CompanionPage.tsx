@@ -1,3 +1,4 @@
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { conversationClient, ConversationError, downloadConversationExport, downloadPrivateNotesExport, type Conversation, type SavedMessage } from "../lib/private-conversations";
 import AccountAccessForm from '../components/AccountAccessForm';
@@ -78,10 +79,11 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
   // Returning from Chat or Omega uses the existing account without another login.
   // Clear a former identity before the browser paints the new account.
   useLayoutEffect(() => {
+    const boundary = customerSessionBoundary(session);
     const token = session?.token ?? null;
-    if (token === previousToken.current) return;
+    if (boundary === previousToken.current) return;
     const wasSignedIn = previousToken.current !== null;
-    previousToken.current = token;
+    previousToken.current = boundary;
     if (wasSignedIn) {
       epoch.current++; notesExport.current?.abort(); locked.current = false;
       authenticatedHere.current = false;
@@ -95,7 +97,7 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
       const data = await conversationClient(token).list();
       if (current()) { setConversations(data.conversations); setMoreConversations(data.conversations.length === 50); }
     }, false, undefined, 'You are signed in, but saved history could not be loaded. Use Refresh saved history to try again.');
-  }, [session?.token]);
+  }, [customerSessionBoundary(session)]);
 
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 text-slate-100">
     <header><h1 className="text-3xl font-bold">Companion conversations</h1>
