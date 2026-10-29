@@ -94,7 +94,7 @@ test('the real province map filters reviewed individual adverts, and never marke
   await expect(records.getByRole('heading',{name:'Office Administrator'})).toBeVisible();
   await expect(records.getByRole('heading',{name:'Personnel Officer: Human Resources Management'})).toHaveCount(0);
   await records.getByLabel(/Include withdrawn posts/).check();
-  const withdrawn=records.getByRole('article').filter({has:records.getByRole('heading',{name:'Personnel Officer: Human Resources Management'})});
+  const withdrawn=records.getByRole('article').filter({hasText:'Personnel Officer: Human Resources Management'});
   await expect(withdrawn.getByText(/Withdrawn by the employer/)).toBeVisible();
   await expect(withdrawn.getByRole('link',{name:'Official withdrawal notice'})).toHaveAttribute('href',/labour.gov.za\/erratum-withdrawal/);
   expect(paid).toEqual([]);
@@ -117,7 +117,7 @@ test('fixed job evidence checker is requested only on demand and cannot certify 
  expect(calls).toEqual([]);
  await region.getByRole('button',{name:'Recheck published job notices'}).click();
  await expect(region.getByText(/Publisher text check complete/)).toBeVisible();
- const carletonville=region.getByRole('article').filter({has:region.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})});
+ const carletonville=region.getByRole('article').filter({hasText:'Administrative Clerk: Management Support Services'});
  await expect(carletonville.getByText(/matching reference and deadline/)).toBeVisible();
  await expect(carletonville.getByText(/current acceptance status must be confirmed/)).toBeVisible();
  expect(calls).toEqual(['GET']);
