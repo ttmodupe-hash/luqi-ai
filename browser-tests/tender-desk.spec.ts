@@ -6,7 +6,7 @@ test('Luqi public tenders are discoverable at 320px without account or paid call
  await page.goto('/#/start');
  await page.getByRole('link',{name:'Open Tender Desk'}).click();
  await expect(page).toHaveURL(/#\/tenders$/);
- await expect(page.getByRole('heading',{name:/Find tenders/})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Find tenders. Prepare with Luqi. You stay in control.'})).toBeVisible();
  await expect(page.getByRole('link',{name:'Open official source'}).first()).toHaveAttribute('href',/etenders\.gov\.za/);
  await expect(page.getByRole('heading',{name:/Lead bond arranger/})).toBeVisible();
  await page.getByLabel('Search tender notices').fill('sign language');
