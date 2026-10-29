@@ -1,8 +1,16 @@
 /** One bounded account request. Cancelling cannot undo server-side registration. */
+/** Shared by login, restore and logout. A late cookie response must not
+ * overwrite a newer identity. The lock contains no customer information.
+ */
+export function withCustomerSessionLock<T>(work: () => Promise<T>): Promise<T> {
+  return Promise.resolve(typeof window !== 'undefined' && typeof document !== 'undefined' &&
+    typeof navigator !== 'undefined' && navigator.locks
+    ? navigator.locks.request('luqi-customer-session', work) : work());
+}
 export const ACCOUNT_REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_ACCOUNT_RESPONSE_BYTES = 32 * 1024;
 export type AccountPath = '/api/v1/auth/login' | '/api/v1/auth/register';
-type AccountCredentials = { email: string; password: string; name?: string };
+type AccountCredentials = { email: string; password: string; name?: string; rememberMe?: boolean };
 type AccountResult = { ok: true; status: number; body: unknown } |
   { ok: false; status: number; retryAfter?: number };
 
@@ -21,12 +29,17 @@ export async function requestAccountJson(
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(abort, ACCOUNT_REQUEST_TIMEOUT_MS);
   const operation = async (): Promise<AccountResult> => {
+    if (controller.signal.aborted) throw interrupted();
     const response = await request(path, {
-      method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      // Same-origin cookies are accepted only by the reviewed host-only session
+      // issuer. The response's bearer token is still kept only in React memory.
+      method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+        'X-Luqi-Session-Intent': path === '/api/v1/auth/login' ? 'login' : 'signup' },
       body: JSON.stringify({ email: credentials.email, password: credentials.password,
         ...(path === '/api/v1/auth/register' && typeof credentials.name === 'string' && credentials.name.trim()
-          ? { name: credentials.name.trim().slice(0, 120) } : {}) }),
+          ? { name: credentials.name.trim().slice(0, 120) } : {}),
+        ...(credentials.rememberMe === true ? { rememberMe: true } : {}) }),
     });
     const discard = () => { void response.body?.cancel().catch(() => {}); };
     if (controller.signal.aborted) { discard(); throw interrupted(); }
@@ -69,7 +82,7 @@ export async function requestAccountJson(
       cancelReader(); reader.releaseLock(); reader = undefined;
     }
   };
-  try { return await Promise.race([operation(), deadline]); }
+  try { return await Promise.race([withCustomerSessionLock(operation), deadline]); }
   catch { if (controller.signal.aborted) throw interrupted(); throw new Error('Account request failed'); }
   finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
