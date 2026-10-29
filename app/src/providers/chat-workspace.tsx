@@ -1,3 +1,4 @@
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PilotReply } from '../lib/ai-pilot';
 import type { PilotConversationTurn } from '../lib/pilot-conversation';
@@ -36,7 +37,7 @@ const MAX_TURNS = 8; // The pilot shares a separate, shorter preview only with e
 
 export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   const { session } = useCustomerSession();
-  const token = session?.token ?? null;
+  const token = customerSessionBoundary(session);
   const tokenAtPaint = useRef(token);
   const nextId = useRef(0);
   const [threads, setThreads] = useState<ChatThread[]>([]);

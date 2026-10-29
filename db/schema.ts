@@ -1,4 +1,4 @@
-import { mysqlTable, serial, varchar, text, int, timestamp, boolean, json, decimal, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, int, timestamp, boolean, json, decimal, mysqlEnum, char, bigint, index } from "drizzle-orm/mysql-core";
 
 /* ───────── Companion Tables ───────── */
 
@@ -138,6 +138,21 @@ export const sessions = mysqlTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Isolated migration only. Historical sessions are never adopted as device credentials.
+export const customerDeviceSessions = mysqlTable('customer_device_sessions_v1', {
+  tokenDigest: char('token_digest', { length: 64 }).primaryKey(),
+  familyId: char('family_id', { length: 73 }).notNull(),
+  userId: bigint('user_id', { mode: 'number', unsigned: true }).notNull(),
+  issuedAt: timestamp('issued_at', { fsp: 3 }).notNull(),
+  lastUsedAt: timestamp('last_used_at', { fsp: 3 }).notNull(),
+  absoluteExpiresAt: timestamp('absolute_expires_at', { fsp: 3 }).notNull(),
+  idleExpiresAt: timestamp('idle_expires_at', { fsp: 3 }).notNull(),
+  rotation: int('rotation', { unsigned: true }).notNull(),
+  rotatedAt: timestamp('rotated_at', { fsp: 3 }),
+  revokedAt: timestamp('revoked_at', { fsp: 3 }),
+}, table => [index('customer_device_family').on(table.familyId),
+  index('customer_device_owner').on(table.userId), index('customer_device_expiry').on(table.absoluteExpiresAt)]);
 
 /* ───────── Analytics & Tracking Tables ───────── */
 

@@ -1,15 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccountSession } from '../lib/private-conversations';
+import { restoreCustomerSession, revokeCustomerSession, clearCustomerResumeHint,
+  hasCustomerResumeHint } from '../lib/customer-resume';
 
 /**
  * Shared customer identity for Notes, Omega and the metered text trial.
- * The token lives ONLY in React memory: no cookies, browser storage, URL,
- * service worker messages, automatic provider requests or hidden refresh.
- * A full reload intentionally requires sign-in again. Admin is separate.
+ * Bearer JWTs stay ONLY in React memory. When an operator later enables
+ * durable resume, a separate HttpOnly/SameSite/host-only server cookie can
+ * restore the account after reload without browser token storage. No automatic
+ * provider call is made. Admin authentication remains strictly separate.
  */
 type CustomerSessionContextValue = {
   session: AccountSession | null;
   expired: boolean;
+  restoring: boolean;
+  signOutUnconfirmed: boolean;
   acceptSession: (value: AccountSession) => void;
   signOut: () => void;
 };
@@ -33,19 +38,80 @@ function sessionDeadline(token: string, now: number): number {
   } catch { return now; }
 }
 type ActiveSession = { session: AccountSession; deadline: number };
+function hasDeviceBinding(token: string | undefined): boolean {
+  try {
+    const part = token?.split('.')[1];
+    return !!part && /^luqi-rs1-[a-f0-9]{64}$/.test(JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))).sid);
+  } catch { return false; }
+}
 
 export function CustomerSessionProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<ActiveSession | null>(null);
   const [expired, setExpired] = useState(false);
+  const [restoring, setRestoring] = useState(() => hasCustomerResumeHint());
+  const [signOutUnconfirmed, setSignOutUnconfirmed] = useState(false);
   const current = useRef<ActiveSession | null>(null);
+  const resumeEpoch = useRef(0);
+  const restoringRequest = useRef<AbortController | null>(null);
   const acceptSession = useCallback((value: AccountSession) => {
+    // Manual sign-in always wins over any late restore from a prior identity.
+    resumeEpoch.current++; restoringRequest.current?.abort(); restoringRequest.current = null;
     const now = Date.now(), deadline = sessionDeadline(value.token, now);
     const next = deadline > now ? { session: value, deadline } : null;
     current.current = next; setActive(next); setExpired(next === null);
+    setRestoring(false); setSignOutUnconfirmed(false);
   }, []);
   const signOut = useCallback(() => {
-    current.current = null; setActive(null); setExpired(false);
+    resumeEpoch.current++; restoringRequest.current?.abort(); restoringRequest.current = null;
+    // Start this deliberate one-shot request BEFORE clearing the inert hint.
+    // The actual credential stays in the HttpOnly cookie and is never read here.
+    const revoke = hasCustomerResumeHint() || hasDeviceBinding(current.current?.session.token)
+      ? revokeCustomerSession(fetch, current.current?.session.token) : null;
+    clearCustomerResumeHint();
+    current.current = null; setActive(null); setExpired(false); setRestoring(false);
+    const version = resumeEpoch.current;
+    if (revoke) void revoke.catch(() => { if (resumeEpoch.current === version) setSignOutUnconfirmed(true); });
+    else setSignOutUnconfirmed(false);
   }, []);
+  useEffect(() => {
+    if (!hasCustomerResumeHint()) { setRestoring(false); return; }
+    const controller = new AbortController(); const version = ++resumeEpoch.current;
+    restoringRequest.current = controller; setRestoring(true);
+    void restoreCustomerSession(controller.signal).then(value => {
+      if (!controller.signal.aborted && resumeEpoch.current === version &&
+          current.current === null && value) acceptSession(value);
+    }).catch(() => {
+      // A transient failure does not erase the cookie or fabricate a login.
+      // An explicit sign-in still works; no automatic retry or provider call.
+    }).finally(() => {
+      if (resumeEpoch.current === version) { restoringRequest.current = null; setRestoring(false); }
+    });
+    return () => { controller.abort(); };
+  }, [acceptSession]);
+  useEffect(() => {
+    if (!active || !hasDeviceBinding(active.session.token)) return;
+    let started = false;
+    const version = resumeEpoch.current;
+    const refresh = () => {
+      if (started || current.current !== active || document.visibilityState === 'hidden' ||
+          active.deadline - Date.now() > 60_000) return;
+      started = true;
+      void restoreCustomerSession().then(value => {
+        if (resumeEpoch.current !== version || current.current !== active) return;
+        if (value && value.user.email === active.session.user.email) acceptSession(value);
+        else { current.current = null; setActive(null); setExpired(true); }
+      }).catch(() => {
+        if (resumeEpoch.current === version && current.current === active) {
+          current.current = null; setActive(null); setExpired(true);
+        }
+      });
+    };
+    const timer = setTimeout(refresh, Math.max(0, active.deadline - Date.now() - 60_000));
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh); };
+  }, [active, acceptSession]);
   useEffect(() => {
     if (!active) return;
     let timer: ReturnType<typeof setTimeout>;
@@ -55,7 +121,19 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
       if (current.current !== active) return;
       const remaining = active.deadline - Date.now();
       if (remaining <= 0) {
-        current.current = null; setActive(null); setExpired(true);
+        if (hasDeviceBinding(active.session.token) && hasCustomerResumeHint()) {
+          const version = resumeEpoch.current;
+          setRestoring(true);
+          void restoreCustomerSession().then(value => {
+            if (resumeEpoch.current !== version || current.current !== active) return;
+            if (value && value.user.email === active.session.user.email) acceptSession(value);
+            else { current.current = null; setActive(null); setExpired(true); }
+          }).catch(() => {
+            if (resumeEpoch.current === version && current.current === active) {
+              current.current = null; setActive(null); setExpired(true);
+            }
+          }).finally(() => { if (resumeEpoch.current === version) setRestoring(false); });
+        } else { current.current = null; setActive(null); setExpired(true); }
       } else timer = setTimeout(check, remaining);
     };
     check();
@@ -68,10 +146,23 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('pageshow', check);
       document.removeEventListener('visibilitychange', check);
     };
-  }, [active]);
+  }, [active, acceptSession]);
   const session = active?.session ?? null;
-  const value = useMemo(() => ({ session, expired, acceptSession, signOut }), [session, expired, acceptSession, signOut]);
-  return <CustomerSessionContext.Provider value={value}>{children}</CustomerSessionContext.Provider>;
+  const value = useMemo(() => ({ session, expired, restoring, signOutUnconfirmed, acceptSession, signOut }),
+    [session, expired, restoring, signOutUnconfirmed, acceptSession, signOut]);
+  return <CustomerSessionContext.Provider value={value}>
+    {restoring && <main key="restore-status" role="status" aria-live="polite" style={{ padding: '2rem', minHeight: '60vh' }}>
+          Checking your secure Luqi sign-in… No AI request is being sent.
+        </main>}
+    {(!restoring || active !== null) && <div key="customer-tools" hidden={restoring}
+      style={restoring ? undefined : { display: 'contents' }}>
+          {signOutUnconfirmed && <p role="alert" style={{ padding: '1rem', border: '1px solid #946c36' }}>
+            This device has cleared its account view, but server sign-out could not be verified.
+            Do not assume the previous session was revoked. Contact verified Luqi support if you suspect unauthorised access.
+          </p>}
+          {children}
+        </div>}
+  </CustomerSessionContext.Provider>;
 }
 
 export function useCustomerSession(): CustomerSessionContextValue {

@@ -20,7 +20,8 @@ for (const route of [login, register]) {
     let calls = 0;
     const result = await requestAccountJson(async (path, init) => {
       calls++; assert.equal(path, route); assert.equal(init.method, 'POST');
-      assert.equal(init.cache, 'no-store'); assert.equal(init.credentials, 'omit');
+      assert.equal(init.cache, 'no-store'); assert.equal(init.credentials, 'same-origin');
+      assert.equal(init.headers['X-Luqi-Session-Intent'], route === login ? 'login' : 'signup');
       assert.equal(init.redirect, 'error'); assert.equal(init.headers.Accept, 'application/json');
       assert.deepEqual(JSON.parse(init.body), credentials);
       return Response.json({ token: 'synthetic' }, { status: route === register ? 201 : 200 });

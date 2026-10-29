@@ -53,7 +53,7 @@ for (const mode of ['signin', 'signup'] as const) {
     expect(screen.getByTestId('location').textContent).toBe('/chat');
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0]).toBe(mode === 'signup' ? '/api/v1/auth/register' : '/api/v1/auth/login');
-    expect(request.mock.calls[0][1]).toMatchObject({ method: 'POST', cache: 'no-store', credentials: 'omit', redirect: 'error' });
+    expect(request.mock.calls[0][1]).toMatchObject({ method: 'POST', cache: 'no-store', credentials: 'same-origin', redirect: 'error' });
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });

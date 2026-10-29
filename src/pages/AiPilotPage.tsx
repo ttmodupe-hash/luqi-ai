@@ -1,3 +1,4 @@
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
@@ -112,14 +113,14 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
 
   // Clear the former identity before paint; never forward its question or consent.
   useLayoutEffect(() => {
-    const token = session?.token ?? null;
-    if (previousToken.current && previousToken.current !== token) {
+    const boundary = customerSessionBoundary(session);
+    if (previousToken.current && previousToken.current !== boundary) {
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
       setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
       setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
     }
-    previousToken.current = token;
-  }, [session?.token]);
+    previousToken.current = boundary;
+  }, [customerSessionBoundary(session)]);
 
   // Switching chats cancels pending work and resets optional sharing.
   // Provider acknowledgement remains scoped to the same signed-in account.
@@ -442,7 +443,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div>}
         <details className="luqi-chat-compose-more">
           <summary>More options: companion, context and writing help</summary>
-          <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
+          <LuqiPromptCoach key={customerSessionBoundary(session)} draft={prompt} disabled={busy || uncertain}
             onApply={value => setPrompt(value)} />
           <label className="luqi-chat-companion-mode">
           <input type="checkbox" checked={companionMode} disabled={busy || uncertain}
@@ -454,7 +455,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <p>Prior chat context is shared only when you enable the visible continuity option. Private notes, account email, browsing and voice are not attached automatically.</p>
           <details className="luqi-chat-companion-personalise">
             <summary>Personalise this reply with one saved private note</summary>
-            <CompanionNotePicker key={session.token} token={session.token} disabled={busy || uncertain}
+            <CompanionNotePicker key={customerSessionBoundary(session)} token={session.token} disabled={busy || uncertain}
               selected={selectedNote} onSelect={note => { setSelectedNote(note); setShareNote(false); }} />
             {selectedNote && <label className="luqi-chat-companion-share">
               <input type="checkbox" checked={shareNote} disabled={busy || uncertain}
@@ -533,7 +534,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             disabled={busy || uncertain} required value={prompt}
             spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
             onChange={event => setPrompt(event.target.value)} />
-          <LuqiPromptCoach key={session.token} draft={prompt} disabled={busy || uncertain}
+          <LuqiPromptCoach key={customerSessionBoundary(session)} draft={prompt} disabled={busy || uncertain}
             onApply={value => { setPrompt(value); setConsent(false); }} />
           <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters.
             {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}

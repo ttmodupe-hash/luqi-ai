@@ -1,3 +1,4 @@
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
 import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
@@ -192,10 +193,11 @@ export default function OmegaTasksPage() {
   }
   // A shared sign-in unlocks this view; clear a former identity before paint.
   useLayoutEffect(() => {
+    const boundary = customerSessionBoundary(session);
     const token = session?.token ?? null;
-    if (token === previousToken.current) return;
+    if (boundary === previousToken.current) return;
     const wasSignedIn = previousToken.current !== null;
-    previousToken.current = token;
+    previousToken.current = boundary;
     if (wasSignedIn) {
       epoch.current++; locked.current = false;
       authenticatedHere.current = false;
@@ -207,7 +209,7 @@ export default function OmegaTasksPage() {
     if (!token) return;
     if (authenticatedHere.current) { authenticatedHere.current = false; return; }
     void run(current => refresh(token, current));
-  }, [session?.token]);
+  }, [customerSessionBoundary(session)]);
 
   function prepareSubmission(draft: OmegaDraft) {
     if (busy || locked.current || uncertain || submission || status?.intake !== "configured" ||
