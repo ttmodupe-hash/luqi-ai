@@ -11,8 +11,8 @@ const password = 'Synthetic-Unique-Password-2026!';
 const email = 'new-user@example.invalid';
 const session = { token: 'synthetic-session', user: { email } };
 const reply = (body: unknown, status = 201) => Response.json(body, { status });
-beforeEach(() => { request.mockReset(); accepted.mockReset(); vi.stubGlobal('fetch', request); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+beforeEach(() => { request.mockReset(); accepted.mockReset(); vi.stubGlobal('fetch', request); vi.stubEnv('VITE_LUQI_CUSTOMER_RESUME_UI_APPROVED', 'true'); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 function setup() {
   render(<AccountAccessForm initialMode="signup" onAuthenticated={accepted} />);
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } });
@@ -190,4 +190,12 @@ it('requires an unchecked explicit private-device choice before requesting persi
   fireEvent.click(screen.getByRole('button', { name: 'Sign in', exact: true }));
   await waitFor(() => expect(accepted).toHaveBeenCalledOnce());
   expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ email, password, rememberMe: true });
+});
+
+it('does not misrepresent remember-device availability before approved activation', () => {
+  vi.stubEnv('VITE_LUQI_CUSTOMER_RESUME_UI_APPROVED', 'false');
+  render(<AccountAccessForm onAuthenticated={accepted} />);
+  expect(screen.queryByRole('checkbox', { name: 'Keep me signed in on this private device' })).toBeNull();
+  expect(screen.getByText(/Secure remember-device sign-in is still being tested/)).toBeTruthy();
+  expect(request).not.toHaveBeenCalled();
 });

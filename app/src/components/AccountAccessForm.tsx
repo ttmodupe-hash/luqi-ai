@@ -88,9 +88,11 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         <PasswordField label="Confirm password" value={confirmation} onChange={setConfirmation}
           autoComplete="new-password" disabled={busy} describedBy="account-password-help" />
       </>}
-      <label className="block"><input type="checkbox" checked={rememberMe} disabled={busy}
-        onChange={event => setRememberMe(event.target.checked)} /> Keep me signed in on this private device</label>
-      <p className="luqi-access-help">Available after secure restoration is enabled. Up to 24 hours, with sign-in required after 12 hours without a session refresh. Leave this off on shared devices.</p>
+      {import.meta.env.VITE_LUQI_CUSTOMER_RESUME_UI_APPROVED === 'true' ? <>
+        <label className="block"><input type="checkbox" checked={rememberMe} disabled={busy}
+          onChange={event => setRememberMe(event.target.checked)} /> Keep me signed in on this private device</label>
+        <p className="luqi-access-help">Opt in only on your private device. Secure session restoration lasts up to 24 hours, or up to 12 hours without a refresh; the server can revoke access sooner.</p>
+      </> : <p className="luqi-access-help">Secure remember-device sign-in is still being tested. Normal sign-in works now, but reopening or refreshing may require signing in again.</p>}
       <div className="luqi-access-actions">
         <button className="luqi-primary" disabled={busy || ambiguous || cooling}>
           {busy ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}

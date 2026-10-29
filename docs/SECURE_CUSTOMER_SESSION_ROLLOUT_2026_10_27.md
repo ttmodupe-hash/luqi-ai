@@ -69,3 +69,18 @@ Only after the gates are recorded may the existing owner-authorised release adva
 Rollback first disables `LUQI_CUSTOMER_RESUME_ENABLED`. Bound bearer tokens fail closed immediately, restoration is refused and cookies are cleared on the next verified same-origin session request. Ordinary memory-only login remains available. Do not drop tables, reset accounts, change signing secrets, or broaden database/CORS privileges as a rollback shortcut. Retain the table and replay history for investigation/recovery.
 
 Existing accounts, customer information, AI budgets, provider configuration and payment settings must remain unchanged. This feature does not establish paid-launch readiness.
+
+### 29 October 2026 — reconciliation with current main and explicit customer UI gate
+
+Integrated onto current main in PR #356, preserving the public-service release (#353) and
+frontend/PWA recovery (#355). **Production remains disabled**: the required runtime
+`LUQI_CUSTOMER_RESUME_ENABLED` variable and separate build-time
+`VITE_LUQI_CUSTOMER_RESUME_UI_APPROVED` flag must both be explicitly reviewed
+and enabled in the rollout. Ordinary production builds hide the opt-in
+checkbox rather than implying it works while the server feature is off.
+The isolated real-MySQL HTTPS browser fixture builds with the UI test flag
+only and activates the reviewed backend against disposable MySQL; this does
+not give production access. Continue to require current production-derived
+isolated recovery and physical installed-device acceptance before turning on
+any customer session persistence. None of the old 24h memory-only sessions
+or P2P/payment/provider budgets are altered by the disabled code.
