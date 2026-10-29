@@ -113,8 +113,28 @@ self.addEventListener('fetch', event => {
   const kind = assetKind(url.pathname);
   if (!kind) return;
   const network = fetch(request);
-  // Cache failures are isolated from the successful network response, and the
-  // browser keeps this maintenance alive instead of dropping a detached write.
-  event.waitUntil(network.then(response => store(request, response, kind)).catch(() => {}));
-  event.respondWith(network.catch(() => cached(request, kind)));
+  // When a new deployment removes an old hashed chunk, a tab that already
+  // downloaded that EXACT public JS/CSS file may still need its former import.
+  // Use only the pre-validated same-URL, same-type cached 200 response; never
+  // guess a substitute filename, cache a denial or fall back to the app shell.
+  // Keep the existing v2 namespace: rotating it would discard those assets.
+  const priorChunk = (kind === 'js' || kind === 'css') &&
+    /^\/assets\/[A-Za-z0-9_-]+-[A-Za-z0-9_-]+\.(js|css)$/.test(url.pathname);
+  const removedChunk = response => priorChunk && !response.redirected &&
+    (response.status === 404 || response.status === 410);
+  // Do not delete an exact, previously verified public asset merely because
+  // its origin now returns 404/410. For any other response, retain the
+  // existing cache privacy/size/revalidation rules and no automatic retries.
+  event.waitUntil(network.then(response =>
+    removedChunk(response) ? undefined : store(request, response, kind)
+  ).catch(() => {}));
+  event.respondWith(network.then(async response => {
+    if (removedChunk(response)) {
+      try {
+        const old = await (await caches.open(CACHE_NAME)).match(request);
+        if (cacheable(old, kind)) return old;
+      } catch { /* Failed storage is not evidence of a usable old asset. */ }
+    }
+    return response;
+  }).catch(() => cached(request, kind)));
 });

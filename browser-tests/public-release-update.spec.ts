@@ -34,3 +34,24 @@ test('unchanged live HTML does not create an update banner',async({page})=>{
  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await expect(page.getByRole('status',{name:'Luqi app update available'})).toHaveCount(0);
 });
+
+test('uncached retired Spatial Vision chunk gives an explicit recovery path, never automatic reload', async ({ page }) => {
+ const writes:string[]=[];page.on('request',request=>{if(request.method()==='POST')writes.push(request.url());});
+ let retiredAttempts=0;
+ await page.route('**/assets/KhoroSpatialVisionLab-*.js',route=>{
+  retiredAttempts++;
+  return route.fulfill({status:404,contentType:'text/plain',body:'Not Found'});
+ });
+ await page.goto('/#/start');
+ await expect(page.getByRole('heading',{name:'A useful place to begin.'})).toBeVisible();
+ await page.evaluate(()=>{window.location.hash='/spatial-vision';});
+ await expect(page.getByRole('heading',{name:'This page could not load'})).toBeVisible();
+ await expect(page.getByRole('alert')).toContainText('Copy important drafts first');
+ await expect(page.getByRole('button',{name:'Reload page'})).toBeVisible();
+ expect(retiredAttempts).toBeGreaterThan(0);
+ expect(writes).toEqual([]); // No AI, account or payment POST can be retried by the boundary.
+ await page.unroute('**/assets/KhoroSpatialVisionLab-*.js');
+ await page.getByRole('button',{name:'Reload page'}).click();
+ await expect(page.getByRole('heading',{name:/Spatial Vision & 3D Lab/})).toBeVisible();
+ expect(writes).toEqual([]);
+});
