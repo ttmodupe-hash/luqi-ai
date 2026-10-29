@@ -121,3 +121,15 @@ it('routes procurement questions to a real local human-controlled tender desk',(
  expect(r?.detail).toMatch(/does not access CSD accounts/);
  expect(guideLuqiNeed('Find government jobs in Gauteng')?.kind).toBe('opportunity');
 });
+
+
+it('routes local government and township enterprise questions to free first-party help instead of paid inference',()=>{
+ const muni=guideLuqiNeed('Help with municipal electricity and rates')!;
+ expect(muni.kind).toBe('municipal');expect(muni.primaryPath).toBe('/municipalities');
+ expect(muni.detail).toMatch(/does not report faults/);
+ const township=guideLuqiNeed('I need funding for my spaza shop in a township')!;
+ expect(township.kind).toBe('township');expect(township.primaryPath).toBe('/township-economy');
+ expect(township.caution).toMatch(/repayment|repayable|Loan/i);
+ expect(guideLuqiNeed('Where can I find the DPSA vacancy circular?')?.kind).toBe('opportunity');
+ expect(guideLuqiNeed('What are the entrance exams for CCNA?')?.kind).toBe('study');
+});
