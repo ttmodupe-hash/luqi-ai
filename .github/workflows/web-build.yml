@@ -66,6 +66,10 @@ jobs:
         run: npx vitest run tests/municipal-economy.test.ts tests/township-economy.test.ts tests/municipal-services-page.test.tsx tests/township-economy-page.test.tsx
       - name: Strictly type-check municipal and township pages, sources and Chat routing
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/municipal-economy.ts src/lib/township-economy.ts src/pages/MunicipalServicesPage.tsx src/pages/TownshipEconomyPage.tsx src/lib/luqi-intent-guide.ts src/pages/AiPilotPage.tsx
+      - name: Verify official immigration sources, visa decisions fail closed and private on-device guide
+        run: npx vitest run tests/visa-entry-sources.test.ts tests/visa-entry-page.test.tsx
+      - name: Type-check visa evidence contracts and customer guide
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/visa-entry-sources.ts src/pages/VisaEntryGuidePage.tsx src/lib/luqi-intent-guide.ts src/pages/AiPilotPage.tsx
       - name: Verify offline AI cost review does not certify bills
         run: node --test tests/provider-cost-review.test.mjs
       - name: Verify retired static authentication entrypoints

@@ -143,3 +143,12 @@ it('routes local government and township enterprise questions to free first-part
  expect(guideLuqiNeed('Where can I find the DPSA vacancy circular?')?.kind).toBe('opportunity');
  expect(guideLuqiNeed('Help me study for my CCNA exam')?.kind).toBe('study');
 });
+
+it('routes visa requirements to the official guide without mistaking card payments for immigration',()=>{
+ const visa=guideLuqiNeed('Does a South African passport need a visa to Egypt?')!;
+ expect(visa.kind).toBe('visa');
+ expect(visa.primaryPath).toBe('/visa-entry');
+ expect(visa.caution).toMatch(/passport numbers or biometrics/);
+ expect(guideLuqiNeed('I am visiting a hotel in Nairobi and need a visa')?.kind).toBe('visa');
+ expect(guideLuqiNeed('Pay my booking by Visa card')?.kind).not.toBe('visa');
+});
