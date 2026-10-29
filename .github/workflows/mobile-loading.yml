@@ -44,15 +44,15 @@ jobs:
             // Preserve every existing route. The packaged app additionally gains
             // the already-public, provider-free consumer-rights page, reviewed
             // comparative evidence source guide and
-            // reviewed Chat, Ask, Login and merchant-hosted payment-availability
+            // reviewed municipal services, township enterprise guides, Chat, Ask, Login and payment-availability
             // entries. The reviewed Luqi PWA install and download-alias routes
             // are also allowed. Guest /try has a separate server-enforced monthly allowance. Gated P2P routes and the packaged private admin
             // entry, consented visual tutor and lazy Spatial Vision Lab are reviewed additions; every older
             // route and iframe stays required.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/driver-rights', '/install', '/login', '/opportunities', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/tenders', '/try', '/visual-tutor']
-              : ['/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/download', '/driver-rights', '/install', '/login', '/opportunities', '/p2p', '/payments', '/rights-guide', '/spatial-vision', '/study-desk', '/tenders', '/try', '/visual-tutor'];
+              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/driver-rights', '/install', '/login', '/municipal-services', '/municipalities', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visual-tutor']
+              : ['/ask', '/business-desk', '/chat', '/circles', '/comparative-evidence', '/download', '/driver-rights', '/install', '/login', '/municipal-services', '/municipalities', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),

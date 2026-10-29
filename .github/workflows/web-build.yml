@@ -62,6 +62,10 @@ jobs:
         run: npx vitest run tests/social-support-sources.test.ts tests/social-support-page.test.tsx
       - name: Strictly type-check SASSA and UIF sources, routes and Chat intent guidance
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/social-support-sources.ts src/pages/SocialSupportPage.tsx src/lib/luqi-intent-guide.ts src/pages/AiPilotPage.tsx
+      - name: Verify municipality directory, official business programmes and private local planners
+        run: npx vitest run tests/municipal-economy.test.ts tests/township-economy.test.ts tests/municipal-services-page.test.tsx tests/township-economy-page.test.tsx
+      - name: Strictly type-check municipal and township pages, sources and Chat routing
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/municipal-economy.ts src/lib/township-economy.ts src/pages/MunicipalServicesPage.tsx src/pages/TownshipEconomyPage.tsx src/lib/luqi-intent-guide.ts src/pages/AiPilotPage.tsx
       - name: Verify offline AI cost review does not certify bills
         run: node --test tests/provider-cost-review.test.mjs
       - name: Verify retired static authentication entrypoints
