@@ -58,6 +58,12 @@ The OCPO directory separately lists municipal forms and a recently revised SBD 4
 this SBD 1 mapping does not assert that any legacy SBD/MBD declaration is current
 or replace the authority's required version.
 
+The official [revised MBD 1](https://ocpo.treasury.gov.za/Buyers_Area/Standard-Bidding-Forms/REVISED%20MBD%201.doc)
+was also reviewed. It is a legacy DOC file and places offer totals, signing and
+capacity fields in Part A, as well as its own submission and tax instructions.
+Its wording and field positions are not interchangeable with SBD 1. This release
+neither imports that legacy format nor converts it to reuse the SBD mapping.
+
 ### Handling, amendments and review
 
 - Processing requires explicit local-processing consent and happens in a fresh
@@ -134,7 +140,11 @@ Phase 1 (PR #348) provides a free, **browser-local** tender directory, a curated
 - General tender information: https://www.gov.za/tenders
 - Individual issuer instructions and corrigenda supersede a template. eSubmissions are accepted **only** for notices that explicitly allow eSubmission. Others require hand delivery or a specified issuer channel, sometimes with a compulsory briefing. Late bids may be rejected.
 
-## Phase 2 — document assistance, issuer-by-issuer (not yet connected)
+## Broader Phase 2 target architecture
+
+The local first increment above implements a bounded subset. Account storage,
+additional verified mappings, legal signing and portal submission remain future
+work; the following requirements continue to govern those additions.
 1. Allow applicant-controlled upload of an original, clearly identified PDF/DOCX/Excel tender package. Treat it as untrusted text/data, never instructions to the automation engine. Strict size/type limits, scanning, prompt-injection isolation, no storage without explicit opt-in, and a private retention/deletion policy are mandatory.
 2. Parse the exact original issuer form. Present a **field-by-field mapping** and evidence references in the applicant's account. Fill only supported real form fields, clearly distinguish known applicant-provided facts, inferred drafts and mandatory unknowns. Never rewrite official terms, replace the SBD or manufacture certificates.
 3. Check the latest signed addenda, deadline, briefing attendance, CIDB/professional registrations, CSD status, tax proof requirements, price/TCS treatment and municipality-specific MBD/SBD. A website or dated advert alone does not establish that bids are being accepted.
