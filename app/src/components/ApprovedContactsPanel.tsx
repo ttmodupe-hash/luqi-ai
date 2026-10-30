@@ -20,8 +20,9 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
     let current = true, pending = false, verified = false, epoch = 0;
     setContacts([]); setCheckedAt(0); setState('checking');
     const api = p2pClient(session.token);
+    const visible = () => document.visibilityState !== 'hidden';
     const refresh = async () => {
-      if (!current || pending || document.visibilityState === 'hidden') return;
+      if (!current || pending || !visible()) return;
       if (!navigator.onLine) { setContacts([]); setState('unavailable'); return; }
       pending = true; const version = epoch;
       try {
@@ -31,7 +32,7 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
           setEligible(status.eligibility !== 'verification_needed'); verified = true;
         }
         const result = await api.contacts();
-        if (current && version === epoch && navigator.onLine && document.visibilityState !== 'hidden') { setContacts(result.contacts); setState('ready'); setCheckedAt(Date.now()); setNow(Date.now()); }
+        if (current && version === epoch && navigator.onLine && visible()) { setContacts(result.contacts); setState('ready'); setCheckedAt(Date.now()); setNow(Date.now()); }
       } catch {
         if (current) { setContacts([]); setState('unavailable'); }
       } finally { pending = false; }
