@@ -20,9 +20,9 @@ test('discovery, native modal focus and calm mode work across Luqi on a narrow p
   await page.reload();
   await expect(page.getByRole('button', { name: 'Calm mode on' })).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await discovery.screenshot({ path: testInfo.outputPath('lively-workspace-320.png'), animations: 'disabled' });
+  await discovery.screenshot({ path: testInfo.outputPath('lively-workspace-320.png'), animations: 'disabled', style: '.luqi-header,.luqi-skip,.luqi-collaboration-dock{visibility:hidden!important}' });
   await page.setViewportSize({ width: 1440, height: 1050 });
-  await discovery.screenshot({ path: testInfo.outputPath('lively-workspace-desktop.png'), animations: 'disabled' });
+  await discovery.screenshot({ path: testInfo.outputPath('lively-workspace-desktop.png'), animations: 'disabled', style: '.luqi-header,.luqi-skip,.luqi-collaboration-dock{visibility:hidden!important}' });
   await discovery.getByRole('button', { name: 'Find support' }).click();
   await discovery.getByRole('link', { name: /SASSA & UIF Support/ }).click();
   await expect(page).toHaveURL(/#\/social-support$/);
