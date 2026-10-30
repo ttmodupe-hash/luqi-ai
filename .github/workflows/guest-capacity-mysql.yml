@@ -1,0 +1,33 @@
+name: Luqi Guest Capacity MySQL
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guest-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: disposable-guest-fixture
+          MYSQL_DATABASE: luqi_guest_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pdisposable-guest-fixture"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_GUEST_MYSQL_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:disposable-guest-fixture@127.0.0.1:3306/luqi_guest_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - run: npx vitest run tests/guest-trial-mysql.integration.test.ts --no-file-parallelism

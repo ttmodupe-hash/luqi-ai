@@ -10,7 +10,7 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { PILOT_MODELS } from './services/pilotModels';
 import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { readGeminiText, PilotOutputError } from './services/pilotOutput';
-import { reserveGuestAttempt, guestTrialEnabled, guestTrialSnapshot, GuestTrialError } from './services/guestTrialBudget';
+import { reserveGuestAttempt, guestTrialEnabled, guestTrialSnapshot, GuestTrialError, guestCapacity, guestNetworkId } from './services/guestTrialBudget';
 
 const GUEST_COOKIE = 'luqi_guest_trial_v1';
 const MAX_GUEST_INPUT = 800;
@@ -21,17 +21,28 @@ const guestBody = z.object({
   }).strict()).max(2).optional(),
 }).strict();
 
-export function signGuestIdentifier(id: string, secret: string): string {
+export function signGuestIdentifier(id: string, secret: string, now = new Date()): string {
   if (!/^[a-f0-9]{32}$/.test(id) || secret.length < 32) throw new GuestTrialError('GUEST_TRIAL_UNAVAILABLE');
-  const signature = createHmac('sha256', secret).update('luqi-guest-cookie-v1|' + id).digest('hex');
-  return id + '.' + signature;
+  const expiry = Math.floor(now.getTime() / 1000) + 2592000;
+  const payload = id + '.' + expiry;
+  return payload + '.' + createHmac('sha256', secret).update('luqi-guest-cookie-v2|' + payload).digest('hex');
 }
-export function validateGuestCookie(value: string | undefined, secret: string): string | null {
-  if (!secret || secret.length < 32 || !/^[a-f0-9]{32}\.[a-f0-9]{64}$/.test(value ?? '')) return null;
-  const [id, signature] = value!.split('.');
-  const expected = signGuestIdentifier(id, secret).slice(33);
-  if (!timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) return null;
-  return id;
+export function validateGuestCookie(value: string | undefined, secret: string, now = new Date()): string | null {
+  if (secret.length < 32) return null;
+  // Preserve the already-issued pilot identity during migration; expanded mode
+  // accepts only expiring v2 cookies. A normal GET upgrades the same identity.
+  if (/^[a-f0-9]{32}\.[a-f0-9]{64}$/.test(value ?? '')) {
+    if (guestCapacity().expanded) return null;
+    const [id, signature] = value!.split('.');
+    const expected = createHmac('sha256', secret).update('luqi-guest-cookie-v1|' + id).digest('hex');
+    return timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex')) ? id : null;
+  }
+  if (!/^[a-f0-9]{32}\.\d{10}\.[a-f0-9]{64}$/.test(value ?? '')) return null;
+  const [id, expires, signature] = value!.split('.');
+  const expiry = Number(expires), seconds = Math.floor(now.getTime() / 1000);
+  if (expiry <= seconds || expiry > seconds + 2592000) return null;
+  const expected = createHmac('sha256', secret).update('luqi-guest-cookie-v2|' + id + '.' + expires).digest('hex');
+  return timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex')) ? id : null;
 }
 export function guestCounterId(id: string, secret: string): number {
   if (!/^[a-f0-9]{32}$/.test(id) || secret.length < 32) throw new GuestTrialError('GUEST_TRIAL_UNAVAILABLE');
@@ -58,7 +69,7 @@ export function permittedGuestOrigin(source: string | undefined, target: string)
   try {
     const a = new URL(source), b = new URL(target);
     if (a.username || a.password || a.search || a.hash || a.pathname !== '/') return false;
-    if (a.hostname !== b.hostname) return false;
+    if (a.hostname !== b.hostname || a.port !== b.port) return false;
     if (a.protocol === 'https:') return true;
     return process.env.NODE_ENV !== 'production' && a.protocol === 'http:' &&
       ['localhost', '127.0.0.1'].includes(a.hostname);
@@ -87,6 +98,8 @@ guestTrial.get('/', async c => {
   if (!id) {
     id = randomBytes(16).toString('hex');
     c.header('Set-Cookie', guestCookie(id, secret));
+  } else if (cookieValue(c.req.header('cookie'))?.split('.').length === 2) {
+    c.header('Set-Cookie', guestCookie(id, secret));
   }
   const status = await guestTrialSnapshot(guestCounterId(id, secret));
   return c.json(status);
@@ -109,9 +122,19 @@ guestTrial.post('/', async c => {
   try { input = buildPilotInput(prompt, 'auto', history); }
   catch (e) { return c.json({ code: e instanceof PilotInputError ? e.code : 'INVALID_INPUT' }, 400); }
   try {
-    await reserveGuestAttempt(guestCounterId(id, secret));
+    const capacity = guestCapacity();
+    await reserveGuestAttempt(guestCounterId(id, secret), new Date(),
+      capacity.expanded ? guestNetworkId(c.req.header('x-real-ip'), secret) : undefined);
     // No OpenAI fallback, no auto-retry, no tools, no implicit provider calls.
     const model = new GoogleGenAI({ apiKey: process.env.LUQI_PILOT_GEMINI_API_KEY! });
+    if (capacity.expanded) {
+      // Count complete system + user context; never infer tokens from English characters.
+      const tokens = await model.models.countTokens({ model: PILOT_MODELS.gemini, contents: input,
+        config: { systemInstruction: GUEST_POLICY,
+          httpOptions: { timeout: 5000, retryOptions: { attempts: 1 } } } });
+      if (!Number.isSafeInteger(tokens.totalTokens) || tokens.totalTokens! < 1 || tokens.totalTokens! > 4096)
+        throw new GuestTrialError('GUEST_TRIAL_UNAVAILABLE');
+    }
     const output = await model.models.generateContent({
       model: PILOT_MODELS.gemini, contents: input,
       config: { systemInstruction: GUEST_POLICY, maxOutputTokens: 512,
@@ -124,7 +147,8 @@ guestTrial.post('/', async c => {
       provider_model: PILOT_MODELS.gemini, response: text, remaining: status.remaining });
   } catch (error) {
     if (error instanceof GuestTrialError) {
-      const isLimit = error.code === 'GUEST_TRIAL_COMPLETE' || error.code === 'GUEST_TRIAL_PAUSED';
+      const isLimit = error.code === 'GUEST_TRIAL_COMPLETE' || error.code === 'GUEST_TRIAL_PAUSED' || error.code === 'GUEST_RATE_LIMITED';
+      if (error.code === 'GUEST_RATE_LIMITED') c.header('Retry-After', String(error.retryAfter));
       return c.json({ status: 'unavailable', code: error.code }, isLimit ? 429 : 503);
     }
     if (error instanceof PilotOutputError)
