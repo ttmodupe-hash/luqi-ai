@@ -96,7 +96,9 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   ).toBe(true);
   await page.screenshot({
     path: test.info().outputPath("search.png"),
+    // Preserve the entire long homepage without exceeding WebKit’s pixel limit on a 3x iPhone.
     fullPage: true,
+    scale: "css",
   });
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
