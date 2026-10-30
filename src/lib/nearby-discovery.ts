@@ -14,7 +14,7 @@ export function mapDiscoveryLink(provider:MapProvider,category:NearbyCategory,lo
  const query=encodeURIComponent([item.query,place,name,'South Africa'].filter(Boolean).join(', '));
  if(provider==='google')return 'https://www.google.com/maps/search/?api=1&query='+query;
  if(provider==='apple')return 'https://maps.apple.com/?q='+query;
- if(provider==='osm')return 'https://www.openstreetmap.org/search?query='+query;
+ if(provider==='osm')return 'https://www.openstreetmap.org/search?query='+encodeURIComponent([place,name,'South Africa'].filter(Boolean).join(', '));
  return null;
 }
 export function provincePath(path:'/opportunities'|'/municipalities'|'/local-pulse',province:ProvinceCode|null){return path+(province?'?province='+province:'');}

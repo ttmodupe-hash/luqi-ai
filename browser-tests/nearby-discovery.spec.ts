@@ -8,7 +8,7 @@ test('Near me carries a province into existing guidance and prepares external se
  await expect(page.getByRole('heading',{name:'City of Tshwane Metropolitan Municipality'})).toBeVisible();
  await page.getByLabel('Map search locality').fill('Mabopane');
  await page.getByLabel('Map provider').selectOption('osm');
- await expect(page.getByRole('link',{name:'Open search in OpenStreetMap'})).toHaveAttribute('href','https://www.openstreetmap.org/search?query=businesses%2C%20Mabopane%2C%20Gauteng%2C%20South%20Africa');
+ await expect(page.getByRole('link',{name:'Open search in OpenStreetMap'})).toHaveAttribute('href','https://www.openstreetmap.org/search?query=Mabopane%2C%20Gauteng%2C%20South%20Africa');
  expect(outgoing).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
  const guides=page.getByRole('region',{name:'Local Luqi guides'});
  await guides.getByRole('link',{name:/Municipal services/}).click();await expect(page.getByLabel('Municipality province')).toHaveValue('GP');

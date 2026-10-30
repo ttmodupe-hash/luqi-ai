@@ -39,6 +39,7 @@ it('rejects arbitrary providers, unknown provinces and unbounded/control-charact
  expect(parseProvince('GP')).toBe('GP');for(const p of ['ZA','gps','<script>',null])expect(parseProvince(p)).toBeNull();
  for(const text of ['', 'x'.repeat(81),'town\n<script>'])expect(mapDiscoveryLink('google','business',text,'GP')).toBeNull();
  expect(mapDiscoveryLink('javascript' as never,'business','Pretoria','GP')).toBeNull();
+ expect(mapDiscoveryLink('osm','business','Mabopane','GP')).toBe('https://www.openstreetmap.org/search?query=Mabopane%2C%20Gauteng%2C%20South%20Africa');
  expect(mapDiscoveryLink('apple','tourism','Pretoria & Hatfield','GP')).toContain('https://maps.apple.com/?q=');
 });
 it.each([[MunicipalServicesPage,'/municipalities?province=GP','Municipality province','GP'],[LocalPulsePage,'/local-pulse?province=LP','Local Pulse region','other']] as const)('honours a validated province in guide links', (Page,path,label,value)=>{
