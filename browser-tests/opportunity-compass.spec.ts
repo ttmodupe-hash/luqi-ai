@@ -176,4 +176,6 @@ test('geographic province explorer works by shape, keyboard and touch-sized name
  await page.setViewportSize({width:1440,height:1050});
  await explorer.getByRole('button',{name:'Select Gauteng'}).click();
  await explorer.screenshot({path:testInfo.outputPath('province-map-desktop.png'),style:screenshotStyle});
+ await explorer.getByRole('button',{name:'View reviewed notices'}).click();
+ await expect(board.getByRole('heading',{name:'Real public-sector posts, internships and learnerships'})).toBeInViewport();
 });

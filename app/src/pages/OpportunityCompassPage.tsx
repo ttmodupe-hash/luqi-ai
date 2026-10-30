@@ -69,7 +69,7 @@ export default function OpportunityCompassPage(){
    </section>
    {country==='ZA'&&<>
      <SouthAfricaProvinceMap value={province} onSelect={setProvince} counts={provinceCounts}/>
-     <div id="province-job-board" className="scroll-mt-6"><VerifiedGovernmentJobsPanel province={province}/></div>
+     <div id="province-job-board" className="scroll-mt-28"><VerifiedGovernmentJobsPanel province={province}/></div>
      <section className="space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-label="Find official opportunity sources">
        <h2 className="text-xl font-semibold">Find a trusted starting point</h2>
        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
