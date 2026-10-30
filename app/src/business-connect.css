@@ -17,4 +17,10 @@
 /* Keep label text in normal inline flow. WebKit can size an anonymous text
    child of a column-flex label to its unwrapped width despite min-inline-size. */
 .business-connect select{appearance:none;-webkit-appearance:none;padding-right:36px;background-image:linear-gradient(45deg,transparent 50%,#99f6e4 50%),linear-gradient(135deg,#99f6e4 50%,transparent 50%);background-position:calc(100% - 19px) 50%,calc(100% - 14px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+/* Contain WebKit's collapsed native-select painting. The native option picker
+   remains available, and long selected municipality names are repeated below. */
+.business-connect label:has(>select){overflow:hidden}
+.business-connect select{overflow:hidden;text-overflow:ellipsis}
+.business-connect select:focus-visible{outline-offset:-3px}
+.business-connect .bc-selected-choice{display:block;margin-top:7px;white-space:normal;overflow-wrap:anywhere;color:#a8bacb;font-size:.82rem;line-height:1.6}
 @media(max-width:640px){.bc-grid{grid-template-columns:1fr}.bc-hour{grid-template-columns:40px minmax(0,1fr);gap:8px;padding:12px 0;border-bottom:1px solid #314457}.bc-hour>.bc-time,.bc-hour>.bc-check:last-child{grid-column:1/-1}.bc-hours-list{grid-template-columns:1fr}.bc-actions>button{flex:1 1 140px}.bc-card .bc-card{padding:14px}.business-connect fieldset{padding:12px}.business-connect{padding:16px}}

@@ -44,6 +44,8 @@ test('Business Connect keeps home-based drafts private at 320px using one existi
   await page.getByLabel('Services and optional prices',{exact:false}).fill('Clothing repairs | R50');
   await page.getByLabel('Township, town or village',{exact:true}).fill('Mabopane');
   await page.getByLabel('How you trade',{exact:true}).selectOption('home_based');
+  await page.getByLabel('Business municipality',{exact:true}).selectOption('City of Tshwane Metropolitan Municipality');
+  await expect(page.locator('.bc-selected-choice')).toHaveText('City of Tshwane Metropolitan Municipality');
   await page.getByLabel('Public service area',{exact:true}).fill('Mabopane and Soshanguve');
   await expect(page.getByLabel('Optional public latitude')).toHaveCount(0);await expect(page.locator('input[type=file]')).toHaveCount(0);
   await expect(page.getByLabel('I approve public display',{exact:false})).not.toBeChecked();
