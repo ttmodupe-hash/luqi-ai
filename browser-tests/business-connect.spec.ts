@@ -51,7 +51,7 @@ test('Business Connect keeps home-based drafts private at 320px using one existi
   const layout=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth,
     overflow:[...document.querySelectorAll('body *')].map(el=>{
       const r=el.getBoundingClientRect(),s=getComputedStyle(el);
-      return {tag:el.tagName,class:el.getAttribute('class'),label:el.getAttribute('aria-label'),right:r.right,width:r.width,
+      return {tag:el.tagName,class:el.getAttribute('class'),label:el.getAttribute('aria-label'),text:el.tagName==='LABEL'?el.textContent?.slice(0,140):undefined,right:r.right,width:r.width,
         scroll:el.scrollWidth,client:el.clientWidth,display:s.display,visibility:s.visibility,whiteSpace:s.whiteSpace,minInlineSize:s.minInlineSize};
     }).filter(el=>el.width>0&&el.visibility!=='hidden'&&(el.right>innerWidth+1||el.scroll>el.client+1)).slice(-20)}));
   expect(layout.width,JSON.stringify({...layout,beforeEditor})).toBeLessThanOrEqual(layout.viewport+1);
