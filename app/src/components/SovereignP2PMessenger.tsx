@@ -1,5 +1,5 @@
 import { useEffect,useRef,useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { useCustomerSession } from '../providers/customer-session';
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
@@ -31,6 +31,10 @@ export default function SovereignP2PMessenger() {
 function PresetList(){return <ul className="p2p-presets">{P2P_PRESETS.map(x=><li key={x.code}><strong>{x.name}</strong><code>{x.code}</code><span>Public topic label · private invitation required</span></li>)}</ul>}
 function Messenger({session}:{session:AccountSession}){
   const api=p2pClient(session.token);
+  const [params]=useSearchParams();
+  const requestedCircle=p2pId.safeParse(params.get("circle"));
+  const requested=requestedCircle.success?requestedCircle.data:null;
+  const appliedContact=useRef<string|null>(null);
   const [status,setStatus]=useState<P2PStatus|null>(null),[access,setAccess]=useState<VaultAccess|null>(null);
   const [passphrase,setPassphrase]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
   const [serviceOnline,setServiceOnline]=useState<'checking'|'online'|'offline'>('checking');
@@ -43,6 +47,11 @@ function Messenger({session}:{session:AccountSession}){
   const [reportId,setReportId]=useState(''),[reportReason,setReportReason]=useState('SCAM_SOLICITATION'),[reportConsent,setReportConsent]=useState(false);
   const alive=useRef(true),locked=useRef(false),accessRef=useRef<VaultAccess|null>(null);
   useEffect(()=>{alive.current=true;locked.current=false;return()=>{alive.current=false;locked.current=true;accessRef.current=null}},[]);
+  useEffect(()=>{
+    if(requested&&appliedContact.current!==requested&&status?.circles.some(item=>item.id===requested&&item.active)){
+      setSelected(requested);appliedContact.current=requested;
+    }
+  },[requested,status]);
   const current=status?.circles.find(x=>x.id===selected);
   const local=access?.value.circles.find(x=>x.id===selected);
   const peer=current&&status?(current.ownerId===status.userId?current.peerId:current.ownerId):null;

@@ -1,7 +1,9 @@
-.luqi-collaboration-dock{display:flex;flex-direction:column;align-items:flex-end;gap:12px;width:100%;max-width:1160px;margin:0 auto;padding:16px 24px;color:#e8f0ff;font-family:inherit;min-width:0}
-.luqi-collaboration-trigger{display:flex;align-items:center;gap:9px;min-height:48px;padding:10px 16px;border:1px solid #6389ba;border-radius:28px;background:#143b69;color:#f2f7ff;box-shadow:none;font:inherit;font-size:.85rem;font-weight:650;cursor:pointer}
+.luqi-tool-content{min-width:0}
+.luqi-collaboration-dock{display:flex;flex-direction:column;align-items:stretch;width:calc(100% - 32px);max-width:380px;margin:16px 16px 24px auto;padding:0;border:1px solid #35536c;border-radius:14px;background:#0d1e30;color:#e8f0ff;font-family:inherit;min-width:0;overflow:hidden}
+.luqi-collaboration-trigger{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:14px 16px;border:0;border-bottom:1px solid #2c465c;background:#13293b;color:#edf7ff;font:inherit;font-size:14px;font-weight:650;text-align:left;cursor:pointer}
+.luqi-collaboration-trigger>svg:last-child{margin-left:auto}
 .luqi-collaboration-trigger:focus-visible,.luqi-collaboration-panel button:focus-visible,.luqi-collaboration-panel a:focus-visible,.luqi-collaboration-panel input:focus-visible{outline:3px solid #94bfff;outline-offset:3px}
-.luqi-collaboration-panel{width:min(380px,100%);min-width:0;padding:18px;border:1px solid #52759e;border-radius:18px;background:#0b1b31;color:#e8f0ff;overflow-wrap:anywhere}
+.luqi-collaboration-panel{width:100%;min-width:0;padding:0 16px 12px;overflow-wrap:anywhere}
 .luqi-collaboration-panel header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .luqi-collaboration-panel h2{font:inherit;font-size:1.15rem;font-weight:700;margin:0}
 .luqi-collaboration-panel button{min-width:44px;min-height:44px;border:1px solid #4e7096;background:#162e4c;color:inherit;border-radius:10px;cursor:pointer}
@@ -15,8 +17,28 @@
 .luqi-approved-contacts .luqi-collaboration-privacy{font-size:.75rem;color:#b2c3da}
 .luqi-collaboration-session{color:#c7defb}
 .luqi-collaboration-short-label{display:none}
-@media(max-width:650px){
- .luqi-collaboration-dock{padding:12px 16px}
- .luqi-collaboration-panel{width:100%;padding:16px}
+.luqi-contact-person{display:flex;align-items:center;gap:10px;min-height:62px}
+.luqi-approved-contacts .luqi-contact-person>div{min-width:0;flex:1}
+.luqi-approved-contacts .luqi-contact-person a{padding:4px 0;min-height:0;font-size:13px;font-weight:600;text-decoration:none}
+.luqi-contact-person small{display:block;color:#a1b9c9;font-size:11px;padding-top:3px}
+.luqi-approved-contacts .luqi-contact-avatar{position:relative;display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:#27455d;color:#d7e9f7;font-size:14px;font-weight:650}
+.luqi-contact-avatar i{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2px solid #0d1e30;background:#94a3b8}
+.luqi-contact-avatar.is-online i{background:#4ade80}.luqi-contact-avatar.is-offline i{background:#f87171}
+.luqi-approved-contacts ul{max-height:260px;overflow:auto;overscroll-behavior:contain}
+.luqi-approved-contacts .luqi-contacts-count{font-size:12px;font-weight:650;color:#c6dfec;margin:14px 0 6px}
+.luqi-approved-contacts .luqi-presence-consent{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:#c2d7e3;cursor:pointer}
+.luqi-approved-contacts .luqi-presence-consent input{display:inline;flex:none;width:17px;min-height:17px;height:17px;margin:0;accent-color:#73d8ad}
+.luqi-approved-contacts .luqi-collaboration-privacy{font-size:10px;line-height:1.65;color:#91aaba}
+.luqi-approved-contacts .luqi-contact-search{font-size:11px;color:#abc4d4}.luqi-contact-search input{font-size:12px}
+@media(min-width:1280px){
+ .luqi-page-content{display:grid;grid-template-columns:minmax(0,1fr) 280px;align-items:start;column-gap:12px}
+ .luqi-page-content>.luqi-playbar{grid-column:1/-1;width:100%}
+ .luqi-tool-content{grid-column:1;grid-row:2}
+ .luqi-collaboration-dock{grid-column:2;grid-row:2;position:sticky;top:150px;align-self:start;margin:0 12px 16px 0;width:calc(100% - 12px);height:calc(100dvh - 166px);max-height:calc(100dvh - 166px);justify-content:flex-end;box-shadow:none}
+ .luqi-shell-chat .luqi-collaboration-dock{top:64px;height:calc(100dvh - 80px);max-height:calc(100dvh - 80px)}
 }
-@media(max-width:900px){.luqi-collaboration-dock.on-chat{padding-bottom:calc(88px + env(safe-area-inset-bottom))}}
+@media(max-width:900px){.luqi-collaboration-dock.on-chat{margin-bottom:calc(88px + env(safe-area-inset-bottom))}}
+
+@media(min-width:1280px){.luqi-collaboration-panel{flex:0 1 auto;overflow:auto;min-height:0}.luqi-collaboration-trigger{flex-shrink:0}}
+
+.luqi-approved-contacts .luqi-contacts-refresh{min-height:36px;margin-top:12px;padding:5px 9px;font-size:11px;border:1px solid #385b76;background:#132f44;color:#c2dded;border-radius:7px}

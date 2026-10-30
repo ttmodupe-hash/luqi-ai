@@ -34,3 +34,15 @@ it('rejects forged identity, plaintext fields, missing report consent, query inp
  expect((await app.request('/api/v1/p2p/status?userId=99')).status).toBe(400);
  expect((await post('/messages',{},'text/plain')).status).toBe(400);expect((await post('/messages',{text:'x'.repeat(20000)})).status).toBe(413);expect(spy).not.toHaveBeenCalled();
 });
+
+it('authenticates presence updates and cannot set another account online',async()=>{
+ vi.stubEnv('LUQI_P2P_ENABLED','true');
+ const spy=vi.spyOn(SovereignP2PEngine,'sharePresence').mockResolvedValue({accepted:true,ttlSeconds:75});
+ const input={leaseId:crypto.randomUUID(),sequence:1,active:true};
+ expect((await post('/presence',input)).status).toBe(200);
+ expect(spy).toHaveBeenCalledExactlyOnceWith(7,input);
+ expect((await post('/presence',{...input,userId:8})).status).toBe(400);
+ mock.auth.mockRejectedValue(Error('expired'));
+ expect((await post('/presence',input)).status).toBe(401);
+ expect(spy).toHaveBeenCalledOnce();
+});

@@ -13,6 +13,7 @@ export function p2pClient(token:string, request:typeof fetch=fetch) {
   }
   return { status:()=>call('/status',p2pStatus),
     contacts:()=>call('/contacts',p2pApprovedContacts),
+    presence:(leaseId:string,sequence:number,active:boolean)=>call('/presence',z.object({accepted:z.literal(true),ttlSeconds:z.literal(75)}),{leaseId,sequence,active}),
     create:(body:unknown)=>call('/circles',z.object({circle:p2pCircle}),body),
     join:(id:string,inviteToken:string)=>call('/join',z.object({requested:z.literal(true),circle:p2pCircle}),{id,inviteToken}),
     confirm:(id:string)=>call('/confirm',z.object({circle:p2pCircle}),{id}),

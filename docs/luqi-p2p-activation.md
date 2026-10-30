@@ -16,7 +16,7 @@ Do not switch on P2P until every gate below is independently verified. The exist
 
 ## P1 — real peer presence
 
-Current user presence is deliberately not shared. An active account is not an online human. Use a green/red dot for messaging **service availability only** until a separate opt-in, server-authorised, short-TTL heartbeat exists for mutually approved and unblocked contacts. Never label hidden presence as offline. Child protections, blocking, clear consent and privacy-retention controls apply before building presence.
+30 Oct implementation adds an embedded Contacts rail and opt-in, server-authorised, 75-second foreground presence leases for mutually approved and unblocked contacts. See `docs/CONTACTS_PRESENCE.md` for tests, retention, capacity and single-replica scope. It remains behind the existing P2P activation gate: this code does not provision the production key, schema, grants, verified cohort or moderation coverage, and does not switch the feature on. Never label hidden or missing presence as offline. Complete P0 before claiming real customer presence is active.
 
 ## User-facing promise
 

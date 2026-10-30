@@ -11,6 +11,8 @@ test('approved toddler gravity idea flows from Luqi Chat into a real 30-second l
     const url = new URL(route.request().url());
     if (url.origin !== origin) { requests.push(url.origin); return route.abort(); }
     // A single first-party GET is the visible Luqi connectivity check, not a provider call.
+    // Embedded Contacts checks only its first-party availability after sign-in.
+    if (url.pathname === '/api/v1/p2p/status' && route.request().method() === 'GET') return route.fulfill({ json: { enabled: false, userId: 7, eligibility: 'verification_needed', circles: [], blockedPeers: [] } });
     if (url.pathname === '/v1/health' && route.request().method() === 'GET') {
       return route.fulfill({status:200,json:{status:'ok'}});
     }
