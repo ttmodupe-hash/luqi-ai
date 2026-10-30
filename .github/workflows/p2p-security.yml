@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -42,7 +42,7 @@ jobs:
       LUQI_AI_PROVIDER_ENABLED: 'false'
       LUQI_AI_BILLING_APPROVED: 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -68,7 +68,7 @@ jobs:
       LUQI_AI_PROVIDER_ENABLED: 'false'
       LUQI_AI_BILLING_APPROVED: 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
