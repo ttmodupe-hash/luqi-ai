@@ -41,6 +41,11 @@ export const workspaceTools = [
     status: "Free official sources · no account", ready: true, path: "/opportunities", icon: "business",
   },
   {
+    id: "local-pulse", title: "Local Pulse · Radio & News", category: "South African talk stations and original newsrooms",
+    description: "Discover reviewed official 702, CapeTalk, SAfm, Kaya 959, EWN and SABC destinations, filter by region, and prepare a source-linked Luqi question. No rebroadcast, live headline claim, account or paid AI request.",
+    status: "Free publisher links · no account", ready: true, path: "/local-pulse", icon: "status",
+  },
+  {
     id: "social-support", title: "SASSA & UIF Support", category: "South African social grants and unemployment benefits",
     description: "Free source-linked SASSA grant and UIF claim information. Guides to official applications, status, appeals and contact channels. No private account access, IDs or AI charge.",
     status: "Free official-source guidance · no account", ready: true, path: "/social-support", icon: "status",
