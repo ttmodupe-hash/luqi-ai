@@ -36,6 +36,8 @@ test('spatial lab keeps images local until consent, supports relief and rejects 
   await page.getByLabel('Email', { exact: true }).fill('spatial@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Synthetic-password-2026!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  // Account transitions intentionally clear local photos; complete sign-in before choosing one.
+  await expect(page.getByRole('region', { name: 'Luqi account access' })).toBeHidden();
   await page.getByLabel(/Choose a local JPEG or PNG/).setInputFiles({
     name: 'synthetic-diagram.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(VISUAL_JPEG, 'base64'),
   });

@@ -7,7 +7,7 @@ import '../province-map.css';
 type Props = { value: ProvinceCode | null; onSelect: (value: ProvinceCode | null) => void;
   counts: Record<ProvinceCode, number> };
 const names: Record<ProvinceCode, string[]> = { EC: ['Eastern Cape'], FS: ['Free State'], GP: ['Gauteng'],
-  KZN: ['KwaZulu-Natal'], LP: ['Limpopo'], MP: ['Mpumalanga'], NC: ['Northern', 'Cape'],
+  KZN: ['KwaZulu-', 'Natal'], LP: ['Limpopo'], MP: ['Mpumalanga'], NC: ['Northern', 'Cape'],
   NW: ['North West'], WC: ['Western Cape'] };
 const colours: Record<ProvinceCode, string> = { EC: '#174959', FS: '#205969', GP: '#32777c',
   KZN: '#266674', LP: '#205264', MP: '#1c455a', NC: '#163d50', NW: '#277072', WC: '#24606b' };
@@ -55,7 +55,7 @@ export default function SouthAfricaProvinceMap({ value, onSelect, counts }: Prop
             </path>;
           })}
           <g className="luqi-province-map-labels" aria-hidden="true" pointerEvents="none">
-            {PROVINCE_GEOMETRY.map(region => <g key={region.id} className={value === region.id ? 'is-selected' : ''}>
+            {PROVINCE_GEOMETRY.map(region => <g key={region.id} className={(value === region.id ? 'is-selected' : '') + (region.id === 'GP' ? ' is-gauteng' : '')}>
               {region.id === 'GP' && <path className="luqi-province-leader" d={`M${region.label[0]},${region.label[1]} L${GAUTENG_CALLOUT[0] + 37},${GAUTENG_CALLOUT[1] + 19} L${GAUTENG_CALLOUT[0] - 30},${GAUTENG_CALLOUT[1] + 19}`} />}
               <text className="luqi-province-fullname" x={region.id === 'GP' ? GAUTENG_CALLOUT[0] : region.label[0]}
                 y={region.id === 'GP' ? GAUTENG_CALLOUT[1] + 10 : region.label[1]} textAnchor="middle">

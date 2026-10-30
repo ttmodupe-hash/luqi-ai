@@ -170,8 +170,10 @@ test('geographic province explorer works by shape, keyboard and touch-sized name
  }
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
  expect(posts).toEqual([]);
- await explorer.screenshot({path:testInfo.outputPath('province-map-320.png')});
+ await page.evaluate(()=>{(document.activeElement as HTMLElement)?.blur();});
+ const screenshotStyle='.luqi-header,.luqi-skip,.luqi-collaboration-dock{visibility:hidden !important}';
+ await explorer.screenshot({path:testInfo.outputPath('province-map-320.png'),style:screenshotStyle});
  await page.setViewportSize({width:1440,height:1050});
  await explorer.getByRole('button',{name:'Select Gauteng'}).click();
- await explorer.screenshot({path:testInfo.outputPath('province-map-desktop.png')});
+ await explorer.screenshot({path:testInfo.outputPath('province-map-desktop.png'),style:screenshotStyle});
 });

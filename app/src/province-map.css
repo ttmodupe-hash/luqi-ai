@@ -18,6 +18,7 @@
 .luqi-province-fullname,.luqi-province-shortname{fill:#edf7fa;font-family:inherit;font-size:20px;font-weight:550;letter-spacing:.015em;paint-order:stroke;stroke:#112936;stroke-width:2px;stroke-linejoin:round}
 .luqi-province-shortname{display:none;font-size:25px;font-weight:650}
 .luqi-province-map-labels>.is-selected text{fill:#092d2a;stroke:#b5ffdf;stroke-width:1px;font-weight:700}
+.luqi-province-map-labels>.is-gauteng.is-selected .luqi-province-fullname{fill:#d8ffef;stroke:#112936;stroke-width:2px}
 .luqi-province-leader{fill:none;stroke:#91c7ce;stroke-width:1.2;stroke-linecap:round}
 .luqi-province-context{fill:#8199a6;font-size:10px;letter-spacing:.11em}
 .luqi-province-ocean{fill:#456474;font-size:12px;letter-spacing:.25em}
