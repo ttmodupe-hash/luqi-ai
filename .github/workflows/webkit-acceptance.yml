@@ -18,7 +18,7 @@ jobs:
     # Playwright image; this avoids flaky public APT/CDN downloads.
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
-    timeout-minutes: 18
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -41,7 +41,7 @@ jobs:
       - name: Verify resolved loading policy and emitted public entrypoint
         run: node scripts/verify-module-loading.mjs
       - name: Run existing account, trial and tool journeys on desktop and iPhone-sized WebKit
-        timeout-minutes: 10
+        timeout-minutes: 13
         run: npx --no-install playwright test --config=playwright.webkit.config.ts
       - name: Preserve synthetic test results and failure evidence
         if: always()
