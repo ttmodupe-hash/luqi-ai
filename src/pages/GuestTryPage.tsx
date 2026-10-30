@@ -90,6 +90,8 @@ export default function GuestTryPage() {
         if (response.status === 429 && value.code === 'GUEST_TRIAL_COMPLETE') {
           setTrial({ enabled: false, remaining: 0, limit: 3, reason: 'complete' });
           setNotice('You have used your three guest replies. Create a Luqi account to continue with the signed-in allowance.');
+        } else if (response.status === 429 && value.code === 'GUEST_RATE_LIMITED') {
+          setNotice('This network or Luqi is receiving many requests. Please try again later. Shared network daily limits reset at 00:00 UTC. No AI attempt was started.');
         } else if (response.status === 429 && value.code === 'GUEST_TRIAL_PAUSED') {
           setTrial({ enabled: false, remaining: 0, limit: 3, reason: 'paused' });
           setNotice('The shared guest allowance is paused. No additional request was started.');
@@ -117,7 +119,7 @@ export default function GuestTryPage() {
     <div className="luqi-guest-intro">
       <p className="luqi-eyebrow"><Sparkles size={16} aria-hidden="true" /> TRY LUQI WITHOUT REGISTERING</p>
       <h1 id="luqi-guest-heading">Ask first. Decide later.</h1>
-      <p>Try up to three real AI replies during the current month without an account. Ask Luqi to explain something, help write a message, or plan an idea. You control each request.</p>
+      <p>Try up to three real AI replies during the current month without an account. Ask Luqi to explain something, help write a message, or plan an idea. You control each request. This is three replies per browser visitor, subject to shared capacity and network abuse controls. Calendar months reset at 00:00 UTC; failed or interrupted requests may count.</p>
       <p className="luqi-guest-honesty"><ShieldCheck size={18} aria-hidden="true" /> No demo answers, payment or automatic model calls. The server uses a strictly limited, secure guest cookie. Recent messages from this tab are included to understand follow-up questions.</p>
     </div>
     <section className="luqi-guest-chat" aria-label="Guest conversation">
@@ -180,7 +182,7 @@ export default function GuestTryPage() {
         <article><h3>Keep useful ideas</h3><p>Use private notes and the signed-in tools. Guest chats and unsaved drafts are not transferred automatically.</p></article>
         <article><h3>Create more</h3><p>Explore image-learning tools and develop a project with Luqi. Some advanced services are still in development.</p></article>
       </div>
-      <p>Guest history lasts only in this tab. Registering does not automatically buy anything or subscribe you to a plan.</p>
+      <p>Guest history lasts only in this tab. Luqi stores pseudonymous usage counters, not your guest transcript. A secure cookie lasts up to 30 days. When expanded capacity is active, a daily keyed network identifier helps prevent abuse; shared networks may experience temporary limits. Google processes the messages you choose to send. Registering does not automatically buy anything or subscribe you to a plan.</p>
       <Link className="luqi-guest-primary" to="/join">Create my Luqi account <ArrowRight size={17} aria-hidden="true" /></Link>
       <Link to="/chat">Already registered? Sign in through Chat</Link>
     </section>

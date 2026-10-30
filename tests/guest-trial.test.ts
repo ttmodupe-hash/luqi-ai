@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
-const reserve = vi.fn(), snapshot = vi.fn(), generate = vi.fn();
+const reserve = vi.fn(), snapshot = vi.fn(), generate = vi.fn(), countTokens = vi.fn();
 vi.mock('../api/services/guestTrialBudget', async original => ({
   ...await original<typeof import('../api/services/guestTrialBudget')>(),
   guestTrialEnabled: vi.fn(() => true),
@@ -10,7 +10,7 @@ vi.mock('../api/services/guestTrialBudget', async original => ({
 vi.mock('@google/genai', () => ({
   ThinkingLevel: { LOW: 'LOW' },
   GoogleGenAI: class {
-    models = { generateContent: (...args: unknown[]) => generate(...args) };
+    models = { countTokens: (...args: unknown[]) => countTokens(...args), generateContent: (...args: unknown[]) => generate(...args) };
   },
 }));
 vi.mock('../api/services/pilotOutput', async original => ({
@@ -36,6 +36,7 @@ beforeEach(() => {
   vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', 'not-real-fixture-key');
   reserve.mockReset().mockResolvedValue(undefined);
   snapshot.mockReset().mockResolvedValue({ enabled: true, remaining: 2, limit: 3, reason: 'ready' });
+  countTokens.mockReset().mockResolvedValue({ totalTokens: 1000 });
   generate.mockReset().mockResolvedValue({ candidates: [] });
 });
 afterEach(() => { vi.unstubAllEnvs(); });
@@ -120,4 +121,44 @@ describe('guest HTTP provider boundary with entirely synthetic inference', () =>
     expect(generate).toHaveBeenCalledTimes(1);
     expect(reserve).toHaveBeenCalledTimes(1);
   });
+});
+
+describe('expanded trial HTTP safety', () => {
+  beforeEach(() => {
+    vi.stubEnv('LUQI_GUEST_CAPACITY_PROFILE', 'public-1000-v1');
+    vi.stubEnv('LUQI_GUEST_TRUST_RAILWAY_PROXY', 'true');
+    vi.stubEnv('LUQI_AI_MONTHLY_USD', '300');
+    vi.stubEnv('LUQI_GEMINI_MONTHLY_USD', '165');
+    vi.stubEnv('LUQI_OPENAI_MONTHLY_USD', '135');
+  });
+  const request = () => send({ prompt: 'Sawubona, explain gravity.' }, { ...headers, 'x-real-ip': '192.0.2.1' });
+  it('reserves before counting the complete prompt and only then generates', async () => {
+    expect((await request()).status).toBe(200);
+    expect(reserve.mock.invocationCallOrder[0]).toBeLessThan(countTokens.mock.invocationCallOrder[0]);
+    expect(countTokens.mock.invocationCallOrder[0]).toBeLessThan(generate.mock.invocationCallOrder[0]);
+    expect(countTokens.mock.calls[0][0].config.systemInstruction).toContain('You are Luqi');
+    expect(generate.mock.calls[0][0].config.maxOutputTokens).toBe(512);
+  });
+  it.each([undefined, NaN, -1, 4097])('fails closed for an invalid token count: %s', async totalTokens => {
+    countTokens.mockResolvedValue({ totalTokens });
+    expect((await request()).status).toBe(503);
+    expect(generate).not.toHaveBeenCalled();
+  });
+  it('does not trust forwarded chains or spend without the trusted network address', async () => {
+    expect((await send({ prompt: 'Hello' }, { ...headers, 'x-forwarded-for': '192.0.2.1' })).status).toBe(503);
+    expect(reserve).not.toHaveBeenCalled(); expect(countTokens).not.toHaveBeenCalled();
+  });
+  it('reports temporary abuse limits without a provider call', async () => {
+    reserve.mockRejectedValue(new GuestTrialError('GUEST_RATE_LIMITED'));
+    const response = await request();
+    expect(response.status).toBe(429); expect(response.headers.get('retry-after')).toBe('60');
+    expect(generate).not.toHaveBeenCalled(); expect(countTokens).not.toHaveBeenCalled();
+  });
+});
+
+it('enforces signed expiry on the server, not only browser Max-Age', () => {
+  const issued = new Date('2026-10-01T00:00:00Z');
+  const signed = signGuestIdentifier(id, SECRET, issued);
+  expect(validateGuestCookie(signed, SECRET, new Date('2026-10-30T00:00:00Z'))).toBe(id);
+  expect(validateGuestCookie(signed, SECRET, new Date('2026-10-31T00:00:00Z'))).toBeNull();
 });
