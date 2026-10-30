@@ -1,5 +1,6 @@
 import {useState} from 'react';
-import {Link} from 'react-router';
+import {Link,useSearchParams} from 'react-router';
+import {parseProvince} from '../lib/nearby-discovery';
 import {MUNICIPAL_DIRECTORY_URL,MUNICIPALITIES,MUNICIPAL_REVIEWED_ON,MUNICIPAL_SERVICES,
  MUNICIPAL_SERVICE_URL,LOCAL_GOVERNMENT_URL,PROVINCE_NAMES,filterMunicipalities,
  isMunicipalReviewFresh,type Municipality,type MunicipalServiceKey} from '../lib/municipal-economy';
@@ -7,7 +8,8 @@ import type{ProvinceCode}from '../lib/opportunity-sources';
 
 const style='mt-2 block w-full min-w-0 rounded-lg border border-slate-500 bg-slate-950 p-3 text-white';
 export default function MunicipalServicesPage(){
- const[province,setProvince]=useState<ProvinceCode|'all'>('all');
+ const[params]=useSearchParams();
+ const[province,setProvince]=useState<ProvinceCode|'all'>(()=>parseProvince(params.get('province'))??'all');
  const[search,setSearch]=useState('');
  const[chosen,setChosen]=useState<Municipality|null>(null);
  const[showCount,setShowCount]=useState(15);

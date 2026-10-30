@@ -1,5 +1,6 @@
 import {useState} from "react";
-import {Link} from "react-router";
+import {Link,useSearchParams} from "react-router";
+import {parseProvince} from "../lib/nearby-discovery";
 import {ArrowUpRight, BookOpen, Check, ClipboardCopy, ExternalLink, Headphones, MapPin, Radio, Search, ShieldCheck} from "lucide-react";
 import {
   filterPulseSources, PULSE_KINDS, PULSE_LANGUAGES, PULSE_RECHECK_BY,
@@ -12,7 +13,8 @@ const regionNames: Record<string, string> = {
 };
 
 export default function LocalPulsePage() {
-  const [region,setRegion] = useState<PulseRegion>("all");
+  const [params]=useSearchParams();
+  const [region,setRegion] = useState<PulseRegion>(()=>{const p=parseProvince(params.get("province"));return p==="GP"||p==="WC"?p:p?"other":"all";});
   const [kind,setKind] = useState<PulseKind>("all");
   const [query,setQuery] = useState("");
   const [sourceId,setSourceId] = useState("ewn");
@@ -42,7 +44,7 @@ export default function LocalPulsePage() {
         <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
           <span className="rounded-full border border-slate-500 bg-slate-950 px-3 py-2">No account needed to browse</span>
           <span className="rounded-full border border-slate-500 bg-slate-950 px-3 py-2">Source links, not copied broadcasts</span>
-          <span className="rounded-full border border-slate-500 bg-slate-950 px-3 py-2">Manual region selection · no GPS</span>
+          <span className="rounded-full border border-slate-500 bg-slate-950 px-3 py-2">Province filter · no precise location</span>
         </div>
         <p className="text-sm text-amber-200"><ShieldCheck size={16} className="mr-1 inline" aria-hidden="true"/> This is a reviewed publisher directory, not a live headline feed or emergency warning service. News and stream availability must be checked on each original site.</p>
         <p className="text-xs text-slate-400">Publisher destinations reviewed: {PULSE_REVIEWED_ON}. {needsReview ? "These directory links are due for rechecking; do not treat them as newly verified." : "Links may change; open each original publisher to verify current content."}</p>

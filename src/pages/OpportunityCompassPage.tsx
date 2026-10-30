@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import {parseProvince} from '../lib/nearby-discovery';
 import PublisherSignals, { usePublisherSignals } from '../components/PublisherSignals';
 import SouthAfricaProvinceMap from '../components/SouthAfricaProvinceMap';
 import { matchGovernmentAdverts } from '../lib/government-job-notices';
@@ -17,8 +18,9 @@ const audienceChoices:{id:OpportunityAudience|'all';label:string}[]=[
  {id:'everyone',label:'Open-to-explore sources'},
 ];
 export default function OpportunityCompassPage(){
+ const [params]=useSearchParams();
  const [country,setCountry]=useState<OpportunityCountry>('ZA');
- const [province,setProvince]=useState<ProvinceCode|null>(null);
+ const [province,setProvince]=useState<ProvinceCode|null>(()=>parseProvince(params.get('province')));
  const [category,setCategory]=useState<OpportunityCategory|'all'>('all');
  const [audience,setAudience]=useState<OpportunityAudience|'all'>('all');
  const [query,setQuery]=useState('');
