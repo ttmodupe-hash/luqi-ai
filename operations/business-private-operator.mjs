@@ -1,7 +1,10 @@
 // Single-file private operator derived from reviewed source e968534fa8d38e857cea543fbb9a085df5f4450f. Function binding replaces Git deployment binding only.
 // db/prepareBusinessStorage.ts
 import { createHash } from "node:crypto";
-import mysql2 from "mysql2/promise";
+import mysqlDependency from "mysql2@3.24.5";
+import {createRequire as operatorRequire} from "node:module";
+const mysql2=operatorRequire(import.meta.url)("mysql2/promise");
+void mysqlDependency;
 
 // api/lib/mysqlConfig.ts
 function parseMySqlConnectionSettings(environment) {
@@ -98,7 +101,7 @@ var BUSINESS_RUNTIME_TABLES = {
 };
 
 // db/runtimeSchema.ts
-import mysql from "mysql2/promise";
+const mysql=mysql2;
 var id2 = { type: "bigint unsigned" };
 var RUNTIME_TABLES = {
   users: {
@@ -323,6 +326,7 @@ async function prepareBusinessStorage(env) {
 }
 
 // scripts/prepare-business-storage.ts
+console.log('BUSINESS_OPERATOR_STARTED');
 var deadline = setTimeout(() => {
   console.error("BUSINESS_SETUP_DEADLINE");
   process.exit(1);
@@ -337,4 +341,5 @@ try {
   clearTimeout(deadline);
 }
 
-import "mysql2@3.24.5";
+
+console.log('BUSINESS_OPERATOR_FINISHED');process.exit(process.exitCode??0);
