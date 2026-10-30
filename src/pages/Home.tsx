@@ -15,6 +15,7 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
+import DiscoveryDeck from "../components/DiscoveryDeck";
 import HeroAiChatConsole from "../components/HeroAiChatConsole";
 import CreatorPackPreview from "../components/CreatorPackPreview";
 import { findWorkspaceTools } from "../components/workspace-catalog";
@@ -83,6 +84,7 @@ export default function Home() {
           </div>
           <HeroAiChatConsole />
         </section>
+        <DiscoveryDeck />
         <CreatorPackPreview compact />
         <section
           id="tools"
