@@ -169,7 +169,7 @@ const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
   },
   tender: {
     title: 'Find public tenders and prepare an authorised bid with Luqi',
-    detail: 'Luqi Tender Desk shows reviewed original tender sources and a local bid-preparation worksheet with missing-item checks, original-form guidance and mandatory applicant approval. It does not access CSD accounts, sign declarations, fill issuer PDFs or submit bids on anyone’s behalf.',
+    detail: 'Luqi Tender Desk has reviewed official tender sources, a local bid-preparation worksheet and original-form assistance for seven supplier contact fields on one verified Treasury SBD 1 DOCX, with mandatory applicant approval. PDF/Excel inspection is limited and filling other originals is blocked until their mappings are verified. You review the exact files and addenda, enter accurate facts and prices, complete declarations and signatures, and submit through the issuer’s prescribed channel. Luqi does not access CSD accounts, sign declarations, fill issuer PDFs or submit bids on anyone’s behalf.',
     status:'local', statusLabel:'Free bidder-controlled preparation',
     nextQuestion:'Find the specific tender, download all original documents, and review mandatory conditions before preparing the human-controlled response.',
     primaryPath:'/tenders',primaryLabel:'Open Luqi Tender Desk',
