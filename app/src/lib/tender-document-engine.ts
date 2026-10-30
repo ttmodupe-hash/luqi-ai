@@ -18,7 +18,9 @@ const xml=(bytes:Uint8Array)=>{
   return text;
 };
 const parser=new XMLParser({ignoreAttributes:false,parseTagValue:false,parseAttributeValue:false,
-  trimValues:false,processEntities:false,removeNSPrefix:true,ignoreDeclaration:true});
+  // DOCTYPE/custom entities are rejected before parsing. Decode standard XML
+  // and numeric character references so formula safety checks see actual text.
+  trimValues:false,processEntities:true,removeNSPrefix:true,ignoreDeclaration:true});
 const array=<T>(x:T|T[]|undefined):T[]=>x===undefined?[]:Array.isArray(x)?x:[x];
 function leafText(node:unknown):string{
   if(typeof node==='string'||typeof node==='number')return String(node);
@@ -105,6 +107,19 @@ function validateOffice(files:Record<string,Uint8Array>,kind:'docx'|'xlsx'){
     const text=xml(bytes);
     if(/<(?:\w+:)?(?:altChunk|object|oleObject|attachedTemplate|DDE|externalReference|webPublishItems)\b/i.test(text)||
       /\b(?:DDEAUTO|INCLUDETEXT|INCLUDEPICTURE|MACROBUTTON)\b/i.test(text))fail('DOCUMENT_UNSAFE');
+    if(kind==='xlsx'){
+      for(const rawFormula of [...xmlTexts(text,'f'),...xmlTexts(text,'definedName')]){
+        const formula=rawFormula.replace(/&#(?:x([0-9a-f]+)|([0-9]+));/gi,(_,hex,decimal)=>{
+          const value=parseInt(hex||decimal,hex?16:10);
+          if(value>0x10ffff||value>=0xd800&&value<=0xdfff)fail('DOCUMENT_INVALID');
+          return String.fromCodePoint(value);
+        });
+        // Keep ordinary calculations inert, but do not carry network, command,
+        // cloud-code or external-workbook formulas into a downloaded bid pack.
+        if(/\b(?:WEBSERVICE|HYPERLINK|RTD|CALL|REGISTER(?:\.ID)?|EXEC|EXECUTE|DDE|SQL\.REQUEST|IMAGE|PY)\s*\(/i.test(formula)||
+          /[|]|https?:|file:|\\\\|\[[^\]]+\][^!]*!/i.test(formula))fail('DOCUMENT_UNSAFE');
+      }
+    }
     if(name.endsWith('.rels')){
       const rels=array(parser.parse(text)?.Relationships?.Relationship);
       for(const rel of rels){

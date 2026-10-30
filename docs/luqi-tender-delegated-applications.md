@@ -76,6 +76,8 @@ neither imports that legacy format nor converts it to reuse the SBD mapping.
   per entry and 12 MiB total expanded content. Macros, active external templates,
   embedded objects, signatures and connections are rejected. Static HTTP(S)
   hyperlinks are retained without being fetched or executed.
+  XLSX formulas that invoke external/network commands, external workbooks or
+  cloud code are rejected; ordinary calculations are displayed without evaluation.
 - PDF filtering is intentionally conservative: stream expansion is bounded before
   parsing; ambiguous/indirect/chained or unsupported compression filters are
   rejected. PDF actions, JavaScript, embedded files, XFA and signatures are rejected
