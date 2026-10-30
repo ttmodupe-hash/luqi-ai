@@ -1,0 +1,40 @@
+name: LUQI Business Connect Review
+on:
+  pull_request:
+    branches: [main]
+    paths: ['api/business-connect.ts', 'api/services/businessConnectStore.ts', 'api/boot.ts', 'contracts/businessConnect.ts', 'app/contracts/businessConnect.ts', 'db/**', 'src/**', 'app/src/**', 'tests/business-connect*', 'tests/fixtures/business-connect.ts', '.github/workflows/business-connect.yml']
+permissions:
+  contents: read
+jobs:
+  consent-ownership-and-mysql:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-business-fixture-only
+          MYSQL_DATABASE: luqi_business_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-business-fixture-only"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: mysql://root:ci-business-fixture-only@127.0.0.1:3306/luqi_business_ci
+      LUQI_BUSINESS_CI_FIXTURE: 'true'
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Consent, ownership, mobile UI and isolated MySQL migration checks
+        run: npx vitest run tests/business-connect-contract.test.ts tests/business-connect-api.test.ts tests/business-connect-client.test.ts tests/business-connect-page.test.tsx tests/business-connect-mysql.integration.test.ts --no-file-parallelism
+      - run: npm run check
+      - name: Record test boundary
+        run: echo 'Synthetic accounts and disposable loopback MySQL only. No production migration, deployment, external map API, AI call or change to spending limits.' >> "$GITHUB_STEP_SUMMARY"

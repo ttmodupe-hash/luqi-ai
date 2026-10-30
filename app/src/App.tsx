@@ -34,6 +34,7 @@ const KhoroSpatialVisionLab = lazy(() => import("./components/KhoroSpatialVision
 const LuqiChatWorkspacePage = lazy(() => import("./pages/LuqiChatWorkspacePage"));
 const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
+const BusinessConnectPage = lazy(() => import('./pages/BusinessConnectPage'));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
@@ -80,6 +81,8 @@ export default function App() {
         <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
+        <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/:id" element={<BusinessConnectPage />} />
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />

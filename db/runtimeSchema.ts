@@ -2,6 +2,7 @@
  * No row contents, credentials, or raw driver errors enter diagnostics.
  */
 import { P2P_RUNTIME_TABLES } from './p2pContracts';
+import { BUSINESS_RUNTIME_TABLES } from './businessConnectContracts';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 
@@ -160,6 +161,7 @@ export async function validateRuntimeSchemaConnection(connection: Connection, co
 
 export function runtimeTableContracts(environment: Record<string,string|undefined>): Record<string,TableContract> {
   return { ...RUNTIME_TABLES,
+    ...(environment.LUQI_BUSINESS_CONNECT_ENABLED === 'true' ? BUSINESS_RUNTIME_TABLES : {}),
     ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { customer_device_sessions_v1: customerResume } : {}),
     ...(environment.LUQI_P2P_ENABLED === 'true' ? P2P_RUNTIME_TABLES : {}),
     ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
