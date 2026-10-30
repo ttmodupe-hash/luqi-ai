@@ -38,6 +38,9 @@ const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
+const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
+const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
 const NearMePage = lazy(() => import("./pages/NearMePage"));
 const LocalPulsePage = lazy(() => import("./pages/LocalPulsePage"));
 const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
@@ -85,6 +88,10 @@ export default function App() {
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
+        <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
+        <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
+        <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />
         <RouterRoute path="/near-me" element={<NearMePage />} />
         <RouterRoute path="/local-pulse" element={<LocalPulsePage />} />
         <RouterRoute path="/news" element={<LocalPulsePage />} />

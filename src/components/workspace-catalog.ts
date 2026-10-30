@@ -36,6 +36,11 @@ export const workspaceTools = [
     status: "Free · no account", ready: true, path: "/comparative-evidence", icon: "academy",
   },
   {
+    id: "business-connect", title: "Business Connect · Local Profiles", category: "Business owners, service areas and reviewed publication",
+    description: "Prepare a private owner profile, choose public contact fields and request publication review. Browse approved public business profiles without an account.",
+    status: "Owner drafts and reviewed public directory", ready: true, path: "/businesses", icon: "business",
+  },
+  {
     id: "near-me", title: "Near me · Places & Local Support", category: "Province discovery, council contacts and map searches",
     description: "Choose a province privately, browse reviewed council names and prepare an external map search for a town or township. No background tracking or invented distances.",
     status: "Free area discovery · optional location", ready: true, path: "/near-me", icon: "status",

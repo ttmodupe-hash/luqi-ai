@@ -1,4 +1,5 @@
 /** Private one-time operator utility. Never imported by the HTTP runtime. */
+import { BUSINESS_RUNTIME_GRANTS } from './businessContracts';
 import { P2P_RUNTIME_GRANTS } from './p2pContracts';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
@@ -20,6 +21,7 @@ export function expectedWebRuntimeGrants(environment: Record<string,string|undef
   return { ...WEB_RUNTIME_GRANTS,
     ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? {customer_device_sessions_v1:'SELECT, INSERT, UPDATE'} : {}),
     ...(environment.LUQI_P2P_ENABLED === 'true' ? P2P_RUNTIME_GRANTS : {}),
+    ...(environment.LUQI_BUSINESS_CONNECT_ENABLED === 'true' ? BUSINESS_RUNTIME_GRANTS : {}),
     ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? {omega_tasks_v1:'SELECT, INSERT, UPDATE, DELETE'} : {}),
     ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? {luqi_project_vault_v1:'SELECT, INSERT, UPDATE, DELETE'} : {}) };
 }
@@ -30,7 +32,7 @@ export async function prepareRuntimeRole(environment: Record<string, string | un
   try {
     const settings = parseMySqlConnectionSettings(environment);
     const password = environment.LUQI_RUNTIME_DB_PASSWORD ?? '';
-    const optionalEnabled = ['LUQI_P2P_ENABLED','LUQI_OMEGA_WEB_ENABLED','LUQI_CUSTOMER_RESUME_ENABLED','LUQI_PROJECT_VAULT_ENABLED']
+    const optionalEnabled = ['LUQI_BUSINESS_CONNECT_ENABLED','LUQI_P2P_ENABLED','LUQI_OMEGA_WEB_ENABLED','LUQI_CUSTOMER_RESUME_ENABLED','LUQI_PROJECT_VAULT_ENABLED']
       .some(name => environment[name] === 'true');
     const expectedGrants = expectedWebRuntimeGrants(environment);
     if (!settings || !/^[a-f0-9]{64}$/.test(password) || password === settings.password ||

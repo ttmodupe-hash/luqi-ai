@@ -21,6 +21,7 @@ import { accountSecurity } from "./account-security";
 import { customerResumeRoutes } from "./services/customerResume";
 import { hostedCheckout } from "./hosted-checkout";
 import { omegaTasks } from "./omega-tasks";
+import { businessConnect } from "./business-connect";
 import { privateProjectVault } from "./private-project-vault";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
@@ -131,6 +132,7 @@ app.route("/api/v1/commerce", hostedCheckout);
 app.route("/api/v1/omega/tasks", omegaTasks);
 // Authenticated encrypted project sync is disabled without an explicit rollout flag.
 app.route("/api/v1/projects", privateProjectVault);
+app.route("/api/v1/business-connect", businessConnect);
 
 // ── tRPC ───────────────────────────────────────────────────────────
 app.route("/api/trpc", createTrpcHttp(appRouter));
@@ -1285,6 +1287,13 @@ if (env.isProduction) {
     if (process.env.LUQI_P2P_ENABLED === 'true') {
       const { checkP2PReadiness } = await import('../db/p2pPreflight');
       await checkP2PReadiness();
+    }
+    if(process.env.LUQI_BUSINESS_CONNECT_ENABLED==='true'){
+      const {businessConnectStore}=await import('./services/businessConnectStore');
+      await businessConnectStore.ready();
+      let running=false;
+      const clean=async()=>{if(running)return;running=true;try{await businessConnectStore.cleanup();}catch{logger.warn('Business Connect retention sweep failed (details redacted)');}finally{running=false;}};
+      void clean();setInterval(()=>void clean(),60*60*1000).unref();
     }
     const { serve } = await import("@hono/node-server");
     const { serveStaticFiles } = await import("./lib/vite");
