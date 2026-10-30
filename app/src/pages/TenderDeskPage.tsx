@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {Link} from 'react-router';
+import {TenderOriginalForms} from '../components/TenderOriginalForms';
 import {PROVINCES,type ProvinceCode} from '../lib/opportunity-sources';
 import {CURATED_TENDER_NOTICES,TENDER_OFFICIAL_SOURCES,TENDER_REVIEWED_ON,
  filterTenders,tenderReviewFresh,tenderStatus,type TenderNotice,type TenderMethod} from '../lib/tender-sources';
@@ -95,13 +96,14 @@ export default function TenderDeskPage(){
    <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Luqi tender desk · South Africa first · Free local preparation</p>
    <h1 id="tender-desk-heading" className="text-3xl font-bold sm:text-4xl">Find tenders. Prepare with Luqi. You stay in control.</h1>
    <p className="max-w-4xl text-slate-200">Discover official public procurement notices and prepare a bidder-controlled draft worksheet for the real tender documents. Luqi automates preparation steps on your device; your review, declarations, pricing, authorisation and final submission cannot be bypassed.</p>
-   <p className="text-sm text-amber-200">No government affiliation or automatic tender submission. This first release does not read/complete a proprietary PDF, log into CSD/eTenders, forge a signature or upload a bid. Never enter passwords, OTPs, bank details, identity numbers or tax PINs into Luqi.</p>
+   <p className="text-sm text-amber-200">No government affiliation or automatic tender submission. Original-form assistance below fills supported supplier contact fields on one verified Treasury DOCX; other PDF, DOCX and Excel originals support limited local inspection. All remaining official fields and signatures need your completion. Never enter passwords, OTPs, bank details, identity numbers or tax PINs into Luqi.</p>
    <div className="flex flex-wrap gap-4 text-sm">
     <Link to="/opportunities" className="text-cyan-200 underline">Jobs and bursaries</Link>
     <Link to="/business-desk" className="text-cyan-200 underline">Business quotation tools</Link>
     <Link to="/chat" className="text-cyan-200 underline">Ask Luqi for general business advice</Link>
    </div>
   </header>
+  <TenderOriginalForms/>
   <section aria-label="Official tender discovery sources" className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Find tenders through official publishers</h2>
    <p className="text-sm text-slate-300">National Treasury eTenders supports current tender search by province, buyer, category and eSubmission availability. Its dynamic listing changes: the curated notices below are dated examples, not a live inventory or guarantee of availability.</p>

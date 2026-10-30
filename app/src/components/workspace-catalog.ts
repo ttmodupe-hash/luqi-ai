@@ -67,7 +67,7 @@ export const workspaceTools = [
   },
   {
     id: "tenders", title: "Tender Desk · Find & Prepare Bids", category: "South African government procurement and small business",
-    description: "Free official tender listings, SBD/MBD form guidance, local editable bid-preparation worksheet, missing-document checks and mandatory human approval. No automatic portal submission.",
+    description: "Official tender listings, a local bid worksheet and verified SBD 1 original-form assistance with applicant approvals. PDF/Excel inspection is limited; final completion and submission remain with you.",
     status: "Local preparation · no account", ready: true, path: "/tenders", icon: "business",
   },
   {
