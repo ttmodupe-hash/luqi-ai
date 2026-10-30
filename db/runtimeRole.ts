@@ -1,5 +1,6 @@
 /** Private one-time operator utility. Never imported by the HTTP runtime. */
 import { P2P_RUNTIME_GRANTS } from './p2pContracts';
+import { BUSINESS_RUNTIME_GRANTS } from './businessConnectContracts';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 import { checkRuntimeSchema } from './runtimeSchema';
@@ -18,6 +19,7 @@ export const WEB_RUNTIME_GRANTS: Readonly<Record<string, string>> = {
 /** One authoritative grant contract for all enabled combinations. No SQL writes. */
 export function expectedWebRuntimeGrants(environment: Record<string,string|undefined>): Readonly<Record<string,string>> {
   return { ...WEB_RUNTIME_GRANTS,
+    ...(environment.LUQI_BUSINESS_CONNECT_ENABLED === 'true' ? BUSINESS_RUNTIME_GRANTS : {}),
     ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? {customer_device_sessions_v1:'SELECT, INSERT, UPDATE'} : {}),
     ...(environment.LUQI_P2P_ENABLED === 'true' ? P2P_RUNTIME_GRANTS : {}),
     ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? {omega_tasks_v1:'SELECT, INSERT, UPDATE, DELETE'} : {}),
@@ -30,7 +32,7 @@ export async function prepareRuntimeRole(environment: Record<string, string | un
   try {
     const settings = parseMySqlConnectionSettings(environment);
     const password = environment.LUQI_RUNTIME_DB_PASSWORD ?? '';
-    const optionalEnabled = ['LUQI_P2P_ENABLED','LUQI_OMEGA_WEB_ENABLED','LUQI_CUSTOMER_RESUME_ENABLED','LUQI_PROJECT_VAULT_ENABLED']
+    const optionalEnabled = ['LUQI_P2P_ENABLED','LUQI_OMEGA_WEB_ENABLED','LUQI_CUSTOMER_RESUME_ENABLED','LUQI_PROJECT_VAULT_ENABLED','LUQI_BUSINESS_CONNECT_ENABLED']
       .some(name => environment[name] === 'true');
     const expectedGrants = expectedWebRuntimeGrants(environment);
     if (!settings || !/^[a-f0-9]{64}$/.test(password) || password === settings.password ||

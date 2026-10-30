@@ -17,6 +17,7 @@ import { privateConversations } from "./private-conversations";
 import { p2p } from './p2p';
 import { opportunityWatch } from './opportunity-scan';
 import { tenderWatch } from './tender-watch';
+import { businessConnect } from './business-connect';
 import { accountSecurity } from "./account-security";
 import { customerResumeRoutes } from "./services/customerResume";
 import { hostedCheckout } from "./hosted-checkout";
@@ -127,6 +128,7 @@ app.route("/api/v1/auth", customerResumeRoutes);
 app.route("/api/v1/p2p", p2p);
 app.route("/api/v1/opportunity-watch", opportunityWatch);
 app.route("/api/v1/tender-watch", tenderWatch);
+app.route('/api/v1/business-connect', businessConnect);
 app.route("/api/v1/commerce", hostedCheckout);
 app.route("/api/v1/omega/tasks", omegaTasks);
 // Authenticated encrypted project sync is disabled without an explicit rollout flag.
