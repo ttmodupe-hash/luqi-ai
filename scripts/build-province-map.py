@@ -38,5 +38,8 @@ for id,parts in polygons.items():
  path=' '.join('M'+' L'.join(','.join(map(str,p)) for p in simplify(ring))+' Z' for polygon in parts for ring in polygon)
  result.append({'id':id,'path':path,'label':project(*labels[id])})
 text="/** Generated from geoBoundaries ZAF ADM1 (2020), OCHA ROSEA / South African MDB.\n * CC BY 4.0 distribution; original CC BY 3.0 IGO. See docs/SOUTH_AFRICA_PROVINCE_MAP.md.\n * Equirectangular 29S, simplified 0.45 SVG units. Display geography, not navigation. */\nimport type { ProvinceCode } from './opportunity-sources';\nexport const PROVINCE_GEOMETRY: readonly {id:ProvinceCode;path:string;label:readonly [number,number]}[] = "+json.dumps(result,separators=(',',':'))+";\nexport const GAUTENG_CALLOUT = "+json.dumps(project(25.9,-24.5))+" as const;\nexport const MAP_CONTEXT_LABELS = "+json.dumps([{'name':'LESOTHO','position':project(28.3,-29.55)},{'name':'ESWATINI','position':project(31.5,-26.5)}])+";\n"
-for prefix in ['src','app/src']:Path(prefix+'/lib/sa-province-map.ts').write_text(text)
+projection = "// Generated from the pinned map source by scripts/build-province-map.py.\nexport const MAP_PROJECTION = " + json.dumps({'cos':cos,'xmin':xmin,'ymin':ymin,'scale':scale,'xoff':xoff,'yoff':yoff},separators=(',',':')) + " as const;\n"
+for prefix in ['src','app/src']:
+ Path(prefix+'/lib/sa-province-map.ts').write_text(text)
+ Path(prefix+'/lib/sa-map-projection.ts').write_text(projection)
 print('Generated nine province paths:',len(text),'bytes per frontend')

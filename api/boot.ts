@@ -78,8 +78,8 @@ app.use("/*", async (c, next) => {
   c.header("Referrer-Policy", c.req.path === '/paystack-checkout.html' || c.req.path.startsWith('/api/v1/commerce/')
     ? 'no-referrer' : 'strict-origin-when-cross-origin');
   // First-party Studio may request a microphone only after a user clicks Record;
-  // cross-origin frames, camera and geolocation remain denied.
-  c.header("Permissions-Policy", "camera=(), microphone=(self), geolocation=()");
+  // cross-origin frames and camera remain denied; device location is same-origin only.
+  c.header("Permissions-Policy", "camera=(), microphone=(self), geolocation=(self)");
   if (process.env.NODE_ENV === "production") {
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }

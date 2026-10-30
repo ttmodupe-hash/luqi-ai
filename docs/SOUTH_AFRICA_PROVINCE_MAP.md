@@ -19,3 +19,11 @@ Regenerate after downloading the pinned file:
 `python scripts/build-province-map.py /path/to/geoBoundaries-ZAF-ADM1_simplified.geojson`
 
 Generated geometry is bundled locally in both frontend source trees. Loading, hovering and selecting the map require no external map tiles, geolocation permission, tracking, API key, model call or paid map service. It does not place invented exact job/business locations. Official advert locations and verification disclosures remain in the existing job cards. The boundary vintage is disclosed; this is a simplified geographic display, not surveyed/legal boundary or navigation advice.
+
+## Optional device location (30 October 2026)
+
+The map offers Use my location, requested only on a click with browser permission and HTTPS. A single low-power fix (10s browser timeout, 12s UI watchdog, no cached positions) is processed locally against the bundled simplified province rings. Coordinates are never transmitted, logged, persisted or shared with contacts/AI; only a province suggestion remains in component memory for explicit confirmation. The browser/OS location provider has separate processing policies. No paid geocoder or map API is added. Leaving or reloading clears the suggestion; cancel invalidates late callbacks. Hidden, stale, invalid, low-accuracy, non-South-African or boundary-adjacent fixes fall back to manual choice.
+
+This is approximate discovery, not navigation, address verification, legal jurisdiction or a precise position marker. An accuracy radius plus 2km simplification margin rejects ambiguous fixes, including some coastal city centres. Manual choice always works. Camera remains blocked; geolocation permission policy allows only this origin, not embedded third parties. Revocation is available in browser site settings. The deployment changes no AI allocation, payment or P2P flags.
+
+Browser location can combine satellite, Wi-Fi and cellular estimates. Luqi cannot choose GPS vs BeiDou/Galileo/GLONASS or guarantee a satellite fix. Compatibility is determined by the device/OS, not a selectable website provider.
