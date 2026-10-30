@@ -87,7 +87,7 @@ export default function OpportunityCompassPage(){
        <p className="text-sm">A bounded read-only agent checks whether three trusted publisher pages respond and can identify a circular number if present. It does not scrape personal data, invent vacancies, certify closing dates, rank candidates or submit applications.</p>
        <button type="button" onClick={()=>{void checkPublishers()}} disabled={checking}
          className="rounded-lg border border-cyan-400 bg-cyan-900 px-4 py-3 font-semibold disabled:opacity-50">{checking?'Checking publishers…':'Check official source pages'}</button>
-       {scanMessage&&<p role="status" className="text-sm">{scanMessage}</p>}
+       {scanMessage&&<p className="text-sm">See the publisher signals in the map above for the check status and timestamp.</p>}
        {scan&&<div className="space-y-2 text-sm"><p>Last publisher check: {new Date(scan.checkedAt).toLocaleString('en-ZA')}</p>
          {scan.sources.map(s=><p key={s.id}>{s.status==='reachable'?'● Reachable publisher':'○ Publisher check unavailable'}: {s.id}{s.publication?' · '+s.publication:''}</p>)}
        </div>}
