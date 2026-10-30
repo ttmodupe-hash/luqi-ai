@@ -7,6 +7,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { countGuestInputTokens } from './services/guestTokenCount';
 import { PILOT_MODELS } from './services/pilotModels';
 import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { readGeminiText, PilotOutputError } from './services/pilotOutput';
@@ -129,9 +130,7 @@ guestTrial.post('/', async c => {
     const model = new GoogleGenAI({ apiKey: process.env.LUQI_PILOT_GEMINI_API_KEY! });
     if (capacity.expanded) {
       // Count complete system + user context; never infer tokens from English characters.
-      const tokens = await model.models.countTokens({ model: PILOT_MODELS.gemini, contents: input,
-        config: { systemInstruction: GUEST_POLICY,
-          httpOptions: { timeout: 5000, retryOptions: { attempts: 1 } } } });
+      const tokens = await countGuestInputTokens(input, GUEST_POLICY);
       if (!Number.isSafeInteger(tokens.totalTokens) || tokens.totalTokens! < 1 || tokens.totalTokens! > 4096)
         throw new GuestTrialError('GUEST_TRIAL_UNAVAILABLE');
     }

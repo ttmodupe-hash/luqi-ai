@@ -1,6 +1,8 @@
 /** Disposable MySQL only. Imports no provider SDK; all requests below are ledger reservations. */
 import { beforeAll, beforeEach, afterAll, it, expect } from 'vitest';
 import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { reserveGuestAttempt, guestTrialSnapshot, guestNetworkId } from '../api/services/guestTrialBudget';
 let db: Pool;
@@ -77,4 +79,14 @@ it('fails closed on invalid identities and a database failure', async () => {
   await db.query('RENAME TABLE ai_pilot_daily_user_usage TO temporarily_unavailable');
   try { await expect(reserveGuestAttempt(-90000, now, network(1))).rejects.toMatchObject({ code: 'GUEST_TRIAL_UNAVAILABLE' }); }
   finally { await db.query('RENAME TABLE temporarily_unavailable TO ai_pilot_daily_user_usage'); }
+});
+
+it('maintenance removes only expired negative pseudonyms and preserves account/aggregate records', async () => {
+  await db.query("INSERT INTO ai_pilot_daily_user_usage (day_utc,user_id,attempts) VALUES ('2000-01-01',-12345,2),('2000-01-01',12345,2),('2000-01-01',-3,10),('2099-01-01',-54321,1)");
+  const { stdout } = await promisify(execFile)(process.execPath, ['operations/guest-maintenance.railway.mjs'],
+    { env: { ...process.env, LUQI_GUEST_MAINTENANCE_MODE: 'cleanup' }, timeout: 20000 });
+  expect(JSON.parse(stdout.trim())).toMatchObject({ operation: 'guest_cleanup', status: 'success', removed: 1, pending: 0 });
+  expect(await number('SELECT COUNT(*) FROM ai_pilot_daily_user_usage')).toBe(3);
+  expect(await number('SELECT COUNT(*) FROM ai_pilot_daily_user_usage WHERE user_id=12345')).toBe(1);
+  expect(await number('SELECT COUNT(*) FROM ai_pilot_daily_user_usage WHERE user_id=-3')).toBe(1);
 });
