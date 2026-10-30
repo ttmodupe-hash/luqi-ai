@@ -35,7 +35,9 @@ test('Business Connect keeps home-based drafts private at 320px using one existi
   await page.locator('.luqi-access').getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page).toHaveURL(/#\/chat$/);
   await page.evaluate(()=>{window.location.hash='#/business-connect';});
-  await page.getByRole('button',{name:'My businesses',exact:true}).click();await page.getByRole('button',{name:'Add your business',exact:true}).click();
+  await page.getByRole('button',{name:'My businesses',exact:true}).click();
+  const beforeEditor=await page.evaluate(()=>document.documentElement.scrollWidth);
+  await page.getByRole('button',{name:'Add your business',exact:true}).click();
   await page.getByLabel('Owner-confirmed business name',{exact:false}).fill('Private Browser Business');
   await page.getByLabel('Public trading name',{exact:true}).fill('Village Repairs');
   await page.getByLabel('Business description',{exact:true}).fill('Clothing repairs for our local community.');
@@ -47,10 +49,12 @@ test('Business Connect keeps home-based drafts private at 320px using one existi
   await expect(page.getByLabel('I approve public display',{exact:false})).not.toBeChecked();
   await page.getByLabel('I own this business',{exact:false}).check();await page.getByLabel('I consent to Luqi storing',{exact:false}).check();
   const layout=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth,
-    controls:[...document.querySelectorAll('.bc-editor input,.bc-editor select,.bc-editor textarea,.bc-editor legend')]
-      .map(el=>({tag:el.tagName,label:el.getAttribute('aria-label'),right:el.getBoundingClientRect().right,width:el.getBoundingClientRect().width}))
-      .filter(el=>el.right>innerWidth+1)}));
-  expect(layout.width,JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport+1);
+    overflow:[...document.querySelectorAll('body *')].map(el=>{
+      const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+      return {tag:el.tagName,class:el.getAttribute('class'),label:el.getAttribute('aria-label'),right:r.right,width:r.width,
+        scroll:el.scrollWidth,client:el.clientWidth,display:s.display,visibility:s.visibility,whiteSpace:s.whiteSpace,minInlineSize:s.minInlineSize};
+    }).filter(el=>el.width>0&&el.visibility!=='hidden'&&(el.right>innerWidth+1||el.scroll>el.client+1)).slice(-20)}));
+  expect(layout.width,JSON.stringify({...layout,beforeEditor})).toBeLessThanOrEqual(layout.viewport+1);
   await page.getByRole('button',{name:'Save draft',exact:true}).click();
   await expect(page.getByText('Private draft saved. Preview the public details before sending for review.')).toBeVisible();
   await expect(page.getByText('Private Browser Business',{exact:true})).toHaveCount(0);
