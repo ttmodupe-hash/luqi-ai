@@ -117,8 +117,8 @@ function BusinessEditor({business,busy,onSave,onCancel,language}:{business:Owned
     <fieldset disabled={busy}><legend>4 · Hours, languages and access</legend>
       {BUSINESS_DAYS.map((day,i)=><div className="bc-hour" key={day}><strong>{day}</strong>
         <label className="bc-check"><input type="checkbox" checked={draft.hours[i].closed} aria-label={day+' closed'} onChange={e=>update('hours',draft.hours.map(h=>h.day===day?{...h,closed:e.target.checked}:h))}/>Closed</label>
-        <input type="time" aria-label={day+' opens'} disabled={draft.hours[i].closed} value={draft.hours[i].opens} onChange={e=>update('hours',draft.hours.map(h=>h.day===day?{...h,opens:e.target.value}:h))}/>
-        <input type="time" aria-label={day+' closes'} disabled={draft.hours[i].closed} value={draft.hours[i].closes} onChange={e=>update('hours',draft.hours.map(h=>h.day===day?{...h,closes:e.target.value}:h))}/>
+        <label className="bc-time">Opens<input type="time" aria-label={day+' opens'} disabled={draft.hours[i].closed} value={draft.hours[i].opens} onChange={e=>update('hours',draft.hours.map(h=>h.day===day?{...h,opens:e.target.value}:h))}/></label>
+        <label className="bc-time">Closes<input type="time" aria-label={day+' closes'} disabled={draft.hours[i].closed} value={draft.hours[i].closes} onChange={e=>update('hours',draft.hours.map(h=>h.day===day?{...h,closes:e.target.value}:h))}/></label>
         <label className="bc-check"><input type="checkbox" checked={draft.hours[i].overnight} disabled={draft.hours[i].closed} onChange={e=>update('hours',draft.hours.map(h=>h.day===day?{...h,overnight:e.target.checked}:h))}/>Next day</label>
       </div>)}
       <p>Languages customers can use</p><div className="bc-choices">{BUSINESS_LANGUAGES.map(l=><label className="bc-check" key={l}><input type="checkbox" checked={draft.languages.includes(l)} onChange={e=>update('languages',e.target.checked?[...draft.languages,l]:draft.languages.filter(v=>v!==l))}/>{BUSINESS_LANGUAGE_NAMES[l]}</label>)}</div>

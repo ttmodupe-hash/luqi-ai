@@ -46,7 +46,11 @@ test('Business Connect keeps home-based drafts private at 320px using one existi
   await expect(page.getByLabel('Optional public latitude')).toHaveCount(0);await expect(page.locator('input[type=file]')).toHaveCount(0);
   await expect(page.getByLabel('I approve public display',{exact:false})).not.toBeChecked();
   await page.getByLabel('I own this business',{exact:false}).check();await page.getByLabel('I consent to Luqi storing',{exact:false}).check();
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const layout=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth,
+    controls:[...document.querySelectorAll('.bc-editor input,.bc-editor select,.bc-editor textarea,.bc-editor legend')]
+      .map(el=>({tag:el.tagName,label:el.getAttribute('aria-label'),right:el.getBoundingClientRect().right,width:el.getBoundingClientRect().width}))
+      .filter(el=>el.right>innerWidth+1)}));
+  expect(layout.width,JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport+1);
   await page.getByRole('button',{name:'Save draft',exact:true}).click();
   await expect(page.getByText('Private draft saved. Preview the public details before sending for review.')).toBeVisible();
   await expect(page.getByText('Private Browser Business',{exact:true})).toHaveCount(0);

@@ -131,7 +131,7 @@ export const businessConnectStore = {
       const p = publicBusiness(fromRow(row));
       return { id:p.id,tradingName:p.tradingName,categories:p.categories,description:p.description.slice(0,180),
         province:p.province,municipality:p.municipality,locality:p.locality,kind:p.kind,languages:p.languages,verification:p.verification };
-    }), nextPage: rows.length > 20 ? input.page+1 : null };
+    }), nextPage: rows.length > 20 && input.page < 50 ? input.page+1 : null };
   },
   async publicPage(id: string) {
     const [rows] = await getPersistentMySqlPool().execute<RowDataPacket[]>('SELECT '+columns+
