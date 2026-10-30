@@ -9,7 +9,7 @@ export const BUSINESS_SETUP_INTENT='create-absent-business-storage-v1';
 export function businessOperatorSettings(env:Record<string,string|undefined>){
  const runtime=parseMySqlConnectionSettings(env),operator=parseMySqlConnectionSettings({DATABASE_URL:env.LUQI_DB_OPERATOR_URL});
  const fixture=env.GITHUB_ACTIONS==='true'&&env.LUQI_MYSQL_CI_FIXTURE==='true'&&env.LUQI_DB_OPERATOR_URL==='mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci'&&runtime?.host==='127.0.0.1'&&runtime.port===3306&&runtime.database==='luqi_ci'&&runtime.user==='luqi_business_fixture';
- const production=env.RAILWAY_PROJECT_ID==='9f627cb8-3136-4b30-89d2-32ca648a1e5f'&&env.RAILWAY_ENVIRONMENT_ID==='1e192ef3-1fa6-4684-81fc-60165c7b0e22'&&env.RAILWAY_SERVICE_NAME==='luqi-business-db-setup'&&/^[a-f0-9]{40}$/.test(env.LUQI_DB_CHECK_SOURCE_SHA??'')&&env.RAILWAY_GIT_COMMIT_SHA===env.LUQI_DB_CHECK_SOURCE_SHA&&runtime?.host.endsWith('.railway.internal');
+ const production=env.RAILWAY_PROJECT_ID==='9f627cb8-3136-4b30-89d2-32ca648a1e5f'&&env.RAILWAY_ENVIRONMENT_ID==='1e192ef3-1fa6-4684-81fc-60165c7b0e22'&&env.RAILWAY_SERVICE_NAME==='luqi-business-db-setup-q5T1'&&env.RAILWAY_SERVICE_ID==='2b192c71-27fc-4f28-98c8-07ab9abee474'&&/^[a-f0-9]{40}$/.test(env.LUQI_DB_CHECK_SOURCE_SHA??'')&&env.RAILWAY_GIT_COMMIT_SHA===env.LUQI_DB_CHECK_SOURCE_SHA&&runtime?.host.endsWith('.railway.internal');
  if(!runtime||!operator||(!fixture&&!production)||runtime.host!==operator.host||runtime.port!==operator.port||runtime.database!==operator.database||!/^[A-Za-z0-9_]{1,64}$/.test(runtime.database)||runtime.user!==(fixture?'luqi_business_fixture':'luqi_web_runtime')||runtime.user===operator.user)throw Error('BUSINESS_SETUP_SCOPE_REJECTED');
  return{runtime,operator};
 }
