@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { businessProfile, BUSINESS_CONSENT_VERSION, BUSINESS_DAYS, type BusinessProfile,
-  type BusinessVerification, type OwnedBusiness, type PublicBusiness } from '@contracts/businessConnect';
+  type BusinessVerification, type OwnedBusiness, type PublicBusiness } from '../../contracts/businessConnect';
 import { requestConversationJson } from './conversation-request';
 
 const verification = z.object({ownerApproved:z.boolean(),contactConfirmed:z.boolean(),
@@ -34,11 +34,16 @@ export class BusinessRequestError extends Error {
 export async function businessRequest<T>(path:string,token:string|undefined,schema:z.ZodType<T>,body?:unknown,method=body===undefined?'GET':'POST'):Promise<T> {
   // Fixed first-party paths only; no map calls, bearer persistence or write retry.
   if (!/^\/(?:status|directory(?:[/?].*)?|mine(?:\/.*)?|reports|moderation\/.*)$/.test(path) || path.includes('://') || path.includes('#')) throw Error('Invalid business path');
-  const result = await requestConversationJson(fetch,'/api/v1/business-connect'+path,{method,credentials:'omit',cache:'no-store',
-    headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},
-    ...(body===undefined?{}:{body:JSON.stringify(body)})});
-  if (!result.ok) throw new BusinessRequestError(result.status);
-  return schema.parse(result.body);
+  try {
+    const result = await requestConversationJson(fetch,'/api/v1/business-connect'+path,{method,credentials:'omit',cache:'no-store',
+      headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},
+      ...(body===undefined?{}:{body:JSON.stringify(body)})});
+    if (!result.ok) throw new BusinessRequestError(result.status);
+    return schema.parse(result.body);
+  } catch (error) {
+    if (error instanceof BusinessRequestError) throw error;
+    throw new BusinessRequestError(503);
+  }
 }
 export const businessResponses = {
   status:z.object({enabled:z.boolean(),publicDirectory:z.boolean(),mode:z.enum(['disabled','authenticated_preview','public'])}).strict(),

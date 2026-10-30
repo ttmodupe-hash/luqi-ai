@@ -41,6 +41,8 @@ describe('Business Connect consent and public disclosure',()=>{
     expect(businessProfile.safeParse(p).success).toBe(true);expect(businessSearchText(p)).toContain('diaparo');
     expect(businessSearchText(p)).not.toContain(p.contacts.email.value);expect(businessSearchText(p)).not.toContain(p.ownerConfirmedName.toLowerCase());
     expect(businessProfile.safeParse({...p,translations:[...p.translations,...p.translations]}).success).toBe(false);
+    expect(businessProfile.parse({...p,hours:[...p.hours].reverse()}).hours.map(h=>h.day)).toEqual(['mon','tue','wed','thu','fri','sat','sun']);
+    expect(businessProfile.safeParse({...p,contacts:{...p.contacts,whatsapp:{value:'0825550102',public:true}}}).success).toBe(false);
     expect(businessSearch.safeParse({q:'%',page:'-1'}).success).toBe(false);expect(businessSearch.safeParse({q:'Mabopane',page:'1'}).success).toBe(true);
   });
   it('requires real reviewer attestation and prevents GPS-derived or owner-set verification',()=>{

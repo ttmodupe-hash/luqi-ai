@@ -25,6 +25,6 @@ it('fails closed on HTTP errors and malformed JSON without treating a write as c
   const request=vi.fn().mockResolvedValueOnce(new Response('',{status:409})).mockResolvedValueOnce(new Response('{broken',{headers:{'Content-Type':'application/json'}}));
   vi.stubGlobal('fetch',request);
   await expect(businessRequest('/mine/4f147685-bad5-46dd-8520-1167d22bd41a','token',businessResponses.saved,{expectedRevision:1},'PUT')).rejects.toThrow('changed or matches');
-  await expect(businessRequest('/status',undefined,businessResponses.status)).rejects.toThrow('Invalid notes response');
+  await expect(businessRequest('/status',undefined,businessResponses.status)).rejects.toThrow('Business Connect is unavailable');
   expect(request).toHaveBeenCalledTimes(2);
 });

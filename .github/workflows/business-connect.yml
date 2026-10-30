@@ -2,7 +2,7 @@ name: LUQI Business Connect Review
 on:
   pull_request:
     branches: [main]
-    paths: ['api/business-connect.ts', 'api/services/businessConnectStore.ts', 'api/boot.ts', 'contracts/businessConnect.ts', 'db/**', 'src/**', 'app/src/**', 'tests/business-connect*', 'tests/fixtures/business-connect.ts', '.github/workflows/business-connect.yml']
+    paths: ['api/business-connect.ts', 'api/services/businessConnectStore.ts', 'api/boot.ts', 'contracts/businessConnect.ts', 'app/contracts/businessConnect.ts', 'db/**', 'src/**', 'app/src/**', 'tests/business-connect*', 'tests/fixtures/business-connect.ts', '.github/workflows/business-connect.yml']
 permissions:
   contents: read
 jobs:

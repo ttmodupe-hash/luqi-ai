@@ -20,7 +20,7 @@ it('keeps the prototype disabled without suggesting that a directory is already 
 it('offers language assistance and home-based registration without GPS, uploads or mandatory private coordinates',async()=>{
   request.mockImplementation((url:string)=>Promise.resolve(response(url.endsWith('/status')?{enabled:true,publicDirectory:false,mode:'authenticated_preview'}:{businesses:[],canReview:false})));
   render(view());await screen.findByRole('button',{name:'My businesses'});fireEvent.click(screen.getByRole('button',{name:'My businesses'}));fireEvent.click(screen.getByRole('button',{name:'Add your business'}));
-  fireEvent.change(screen.getByLabelText('How you trade'),{target:{value:'home_based'}});
+  fireEvent.change(screen.getByRole('combobox',{name:'How you trade',exact:true}),{target:{value:'home_based'}});
   expect(screen.queryByLabelText('Optional public latitude')).toBeNull();expect(screen.queryByLabelText('Public storefront address')).toBeNull();expect(document.querySelector('input[type=file]')).toBeNull();
   fireEvent.change(screen.getByLabelText('Business Connect language'),{target:{value:'zu'}});
   expect(screen.getByRole('heading',{name:'Thola amabhizinisi aseduze'})).toBeTruthy();

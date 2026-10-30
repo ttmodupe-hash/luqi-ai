@@ -13,6 +13,7 @@ const text = (min: number, max: number) => z.string().trim().min(min).max(max)
 const optionalText = (max: number) => text(0, max);
 const phone = z.string().trim().max(25).refine(v => v === '' || /^\+?[\d ()-]{7,25}$/.test(v));
 const email = z.union([z.literal(''), z.email().max(200)]);
+const whatsapp = phone.refine(v => v === '' || /^\+[1-9]\d{7,14}$/.test(v.replace(/[ ()-]/g,'')), 'Use an international WhatsApp number, e.g. +27 82 555 0102');
 const web = z.string().max(400).refine(v => {
   if (!v) return true;
   try { const u = new URL(v); return u.protocol === 'https:' && !u.username && !u.password &&
@@ -33,11 +34,12 @@ export const businessProfile = z.object({
   deliveryRadiusKm: z.number().int().min(0).max(200).nullable(),
   publicAddress: optionalText(250), landmark: optionalText(150),
   publicPoint: z.object({ latitude: z.number().min(-35).max(-22), longitude: z.number().min(16).max(33) }).strict().nullable(),
-  contacts: z.object({ phone: channel(phone), whatsapp: channel(phone), email: channel(email), website: channel(web),
+  contacts: z.object({ phone: channel(phone), whatsapp: channel(whatsapp), email: channel(email), website: channel(web),
     preferred: z.enum(['none', 'phone', 'whatsapp', 'email', 'website']) }).strict(),
   hours: z.array(z.object({ day: z.enum(BUSINESS_DAYS), closed: z.boolean(), opens: time, closes: time,
     overnight: z.boolean() }).strict()).length(7)
-    .refine(v => new Set(v.map(x => x.day)).size === 7 && v.every(x => x.closed || (x.overnight ? x.closes <= x.opens : x.closes > x.opens))),
+    .refine(v => new Set(v.map(x => x.day)).size === 7 && v.every(x => x.closed || (x.overnight ? x.closes <= x.opens : x.closes > x.opens)))
+    .transform(v => BUSINESS_DAYS.map(day => v.find(h => h.day === day)!)),
   languages: z.array(z.enum(BUSINESS_LANGUAGES)).min(1).max(11).refine(v => new Set(v).size === v.length),
   accessibility: z.array(z.enum(['step_free', 'wheelchair_access', 'sign_language', 'delivery', 'by_appointment'])).max(5)
     .refine(v => new Set(v).size === v.length),

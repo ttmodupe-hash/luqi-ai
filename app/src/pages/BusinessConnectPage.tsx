@@ -4,7 +4,7 @@ import { useCustomerSession } from '../providers/customer-session';
 import { getStoredLanguage } from '../lib/languages';
 import { MUNICIPALITIES, PROVINCE_NAMES } from '../lib/municipal-economy';
 import { BUSINESS_CATEGORIES, BUSINESS_DAYS, BUSINESS_LANGUAGES, BUSINESS_PROVINCES, businessProfile, publicBusiness,
-  type BusinessProfile } from '@contracts/businessConnect';
+  type BusinessProfile } from '../../contracts/businessConnect';
 import { businessCopy, businessNavigationLink, businessRequest, businessResponses, businessSharePath, newBusinessDraft,
   BUSINESS_LANGUAGE_NAMES, initialBusinessVerification, type BusinessDraft, type BusinessSummary, type OwnedBusiness, type PublicBusiness } from '../lib/business-connect';
 import '../business-connect.css';
@@ -92,7 +92,7 @@ function BusinessEditor({business,busy,onSave,onCancel,language}:{business:Owned
         {BUSINESS_PROVINCES.map(p=><option value={p} key={p}>{PROVINCE_NAMES[p]}</option>)}</select></label>
       <label>Business municipality<select value={draft.municipality} onChange={e=>update('municipality',e.target.value)}>{MUNICIPALITIES.filter(m=>m.province===draft.province).map(m=><option key={m.name}>{m.name}</option>)}</select></label>
       <label>Township, town or village<input required maxLength={100} value={draft.locality} onChange={e=>update('locality',e.target.value)}/></label>
-      <label>How you trade<select value={draft.kind} onChange={e=>locationOff(e.target.value as BusinessProfile['kind'])}><option value="service_area">Service area · travel to customers</option><option value="mobile">Mobile trader</option><option value="home_based">Home-based business</option><option value="storefront">Public storefront</option></select></label>
+      <label>How you trade<select aria-label="How you trade" value={draft.kind} onChange={e=>locationOff(e.target.value as BusinessProfile['kind'])}><option value="service_area">Service area · travel to customers</option><option value="mobile">Mobile trader</option><option value="home_based">Home-based business</option><option value="storefront">Public storefront</option></select></label>
     </div><label>Public service area<input maxLength={250} required={draft.kind!=='storefront'} value={draft.serviceArea} placeholder="e.g. Soshanguve, Mabopane and nearby areas" onChange={e=>update('serviceArea',e.target.value)}/></label>
     <label>Optional delivery radius in km<input type="number" min="0" max="200" value={draft.deliveryRadiusKm??''} onChange={e=>update('deliveryRadiusKm',e.target.value===''?null:Number(e.target.value))}/></label>
     {draft.kind==='storefront'&&<label className="bc-check"><input type="checkbox" checked={draft.consent.exactLocation} onChange={e=>{
