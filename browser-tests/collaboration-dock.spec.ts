@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-test('bottom-right Circles uses the current login and only explicit approved-contact reads',async({page},testInfo)=>{
+test('inline bottom-right Circles uses the current login and only explicit approved-contact reads',async({page},testInfo)=>{
  let logins=0,paid=0,contactReads=0;
  page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/luqi-core'))paid++});
  await page.route('**/v1/readiness',r=>r.fulfill({json:{checks:{persistence:'connected',ai_pilot:'configured_not_verified'}}}));
@@ -13,12 +13,15 @@ test('bottom-right Circles uses the current login and only explicit approved-con
  await expect(page.getByLabel('Your question')).toBeVisible();
  await page.getByLabel('Your question').fill('Keep this unsent draft');
  const trigger=page.getByRole('button',{name:'Open Circles & Chat',exact:true});
- const bounds=await trigger.boundingBox(),viewport=page.viewportSize()!;
- expect(bounds).not.toBeNull();expect(bounds!.x+bounds!.width).toBeGreaterThan(viewport.width-25);
- expect(bounds!.y+bounds!.height).toBeLessThanOrEqual(viewport.height);
+ const access=page.getByRole('complementary',{name:'Circles and chat access'});
+ expect(await access.evaluate(element=>getComputedStyle(element).position)).toBe('static');
+ expect(await trigger.getAttribute('aria-haspopup')).toBeNull();
  expect(contactReads).toBe(0);
  await trigger.click();
- const dialog=page.getByRole('dialog',{name:'Circles & Chat'});
+ const dialog=page.getByRole('region',{name:'Circles & Chat',exact:true});
+ await expect(page.getByRole('dialog',{name:'Circles & Chat'})).toHaveCount(0);
+ await expect(dialog).toBeFocused();
+ expect(await dialog.evaluate(element=>getComputedStyle(element).position)).toBe('static');
  await expect(dialog.getByRole('link',{name:'Approved study partner'})).toBeVisible();
  await expect(dialog.getByRole('link',{name:'Sign in to Luqi'})).toHaveCount(0);
  await expect(dialog.getByText(/An active account does not mean someone is online/)).toBeVisible();

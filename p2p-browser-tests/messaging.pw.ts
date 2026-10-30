@@ -9,7 +9,7 @@ async function signUp(page:Page,email:string,name:string){
  await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page.getByRole('heading',{name:'Luqi Chat',exact:true})).toBeVisible();
  const root=await mysql.createConnection(ROOT);try{const[r]=await root.execute<mysql.ResultSetHeader>("UPDATE users SET role='p2p_adult' WHERE email=?",[email]);expect(r.affectedRows).toBe(1)}finally{await root.end()}
  await page.getByRole('button',{name:'Open Circles & Chat',exact:true}).click();
- await page.getByRole('dialog',{name:'Circles & Chat'}).getByRole('link',{name:'Open your circles',exact:true}).click();
+ await page.getByRole('region',{name:'Circles & Chat',exact:true}).getByRole('link',{name:'Open your circles',exact:true}).click();
  await page.getByLabel('Device vault passphrase').fill(VAULT);await page.getByRole('button',{name:'Unlock or create vault',exact:true}).click();await expect(page.getByRole('button',{name:'Lock device vault',exact:true})).toBeVisible();
 }
 test('two real accounts exchange ciphertext, detect a risky message, and durably report/block',async({page,context,baseURL,browser})=>{
@@ -29,7 +29,7 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
   await page.getByLabel('I compared this code',{exact:false}).check();await peer.getByLabel('I compared this code',{exact:false}).check();
   await page.getByRole('button',{name:/Approve account/}).click();await peer.getByRole('button',{name:'Refresh circles',exact:true}).click();
   await page.getByRole('button',{name:'Open Circles & Chat',exact:true}).click();
-  const contacts=page.getByRole('dialog',{name:'Circles & Chat'});
+  const contacts=page.getByRole('region',{name:'Circles & Chat',exact:true});
   await expect(contacts.getByRole('link',{name:'Synthetic peer',exact:true})).toBeVisible();
   await expect(contacts.getByRole('link',{name:'Sign in to Luqi',exact:true})).toHaveCount(0);
   await page.keyboard.press('Escape');
