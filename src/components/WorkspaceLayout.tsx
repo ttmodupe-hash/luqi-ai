@@ -100,6 +100,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             </p>}
             <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
             {children}
+            <CollaborationDock />
           </div>
         </div>
       ) : (
@@ -191,6 +192,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         </p>}
         <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
         {children}
+        <CollaborationDock />
       </div>
       <footer className="luqi-footer">
         <div>
@@ -212,7 +214,6 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       </footer>
         </>
       )}
-      <CollaborationDock />
       <dialog
         ref={dialog}
         className="luqi-search-dialog"
