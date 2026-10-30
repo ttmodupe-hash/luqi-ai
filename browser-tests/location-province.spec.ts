@@ -18,7 +18,7 @@ test('device location suggests a province only after a click and explicit confir
 test('an outside-coverage fix retains manual province choice',async({page,context})=>{
  await context.grantPermissions(['geolocation']);await context.setGeolocation({latitude:0,longitude:0,accuracy:10});
  await page.goto('/#/opportunities');await page.getByRole('button',{name:'Use my location',exact:true}).click();
- await expect(page.getByRole('status').filter({hasText:'Could not confidently identify'})).toBeVisible();
+ await expect(page.getByText(/Could not confidently identify a South African province/)).toBeVisible();
  await page.getByRole('button',{name:'Select Gauteng',exact:true}).click();
  await expect(page.getByRole('button',{name:'Select Gauteng',exact:true})).toHaveAttribute('aria-pressed','true');
 });

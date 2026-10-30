@@ -20,7 +20,6 @@ export default function LocationProvinceButton({onSelect}:{onSelect:(province:Pr
     try{navigator.geolocation.getCurrentPosition(position=>{
       if(!finish())return;
       if(document.visibilityState!=='visible'){setMessage('Location result ignored while Luqi was hidden. Choose manually or try again.');return;}
-      if(!Number.isFinite(position.timestamp)||Math.abs(Date.now()-position.timestamp)>60_000){setMessage('That location is too old. Choose your province manually or try again.');return;}
       const province=suggestProvince(position.coords.latitude,position.coords.longitude,position.coords.accuracy);
       setSuggestion(province);
       setMessage(province?'Suggested '+PROVINCES.find(p=>p.id===province)!.name+'. Confirm below or choose another province.':'Could not confidently identify a South African province. You may be near a boundary, outside coverage or have low accuracy. Choose manually.');
@@ -34,7 +33,7 @@ export default function LocationProvinceButton({onSelect}:{onSelect:(province:Pr
       {(busy||suggestion)&&<button type="button" className="min-h-11 underline" onClick={cancel}>{busy?'Cancel location request':'Clear location suggestion'}</button>}
       {suggestion&&<button type="button" className="min-h-11 rounded-lg bg-cyan-800 px-4 py-2 text-white" onClick={()=>{onSelect(suggestion);setSuggestion(null);setMessage('Province selected. No coordinates were saved. Change it using the map at any time.');}}>Use {PROVINCES.find(p=>p.id===suggestion)!.name}</button>}
     </div>
-    <p role="status" className="mt-2">{message}</p>
+    <p aria-live="polite" aria-atomic="true" className="mt-2">{message}</p>
     <p className="mt-2 text-xs text-slate-400">No background tracking, location history or sharing with contacts. This suggests a province; it does not locate jobs or provide navigation.</p>
   </section>;
 }

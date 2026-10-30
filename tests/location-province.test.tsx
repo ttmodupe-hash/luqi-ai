@@ -19,15 +19,15 @@ it('does not request on mount; requests once with bounded options and requires s
  act(()=>getPosition.mock.calls[0][0](position()));expect(select).not.toHaveBeenCalled();fireEvent.click(screen.getByText('Use Gauteng'));expect(select).toHaveBeenCalledWith('GP');
 });
 it('denial keeps manual selection available and no automatic retry',()=>{
- render(<LocationProvinceButton onSelect={vi.fn()}/>);fireEvent.click(screen.getByText('Use my location'));act(()=>getPosition.mock.calls[0][1]({code:1}));expect(screen.getByRole('status').textContent).toContain('permission was denied');expect(getPosition).toHaveBeenCalledTimes(1);
+ render(<LocationProvinceButton onSelect={vi.fn()}/>);fireEvent.click(screen.getByText('Use my location'));act(()=>getPosition.mock.calls[0][1]({code:1}));expect(screen.getByText(/Location permission was denied/).textContent).toContain('permission was denied');expect(getPosition).toHaveBeenCalledTimes(1);
 });
 it('cancel ignores late success and a watchdog releases a stalled permission prompt',()=>{
  vi.useFakeTimers();const select=vi.fn();render(<LocationProvinceButton onSelect={select}/>);fireEvent.click(screen.getByText('Use my location'));const success=getPosition.mock.calls[0][0];fireEvent.click(screen.getByText('Cancel location request'));act(()=>success(position()));expect(screen.queryByText('Use Gauteng')).toBeNull();
- fireEvent.click(screen.getByText('Use my location'));act(()=>vi.advanceTimersByTime(12000));expect(screen.getByRole('status').textContent).toContain('timed out');act(()=>getPosition.mock.calls[1][0](position()));expect(select).not.toHaveBeenCalled();expect(screen.queryByText('Use Gauteng')).toBeNull();
+ fireEvent.click(screen.getByText('Use my location'));act(()=>vi.advanceTimersByTime(12000));expect(screen.getByText(/Location request timed out/).textContent).toContain('timed out');act(()=>getPosition.mock.calls[1][0](position()));expect(select).not.toHaveBeenCalled();expect(screen.queryByText('Use Gauteng')).toBeNull();
 });
-it('ignores hidden or stale results',()=>{
- render(<LocationProvinceButton onSelect={vi.fn()}/>);fireEvent.click(screen.getByText('Use my location'));vi.spyOn(document,'visibilityState','get').mockReturnValue('hidden');act(()=>getPosition.mock.calls[0][0](position()));expect(screen.getByRole('status').textContent).toContain('hidden');
- vi.spyOn(document,'visibilityState','get').mockReturnValue('visible');fireEvent.click(screen.getByText('Use my location'));act(()=>getPosition.mock.calls[1][0]({...position(),timestamp:Date.now()-120000}));expect(screen.getByRole('status').textContent).toContain('too old');
+it('ignores hidden results and accepts fresh browser fixes independently of wall-clock differences',()=>{
+ render(<LocationProvinceButton onSelect={vi.fn()}/>);fireEvent.click(screen.getByText('Use my location'));vi.spyOn(document,'visibilityState','get').mockReturnValue('hidden');act(()=>getPosition.mock.calls[0][0](position()));expect(screen.getByText(/Location result ignored/).textContent).toContain('hidden');
+ vi.spyOn(document,'visibilityState','get').mockReturnValue('visible');fireEvent.click(screen.getByText('Use my location'));act(()=>getPosition.mock.calls[1][0]({...position(),timestamp:Date.now()-120000}));expect(screen.getByText('Use Gauteng')).toBeTruthy();
 });
 it('same-origin permission policy and mirrored privacy files stay aligned; no location transport or persistence',()=>{
  expect(readFileSync('api/boot.ts','utf8')).toContain('camera=(), microphone=(self), geolocation=(self)');
