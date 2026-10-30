@@ -60,6 +60,36 @@ class ComparisonTests(unittest.TestCase):
         self.assertFalse(result["settings_changed"])
         self.assertTrue(result["human_review_required"])
 
+    def test_expanded_profile_and_mixed_reservations_do_not_invent_attempts(self):
+        data = fixture(); data.update(format="luqi.pilot-spend-evidence.v2", budget_profile="approved-300-v1")
+        data["ledger"]["rows"][0]["reserved_cents"] = 101
+        result = review.assess(data, NOW)
+        self.assertEqual(result["approved_total_usd"], "300")
+        self.assertEqual(result["providers"]["gemini"]["approved_cap_usd"], "165")
+        self.assertEqual(result["providers"]["openai"]["approved_cap_usd"], "135")
+        self.assertEqual(result["providers"]["gemini"]["reserved_usd"], "1.01")
+        self.assertIsNone(result["providers"]["gemini"]["reservation_attempts"])
+        self.assertIsNone(result["providers"]["openai"]["reservation_attempts"])
+        self.assertNotIn("gemini:reservation_step_invalid", result["findings"])
+        self.assertFalse(result["production_reconciliation_complete"])
+
+    def test_expanded_caps_are_selected_explicitly_and_refuse_unapproved_profiles(self):
+        data = fixture(); data["budget_profile"] = "approved-300-v1"
+        with self.assertRaises(review.EvidenceError): review.assess(data, NOW)
+        data["format"] = "luqi.pilot-spend-evidence.v2"
+        for profile in ("unlimited", "approved-301-v1", 300, None):
+            data["budget_profile"] = profile
+            with self.subTest(profile=profile), self.assertRaises(review.EvidenceError): review.assess(data, NOW)
+
+    def test_expanded_cost_thresholds_preserve_300_total(self):
+        data = fixture(); data.update(format="luqi.pilot-spend-evidence.v2", budget_profile="approved-300-v1")
+        data["providers"][0]["usage_usd"] = "165"
+        data["providers"][1]["usage_usd"] = "135"
+        result = review.assess(data, NOW)
+        self.assertIn("total_reported_cost_cap_reached_or_exceeded", result["findings"])
+        self.assertIn("gemini:reported_cost_cap_reached_or_exceeded", result["findings"])
+        self.assertFalse(result["settings_changed"])
+
     def test_provisional_billing_never_claims_reconciliation(self):
         result = review.assess(partial(), NOW)
         self.assertIn("gemini:billing_provisional", result["findings"])

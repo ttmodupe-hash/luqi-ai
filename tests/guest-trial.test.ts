@@ -7,6 +7,7 @@ vi.mock('../api/services/guestTrialBudget', async original => ({
   guestTrialSnapshot: (...args: unknown[]) => snapshot(...args),
   reserveGuestAttempt: (...args: unknown[]) => reserve(...args),
 }));
+vi.mock('../api/services/guestTokenCount', () => ({ countGuestInputTokens: (...args: unknown[]) => countTokens(...args) }));
 vi.mock('@google/genai', () => ({
   ThinkingLevel: { LOW: 'LOW' },
   GoogleGenAI: class {
@@ -136,7 +137,8 @@ describe('expanded trial HTTP safety', () => {
     expect((await request()).status).toBe(200);
     expect(reserve.mock.invocationCallOrder[0]).toBeLessThan(countTokens.mock.invocationCallOrder[0]);
     expect(countTokens.mock.invocationCallOrder[0]).toBeLessThan(generate.mock.invocationCallOrder[0]);
-    expect(countTokens.mock.calls[0][0].config.systemInstruction).toContain('You are Luqi');
+    expect(countTokens.mock.calls[0][1]).toContain('You are Luqi');
+    expect(countTokens.mock.calls[0][0]).toContain('Sawubona');
     expect(generate.mock.calls[0][0].config.maxOutputTokens).toBe(512);
   });
   it.each([undefined, NaN, -1, 4097])('fails closed for an invalid token count: %s', async totalTokens => {

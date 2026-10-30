@@ -30,4 +30,6 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev
+      - run: npx tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop operations/guest-maintenance.ts
+      - run: node operations/build-guest-maintenance.mjs
       - run: npx vitest run tests/guest-trial-mysql.integration.test.ts --no-file-parallelism
