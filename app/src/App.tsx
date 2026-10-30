@@ -5,7 +5,7 @@ import WorkspaceLayout from "./components/WorkspaceLayout";
 import { CustomerSessionProvider } from "./providers/customer-session";
 import { ChatWorkspaceProvider } from "./providers/chat-workspace";
 import { SovereignRegionProvider } from "./providers/sovereign-region";
-import ServiceStatusPage from "./pages/ServiceStatusPage";
+const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 import Home from "./pages/Home";
@@ -17,7 +17,7 @@ const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-const OmegaTasksPage = lazy(() => import('./pages/OmegaTasksPage'));
+import OmegaTasksPage from './pages/OmegaTasksPage';
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
 // Keep core account/notes/help pages ready, and defer optional tool downloads.

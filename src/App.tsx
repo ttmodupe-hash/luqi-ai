@@ -5,7 +5,7 @@ import WorkspaceLayout from "./components/WorkspaceLayout";
 import { CustomerSessionProvider } from "./providers/customer-session";
 import { ChatWorkspaceProvider } from "./providers/chat-workspace";
 import { SovereignRegionProvider } from "./providers/sovereign-region";
-import ServiceStatusPage from "./pages/ServiceStatusPage";
+const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
 import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
@@ -19,7 +19,7 @@ const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-const OmegaTasksPage = lazy(() => import('./pages/OmegaTasksPage'));
+import OmegaTasksPage from './pages/OmegaTasksPage';
 
 // Load optional tools only when their route is rendered. Keep account, notes,
 // the release-observed core pages available in the initial bundle. Informational
