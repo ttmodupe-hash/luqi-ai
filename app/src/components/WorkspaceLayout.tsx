@@ -4,6 +4,8 @@ import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
 import RouteLoadBoundary from "./RouteLoadBoundary";
 import PublicReleaseUpdateNotice from "./PublicReleaseUpdateNotice";
+import WorkspacePlaybar, { readCalmPreference } from "./WorkspacePlaybar";
+import "../experience.css";
 import CollaborationDock from './CollaborationDock';
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
 const ChatSidebar = lazy(() => import("./ChatSidebar"));
@@ -33,6 +35,11 @@ const navigation = [
 ] as const;
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const [calm, setCalm] = useState(readCalmPreference);
+  const changeCalm = (value: boolean) => {
+    setCalm(value);
+    try { localStorage.setItem("luqi:calm-mode", String(value)); } catch { /* Preference works without storage. */ }
+  };
   const isChatWorkspace = location.pathname === "/chat";
   const customer = useOptionalCustomerSession();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -69,7 +76,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   }, [searchOpen]);
   const results = findWorkspaceTools(query);
   return (
-    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"}>
+    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm ? "calm" : "auto"}>
       <Toaster />
       <a
         className="luqi-skip"
@@ -91,6 +98,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             {customer?.expired && <p role="status" className="luqi-info">
               Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
             </p>}
+            <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
             {children}
           </div>
         </div>
@@ -181,6 +189,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         {customer?.expired && <p role="status" className="luqi-info">
           Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
         </p>}
+        <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
         {children}
       </div>
       <footer className="luqi-footer">

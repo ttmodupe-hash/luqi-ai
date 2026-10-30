@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import PublisherSignals, { usePublisherSignals } from '../components/PublisherSignals';
 import SouthAfricaProvinceMap from '../components/SouthAfricaProvinceMap';
 import { matchGovernmentAdverts } from '../lib/government-job-notices';
 import OpportunityVerificationPanel from '../components/OpportunityVerificationPanel';
@@ -9,8 +10,6 @@ import {
  deadlineState,matchOpportunitySources,
  type OpportunityCountry,type OpportunityCategory,type OpportunityAudience,type ProvinceCode,
 } from '../lib/opportunity-sources';
-type Check={id:string;status:'reachable'|'unavailable';checkedAt:string;publication?:string};
-type Snapshot={status:'sources_checked';checkedAt:string;scope:'publisher-pages-only';sources:Check[]};
 const audienceChoices:{id:OpportunityAudience|'all';label:string}[]=[
  {id:'all',label:'Show all audiences'},{id:'youth',label:'Young people'},
  {id:'graduate',label:'Graduates'},{id:'entrepreneur',label:'Entrepreneurs'},
@@ -23,30 +22,12 @@ export default function OpportunityCompassPage(){
  const [category,setCategory]=useState<OpportunityCategory|'all'>('all');
  const [audience,setAudience]=useState<OpportunityAudience|'all'>('all');
  const [query,setQuery]=useState('');
- const [scan,setScan]=useState<Snapshot|null>(null);
- const [scanMessage,setScanMessage]=useState('');
- const [checking,setChecking]=useState(false);
+ const signals=usePublisherSignals();
+ const {scan,scanMessage,checking,checkPublishers}=signals;
  const results=country==='ZA'?matchOpportunitySources(category,audience,query):[];
  const anchor=COUNTRY_ANCHORS.find(x=>x.id===country)!;
  const today=new Date();
  const provinceCounts=Object.fromEntries(PROVINCES.map(p=>[p.id,matchGovernmentAdverts({province:p.id,level:'all',query:'',includeHistory:false,now:today}).length])) as Record<ProvinceCode,number>;
- async function checkPublishers(){
-   if(checking)return;setChecking(true);setScanMessage('Checking official publisher pages; this does not verify individual vacancies.');
-   const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),10_000);
-   try {
-     const response=await fetch('/api/v1/opportunity-watch',{method:'GET',cache:'no-store',
-       credentials:'omit',redirect:'error',signal:controller.signal,headers:{Accept:'application/json'}});
-     if(!response.ok)throw Error('Source monitor unavailable');
-     const value:unknown=await response.json();
-     if(!value||typeof value!=='object')throw Error('Invalid source monitor reply');
-     const data=value as Snapshot;
-     if(data.status!=='sources_checked'||data.scope!=='publisher-pages-only'||!Array.isArray(data.sources)||data.sources.length!==3
-       ||data.sources.some(x=>!['reachable','unavailable'].includes(x.status)))throw Error('Invalid source monitor reply');
-     setScan(data);setScanMessage('Publisher-page check completed. A reachable site does not mean an advertised position is open.');
-   }catch{
-     setScan(null);setScanMessage('Official source availability could not be confirmed. Open the original agency websites directly.');
-   }finally{clearTimeout(timeout);setChecking(false);}
- }
  return <main className="mx-auto max-w-6xl min-w-0 space-y-6 px-3 py-7 text-slate-100 sm:px-6 sm:py-10" aria-labelledby="opportunities-heading">
    <header className="space-y-3">
      <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Luqi opportunities · South Africa first · Free</p>
@@ -57,7 +38,7 @@ export default function OpportunityCompassPage(){
    <section className="space-y-3 rounded-xl border border-cyan-800 bg-slate-900 p-4" aria-label="Country scope">
      <h2 className="text-lg font-semibold">Country-by-country rollout</h2>
      <label className="block max-w-lg text-sm">Select your country or research view
-       <select aria-label="Country view" value={country} onChange={e=>{setCountry(e.target.value as OpportunityCountry);setProvince(null);setScan(null);}}
+       <select aria-label="Country view" value={country} onChange={e=>{setCountry(e.target.value as OpportunityCountry);setProvince(null);signals.setAuto(false);}}
          className="mt-2 w-full rounded-lg border border-slate-500 bg-slate-950 px-3 py-3 text-white">
          {COUNTRY_ANCHORS.map(x=><option key={x.id} value={x.id}>{x.flag} {x.name}</option>)}
        </select>
@@ -68,7 +49,7 @@ export default function OpportunityCompassPage(){
      </p>}
    </section>
    {country==='ZA'&&<>
-     <SouthAfricaProvinceMap value={province} onSelect={setProvince} counts={provinceCounts}/>
+     <SouthAfricaProvinceMap value={province} onSelect={setProvince} counts={provinceCounts} signals={<PublisherSignals signals={signals}/>}/>
      <div id="province-job-board" className="scroll-mt-28"><VerifiedGovernmentJobsPanel province={province}/></div>
      <section className="space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-label="Find official opportunity sources">
        <h2 className="text-xl font-semibold">Find a trusted starting point</h2>
@@ -106,7 +87,7 @@ export default function OpportunityCompassPage(){
        <p className="text-sm">A bounded read-only agent checks whether three trusted publisher pages respond and can identify a circular number if present. It does not scrape personal data, invent vacancies, certify closing dates, rank candidates or submit applications.</p>
        <button type="button" onClick={()=>{void checkPublishers()}} disabled={checking}
          className="rounded-lg border border-cyan-400 bg-cyan-900 px-4 py-3 font-semibold disabled:opacity-50">{checking?'Checking publishers…':'Check official source pages'}</button>
-       {scanMessage&&<p role="status" className="text-sm">{scanMessage}</p>}
+       {scanMessage&&<p className="text-sm">See the publisher signals in the map above for the check status and timestamp.</p>}
        {scan&&<div className="space-y-2 text-sm"><p>Last publisher check: {new Date(scan.checkedAt).toLocaleString('en-ZA')}</p>
          {scan.sources.map(s=><p key={s.id}>{s.status==='reachable'?'● Reachable publisher':'○ Publisher check unavailable'}: {s.id}{s.publication?' · '+s.publication:''}</p>)}
        </div>}

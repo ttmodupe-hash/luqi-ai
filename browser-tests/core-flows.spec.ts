@@ -79,7 +79,7 @@ test('public pages render without horizontal overflow or JavaScript exceptions',
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
     if (path === '/service-status') await expect(page.getByRole('alert')).toContainText('Status unavailable');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), path).toBe(true);
-    await page.screenshot({ path: test.info().outputPath(path.replaceAll('/', '') || 'home') + '.png', fullPage: true });
+    await page.screenshot({ path: test.info().outputPath(path.replaceAll('/', '') || 'home') + '.png', fullPage: true, scale: 'css' });
   }
   expect(errors).toEqual([]);
 });

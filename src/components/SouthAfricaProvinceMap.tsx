@@ -1,24 +1,24 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUpRight, Check, Compass, MapPin, MousePointer2 } from 'lucide-react';
 import { PROVINCES, type ProvinceCode } from '../lib/opportunity-sources';
 import { GAUTENG_CALLOUT, MAP_CONTEXT_LABELS, PROVINCE_GEOMETRY } from '../lib/sa-province-map';
 import '../province-map.css';
 
 type Props = { value: ProvinceCode | null; onSelect: (value: ProvinceCode | null) => void;
-  counts: Record<ProvinceCode, number> };
+  counts: Record<ProvinceCode, number>; signals?: ReactNode };
 const names: Record<ProvinceCode, string[]> = { EC: ['Eastern Cape'], FS: ['Free State'], GP: ['Gauteng'],
   KZN: ['KwaZulu-', 'Natal'], LP: ['Limpopo'], MP: ['Mpumalanga'], NC: ['Northern', 'Cape'],
   NW: ['North West'], WC: ['Western Cape'] };
 const colours: Record<ProvinceCode, string> = { EC: '#174959', FS: '#205969', GP: '#32777c',
   KZN: '#266674', LP: '#205264', MP: '#1c455a', NC: '#163d50', NW: '#277072', WC: '#24606b' };
-export default function SouthAfricaProvinceMap({ value, onSelect, counts }: Props) {
+export default function SouthAfricaProvinceMap({ value, onSelect, counts, signals }: Props) {
   const prefix = 'za-map-' + useId().replace(/:/g, '');
   const [hovered, setHovered] = useState<ProvinceCode | null>(null);
   const chosen = PROVINCES.find(p => p.id === value);
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   const select = (id: ProvinceCode) => onSelect(value === id ? null : id);
   const browse = () => document.getElementById('province-job-board')?.scrollIntoView({ block: 'start',
-    behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    behavior: document.querySelector('.luqi-shell[data-motion="calm"]') || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   return <section className="luqi-province-explorer" aria-label="Choose a South African province">
     <header className="luqi-province-heading">
       <div><p className="luqi-province-kicker"><Compass size={15} aria-hidden="true" /> OPPORTUNITIES, CLOSER TO HOME</p>
@@ -26,6 +26,7 @@ export default function SouthAfricaProvinceMap({ value, onSelect, counts }: Prop
         <p>Start with your province. Discover reviewed job notices and trusted official sources.</p></div>
       <span className="luqi-province-country">🇿🇦 <span>South Africa</span><span className="luqi-province-country-count">9 provinces</span></span>
     </header>
+    {signals}
     <div className="luqi-province-workspace">
       <div className="luqi-province-map-panel">
         <div className="luqi-province-map-topline"><span><MapPin size={14} aria-hidden="true" /> {chosen?.name ?? 'Choose your starting point'}</span>
@@ -54,6 +55,13 @@ export default function SouthAfricaProvinceMap({ value, onSelect, counts }: Prop
               <title>{name + ' · ' + counts[region.id] + ' reviewed notice' + (counts[region.id] === 1 ? '' : 's')}</title>
             </path>;
           })}
+          <g className="luqi-province-beacons" aria-hidden="true" pointerEvents="none">
+            {PROVINCE_GEOMETRY.filter(region => counts[region.id] > 0).map((region, index) =>
+              <g key={region.id} style={{ animationDelay: `${index * .35}s` }}>
+                <circle className="luqi-province-beacon-ring" cx={region.label[0]} cy={region.label[1] + 31} r="7" />
+                <circle cx={region.label[0]} cy={region.label[1] + 31} r="3" fill="#c5ffe5" />
+              </g>)}
+          </g>
           <g className="luqi-province-map-labels" aria-hidden="true" pointerEvents="none">
             {PROVINCE_GEOMETRY.map(region => <g key={region.id} className={(value === region.id ? 'is-selected' : '') + (region.id === 'GP' ? ' is-gauteng' : '')}>
               {region.id === 'GP' && <path className="luqi-province-leader" d={`M${region.label[0]},${region.label[1]} L${GAUTENG_CALLOUT[0] + 37},${GAUTENG_CALLOUT[1] + 19} L${GAUTENG_CALLOUT[0] - 30},${GAUTENG_CALLOUT[1] + 19}`} />}

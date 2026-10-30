@@ -60,7 +60,8 @@ export async function scanOfficialOpportunitySources(
  }));
  return {status:'sources_checked',checkedAt,scope:'publisher-pages-only',sources};
 }
-const CACHE_MS=6*60*60*1000;
+// Shared single-flight cache bounds upstream traffic to at most three scans per 15 minutes per process.
+const CACHE_MS=15*60*1000;
 let cache:{at:number;snapshot:ScoutSnapshot}|null=null;
 let ongoing:Promise<ScoutSnapshot>|null=null;
 export function clearOpportunityScoutCacheForTest(){cache=null;ongoing=null;}
