@@ -29,6 +29,7 @@
     "app/src/App.tsx",
     "scripts/inspect-release-database.ts",
     "scripts/prepare-release-feature-storage.ts",
-    "scripts/prepare-business-storage.ts"
+    "scripts/prepare-business-storage.ts",
+    "scripts/accept-business-storage.ts"
   ]
 }
