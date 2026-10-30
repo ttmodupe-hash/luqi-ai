@@ -1,13 +1,12 @@
-import { lazy, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router';
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useOptionalCustomerSession } from '../providers/customer-session';
-import RouteLoadBoundary from './RouteLoadBoundary';
+import Contacts from './ApprovedContactsPanel';
 import type { ContactPresenceControls } from './useContactPresence';
 import './collaboration-dock.css';
 
 // Guests make no private reads; signed-in people see only their approved Luqi contacts.
-const Contacts = lazy(() => import('./ApprovedContactsPanel'));
 export default function CollaborationDock({ presence }: { presence?: ContactPresenceControls }) {
   const customer = useOptionalCustomerSession(), location = useLocation();
   const [open, setOpen] = useState(true);
@@ -26,8 +25,8 @@ export default function CollaborationDock({ presence }: { presence?: ContactPres
     {open && <section ref={panel} id="luqi-collaboration-panel" className="luqi-collaboration-panel"
       aria-labelledby="luqi-collaboration-title" tabIndex={-1}>
       <h2 id="luqi-collaboration-title" className="luqi-sr-only">Your contacts</h2>
-      {open && <RouteLoadBoundary><Contacts key={customer?.session?.token ?? 'guest'}
-        session={customer?.session ?? null} close={close} presence={presence} /></RouteLoadBoundary>}
+      {open && <Contacts key={customer?.session?.token ?? 'guest'}
+        session={customer?.session ?? null} close={close} presence={presence} />}
     </section>}
   </aside>;
 }
