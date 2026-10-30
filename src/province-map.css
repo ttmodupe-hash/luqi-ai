@@ -1,0 +1,51 @@
+.luqi-province-explorer{--pm-mint:#a4f4d4;--pm-line:#29424f;border:1px solid var(--pm-line);border-radius:22px;background:#0b1723;color:#e9f3f6;overflow:hidden;box-shadow:0 16px 48px #0002}
+.luqi-province-heading{display:flex;gap:24px;align-items:flex-start;justify-content:space-between;padding:28px 28px 22px}
+.luqi-province-heading h2{font-size:clamp(1.35rem,2.4vw,1.8rem);font-weight:650;letter-spacing:-.035em;margin:8px 0}
+.luqi-province-heading p:not(.luqi-province-kicker){font-size:14px;color:#a9bbc5;line-height:1.6;margin:0}
+.luqi-province-kicker{display:flex;gap:7px;align-items:center;font-size:10px;font-weight:700;letter-spacing:.15em;color:#a4f4d4;margin:0}
+.luqi-province-country{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:#132737;border:1px solid #294352;padding:9px 12px;border-radius:24px;white-space:nowrap;font-size:12px;margin-top:5px}
+.luqi-province-country-count{color:#9eb4c1;font-size:11px;border-left:1px solid #3a5360;padding-left:9px}
+.luqi-province-workspace{display:grid;grid-template-columns:minmax(0,1fr) 285px;border-top:1px solid var(--pm-line);border-bottom:1px solid var(--pm-line)}
+.luqi-province-map-panel{min-width:0;position:relative;background:radial-gradient(ellipse at 53% 47%,#16364065,transparent 65%),#07131f}
+.luqi-province-map-topline{position:absolute;top:17px;left:20px;right:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:#9cb8c7;pointer-events:none;z-index:1}
+.luqi-province-map-topline>span:first-child{display:flex;gap:6px;align-items:center}
+.luqi-province-north{font-size:14px;letter-spacing:.12em;color:#d3e6e9}
+.luqi-province-svg{display:block;width:100%;height:auto;max-height:590px}
+.luqi-province-shape{cursor:pointer;transition:fill .16s,stroke .16s;outline:none;stroke-linejoin:round}
+.luqi-province-shape:hover{fill:#3b7b84;stroke:#d9fffa;stroke-width:2}
+.luqi-province-shape.is-selected{fill:#a4f4d4;stroke:#effffb;stroke-width:2}
+.luqi-province-shape:focus-visible{fill:#5ca7b2;stroke:#fff;stroke-width:3;stroke-dasharray:5 2}
+.luqi-province-fullname,.luqi-province-shortname{fill:#edf7fa;font-family:inherit;font-size:20px;font-weight:550;letter-spacing:.015em;paint-order:stroke;stroke:#112936;stroke-width:2px;stroke-linejoin:round}
+.luqi-province-shortname{display:none;font-size:25px;font-weight:650}
+.luqi-province-map-labels>.is-selected text{fill:#092d2a;stroke:#b5ffdf;stroke-width:1px;font-weight:700}
+.luqi-province-leader{fill:none;stroke:#91c7ce;stroke-width:1.2;stroke-linecap:round}
+.luqi-province-context{fill:#8199a6;font-size:10px;letter-spacing:.11em}
+.luqi-province-ocean{fill:#456474;font-size:12px;letter-spacing:.25em}
+.luqi-province-map-caption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:9px;padding:0 20px 18px;font-size:10px;color:#94aebb}
+.luqi-province-map-caption>span{display:flex;align-items:center;gap:7px}
+.luqi-province-key{width:8px;height:8px;border:1px solid #b6e8df;background:#277072;border-radius:2px}
+.luqi-province-summary{border-left:1px solid var(--pm-line);padding:28px 24px;background:linear-gradient(155deg,#112735,#0c1a27);display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-width:0}
+.luqi-province-summary-icon{padding:11px;border:1px solid #355d64;border-radius:14px;color:#a4f4d4;background:#1a3a4211;margin-bottom:22px}
+.luqi-province-summary h3{font-size:27px;font-weight:600;line-height:1.2;letter-spacing:-.04em;margin:10px 0 13px;max-width:235px}
+.luqi-province-summary>p:not(.luqi-province-kicker){font-size:12px;line-height:1.7;color:#abc0cb;margin:0}
+.luqi-province-stat{display:flex;align-items:center;gap:13px;margin:24px 0}
+.luqi-province-stat>strong{font-size:48px;font-weight:550;letter-spacing:-.06em;line-height:1;color:#baf9e0}
+.luqi-province-stat>span{font-size:12px;color:#d5e5eb;line-height:1.7}.luqi-province-stat small{display:block;font-size:10px;color:#8ea9b7}
+.luqi-province-summary .luqi-province-empty{padding-bottom:15px;color:#bad5e0;font-size:11px}
+.luqi-province-browse{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#a4f4d4;color:#092d2a;border:1px solid #b2f9df;border-radius:9px;padding:12px 13px;font-size:12px;font-weight:700;min-height:44px;cursor:pointer}
+.luqi-province-browse:hover{background:#c7ffe9}.luqi-province-reset{min-height:44px;font-size:12px;text-decoration:underline;text-underline-offset:4px;color:#c2dce7;cursor:pointer;width:100%;margin-top:5px}
+.luqi-province-official{display:flex;gap:7px;align-items:center;font-size:11px;color:#b5dfef;padding:18px 0 12px;text-decoration:underline;text-underline-offset:4px}
+.luqi-province-summary .luqi-province-count-note{font-size:10px;line-height:1.65;color:#91a9b7}
+.luqi-province-selector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:20px 24px 12px}
+.luqi-province-selector>button{display:flex;align-items:center;gap:9px;min-width:0;min-height:46px;text-align:left;border:1px solid #2c4553;border-radius:9px;background:#0e202e;color:#c2d6e0;padding:7px 11px;font-size:12px;cursor:pointer;transition:background .16s,border-color .16s}
+.luqi-province-selector>button:hover{background:#183948;border-color:#688e9b}.luqi-province-selector>button.is-selected{background:#1a413f;border-color:#8fe7c5;color:#dcfff0}
+.luqi-province-selector-code{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:7px;background:#1b3544;color:#91b7c8;font-size:9px;font-weight:750}
+.luqi-province-selector .is-selected .luqi-province-selector-code{background:#a4f4d4;color:#102e2b}
+.luqi-province-selector-count{margin-left:auto;color:#b3cbd7;font-size:11px;flex-shrink:0}
+.luqi-province-selection-status{font-size:12px;color:#bbe6dd;line-height:1.6;margin:0;padding:2px 24px 17px}
+.luqi-province-footnote{border-top:1px solid #233b48;background:#091621;padding:14px 24px;font-size:10px;color:#91a9b7;line-height:1.7}
+.luqi-province-footnote p{margin:0}.luqi-province-footnote p+p{margin-top:4px}.luqi-province-footnote a{text-decoration:underline;text-underline-offset:3px}
+.luqi-province-explorer button:focus-visible,.luqi-province-explorer a:focus-visible{outline:2px solid #e2fff4;outline-offset:4px}
+@media(max-width:850px){.luqi-province-workspace{grid-template-columns:minmax(0,1fr) 235px}.luqi-province-heading{padding:22px 20px;gap:14px}.luqi-province-summary{padding:22px 18px}.luqi-province-summary h3{font-size:23px}.luqi-province-country-count{display:none}.luqi-province-fullname{font-size:21px}}
+@media(max-width:620px){.luqi-province-explorer{border-radius:16px}.luqi-province-heading{display:block;padding:20px 17px}.luqi-province-heading h2{font-size:22px;line-height:1.25}.luqi-province-heading p:not(.luqi-province-kicker){font-size:12px}.luqi-province-country{display:inline-flex;margin-top:14px;padding:5px 9px;font-size:10px}.luqi-province-country-count{display:inline;font-size:10px}.luqi-province-kicker{font-size:8px;letter-spacing:.12em}.luqi-province-workspace{grid-template-columns:1fr}.luqi-province-map-topline{left:14px;right:14px;top:12px;font-size:9px}.luqi-province-svg{padding-top:16px}.luqi-province-fullname,.luqi-province-leader,.luqi-province-gauteng-dot{display:none}.luqi-province-shortname{display:block}.luqi-province-map-caption{font-size:9px;padding:0 14px 14px;gap:6px}.luqi-province-map-caption>span:last-child{display:none}.luqi-province-summary{border-left:0;border-top:1px solid var(--pm-line);padding:20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 15px;align-items:center}.luqi-province-summary-icon{display:none}.luqi-province-summary .luqi-province-kicker{grid-column:1/-1}.luqi-province-summary h3{font-size:22px;margin:0;max-width:none}.luqi-province-summary>p:not(.luqi-province-kicker){grid-column:1/-1;font-size:12px}.luqi-province-summary h3{grid-column:1}.luqi-province-stat{grid-column:2;grid-row:2;margin:0;gap:7px}.luqi-province-stat>strong{font-size:34px}.luqi-province-stat>span{font-size:9px;max-width:63px;line-height:1.4}.luqi-province-stat small{display:none}.luqi-province-browse,.luqi-province-reset,.luqi-province-official{grid-column:1/-1}.luqi-province-summary .luqi-province-count-note{font-size:10px}.luqi-province-official{padding:7px 0;min-height:32px}.luqi-province-selector{grid-template-columns:repeat(2,minmax(0,1fr));padding:16px 14px 12px;gap:7px}.luqi-province-selector>button{font-size:11px;padding:7px;gap:6px}.luqi-province-selector-code{width:23px;height:26px;font-size:8px}.luqi-province-selector-count{font-size:10px}.luqi-province-selection-status{padding:0 16px 15px;font-size:11px}.luqi-province-footnote{padding:13px 16px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.luqi-province-shape,.luqi-province-selector>button{transition:none}}
