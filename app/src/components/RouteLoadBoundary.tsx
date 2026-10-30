@@ -33,13 +33,13 @@ class PageErrorBoundary extends Component<Props, FailureState> {
   }
 }
 
-export default function RouteLoadBoundary({ children, onReload = () => window.location.reload() }:
-  { children: ReactNode; onReload?: () => void }) {
+export default function RouteLoadBoundary({ children, onReload = () => window.location.reload(), loading }:
+  { children: ReactNode; onReload?: () => void; loading?: ReactNode }) {
   const { pathname } = useLocation();
   // Reset on route changes so users can leave a failed tool. Never keep a
   // previous route's private account content behind a loading message.
   return <PageErrorBoundary key={pathname} onReload={onReload}>
-    <Suspense fallback={<section className="luqi-info" role="status" aria-live="polite" aria-busy="true">
+    <Suspense fallback={loading ?? <section className="luqi-info" role="status" aria-live="polite" aria-busy="true">
       <h1>Loading this tool…</h1>
       <p>Only the selected tool is being downloaded. You can still use the navigation.</p>
     </section>}>
