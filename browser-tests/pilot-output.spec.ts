@@ -12,6 +12,8 @@ for (const [code, status, message] of [
       if (url.origin !== new URL(baseURL!).origin) { unexpected.push('external'); return route.abort(); }
       if (url.pathname === '/v1/health' && request.method() === 'GET') return route.fulfill({status:200,json:{status:'ok'}});
       if (url.pathname === '/v1/readiness') return route.fulfill({ json: { checks: { persistence: 'connected', ai_pilot: 'configured_not_verified' } } });
+      // Embedded Contacts performs a bounded first-party read after sign-in.
+      if (url.pathname === '/api/v1/p2p/status' && request.method() === 'GET') return route.fulfill({ json: { enabled: false, userId: 7, eligibility: 'verification_needed', circles: [], blockedPeers: [] } });
       if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: { token: 'synthetic-token', user: { email: 'output@example.invalid' } } });
       if (url.pathname === '/api/v1/luqi-core') {
         calls++; expect(request.postDataJSON()).toEqual({ language: 'English', user_input: 'Synthetic question' });

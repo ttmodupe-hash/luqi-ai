@@ -34,7 +34,7 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
   const contacts=page.getByRole('region',{name:'Your contacts',exact:true});
   await expect(contacts.getByRole('link',{name:'Synthetic peer',exact:true})).toBeVisible();
   await page.bringToFront();
-  await contacts.getByLabel('Share my online status with approved contacts').check();
+  await contacts.getByLabel('Share my online status from this tab').check();
   await expect(contacts.getByText('Sharing recent activity with approved contacts.')).toBeVisible();
   await peer.getByRole('button',{name:'Refresh contacts',exact:true}).click();
   await expect(peer.getByRole('region',{name:'Your contacts',exact:true}).getByText('Online',{exact:true})).toBeVisible();

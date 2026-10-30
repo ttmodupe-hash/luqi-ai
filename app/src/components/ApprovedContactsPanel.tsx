@@ -75,11 +75,11 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
         })}</ul>
         {!found.length && <p>{contacts.length ? 'No approved contact matches this name.' : 'No mutually approved contacts yet. Add a private invitation in your circles.'}</p>}
         {presence && eligible && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
-          onChange={event => presence.setSharing(event.target.checked)} /> Share my online status with approved contacts</label>}
+          onChange={event => presence.setSharing(event.target.checked)} /> Share my online status from this tab</label>}
         {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       </>}
       <Link to="/p2p" onClick={close}>Manage contacts &amp; circles</Link>
     </>}
-    <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means recent foreground activity; closed or background tabs may take up to 75 seconds to become away. No last-seen history is shared.</p>
+    <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means recent foreground activity; closed or background tabs may take up to 75 seconds to become away. Other sharing tabs can keep you online. No last-seen history is shared.</p>
   </div>;
 }

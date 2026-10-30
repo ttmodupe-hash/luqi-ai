@@ -6,7 +6,7 @@ import RouteLoadBoundary from './RouteLoadBoundary';
 import type { ContactPresenceControls } from './useContactPresence';
 import './collaboration-dock.css';
 
-// No private account requests, cryptography bundle or contact names on startup.
+// Guests make no private reads; signed-in people see only their approved Luqi contacts.
 const Contacts = lazy(() => import('./ApprovedContactsPanel'));
 export default function CollaborationDock({ presence }: { presence?: ContactPresenceControls }) {
   const customer = useOptionalCustomerSession(), location = useLocation();
