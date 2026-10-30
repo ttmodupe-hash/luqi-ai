@@ -63,7 +63,7 @@ jobs:
             -v /tmp/luqi-business-server.js:/tmp/luqi-business-server.js:ro -v /tmp/luqi-business.key:/tmp/luqi-business.key:ro -v /tmp/luqi-business.crt:/tmp/luqi-business.crt:ro \
             -e LUQI_MYSQL_CI_FIXTURE -e DATABASE_URL -e GITHUB_ACTIONS=true -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
             "$image" npx --no-install playwright test --config playwright.business.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: business-profile-browser-evidence

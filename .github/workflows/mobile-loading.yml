@@ -76,7 +76,7 @@ jobs:
           node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-after"
           node scripts/verify-mobile-bundle.mjs "$RUNNER_TEMP/luqi-mobile-before" "$RUNNER_TEMP/luqi-mobile-after" | tee mobile-bundle-report.json
       - name: Preserve measured payload evidence only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mobile-bundle-report
           path: mobile-bundle-report.json

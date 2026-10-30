@@ -146,7 +146,7 @@ jobs:
       - name: Verify desktop and mobile browser flows with synthetic API fixtures
         run: npx playwright test
       - name: Preserve public pilot layout evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: public-pilot-layouts
@@ -167,7 +167,7 @@ jobs:
             test-results/**/province-map-desktop.png
             test-results/**/tender-original-form.png
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-failure-evidence
