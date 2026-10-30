@@ -1,6 +1,7 @@
 /** Server-owned identity, mutual pair circles and durable block/report enforcement.
  * No plaintext message bodies or encryption keys enter the delivery store.
  */
+import { contactPresence } from './contactPresence';
 import { randomUUID, createHmac, createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { getPersistentMySqlPool } from '../queries/connection';
@@ -106,6 +107,14 @@ async function owned(c: PoolConnection, actor: number, id: string, active = fals
   return row;
 }
 export class SovereignP2PEngine {
+  static async sharePresence(actor: number, input: { leaseId: string; sequence: number; active: boolean }) {
+    await transaction(actor, async (_c, user) => {
+      if (eligibility(user.role) === 'verification_needed') deny();
+    });
+    try { contactPresence.update(actor, input.leaseId, input.sequence, input.active); }
+    catch { throw new P2PError('P2P_LIMIT'); }
+    return { accepted: true as const, ttlSeconds: 75 as const };
+  }
   static async approvedContacts(actor: number) {
     return transaction(actor, async (c, user) => {
       if (eligibility(user.role) === 'verification_needed') return { contacts: [] };
@@ -126,7 +135,7 @@ export class SovereignP2PEngine {
         const name = typeof person.name === 'string'
           ? person.name.replace(/[\p{Cc}\p{Cf}]/gu, '').trim().slice(0, 120) : '';
         contacts.push({ circleId: row.id, userId: peer, name: name || 'Luqi member ' + peer,
-          accountActive: true as const, presence: 'not_shared' as const });
+          accountActive: true as const, presence: contactPresence.read(peer) });
       }
       return { contacts };
     });

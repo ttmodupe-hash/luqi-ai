@@ -21,12 +21,11 @@ export const p2pStatus = z.object({ enabled: z.boolean(), userId: z.number().int
   blockedPeers: z.array(z.number().int().positive().safe()).max(100),
   eligibility: z.enum(['verified_adult', 'verified_student', 'verification_needed']), circles: z.array(p2pCircle).max(24) });
 export type P2PStatus = z.infer<typeof p2pStatus>;
-/** A current mutual contact only. No online/offline/last-seen information is
- * collected or disclosed by this contract. Account-active is not presence. */
+/** Presence is an expiring, opt-in foreground signal, visible only to current mutual contacts. No last-seen timestamp. */
 export const p2pApprovedContact = z.object({
   circleId: p2pId, userId: z.number().int().positive().safe(),
   name: z.string().min(1).max(120), accountActive: z.literal(true),
-  presence: z.literal('not_shared'),
+  presence: z.enum(['online','offline','not_shared']),
 }).strict();
 export const p2pApprovedContacts = z.object({
   contacts: z.array(p2pApprovedContact).max(24),

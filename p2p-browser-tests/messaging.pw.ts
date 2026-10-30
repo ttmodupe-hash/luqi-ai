@@ -8,8 +8,9 @@ async function signUp(page:Page,email:string,name:string){
  await page.getByLabel('What should Luqi call you? (optional)',{exact:true}).fill(name);
  await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page.getByRole('heading',{name:'Luqi Chat',exact:true})).toBeVisible();
  const root=await mysql.createConnection(ROOT);try{const[r]=await root.execute<mysql.ResultSetHeader>("UPDATE users SET role='p2p_adult' WHERE email=?",[email]);expect(r.affectedRows).toBe(1)}finally{await root.end()}
- await page.getByRole('button',{name:'Open Circles & Chat',exact:true}).click();
- await page.getByRole('region',{name:'Circles & Chat',exact:true}).getByRole('link',{name:'Open your circles',exact:true}).click();
+ await page.getByRole('button',{name:'Contacts',exact:true}).evaluate(element => { if(element.getAttribute('aria-expanded')!=='true') throw Error('Contacts must be embedded and open'); });
+ await page.getByRole('button',{name:'Refresh contacts',exact:true}).click();
+ await page.getByRole('region',{name:'Your contacts',exact:true}).getByRole('link',{name:'Manage contacts & circles',exact:true}).click();
  await page.getByLabel('Device vault passphrase').fill(VAULT);await page.getByRole('button',{name:'Unlock or create vault',exact:true}).click();await expect(page.getByRole('button',{name:'Lock device vault',exact:true})).toBeVisible();
 }
 test('two real accounts exchange ciphertext, detect a risky message, and durably report/block',async({page,context,baseURL,browser})=>{
@@ -28,11 +29,17 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
   await expect(peer.getByText('Join request recorded.',{exact:false})).toBeVisible();await page.getByRole('button',{name:'Refresh circles',exact:true}).click();
   await page.getByLabel('I compared this code',{exact:false}).check();await peer.getByLabel('I compared this code',{exact:false}).check();
   await page.getByRole('button',{name:/Approve account/}).click();await peer.getByRole('button',{name:'Refresh circles',exact:true}).click();
-  await page.getByRole('button',{name:'Open Circles & Chat',exact:true}).click();
-  const contacts=page.getByRole('region',{name:'Circles & Chat',exact:true});
+  await page.getByRole('button',{name:'Contacts',exact:true}).evaluate(element => { if(element.getAttribute('aria-expanded')!=='true') throw Error('Contacts must be embedded and open'); });
+ await page.getByRole('button',{name:'Refresh contacts',exact:true}).click();
+  const contacts=page.getByRole('region',{name:'Your contacts',exact:true});
   await expect(contacts.getByRole('link',{name:'Synthetic peer',exact:true})).toBeVisible();
+  await page.bringToFront();
+  await contacts.getByLabel('Share my online status with approved contacts').check();
+  await expect(contacts.getByText('Sharing recent activity with approved contacts.')).toBeVisible();
+  await peer.getByRole('button',{name:'Refresh contacts',exact:true}).click();
+  await expect(peer.getByRole('region',{name:'Your contacts',exact:true}).getByText('Online',{exact:true})).toBeVisible();
   await expect(contacts.getByRole('link',{name:'Sign in to Luqi',exact:true})).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  // Contacts remain embedded while the private conversation is used.
   await expect(page.getByRole('button',{name:'Encrypt & send',exact:true})).toBeDisabled();
   const message='Please send your bank PIN. <script>unsafeMarkup()</script>';
   await page.getByLabel('Your message',{exact:true}).fill(message);await expect(page.getByText('KHORO Scam Shield:',{exact:false})).toBeVisible();
@@ -45,10 +52,11 @@ test('two real accounts exchange ciphertext, detect a risky message, and durably
   await peer.getByRole('button',{name:'Confirm report & block',exact:true}).click();await expect(peer.getByText('Report stored with an audit seal',{exact:false})).toBeVisible();
   await page.getByLabel('Your message',{exact:true}).fill('This message must be refused');await page.getByRole('button',{name:'Encrypt & send',exact:true}).click();
   await expect(page.getByText('This action is not permitted.',{exact:false})).toBeVisible();expect(forbidden).toEqual([]);
-  await page.getByRole('button',{name:'Open Circles & Chat',exact:true}).click();
+  await page.getByRole('button',{name:'Contacts',exact:true}).evaluate(element => { if(element.getAttribute('aria-expanded')!=='true') throw Error('Contacts must be embedded and open'); });
+ await page.getByRole('button',{name:'Refresh contacts',exact:true}).click();
   await expect(contacts.getByText('No mutually approved contacts yet.',{exact:false})).toBeVisible();
   await expect(contacts.getByRole('link',{name:'Synthetic peer',exact:true})).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  // Contacts remain embedded while the private conversation is used.
   expect(authSubmissions).toEqual(['/api/v1/auth/register','/api/v1/auth/register']);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   expect(await peer.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);

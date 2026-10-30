@@ -6,6 +6,7 @@ import RouteLoadBoundary from "./RouteLoadBoundary";
 import PublicReleaseUpdateNotice from "./PublicReleaseUpdateNotice";
 import WorkspacePlaybar, { readCalmPreference } from "./WorkspacePlaybar";
 import "../experience.css";
+import { useContactPresence } from "./useContactPresence";
 import CollaborationDock from './CollaborationDock';
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
 const ChatSidebar = lazy(() => import("./ChatSidebar"));
@@ -42,6 +43,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   };
   const isChatWorkspace = location.pathname === "/chat";
   const customer = useOptionalCustomerSession();
+  const presence = useContactPresence(customer?.session?.token);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -99,8 +101,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
             </p>}
             <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
-            {children}
-            <CollaborationDock />
+            <div className="luqi-tool-content">{children}</div>
+            <CollaborationDock presence={presence} />
           </div>
         </div>
       ) : (
@@ -191,8 +193,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
         </p>}
         <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
-        {children}
-        <CollaborationDock />
+        <div className="luqi-tool-content">{children}</div>
+        <CollaborationDock presence={presence} />
       </div>
       <footer className="luqi-footer">
         <div>

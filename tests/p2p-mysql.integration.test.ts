@@ -41,6 +41,19 @@ beforeAll(async()=>{
 beforeEach(async()=>{owner=await account();peer=await account();outsider=await account();moderator=await account('p2p_moderator')});
 afterAll(async()=>{await closeDb?.();await root?.end();vi.unstubAllEnvs()});
 describe.sequential('durable private messaging enforcement',()=>{
+ it('shares only deliberate expiring presence with current approved peers and honours newer opt-out',async()=>{
+  await pair();const leaseId=crypto.randomUUID();
+  expect((await request(owner,'/presence',{leaseId,sequence:1,active:true})).status).toBe(200);
+  expect((await(await request(peer,'/contacts')).json()).contacts[0].presence).toBe('online');
+  expect((await(await request(outsider,'/contacts')).json()).contacts).toEqual([]);
+  expect((await request(owner,'/presence',{leaseId,sequence:2,active:false})).status).toBe(200);
+  expect((await request(owner,'/presence',{leaseId,sequence:1,active:true})).status).toBe(200);
+  expect((await(await request(peer,'/contacts')).json()).contacts[0].presence).toBe('not_shared');
+  await request(peer,'/presence',{leaseId:crypto.randomUUID(),sequence:1,active:true});
+  await request(owner,'/block',{peerId:peer.id});
+  expect((await(await request(owner,'/contacts')).json()).contacts).toEqual([]);
+ });
+
  it('lists only current mutual contacts and never exposes online, login times or email',async()=>{
   await pair();
   await root.execute('UPDATE users SET name=? WHERE id=?',['Naledi',peer.id]);
