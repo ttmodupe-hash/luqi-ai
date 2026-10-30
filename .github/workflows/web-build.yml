@@ -24,6 +24,8 @@ jobs:
           node-version: "22"
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify opt-in local province location
+        run: npx vitest run tests/location-province.test.tsx tests/nearby-discovery.test.tsx
       - name: Verify inline Circles controls and frontend parity
         run: npx vitest run tests/collaboration-inline.test.tsx tests/contact-presence.test.ts tests/contact-presence-client.test.tsx tests/approved-contacts-panel.test.tsx tests/p2p-parity.test.ts
       - name: Verify persistent database configuration contracts

@@ -5,7 +5,7 @@ import WorkspaceLayout from "./components/WorkspaceLayout";
 import { CustomerSessionProvider } from "./providers/customer-session";
 import { ChatWorkspaceProvider } from "./providers/chat-workspace";
 import { SovereignRegionProvider } from "./providers/sovereign-region";
-import ServiceStatusPage from "./pages/ServiceStatusPage";
+const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
 import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
@@ -40,6 +40,7 @@ const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const NearMePage = lazy(() => import("./pages/NearMePage"));
 const LocalPulsePage = lazy(() => import("./pages/LocalPulsePage"));
 const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
 const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
@@ -98,6 +99,7 @@ export default function App() {
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
+        <RouterRoute path="/near-me" element={<NearMePage />} />
         <RouterRoute path="/local-pulse" element={<LocalPulsePage />} />
         <RouterRoute path="/news" element={<LocalPulsePage />} />
         <RouterRoute path="/social-support" element={<SocialSupportPage />} />

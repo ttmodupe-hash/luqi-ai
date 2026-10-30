@@ -4,7 +4,7 @@ import { ArrowUpRight, Compass, Shuffle, Sparkles } from 'lucide-react';
 import { workspaceTools } from './workspace-catalog';
 
 const journeys = [
-  { name: 'Explore', hint: 'A little closer to your world.', ids: ['opportunity-compass', 'local-pulse', 'visa-entry'] },
+  { name: 'Explore', hint: 'A little closer to your world.', ids: ['near-me', 'local-pulse', 'visa-entry'] },
   { name: 'Learn & play', hint: 'Try something. See what changes.', ids: ['physics', 'study', 'spatial-vision'] },
   { name: 'Create', hint: 'Give your next idea some room.', ids: ['academy', 'business', 'notes'] },
   { name: 'Grow a business', hint: 'Small steps. Real possibilities.', ids: ['township-economy', 'tenders', 'business'] },

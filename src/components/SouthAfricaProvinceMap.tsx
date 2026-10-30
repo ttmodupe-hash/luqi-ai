@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUpRight, Check, Compass, MapPin, MousePointer2 } from '
 import { PROVINCES, type ProvinceCode } from '../lib/opportunity-sources';
 import { GAUTENG_CALLOUT, MAP_CONTEXT_LABELS, PROVINCE_GEOMETRY } from '../lib/sa-province-map';
 import '../province-map.css';
+import LocationProvinceButton from './LocationProvinceButton';
 
 type Props = { value: ProvinceCode | null; onSelect: (value: ProvinceCode | null) => void;
   counts: Record<ProvinceCode, number>; signals?: ReactNode };
@@ -26,6 +27,7 @@ export default function SouthAfricaProvinceMap({ value, onSelect, counts, signal
         <p>Start with your province. Discover reviewed job notices and trusted official sources.</p></div>
       <span className="luqi-province-country">🇿🇦 <span>South Africa</span><span className="luqi-province-country-count">9 provinces</span></span>
     </header>
+    <LocationProvinceButton onSelect={onSelect} />
     {signals}
     <div className="luqi-province-workspace">
       <div className="luqi-province-map-panel">
@@ -104,7 +106,7 @@ export default function SouthAfricaProvinceMap({ value, onSelect, counts, signal
       </button>)}
     </div>
     <p className="luqi-province-selection-status" role="status">{chosen ? 'Selected ' + chosen.name + '. The reviewed notices below now match this province.' : 'No province selected. Showing reviewed notices across all nine provinces.'}</p>
-    <footer className="luqi-province-footnote"><p>Geographic province boundaries, not exact job-site coordinates. Location stays your choice; Luqi does not read GPS here.</p>
+    <footer className="luqi-province-footnote"><p>Geographic province boundaries, not exact job-site coordinates. Choose a province manually or opt in to a one-time device location suggestion.</p>
       <p>Boundaries: <a href="https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM1/" target="_blank" rel="noopener noreferrer">geoBoundaries · OCHA ROSEA / Municipal Demarcation Board</a> · 2020, simplified · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> / <a href="https://creativecommons.org/licenses/by/3.0/igo/" target="_blank" rel="noopener noreferrer">CC BY 3.0 IGO</a></p>
     </footer>
   </section>;

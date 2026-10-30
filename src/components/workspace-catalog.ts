@@ -36,6 +36,11 @@ export const workspaceTools = [
     status: "Free · no account", ready: true, path: "/comparative-evidence", icon: "academy",
   },
   {
+    id: "near-me", title: "Near me · Places & Local Support", category: "Province discovery, council contacts and map searches",
+    description: "Choose a province privately, browse reviewed council names and prepare an external map search for a town or township. No background tracking or invented distances.",
+    status: "Free area discovery · optional location", ready: true, path: "/near-me", icon: "status",
+  },
+  {
     id: "opportunity-compass", title: "Opportunity Compass · Jobs & Funding", category: "South African youth government vacancies and grants",
     description: "Free government, graduate, bursary, sponsorship and youth support source directory, nine-province map and read-only publisher health check. Verify each opening and requirements with the agency.",
     status: "Free official sources · no account", ready: true, path: "/opportunities", icon: "business",
