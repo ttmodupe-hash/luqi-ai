@@ -147,3 +147,35 @@ test('new official internship and learnership cards disclose pay units and evide
  expect(posts).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
 });
+
+test('geographic province explorer works by shape, keyboard and touch-sized names at 320px',async({page},testInfo)=>{
+ await page.setViewportSize({width:320,height:850});
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.goto('/#/opportunities');
+ const explorer=page.getByRole('region',{name:'Choose a South African province'});
+ const map=explorer.getByRole('group',{name:/South Africa province map/});
+ await expect(map.getByRole('button')).toHaveCount(9);
+ const gp=map.getByRole('button',{name:'Explore Gauteng on the map'});
+ await gp.focus();await gp.press('Enter');
+ await expect(explorer.getByRole('button',{name:'Select Gauteng'})).toHaveAttribute('aria-pressed','true');
+ await expect(explorer.getByRole('status')).toContainText('Selected Gauteng');
+ const board=page.getByRole('region',{name:'Individual government job matches'});
+ await expect(board.getByRole('heading',{name:'Client Service Officer: COID'})).toHaveCount(0);
+ await explorer.getByRole('button',{name:'Select Northern Cape'}).click();
+ await expect(explorer.getByText(/No matching notice in this collection yet/)).toBeVisible();
+ await explorer.getByRole('button',{name:'Show all South Africa'}).click();
+ await expect(board.getByRole('heading',{name:'Client Service Officer: COID'})).toBeVisible();
+ for(const button of await explorer.getByRole('group',{name:'Province selection',exact:true}).getByRole('button').all()){
+  const box=await button.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(44);
+ }
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ expect(posts).toEqual([]);
+ await page.evaluate(()=>{(document.activeElement as HTMLElement)?.blur();});
+ const screenshotStyle='.luqi-header,.luqi-skip,.luqi-collaboration-dock{visibility:hidden !important}';
+ await explorer.screenshot({path:testInfo.outputPath('province-map-320.png'),style:screenshotStyle});
+ await page.setViewportSize({width:1440,height:1050});
+ await explorer.getByRole('button',{name:'Select Gauteng'}).click();
+ await explorer.screenshot({path:testInfo.outputPath('province-map-desktop.png'),style:screenshotStyle});
+ await explorer.getByRole('button',{name:'View reviewed notices'}).click();
+ await expect(board.getByRole('heading',{name:'Real public-sector posts, internships and learnerships'})).toBeInViewport();
+});

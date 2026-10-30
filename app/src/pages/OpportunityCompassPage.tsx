@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import SouthAfricaProvinceMap from '../components/SouthAfricaProvinceMap';
+import { matchGovernmentAdverts } from '../lib/government-job-notices';
 import OpportunityVerificationPanel from '../components/OpportunityVerificationPanel';
 import VerifiedGovernmentJobsPanel from '../components/VerifiedGovernmentJobsPanel';
 import {
@@ -25,9 +27,9 @@ export default function OpportunityCompassPage(){
  const [scanMessage,setScanMessage]=useState('');
  const [checking,setChecking]=useState(false);
  const results=country==='ZA'?matchOpportunitySources(category,audience,query):[];
- const chosenProvince=PROVINCES.find(x=>x.id===province);
  const anchor=COUNTRY_ANCHORS.find(x=>x.id===country)!;
  const today=new Date();
+ const provinceCounts=Object.fromEntries(PROVINCES.map(p=>[p.id,matchGovernmentAdverts({province:p.id,level:'all',query:'',includeHistory:false,now:today}).length])) as Record<ProvinceCode,number>;
  async function checkPublishers(){
    if(checking)return;setChecking(true);setScanMessage('Checking official publisher pages; this does not verify individual vacancies.');
    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),10_000);
@@ -66,25 +68,8 @@ export default function OpportunityCompassPage(){
      </p>}
    </section>
    {country==='ZA'&&<>
-     <section className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-label="Choose a South African province">
-       <h2 className="text-xl font-semibold">Explore South Africa by province</h2>
-       <p className="text-sm text-slate-300">Choose a province to filter the reviewed individual job notices below, as well as guide your official-source search. This schematic map shows provinces, not exact job-site coordinates or travel routes. Luqi does not read GPS.</p>
-       <div className="relative mx-auto w-full max-w-2xl overflow-hidden rounded-xl border border-slate-700 bg-slate-950" style={{aspectRatio:'1.5'}}>
-         <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-           <path d="M 9 56 L 16 35 L 28 20 L 47 20 L 53 9 L 68 10 L 72 23 L 91 35 L 90 53 L 82 69 L 67 84 L 50 93 L 30 96 L 21 91 L 17 75 Z" fill="#123a39" stroke="#64b4aa" strokeWidth="1.2"/>
-           <path d="M 26 45 L 46 43 L 63 53 L 83 44 M 42 22 L 50 55 L 39 83 M 15 67 L 57 74 L 70 86" fill="none" stroke="#547b70" strokeDasharray="2 2" strokeWidth=".5"/>
-         </svg>
-         {PROVINCES.map(p=><button key={p.id} type="button" aria-pressed={province===p.id}
-           aria-label={'Select '+p.name} title={p.name}
-           onClick={()=>setProvince(province===p.id?null:p.id)}
-           className={'absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-100 sm:h-10 sm:w-10 sm:text-xs '+
-             (province===p.id?'border-white bg-cyan-400 text-slate-950':'border-cyan-300 bg-slate-900 text-white')}
-           style={{left:String(p.x)+'%',top:String(p.y)+'%'}}>{p.id}</button>)}
-       </div>
-       <p role="status" className="text-sm text-cyan-200">{chosenProvince?'Selected '+chosenProvince.name+'. Check provincial posts in the DPSA vacancy circular and search your area in SA Youth.':'No province selected. Showing national starting points for all nine provinces.'}</p>
-       {province&&<button type="button" className="rounded border border-slate-500 px-3 py-2 text-sm" onClick={()=>setProvince(null)}>All South Africa</button>}
-     </section>
-     <VerifiedGovernmentJobsPanel province={province}/>
+     <SouthAfricaProvinceMap value={province} onSelect={setProvince} counts={provinceCounts}/>
+     <div id="province-job-board" className="scroll-mt-28"><VerifiedGovernmentJobsPanel province={province}/></div>
      <section className="space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-4" aria-label="Find official opportunity sources">
        <h2 className="text-xl font-semibold">Find a trusted starting point</h2>
        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

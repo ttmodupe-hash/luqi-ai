@@ -18,7 +18,7 @@ it('shows official youth and government opportunities without login, coordinates
 it('selects a province without pretending sources have verified job coordinates',()=>{
  show();fireEvent.click(screen.getByRole('button',{name:'Select Gauteng'}));
  expect(screen.getByText(/Selected Gauteng/)).toBeTruthy();
- expect(screen.getByText(/schematic map shows provinces, not exact job-site coordinates/)).toBeTruthy();
+ expect(screen.getByText(/Geographic province boundaries, not exact job-site coordinates/)).toBeTruthy();
  expect(request).not.toHaveBeenCalled();
 });
 it('filters categories and audiences while keeping eligibility undecided',()=>{
@@ -40,4 +40,41 @@ it('uses the province map to filter individual official job notices, not just di
   expect(screen.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})).toBeTruthy();
   expect(screen.queryByRole('heading',{name:'Client Service Officer: COID'})).toBeNull();
   expect(request).not.toHaveBeenCalled();
+});
+
+it('uses geographic province shapes with keyboard selection, shared list state and reset',()=>{
+ show();
+ const area=screen.getByRole('button',{name:'Explore Gauteng on the map'});
+ fireEvent.keyDown(area,{key:'Enter'});
+ expect(area.getAttribute('aria-pressed')).toBe('true');
+ expect(screen.getByRole('button',{name:'Select Gauteng'}).getAttribute('aria-pressed')).toBe('true');
+ const jobs=screen.getByRole('region',{name:'Individual government job matches'});
+ expect(within(jobs).queryByRole('heading',{name:'Client Service Officer: COID'})).toBeNull();
+ fireEvent.keyDown(area,{key:'Escape'});
+ expect(screen.getByText(/No province selected/)).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Select Gauteng'}).getAttribute('aria-pressed')).toBe('false');
+ expect(within(jobs).getByRole('heading',{name:'Client Service Officer: COID'})).toBeTruthy();
+ expect(request).not.toHaveBeenCalled();
+});
+it('makes provinces with no reviewed matches honest and keeps the official route available',()=>{
+ show();fireEvent.keyDown(screen.getByRole('button',{name:'Explore Northern Cape on the map'}),{key:' '});
+ expect(screen.getByText(/No matching notice in this collection yet/)).toBeTruthy();
+ expect(screen.getByRole('link',{name:/Explore official vacancy circulars/}).getAttribute('href')).toBe('https://www.dpsa.gov.za/newsroom/psvc/');
+ fireEvent.click(screen.getByRole('button',{name:'Show all South Africa'}));
+ expect(screen.getByText(/No province selected/)).toBeTruthy();
+ expect(request).not.toHaveBeenCalled();
+});
+it('keeps nine separate geographic regions, the source attribution and equivalent touch controls',()=>{
+ show();
+ const map=screen.getByRole('group',{name:/South Africa province map/});
+ const regions=within(map).getAllByRole('button');
+ expect(regions).toHaveLength(9);
+ expect(new Set(regions.map(r=>r.getAttribute('d'))).size).toBe(9);
+ for(const region of regions){
+   expect(region.getAttribute('fill-rule')).toBe('evenodd');
+   expect(region.getAttribute('tabindex')).toBe('0');
+ }
+ expect(screen.getByRole('link',{name:/geoBoundaries/}).getAttribute('href')).toContain('/ZAF/ADM1/');
+ expect(screen.getByRole('link',{name:'CC BY 3.0 IGO'})).toBeTruthy();
+ expect(request).not.toHaveBeenCalled();
 });
