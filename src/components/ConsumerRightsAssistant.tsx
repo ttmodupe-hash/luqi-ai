@@ -1,4 +1,5 @@
 import React, { useState, type FormEvent } from 'react';
+import KhoroVehicleFinanceScenario from './KhoroVehicleFinanceScenario';
 import {
   CONSUMER_GUIDE_RECHECK_AFTER, CONSUMER_GUIDE_REVIEWED_ON,
   CONSUMER_ISSUES, CONSUMER_QUICK, CONSUMER_SOURCES, MAX_CONSUMER_STORY_LENGTH,
@@ -197,6 +198,8 @@ export const ConsumerRightsAssistant: React.FC = () => {
           </section>
         </section>
       )}
+
+      <KhoroVehicleFinanceScenario />
 
       <section className="space-y-2 rounded-xl border border-slate-700 bg-slate-900 p-4" aria-labelledby="consumer-official-links">
         <h2 id="consumer-official-links" className="text-lg font-semibold">Official sources and referral organisations</h2>
