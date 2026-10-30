@@ -1,0 +1,17 @@
+FROM node:22-alpine AS build
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps --include=dev --ignore-scripts
+COPY api/lib/mysqlConfig.ts api/lib/mysqlConfig.ts
+COPY db/ db/
+COPY scripts/prepare-business-storage.ts scripts/prepare-business-storage.ts
+COPY scripts/accept-business-storage.ts scripts/accept-business-storage.ts
+COPY contracts/business-connect.ts contracts/business-connect.ts
+RUN node_modules/.bin/esbuild scripts/prepare-business-storage.ts --bundle --platform=node --format=esm --outfile=/build/setup.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+RUN node_modules/.bin/esbuild scripts/accept-business-storage.ts --bundle --platform=node --format=esm --outfile=/build/accept.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+FROM node:22-alpine
+WORKDIR /work
+COPY --from=build /build/setup.js ./setup.js
+COPY --from=build /build/accept.js ./accept.js
+USER node
+CMD ["node","/work/setup.js"]

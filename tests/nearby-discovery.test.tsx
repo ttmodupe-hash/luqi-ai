@@ -16,7 +16,7 @@ it('shows no fake near-distance, public businesses or automatic location/map req
  render(<MemoryRouter><NearMePage/></MemoryRouter>);
  expect(screen.getByRole('heading',{name:'Near me — find your next stop'})).toBeTruthy();
  expect(screen.queryByRole('link',{name:'Open search in Google Maps'})).toBeNull();expect(request).not.toHaveBeenCalled();expect(getPosition).not.toHaveBeenCalled();
- expect(screen.getByText(/registration and reviewed public business profiles are still being developed/)).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Create my business profile'}).getAttribute('href')).toBe('/business-connect');
 });
 it('filters real council names and carries only selected province into internal guide links',()=>{
  render(<MemoryRouter><NearMePage/></MemoryRouter>);

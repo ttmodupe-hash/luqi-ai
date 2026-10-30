@@ -1,6 +1,7 @@
 /** Read-only contract for the enabled web runtime, not a migration engine.
  * No row contents, credentials, or raw driver errors enter diagnostics.
  */
+import { BUSINESS_RUNTIME_TABLES } from './businessContracts';
 import { P2P_RUNTIME_TABLES } from './p2pContracts';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
@@ -162,6 +163,7 @@ export function runtimeTableContracts(environment: Record<string,string|undefine
   return { ...RUNTIME_TABLES,
     ...(environment.LUQI_CUSTOMER_RESUME_ENABLED === 'true' ? { customer_device_sessions_v1: customerResume } : {}),
     ...(environment.LUQI_P2P_ENABLED === 'true' ? P2P_RUNTIME_TABLES : {}),
+    ...(environment.LUQI_BUSINESS_CONNECT_ENABLED === 'true' ? BUSINESS_RUNTIME_TABLES : {}),
     ...(environment.LUQI_OMEGA_WEB_ENABLED === 'true' ? { omega_tasks_v1: omega } : {}),
     ...(environment.LUQI_PROJECT_VAULT_ENABLED === 'true' ? { luqi_project_vault_v1: privateVault } : {}) };
 }

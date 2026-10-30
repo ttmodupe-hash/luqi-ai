@@ -64,8 +64,8 @@ export default function NearMePage(){
   </section>
   <section className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-5" aria-label="Business owners and visitors">
    <h2 className="inline-flex items-center gap-2 text-xl font-semibold"><ShieldCheck size={20} aria-hidden="true"/> Build local confidence</h2>
-   <p className="text-sm text-slate-300">Luqi Business Connect registration and reviewed public business profiles are still being developed. A search result on an external map is not a Luqi-verified listing. Business location publication will require separate owner consent; home-based and mobile businesses must be able to use a service area.</p>
-   <div className="flex flex-wrap gap-4"><Link className="min-h-11 py-2 text-cyan-200 underline" to="/township-economy">Small-business support</Link><Link className="min-h-11 py-2 text-cyan-200 underline" to="/visa-entry">Visitor entry guidance</Link><Link className="min-h-11 py-2 text-cyan-200 underline" to="/consumer-rights">Consumer support</Link></div>
+   <p className="text-sm text-slate-300">Business owners can prepare private Luqi profiles and request publication review. Published contacts and trading addresses require owner consent. Home-based and mobile businesses use service areas. Publication review is not independent location verification; external map results are separate.</p>
+   <div className="flex flex-wrap gap-4"><Link className="min-h-11 py-2 text-cyan-200 underline" to={'/businesses'+(province?'?province='+province:'')}>Browse Luqi business profiles</Link><Link className="min-h-11 py-2 text-cyan-200 underline" to="/business-connect">Create my business profile</Link><Link className="min-h-11 py-2 text-cyan-200 underline" to="/township-economy">Small-business support</Link><Link className="min-h-11 py-2 text-cyan-200 underline" to="/visa-entry">Visitor entry guidance</Link><Link className="min-h-11 py-2 text-cyan-200 underline" to="/consumer-rights">Consumer support</Link></div>
   </section>
  </main>;
 }

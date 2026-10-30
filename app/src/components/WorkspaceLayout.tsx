@@ -20,6 +20,7 @@ captureLuqiInstallPrompt();
 const navigation = [
   ["/chat", "Chat"],
   ["/near-me", "Near me"],
+  ["/businesses", "Local businesses"],
   ["/opportunities", "Opportunities"],
   ["/local-pulse", "Local Pulse"],
   ["/social-support", "SASSA & UIF"],
