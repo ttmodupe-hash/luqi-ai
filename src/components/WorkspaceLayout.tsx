@@ -17,6 +17,7 @@ captureLuqiInstallPrompt();
 const navigation = [
   ["/chat", "Chat"],
   ["/opportunities", "Opportunities"],
+  ["/local-pulse", "Local Pulse"],
   ["/social-support", "SASSA & UIF"],
   ["/tenders", "Tenders"],
   ["/municipalities", "Municipal services"],
