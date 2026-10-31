@@ -127,6 +127,9 @@ test('fixed job evidence checker is requested only on demand and cannot certify 
 });
 
 test('new official internship and learnership cards disclose pay units and evidence limits on a 320px phone',async({page})=>{
+ // This test verifies the reviewed advert before its real closing date.
+ // Runtime expiry must remain live; the wall clock must not erase this fixture.
+ await page.clock.setFixedTime(new Date('2026-10-29T10:00:00Z'));
  const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
  await page.setViewportSize({width:320,height:740});
  await page.goto('/#/opportunities');

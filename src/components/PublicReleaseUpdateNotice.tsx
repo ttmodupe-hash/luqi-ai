@@ -27,6 +27,9 @@ export default function PublicReleaseUpdateNotice() {
     const focus = () => { void inspect(); };
     const resume = () => { if (document.visibilityState !== 'hidden') void inspect(); };
     const first = window.setTimeout(() => { void inspect(); }, 6_000);
+    // A visible installed app can stay open through several deployments.
+    // The same cooldown, visibility and in-flight guards bound every check.
+    const periodic = window.setInterval(() => { void inspect(); }, PUBLIC_RELEASE_CHECK_COOLDOWN_MS);
     window.addEventListener('focus', focus);
     window.addEventListener('pageshow', focus);
     window.addEventListener('online', focus);
@@ -34,6 +37,7 @@ export default function PublicReleaseUpdateNotice() {
     return () => {
       active = false;
       window.clearTimeout(first);
+      window.clearInterval(periodic);
       window.removeEventListener('focus', focus);
       window.removeEventListener('pageshow', focus);
       window.removeEventListener('online', focus);

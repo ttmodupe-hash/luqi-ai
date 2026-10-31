@@ -13,9 +13,28 @@ test('Luqi has a shareable Android and iPhone install page from the homepage', a
   await expect(page.getByRole('heading', { name: 'Take Luqi with you.' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'On Android' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'On iPhone or iPad' })).toBeVisible();
-  await expect(page.getByText(/not a signed Android APK or an App Store iOS download/)).toBeVisible();
+  await expect(page.getByText(/browser may create its own managed Android package/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Huawei, Xiaomi, Oppo and other Android phones' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep Luqi up to date' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open Luqi Chat' })).toHaveAttribute('href', '#/chat');
   expect(paid).toEqual([]);
+});
+
+test('install guidance works without a browser prompt on a 320px phone and never offers a sideload', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/download');
+  await expect(page.getByRole('heading', { name: 'Take Luqi with you.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Install Luqi now' })).toHaveCount(0);
+  const safety = page.getByRole('region', { name: 'Install safely on your phone' });
+  await expect(safety).toContainText('Do not choose “Install anyway”, switch off Play Protect or other protections');
+  await expect(safety).toContainText('Website or connection warning');
+  await expect(safety).toContainText('Browser or phone restriction');
+  await expect(page.getByText(/If neither Install nor Add to Home screen is offered/)).toBeVisible();
+  expect(await page.locator('a[href$=".apk"], a[download]').count()).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(writes).toEqual([]);
 });
 
 test('only a user click opens a synthetic browser install prompt', async ({ page }) => {

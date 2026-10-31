@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import React, {lazy} from 'react';
 import {afterEach,expect,it,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {act,cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
-import {checkPublicRelease,currentPublicBoot,servedPublicBoot} from '../src/lib/public-release-update';
+import {checkPublicRelease,currentPublicBoot,servedPublicBoot,PUBLIC_RELEASE_CHECK_COOLDOWN_MS} from '../src/lib/public-release-update';
 import PublicReleaseUpdateNotice from '../src/components/PublicReleaseUpdateNotice';
 import RouteLoadBoundary from '../src/components/RouteLoadBoundary';
 
@@ -12,7 +12,7 @@ const html=(src:string)=>'<!doctype html><html><head><script crossorigin type="m
 const script=(src:string)=>{
  const s=document.createElement('script');s.type='module';s.src=src;document.head.appendChild(s);return s;
 };
-afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();document.querySelectorAll('script[src*="index-fixture"]').forEach(x=>x.remove());});
+afterEach(()=>{cleanup();vi.useRealTimers();vi.unstubAllGlobals();vi.restoreAllMocks();document.querySelectorAll('script[src*="index-fixture"]').forEach(x=>x.remove());});
 
 it('identifies only same-origin hashed public app boot scripts, not an API or hostile script',()=>{
  const fixture=script('/assets/index-fixture-old123.js');
@@ -65,6 +65,33 @@ it('shows a user-controlled update notice on refocus, never a silent logout, AI 
  fireEvent.click(screen.getByRole('button',{name:'Not now'}));
  await waitFor(()=>expect(screen.queryByRole('status',{name:'Luqi app update available'})).toBeNull());
  fixture.remove();
+});
+it('detects a later release in an app left open, pauses hidden/offline checks and clears its timer on unmount',async()=>{
+ vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-31T12:00:00Z'));
+ script('/assets/index-fixture-old123.js');
+ let latest='/assets/index-fixture-old123.js';
+ const get=vi.fn(async()=>new Response(html(latest),{headers:{'Content-Type':'text/html'}}));
+ vi.stubGlobal('fetch',get);
+ const visibility=vi.spyOn(document,'visibilityState','get').mockReturnValue('visible');
+ const online=vi.spyOn(window.navigator,'onLine','get').mockReturnValue(true);
+ const view=render(<PublicReleaseUpdateNotice/>);
+ await act(async()=>{await vi.advanceTimersByTimeAsync(6_000);});
+ expect(get).toHaveBeenCalledTimes(1);
+ expect(screen.queryByRole('status',{name:'Luqi app update available'})).toBeNull();
+ latest='/assets/index-fixture-new123.js';
+ visibility.mockReturnValue('hidden');
+ await act(async()=>{await vi.advanceTimersByTimeAsync(PUBLIC_RELEASE_CHECK_COOLDOWN_MS*2);});
+ expect(get).toHaveBeenCalledTimes(1);
+ visibility.mockReturnValue('visible');online.mockReturnValue(false);
+ await act(async()=>{await vi.advanceTimersByTimeAsync(PUBLIC_RELEASE_CHECK_COOLDOWN_MS);});
+ expect(get).toHaveBeenCalledTimes(1);
+ online.mockReturnValue(true);
+ await act(async()=>{await vi.advanceTimersByTimeAsync(PUBLIC_RELEASE_CHECK_COOLDOWN_MS);});
+ expect(get).toHaveBeenCalledTimes(2);
+ expect(screen.getByRole('status',{name:'Luqi app update available'}).textContent).toContain('Save or copy unsent messages');
+ view.unmount();
+ await act(async()=>{await vi.advanceTimersByTimeAsync(PUBLIC_RELEASE_CHECK_COOLDOWN_MS*2);});
+ expect(get).toHaveBeenCalledTimes(2);
 });
 it('keeps import failure diagnostics private and never retries automatically',async()=>{
  vi.spyOn(console,'error').mockImplementation(()=>{});

@@ -29,7 +29,10 @@ test('frontend trees expose the same install route and safe browser UI', async (
   }
   const page = await source('src/pages/InstallAppPage.tsx');
   assert.match(page, /Add to Home Screen/);
-  assert.match(page, /not a signed Android APK/);
+  assert.match(page, /browser may create its own managed Android package/);
+  assert.match(page, /Huawei, Xiaomi, Oppo and other Android phones/);
+  assert.match(page, /Keep Luqi up to date/);
+  assert.match(page, /Do not choose “Install anyway”, switch off Play Protect or other protections/);
   assert.doesNotMatch(page, /https?:\/\/(?!app\.luqi-ai\.com)/);
 });
 
