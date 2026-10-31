@@ -85,6 +85,14 @@ export default function InstallAppPage() {
         </section>
       </div>
 
+      <section className="luqi-install-clarity" aria-labelledby="install-security-title">
+        <h2 id="install-security-title">Install safely on your phone</h2>
+        <p>Luqi installs from your browser as a web app. You do not need an Android APK, a separate installer or permission to install unknown apps.</p>
+        <p><strong>If Google Play Protect says an app is unsafe or built for an older Android version, stop.</strong> Do not choose “Install anyway”, switch off Play Protect or change device security settings. An APK showing this warning is not the Luqi browser installation described on this page.</p>
+        <p>Instead, open <strong>https://app.luqi-ai.com</strong> in your browser and use its Install app or Add to Home screen option. If installation is unavailable on your phone, keep using Luqi securely in the browser.</p>
+        <p>If an app labelled Luqi shows a security warning, report the download address and a screenshot without passwords, one-time codes or personal details. Luqi cannot verify third-party APK copies.</p>
+      </section>
+
       <section className="luqi-install-clarity" aria-labelledby="install-clarity-title">
         <h2 id="install-clarity-title">What gets installed?</h2>
         <p>This is the official Luqi website installed as a <strong>progressive web app (PWA)</strong>, not a signed Android APK or an App Store iOS download. There is no sideloading, payment, browser extension or extra permission request.</p>
