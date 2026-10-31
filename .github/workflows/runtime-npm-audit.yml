@@ -17,6 +17,7 @@ on:
       - "backend/auth.py"
       - "tests/test_legacy_auth_security.py"
       - "scripts/report-runtime-audit.mjs"
+      - "scripts/verify-glob-consumers.mjs"
       - ".github/workflows/runtime-npm-audit.yml"
 
 permissions:
@@ -54,6 +55,8 @@ jobs:
           node-version: "22"
       - name: Install exact LUQI dependencies
         run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify glob and lint consumer APIs after security updates
+        run: node scripts/verify-glob-consumers.mjs
       - name: Audit production dependency tree
         shell: bash
         run: |
@@ -126,6 +129,8 @@ jobs:
           npm audit --include=dev --audit-level=low
       - name: Build standalone frontend
         run: npm run build
+      - name: Verify standalone dependency consumer APIs
+        run: node ../scripts/verify-glob-consumers.mjs app
       - name: Install and audit desktop dependencies
         working-directory: app/electron
         run: |
@@ -134,5 +139,8 @@ jobs:
       - name: Build Linux directory (no publishing or code signing)
         working-directory: app/electron
         run: npm run build -- --linux --dir --publish=never
+      - name: Verify desktop archive and matching APIs
+        working-directory: app/electron
+        run: node ../../scripts/verify-glob-consumers.mjs app/electron
       - name: Smoke-test packaged desktop workspace
         run: xvfb-run -a release/linux-unpacked/luqi-ai --no-sandbox --luqi-smoke-test
