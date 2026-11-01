@@ -12,12 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: fce69a68a36ab48621d48cbf1aceb706c67521aa
           persist-credentials: false
-      - name: Export public tracked application source only
+      - name: Export exact audited public application tree
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = fce69a68a36ab48621d48cbf1aceb706c67521aa
+          test "$(git rev-parse HEAD)" = fce69a68a36ab48621d48cbf1aceb706c67521aa
           git archive --format=tar.gz --output=/tmp/luqi-audit-source.tar.gz HEAD
       - uses: actions/upload-artifact@v4
         with:
