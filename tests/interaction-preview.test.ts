@@ -16,4 +16,11 @@ describe('local course illustration and draft boundaries', () => {
     expect(source).toMatch(/if \(!workspaceMode\) return;[^\n]*\n\s*const draft = readChatReturn/);
     expect(source).toBe(readFileSync('app/src/pages/AiPilotPage.tsx', 'utf8'));
   });
+  it('does not load guide-only presentation during public homepage startup', () => {
+    const source = readFileSync('src/components/WorkspaceLayout.tsx', 'utf8');
+    expect(source).toContain("const GuideHandoffNotice = lazy(() => import('./GuideHandoffNotice'))");
+    expect(source).toContain('const guideNotice = isGuidePath(location.pathname) ?');
+    expect(source).not.toContain("import GuideHandoffNotice from");
+    expect(source).toBe(readFileSync('app/src/components/WorkspaceLayout.tsx', 'utf8'));
+  });
 });
