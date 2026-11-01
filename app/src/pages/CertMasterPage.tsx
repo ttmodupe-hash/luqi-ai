@@ -46,6 +46,7 @@ import { Slider } from "@/components/ui/slider";
 import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
 import AiPilotPage from "./AiPilotPage";
 import { evaluatePracticeCommand } from "../lib/certification-client";
+import { CERT_PATHWAYS, CERT_REVIEWED_ON, LUQI_PRACTICE_GOAL } from "../lib/certification-standards";
 import { calculateIPv4Subnet } from "../lib/network-planner";
 import NetworkVlsmPlanner from "../components/NetworkVlsmPlanner";
 
@@ -518,7 +519,7 @@ export default function CertMasterPage() {
     });
     const total = filteredQuestions.length;
     const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const passed = selectedTrack === "itil_ai_v5" ? percentage >= 75 : percentage >= 82.5;
+    const passed = percentage >= LUQI_PRACTICE_GOAL;
     return { correct, total, percentage, passed };
   }, [filteredQuestions, selectedAnswers, selectedTrack]);
 
@@ -672,7 +673,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                 </Badge>
               </div>
               <p className="text-xs text-slate-400">
-                Advanced AI Governance, CCNA, CCNP & CCIP Hands-On Training
+                AI Governance, CCNA, CCNP Enterprise & Service Provider Learning
               </p>
             </div>
           </div>
@@ -696,13 +697,45 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
 
       {/* Main Hub Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <p className="rounded-xl border border-amber-700 p-3 text-sm text-amber-100">Luqi practice material, not official examination questions or a verified current certification syllabus. Confirm course versions, requirements and standards with the awarding organisation. Simulator output is illustrative, not real network activity.</p>
+        <section aria-label="Official certification pathways" className="rounded-xl border border-emerald-700 bg-slate-900 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white">Learn the skills. Follow the official certification pathway.</h2>
+              <p className="text-sm text-slate-200">Choose an awarding-body pathway, practise with Luqi's exercises, then use its current exam guide and training outline.</p>
+              <p className="text-xs text-emerald-200">Official exam details reviewed {CERT_REVIEWED_ON}.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-950"
+                href={CERT_PATHWAYS[selectedTrack].examUrl} target="_blank" rel="noopener noreferrer">Official exam details <ExternalLink size={16} aria-hidden="true" /></a>
+              <a className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-500 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                href={CERT_PATHWAYS[selectedTrack].learningUrl} target="_blank" rel="noopener noreferrer">Official training <ExternalLink size={16} aria-hidden="true" /></a>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+            <div className="rounded-lg border border-slate-700 bg-slate-950 p-4">
+              <h3 className="font-semibold text-emerald-200">{CERT_PATHWAYS[selectedTrack].title}</h3>
+              <p className="mt-1 text-sm text-slate-200">{CERT_PATHWAYS[selectedTrack].code} · {CERT_PATHWAYS[selectedTrack].duration}</p>
+              <p className="mt-2 text-xs text-slate-300">{CERT_PATHWAYS[selectedTrack].status}</p>
+              <p className="mt-2 text-xs text-slate-400">{CERT_PATHWAYS[selectedTrack].examFacts}</p>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-950 p-4">
+              <h3 className="font-semibold text-emerald-200">Skills to practise</h3>
+              <ul className="mt-2 grid gap-1 text-xs text-slate-300">
+                {CERT_PATHWAYS[selectedTrack].topics.map(topic => <li key={topic}>• {topic}</li>)}
+              </ul>
+            </div>
+          </div>
+          <details className="mt-3 text-sm text-slate-300">
+            <summary className="min-h-10 cursor-pointer py-2 font-medium text-slate-200">How Luqi practice works</summary>
+            <p className="max-w-4xl pb-2 text-xs leading-relaxed">Luqi creates its own study questions and local teaching scenarios, not copies of protected certification exam items. The network topology is a practice simulation and does not connect to actual routers. Awarding-body links above provide the official exam requirements; the {LUQI_PRACTICE_GOAL}% mastery goal measures progress only within Luqi.</p>
+          </details>
+        </section>
         {/* Track Selection Ribbon */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             {
               id: "itil_ai_v5" as TrackId,
-              title: "ITIL® AI Governance (v5)",
+              title: "ITIL AI Governance · Version 5",
               code: "ITIL-AI-V5",
               tag: "AI Ethics & ISO 42001",
               icon: Shield,
@@ -710,7 +743,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             },
             {
               id: "ccna_200_301" as TrackId,
-              title: "Cisco CCNA (200-301)",
+              title: "Cisco CCNA · 200-301 v1.1",
               code: "200-301 CCNA",
               tag: "Routing, Switching & VLSM",
               icon: Network,
@@ -718,7 +751,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             },
             {
               id: "ccnp_encor" as TrackId,
-              title: "Cisco CCNP Enterprise",
+              title: "Cisco CCNP Enterprise · ENCOR",
               code: "350-401 ENCOR",
               tag: "BGP, Advanced OSPF & QoS",
               icon: Cpu,
@@ -726,9 +759,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             },
             {
               id: "ccip_sp" as TrackId,
-              title: "Cisco CCIP / Service Provider",
+              title: "Cisco Service Provider Advanced Routing",
               code: "300-510 SPRI",
-              tag: "MPLS, LDP & Carrier VPNs",
+              tag: "SPRI v1.1 · Routing, MPLS & Segment Routing",
               icon: Layers,
               color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
             }
@@ -1093,9 +1126,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     </div>
                     <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
                       <div className="text-2xl font-extrabold text-slate-300">
-                        {selectedTrack === "itil_ai_v5" ? "75%" : "82.5%"}
+                        {LUQI_PRACTICE_GOAL + "%"}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">Practice Target (not official)</div>
+                      <div className="text-xs text-slate-400 mt-1">Luqi mastery goal</div>
                     </div>
                   </div>
 
@@ -1105,8 +1138,8 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     </h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
                       {scoreStats.passed
-                        ? "Exceptional performance! You met this local practice target. This does not establish certification readiness or an official exam result."
-                        : "Review required on missed domains. Use the Spaced Repetition Flashcards and Hands-On Cisco CLI sandbox to drill command syntax and RFC protocol tie-breakers."}
+                        ? "Great progress. Your Luqi practice score reached the mastery goal. Continue with the next topic and the awarding body's official learning path."
+                        : "Build your score: revisit missed topics, use the flashcards and practise with the networking tools before trying again."}
                     </p>
                   </div>
 
@@ -1264,7 +1297,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     Multi-Area OSPF & BGP Enterprise Spine-Leaf Topology
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-400">
-                    Illustrative packet-flow examples. Buttons animate predetermined teaching scenarios; timings and delivery outcomes are not live measurements.
+                    Explore the OSPF and BGP exchange step by step. This playback illustrates protocol behaviour, not measurements from a connected router.
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -1656,9 +1689,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
         {/* The selected practice question is a draft, never an automatic AI request. */}
         {activeTab === 'coach' && <section className="min-w-0 space-y-5" aria-label="Luqi study coach">
           <h2 className="text-xl font-bold">Ask Luqi about your course</h2>
-          <p className="text-sm text-slate-300">Course: {selectedTrack}. Use your existing Luqi account and approve each request. AI explanations are practice help, not official marking or certification. Your selected question is editable before Send.</p>
+          <p className="text-sm text-slate-300">Course: {CERT_PATHWAYS[selectedTrack].title}. Ask Luqi about any concept, review the response and keep practising. Sending a question uses your existing consent-controlled Chat workflow.</p>
           <AiPilotPage key={selectedTrack} embedded initialQuestion={coachQuery} />
-          <details><summary className="min-h-11 cursor-pointer py-3">Illustrative video lessons (not live generated footage)</summary><CertMasterVideoCoach /></details>
+          <details><summary className="min-h-11 cursor-pointer py-3">Explore animated lesson examples</summary><CertMasterVideoCoach /></details>
         </section>}
       </main>
     </div>
