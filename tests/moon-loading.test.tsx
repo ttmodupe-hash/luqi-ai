@@ -12,14 +12,15 @@ test('Moon starts loading automatically without replacing the surrounding homepa
   expect(loader).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('heading', { name: 'Luqi homepage' })).toBeTruthy();
   expect(screen.getByRole('status').textContent).toContain('Loading the live Moon');
+  expect(screen.getByRole('status').style.color).toBe('rgb(24, 61, 48)');
   expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Keep my draft');
 });
-test('pending download offers manual recovery with an unsaved-work warning', () => {
+test('pending download offers readable manual recovery with an unsaved-work warning', () => {
   const reload = vi.fn();
   render(<MoonNowPanel loader={() => new Promise<MoonModule>(() => {})} onReload={reload}/>);
   expect(reload).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('Taking longer than expected?'));
-  expect(screen.getByText(/copy important drafts first/i)).toBeTruthy();
+  expect(screen.getByText(/copy important drafts first/i).style.color).toBe('rgb(24, 61, 48)');
   fireEvent.click(screen.getByRole('button', { name: 'Reload page' }));
   expect(reload).toHaveBeenCalledTimes(1);
 });
@@ -31,12 +32,13 @@ test('resolved module appears automatically and loader is stable across parent r
   expect(loader).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('status')).toBeNull();
 });
-test('failed import is isolated and does not expose the error, URL or clear the draft', async () => {
+test('failed import is isolated and readable, without exposing errors or clearing drafts', async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   const loader = vi.fn(async () => { throw new Error('failed asset https://example.invalid/private?token=synthetic-test-only'); });
   const reload = vi.fn();
   render(<><input aria-label="Existing draft" defaultValue="Keep my draft"/><MoonNowPanel loader={loader} onReload={reload}/></>);
   expect((await screen.findByRole('alert')).textContent).toContain('other Luqi tools are still available');
+  expect(screen.getByRole('alert').style.color).toBe('rgb(24, 61, 48)');
   expect(document.body.textContent).not.toContain('synthetic-test-only');
   expect(document.body.textContent).not.toContain('example.invalid');
   expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Keep my draft');

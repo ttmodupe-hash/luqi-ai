@@ -4,15 +4,16 @@ export type MoonModule = { default: ComponentType };
 const loadMoon = (): Promise<MoonModule> => import('./MoonNowContent');
 const reloadPage = () => window.location.reload();
 const frame = { minHeight: 380, margin: '1.5rem 0' };
+const readable = { color: '#183d30' };
 
 function ReloadAction({ onReload }: { onReload: () => void }) {
-  return <><p>Reloading clears unsaved text and in-memory sign-in. Copy important drafts first.</p>
+  return <><p style={readable}>Reloading clears unsaved text and in-memory sign-in. Copy important drafts first.</p>
     <button type="button" className="luqi-secondary" onClick={onReload}>Reload page</button></>;
 }
 function MoonLoading({ onReload }: { onReload: () => void }) {
   return <section className="luqi-info" style={frame} aria-label="Moon tracker loading">
     <h2>Moon now</h2>
-    <p role="status" aria-live="polite">Loading the live Moon calculations…</p>
+    <p role="status" style={readable}>Loading the live Moon calculations…</p>
     <details><summary>Taking longer than expected?</summary><ReloadAction onReload={onReload} /></details>
   </section>;
 }
@@ -25,7 +26,7 @@ class MoonErrorBoundary extends Component<{ children: ReactNode; onReload: () =>
   render() {
     if (this.state.failed) return <section className="luqi-info" style={frame} aria-label="Moon tracker recovery">
       <h2>Moon now</h2>
-      <p role="alert">The Moon tracker could not load. Your other Luqi tools are still available.</p>
+      <p role="alert" style={readable}>The Moon tracker could not load. Your other Luqi tools are still available.</p>
       <ReloadAction onReload={this.props.onReload} />
     </section>;
     return this.props.children;
