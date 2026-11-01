@@ -45,14 +45,14 @@ export default function Home() {
               <span /> YOUR EVERYDAY WORKSPACE
             </p>
             <h1 id="workspace-title">
-              A little curiosity.
+              Knowledge. People.
               <br />
-              <em>A lot of possibility.</em>
+              <em>A Stronger Africa.</em>
             </h1>
             <p className="luqi-hero-description">
-              Find answers and take action: explore African destinations, learn
-              your rights, discover opportunities, build a quote or create a story.
-              Start with a question and Luqi will help you find the next step.
+              AI, tools and source-linked information for everyday life, learning,
+              business and opportunities across Africa. Ask Luqi a question or
+              explore the tools available today.
             </p>
             <div className="luqi-hero-actions">
               <Link className="luqi-primary" to="/try">
