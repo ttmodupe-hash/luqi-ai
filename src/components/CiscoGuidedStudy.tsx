@@ -49,7 +49,7 @@ export default function CiscoGuidedStudy() {
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Check your thinking · Luqi original exercise</p>
         <h3 className="text-base font-semibold text-white">{lesson.question}</h3>
         <div className="grid gap-2" role="group" aria-label="Choose your answer">
-          {lesson.options.map((choice,i)=><button key={i} type="button" aria-pressed={selected===i} onClick={() => setAnswers(old=>({...old,[lesson.id]:i}))}
+          {lesson.options.map((choice,i)=><button key={i} type="button" aria-label={String.fromCharCode(65+i)+'. '+choice} aria-pressed={selected===i} onClick={() => setAnswers(old=>({...old,[lesson.id]:i}))}
             className={'min-h-11 rounded-lg border px-3 py-3 text-left text-sm focus-visible:outline-2 focus-visible:outline-emerald-300 '+(selected===i?'border-emerald-400 bg-emerald-900 text-white':'border-slate-600 bg-slate-900 text-slate-200 hover:bg-slate-800')}>
               <span className="mr-2 font-semibold">{String.fromCharCode(65+i)}.</span>{choice}
             </button>)}
