@@ -50,13 +50,22 @@ export function verifyDeferred(manifest, files) {
   }
   roots.forEach(root => walk(root, false));
   for (const key of ['src/pages/PendulumLabPage.tsx', 'src/pages/VideoStudioPage.tsx', 'src/pages/CertMasterPage.tsx']) {
-    const item = manifest[key];
-    assert.ok(item && typeof item.file === 'string', 'Lazy tool is missing from the build: ' + key);
+    // Rollup may assign a synthetic manifest key to the Studio facade when
+    // the dynamically imported route reuses a shared Content Studio module.
+    // In that case resolve the single exact VideoStudioPage chunk by its
+    // build output name; never accept a generic bundle or an unknown route.
+    const matching = Object.entries(manifest).filter(([candidate, output]) =>
+      key === 'src/pages/VideoStudioPage.tsx' && candidate !== key &&
+      /^assets\\/VideoStudioPage-[A-Za-z0-9_-]+\\.js$/.test(output?.file ?? ''));
+    const resolvedKey = manifest[key] ? key : matching.length === 1 ? matching[0][0] : key;
+    const item = manifest[resolvedKey];
+    assert.ok(item && typeof item.file === 'string',
+      'Lazy tool is missing from the build: ' + key + '; candidate entries: ' +
+      JSON.stringify(Object.keys(manifest).filter(name => /StudioPage|Studio-|studio/i.test(name)).slice(0,12)));
     assert.ok(!files.includes(item.file), 'Tool is still initially loaded: ' + key);
-    // A dynamic route can be represented as a nested static import from another
-    // deferred chunk; it still must be reachable only after a lazy boundary.
-    assert.ok(item.isDynamicEntry === true || deferred.has(key),
-      'Tool has no verified lazy entry: ' + key);
+    // The synthetic chunk must be reachable only through a dynamic boundary.
+    assert.ok(item.isDynamicEntry === true || deferred.has(resolvedKey),
+      'Tool has no verified lazy entry: ' + key + ' (' + resolvedKey + ')');
   }
 }
 

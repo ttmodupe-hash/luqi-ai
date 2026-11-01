@@ -59,3 +59,18 @@ test('rejects missing or fake dynamic markers even when output names look like t
  };
  assert.throws(() => verifyDeferred(manifest, initialJs(manifest)));
 });
+
+test('accepts uniquely identified lazily reachable Rollup Studio facade with synthetic key', () => {
+ const manifest = {
+  'index.html': {isEntry:true,file:'assets/main.js',dynamicImports:['_VideoStudioPage-abc.js']},
+  '_VideoStudioPage-abc.js': {file:'assets/VideoStudioPage-abc.js'},
+  'src/pages/PendulumLabPage.tsx': {file:'assets/pendulum.js',isDynamicEntry:true},
+  'src/pages/CertMasterPage.tsx': {file:'assets/cert.js',isDynamicEntry:true},
+ };
+ verifyDeferred(manifest, initialJs(manifest));
+ manifest['index.html'].imports=['_VideoStudioPage-abc.js'];
+ assert.throws(() => verifyDeferred(manifest, initialJs(manifest)));
+ delete manifest['index.html'].imports;
+ manifest['index.html'].dynamicImports=[];
+ assert.throws(() => verifyDeferred(manifest, initialJs(manifest)));
+});
