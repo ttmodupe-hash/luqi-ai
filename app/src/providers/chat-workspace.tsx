@@ -1,4 +1,5 @@
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { syncInteractionOwner } from '../lib/interaction-handoff';
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PilotReply } from '../lib/ai-pilot';
 import type { PilotConversationTurn } from '../lib/pilot-conversation';
@@ -53,6 +54,7 @@ export function ChatWorkspaceProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     if (tokenAtPaint.current === token) return;
     tokenAtPaint.current = token;
+    syncInteractionOwner(token);
     nextId.current = 0;
     setThreads([]);
     setActiveId(null);

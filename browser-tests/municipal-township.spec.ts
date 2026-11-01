@@ -38,7 +38,9 @@ test('Start and Chat expose municipality and township guidance without account o
  await page.getByRole('link',{name:/Explore township economy support/}).click();
  await expect(page).toHaveURL(/#\/township-economy$/);
  await page.goto('/#/chat');
+ await page.getByText('Browse free Luqi guides',{exact:true}).click();
  await page.getByRole('link',{name:/Township economy: spaza, business permits/}).click();
  await expect(page).toHaveURL(/#\/township-economy$/);
+ await expect(page.getByRole('heading',{name:'Build your business. Find the right official support.'})).toBeVisible();
  expect(posts).toEqual([]);
 });

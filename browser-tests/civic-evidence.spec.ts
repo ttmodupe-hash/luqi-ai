@@ -52,14 +52,14 @@ test('shared Luqi login plus explicit approval sends only claim ID, question and
  expect(calls).toEqual([]);
  await form.getByLabel('Question about this evidence',{exact:true}).fill('Does a clean audit prove every tap works?');
  await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
- await form.getByRole('checkbox').check();
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();
  await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
  const log=page.getByRole('log',{name:'Civic explanation conversation'});
  await expect(log.getByText('AI-selected reviewed explanation',{exact:false})).toBeVisible();
  expect(calls).toEqual([{claimId:'clean-audit',question:'Does a clean audit prove every tap works?'}]);
- await expect(form.getByRole('checkbox')).not.toBeChecked();
+ await expect(form.getByRole('checkbox', { name: /I approve sending this question/ })).not.toBeChecked();
  await form.getByLabel('Question about this evidence',{exact:true}).fill('Why is that not a guarantee?');
- await form.getByRole('checkbox').check();await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
  await expect(log.getByText('Why is that not a guarantee?',{exact:true})).toBeVisible();
  expect(calls[1]).toEqual({claimId:'clean-audit',question:'Why is that not a guarantee?',previousPassageIds:['clean-limit']});
  const stored=await page.evaluate(()=>JSON.stringify([localStorage,sessionStorage]));
@@ -72,7 +72,7 @@ test('forged response is not rendered or retried, and sign-out clears the civic 
  await signInToEvidence(page);
  const form=page.getByRole('form',{name:'Ask the civic evidence supporter'});
  await form.getByLabel('Question about this evidence',{exact:true}).fill('private synthetic question marker');
- await form.getByRole('checkbox').check();await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
  await expect(form.getByRole('status')).toContainText('not displayed');
  await expect(page.getByText('Invented political claim which must never render')).toHaveCount(0);
  await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
@@ -81,8 +81,8 @@ test('forged response is not rendered or retried, and sign-out clears the civic 
  if(await mobileOpen.isVisible())await mobileOpen.click();
  await page.locator('button[title="Sign out of Luqi"]').click();
  await expect(form.getByLabel('Question about this evidence',{exact:true})).toHaveValue('');
- await expect(form.getByRole('checkbox')).not.toBeChecked();
- await expect(form.getByRole('checkbox')).toBeDisabled();
+ await expect(form.getByRole('checkbox', { name: /I approve sending this question/ })).not.toBeChecked();
+ await expect(form.getByRole('checkbox', { name: /I approve sending this question/ })).toBeDisabled();
  expect(calls).toBe(1);
 });
 test('expired records remain dated and block AI; forged record links never become prompts',async({page})=>{
@@ -103,6 +103,6 @@ test('likely voter ID numbers cannot be approved for provider transmission',asyn
  const form=page.getByRole('form',{name:'Ask the civic evidence supporter'});
  await form.getByLabel('Question about this evidence',{exact:true}).fill('My ID is ０１２３４５６７８９０１２');
  await expect(form.getByRole('alert')).toContainText('Remove the personal ID');
- await form.getByRole('checkbox').check();await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
  expect(calls).toBe(0);
 });
