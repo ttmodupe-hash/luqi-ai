@@ -1,17 +1,17 @@
 export const workspaceTools = [
   {
     id: "civic-evidence", title: "Civic Evidence Desk", category: "Politics, voting and public accountability",
-    description: "Understand source-linked public records, audits, budgets, Parliament and IEC voting information. Free reviewed explanations and optional signed-in AI clarification; not live party rankings or voting recommendations.",
+    description: "Source-linked audits, budgets, Parliament and IEC voting information. Free explanations; optional signed-in AI clarification. No live party rankings or voting recommendations.",
     status: "Free evidence · optional signed-in AI", ready: true, path: "/chat?civic=1", icon: "status",
   },
   {
     id: "spatial-vision", title: "Spatial Vision & 3D Lab", category: "Inspect images and regions locally",
-    description: "Process a photo on your device, explore illustrative 2.5D relief, mark serial labels locally, or request a signed-in, budgeted Gemini/OpenAI visual explanation. AI boxes are approximate, not verified masks.",
+    description: "Local photo processing, illustrative 2.5D relief and serial labels. Optional signed-in, budgeted Gemini/OpenAI explanations. AI boxes are approximate, not verified masks.",
     status: "Local tools + limited signed-in AI pilot", ready: true, path: "/spatial-vision", icon: "academy",
   },
   {
     id: "visual-tutor", title: "Visual tutor", category: "Select a photo region and learn",
-    description: "Crop a JPEG or PNG locally and ask for an explanation in your chosen language. Requires sign-in, per-image agreement and the shared AI allowance.",
+    description: "Crop JPEG/PNG locally; request an explanation in your language. Requires sign-in, per-image agreement and shared AI allowance.",
     status: "Limited trial · sign-in required", ready: true, path: "/visual-tutor", icon: "academy",
   },
   {
@@ -19,7 +19,7 @@ export const workspaceTools = [
     title: "AI text trial",
     category: "Ask a question, with clear limits",
     description:
-      "Sign in and give consent to try Gemini, with a separately limited OpenAI fallback. Availability is checked before sending; private notes are not sent automatically.",
+      "Sign in and consent to Gemini with limited OpenAI fallback. Availability is checked before sending; private notes are not sent automatically.",
     status: "Limited trial · sign-in required",
     ready: true,
     path: "/chat",
@@ -27,22 +27,22 @@ export const workspaceTools = [
   },
   {
     id: "driver-rights", title: "Driver rights & traffic stops", category: "South African traffic stop law and roadside safety",
-    description: "Free source-linked South African driver guidance: police ID, roadblocks, searches, fines and corruption reporting. Safe roadside quick-reference and legal review dates; no account or AI calls.",
+    description: "Source-linked police ID, roadblocks, searches, fines and corruption reporting, with legal review dates. Free roadside guidance; no account or AI calls.",
     status: "Free · no account", ready: true, path: "/driver-rights", icon: "status",
   },
   {
     id: "consumer-rights", title: "Consumer rights & complaint help", category: "South African retail, banking and service disputes",
-    description: "Free three-step guidance, official sector sources, local editable complaint drafts and a vehicle-finance balloon payment comparison with private text download. No account, paid AI or automatic filing.",
+    description: "Three-step official-source guidance, editable complaint drafts and vehicle-finance balloon payment comparisons with private downloads. No account, paid AI or automatic filing.",
     status: "Free · no account", ready: true, path: "/consumer-rights", icon: "status",
   },
   {
     id: "comparative-evidence", title: "Faith, history & scientific evidence", category: "Comparative religion and scholarly verification",
-    description: "Seven curated studies distinguishing faith narratives, scientific methods, manuscripts and historical interpretation, with source links and no religion rankings.",
+    description: "Seven source-linked studies of faith narratives, scientific methods, manuscripts and historical interpretation. No religion rankings.",
     status: "Free · no account", ready: true, path: "/comparative-evidence", icon: "academy",
   },
   {
     id: "business-connect", title: "Business Connect · Local Profiles", category: "Business owners, service areas and reviewed publication",
-    description: "Prepare a private owner profile, choose public contact fields and request publication review. Browse approved public business profiles without an account.",
+    description: "Prepare private owner profiles, choose public contacts and request publication review. Browse approved businesses without an account.",
     status: "Owner drafts and reviewed public directory", ready: true, path: "/businesses", icon: "business",
   },
   {
@@ -90,7 +90,7 @@ export const workspaceTools = [
     title: "Private notes",
     category: "Your ideas, kept together",
     description:
-      "Save conversation notes to your account. Review your history and delete a conversation when you choose.",
+      "Save account notes, review conversation history and delete selected conversations.",
     status: "Sign-in required",
     ready: true,
     path: "/companion",
@@ -101,7 +101,7 @@ export const workspaceTools = [
     title: "Physics lab",
     category: "Learn by changing things",
     description:
-      "Investigate simple, double and driven pendulum motion in the browser. Adjust conditions, watch graphs and collect lab observations.",
+      "Adjust simple, double and driven pendulum motion, watch graphs and collect browser-local lab observations.",
     status: "In-browser tool",
     ready: true,
     path: "/pendulum-lab",
@@ -123,7 +123,7 @@ export const workspaceTools = [
     title: "African languages",
     category: "More voices, more possibility",
     description:
-      "Choose a language preference in supported experiences while Luqi evaluates native-language teaching, translation quality and regional voices.",
+      "Choose supported language preferences. Native-language teaching, translation quality and regional voices remain under evaluation.",
     status: "In development",
     ready: false,
     path: null,
@@ -134,7 +134,7 @@ export const workspaceTools = [
     title: "Content studio",
     category: "Create, explain and learn",
     description:
-      "Create a six-scene animation, edit your story and export video, script and subtitles. Record your own narration or add authorised music for supported browser exports.",
+      "Edit six-scene animations; export video, script and subtitles. Add your recorded narration or authorised music in supported browsers.",
     status: "Local creation · no paid call",
     ready: true,
     path: "/content-studio",
@@ -145,7 +145,7 @@ export const workspaceTools = [
     title: "Luqi practical tools",
     category: "Travel and vehicle calculations",
     description:
-      "Use Luqi's travel budget and vehicle service schedule calculators now, directly in your browser without an account or paid AI. The separate saved task queue and workers are not activated.",
+      "Browser-local travel budget and vehicle service schedule calculators; no account or paid AI. Saved task queue and workers are not activated.",
     status: "Local · no account",
     ready: true,
     path: "/omega-tasks",
@@ -156,7 +156,7 @@ export const workspaceTools = [
     title: "Business desk",
     category: "Quotes and pricing for small businesses",
     description:
-      "Prepare a draft ZAR quotation for a customer, download its text, and estimate gross margin and break-even sales in your browser. No AI calls, tax invoices or payment processing.",
+      "Draft ZAR quotations with text download, gross margin and break-even sales. Browser-local; no AI calls, tax invoices or payment processing.",
     status: "Local · no account",
     ready: true,
     path: "/business-desk",
@@ -167,7 +167,7 @@ export const workspaceTools = [
     title: "Study desk",
     category: "Self-paced flashcards and exam topic planning",
     description:
-      "Create and review your own flashcards, plan topics before an exam, and download or import a bounded study deck. No AI calls, cloud storage or account required.",
+      "Create flashcards, review topics before exams, download or import study decks. Local; no AI calls, cloud storage or account.",
     status: "Local · no account",
     ready: true,
     path: "/study-desk",
