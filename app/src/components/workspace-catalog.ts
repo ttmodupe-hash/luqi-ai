@@ -96,7 +96,7 @@ export const workspaceTools = [
     title: "Physics lab",
     category: "Learn by changing things",
     description:
-      "Experiment with pendulum motion in your browser: adjust conditions, observe movement and explore the physics behind the results.",
+      "Investigate simple, double and driven pendulum motion in the browser. Adjust conditions, watch graphs and collect lab observations.",
     status: "In-browser tool",
     ready: true,
     path: "/pendulum-lab",
@@ -118,7 +118,7 @@ export const workspaceTools = [
     title: "African languages",
     category: "More voices, more possibility",
     description:
-      "Help shape Luqi’s African-language future. We’re evaluating quality, regional expression and source-based learning before launching a dedicated translation experience.",
+      "Choose a language preference in supported experiences while Luqi evaluates native-language teaching, translation quality and regional voices.",
     status: "In development",
     ready: false,
     path: null,
@@ -129,7 +129,7 @@ export const workspaceTools = [
     title: "Content studio",
     category: "Create, explain and learn",
     description:
-      "Create and edit a six-scene story, explore an interactive 3D pendulum and export a 90-second animation with script and subtitles. Audio narration is a separate upcoming capability.",
+      "Create a six-scene animation, edit your story and export video, script and subtitles. Record your own narration or add authorised music for supported browser exports.",
     status: "Local creation · no paid call",
     ready: true,
     path: "/content-studio",

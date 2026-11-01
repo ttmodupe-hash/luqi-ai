@@ -50,8 +50,9 @@ export default function Home() {
               <em>A lot of possibility.</em>
             </h1>
             <p className="luqi-hero-description">
-              Tell Luqi what you need — from visiting Africa to learning,
-              creating and growing an idea. Start with a question, not a menu.
+              Find answers and take action: explore African destinations, learn
+              your rights, discover opportunities, build a quote or create a story.
+              Start with a question and Luqi will help you find the next step.
             </p>
             <div className="luqi-hero-actions">
               <Link className="luqi-primary" to="/try">
@@ -78,8 +79,9 @@ export default function Home() {
             <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link><span>Android or iPhone · No app store required</span></p>
             <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
             <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
+            <p className="luqi-hero-onboarding">Want to understand public records? <Link to="/chat?civic=1">Explore Luqi's Civic Evidence Desk</Link> with original source links.</p>
             <p className="luqi-hero-footnote">
-              <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your Luqi sign-in, explicit consent and shared limits.
+              <ShieldCheck size={15} aria-hidden="true" /> Explore free tools without an account. Guest AI is available on a limited trial; additional AI use depends on consent and availability.
             </p>
           </div>
           <HeroAiChatConsole />
@@ -222,9 +224,10 @@ export default function Home() {
               The same care.
             </h2>
             <p>
-              We’re developing African-language evaluations and knowledge
-              grounded in sources. Language quality still needs review before we
-              promise reliable AI answers.
+              Africa speaks with many voices. Luqi lets you explore practical
+              learning and source-linked guidance today while we test additional
+              mother-tongue, translation and companion-voice experiences with
+              regional language reviewers.
             </p>
           </div>
           <div
@@ -245,9 +248,10 @@ export default function Home() {
         <div className="luqi-home-note">
           <ShieldCheck size={20} aria-hidden="true" />
           <p>
-            <strong>Clear about what’s ready.</strong> AI text has a separate,
-            limited trial. Voice, payments and autonomous agents remain unavailable.
-            Service health alone does not verify these features.
+            <strong>Choose what you can do today.</strong> Explore free public
+            guides, create local study and business work, and try Luqi Chat.
+            Consent, costs and availability are shown where needed. Check current
+            service status before relying on connected features.
           </p>
           <Link to="/service-status">
             Check service status <ArrowUpRight size={17} aria-hidden="true" />
