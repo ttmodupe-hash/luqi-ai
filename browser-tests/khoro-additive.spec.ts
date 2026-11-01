@@ -47,3 +47,55 @@ test('concept switching preserves unsaved drafts and never claims translation or
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   expect(posts).toEqual([]);
 });
+
+test('a user-approved finance download contains the current comparison without uploading amounts', async ({ page }) => {
+  const posts: string[] = [];
+  const downloads: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  page.on('download', download => downloads.push(download.suggestedFilename()));
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/consumer-rights');
+  const tool = page.getByRole('region', { name: 'Understand a balloon-payment scenario' });
+  await tool.getByLabel('Amount financed (rand)').fill('120000');
+  await tool.getByLabel('Annual interest (%)').fill('0');
+  await tool.getByLabel('Repayment term (months)').fill('12');
+  await tool.getByLabel('Balloon at term end (%)').fill('30');
+  const explanation = tool.getByRole('region', { name: 'Understand the difference' });
+  await expect(explanation.getByText(/A lower instalment is not proof/)).toBeVisible();
+  expect(downloads).toEqual([]);
+  const downloadEvent = page.waitForEvent('download');
+  await tool.getByRole('button', { name: 'Download my comparison' }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe('luqi-vehicle-finance-comparison.txt');
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error('Comparison download was not readable');
+  let content = '';
+  for await (const chunk of stream) content += chunk.toString();
+  expect(content).toContain('Amount financed: R120000.00');
+  expect(content).toContain('Monthly instalment: R7000.00');
+  expect(content).toContain('Separate final balloon: R36000.00');
+  expect(content).toContain('Additional total repaid with balloon: R0.00');
+  expect(content).toContain('Excludes initiation/monthly fees, insurance');
+  expect(content).toContain('Protect or delete the downloaded file on shared devices');
+  await tool.getByLabel('Amount financed (rand)').fill('');
+  await expect(tool.getByRole('button', { name: 'Download my comparison' })).toBeDisabled();
+  await expect(tool.getByText(/Download requested/)).toHaveCount(0);
+  expect(downloads).toEqual(['luqi-vehicle-finance-comparison.txt']);
+  expect(posts).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+test('download failure preserves the finance draft and never claims a saved file', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.goto('/#/consumer-rights');
+  const tool = page.getByRole('region', { name: 'Understand a balloon-payment scenario' });
+  await expect(tool.getByLabel('Amount financed (rand)')).toHaveValue('280000');
+  await page.evaluate(() => { URL.createObjectURL = () => { throw new Error('Synthetic unsupported download'); }; });
+  await tool.getByRole('button', { name: 'Download my comparison' }).click();
+  await expect(tool.getByText(/This browser could not start the download/)).toBeVisible();
+  await expect(tool.getByText(/Download requested/)).toHaveCount(0);
+  await expect(tool.getByLabel('Amount financed (rand)')).toHaveValue('280000');
+  await expect(tool.getByText('With balloon', { exact: true })).toBeVisible();
+  expect(posts).toEqual([]);
+});
