@@ -145,7 +145,7 @@ export const workspaceTools = [
     title: "Luqi practical tools",
     category: "Travel and vehicle calculations",
     description:
-      "Browser-local travel budget and vehicle service schedule calculators; no account or paid AI. Saved task queue and workers are not activated.",
+      "Browser-local travel budget and vehicle service schedule calculators without an account or paid AI. Saved task queue and workers are not activated.",
     status: "Local · no account",
     ready: true,
     path: "/omega-tasks",
@@ -156,7 +156,7 @@ export const workspaceTools = [
     title: "Business desk",
     category: "Quotes and pricing for small businesses",
     description:
-      "Draft ZAR quotations with text download, gross margin and break-even sales. Browser-local; no AI calls, tax invoices or payment processing.",
+      "Draft ZAR quotations with text download, gross margin and break-even sales. Browser-local. No AI calls, tax invoices or payment processing.",
     status: "Local · no account",
     ready: true,
     path: "/business-desk",
@@ -167,7 +167,7 @@ export const workspaceTools = [
     title: "Study desk",
     category: "Self-paced flashcards and exam topic planning",
     description:
-      "Create flashcards, review topics before exams, download or import study decks. Local; no AI calls, cloud storage or account.",
+      "Create flashcards, review topics before exams, download or import study decks. Local. No AI calls, cloud storage or account.",
     status: "Local · no account",
     ready: true,
     path: "/study-desk",
