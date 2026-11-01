@@ -47,7 +47,10 @@ test('choosing a recent conversation from Civic shows that actual conversation w
  await page.route('**/api/v1/luqi-core',r=>{calls++;return r.fulfill({json:{status:'success',response:'Synthetic confirmed study reply.',provider:'gemini',provider_model:'fixture'}});});
  await signIn(page);
  await page.getByLabel('Your question',{exact:true}).fill('Explain a study technique');
- await page.getByRole('checkbox',{name:/I understand AI text may go/}).check();
+ // The approved control is replaced by its confirmation; assert the resulting state.
+ await page.getByRole('checkbox',{name:/I understand AI text may go/}).click();
+ await expect(page.getByText('AI text sharing approved for this signed-in tab. Each message still needs Send.',{exact:true})).toBeVisible();
+ expect(calls).toBe(0);
  await page.getByRole('button',{name:'Send question',exact:true}).click();
  await expect(page.getByText('Synthetic confirmed study reply.',{exact:true})).toBeVisible();
  await goCivic(page);await openSidebar(page);
