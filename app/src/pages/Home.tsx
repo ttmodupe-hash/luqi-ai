@@ -184,7 +184,7 @@ export default function Home() {
                       </Link>
                     ) : (
                       <span className="luqi-preview-note">
-                        Not available yet
+                        Coming soon
                       </span>
                     )}
                   </div>
@@ -238,7 +238,7 @@ export default function Home() {
             <span>Yorùbá</span>
             <span>English</span>
             <p>
-              Evaluation plans, not a list of verified language capabilities.
+              Languages being evaluated for future companion experiences.
             </p>
           </div>
         </section>
