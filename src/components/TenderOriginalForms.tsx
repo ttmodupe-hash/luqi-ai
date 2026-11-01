@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {useOptionalCustomerSession} from '../providers/customer-session';
 import {EMPTY_SUPPLIER_VALUES,SBD1_FIELDS,VERIFIED_SBD1,TENDER_FILE_MAX,TENDER_DOCUMENT_ERRORS,
   type SupplierValues,type TenderDocumentInspection} from '../lib/tender-document-contract';
+import {TenderSupplierGuide} from './TenderSupplierGuide';
 import {runTenderDocument} from '../lib/tender-document-client';
 import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTenderAudit,prepareTenderPacket,
   validatePacketContext,canExportTenderPacket,buildTenderOriginalArchive,
@@ -199,13 +200,8 @@ export function TenderOriginalForms(){
         </li>)}</ul>
       </section>
       {primary.inspection.templateId&&<>
-        <fieldset disabled={busy||historyFull} className="space-y-3"><legend className="font-semibold">Your verified supplier facts</legend>
-          <p className="text-xs text-slate-300">Only facts you type are inserted. Leave unknown or inapplicable fields blank. No certificates, tax compliance, eligibility or experience are invented. Do not enter passwords, OTPs, tax PINs, ID numbers or bank details.</p>
-          <div className="grid gap-3 sm:grid-cols-2">{SBD1_FIELDS.map(field=><label key={field.id} className="block min-w-0 text-sm">{field.label}{field.required?' (required for this export)':''}
-            <input aria-label={'SBD 1 '+field.label} maxLength={field.max} type={field.id==='email'?'email':'text'} autoComplete="off" value={values[field.id]} className={inputStyle}
-              onChange={e=>{setValues(previous=>({...previous,[field.id]:e.target.value}));invalidate('edit-field',field.id)}}/>
-          </label>)}</div>
-        </fieldset>
+        <TenderSupplierGuide values={values} disabled={busy||historyFull}
+          onChange={(field,value)=>{setValues(previous=>({...previous,[field]:value}));invalidate('edit-field',field)}}/>
         <fieldset disabled={busy||historyFull} className="space-y-3"><legend className="font-semibold">Bid context for your private review record</legend>
           <p className="text-xs text-slate-300">These values identify the review packet. They do not fill the authority’s bid invitation, pricing schedule or declarations. Confirm them against the issuer originals.</p>
           <div className="grid gap-3 sm:grid-cols-2">
