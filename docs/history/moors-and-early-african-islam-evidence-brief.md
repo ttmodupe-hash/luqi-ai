@@ -38,6 +38,30 @@ African-origin people were present among the early Muslims in Arabia, notably **
 6. Islam Museum, *Bilal ibn Rabah* (faith-tradition contextual account) — https://www.islam.museum/en/person/bilal-ibn-rabah/
 7. Islam Museum, *Aksum* and *Negus of Aksum* (faith-tradition contextual accounts) — https://www.islam.museum/en/place/aksum/ and https://www.islam.museum/en/person/negus-of-aksum/
 
+## Islamic sciences and African intellectual history
+
+The history of Islam must include the **religious sciences** (Qur'anic exegesis, hadith criticism, jurisprudence, theology, Arabic grammar) as well as disciplines developed in and across Muslim-majority societies: **mathematics, astronomy, optics, medicine, geography and engineering**. “Islamic sciences” can refer to both; never collapse all scientific work into religious doctrine or claim every contributor shared one religious identity.
+
+### Scholars and fields to study
+- **al-Khwarizmi** — systematic algebra and mathematical computation; recognise Greek and Indian precursors while explaining original developments.
+- **Ibn al-Haytham** — optics and experimental studies of light and vision.
+- **Ibn Sina** — medical synthesis and *Canon of Medicine*; discuss clinical knowledge in its historical context, not as modern medical advice.
+- **al-Biruni** — mathematical astronomy, geography, comparative inquiry.
+- **Ibn Khaldun** — historical method and social analysis; distinguish the social sciences from natural sciences.
+- **West African scholars and manuscript cultures** — Timbuktu, Sankore and family libraries preserving and producing works in law, Qur'anic studies, mathematics, astronomy, medicine, poetry and history. Highlight both locally authored and imported/circulated manuscripts, without treating all manuscripts as original discoveries.
+
+### Evidence and discussion
+The Library of Congress exhibits actual Timbuktu manuscripts on astronomy and arithmetic. UNESCO documents Timbuktu's Islamic cultural role. The University of Cape Town's Timbuktu Manuscripts Project explains both religious and non-religious learning across the Saharan/Sahelian manuscript networks. Medical history scholarship documents original work in optics and circulation.
+
+- Library of Congress: https://www.loc.gov/exhibits/mali/mali-exhibit.html
+- UNESCO World Heritage: https://whc.unesco.org/en/list/119/
+- UCT Timbuktu Manuscripts Project: https://tombouctoumanuscripts.uct.ac.za/articles/2013-01-31-why-does-timbuktu-matter
+- Medical history review (CMAJ): https://pmc.ncbi.nlm.nih.gov/articles/PMC1863528/
+- University of Hamburg manuscript conservation: https://www.csmc.uni-hamburg.de/timbuktu/manuscripts.html
+
+### Editorial controls
+Present primary sources and later scholarship with dates. Do not label beliefs, astrology, or historical medicine as empirically verified modern science. Correct myths of either exclusive Muslim invention or mere passive transmission. Include African women, schools and intellectual networks where surviving evidence supports their contributions. Do not equate the intellectual histories of all African regions or all Muslim communities.
+
 ## Product acceptance before publication
 
 - Expose this brief only via the existing Luqi history/research experience, not a separate KHORO product/login.
