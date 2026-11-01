@@ -19,7 +19,7 @@ test('pending download offers manual recovery with an unsaved-work warning', () 
   render(<MoonNowPanel loader={() => new Promise<MoonModule>(() => {})} onReload={reload}/>);
   expect(reload).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('Taking longer than expected?'));
-  expect(screen.getByText(/copy important drafts first/)).toBeTruthy();
+  expect(screen.getByText(/copy important drafts first/i)).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Reload page' }));
   expect(reload).toHaveBeenCalledTimes(1);
 });

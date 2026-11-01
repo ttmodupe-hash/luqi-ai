@@ -19,8 +19,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
-      - name: Check lunar references, inputs, privacy and mirrored homepage
-        run: node --test tests/moon-tracker.test.mjs
+      - name: Check lunar references above and below the horizon, privacy and mirrored homepage
+        run: node --test tests/moon-tracker.test.mjs tests/moon-above-horizon.test.mjs
       - name: Install locked UI test dependencies without lifecycle scripts
         run: npm ci --legacy-peer-deps --ignore-scripts
       - name: Exercise optional location, live updates, isolated lazy failures and retained discovery tools
