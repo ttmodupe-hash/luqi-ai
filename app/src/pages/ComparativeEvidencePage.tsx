@@ -1,11 +1,16 @@
 import { useState } from 'react';
+import { useOptionalCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { readGuide } from '../lib/interaction-handoff';
 import { Link } from 'react-router';
 import { EVIDENCE_CASES, EVIDENCE_REVIEWED_ON, EVIDENCE_RECHECK_AFTER,
   evidenceIsCurrent, evidenceSourcesFor, type EvidenceTopic } from '../lib/comparative-evidence';
 
 /** Source-linked local reading aid, not a religion-ranking, truth or inference service. */
 export default function ComparativeEvidencePage() {
-  const [topic, setTopic] = useState<EvidenceTopic>('creation');
+  const customer = useOptionalCustomerSession();
+  const selected = readGuide(customerSessionBoundary(customer?.session ?? null), '/comparative-evidence')?.selection;
+  const [topic, setTopic] = useState<EvidenceTopic>(() => EVIDENCE_CASES.some(item => item.id === selected) ? selected as EvidenceTopic : 'creation');
   const current = evidenceIsCurrent();
   const item = EVIDENCE_CASES.find(e => e.id === topic) ?? EVIDENCE_CASES[0];
   return <main className="mx-auto max-w-5xl min-w-0 space-y-6 px-3 py-6 text-slate-100 sm:px-5 sm:py-9" aria-labelledby="evidence-title">

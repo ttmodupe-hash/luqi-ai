@@ -43,6 +43,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
+import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
+import AiPilotPage from "./AiPilotPage";
+import { evaluatePracticeCommand } from "../lib/certification-client";
+import { calculateIPv4Subnet } from "../lib/network-planner";
+import NetworkVlsmPlanner from "../components/NetworkVlsmPlanner";
 
 // ── TYPES ────────────────────────────────────────────────────────────
 
@@ -432,10 +437,10 @@ export default function CertMasterPage() {
   useEffect(() => {
     const handleCustomNav = (e: any) => {
       const detail = e.detail;
-      if (detail?.tabKey === "tab" && detail?.tabValue) {
+      if (detail?.tabKey === "tab" && ["exam", "terminal", "subnet", "flashcards", "coach", "topology"].includes(detail?.tabValue)) {
         setActiveTab(detail.tabValue);
       }
-      if (detail?.tabKey === "track" && detail?.tabValue) {
+      if (detail?.tabKey === "track" && ["itil_ai_v5", "ccna_200_301", "ccnp_encor", "ccip_sp"].includes(detail?.tabValue)) {
         setSelectedTrack(detail.tabValue);
       }
     };
@@ -532,7 +537,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
   ]);
   const [cliMode, setCliMode] = useState<string>("user");
   const [cliPrompt, setCliPrompt] = useState<string>("Router>");
-  const [activeLabScenario, setActiveLabScenario] = useState<LabScenario>(LAB_SCENARIOS[0]);
+  const [activeLabScenario, setActiveLabScenario] = useState<LabScenario | null>(LAB_SCENARIOS[0]);
   const cliScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -541,55 +546,36 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
     }
   }, [cliHistory]);
 
+  const cliPending = useRef<AbortController | null>(null);
+  const cliEpoch = useRef(0);
+  const [cliBusy, setCliBusy] = useState(false);
+  const [cliNotice, setCliNotice] = useState('');
+  useEffect(() => {
+    cliEpoch.current++; cliPending.current?.abort(); cliPending.current = null;
+    setCliBusy(false); setCliNotice(''); setCliInput(''); setCoachQuery(''); setCliMode('user'); setCliPrompt('Router>');
+    setCliHistory([{ command: 'help', output: 'Local learning simulation: no physical router is connected. Choose a supported practice command.', prompt: 'Router>' }]);
+    setCurrentQIndex(0); setSelectedAnswers({}); setShowExplanation(false); setExamFinished(false);
+    setIsTimerRunning(false); setExamMode('practice'); setTimeLeftSec(0); setFcIndex(0); setIsFlipped(false); setDrillFeedback(null);
+    setActiveLabScenario(LAB_SCENARIOS.find(lab => lab.trackId === selectedTrack) ?? null);
+    return () => { cliEpoch.current++; cliPending.current?.abort(); cliPending.current = null; };
+  }, [selectedTrack]);
   const handleExecuteCli = async (cmdToRun?: string) => {
     const command = (cmdToRun !== undefined ? cmdToRun : cliInput).trim();
-    if (!command) return;
-
+    if (!command || cliPending.current) return;
+    if (command.length > 200) { setCliNotice('Use at most 200 characters for one practice command.'); return; }
+    setCliInput(command); setCliNotice(''); setCliBusy(true);
+    const controller = new AbortController(), epoch = ++cliEpoch.current; cliPending.current = controller;
+    const currentPrompt = cliPrompt;
     try {
-      const res = await fetch("/api/v1/cert-academy/cli-eval", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          command,
-          mode: cliMode,
-          prompt: cliPrompt
-        })
-      });
-      const data = await res.json();
-
-      setCliHistory((prev) => [
-        ...prev,
-        {
-          command,
-          output: data.output,
-          prompt: cliPrompt
-        }
-      ]);
-      setCliMode(data.nextMode);
-      setCliPrompt(data.prompt);
-      setCliInput("");
-    } catch (e) {
-      // Offline local evaluation
-      let out = "";
-      let nextM = cliMode;
-      let nextP = cliPrompt;
-      if (command.toLowerCase() === "enable" || command.toLowerCase() === "en") {
-        nextM = "privileged";
-        nextP = "Router#";
-      } else if (command.toLowerCase() === "conf t" || command.toLowerCase() === "configure terminal") {
-        nextM = "config";
-        nextP = "Router(config)#";
-        out = "Enter configuration commands, one per line. End with CNTL/Z.";
-      } else if (command.toLowerCase() === "exit") {
-        nextM = "privileged";
-        nextP = "Router#";
-      } else {
-        out = `% Executed: ${command}`;
-      }
-      setCliHistory((prev) => [...prev, { command, output: out, prompt: cliPrompt }]);
-      setCliMode(nextM);
-      setCliPrompt(nextP);
-      setCliInput("");
+      const data = await evaluatePracticeCommand(command, cliMode, controller.signal);
+      if (epoch !== cliEpoch.current || controller.signal.aborted) return;
+      setCliHistory(previous => [...previous, { command, output: data.output, prompt: currentPrompt }].slice(-100));
+      setCliMode(data.nextMode); setCliPrompt(data.prompt); setCliInput('');
+    } catch {
+      if (epoch !== cliEpoch.current) return;
+      setCliNotice('The practice result could not be confirmed. Your command and previous state are unchanged. No automatic retry was made; this tool does not control a real router.');
+    } finally {
+      if (epoch === cliEpoch.current) { cliPending.current = null; setCliBusy(false); }
     }
   };
 
@@ -599,51 +585,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
   const [drillAnswer, setDrillAnswer] = useState("");
   const [drillFeedback, setDrillFeedback] = useState<string | null>(null);
 
-  const subnetCalculations = useMemo(() => {
-    try {
-      const parts = subnetIp.split(".").map((p) => parseInt(p, 10));
-      if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) {
-        return null;
-      }
-      const ipNum = ((parts[0] << 24) >>> 0) + ((parts[1] << 16) >>> 0) + ((parts[2] << 8) >>> 0) + (parts[3] >>> 0);
-      const maskNum = subnetCidr === 0 ? 0 : (~0 << (32 - subnetCidr)) >>> 0;
-      const wildcardNum = (~maskNum) >>> 0;
-      const netNum = (ipNum & maskNum) >>> 0;
-      const bcastNum = (netNum | wildcardNum) >>> 0;
-
-      const toIpStr = (n: number) => [
-        (n >>> 24) & 255,
-        (n >>> 16) & 255,
-        (n >>> 8) & 255,
-        n & 255
-      ].join(".");
-
-      const totalHosts = Math.pow(2, 32 - subnetCidr);
-      const usableHosts = subnetCidr >= 31 ? 0 : totalHosts - 2;
-      const firstUsable = subnetCidr >= 31 ? "N/A" : toIpStr(netNum + 1);
-      const lastUsable = subnetCidr >= 31 ? "N/A" : toIpStr(bcastNum - 1);
-
-      // Binary string
-      const binaryIp = parts.map((p) => p.toString(2).padStart(8, "0")).join(".");
-      const maskParts = [(maskNum >>> 24) & 255, (maskNum >>> 16) & 255, (maskNum >>> 8) & 255, maskNum & 255];
-      const binaryMask = maskParts.map((p) => p.toString(2).padStart(8, "0")).join(".");
-
-      return {
-        networkAddress: toIpStr(netNum),
-        broadcastAddress: toIpStr(bcastNum),
-        subnetMask: toIpStr(maskNum),
-        wildcardMask: toIpStr(wildcardNum),
-        firstUsable,
-        lastUsable,
-        totalHosts,
-        usableHosts,
-        binaryIp,
-        binaryMask
-      };
-    } catch {
-      return null;
-    }
-  }, [subnetIp, subnetCidr]);
+  const subnetCalculations = useMemo(() => calculateIPv4Subnet(subnetIp, subnetCidr), [subnetIp, subnetCidr]);
 
   // ── FLASHCARD STATE (LEITNER BOXES) ──
   const [fcIndex, setFcIndex] = useState(0);
@@ -657,7 +599,8 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
     }
   });
 
-  const activeFlashcard = FLASHCARDS[fcIndex] || FLASHCARDS[0];
+  const trackFlashcards = FLASHCARDS.filter(card => card.trackId === selectedTrack);
+  const activeFlashcard = trackFlashcards[fcIndex] || trackFlashcards[0];
 
   const handleLeitnerAdvance = (fcId: string, success: boolean) => {
     const curBox = boxState[fcId] || 1;
@@ -670,54 +613,12 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
       console.warn("Storage sync failed", e);
     }
     setIsFlipped(false);
-    setFcIndex((prev) => (prev + 1) % FLASHCARDS.length);
+    setFcIndex((prev) => (prev + 1) % Math.max(1, trackFlashcards.length));
   };
 
-  // ── AI EXAM COACH STATE ──
-  const [coachQuery, setCoachQuery] = useState("");
-  const [coachLoading, setCoachLoading] = useState(false);
-  const [coachMessages, setCoachMessages] = useState<{ role: "user" | "coach"; text: string }[]>([
-    {
-      role: "coach",
-      text: `Hello, Engineer! I am your Senior Exam Proctor for ITIL® AI Governance (v5), Cisco CCNA (200-301), and CCNP/CCIP Enterprise & Service Provider.\n\nAsk me anything: BGP path attributes, OSPF LSA types, Subnetting magic numbers, ISO 42001 compliance criteria, or test questions!`
-    }
-  ]);
-
-  const handleSendCoach = async (promptText?: string) => {
-    const textToSend = promptText || coachQuery;
-    if (!textToSend.trim() || coachLoading) return;
-
-    setCoachMessages((prev) => [...prev, { role: "user", text: textToSend }]);
-    setCoachQuery("");
-    setCoachLoading(true);
-
-    try {
-      const res = await fetch("/api/v1/cert-academy/coach", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: textToSend,
-          track: selectedTrack,
-          context: `Active tab is ${activeTab}, current question is ${activeQuestion?.question}`
-        })
-      });
-      const data = await res.json();
-      setCoachMessages((prev) => [
-        ...prev,
-        { role: "coach", text: data.answer || "No response received from proctor." }
-      ]);
-    } catch (e: any) {
-      setCoachMessages((prev) => [
-        ...prev,
-        {
-          role: "coach",
-          text: `Offline Proctor Note: BGP Path selection uses "We Love Oranges As Oranges Mean Pure Refreshment" (Weight, Local Pref, Locally Originated, AS-Path, Origin, MED, eBGP > iBGP, lowest IGP, lowest Router ID). For ITIL 5, remember ISO/IEC 42001 and mandatory Human-in-the-Loop gating on high-risk pipelines.`
-        }
-      ]);
-    } finally {
-      setCoachLoading(false);
-    }
-  };
+  // The coach reuses Luqi Chat's authenticated, budgeted and consent-controlled path.
+  const [coachQuery, setCoachQuery] = useState('');
+  const handleSendCoach = (text: string) => { setCoachQuery(text); setActiveTab('coach'); };
 
   // ── TOPOLOGY PACKET ANIMATION ──
   const [packetState, setPacketState] = useState<string | null>(null);
@@ -795,6 +696,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
 
       {/* Main Hub Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <p className="rounded-xl border border-amber-700 p-3 text-sm text-amber-100">Luqi practice material, not official examination questions or a verified current certification syllabus. Confirm course versions, requirements and standards with the awarding organisation. Simulator output is illustrative, not real network activity.</p>
         {/* Track Selection Ribbon */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
@@ -1016,7 +918,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       {showExplanation && (
                         <div className="mt-6 p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3">
                           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider">
-                            <CheckCircle2 className="w-4 h-4" /> Official Examination Analysis & Solution
+                            <CheckCircle2 className="w-4 h-4" /> Luqi practice explanation — check the original syllabus
                           </div>
                           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                             {activeQuestion.explanation}
@@ -1143,15 +1045,15 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
 
                       <div className="pt-3 border-t border-slate-800 text-xs space-y-1.5 text-slate-400">
                         <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50" />
+                          <span className="w-3 h-3 rounded-sm bg-emerald-500/30 border border-emerald-500/50" />
                           <span>Answered</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded bg-amber-500" />
+                          <span className="w-3 h-3 rounded-sm bg-amber-500" />
                           <span>Current Question</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded bg-slate-800" />
+                          <span className="w-3 h-3 rounded-sm bg-slate-800" />
                           <span>Unanswered</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1171,7 +1073,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     <Award className={`w-8 h-8 ${scoreStats.passed ? "text-emerald-400" : "text-amber-400"}`} />
                   </div>
                   <CardTitle className="text-2xl font-bold">
-                    {scoreStats.passed ? "EXAM PASSED!" : "EXAM REVIEW REQUIRED"}
+                    {scoreStats.passed ? "PRACTICE TARGET REACHED" : "PRACTICE REVIEW NEEDED"}
                   </CardTitle>
                   <CardDescription className="text-sm text-slate-400">
                     Comprehensive Diagnostic Scorecard for {selectedTrack.toUpperCase().replace(/_/g, " ")}
@@ -1193,7 +1095,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       <div className="text-2xl font-extrabold text-slate-300">
                         {selectedTrack === "itil_ai_v5" ? "75%" : "82.5%"}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">Passing Threshold</div>
+                      <div className="text-xs text-slate-400 mt-1">Practice Target (not official)</div>
                     </div>
                   </div>
 
@@ -1203,7 +1105,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     </h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
                       {scoreStats.passed
-                        ? "Exceptional performance! Your comprehension of core protocols, state machines, and governance constraints exceeds the certification benchmark."
+                        ? "Exceptional performance! You met this local practice target. This does not establish certification readiness or an official exam result."
                         : "Review required on missed domains. Use the Spaced Repetition Flashcards and Hands-On Cisco CLI sandbox to drill command syntax and RFC protocol tie-breakers."}
                     </p>
                   </div>
@@ -1235,16 +1137,16 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       Guided Hands-On Labs
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-400">
-                      Select an official scenario to configure and test in the live emulator.
+                      Choose a Luqi practice scenario for this course. Outputs are simulated, not measurements from a real network.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {LAB_SCENARIOS.map((lab) => (
+                    {LAB_SCENARIOS.filter(lab => lab.trackId === selectedTrack).map((lab) => (
                       <div
                         key={lab.id}
                         onClick={() => setActiveLabScenario(lab)}
                         className={`p-3 rounded-xl border transition cursor-pointer ${
-                          activeLabScenario.id === lab.id
+                          activeLabScenario?.id === lab.id
                             ? "bg-amber-500/10 border-amber-500 text-amber-200 ring-1 ring-amber-500/20"
                             : "bg-slate-950/60 border-slate-800 hover:bg-slate-800 text-slate-300"
                         }`}
@@ -1260,8 +1162,8 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
                         Topology Context:
                       </span>
-                      <div className="p-2 rounded bg-slate-950 font-mono text-[11px] text-emerald-400 border border-slate-800">
-                        {activeLabScenario.topologyHint}
+                      <div className="p-2 rounded-sm bg-slate-950 font-mono text-[11px] text-emerald-400 border border-slate-800">
+                        {activeLabScenario?.topologyHint ?? 'No guided scenario for this course yet. The generic command practice is still available.'}
                       </div>
                     </div>
 
@@ -1270,11 +1172,11 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                         Quick Command Snippets:
                       </span>
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {activeLabScenario.initialCommands.map((cmd, i) => (
+                        {(activeLabScenario?.initialCommands ?? ['help']).map((cmd, i) => (
                           <button
                             key={i}
-                            onClick={() => handleExecuteCli(cmd)}
-                            className="text-[10px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 font-mono text-amber-300 transition cursor-pointer"
+                            disabled={cliBusy} onClick={() => handleExecuteCli(cmd)}
+                            className="text-[10px] px-2 py-1 rounded-sm bg-slate-800 hover:bg-slate-700 font-mono text-amber-300 transition cursor-pointer"
                           >
                             {cmd}
                           </button>
@@ -1297,7 +1199,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
                       </div>
                       <span className="text-slate-300 font-semibold ml-2">
-                        cisco-c8000v-console [ttyS0 9600 8N1]
+                        Luqi simulated command practice
                       </span>
                     </div>
                     <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/40">
@@ -1325,12 +1227,14 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     ))}
                   </div>
 
+                  {cliNotice && <p role="status" className="p-3 text-sm text-amber-200">{cliNotice}</p>}
+                  <p className="px-3 text-xs text-slate-400">Training simulation only. A successful sample is not evidence that a real packet or command ran.</p>
                   {/* Terminal Input Bar */}
                   <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 font-mono text-xs">
                     <span className="text-amber-400 font-bold shrink-0">{cliPrompt}</span>
                     <input
                       type="text"
-                      value={cliInput}
+                      aria-label="Practice command" maxLength={200} disabled={cliBusy} value={cliInput}
                       onChange={(e) => setCliInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleExecuteCli();
@@ -1339,7 +1243,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       className="flex-1 bg-transparent text-slate-100 outline-hidden font-mono placeholder:text-slate-600 text-xs"
                       autoFocus
                     />
-                    <Button size="sm" onClick={() => handleExecuteCli()}>
+                    <Button size="sm" aria-label="Run practice command" disabled={cliBusy} onClick={() => handleExecuteCli()}>
                       <Send className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -1360,7 +1264,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     Multi-Area OSPF & BGP Enterprise Spine-Leaf Topology
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-400">
-                    Live visual state machine & packet flow simulator. Inject packets to inspect header transitions.
+                    Illustrative packet-flow examples. Buttons animate predetermined teaching scenarios; timings and delivery outcomes are not live measurements.
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -1461,7 +1365,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                 {/* Packet Flight Log */}
                 <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
                   <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">
-                    Live Telemetry Event Log
+                    Illustrative Event Log
                   </h4>
                   <div className="space-y-1 font-mono text-xs text-slate-300 max-h-32 overflow-y-auto">
                     {packetLog.length === 0 ? (
@@ -1479,6 +1383,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
         {/* TAB 4: SUBNETTING & VLSM ENGINE */}
         {activeTab === "subnet" && (
           <div className="space-y-6">
+            <NetworkVlsmPlanner />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Calculator Inputs & Output */}
               <div className="lg:col-span-7 space-y-4">
@@ -1495,9 +1400,12 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                   <CardContent className="space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-semibold text-slate-300">IPv4 Address</label>
+                        <label htmlFor="luqi-subnet-ip" className="text-xs font-semibold text-slate-300">IPv4 Address</label>
                         <input
+                          id="luqi-subnet-ip"
+                          aria-label="IPv4 Address"
                           type="text"
+                          maxLength={15}
                           value={subnetIp}
                           onChange={(e) => setSubnetIp(e.target.value)}
                           className="w-full mt-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm font-mono text-amber-300 outline-hidden focus:border-amber-500"
@@ -1512,8 +1420,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                         </div>
                         <input
                           type="range"
-                          min="8"
-                          max="30"
+                          aria-label="IPv4 prefix length"
+                          min="0"
+                          max="32"
                           value={subnetCidr}
                           onChange={(e) => setSubnetCidr(parseInt(e.target.value, 10))}
                           className="w-full mt-3 accent-amber-500 cursor-pointer"
@@ -1521,6 +1430,8 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       </div>
                     </div>
 
+                    {!subnetCalculations && <p role="status" className="text-sm text-amber-200">Enter exactly four decimal IPv4 octets (0–255), with no trailing text.</p>}
+                    {subnetCalculations && <p className="text-xs text-emerald-200">{subnetCalculations.note}</p>}
                     {subnetCalculations && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
                         <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
@@ -1650,32 +1561,34 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
         )}
 
         {/* TAB 5: FLASHCARDS (SPACED REPETITION) */}
-        {activeTab === "flashcards" && (
+        {activeTab === "flashcards" && activeFlashcard && (
           <div className="space-y-6 max-w-2xl mx-auto">
             {/* Leitner Progress Stats */}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Box 1 (Daily Learn)</span>
                 <p className="text-lg font-bold text-amber-400 mt-0.5">
-                  {Object.values(boxState).filter((b) => b === 1).length} Cards
+                  {trackFlashcards.filter(card => (boxState[card.id] ?? 1) === 1).length} Cards
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Box 2 (Review)</span>
                 <p className="text-lg font-bold text-blue-400 mt-0.5">
-                  {Object.values(boxState).filter((b) => b === 2).length} Cards
+                  {trackFlashcards.filter(card => boxState[card.id] === 2).length} Cards
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Box 3 (Mastered)</span>
                 <p className="text-lg font-bold text-emerald-400 mt-0.5">
-                  {Object.values(boxState).filter((b) => b === 3).length} Cards
+                  {trackFlashcards.filter(card => boxState[card.id] === 3).length} Cards
                 </p>
               </div>
             </div>
 
             {/* Flashcard Component */}
             <div
+              role="button" tabIndex={0} aria-label="Flip current flashcard" aria-pressed={isFlipped}
+              onKeyDown={event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); setIsFlipped(value => !value); } }}
               onClick={() => setIsFlipped(!isFlipped)}
               className="w-full min-h-[320px] p-8 rounded-2xl bg-linear-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-2xl flex flex-col justify-between cursor-pointer transition-all hover:border-amber-500/40 relative overflow-hidden"
             >
@@ -1684,7 +1597,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                   {activeFlashcard.domain}
                 </Badge>
                 <span className="text-xs text-slate-500">
-                  Card {fcIndex + 1} of {FLASHCARDS.length} &bull; Click to Flip
+                  Card {fcIndex + 1} of {trackFlashcards.length} &bull; Click to Flip
                 </span>
               </div>
 
@@ -1740,98 +1653,13 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
           </div>
         )}
 
-        {/* TAB 6: AI EXAM COACH */}
-        {activeTab === "coach" && (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            <Card className="border-slate-800 bg-slate-900/80 shadow-2xl flex flex-col h-[600px]">
-              <CardHeader className="pb-3 border-b border-slate-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-bold">
-                        Intelligent AI Certification Coach & Proctor
-                      </CardTitle>
-                      <CardDescription className="text-xs text-slate-400">
-                        Ask deep questions about ITIL 5, Cisco IOS, BGP tie-breakers, or RFC standards.
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs font-mono text-amber-400">
-                    Track: {selectedTrack.toUpperCase()}
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              {/* Chat Stream */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4">
-                {coachMessages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {msg.role === "coach" && (
-                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-1">
-                        <GraduationCap className="w-4 h-4" />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[80%] p-4 rounded-xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === "user"
-                          ? "bg-amber-600 text-white font-medium ml-12"
-                          : "bg-slate-950 border border-slate-800 text-slate-200 shadow-md mr-12"
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
-                {coachLoading && (
-                  <div className="flex items-center gap-2 text-xs text-amber-400 font-mono animate-pulse">
-                    <Sparkles className="w-3.5 h-3.5" /> Proctor is synthesizing RFC and ITIL guidance...
-                  </div>
-                )}
-              </div>
-
-              {/* Preset Chips */}
-              <div className="px-4 py-2 border-t border-slate-800 bg-slate-950/60 flex flex-wrap gap-1.5">
-                {[
-                  "Explain BGP Path Selection Mnemonic",
-                  "Compare ISO 42001 vs EU AI Act in ITIL 5",
-                  "How does OSPF DR/BDR election work?",
-                  "Walk through a /27 subnetting calculation"
-                ].map((chip, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleSendCoach(chip)}
-                    className="text-[11px] px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-
-              {/* Input Bar */}
-              <div className="p-3 bg-slate-950 border-t border-slate-800 flex gap-2">
-                <input
-                  type="text"
-                  value={coachQuery}
-                  onChange={(e) => setCoachQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSendCoach();
-                  }}
-                  placeholder="Ask a technical or certification question..."
-                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-100 outline-hidden focus:border-amber-500"
-                />
-                <Button size="sm" onClick={() => handleSendCoach()} disabled={coachLoading}>
-                  <Send className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
+        {/* The selected practice question is a draft, never an automatic AI request. */}
+        {activeTab === 'coach' && <section className="min-w-0 space-y-5" aria-label="Luqi study coach">
+          <h2 className="text-xl font-bold">Ask Luqi about your course</h2>
+          <p className="text-sm text-slate-300">Course: {selectedTrack}. Use your existing Luqi account and approve each request. AI explanations are practice help, not official marking or certification. Your selected question is editable before Send.</p>
+          <AiPilotPage key={selectedTrack} embedded initialQuestion={coachQuery} />
+          <details><summary className="min-h-11 cursor-pointer py-3">Illustrative video lessons (not live generated footage)</summary><CertMasterVideoCoach /></details>
+        </section>}
       </main>
     </div>
   );

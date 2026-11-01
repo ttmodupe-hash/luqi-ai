@@ -3,8 +3,8 @@
  * Category routing is selected by the user, not inferred or AI-generated.
  * No network requests, accounts, private storage, legal verdicts or auto-sends.
  */
-export const CONSUMER_GUIDE_REVIEWED_ON = '2026-10-26';
-export const CONSUMER_GUIDE_RECHECK_AFTER = '2026-11-02';
+export const CONSUMER_GUIDE_REVIEWED_ON = '2026-11-01';
+export const CONSUMER_GUIDE_RECHECK_AFTER = '2026-11-08';
 export const MAX_CONSUMER_STORY_LENGTH = 1800;
 
 export type DisputeType =
@@ -42,7 +42,7 @@ export const CONSUMER_SOURCES: readonly ConsumerSource[] = [
     id: 'cgso',
     name: 'Consumer complaints and assistance',
     publisher: 'Consumer Goods and Services Ombud (CGSO)',
-    url: 'https://www.cgso.org.za/consumer/',
+    url: 'https://www.cgso.org.za/your-rights/',
     reviewedOn: CONSUMER_GUIDE_REVIEWED_ON,
   },
   {
@@ -70,7 +70,7 @@ export const CONSUMER_SOURCES: readonly ConsumerSource[] = [
     id: 'icasa',
     name: 'Communications service complaints portal',
     publisher: 'ICASA',
-    url: 'https://www.icasa.org.za/pages/consumer-complaints',
+    url: 'https://www.icasa.org.za/pages/consumer-complaints-procedure',
     reviewedOn: CONSUMER_GUIDE_REVIEWED_ON,
   },
   {
@@ -84,7 +84,7 @@ export const CONSUMER_SOURCES: readonly ConsumerSource[] = [
     id: 'information-regulator',
     name: 'POPIA privacy complaints and official contacts',
     publisher: 'Information Regulator (South Africa)',
-    url: 'https://inforegulator.org.za/contact-us/',
+    url: 'https://inforegulator.org.za/complaints/',
     reviewedOn: CONSUMER_GUIDE_REVIEWED_ON,
   },
 ] as const;
@@ -245,8 +245,8 @@ export function consumerSourcesFor(type: DisputeType): ConsumerSource[] {
 export function consumerGuideIsCurrent(date: Date = new Date()): boolean {
   const t = date.getTime();
   return Number.isFinite(t) &&
-    t >= Date.parse('2026-10-26T00:00:00+02:00') &&
-    t <= Date.parse('2026-11-02T23:59:59+02:00');
+    t >= Date.parse('2026-11-01T00:00:00+02:00') &&
+    t <= Date.parse('2026-11-08T23:59:59+02:00');
 }
 
 export function prepareConsumerStory(type: DisputeType, story: unknown) {

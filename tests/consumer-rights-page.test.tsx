@@ -10,7 +10,7 @@ let priorClipboard: PropertyDescriptor | undefined;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-10-26T09:56:00+02:00'));
+  vi.setSystemTime(new Date('2026-11-01T09:56:00+02:00'));
   requests.mockReset();
   copied.mockReset().mockResolvedValue(undefined);
   vi.stubGlobal('fetch', requests);
@@ -89,7 +89,7 @@ it('makes the complaint correspondence entirely user editable and copies only th
 });
 
 it('refuses to prepare detailed guidance after its source review has expired', () => {
-  vi.setSystemTime(new Date('2026-11-03T09:00:00+02:00'));
+  vi.setSystemTime(new Date('2026-11-09T09:00:00+02:00'));
   show();
   expect(screen.getByRole('alert').textContent).toMatch(/source review has expired/);
   expect((screen.getByRole('button', { name: 'Prepare my options locally' }) as HTMLButtonElement).disabled).toBe(true);

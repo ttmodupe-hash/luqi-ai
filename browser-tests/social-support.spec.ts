@@ -29,6 +29,8 @@ test('Start and Chat expose free public support navigation',async({page})=>{
  await page.getByRole('link',{name:/Open SASSA & UIF support/}).click();
  await expect(page).toHaveURL(/#\/social-support$/);
  await page.goto('/#/chat');
+ await page.getByText('Browse free Luqi guides',{exact:true}).click();
  await page.getByRole('link',{name:/SASSA grants, UIF claims, status and appeals/}).click();
  await expect(page).toHaveURL(/#\/social-support$/);
+ await expect(page.getByRole('heading',{name:'SASSA grants and UIF claims support'})).toBeVisible();
 });

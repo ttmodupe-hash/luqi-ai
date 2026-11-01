@@ -45,6 +45,7 @@ test('visitor can open roadside safety from Chat without signing in or calling A
     if (request.method() === 'POST' && /\/api\/v1\/luqi-core/.test(request.url())) requests.push(request.url());
   });
   await page.goto('/#/chat');
+  await page.getByText('Browse free Luqi guides', { exact: true }).click();
   await page.getByRole('link', { name: /Roadside help: free South African driver rights/ }).click();
   await expect(page).toHaveURL(/#\/driver-rights$/);
   expect(requests).toEqual([]);
