@@ -130,20 +130,6 @@ export const workspaceTools = [
     icon: "languages",
   },
   {
-    id: "network-intelligence",
-    title: "Luqi Network Intelligence · CIDR & VLSM",
-    category: "Cisco networking · IPv4 subnet design",
-    description: "Plan IPv4 LANs with validated masks, wildcard rules, /31 links, /32 routes and downloadable largest-first VLSM allocations. No account or paid AI.",
-    status: "Local network design · no account", ready: true, path: "/cert-academy?tab=subnet", icon: "academy",
-  },
-  {
-    id: "motion-rig",
-    title: "Luqi Motion Studio · 2D Rigging",
-    category: "Original characters and keyframe animation",
-    description: "Animate original 2D characters, edit six joint angles at five keyframes and export vector artwork plus editable project JSON on your device.",
-    status: "Local creative editor · no account", ready: true, path: "/content-studio", icon: "academy",
-  },
-  {
     id: "academy",
     title: "Content studio",
     category: "Create, explain and learn",
