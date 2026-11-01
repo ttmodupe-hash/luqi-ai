@@ -36,3 +36,26 @@ test('both frontend trees retain exactly the same safe fallback', async () => {
   assert.equal(await readFile(new URL('../src/components/RouteLoadBoundary.tsx', import.meta.url), 'utf8'),
     await readFile(new URL('../app/src/components/RouteLoadBoundary.tsx', import.meta.url), 'utf8'));
 });
+
+test('accepts a nested deferred Studio dependency without treating it as initial JavaScript', () => {
+ const manifest = {
+  'index.html': { isEntry: true, file: 'assets/main.js', dynamicImports: ['source'] },
+  source: { file: 'assets/content.js', isDynamicEntry: true, imports: ['src/pages/VideoStudioPage.tsx'] },
+  'src/pages/VideoStudioPage.tsx': { file: 'assets/studio.js' },
+  'src/pages/PendulumLabPage.tsx': { file: 'assets/pendulum.js', isDynamicEntry: true },
+  'src/pages/CertMasterPage.tsx': { file: 'assets/cert.js', isDynamicEntry: true },
+ };
+ verifyDeferred(manifest, ['assets/main.js']);
+ // This same nested module must FAIL if imported before the first lazy boundary.
+ manifest['index.html'].imports = ['src/pages/VideoStudioPage.tsx'];
+ assert.throws(() => verifyDeferred(manifest, initialJs(manifest)));
+});
+test('rejects missing or fake dynamic markers even when output names look like tools', () => {
+ const manifest = {
+  'index.html': { isEntry: true, file: 'assets/main.js' },
+  'src/pages/PendulumLabPage.tsx': { file: 'assets/pendulum.js', isDynamicEntry: true },
+  'src/pages/VideoStudioPage.tsx': { file: 'assets/studio.js' },
+  'src/pages/CertMasterPage.tsx': { file: 'assets/cert.js', isDynamicEntry: true },
+ };
+ assert.throws(() => verifyDeferred(manifest, initialJs(manifest)));
+});

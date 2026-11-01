@@ -30,11 +30,33 @@ export function initialJs(manifest) {
   return [...files].sort();
 }
 
+/** Vite may fold a thin wrapper (VideoStudioPage) into an already lazy
+ * module as its import graph evolves. Validate the actual *deferred graph*
+ * rather than requiring a particular file's isDynamicEntry flag.
+ * Nothing on the HTML entry's static graph may contain these tools.
+ */
 export function verifyDeferred(manifest, files) {
+  const roots = Object.keys(manifest).filter(key => manifest[key]?.isEntry === true);
+  const deferred = new Set(), visited = new Set();
+  function walk(key, afterLazy) {
+    const marker = key + ':' + afterLazy;
+    if (visited.has(marker)) return;
+    visited.add(marker);
+    const item = manifest[key];
+    assert.ok(item && typeof item.file === 'string', 'Broken manifest import graph: ' + key);
+    if (afterLazy) deferred.add(key);
+    for (const dependency of item.imports ?? []) walk(dependency, afterLazy);
+    for (const dependency of item.dynamicImports ?? []) walk(dependency, true);
+  }
+  roots.forEach(root => walk(root, false));
   for (const key of ['src/pages/PendulumLabPage.tsx', 'src/pages/VideoStudioPage.tsx', 'src/pages/CertMasterPage.tsx']) {
     const item = manifest[key];
-    assert.ok(item?.isDynamicEntry === true, `Tool is not a dynamic entry: ${key}`);
-    assert.ok(!files.includes(item.file), `Tool is still initially loaded: ${key}`);
+    assert.ok(item && typeof item.file === 'string', 'Lazy tool is missing from the build: ' + key);
+    assert.ok(!files.includes(item.file), 'Tool is still initially loaded: ' + key);
+    // A dynamic route can be represented as a nested static import from another
+    // deferred chunk; it still must be reachable only after a lazy boundary.
+    assert.ok(item.isDynamicEntry === true || deferred.has(key),
+      'Tool has no verified lazy entry: ' + key);
   }
 }
 
