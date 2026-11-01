@@ -1,4 +1,9 @@
 import {test,expect} from '@playwright/test';
+// These fixtures describe notices reviewed on 29 October. Keep runtime source
+// expiry live; a CI runner's later wall clock must not change fixture meaning.
+test.beforeEach(async ({page}) => {
+ await page.clock.setFixedTime(new Date('2026-10-29T10:00:00Z'));
+});
 test('Luqi public tenders are discoverable at 320px without account or paid calls',async({page})=>{
  await page.setViewportSize({width:320,height:740});
  const calls:string[]=[];
@@ -80,4 +85,27 @@ test('on-demand tender monitor checks only fixed first-party GET and never claim
  await expect(bond.getByText(/Tender number and closing date appear on the source/)).toBeVisible();
  await expect(bond.getByText(/Source-listed; issuer confirmation required/)).toBeVisible();
  expect(methods).toEqual(['GET']);
+});
+
+test('expired source review still blocks a preparation pack even with applicant approvals', async ({page}) => {
+ await page.clock.setFixedTime(new Date('2026-11-01T10:00:00Z'));
+ const calls:string[]=[];
+ page.on('request', req => { if(req.method() !== 'GET') calls.push(req.method()); });
+ await page.goto('/#/tenders');
+ const tender=page.getByRole('article').filter({has:page.getByRole('heading',{name:/Contractor-development mentorship/})});
+ await tender.getByRole('button',{name:'Prepare bidder worksheet for this tender'}).click();
+ const assistant=page.getByRole('region',{name:'Luqi assisted tender preparation'});
+ await assistant.getByLabel('Bidder trading name').fill('Test supplier (synthetic)');
+ await assistant.getByLabel('Your truthful response to the tender scope').fill('Synthetic scope response');
+ await assistant.getByLabel('How you propose to deliver the work').fill('Synthetic method');
+ await assistant.getByLabel('Actual related experience you can substantiate').fill('Synthetic experience');
+ await assistant.getByLabel('Pricing assumptions, exclusions and tax basis for review').fill('Synthetic tax basis');
+ await assistant.getByLabel('Bid price in rand').fill('125000.00');
+ await assistant.getByLabel('Confirmed tender submission method').selectOption('physical');
+ const checkboxes=assistant.getByRole('region',{name:'Mandatory human tender approvals'}).getByRole('checkbox');
+ await expect(checkboxes).toHaveCount(7);
+ for(let i=0;i<7;i++) await checkboxes.nth(i).check();
+ await expect(assistant.getByText(/Source review is older than 48 hours/)).toBeVisible();
+ await expect(assistant.getByRole('button',{name:'Export human-approved preparation pack'})).toBeDisabled();
+ expect(calls).toEqual([]);
 });

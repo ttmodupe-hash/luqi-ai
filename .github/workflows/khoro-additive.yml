@@ -1,0 +1,24 @@
+name: Luqi KHORO Additive Acceptance
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify-local-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify finance arithmetic, backend input boundary and mirrored UI
+        run: npx vitest run tests/khoro-release.test.ts
+      - name: Type-check local finance and learning tools
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/KhoroVehicleFinanceScenario.tsx src/components/KhoroExamConceptBridge.tsx api/lib/khoroFinanceScenario.ts
