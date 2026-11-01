@@ -79,7 +79,7 @@ export default function Home() {
             <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
             <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
             <p className="luqi-hero-footnote">
-              <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. AI text requires your Luqi sign-in, explicit consent and shared limits.
+              <ShieldCheck size={15} aria-hidden="true" /> Local guidance is free. Try the limited guest AI allowance without registering; signed-in AI uses separate consent and shared limits.
             </p>
           </div>
           <HeroAiChatConsole />
@@ -246,7 +246,7 @@ export default function Home() {
           <ShieldCheck size={20} aria-hidden="true" />
           <p>
             <strong>Clear about what’s ready.</strong> AI text has a separate,
-            limited trial. Voice, payments and autonomous agents remain unavailable.
+            limited guest trial and signed-in allowance. Studio supports your own recorded audio; generated voice and autonomous agents are not enabled. Payments shows only currently published offers.
             Service health alone does not verify these features.
           </p>
           <Link to="/service-status">

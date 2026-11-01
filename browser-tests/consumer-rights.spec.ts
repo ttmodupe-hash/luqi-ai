@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+// Freeze reviewed-edition fixtures; independent expiry denial is covered in unit/UI tests.
+test.beforeEach(async ({page})=>{ await page.clock.setFixedTime(new Date('2026-11-02T10:00:00Z')); });
 
 test('consumer story stays local and options link to original regulators on a 320px display', async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 320, height: 740 });

@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "civic-evidence", title: "Civic Evidence Desk", category: "Politics, voting and public accountability",
+    description: "Understand source-linked public records, audits, budgets, Parliament and IEC voting information. Free reviewed explanations and optional signed-in AI clarification; not live party rankings or voting recommendations.",
+    status: "Free evidence · optional signed-in AI", ready: true, path: "/chat?civic=1", icon: "status",
+  },
+  {
     id: "spatial-vision", title: "Spatial Vision & 3D Lab", category: "Inspect images and regions locally",
     description: "Process a photo on your device, explore illustrative 2.5D relief, mark serial labels locally, or request a signed-in, budgeted Gemini/OpenAI visual explanation. AI boxes are approximate, not verified masks.",
     status: "Local tools + limited signed-in AI pilot", ready: true, path: "/spatial-vision", icon: "academy",
@@ -27,7 +32,7 @@ export const workspaceTools = [
   },
   {
     id: "consumer-rights", title: "Consumer rights & complaint help", category: "South African retail, banking and service disputes",
-    description: "Free three-step guidance, official sector sources and local editable complaint drafts. No account, paid AI or automatic filing.",
+    description: "Free three-step guidance, official sector sources, local editable complaint drafts and a vehicle-finance balloon payment comparison with private text download. No account, paid AI or automatic filing.",
     status: "Free · no account", ready: true, path: "/consumer-rights", icon: "status",
   },
   {
@@ -118,7 +123,7 @@ export const workspaceTools = [
     title: "African languages",
     category: "More voices, more possibility",
     description:
-      "Language-quality evaluation and source-grounded knowledge are in development. Translated AI answers are not available here yet.",
+      "Choose a reply language in Luqi Chat. AI wording can be inaccurate; independently reviewed translations and wider language-quality evaluation remain in development.",
     status: "In development",
     ready: false,
     path: null,
@@ -129,7 +134,7 @@ export const workspaceTools = [
     title: "Content studio",
     category: "Create, explain and learn",
     description:
-      "Edit a six-scene story, explore a 3D pendulum and export a silent 90-second animation, script and subtitles locally.",
+      "Edit six scenes, add your own recorded narration or rights-cleared music, and export animation, script and subtitles locally where recording is supported. Generated voice and cinematic AI footage are not enabled.",
     status: "Local creation · no paid call",
     ready: true,
     path: "/content-studio",

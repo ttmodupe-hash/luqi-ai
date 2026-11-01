@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useOptionalCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { readGuide } from '../lib/interaction-handoff';
 import { Link } from 'react-router';
 import { RIGHTS_LANGUAGES } from '../lib/rights-source-guide';
 import {
@@ -12,7 +15,9 @@ const modes: DriverMode[] = ['stop', 'bribe', 'search', 'fine', 'arrest'];
 /** Public, source-linked roadside information. No location tracking, account, microphone,
  * camera, automatic 10111 dialling, evidence upload, AI call or report submission. */
 export default function DriverRightsPage() {
-  const [mode, setMode] = useState<DriverMode>('stop');
+  const customer = useOptionalCustomerSession();
+  const selected = readGuide(customerSessionBoundary(customer?.session ?? null), '/driver-rights')?.selection;
+  const [mode, setMode] = useState<DriverMode>(() => modes.includes(selected as DriverMode) ? selected as DriverMode : 'stop');
   const [topic, setTopic] = useState<DriverTopic>('stopping');
   const [language, setLanguage] = useState('en');
   const current = driverGuideIsCurrent();

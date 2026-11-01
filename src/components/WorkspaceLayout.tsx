@@ -8,6 +8,7 @@ import WorkspacePlaybar, { readCalmPreference } from "./WorkspacePlaybar";
 import "../experience.css";
 import { useContactPresence } from "./useContactPresence";
 import CollaborationDock from './CollaborationDock';
+import GuideHandoffNotice from './GuideHandoffNotice';
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
 const ChatSidebar = lazy(() => import("./ChatSidebar"));
 import { findWorkspaceTools } from "./workspace-catalog";
@@ -103,7 +104,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
             </p>}
             <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
-            <div className="luqi-tool-content">{children}</div>
+            <div className="luqi-tool-content"><GuideHandoffNotice key={location.pathname} />{children}</div>
             <CollaborationDock presence={presence} />
           </div>
         </div>
@@ -126,11 +127,15 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
           <nav aria-label="Primary navigation" className="luqi-desktop-nav">
-            {navigation.map(([path, name]) => (
+            {navigation.slice(0, 3).map(([path, name]) => (
               <NavLink key={path} to={path} end={path === "/"}>
                 {name}
               </NavLink>
             ))}
+            <details onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }} className="luqi-more-services" key={location.pathname + location.search}>
+              <summary>More services</summary>
+              <div>{navigation.slice(3).map(([path, name]) => <NavLink key={path} to={path} end={path === '/'}>{name}</NavLink>)}<NavLink to="/chat?civic=1">Civic evidence</NavLink></div>
+            </details>
           </nav>
           <div className="luqi-header-actions">
             <button
@@ -195,7 +200,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
         </p>}
         <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
-        <div className="luqi-tool-content">{children}</div>
+        <div className="luqi-tool-content"><GuideHandoffNotice key={location.pathname} />{children}</div>
         <CollaborationDock presence={presence} />
       </div>
       <footer className="luqi-footer">
@@ -287,8 +292,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           )}
         </div>
         <p className="luqi-dialog-note">
-          AI text has a separate signed-in trial with availability checks and
-          provider limits. Voice, payments and autonomous workers remain unavailable.
+          Guest AI trial and signed-in AI have separate availability and allowance checks. Recorded Studio audio is local; generated voice and autonomous workers are not enabled. Check Payments for any currently published offer.
         </p>
       </dialog>
     </div>

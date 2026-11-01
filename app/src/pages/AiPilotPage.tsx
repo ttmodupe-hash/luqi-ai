@@ -1,4 +1,5 @@
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { stageGuide, readChatReturn, clearGuideHandoff, isGuidePath } from '../lib/interaction-handoff';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import AccountAccessForm from '../components/AccountAccessForm';
@@ -68,6 +69,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [uncertain, setUncertain] = useState(false);
   const [turns, setTurns] = useState<PilotConversationTurn[]>([]);
   const [shareContext, setShareContext] = useState(false);
+  const [copyQuestionToGuide, setCopyQuestionToGuide] = useState(false);
   const [companionMode, setCompanionMode] = useState(false);
   const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
   const [shareNote, setShareNote] = useState(false);
@@ -117,7 +119,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (previousToken.current && previousToken.current !== boundary) {
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
       setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
-      setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
+      setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
     }
     previousToken.current = boundary;
   }, [customerSessionBoundary(session)]);
@@ -132,7 +134,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
     setTurns(workspace.activeThread?.turns ?? []);
-    setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
     setBusy(false); setUncertain(false);
     setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
   }, [workspace?.selectionVersion]);
@@ -153,29 +155,32 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     }
   }, [initialQuestion]);
 
+  useEffect(() => {
+    const draft = readChatReturn(customerSessionBoundary(session));
+    if (draft !== null) { setPrompt(draft); clearGuideHandoff(); }
+  }, []);
+  function openGuide(path: string) {
+    if (!isGuidePath(path) || busy || uncertain) return;
+    const selection = path === '/consumer-rights' ? detectConsumerCategory(prompt)
+      : path === '/driver-rights' ? detectDriverMode(prompt)
+      : path === '/comparative-evidence' ? detectEvidenceTopic(prompt) : null;
+    stageGuide(customerSessionBoundary(session), path, prompt, selection, copyQuestionToGuide);
+    navigate(path);
+  }
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
-    setTurns([]); setShareContext(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
   }
   function newChat() {
     if (locked.current) return;
     if (workspace) { workspace.startNewChat(); return; }
     epoch.current++;
-    setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false);
+    setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false); setCopyQuestionToGuide(false);
     setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
-  async function submit() {
-    if (detectDriverMode(prompt)) { navigate('/driver-rights'); return; }
-    if (detectConsumerCategory(prompt)) { navigate('/consumer-rights'); return; }
-    if (detectEvidenceTopic(prompt)) { navigate('/comparative-evidence'); return; }
-    const publicSupportPath = socialSupportPathForInput(prompt);
-    if (publicSupportPath) { navigate(publicSupportPath); return; }
-    if (detectVisaEntryIntent(prompt)) { navigate('/visa-entry'); return; }
-    if (detectTownshipEconomyIntent(prompt)) { navigate('/township-economy'); return; }
-    if (detectMunicipalIntent(prompt)) { navigate('/municipalities'); return; }
-    if (detectTenderIntent(prompt)) { navigate('/tenders'); return; }
-    if (detectOpportunityIntent(prompt)) { navigate('/opportunities'); return; }
+  async function submit(preferAi = false) {
+    if (!preferAi && localGuidePath) { openGuide(localGuidePath); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
     const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
@@ -265,17 +270,17 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <span className="luqi-chat-canvas-tag">Limited text pilot</span>
       </header>
       <div className="px-3"><ConnectionStatusBadge /></div>
-      <div className="space-y-1 px-3 text-sm">
-        <p><Link to="/driver-rights" className="text-cyan-200 underline underline-offset-2">Roadside help: free South African driver rights (no sign-in or AI request)</Link></p>
-        <p><Link to="/consumer-rights" className="text-cyan-200 underline underline-offset-2">Consumer rights: three-step guidance and complaint preparation</Link></p>
-        <p><Link to="/comparative-evidence" className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
-        <p><Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
-        <p><Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
-        <p><Link to="/municipalities" className="text-cyan-200 underline underline-offset-2">Municipal services, permits, rates and indigent support: find your council</Link></p>
-        <p><Link to="/township-economy" className="text-cyan-200 underline underline-offset-2">Township economy: spaza, business permits, funding and local plans</Link></p>
-        <p><Link to="/visa-entry" className="text-cyan-200 underline underline-offset-2">Visa & Entry: review official South African and African immigration sources</Link></p>
-        <p><Link to="/social-support" className="text-cyan-200 underline underline-offset-2">SASSA grants, UIF claims, status and appeals: free official support</Link></p>
-      </div>
+      <details className="luqi-chat-guide-directory space-y-1 px-3 text-sm"><summary>Browse free Luqi guides</summary>
+        <p><Link to="/driver-rights" onClick={event => { event.preventDefault(); openGuide('/driver-rights'); }} className="text-cyan-200 underline underline-offset-2">Roadside help: free South African driver rights (no sign-in or AI request)</Link></p>
+        <p><Link to="/consumer-rights" onClick={event => { event.preventDefault(); openGuide('/consumer-rights'); }} className="text-cyan-200 underline underline-offset-2">Consumer rights: three-step guidance and complaint preparation</Link></p>
+        <p><Link to="/comparative-evidence" onClick={event => { event.preventDefault(); openGuide('/comparative-evidence'); }} className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
+        <p><Link to="/opportunities" onClick={event => { event.preventDefault(); openGuide('/opportunities'); }} className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
+        <p><Link to="/tenders" onClick={event => { event.preventDefault(); openGuide('/tenders'); }} className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
+        <p><Link to="/municipalities" onClick={event => { event.preventDefault(); openGuide('/municipalities'); }} className="text-cyan-200 underline underline-offset-2">Municipal services, permits, rates and indigent support: find your council</Link></p>
+        <p><Link to="/township-economy" onClick={event => { event.preventDefault(); openGuide('/township-economy'); }} className="text-cyan-200 underline underline-offset-2">Township economy: spaza, business permits, funding and local plans</Link></p>
+        <p><Link to="/visa-entry" onClick={event => { event.preventDefault(); openGuide('/visa-entry'); }} className="text-cyan-200 underline underline-offset-2">Visa & Entry: review official South African and African immigration sources</Link></p>
+        <p><Link to="/social-support" onClick={event => { event.preventDefault(); openGuide('/social-support'); }} className="text-cyan-200 underline underline-offset-2">SASSA grants, UIF claims, status and appeals: free official support</Link></p>
+      </details>
       {languageControl}
       {personalWelcome}
       {session && <div className="luqi-chat-availability-row">
@@ -287,43 +292,43 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         <Link to="/service-status">Service status</Link>
       </div>}
       {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
-      {driverMode && <DriverQuickCard mode={driverMode} />}
-      {consumerCategory && <ConsumerQuickCard category={consumerCategory} />}
+      {driverMode && <DriverQuickCard mode={driverMode} onOpen={() => openGuide('/driver-rights')} />}
+      {consumerCategory && <ConsumerQuickCard category={consumerCategory} onOpen={() => openGuide('/consumer-rights')} />}
       {socialPath && <section aria-label="Free social benefit support guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Luqi public benefits guide — government sources</h2>
         <p className="text-sm">See official SASSA or UIF rules, current portals, documents, status and appeals. Never share identity numbers, OTPs, bank details or passwords with Luqi. Luqi cannot file or inspect a claim.</p>
-        <Link to={socialPath} className="text-cyan-200 underline underline-offset-2">Open free {socialPath==='/uif'?'UIF':'SASSA'} support guide</Link>
+        <Link to={socialPath} onClick={event => { event.preventDefault(); openGuide(socialPath); }} className="text-cyan-200 underline underline-offset-2">Open free {socialPath==='/uif'?'UIF':'SASSA'} support guide</Link>
       </section>}
       {visaIntent && <section aria-label="Free visa and entry guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Visa and entry — verify with the real government</h2>
         <p className="text-sm">Choose passport nationality, destination and purpose. Read official visa/ETA guidance and review dates without uploading documents or making a paid AI request. Entry and eligibility are not guaranteed.</p>
-        <Link to="/visa-entry" className="text-cyan-200 underline underline-offset-2">Open Visa &amp; Entry Guide</Link>
+        <Link to="/visa-entry" onClick={event => { event.preventDefault(); openGuide('/visa-entry'); }} className="text-cyan-200 underline underline-offset-2">Open Visa &amp; Entry Guide</Link>
       </section>}
       {municipalIntent && <section aria-label="Free municipal service guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Find your municipality and service</h2>
         <p className="text-sm">Choose a council using the government directory. Check local rates, service complaints, indigent relief and trading permits, without entering private account data.</p>
-        <Link to="/municipalities" className="text-cyan-200 underline underline-offset-2">Open municipal support</Link>
+        <Link to="/municipalities" onClick={event => { event.preventDefault(); openGuide('/municipalities'); }} className="text-cyan-200 underline underline-offset-2">Open municipal support</Link>
       </section>}
       {townshipIntent && <section aria-label="Free township economy guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Township and rural enterprise planning</h2>
         <p className="text-sm">Build a local action plan, confirm municipal trading rules, and explore original TREP and Spaza Fund guidance. Funding is not guaranteed and loan products may be repayable.</p>
-        <Link to="/township-economy" className="text-cyan-200 underline underline-offset-2">Open free township business planner</Link>
+        <Link to="/township-economy" onClick={event => { event.preventDefault(); openGuide('/township-economy'); }} className="text-cyan-200 underline underline-offset-2">Open free township business planner</Link>
       </section>}
       {tenderIntent && <section aria-label="Free tender preparation guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Luqi Tender Desk — prepare with human control</h2>
         <p className="text-sm">Find the original tender notice, review eligibility and SBD/MBD documents, draft your answers locally and approve pricing and declarations yourself. Final submission and signatures are not automated.</p>
-        <Link to="/tenders" className="text-cyan-200 underline underline-offset-2">Open free Tender Desk</Link>
+        <Link to="/tenders" onClick={event => { event.preventDefault(); openGuide('/tenders'); }} className="text-cyan-200 underline underline-offset-2">Open free Tender Desk</Link>
       </section>}
       {opportunityIntent && <section aria-label="Free opportunity quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Luqi Opportunity Compass — start with official sources</h2>
         <ol className="list-inside list-decimal space-y-2 text-sm"><li>Choose your province and opportunity type.</li><li>Read the official advertiser’s post, requirements and deadline.</li><li>Apply directly through its verified instructions. Never pay someone to secure a public job.</li></ol>
-        <Link to="/opportunities" className="text-cyan-200 underline underline-offset-2">Explore opportunities in Luqi</Link>
+        <Link to="/opportunities" onClick={event => { event.preventDefault(); openGuide('/opportunities'); }} className="text-cyan-200 underline underline-offset-2">Explore opportunities in Luqi</Link>
         <p className="text-xs text-slate-300">This is an official source directory, not a confirmed live vacancy or a paid AI request.</p>
       </section>}
       {evidenceTopic && <section aria-label="Comparative evidence quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
         <h2 className="font-semibold">Explore a scholarly comparison with Luqi</h2>
         <p className="text-sm">Selected topic: {EVIDENCE_CASES.find(item => item.id === evidenceTopic)?.title}. Compare traditional accounts, scientific evidence, manuscripts and interpretations without ranking faiths. No provider call is made.</p>
-        <Link to="/comparative-evidence" className="text-cyan-200 underline underline-offset-2">Open comparative evidence guide</Link>
+        <Link to="/comparative-evidence" onClick={event => { event.preventDefault(); openGuide('/comparative-evidence'); }} className="text-cyan-200 underline underline-offset-2">Open comparative evidence guide</Link>
       </section>}
       <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
         {!turns.length ? <div className="luqi-chat-welcome">
@@ -352,7 +357,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {videoPlan && <section className="luqi-video-proposal" aria-label="Video production proposal">
             <h2>Here's how Luqi will make your video</h2>
             <p><strong>{videoPlan.audience}</strong> · {videoPlan.sceneSeconds * 6} seconds · {videoPlan.theme === 'gravity' ? 'Animated gravity demonstration' : 'Illustrative story graphics'}</p>
-            <p>{videoPlan.explanation} The current Studio exports silent videos with captions; it does not yet generate a spoken voice, cinematic scenes or music.</p>
+            <p>{videoPlan.explanation} The first Studio export is silent with captions. You can add your own recorded voice or rights-cleared music; generated voice and cinematic footage are not enabled.</p>
             <ol aria-label="Proposed video scenes">{videoPlan.scenes.map((scene, index) => <li key={index}>
               <strong>{scene.title}</strong><span>{scene.caption}</span>
             </li>)}</ol>
@@ -386,10 +391,10 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           <summary>Prefer to sign in here?</summary>
           <AccountAccessForm purpose="ai" onAuthenticated={value => {
             epoch.current++; acceptSession(value); setNotice(''); setAnswer(null);
-            setTurns([]); setShareContext(false);
+            setTurns([]); setShareContext(false); setCopyQuestionToGuide(false);
           }} />
         </details>
-      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (localGuidePath) navigate(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
+      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
         <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
         <div className="luqi-chat-compose-input">
           <textarea id="ai-question" rows={2} required value={prompt}
@@ -404,7 +409,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey &&
                   !event.altKey && !event.metaKey && !event.nativeEvent.isComposing &&
                   !event.repeat && canSend) {
-                event.preventDefault(); if (localGuidePath) navigate(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit();
+                event.preventDefault(); if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit();
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
@@ -412,6 +417,11 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             <Send size={18} aria-hidden="true" /><span>{localGuidePath ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
           </button>
         </div>
+        {localGuidePath && <div className="space-y-2 px-3 py-2 text-sm">
+          <label className="flex items-start gap-2"><input type="checkbox" checked={copyQuestionToGuide} disabled={busy || uncertain} onChange={event => setCopyQuestionToGuide(event.target.checked)} />Use this question in the free guide on this device only (optional).</label>
+          <p>Open guide keeps your unsent Chat draft in this tab. No AI request is made.</p>
+          <button type="button" className="min-h-11 rounded border border-cyan-600 px-3 py-2" disabled={!session || !consentGranted || checking || !available || busy || uncertain || tooLong || contextTooLong || !prompt.trim()} onClick={() => { void submit(true); }}>Ask AI instead (uses my allowance)</button>
+        </div>}
         <div className="luqi-chat-compose-meta">
           <span id="ai-question-limit" className="luqi-chat-limit">
             {questionLength}/{MAX_PILOT_QUESTION_CHARS} characters
@@ -481,7 +491,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         </div>
       </form>}
       <p className="luqi-chat-caption">
-        Only verified replies appear here. A timeout is never retried automatically.
+        Only completed AI replies appear here. Important facts still need checking. A timeout is never retried automatically.
         This in-tab history is cleared on sign-out or reload; it is not cloud-saved.
         <Link to="/service-status"> Service status</Link> · <Link to="/privacy">Privacy</Link>
       </p>
@@ -508,7 +518,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     </div>
     <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 1024 tokens.</p>
     {notice && <p role="alert">{notice}</p>}
-    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); }} /> : <>
+    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); }} /> : <>
       <section><p>Signed in as {session.user.email}.</p>
         <div className="luqi-chat-actions">
           <button className="luqi-secondary" type="button" disabled={busy} onClick={newChat}>New chat</button>

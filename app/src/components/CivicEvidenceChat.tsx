@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { stageCivicSignIn, readCivicResume, clearCivicResume } from '../lib/interaction-handoff';
 import CivicEvidencePanel, { CivicPassageView, useCivicReviewClock } from './CivicEvidencePanel';
 import { civicQuestionProblem, civicReviewCurrent, getCivicClaim, type CivicClaim, type PassageKind } from '../lib/civic-evidence';
 import { askCivicEvidence, CivicChatError } from '../lib/civic-evidence-client';
@@ -14,12 +16,14 @@ export default function CivicEvidenceChat({ claimId }: { claimId: string }) {
     <Link className="text-cyan-200 underline" to="/chat?civic=1">Choose a reviewed evidence record</Link>
   </section>;
   // Remount on identity/claim change: no question, consent or model reply crosses accounts.
-  return <CivicConversation key={claim.id + ':' + (session?.token ?? 'guest')} claim={claim} token={session?.token ?? null} />;
+  return <CivicConversation key={claim.id + ':' + (session?.token ?? 'guest')} claim={claim} token={session?.token ?? null} owner={customerSessionBoundary(session)} />;
 }
-function CivicConversation({ claim, token }: { claim: CivicClaim; token: string | null }) {
+function CivicConversation({ claim, token, owner }: { claim: CivicClaim; token: string | null; owner: string | null }) {
   const now = useCivicReviewClock();
   const current = civicReviewCurrent(claim, now);
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState(() => readCivicResume(owner, claim.id));
+  const [keepForSignIn, setKeepForSignIn] = useState(false);
+  useEffect(() => { clearCivicResume(); }, []);
   const [consent, setConsent] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
@@ -32,6 +36,13 @@ function CivicConversation({ claim, token }: { claim: CivicClaim; token: string 
     mounted.current = true;
     return () => { mounted.current = false; version.current++; pending.current?.abort(); locked.current = false; };
   }, []);
+  useEffect(() => {
+    const guard = (event: Event) => {
+      if ((question.trim() || busy) && !window.confirm('Leave this evidence conversation? Your unsent question will be cleared. Any AI attempt already started may still count toward your allowance.')) event.preventDefault();
+    };
+    window.addEventListener('luqi:leave-civic', guard);
+    return () => window.removeEventListener('luqi:leave-civic', guard);
+  }, [question, busy]);
   function addReviewed(kind: PassageKind) {
     if (locked.current) return;
     const passage = claim.passages.find(item => item.kind === kind)!;
@@ -103,7 +114,10 @@ function CivicConversation({ claim, token }: { claim: CivicClaim; token: string 
       <textarea id="civic-question" value={question} maxLength={1000} disabled={busy} rows={3} onChange={event => setQuestion(event.target.value)} aria-describedby="civic-question-privacy" className="w-full min-w-0 rounded-lg border border-slate-500 bg-slate-900 p-3 text-white" />
       <p id="civic-question-privacy" className="text-xs text-slate-300">{question.length}/1000. Do not enter ID numbers, contact details or voting preferences. No private notes, location or account profile are sent with this question.</p>
       {problem === 'private_identifier' && <p role="alert" className="text-sm text-amber-200">Remove the personal ID number before continuing.</p>}
-      {!token && <p className="text-sm text-slate-200">AI assistance uses your existing Luqi account. <Link to="/login" className="text-cyan-200 underline">Sign in to Luqi</Link>, then return to this record. The evidence and free clarification buttons remain available now.</p>}
+      {!token && <div className="space-y-2 text-sm text-slate-200">
+        <label className="flex items-start gap-2"><input type="checkbox" checked={keepForSignIn} onChange={event => setKeepForSignIn(event.target.checked)} />Keep this question in this tab while I sign in (not in the URL or browser storage).</label>
+        <p>AI assistance uses your existing Luqi account. <Link to="/login" className="text-cyan-200 underline" onClick={() => stageCivicSignIn(claim.id, keepForSignIn && !problem ? question : '')}>Sign in to Luqi</Link> and return to this evidence record. The evidence and free clarification buttons remain available now.</p>
+      </div>}
       {!current && <p role="note" className="text-sm text-amber-200">Source review expired. AI requests are disabled until the review is renewed.</p>}
       <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={consent} disabled={busy || !token || !current} onChange={event => setConsent(event.target.checked)} className="mt-1" />
         <span>I approve sending this question to Luqi’s configured AI provider using my existing allowance. The service selects reviewed passages; it does not search for new facts.</span></label>
