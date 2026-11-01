@@ -173,6 +173,11 @@ export const workspaceTools = [
     path: "/study-desk",
     icon: "study",
   },
+  {
+    id: "space-science", title: "Space & Science Hub", category: "South African astronomy and satellite learning",
+    description: "Explore SANSA, SARAO, MeerKAT and SKAO original sources. Calculate radio wavelength and signal travel time, practise three concepts and download local study notes. No live telemetry or paid AI.",
+    status: "Free local learning · publisher links", ready: true, path: "/space-science", icon: "physics",
+  },
 ] as const;
 
 // Normalize the fixed public catalog once, not once per word on each keystroke.
