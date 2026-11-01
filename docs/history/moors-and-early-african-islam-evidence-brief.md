@@ -62,6 +62,29 @@ The Library of Congress exhibits actual Timbuktu manuscripts on astronomy and ar
 ### Editorial controls
 Present primary sources and later scholarship with dates. Do not label beliefs, astrology, or historical medicine as empirically verified modern science. Correct myths of either exclusive Muslim invention or mere passive transmission. Include African women, schools and intellectual networks where surviving evidence supports their contributions. Do not equate the intellectual histories of all African regions or all Muslim communities.
 
+## Luqi AI evidence-guided teaching experience — integration specification
+
+**Purpose:** Luqi AI should help ordinary users understand the material through conversations, not merely display an article. Keep Luqi and KHORO one product and one account. This document is editorial source material; a production retrieval/AI integration must still be coded and tested.
+
+**Reader journey:**
+1. Open the African History & Islamic Sciences topic on desktop/mobile without requiring sign-in for free, non-inference reading. Show a brief overview, chronology, regional context and the source list.
+2. Select a passage or ask a question such as "Were the Moors the first Black Muslims?" or "Did Islam abolish slavery at its beginning?" Provide a simple explanation first, with an optional deeper scholarly reading.
+3. Each substantial factual statement must link to a specific source, relevant passage/page when available, publication date, and the type of evidence: primary document, archaeology, later historical interpretation, or attributed faith tradition. Do not cite a source that does not support the claim.
+4. Expose comparison and follow-up questions. Keep topic context across turns while allowing users to challenge a claim, explore source disagreements, or switch between elementary and advanced language.
+5. Label uncertainty and source disputes clearly. Never infer the race of a historical person from a modern racial category without historical support, or frame one religion's tradition as settled empirical fact.
+6. If citations cannot be retrieved, say so and offer the curated free article rather than generating confident unsupported statements. Do not pretend an external source was checked.
+7. Explain the Islamic religious sciences separately from disciplines such as astronomy, mathematics, medicine and optics, while acknowledging multilingual, multi-religious scholarship and African intellectual networks.
+8. Provide translations only where reviewed or disclose AI-translated text; retain source titles and citation fidelity.
+
+**Technical acceptance requirements:**
+- Build a versioned, editorially approved record schema: source ID, title, author/publisher, URL, date, passage/page, topic tags, claim IDs, assessment, review date, and active/withdrawn status.
+- Implement evidence-bound retrieval with claim-to-source verification and refusal/uncertainty handling for unsupported conclusions. Use provider budget controls, guest trial rules and permission checks already in Luqi.
+- Do not retrieve private account data or invoke paid inference without the existing explicit permission, authentication and quota mechanisms.
+- Make every source link safe and user accessible. Include fallback states for removed links, citations not found, disconnected devices or AI downtime.
+- Test grounding (no fabricated citations, exact support for contested claims), follow-up coherence, unsupported claim correction, unsafe prompt injection via retrieved text, accessibility/keyboard navigation, mobile layout and PWA update paths.
+- Measure citation-click usability and reported mistakes without collecting sensitive beliefs or assigning religious/racial profiles.
+- Release only after editorial verification, all required CI/security checks, and desktop/mobile acceptance. This brief alone does not activate an AI knowledge module.
+
 ## Product acceptance before publication
 
 - Expose this brief only via the existing Luqi history/research experience, not a separate KHORO product/login.
