@@ -46,6 +46,8 @@ import { Slider } from "@/components/ui/slider";
 import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
 import AiPilotPage from "./AiPilotPage";
 import { evaluatePracticeCommand } from "../lib/certification-client";
+import { calculateIPv4Subnet } from "../lib/network-planner";
+import NetworkVlsmPlanner from "../components/NetworkVlsmPlanner";
 
 // ── TYPES ────────────────────────────────────────────────────────────
 
@@ -583,51 +585,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
   const [drillAnswer, setDrillAnswer] = useState("");
   const [drillFeedback, setDrillFeedback] = useState<string | null>(null);
 
-  const subnetCalculations = useMemo(() => {
-    try {
-      const parts = subnetIp.split(".").map((p) => parseInt(p, 10));
-      if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) {
-        return null;
-      }
-      const ipNum = ((parts[0] << 24) >>> 0) + ((parts[1] << 16) >>> 0) + ((parts[2] << 8) >>> 0) + (parts[3] >>> 0);
-      const maskNum = subnetCidr === 0 ? 0 : (~0 << (32 - subnetCidr)) >>> 0;
-      const wildcardNum = (~maskNum) >>> 0;
-      const netNum = (ipNum & maskNum) >>> 0;
-      const bcastNum = (netNum | wildcardNum) >>> 0;
-
-      const toIpStr = (n: number) => [
-        (n >>> 24) & 255,
-        (n >>> 16) & 255,
-        (n >>> 8) & 255,
-        n & 255
-      ].join(".");
-
-      const totalHosts = Math.pow(2, 32 - subnetCidr);
-      const usableHosts = subnetCidr >= 31 ? 0 : totalHosts - 2;
-      const firstUsable = subnetCidr >= 31 ? "N/A" : toIpStr(netNum + 1);
-      const lastUsable = subnetCidr >= 31 ? "N/A" : toIpStr(bcastNum - 1);
-
-      // Binary string
-      const binaryIp = parts.map((p) => p.toString(2).padStart(8, "0")).join(".");
-      const maskParts = [(maskNum >>> 24) & 255, (maskNum >>> 16) & 255, (maskNum >>> 8) & 255, maskNum & 255];
-      const binaryMask = maskParts.map((p) => p.toString(2).padStart(8, "0")).join(".");
-
-      return {
-        networkAddress: toIpStr(netNum),
-        broadcastAddress: toIpStr(bcastNum),
-        subnetMask: toIpStr(maskNum),
-        wildcardMask: toIpStr(wildcardNum),
-        firstUsable,
-        lastUsable,
-        totalHosts,
-        usableHosts,
-        binaryIp,
-        binaryMask
-      };
-    } catch {
-      return null;
-    }
-  }, [subnetIp, subnetCidr]);
+  const subnetCalculations = useMemo(() => calculateIPv4Subnet(subnetIp, subnetCidr), [subnetIp, subnetCidr]);
 
   // ── FLASHCARD STATE (LEITNER BOXES) ──
   const [fcIndex, setFcIndex] = useState(0);
@@ -1425,6 +1383,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
         {/* TAB 4: SUBNETTING & VLSM ENGINE */}
         {activeTab === "subnet" && (
           <div className="space-y-6">
+            <NetworkVlsmPlanner />
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Calculator Inputs & Output */}
               <div className="lg:col-span-7 space-y-4">
@@ -1441,9 +1400,12 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                   <CardContent className="space-y-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-semibold text-slate-300">IPv4 Address</label>
+                        <label htmlFor="luqi-subnet-ip" className="text-xs font-semibold text-slate-300">IPv4 Address</label>
                         <input
+                          id="luqi-subnet-ip"
+                          aria-label="IPv4 Address"
                           type="text"
+                          maxLength={15}
                           value={subnetIp}
                           onChange={(e) => setSubnetIp(e.target.value)}
                           className="w-full mt-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm font-mono text-amber-300 outline-hidden focus:border-amber-500"
@@ -1458,8 +1420,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                         </div>
                         <input
                           type="range"
-                          min="8"
-                          max="30"
+                          aria-label="IPv4 prefix length"
+                          min="0"
+                          max="32"
                           value={subnetCidr}
                           onChange={(e) => setSubnetCidr(parseInt(e.target.value, 10))}
                           className="w-full mt-3 accent-amber-500 cursor-pointer"
@@ -1467,6 +1430,8 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       </div>
                     </div>
 
+                    {!subnetCalculations && <p role="status" className="text-sm text-amber-200">Enter exactly four decimal IPv4 octets (0–255), with no trailing text.</p>}
+                    {subnetCalculations && <p className="text-xs text-emerald-200">{subnetCalculations.note}</p>}
                     {subnetCalculations && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
                         <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
