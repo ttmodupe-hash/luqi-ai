@@ -434,8 +434,8 @@ export const CertMasterVideoCoach: React.FC = () => {
   const [walkthrough, setWalkthrough] = useState<TechnicalWalkthroughPayload>(DEFAULT_STP_VIDEO_WALKTHROUGH);
   const [currentSceneIdx, setCurrentSceneIdx] = useState<number>(2); // Default to Scene 3 (LEARNING)
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
+  const [previewNotice, setPreviewNotice] = useState('Choose a local example. These are practice illustrations, not a verified answer to an arbitrary question.');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const currentScene = walkthrough.scenes[currentSceneIdx] || walkthrough.scenes[0];
@@ -454,7 +454,7 @@ export const CertMasterVideoCoach: React.FC = () => {
 
   // Auto-advance scenes when playing video walkthrough
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying) { window.speechSynthesis?.cancel(); return; }
     speakSceneNarration(currentScene.narrationScript);
 
     const timer = setTimeout(() => {
@@ -465,8 +465,8 @@ export const CertMasterVideoCoach: React.FC = () => {
       }
     }, currentScene.durationSec * 1000);
 
-    return () => clearTimeout(timer);
-  }, [isPlaying, currentSceneIdx, walkthrough]);
+    return () => { clearTimeout(timer); window.speechSynthesis?.cancel(); };
+  }, [isPlaying, currentSceneIdx, walkthrough, voiceEnabled]);
 
   // Real-Time 60FPS HTML5 Canvas Packet & Port-State Video Renderer
   useEffect(() => {
@@ -614,125 +614,27 @@ export const CertMasterVideoCoach: React.FC = () => {
     return () => cancelAnimationFrame(animId);
   }, [currentScene]);
 
-  // Dynamically generate a new 4-scene Video Walkthrough & Deep Answer for ANY Cisco/ITIL question
-  const handleAskAndGenerateVideo = async (customQuery?: string) => {
-    const query = (customQuery ?? questionInput).trim();
-    if (!query || isGenerating) return;
-    setQuestionInput(query);
-    setIsGenerating(true);
-    setIsPlaying(false);
-
-    // Instant match for curated high-yield questions
-    const qLower = query.toLowerCase();
-    if (
-      qLower.includes('spanning') ||
-      qLower.includes('stp') ||
-      qLower.includes('802.1d') ||
-      qLower.includes('which port state')
-    ) {
-      setWalkthrough(DEFAULT_STP_VIDEO_WALKTHROUGH);
-      setCurrentSceneIdx(2);
-      setIsGenerating(false);
-      setIsPlaying(true);
-      return;
-    }
-
-    if (qLower.includes('bgp') || qLower.includes('mnemonic') || qLower.includes('path selection')) {
-      setWalkthrough(BGP_VIDEO_WALKTHROUGH);
-      setCurrentSceneIdx(0);
-      setIsGenerating(false);
-      setIsPlaying(true);
-      return;
-    }
-
-    if (qLower.includes('iso 42001') || qLower.includes('itil') || qLower.includes('eu ai act')) {
-      setWalkthrough(ITIL_VIDEO_WALKTHROUGH);
-      setCurrentSceneIdx(0);
-      setIsGenerating(false);
-      setIsPlaying(true);
-      return;
-    }
-
-    if (qLower.includes('ospf') || qLower.includes('dr/bdr') || qLower.includes('broadcast')) {
-      setWalkthrough(OSPF_VIDEO_WALKTHROUGH);
-      setCurrentSceneIdx(0);
-      setIsGenerating(false);
-      setIsPlaying(true);
-      return;
-    }
-
-    if (qLower.includes('subnetting') || qLower.includes('/27') || qLower.includes('vlsm')) {
-      setWalkthrough(SUBNETTING_VIDEO_WALKTHROUGH);
-      setCurrentSceneIdx(0);
-      setIsGenerating(false);
-      setIsPlaying(true);
-      return;
-    }
-
-    // Dynamic AI Generator via Server-Side Gemini Proxy
-    try {
-      const prompt = `
-        You are Luqi-AI Senior Cisco CCNA/CCNP/CCIP & ITIL v5 Proctor.
-        The engineer asked: "${query}"
-        Generate a 100% factually accurate, RFC/IEEE-verified explanation AND a 4-scene interactive video walkthrough JSON object matching this exact schema:
-        {
-          "directAnswerHeadline": "Exact direct answer to the question",
-          "deepEngineeringExplanation": "Detailed, zero-fluff technical breakdown",
-          "ciscoIosVerification": "Realistic Cisco IOS CLI verification output (e.g., show spanning-tree, show ip bgp, show ip ospf interface)",
-          "scenes": [
-            {
-              "sceneNumber": 1,
-              "title": "Scene title",
-              "durationSec": 6,
-              "narrationScript": "Spoken audio script explaining this step clearly",
-              "cliCommandOutput": "Single-line CLI state summary",
-              "visualState": {
-                "activePortState": "BLOCKING" | "LISTENING" | "LEARNING" | "FORWARDING",
-                "bpduFlowing": true,
-                "macTableLearning": false,
-                "userDataForwarding": false,
-                "macEntries": ["VLAN 1 | 0050.7966.6801 | Gi0/1"],
-                "highlightNote": "Key takeaway for this scene"
-              }
-            }
-          ]
-        }
-        Return ONLY valid JSON.
-      `;
-
-      const res = await fetch('/api/gemini/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          model: 'gemini-3.8-flash',
-          systemInstruction: 'You are an elite Cisco and ITIL exam proctor. Output strictly valid JSON.',
-        }),
-      });
-
-      const json = await res.json();
-      if (json.status === 'success' && json.data?.text) {
-        let raw = json.data.text.trim();
-        if (raw.startsWith('```json')) raw = raw.slice(7);
-        if (raw.startsWith('```')) raw = raw.slice(3);
-        if (raw.endsWith('```')) raw = raw.slice(0, -3);
-        const parsed: TechnicalWalkthroughPayload = JSON.parse(raw.trim());
-
-        if (parsed.scenes && parsed.scenes.length > 0) {
-          setWalkthrough(parsed);
-          setCurrentSceneIdx(0);
-          setIsPlaying(true);
-        }
-      }
-    } catch (err) {
-      console.warn('[CertMasterVideoCoach] Dynamic generator fallback:', err);
-      // Keep high-precision STP walkthrough as trusted baseline
-      setWalkthrough(DEFAULT_STP_VIDEO_WALKTHROUGH);
-      setCurrentSceneIdx(2);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  // Explicit local examples only. Arbitrary questions belong to the authenticated Chat below.
+const handleAskAndGenerateVideo = (customQuery?: string) => {
+  const query = (customQuery ?? questionInput).trim();
+  if (!query) return;
+  setQuestionInput(query); setIsPlaying(false);
+  const q = query.toLowerCase();
+  const choices: [string[], TechnicalWalkthroughPayload, number][] = [
+    [['stp', 'spanning tree', 'in standard ieee 802.1d spanning tree protocol, which port state learns macs without forwarding frames?', 'in standard ieee 802.1d spanning tree protocol, which port state is responsible for processing bpdus, learning mac addresses from frames, but not forwarding user data frames?'], DEFAULT_STP_VIDEO_WALKTHROUGH, 2],
+    [['bgp', 'explain bgp path selection mnemonic (weight, local_pref, originate, as_path, origin, med)'], BGP_VIDEO_WALKTHROUGH, 0],
+    [['governance', 'compare iso 42001 vs eu ai act in itil 5 governance'], ITIL_VIDEO_WALKTHROUGH, 0],
+    [['ospf', 'how does ospf dr/bdr election work on broadcast multi-access segments?'], OSPF_VIDEO_WALKTHROUGH, 0],
+    [['subnetting', 'walk through a /27 vlsm subnetting calculation step-by-step'], SUBNETTING_VIDEO_WALKTHROUGH, 0],
+  ];
+  const choice = choices.find(([terms]) => terms.includes(q));
+  if (!choice) {
+    setPreviewNotice('No matching local example. Your text is retained; the previous illustration is unchanged and is NOT an answer to this question. Use the signed-in Luqi text helper below. No AI request was made.');
+    return;
+  }
+  setWalkthrough(choice[1]); setCurrentSceneIdx(choice[2]);
+  setPreviewNotice('Local practice example selected. Check the material against original standards; no AI generation, live router access or certification validation occurred.');
+};
 
   return (
     <div className="p-6 bg-slate-950 border border-slate-800 rounded-3xl text-slate-100 max-w-5xl mx-auto space-y-6 shadow-2xl">
@@ -740,7 +642,7 @@ export const CertMasterVideoCoach: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
-            🎬 CertMaster Live Video Walkthrough & RFC Proctor
+            Local practice walkthrough · not live network evidence
           </span>
           <h3 className="text-lg font-extrabold text-white mt-2">{walkthrough.directAnswerHeadline}</h3>
         </div>
@@ -749,7 +651,7 @@ export const CertMasterVideoCoach: React.FC = () => {
           <button
             onClick={() => {
               setIsPlaying(!isPlaying);
-              if (!isPlaying) speakSceneNarration(currentScene.narrationScript);
+
             }}
             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs transition"
           >
@@ -761,7 +663,7 @@ export const CertMasterVideoCoach: React.FC = () => {
               voiceEnabled ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-slate-900 text-slate-400 border-slate-800'
             }`}
           >
-            {voiceEnabled ? '🔊 Voice Proctor: ON' : '🔈 Voice Proctor: Muted'}
+            {voiceEnabled ? 'Browser narration: on' : 'Browser narration: off'}
           </button>
         </div>
       </div>
@@ -831,7 +733,7 @@ export const CertMasterVideoCoach: React.FC = () => {
           <p className="text-slate-200 leading-relaxed">{walkthrough.deepEngineeringExplanation}</p>
         </div>
         <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-mono space-y-2">
-          <h4 className="font-bold text-emerald-400 uppercase tracking-wider">💻 Cisco IOS CLI Verification</h4>
+          <h4 className="font-bold text-emerald-400 uppercase tracking-wider">Illustrative CLI output · not a real device result</h4>
           <pre className="text-[11px] text-slate-300 overflow-x-auto whitespace-pre-wrap">{walkthrough.ciscoIosVerification}</pre>
         </div>
       </div>
@@ -865,19 +767,22 @@ export const CertMasterVideoCoach: React.FC = () => {
         >
           <input
             type="text"
+            aria-label="Local walkthrough topic"
+            maxLength={1000}
             value={questionInput}
             onChange={e => setQuestionInput(e.target.value)}
-            placeholder="Ask any CCNA, CCNP, CCIP, or ITIL 5 question to generate a live video walkthrough..."
+            placeholder="Choose a preset, or enter STP, BGP, OSPF, subnetting or governance"
             className="flex-1 bg-transparent px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-hidden"
           />
           <button
             type="submit"
-            disabled={isGenerating}
+            disabled={!questionInput.trim()}
             className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-5 py-2 rounded-xl text-xs transition disabled:opacity-50"
           >
-            {isGenerating ? 'Compiling Video...' : '🎬 Generate Video Walkthrough'}
+            Open local example
           </button>
         </form>
+        <p role="status" className="text-sm text-amber-200">{previewNotice}</p>
       </div>
     </div>
   );

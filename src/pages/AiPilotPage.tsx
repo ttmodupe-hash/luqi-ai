@@ -156,6 +156,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   }, [initialQuestion]);
 
   useEffect(() => {
+    if (!workspaceMode) return; // Embedded helpers cannot consume the main Chat draft.
     const draft = readChatReturn(customerSessionBoundary(session));
     if (draft !== null) { setPrompt(draft); clearGuideHandoff(); }
   }, []);
