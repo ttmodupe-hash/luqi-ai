@@ -105,13 +105,13 @@ const QUESTION_BANK: Question[] = [
     correctKey: "B",
     explanation: "'Start where you are' mandates that an organization assess, understand, and leverage existing services, data provenance, and process baselines before attempting wholesale transformation or deploying uncalibrated foundation models.",
     trapWarning: "While 'Keep it simple' sounds plausible, the specific failure to evaluate current data pipelines and baseline systems directly breaches 'Start where you are'.",
-    reference: "ITIL 5 AI Governance Framework — Section 3.2: Guiding Principles in Cognitive Systems"
+    reference: "PeopleCert ITIL AI Governance (Version 5) · Luqi original service-improvement scenario"
   },
   {
     id: "itil-2",
     trackId: "itil_ai_v5",
     domain: "AI Risk & ISO 42001",
-    question: "According to ISO/IEC 42001 and EU AI Act risk tiers integrated into ITIL 5, an AI system used to autonomously control high-voltage electrical grid routing without human intervention is classified as:",
+    question: "The EU AI Act Annex III identifies safety components in the supply of electricity as a high-risk area. Which risk category should be assessed for an AI system performing that safety function?",
     options: [
       { key: "A", text: "Minimal Risk" },
       { key: "B", text: "Limited / Transparency Risk" },
@@ -119,15 +119,15 @@ const QUESTION_BANK: Question[] = [
       { key: "D", text: "Unacceptable Risk (Prohibited)" }
     ],
     correctKey: "C",
-    explanation: "AI management in critical physical infrastructure (energy grids, transport, water networks) falls directly into the High-Risk category under EU AI Act and ISO 42001 Annex A. It requires mandatory conformity assessments, continuous event logging, and human oversight gates.",
+    explanation: "EU Regulation 2024/1689 Annex III(2) lists AI systems used as safety components in the management or operation of critical infrastructure, including electricity supply. A real system's legal classification still depends on its intended purpose, applicable exceptions and regulatory scope. ISO/IEC 42001 is an AI management system standard, not a set of the EU AI Act's four risk tiers.",
     trapWarning: "Critical infrastructure is NOT automatically 'Unacceptable/Prohibited' (which is reserved for social scoring and biometric cognitive manipulation); rather it is strictly regulated as 'High Risk'.",
-    reference: "ISO/IEC 42001:2023 Clause 6.1 & EU AI Act Annex III"
+    reference: "EUR-Lex: Regulation (EU) 2024/1689, Annex III(2) (safety components in critical infrastructure)"
   },
   {
     id: "itil-3",
     trackId: "itil_ai_v5",
     domain: "AI Ethics & Lifecycle",
-    question: "When an LLM agent begins making erroneous predictions due to changes in consumer terminology and seasonal purchasing patterns after 6 months in production, ITIL 5 MLOps classifies this degradation specifically as:",
+    question: "An AI forecasting model sees a sustained shift in customer input terminology and seasonal demand patterns. Which phenomenon should the monitoring team investigate first?",
     options: [
       { key: "A", text: "Algorithmic Inversion" },
       { key: "B", text: "Data Drift (Input Covariate Shift)" },
@@ -137,13 +137,13 @@ const QUESTION_BANK: Question[] = [
     correctKey: "B",
     explanation: "Data Drift (Covariate Shift) occurs when the statistical distribution of real-world input variables changes over time relative to the distribution on which the model was trained, while Concept Drift refers to changes in the relationship between input features and target labels.",
     trapWarning: "Do not confuse Data Drift (input distribution change) with Model Hallucination or security-related Prompt Poisoning.",
-    reference: "ITIL 5 Continuous AI Assurance & MLOps Lifecycle"
+    reference: "Luqi AI operations scenario · data drift versus concept drift"
   },
   {
     id: "itil-4",
     trackId: "itil_ai_v5",
     domain: "Human-in-the-Loop Architecture",
-    question: "What is the primary role of a 'Human-in-the-Loop' (HITL) gate in an ITIL 5 compliant autonomous operational pipeline?",
+    question: "In a high-impact operational AI workflow, what is the main purpose of a human-approval gate before an irreversible change?",
     options: [
       { key: "A", text: "Manually re-typing prompt tokens into LLM interfaces" },
       { key: "B", text: "Serving as a mandatory approval checkpoint before high-impact, irreversible actions are executed" },
@@ -151,12 +151,12 @@ const QUESTION_BANK: Question[] = [
       { key: "D", text: "Rewriting model weights directly in the neural network layers" }
     ],
     correctKey: "B",
-    explanation: "HITL gates decouple autonomous reasoning from irreversible write actions. Agents can autonomously draft code or propose transactions, but the execution node must hold for cryptographic human sign-off.",
+    explanation: "Human approval checkpoints separate proposed AI actions from their actual execution. High-impact changes are reviewed under the organisation's access controls, policy and evidence requirements. Cryptographic signatures are an optional technical mechanism, not a universal ITIL rule.",
     trapWarning: "Reviewing low-level read queries would destroy scalability; HITL specifically guards irreversible, high-impact state transitions.",
-    reference: "NIST AI RMF & ITIL 5 Change Enablement for Agentic Systems"
+    reference: "NIST AI Risk Management Framework · Luqi human-approval workflow scenario"
   },
 
-  // CISCO CCNA (200-301)
+  // CISCO CCNA (200-301 v1.1, issuer checked 1 November 2026)
   {
     id: "ccna-1",
     trackId: "ccna_200_301",
@@ -187,7 +187,7 @@ const QUESTION_BANK: Question[] = [
     correctKey: "C",
     explanation: "In 802.1D STP: Blocking drops all frames; Listening processes BPDUs only (does not populate MAC table); Learning populates the switch MAC table from incoming source addresses but does not forward frames yet; Forwarding both learns and forwards frames.",
     trapWarning: "Listening state does NOT learn MAC addresses; only Learning state builds the CAM/MAC table.",
-    reference: "IEEE 802.1D STP State Machine & CCNA Exam Topic 2.5"
+    reference: "IEEE 802.1D classic STP foundations; Cisco CCNA 200-301 v1.1 topic 2.5 covers Rapid PVST+"
   },
   {
     id: "ccna-3",
@@ -204,6 +204,55 @@ const QUESTION_BANK: Question[] = [
     explanation: "OSPF strictly requires unique 32-bit Router IDs within the autonomous system. If two neighbors have identical Router IDs on the same segment, they will ignore each other's Hello packets or detect the collision, preventing the 2-WAY and FULL adjacency states.",
     trapWarning: "Routers never automatically increment their own Router ID; it must be manually corrected or derived from another active loopback/physical interface.",
     reference: "RFC 2328 OSPF Version 2 & CCNA Exam Topic 3.4"
+  },
+
+  {
+    id: "ccna-4",
+    trackId: "ccna_200_301",
+    domain: "Automation & AI Network Operations",
+    question: "A network team analyses several months of interface counters to forecast congestion before customers experience it. Which description is most accurate?",
+    options: [
+      { key: "A", text: "Predictive AI estimates future load from observed patterns; generated text could separately explain the forecast." },
+      { key: "B", text: "Only generative AI can work with network telemetry." },
+      { key: "C", text: "Every prediction made by a network tool is proof of a verified physical network event." },
+      { key: "D", text: "An AI assistant must automatically apply configuration changes whenever it forecasts congestion." }
+    ],
+    correctKey: "A",
+    explanation: "Predictive approaches estimate likely future values or events using observed measurements; generative systems can produce summaries or suggested actions. Neither removes the need for telemetry quality checks or human-approved configuration changes.",
+    trapWarning: "A forecast is not an observed outage and should not be treated as one.",
+    reference: "Cisco CCNA 200-301 v1.1 release notes, topic 6.4: AI and machine learning in network operations"
+  },
+  {
+    id: "ccna-5",
+    trackId: "ccna_200_301",
+    domain: "Infrastructure as Code",
+    question: "Which combination best describes the purpose of Ansible and Terraform in network automation?",
+    options: [
+      { key: "A", text: "Both are Layer 2 packet-switching protocols." },
+      { key: "B", text: "Ansible automates configuration tasks while Terraform declaratively provisions and manages infrastructure state." },
+      { key: "C", text: "Terraform always replaces all routing protocols in an enterprise." },
+      { key: "D", text: "Ansible is a subnet mask and Terraform is a VLAN ID." }
+    ],
+    correctKey: "B",
+    explanation: "Ansible is commonly used for automation and configuration tasks; Terraform is used to describe and manage infrastructure resources declaratively. Lab exercises should show how both fit a change-controlled network workflow.",
+    trapWarning: "Infrastructure tools are not the same as the network protocols they help manage.",
+    reference: "Cisco CCNA 200-301 v1.1 release notes, topic 6.6: Ansible and Terraform"
+  },
+  {
+    id: "ccna-6",
+    trackId: "ccna_200_301",
+    domain: "Network Access · VLAN Trunks",
+    question: "A switch trunk carries traffic for several VLANs using IEEE 802.1Q. How does a receiver determine the VLAN of a tagged Ethernet frame?",
+    options: [
+      { key: "A", text: "A VLAN tag in the Ethernet frame carries the VLAN identifier." },
+      { key: "B", text: "All frames on a trunk belong to VLAN 1 by definition." },
+      { key: "C", text: "A router automatically embeds the VLAN in the IPv4 destination address." },
+      { key: "D", text: "802.1Q changes the frame into an OSPF hello packet." }
+    ],
+    correctKey: "A",
+    explanation: "IEEE 802.1Q specifies a VLAN identification field in a tagged Ethernet frame. In practical labs, check native VLAN handling and allowed VLAN configuration separately.",
+    trapWarning: "A VLAN tag is an Ethernet-layer field, not an IP address or routing protocol.",
+    reference: "Cisco CCNA 200-301 v1.1: network access and VLAN trunking"
   },
 
   // CISCO CCNP (350-401 ENCOR & ENARSI)
@@ -255,7 +304,7 @@ const QUESTION_BANK: Question[] = [
     correctKey: "B",
     explanation: "PHP allows the second-to-last (penultimate) router in the LSP to pop the top MPLS label before handing the packet to the egress PE router. This spares the egress PE router from having to do both an LFIB label lookup and a subsequent FIB/IP lookup, boosting forwarding throughput.",
     trapWarning: "Label 0 is Explicit Null (retains QoS bits), whereas Label 3 is Implicit Null (triggers PHP).",
-    reference: "RFC 3031 & Cisco Service Provider IP Routing (CCIP/SPRI)"
+    reference: "RFC 3031 (MPLS) · Cisco 300-510 SPRI advanced routing topics"
   },
   {
     id: "ccip-2",
@@ -300,7 +349,7 @@ const FLASHCARDS: Flashcard[] = [
     id: "fc-3",
     trackId: "itil_ai_v5",
     domain: "ITIL 5 AI Guiding Principles",
-    front: "List the 7 ITIL 5 Guiding Principles applied to Generative & Autonomous AI.",
+    front: "Apply the seven ITIL guiding principles to an AI-service improvement project.",
     back: "1. Focus on value (outcome > token vanity)\n2. Start where you are (audit data pipelines first)\n3. Progress iteratively with feedback (RLHF/evals)\n4. Collaborate and promote visibility (transparency)\n5. Think and work holistically (ethics + infra + SLAs)\n6. Keep it simple and practical (avoid over-agentification)\n7. Optimize and automate (guardrails & observability)",
     mnemonic: "V-A-I-C-H-S-A (Value, As-is, Iterate, Collaborate, Holistic, Simple, Automate)",
     keyRule: "Never build autonomous write-access without an asynchronous Human-in-the-Loop gate."
@@ -328,7 +377,7 @@ const FLASHCARDS: Flashcard[] = [
     domain: "ISO 42001 & AI Risk",
     front: "What are the 4 EU AI Act & ISO 42001 risk classification tiers?",
     back: "1. Unacceptable: Cognitive behavioral distortion, biometric social scoring (BANNED)\n2. High-Risk: Critical infrastructure, medical diagnostics, legal, HR filtering (Strict audits & human oversight)\n3. Limited/Transparency: Chatbots, deepfakes (Must disclose AI nature)\n4. Minimal: Spam filters, AI spell check",
-    keyRule: "ITIL 5 requires high-risk systems to implement continuous telemetry and audit logs."
+    keyRule: "Use appropriate governance, risk evaluation and oversight based on the actual system; avoid treating AI Act categories as an ISO 42001 grading system."
   }
 ];
 
