@@ -13,7 +13,6 @@ function MoonLoading({ onReload }: { onReload: () => void }) {
   return <section className="luqi-info" style={frame} aria-label="Moon tracker loading">
     <h2>Moon now</h2>
     <p role="status" aria-live="polite">Loading the live Moon calculations…</p>
-    <p>This panel opens automatically. No sign-in or location is required.</p>
     <details><summary>Taking longer than expected?</summary><ReloadAction onReload={onReload} /></details>
   </section>;
 }
@@ -27,7 +26,6 @@ class MoonErrorBoundary extends Component<{ children: ReactNode; onReload: () =>
     if (this.state.failed) return <section className="luqi-info" style={frame} aria-label="Moon tracker recovery">
       <h2>Moon now</h2>
       <p role="alert">The Moon tracker could not load. Your other Luqi tools are still available.</p>
-      <p>Check your connection or reload the latest release.</p>
       <ReloadAction onReload={this.props.onReload} />
     </section>;
     return this.props.children;
