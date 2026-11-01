@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test';
+// Source-specific fixtures describe the dated 29 October review. Pin only test
+// time; the explicit expired-notice case below still exercises runtime expiry.
+test.beforeEach(async ({page}) => {
+ await page.clock.setFixedTime(new Date('2026-10-29T10:00:00Z'));
+});
 test('Opportunity Compass is useful at 320px without private data or unapproved inference', async ({page}) => {
   await page.setViewportSize({width:320,height:740});
   const posts:string[]=[];
@@ -181,4 +186,18 @@ test('geographic province explorer works by shape, keyboard and touch-sized name
  await explorer.screenshot({path:testInfo.outputPath('province-map-desktop.png'),style:screenshotStyle});
  await explorer.getByRole('button',{name:'View reviewed notices'}).click();
  await expect(board.getByRole('heading',{name:'Real public-sector posts, internships and learnerships'})).toBeInViewport();
+});
+
+test('passed deadlines stay excluded and explicitly expired when history is opened',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-10T10:00:00Z'));
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.goto('/#/opportunities');
+ const board=page.getByRole('region',{name:'Individual government job matches'});
+ await expect(board.getByRole('heading',{name:'Administrative Clerk: Management Support Services',exact:true})).toHaveCount(0);
+ await board.getByLabel(/Include withdrawn posts/).check();
+ const expired=board.getByRole('article').filter({has:page.getByRole('heading',{name:'Administrative Clerk: Management Support Services',exact:true})});
+ await expect(expired.getByText('Published closing date passed. Not an active listing.',{exact:true})).toBeVisible();
+ await expect(expired.getByText(/source review is older than 48 hours/)).toBeVisible();
+ await expect(expired.getByText(/current acceptance status must be confirmed/)).toHaveCount(0);
+ expect(posts).toEqual([]);
 });
