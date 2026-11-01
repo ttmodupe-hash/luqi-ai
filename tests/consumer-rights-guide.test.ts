@@ -87,11 +87,11 @@ describe('consumer rights guide, zero-provider fallback', () => {
     expect(() => makeConsumerDraft('Supplier', 'tiny')).toThrow();
   });
   it('expires the procedural guidance after the short review period', () => {
-    expect(CONSUMER_GUIDE_REVIEWED_ON).toBe('2026-10-26');
-    expect(CONSUMER_GUIDE_RECHECK_AFTER).toBe('2026-11-02');
-    expect(consumerGuideIsCurrent(new Date('2026-10-26T09:56:00+02:00'))).toBe(true);
-    expect(consumerGuideIsCurrent(new Date('2026-11-02T23:59:59+02:00'))).toBe(true);
-    expect(consumerGuideIsCurrent(new Date('2026-11-03T00:00:00+02:00'))).toBe(false);
+    expect(CONSUMER_GUIDE_REVIEWED_ON).toBe('2026-11-01');
+    expect(CONSUMER_GUIDE_RECHECK_AFTER).toBe('2026-11-08');
+    expect(consumerGuideIsCurrent(new Date('2026-11-01T09:56:00+02:00'))).toBe(true);
+    expect(consumerGuideIsCurrent(new Date('2026-11-08T23:59:59+02:00'))).toBe(true);
+    expect(consumerGuideIsCurrent(new Date('2026-11-09T00:00:00+02:00'))).toBe(false);
     expect(consumerGuideIsCurrent(new Date('wrong'))).toBe(false);
   });
 });

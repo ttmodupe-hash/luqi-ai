@@ -1,0 +1,37 @@
+import {test,expect} from '@playwright/test';
+test('Luqi Motion Studio has real editable rig and downloaded data; no paid AI calls',async({page})=>{
+ const posts:string[]=[];page.on('request',r=>{if(r.method()!=='GET')posts.push(r.url());});
+ await page.setViewportSize({width:390,height:844});await page.goto('/#/content-studio');
+ await page.getByRole('button',{name:'Open Luqi Motion Studio'}).click();
+ const panel=page.getByRole('region',{name:'Luqi Motion Studio'});
+ await expect(panel.getByRole('heading',{name:'Build original character motion'})).toBeVisible();
+ await expect(panel.getByRole('img',{name:/Live 2D rig preview/})).toBeVisible();
+ await panel.getByLabel('Motion character').selectOption('engineer');
+ await panel.getByLabel('Motion preset').selectOption('walk');
+ await panel.getByRole('button',{name:'2 s',exact:true}).click();
+ await panel.getByLabel('Motion Left leg').focus();
+ await panel.getByLabel('Motion Left leg').press('End');
+ await expect(panel.getByLabel('Motion Left leg')).toHaveValue('160');
+ const waitJson=page.waitForEvent('download');await panel.getByRole('button',{name:'Download rig keyframes (JSON)'}).click();
+ const file=await waitJson;expect(file.suggestedFilename()).toBe('luqi-motion-project.json');
+ const stream=await file.createReadStream();let text='';for await(const ch of stream)text+=ch.toString();
+ const result=JSON.parse(text);expect(result.frames[2].pose.leftLeg).toBe(160);expect(result.template).toBe('engineer');
+ const waitSvg=page.waitForEvent('download');await panel.getByRole('button',{name:'Download SVG frame'}).click();
+ expect((await waitSvg).suggestedFilename()).toBe('luqi-motion-frame.svg');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(posts).toEqual([]);
+ await expect(page.getByText(/Toonbee/i)).toHaveCount(0);
+});
+test('Luqi CCNA VLSM allocates correct networks and rejects invalid input without provider calls',async({page})=>{
+ const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await page.setViewportSize({width:390,height:844});await page.goto('/#/cert-academy?tab=subnet');
+ const plan=page.getByRole('region',{name:'Luqi VLSM network planner'});
+ await expect(plan.getByText('192.168.10.128/26')).toBeVisible();
+ await plan.getByLabel('Parent network (CIDR)').fill('10.0.0.0/30');
+ await expect(plan.getByText(/do not fit/)).toBeVisible();
+ await plan.getByLabel('Parent network (CIDR)').fill('10.0.0.0/24');
+ await expect(plan.getByText('10.0.0.128/26')).toBeVisible();
+ await page.getByLabel('IPv4 Address').fill('1.2.3.4invalid');
+ await expect(page.getByText(/Enter exactly four decimal IPv4 octets/)).toBeVisible();
+ expect(posts).toEqual([]);
+});

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { BookOpen, BriefcaseBusiness, ChevronLeft, ChevronRight, CircleHelp, Compass,
   Globe2, GraduationCap, History, LayoutGrid, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen,
   PenLine, Plus, Search, ShieldCheck, Smartphone, Trash2, UserRound, X } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import { useOptionalCustomerSession } from '../providers/customer-session';
 import SavedNotesPeek from './SavedNotesPeek';
+import { clearGuideHandoff } from '../lib/interaction-handoff';
 import '../chat-workspace.css';
 
 const shortcuts = [
@@ -28,6 +29,7 @@ export default function ChatSidebar() {
   const workspace = useOptionalChatWorkspace();
   const customer = useOptionalCustomerSession();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [filter, setFilter] = useState('');
@@ -36,7 +38,7 @@ export default function ChatSidebar() {
   const [mobileSection, setMobileSection] = useState<'services' | 'recents'>('services');
   const recentAnchor = useRef<HTMLElement>(null);
   const mobileMenu = useRef<HTMLButtonElement>(null);
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+  useEffect(() => { setMobileOpen(false); }, [location.pathname, location.search]);
   useEffect(() => { setConfirmForget(null); setShown(12); }, [customer?.session?.token]);
   useEffect(() => {
     if (mobileOpen && mobileSection === 'recents') recentAnchor.current?.scrollIntoView?.({ block: 'start' });
@@ -53,7 +55,15 @@ export default function ChatSidebar() {
   const close = () => { setMobileOpen(false); setMobileSection('services'); };
   const closeWithFocus = () => { close(); mobileMenu.current?.focus(); };
   const showSidebar = (section: 'services' | 'recents') => { setMobileSection(section); setMobileOpen(true); };
-  const start = () => { workspace?.startNewChat(); close(); };
+  const leaveCivic = () => window.dispatchEvent(new Event('luqi:leave-civic', { cancelable: true }));
+  const start = () => {
+    if (!leaveCivic()) return;
+    clearGuideHandoff(); workspace?.startNewChat(); close(); navigate('/chat');
+  };
+  const selectRecent = (id: string) => {
+    if (!leaveCivic()) return;
+    clearGuideHandoff(); workspace?.selectThread(id); close(); navigate('/chat');
+  };
   return <>
     <div className="luqi-chat-mobile-bar">
       <button ref={mobileMenu} type="button" aria-controls="luqi-chat-sidebar" aria-expanded={mobileOpen}
@@ -112,7 +122,7 @@ export default function ChatSidebar() {
               <button type="button" title={chat.title}
                 aria-current={workspace?.activeThread?.id === chat.id ? 'true' : undefined}
                 className={workspace?.activeThread?.id === chat.id ? 'active' : ''}
-                onClick={() => { workspace?.selectThread(chat.id); close(); }}>
+                onClick={() => selectRecent(chat.id)}>
                 <MessageCircle size={16} aria-hidden="true" /><span>{chat.title}</span>
               </button>
               <button type="button" className="luqi-chat-rail-thread-forget"

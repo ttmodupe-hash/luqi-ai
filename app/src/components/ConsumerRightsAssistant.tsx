@@ -1,5 +1,8 @@
-import React, { useState, type FormEvent } from 'react';
+import React, { useState, useLayoutEffect, useRef, type FormEvent } from 'react';
 import KhoroVehicleFinanceScenario from './KhoroVehicleFinanceScenario';
+import { useOptionalCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { readGuide } from '../lib/interaction-handoff';
 import {
   CONSUMER_GUIDE_RECHECK_AFTER, CONSUMER_GUIDE_REVIEWED_ON,
   CONSUMER_ISSUES, CONSUMER_QUICK, CONSUMER_SOURCES, MAX_CONSUMER_STORY_LENGTH,
@@ -23,8 +26,12 @@ const categories: readonly { value: DisputeType; label: string }[] = [
 ];
 
 export const ConsumerRightsAssistant: React.FC = () => {
-  const [type, setType] = useState<DisputeType>('UNSURE');
-  const [story, setStory] = useState('');
+  const customer = useOptionalCustomerSession();
+  const owner = customerSessionBoundary(customer?.session ?? null);
+  const carried = readGuide(owner, '/consumer-rights');
+  const previousOwner = useRef(owner);
+  const [type, setType] = useState<DisputeType>(() => categories.some(item => item.value === carried?.selection) ? carried!.selection as DisputeType : 'UNSURE');
+  const [story, setStory] = useState(() => carried?.question && carried.question.length <= MAX_CONSUMER_STORY_LENGTH ? carried.question : '');
   const [organisation, setOrganisation] = useState('');
   const [submitted, setSubmitted] = useState<ReturnType<typeof prepareConsumerStory>>(null);
   const [copied, setCopied] = useState(false);
@@ -41,6 +48,9 @@ export const ConsumerRightsAssistant: React.FC = () => {
     setCopyNotice('');
     setDraft('');
   }
+  useLayoutEffect(() => {
+    if (previousOwner.current !== owner) { previousOwner.current = owner; setType('UNSURE'); setStory(''); setOrganisation(''); clearResult(); }
+  }, [owner]);
   function prepare(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearResult();
@@ -113,7 +123,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
         <h2 id="consumer-review-date" className="text-lg font-semibold">Source freshness</h2>
         <p className="text-sm text-slate-300">
           Source list checked {CONSUMER_GUIDE_REVIEWED_ON}; recheck required after {CONSUMER_GUIDE_RECHECK_AFTER}.
-          This is not live legal research or qualified legal approval.
+          This is an automated public-source review, not live legal research or qualified legal approval. Some publishers may be unavailable; confirm the procedure with the original organisation before acting.
         </p>
         {!current && <p role="alert" className="rounded-lg border border-rose-400 bg-slate-900 p-3 text-sm">
           This guide's source review has expired. Local advice summaries and letter preparation are paused until sources

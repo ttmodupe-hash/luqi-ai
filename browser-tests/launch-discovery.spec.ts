@@ -32,7 +32,7 @@ test('workspace search can find the trial and retains truthful availability labe
   await page.goto('/#/start');
   await page.getByRole('button', { name: 'Search workspace', exact: true }).click();
   await page.getByRole('textbox', { name: 'Search tools', exact: true }).fill('AI text');
-  await expect(page.getByText(/signed-in trial with availability checks/)).toBeVisible();
+  await expect(page.getByText(/Guest AI trial and signed-in AI have separate availability and allowance checks/)).toBeVisible();
   await page.getByRole('link', { name: 'AI text trial', exact: true }).click();
   await trialPage(page, writes);
 });

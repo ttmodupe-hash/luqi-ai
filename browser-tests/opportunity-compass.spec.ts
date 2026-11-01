@@ -49,6 +49,7 @@ test('Chat links directly to opportunities without a paid provider request',asyn
  const paid:string[]=[];
  page.on('request',req=>{if(req.method()==='POST'&&/\/api\/v1\/luqi-core/.test(req.url()))paid.push(req.url())});
  await page.goto('/#/chat');
+  await page.getByText('Browse free Luqi guides', { exact: true }).click();
  await page.getByRole('link',{name:/Government jobs, youth funding, bursaries and graduates/}).click();
  await expect(page).toHaveURL(/#\/opportunities$/);
  expect(paid).toEqual([]);

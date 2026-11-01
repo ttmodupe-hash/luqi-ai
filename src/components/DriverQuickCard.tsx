@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { DRIVER_QUICK, DRIVER_RECHECK_AFTER, type DriverMode } from '../lib/driver-rights';
 
 /** No service request: typing a roadside phrase displays instant local safety steps. */
-export default function DriverQuickCard({ mode }: { mode: DriverMode }) {
+export default function DriverQuickCard({ mode, onOpen }: { mode: DriverMode; onOpen?: () => void }) {
   const quick = DRIVER_QUICK[mode];
   return <section className="mx-3 my-3 min-w-0 space-y-2 rounded-xl border border-amber-500 bg-slate-950 p-3 text-slate-100 sm:mx-4"
     aria-labelledby="luqi-driver-quick-title" aria-live="polite">
@@ -13,6 +13,6 @@ export default function DriverQuickCard({ mode }: { mode: DriverMode }) {
     </ol>
     <p className="text-xs text-slate-300">Basic safety summary. Detailed legal sources must be rechecked after {DRIVER_RECHECK_AFTER}.</p>
     <Link className="inline-block break-words text-sm font-semibold text-cyan-200 underline underline-offset-2"
-      to="/driver-rights">Open full South African driver rights and source links</Link>
+      to="/driver-rights" onClick={event => { if (onOpen) { event.preventDefault(); onOpen(); } }}>Open full South African driver rights and source links</Link>
   </section>;
 }

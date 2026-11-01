@@ -28,7 +28,9 @@ test('Start and Chat expose the free visa source navigator',async({page})=>{
  await page.getByRole('link',{name:/Explore Visa & Entry/}).click();
  await expect(page).toHaveURL(/#\/visa-entry$/);
  await page.goto('/#/chat');
+ await page.getByText('Browse free Luqi guides',{exact:true}).click();
  await page.getByRole('link',{name:/Visa & Entry: review official South African/}).click();
  await expect(page).toHaveURL(/#\/visa-entry$/);
+ await expect(page.getByRole('heading',{name:/Plan your journey. Verify entry requirements/})).toBeVisible();
  expect(posts).toEqual([]);
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episodeOutline,
   pendulumPeriod, sceneAtForDuration, storyboardJson, subtitles, studioDuration,
@@ -10,6 +10,8 @@ import StudioDraftImport from '../components/StudioDraftImport';
 import { serializeStudioDraft } from '../lib/studio-draft';
 import StudioAudioPanel, { type StudioAudioAssets } from '../components/StudioAudioPanel';
 import { browserMixedRecordingType, prepareStudioAudioMix, type StudioAudioMix } from '../lib/studio-audio';
+
+const LuqiMotionRigStudio = lazy(() => import('../components/LuqiMotionRigStudio'));
 
 interface Recording { media: MediaRecorder; stream: MediaStream; chunks: Blob[]; started: number; discard: boolean; timer: ReturnType<typeof setTimeout>; bytes: number; audioMix: StudioAudioMix | null }
 function saveText(name: string, body: string, type: string) {
@@ -25,6 +27,7 @@ export default function ContentStudioPage() {
   const [scenes, setScenes] = useState<StudioScene[]>(() => approvedPlan ? approvedPlan.scenes.map(scene => ({ ...scene })) : SHOWCASE_SCENES.map(s => ({ ...s })));
   const [draftBusy, setDraftBusy] = useState(false);
   const [audio, setAudio] = useState<StudioAudioAssets>({ narration: null, music: null, musicVolume: .25 });
+  const [motionEditorOpen, setMotionEditorOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [audioPreparing, setAudioPreparing] = useState(false);
   const audioEpoch = useRef(0);
@@ -35,12 +38,15 @@ export default function ContentStudioPage() {
   const [time, setTime] = useState(0), [playing, setPlaying] = useState(false), [recording, setRecording] = useState(false);
   const [length, setLength] = useState(2.5), [gravity, setGravity] = useState(9.81), [yaw, setYaw] = useState(28);
   const [message, setMessage] = useState(approvedPlan ? 'Your approved Chat draft is loaded. A silent first export starts automatically when supported; add your own audio later and record again.' : 'Your storyboard and chosen audio stay in this tab. Download them before leaving.');
-  const [clip, setClip] = useState<{ url: string; extension: string; format: StudioFormat } | null>(null);
+  const [clip, setClip] = useState<{ url: string; extension: string; format: StudioFormat; draftKey: string; seconds: number } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null), position = useRef(0), active = useRef<Recording | null>(null), mounted = useRef(true);
   const clipSeconds = studioDuration(sceneSeconds);
   const dimensions = STUDIO_FORMATS[format], selected = sceneAtForDuration(time, sceneSeconds);
   const editingLocked = recording || draftBusy || voiceBusy || audioPreparing;
   const hasAudio = Boolean(audio.narration || audio.music);
+  // Only the local visual revision is fingerprinted. Audio replacement already clears clip.
+  const draftKey = JSON.stringify([scenes, format, sceneSeconds, motion, length, gravity, yaw]);
+  const clipIsCurrent = clip?.draftKey === draftKey;
   const availableVideoType = hasAudio ? browserMixedRecordingType() : recordingType;
   function cancelRecording() {
     const run = active.current; if (!run) return;
@@ -143,7 +149,7 @@ export default function ContentStudioPage() {
         }
         const blob = new Blob(run.chunks, { type: media.mimeType });
         position.current = clipSeconds; setTime(clipSeconds);
-        setClip({ url: URL.createObjectURL(blob), format,
+        setClip({ url: URL.createObjectURL(blob), format, draftKey, seconds: clipSeconds,
           extension: media.mimeType.startsWith('video/mp4') ? 'mp4' : 'webm' });
         setMessage(run.audioMix
           ? 'Your local video with mixed voice/music is ready. Play it and confirm the soundtrack before downloading.'
@@ -200,6 +206,12 @@ export default function ContentStudioPage() {
         </fieldset>
       </section>
     </div>
+    <section className="luqi-studio-motion-entry" aria-label="Luqi Motion Studio access">
+      <h2>Luqi Motion Studio · Character rigging</h2>
+      <p>Create original vector characters and animate real keyframes on your device. Export editable SVG and JSON without a new account or cloud AI request.</p>
+      <button type="button" aria-expanded={motionEditorOpen} aria-controls="luqi-motion-panel" disabled={editingLocked} onClick={() => setMotionEditorOpen(value=>!value)}>{motionEditorOpen?'Close Luqi Motion Studio':'Open Luqi Motion Studio'}</button>
+      {motionEditorOpen && <div id="luqi-motion-panel"><Suspense fallback={<p role="status">Opening the local motion editor…</p>}><LuqiMotionRigStudio /></Suspense></div>}
+    </section>
     <StudioAudioPanel audio={audio} onChange={next => { setAudio(next); setClip(null); }}
       disabled={recording || draftBusy || audioPreparing} clipSeconds={clipSeconds}
       onRecordingChange={setVoiceBusy} />
@@ -214,7 +226,13 @@ export default function ContentStudioPage() {
         : hasAudio ? 'This browser cannot record video with audio here. Download your separate audio and storyboard, or try a supported browser.'
         : 'Video recording is unavailable in this browser. You can still edit and download your storyboard, subtitles and script.'}</p>
       <p role="status" aria-label="Studio export status" aria-live="polite">{message}</p>
-      {clip && <div><video src={clip.url} controls aria-label="Completed local animation" /><a className="luqi-primary" href={clip.url} download={'luqi-showcase-' + clipSeconds + 's-' + clip.format + '.' + clip.extension}>Download {clipSeconds}-second video (.{clip.extension})</a></div>}
+      {clip && <div>
+        {!clipIsCurrent && <p role="status">Previous export — record again to include your changes. This preview is the earlier recording, not the current storyboard.</p>}
+        <video src={clip.url} controls aria-label={clipIsCurrent ? 'Completed local animation' : 'Previous export preview'} />
+        <a className="luqi-primary" href={clip.url} download={'luqi-showcase-' + clip.seconds + 's-' + clip.format + '.' + clip.extension}>
+          {clipIsCurrent ? `Download ${clip.seconds}-second video (.${clip.extension})` : `Download previous export (${clip.seconds}s, ${clip.format}, .${clip.extension})`}
+        </a>
+      </div>}
     </section>
     <section className="luqi-studio-responsibility"><h2>Support that keeps you in control.</h2><p>Use examples your audience can relate to. Distinguish evidence from opinion and invite a counterexample. Obtain permission for music, images, voices and guests. Check the rules for the audience’s country before publishing.</p>
       <p>Luqi does not file tax returns, act as a chartered accountant or publish on your behalf here. Those workflows need a verified identity, a specific mandate, the relevant professional review and approval of the final action.</p><Link to="/ai-trial">Check the separate signed-in text trial</Link><span> · </span><Link to="/privacy">Privacy information</Link></section>
