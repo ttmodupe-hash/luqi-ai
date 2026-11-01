@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { JOINTS, LUQI_RIGS, MOTIONS, RIG_SECONDS, frameAt, presetMotion, rigSvg, serializeRig,
  type Joint, type MotionId, type RigId } from '../lib/motion-rig';
 import '../motion-rig.css';
+import LuqiRigVideoRecorder from './LuqiRigVideoRecorder';
+import type { StudioAudioAssets } from './StudioAudioPanel';
 const labels:Record<Joint,string>={leftArm:'Left arm',rightArm:'Right arm',leftLeg:'Left leg',rightLeg:'Right leg',head:'Head tilt',torso:'Body lean'};
-export default function LuqiMotionRigStudio(){
+export default function LuqiMotionRigStudio({ audio, disabled, onRecordingChange }: {
+ audio: StudioAudioAssets; disabled: boolean; onRecordingChange: (active: boolean) => void;
+}) {
  const [rig,setRig]=useState<RigId>('scholar'),[action,setAction]=useState<MotionId>('wave');
  const [frames,setFrames]=useState(()=>presetMotion('wave'));
  const [selected,setSelected]=useState(0),[time,setTime]=useState(0),[playing,setPlaying]=useState(false);
@@ -25,8 +29,9 @@ export default function LuqiMotionRigStudio(){
   document.addEventListener('visibilitychange',hide);
   return ()=>document.removeEventListener('visibilitychange',hide);
  },[]);
- function choose(a:MotionId){setPlaying(false);setAction(a);setFrames(presetMotion(a));setSelected(0);setTime(0);setNotice('');}
+ function choose(a:MotionId){if(disabled)return;setPlaying(false);setAction(a);setFrames(presetMotion(a));setSelected(0);setTime(0);setNotice('');}
  function change(j:Joint,v:number){
+  if(disabled)return;
   setPlaying(false);setTime(selected);
   setFrames(old=>old.map((f,i)=>i===selected?{...f,pose:{...f.pose,[j]:v}}:f));setNotice('');
  }
@@ -67,23 +72,23 @@ export default function LuqiMotionRigStudio(){
      <text x="20" y="336" fontSize="16" fontFamily="sans-serif" fill="#fff">{title}</text>
     </svg>
     <label>Preview time · {time.toFixed(2)} s
-      <input aria-label="Motion timeline" type="range" min="0" max={RIG_SECONDS} step=".05" value={time} onChange={e=>{setPlaying(false);setTime(Number(e.target.value));}}/>
+      <input aria-label="Motion timeline" disabled={disabled} type="range" min="0" max={RIG_SECONDS} step=".05" value={time} onChange={e=>{setPlaying(false);setTime(Number(e.target.value));}}/>
     </label>
     <div className="luqi-motion-buttons">
-     <button type="button" aria-pressed={playing} onClick={()=>setPlaying(v=>!v)}>{playing?'Pause rig preview':'Play rig preview'}</button>
-     <button type="button" onClick={()=>choose(action)}>Reset keyframes</button>
+     <button type="button" disabled={disabled} aria-pressed={playing} onClick={()=>setPlaying(v=>!v)}>{playing?'Pause rig preview':'Play rig preview'}</button>
+     <button type="button" disabled={disabled} onClick={()=>choose(action)}>Reset keyframes</button>
     </div>
     <p role="status" aria-live="polite">{notice||'This is a genuine, locally rendered 2D vector rig; not an AI-created film.'}</p>
    </div>
    <div className="luqi-motion-controls">
     <div className="luqi-motion-grid">
      <label>Character template
-      <select aria-label="Motion character" value={rig} onChange={e=>setRig(e.target.value as RigId)}>
+      <select aria-label="Motion character" disabled={disabled} value={rig} onChange={e=>setRig(e.target.value as RigId)}>
        {Object.entries(LUQI_RIGS).map(([key,value])=><option key={key} value={key}>{value.name}</option>)}
       </select>
      </label>
      <label>Motion preset
-      <select aria-label="Motion preset" value={action} onChange={e=>choose(e.target.value as MotionId)}>
+      <select aria-label="Motion preset" disabled={disabled} value={action} onChange={e=>choose(e.target.value as MotionId)}>
        {MOTIONS.map(m=><option value={m} key={m}>{m==='wave'?'Wave':m==='type'?'Typing':'Walking'}</option>)}
       </select>
      </label>
@@ -91,23 +96,25 @@ export default function LuqiMotionRigStudio(){
     <fieldset>
      <legend>Selected keyframe: {selected} s</legend>
      <div className="luqi-motion-keys" role="group" aria-label="Motion keyframes">
-       {frames.map((f,i)=><button type="button" aria-pressed={selected===i} key={f.time} onClick={()=>{setPlaying(false);setSelected(i);setTime(i);}}>{i} s</button>)}
+       {frames.map((f,i)=><button type="button" disabled={disabled} aria-pressed={selected===i} key={f.time} onClick={()=>{setPlaying(false);setSelected(i);setTime(i);}}>{i} s</button>)}
      </div>
      <div className="luqi-motion-grid">
       {JOINTS.map(j=><label key={j}>{labels[j]} · {pose[j]}°
-       <input aria-label={'Motion '+labels[j]} type="range" min="-160" max="160" step="1" value={pose[j]} onChange={e=>change(j,Number(e.target.value))}/>
+       <input aria-label={'Motion '+labels[j]} disabled={disabled} type="range" min="-160" max="160" step="1" value={pose[j]} onChange={e=>change(j,Number(e.target.value))}/>
       </label>)}
      </div>
     </fieldset>
     <label>Artwork title
-      <input aria-label="Motion artwork title" maxLength={80} value={title} onChange={e=>setTitle(e.target.value)}/>
+      <input aria-label="Motion artwork title" disabled={disabled} maxLength={80} value={title} onChange={e=>setTitle(e.target.value)}/>
     </label>
     <div className="luqi-motion-buttons">
-     <button type="button" onClick={()=>{try{download('luqi-motion-frame.svg','image/svg+xml',rigSvg(rig,title,current));}catch(e){setNotice(e instanceof Error?e.message:'Invalid SVG');}}}>Download SVG frame</button>
-     <button type="button" onClick={()=>{try{download('luqi-motion-project.json','application/json',serializeRig(rig,action,title,frames));}catch(e){setNotice(e instanceof Error?e.message:'Invalid rig');}}}>Download rig keyframes (JSON)</button>
+     <button type="button" disabled={disabled} onClick={()=>{try{download('luqi-motion-frame.svg','image/svg+xml',rigSvg(rig,title,current));}catch(e){setNotice(e instanceof Error?e.message:'Invalid SVG');}}}>Download SVG frame</button>
+     <button type="button" disabled={disabled} onClick={()=>{try{download('luqi-motion-project.json','application/json',serializeRig(rig,action,title,frames));}catch(e){setNotice(e instanceof Error?e.message:'Invalid rig');}}}>Download rig keyframes (JSON)</button>
     </div>
    </div>
   </div>
-  <p className="luqi-motion-note">SVG saves the current pose. JSON saves five keyframes for later editing. A rendered video with voiceover remains available separately in Luqi Content Studio above; this editor does not automatically merge character movements into that video.</p>
+  <LuqiRigVideoRecorder rig={rig} frames={frames} title={title} audio={audio}
+    disabled={disabled} onRecordingChange={active => { if(active) setPlaying(false); onRecordingChange(active); }} />
+  <p className="luqi-motion-note">SVG saves a vector frame, JSON saves the keyframes. The character recorder creates a real four-second video of the moving rig, with selected sound when supported. The six-scene storyboard remains a separate editor above.</p>
  </section>;
 }
