@@ -22,6 +22,6 @@ jobs:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Validate handoff ownership, source expiry, CLI failures and output freshness
-        run: npx vitest run tests/interaction-audit.test.ts tests/interaction-studio.test.tsx tests/consumer-rights-guide.test.ts tests/consumer-rights-page.test.tsx tests/customer-entry-page.test.tsx
+        run: npx vitest run tests/interaction-audit.test.ts tests/interaction-studio.test.tsx tests/interaction-preview.test.ts tests/consumer-rights-guide.test.ts tests/consumer-rights-page.test.tsx tests/customer-entry-page.test.tsx
       - name: Type check repaired state and transport boundaries
-        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/interaction-handoff.ts src/lib/certification-client.ts src/pages/CustomerEntryPage.tsx src/pages/ContentStudioPage.tsx src/components/CivicEvidenceChat.tsx src/components/ChatSidebar.tsx src/components/SocraticExamTutor.tsx
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/interaction-handoff.ts src/lib/certification-client.ts src/pages/CustomerEntryPage.tsx src/pages/ContentStudioPage.tsx src/components/CivicEvidenceChat.tsx src/components/ChatSidebar.tsx src/components/SocraticExamTutor.tsx src/components/CertMasterVideoCoach.tsx
