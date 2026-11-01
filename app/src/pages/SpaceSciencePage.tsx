@@ -72,9 +72,9 @@ export default function SpaceSciencePage() {
           <div className="luqi-space-inputs">
             <label htmlFor="space-frequency">Frequency<input id="space-frequency" inputMode="decimal" autoComplete="off" maxLength={24} value={frequency}
               onChange={event => { setFrequency(event.target.value); setNotice(''); }} aria-invalid={!wave.ok} aria-describedby="space-wave-result" /></label>
-            <label htmlFor="space-frequency-unit">Unit<select id="space-frequency-unit" value={unit} onChange={event => { setUnit(event.target.value as FrequencyUnit); setNotice(''); }}>
+            <div><label htmlFor="space-frequency-unit">Unit</label><select id="space-frequency-unit" value={unit} onChange={event => { setUnit(event.target.value as FrequencyUnit); setNotice(''); }}>
               {FREQUENCY_UNITS.map(value => <option key={value}>{value}</option>)}
-            </select></label>
+            </select></div>
           </div>
           <div id="space-wave-result" className="luqi-space-result" role="status" aria-live="polite">
             {wave.ok ? <><strong>{wave.value.wavelengthM.toPrecision(6)} m</strong><span>Wavelength in vacuum</span></> : <p>{wave.error}</p>}
@@ -105,9 +105,9 @@ export default function SpaceSciencePage() {
       <p>SANSA, SARAO and SKAO have distinct programmes. Keep the organisation, publication time and evidence behind each claim visible.</p>
       <div className="luqi-space-inputs luqi-space-filter">
         <label htmlFor="space-source-query">Search science sources<input id="space-source-query" type="search" maxLength={120} value={query} onChange={event => setQuery(event.target.value)} placeholder="MeerKAT, water, spacecraft…" /></label>
-        <label htmlFor="space-source-category">Topic<select id="space-source-category" value={category} onChange={event => setCategory(event.target.value as SpaceCategory)}>
+        <div><label htmlFor="space-source-category">Topic</label><select id="space-source-category" value={category} onChange={event => setCategory(event.target.value as SpaceCategory)}>
           {SPACE_CATEGORIES.map(value => <option key={value}>{value}</option>)}
-        </select></label>
+        </select></div>
       </div>
       <p role="status" aria-live="polite">{sources.length} matching source{sources.length === 1 ? '' : 's'}</p>
       <div className="luqi-space-grid">

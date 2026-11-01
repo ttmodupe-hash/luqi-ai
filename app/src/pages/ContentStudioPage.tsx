@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { SHOWCASE_SCENES, STUDIO_FORMATS, drawStudioFrame, episodeOutline,
   pendulumPeriod, sceneAtForDuration, storyboardJson, subtitles, studioDuration,
@@ -10,6 +10,8 @@ import StudioDraftImport from '../components/StudioDraftImport';
 import { serializeStudioDraft } from '../lib/studio-draft';
 import StudioAudioPanel, { type StudioAudioAssets } from '../components/StudioAudioPanel';
 import { browserMixedRecordingType, prepareStudioAudioMix, type StudioAudioMix } from '../lib/studio-audio';
+
+const LuqiMotionRigStudio = lazy(() => import('../components/LuqiMotionRigStudio'));
 
 interface Recording { media: MediaRecorder; stream: MediaStream; chunks: Blob[]; started: number; discard: boolean; timer: ReturnType<typeof setTimeout>; bytes: number; audioMix: StudioAudioMix | null }
 function saveText(name: string, body: string, type: string) {
@@ -25,6 +27,7 @@ export default function ContentStudioPage() {
   const [scenes, setScenes] = useState<StudioScene[]>(() => approvedPlan ? approvedPlan.scenes.map(scene => ({ ...scene })) : SHOWCASE_SCENES.map(s => ({ ...s })));
   const [draftBusy, setDraftBusy] = useState(false);
   const [audio, setAudio] = useState<StudioAudioAssets>({ narration: null, music: null, musicVolume: .25 });
+  const [motionEditorOpen, setMotionEditorOpen] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [audioPreparing, setAudioPreparing] = useState(false);
   const audioEpoch = useRef(0);
@@ -203,6 +206,13 @@ export default function ContentStudioPage() {
         </fieldset>
       </section>
     </div>
+    <section className="luqi-studio-motion-entry" aria-label="Luqi Motion Studio access">
+      <h2>Luqi Motion Studio · Character rigging</h2>
+      <p>Create original characters, animate real keyframes and record a four-second character video on your device. Your own voiceover and authorised music can be mixed in supported browsers.</p>
+      <button type="button" aria-expanded={motionEditorOpen} aria-controls="luqi-motion-panel" disabled={editingLocked} onClick={() => setMotionEditorOpen(value=>!value)}>{motionEditorOpen?'Close Luqi Motion Studio':'Open Luqi Motion Studio'}</button>
+      {motionEditorOpen && <div id="luqi-motion-panel"><Suspense fallback={<p role="status">Opening the local motion editor…</p>}><LuqiMotionRigStudio
+  audio={audio} disabled={editingLocked} onRecordingChange={setVoiceBusy}/></Suspense></div>}
+    </section>
     <StudioAudioPanel audio={audio} onChange={next => { setAudio(next); setClip(null); }}
       disabled={recording || draftBusy || audioPreparing} clipSeconds={clipSeconds}
       onRecordingChange={setVoiceBusy} />

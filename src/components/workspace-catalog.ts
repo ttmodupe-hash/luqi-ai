@@ -47,27 +47,27 @@ export const workspaceTools = [
   },
   {
     id: "near-me", title: "Near me · Places & Local Support", category: "Province discovery, council contacts and map searches",
-    description: "Choose a province privately, browse reviewed council names and prepare an external map search for a town or township. No background tracking or invented distances.",
+    description: "Choose a province, council, town or township for an external map search. No background tracking or invented distances.",
     status: "Free area discovery · optional location", ready: true, path: "/near-me", icon: "status",
   },
   {
     id: "opportunity-compass", title: "Opportunity Compass · Jobs & Funding", category: "South African youth government vacancies and grants",
-    description: "Free government, graduate, bursary, sponsorship and youth support source directory, nine-province map and read-only publisher health check. Verify each opening and requirements with the agency.",
+    description: "Government jobs, graduate opportunities, bursaries, sponsorship and youth funding; nine-province map and publisher health checks. Verify openings with the agency.",
     status: "Free official sources · no account", ready: true, path: "/opportunities", icon: "business",
   },
   {
     id: "local-pulse", title: "Local Pulse · Radio & News", category: "South African talk stations and original newsrooms",
-    description: "Discover reviewed official 702, CapeTalk, SAfm, Kaya 959, EWN and SABC destinations, filter by region, and prepare a source-linked Luqi question. No rebroadcast, live headline claim, account or paid AI request.",
+    description: "Official 702, CapeTalk, SAfm, Kaya 959, EWN and SABC links with region filters and source-linked questions. No rebroadcast, live headlines or paid AI.",
     status: "Free publisher links · no account", ready: true, path: "/local-pulse", icon: "status",
   },
   {
     id: "social-support", title: "SASSA & UIF Support", category: "South African social grants and unemployment benefits",
-    description: "Free source-linked SASSA grant and UIF claim information. Guides to official applications, status, appeals and contact channels. No private account access, IDs or AI charge.",
+    description: "Official SASSA grants and UIF claims: applications, status, appeals and contacts. No private account access, IDs or paid AI.",
     status: "Free official-source guidance · no account", ready: true, path: "/social-support", icon: "status",
   },
   {
     id: "municipal-services", title: "Municipal Services · Find Your Council", category: "All nine South African provinces and local government",
-    description: "Search government-listed municipality names, choose water, rates, indigent relief, business permits or local development and download a private request checklist. No council account integration, claim of outage reporting or paid AI.",
+    description: "Find a municipality for water, rates, indigent relief, business permits or local development; download a private checklist. No council account access, outage reporting or paid AI.",
     status: "Free original-source guidance · no account", ready: true, path: "/municipalities", icon: "status",
   },
   {
@@ -174,9 +174,9 @@ export const workspaceTools = [
     icon: "study",
   },
   {
-    id: "space-science", title: "Space & Science Hub", category: "South African astronomy and satellite learning",
-    description: "Explore SANSA, SARAO, MeerKAT and SKAO original sources. Calculate radio wavelength and signal travel time, practise three concepts and download local study notes. No live telemetry or paid AI.",
-    status: "Free local learning · publisher links", ready: true, path: "/space-science", icon: "physics",
+    id: "space-science", title: "Space & Science Hub", category: "South African astronomy",
+    description: "SANSA, SARAO, MeerKAT and SKAO sources; radio wavelength, signal delay, practice and notes. No live feeds or paid AI.",
+    status: "Free local learning", ready: true, path: "/space-science", icon: "physics",
   },
 ] as const;
 

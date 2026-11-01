@@ -49,3 +49,18 @@ test('in-page learning shortcuts do not replace the hash-router location',async(
   await expect(page).toHaveURL(/#\/space-science$/);await expect(page.getByRole('heading',{name:heading,exact:true})).toBeFocused();
  }
 });
+
+
+test('frequency and source selection also work with the keyboard',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/#/space-science');
+ const unit=page.getByLabel('Unit',{exact:true});
+ await unit.focus();await expect(unit).toBeFocused();
+ await unit.press('Home');await unit.press('ArrowDown');await unit.press('Enter');
+ await expect(unit).toHaveValue('kHz');
+ await expect(page.getByText('214137 m',{exact:true})).toBeVisible();
+ const topic=page.getByLabel('Topic',{exact:true});
+ await topic.focus();await topic.press('Home');await topic.press('ArrowDown');await topic.press('Enter');
+ await expect(topic).toHaveValue('Radio astronomy');await expect(page.getByRole('article')).toHaveCount(3);
+ expect(errors).toEqual([]);
+});

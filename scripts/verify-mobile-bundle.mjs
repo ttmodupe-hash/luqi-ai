@@ -30,11 +30,47 @@ export function initialJs(manifest) {
   return [...files].sort();
 }
 
+/** Vite may fold a thin wrapper (VideoStudioPage) into an already lazy
+ * module as its import graph evolves. Validate the actual *deferred graph*
+ * rather than requiring a particular file's isDynamicEntry flag.
+ * Nothing on the HTML entry's static graph may contain these tools.
+ */
 export function verifyDeferred(manifest, files) {
-  for (const key of ['src/pages/PendulumLabPage.tsx', 'src/pages/VideoStudioPage.tsx', 'src/pages/CertMasterPage.tsx']) {
+  const roots = Object.keys(manifest).filter(key => manifest[key]?.isEntry === true);
+  const deferred = new Set(), visited = new Set();
+  function walk(key, afterLazy) {
+    const marker = key + ':' + afterLazy;
+    if (visited.has(marker)) return;
+    visited.add(marker);
     const item = manifest[key];
-    assert.ok(item?.isDynamicEntry === true, `Tool is not a dynamic entry: ${key}`);
-    assert.ok(!files.includes(item.file), `Tool is still initially loaded: ${key}`);
+    assert.ok(item && typeof item.file === 'string', 'Broken manifest import graph: ' + key);
+    if (afterLazy) deferred.add(key);
+    for (const dependency of item.imports ?? []) walk(dependency, afterLazy);
+    for (const dependency of item.dynamicImports ?? []) walk(dependency, true);
+  }
+  roots.forEach(root => walk(root, false));
+  for (const key of ['src/pages/PendulumLabPage.tsx', 'src/pages/VideoStudioPage.tsx', 'src/pages/CertMasterPage.tsx']) {
+    // Rollup may assign a synthetic manifest key to the Studio facade when
+    // the dynamically imported route reuses a shared Content Studio module.
+    // In that case resolve the single exact VideoStudioPage chunk by its
+    // build output name; never accept a generic bundle or an unknown route.
+    const matching = Object.entries(manifest).filter(([candidate, output]) => {
+      const file = output?.file ?? '';
+      const prefix = 'assets/VideoStudioPage-';
+      const digest = file.startsWith(prefix) && file.endsWith('.js')
+        ? file.slice(prefix.length, -3) : '';
+      return key === 'src/pages/VideoStudioPage.tsx' && candidate !== key &&
+        /^[A-Za-z0-9_-]+$/.test(digest);
+    });
+    const resolvedKey = manifest[key] ? key : matching.length === 1 ? matching[0][0] : key;
+    const item = manifest[resolvedKey];
+    assert.ok(item && typeof item.file === 'string',
+      'Lazy tool is missing from the build: ' + key + '; candidate entries: ' +
+      JSON.stringify(Object.keys(manifest).filter(name => /StudioPage|Studio-|studio/i.test(name)).slice(0,12)));
+    assert.ok(!files.includes(item.file), 'Tool is still initially loaded: ' + key);
+    // The synthetic chunk must be reachable only through a dynamic boundary.
+    assert.ok(item.isDynamicEntry === true || deferred.has(resolvedKey),
+      'Tool has no verified lazy entry: ' + key + ' (' + resolvedKey + ')');
   }
 }
 
