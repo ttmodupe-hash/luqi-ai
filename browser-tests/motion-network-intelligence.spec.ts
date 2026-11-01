@@ -9,12 +9,13 @@ test('Luqi Motion Studio has real editable rig and downloaded data; no paid AI c
  await panel.getByLabel('Motion character').selectOption('engineer');
  await panel.getByLabel('Motion preset').selectOption('walk');
  await panel.getByRole('button',{name:'2 s',exact:true}).click();
- await panel.getByLabel('Motion Left leg').fill('44');
- await expect(panel.getByLabel('Motion Left leg')).toHaveValue('44');
+ await panel.getByLabel('Motion Left leg').focus();
+ await panel.getByLabel('Motion Left leg').press('End');
+ await expect(panel.getByLabel('Motion Left leg')).toHaveValue('160');
  const waitJson=page.waitForEvent('download');await panel.getByRole('button',{name:'Download rig keyframes (JSON)'}).click();
  const file=await waitJson;expect(file.suggestedFilename()).toBe('luqi-motion-project.json');
  const stream=await file.createReadStream();let text='';for await(const ch of stream)text+=ch.toString();
- const result=JSON.parse(text);expect(result.frames[2].pose.leftLeg).toBe(44);expect(result.template).toBe('engineer');
+ const result=JSON.parse(text);expect(result.frames[2].pose.leftLeg).toBe(160);expect(result.template).toBe('engineer');
  const waitSvg=page.waitForEvent('download');await panel.getByRole('button',{name:'Download SVG frame'}).click();
  expect((await waitSvg).suggestedFilename()).toBe('luqi-motion-frame.svg');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
