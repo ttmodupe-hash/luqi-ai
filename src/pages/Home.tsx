@@ -186,7 +186,7 @@ export default function Home() {
                       </Link>
                     ) : (
                       <span className="luqi-preview-note">
-                        Coming soon
+                        Not available yet
                       </span>
                     )}
                   </div>
