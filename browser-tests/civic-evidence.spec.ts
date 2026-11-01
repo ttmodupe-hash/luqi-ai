@@ -9,6 +9,8 @@ const answer={format:'luqi.civic-explanation.v1',edition:'2026-11-01.1',claimId:
 async function signInToEvidence(page:Page){
  await page.route('**/api/v1/auth/login',route=>route.fulfill({json:{token:'synthetic-civic-session',user:{email:'civic-fixture@example.test',name:'Civic tester'}}}));
  await page.goto('/#/chat');
+ // Follow the existing collapsed in-chat sign-in UI, as a visitor would.
+ await page.getByText('Prefer to sign in here?',{exact:true}).click();
  const access=page.getByRole('region',{name:'Sign in to your Luqi account'});
  await access.getByLabel('Email',{exact:true}).fill('civic-fixture@example.test');
  await access.getByLabel('Password',{exact:true}).fill('synthetic-passphrase-only');
