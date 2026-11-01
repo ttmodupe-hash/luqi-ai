@@ -103,7 +103,7 @@ const QUESTION_BANK: Question[] = [
       { key: "D", text: "Progress iteratively with feedback" }
     ],
     correctKey: "B",
-    explanation: "'Start where you are' mandates that an organization assess, understand, and leverage existing services, data provenance, and process baselines before attempting wholesale transformation or deploying uncalibrated foundation models.",
+    explanation: "'Start where you are' encourages teams to assess existing services, data quality and operational baselines before deciding where AI adds value. In this Luqi scenario, that principle helps avoid replacing a working process without understanding it.",
     trapWarning: "While 'Keep it simple' sounds plausible, the specific failure to evaluate current data pipelines and baseline systems directly breaches 'Start where you are'.",
     reference: "PeopleCert ITIL AI Governance (Version 5) · Luqi original service-improvement scenario"
   },
@@ -120,7 +120,7 @@ const QUESTION_BANK: Question[] = [
     ],
     correctKey: "C",
     explanation: "EU Regulation 2024/1689 Annex III(2) lists AI systems used as safety components in the management or operation of critical infrastructure, including electricity supply. A real system's legal classification still depends on its intended purpose, applicable exceptions and regulatory scope. ISO/IEC 42001 is an AI management system standard, not a set of the EU AI Act's four risk tiers.",
-    trapWarning: "Critical infrastructure is NOT automatically 'Unacceptable/Prohibited' (which is reserved for social scoring and biometric cognitive manipulation); rather it is strictly regulated as 'High Risk'.",
+    trapWarning: "High-risk and prohibited practices are different legal categories. Check intended purpose and the Regulation's current scope before classifying a real system.",
     reference: "EUR-Lex: Regulation (EU) 2024/1689, Annex III(2) (safety components in critical infrastructure)"
   },
   {
@@ -375,8 +375,8 @@ const FLASHCARDS: Flashcard[] = [
     id: "fc-6",
     trackId: "itil_ai_v5",
     domain: "ISO 42001 & AI Risk",
-    front: "What are the 4 EU AI Act & ISO 42001 risk classification tiers?",
-    back: "1. Unacceptable: Cognitive behavioral distortion, biometric social scoring (BANNED)\n2. High-Risk: Critical infrastructure, medical diagnostics, legal, HR filtering (Strict audits & human oversight)\n3. Limited/Transparency: Chatbots, deepfakes (Must disclose AI nature)\n4. Minimal: Spam filters, AI spell check",
+    front: "How does the EU AI Act's risk-based approach differ from ISO/IEC 42001?",
+    back: "The EU AI Act prohibits defined practices, regulates specified high-risk AI systems and imposes transparency duties in some cases. ISO/IEC 42001:2023 is an AI management-system standard. It does not itself set the EU Act's legal risk categories.",
     keyRule: "Use appropriate governance, risk evaluation and oversight based on the actual system; avoid treating AI Act categories as an ISO 42001 grading system."
   }
 ];

@@ -18,7 +18,7 @@ test('Luqi Motion Studio records actual animated video, or clearly exposes suppo
    await record.click();
    await expect(exportPanel.getByRole('status',{name:'Character video status'}))
     .toContainText(/character video is ready|moving character video is ready/i,{timeout:16000});
-   const preview=exportPanel.getByRole('video',{name:'Completed character video preview'});
+   const preview=exportPanel.locator('video[aria-label="Completed character video preview"]');
    await expect(preview).toBeVisible();
    const metadata=await preview.evaluate(async element => {
      const video=element as HTMLVideoElement;
