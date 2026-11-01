@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   moon-calculation-and-privacy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -23,10 +23,10 @@ jobs:
         run: node --test tests/moon-tracker.test.mjs
       - name: Install locked UI test dependencies without lifecycle scripts
         run: npm ci --legacy-peer-deps --ignore-scripts
-      - name: Exercise optional location, live updates, isolated lazy failures and manual controls
-        run: npx --no-install vitest run tests/moon-now.test.tsx tests/moon-loading.test.tsx
-      - name: Strictly type check the Moon loading and calculation interfaces
-        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/MoonNowPanel.tsx src/components/MoonNowContent.tsx
+      - name: Exercise optional location, live updates, isolated lazy failures and retained discovery tools
+        run: npx --no-install vitest run tests/moon-now.test.tsx tests/moon-loading.test.tsx tests/home-extras.test.tsx
+      - name: Strictly type check the Moon and deferred homepage interfaces
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/MoonNowPanel.tsx src/components/MoonNowContent.tsx src/components/HomeExtras.tsx src/components/HomeDiscoveryContent.tsx
       - name: Build the actual frontend without production credentials
         run: npx --no-install vite build
       - name: Install isolated Chromium and WebKit acceptance browsers

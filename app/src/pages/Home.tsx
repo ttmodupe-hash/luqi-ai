@@ -15,10 +15,9 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import DiscoveryDeck from "../components/DiscoveryDeck";
+import HomeExtras from "../components/HomeExtras";
 import HeroAiChatConsole from "../components/HeroAiChatConsole";
 import MoonNowPanel from "../components/MoonNowPanel";
-import CreatorPackPreview from "../components/CreatorPackPreview";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
 const icons = {
@@ -86,8 +85,7 @@ export default function Home() {
           <HeroAiChatConsole />
         </section>
         <MoonNowPanel />
-        <DiscoveryDeck />
-        <CreatorPackPreview compact />
+        <HomeExtras />
         <section
           id="tools"
           className="luqi-tools-section"
