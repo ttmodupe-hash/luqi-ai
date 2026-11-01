@@ -2,7 +2,8 @@
 import React from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import MoonNowPanel from '../src/components/MoonNowPanel';
+import MoonNowPanel from '../src/components/MoonNowContent';
+// The calculation/interaction unit is unchanged; loading-boundary tests are separate.
 const getPosition = vi.fn();
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-01T20:00:00Z'));

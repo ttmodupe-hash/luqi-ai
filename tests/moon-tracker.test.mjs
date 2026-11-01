@@ -71,14 +71,21 @@ test('phase silhouette area matches computed illumination', () => {
   for(const f of [NaN,Infinity,-.1,1.1]) assert.throws(()=>illuminatedPath(f));
 });
 test('panel source contains no calls that transmit or persist location', () => {
-  const code=readFileSync(new URL('../src/components/MoonNowPanel.tsx',import.meta.url),'utf8');
+  const code=['MoonNowPanel.tsx','MoonNowContent.tsx'].map(file=>readFileSync(new URL('../src/components/'+file,import.meta.url),'utf8')).join('\n');
   assert.doesNotMatch(code,/\b(?:fetch|XMLHttpRequest|WebSocket|sendBeacon|localStorage|sessionStorage|watchPosition)\b/);
   assert.match(code,/getCurrentPosition/);assert.match(code,/enableHighAccuracy: false/);
   assert.match(code,/requestGeneration/);assert.match(code,/visibilitychange/);
 });
 test('both frontends contain the same panel and homepage integration', () => {
-  for(const file of ['pages/Home.tsx','components/MoonNowPanel.tsx','components/moon-now.css','lib/moon-tracker.mjs','lib/moon-tracker.d.mts']) {
+  for(const file of ['pages/Home.tsx','components/MoonNowPanel.tsx','components/MoonNowContent.tsx','components/moon-now.css','lib/moon-tracker.mjs','lib/moon-tracker.d.mts']) {
     assert.equal(readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),readFileSync(new URL('../app/src/'+file,import.meta.url),'utf8'));
   }
   assert.match(readFileSync(new URL('../src/pages/Home.tsx',import.meta.url),'utf8'),/<MoonNowPanel\s*\/>/);
+});
+test('homepage entry defers the calculations but renders without user activation', () => {
+  const code=readFileSync(new URL('../src/components/MoonNowPanel.tsx',import.meta.url),'utf8');
+  assert.match(code,/import\('\.\/MoonNowContent'\)/);
+  assert.doesNotMatch(code,/from\s+['"].*(?:moon-tracker|MoonNowContent)/);
+  assert.match(code,/<Panel\s*\/>/);
+  assert.match(code,/MoonErrorBoundary/);assert.match(code,/Suspense/);
 });
