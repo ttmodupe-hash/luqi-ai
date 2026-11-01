@@ -39,6 +39,11 @@ const navigation = [
   ["/start", "Start here"],
   ["/install", "Install"],
 ] as const;
+// Keep the five most useful destinations visible on wide screens; the complete
+// directory remains in an accessible native disclosure and the narrow-screen menu.
+const primaryPaths: ReadonlySet<string> = new Set(["/chat", "/", "/opportunities", "/local-pulse", "/content-studio"]);
+const primaryNavigation = navigation.filter(([path]) => primaryPaths.has(path));
+const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(path));
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [calm, setCalm] = useState(readCalmPreference);
@@ -55,11 +60,13 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const moreMenu = useRef<HTMLDetailsElement>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     setMenuOpen(false);
     setSearchOpen(false);
-  }, [location.pathname]);
+    if (moreMenu.current) moreMenu.current.open = false;
+  }, [location.pathname, location.search]);
   useEffect(() => {
     const open = () => setSearchOpen(true);
     const keys = (event: KeyboardEvent) => {
@@ -130,14 +137,33 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
           <nav aria-label="Primary navigation" className="luqi-desktop-nav">
-            {navigation.slice(0, 3).map(([path, name]) => (
+            {primaryNavigation.map(([path, name]) => (
               <NavLink key={path} to={path} end={path === "/"}>
                 {name}
               </NavLink>
             ))}
-            <details onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }} className="luqi-more-services" key={location.pathname + location.search}>
+            <details
+              ref={moreMenu}
+              className="luqi-more-services"
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && event.currentTarget.open) {
+                  event.preventDefault();
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector<HTMLElement>("summary")?.focus();
+                }
+              }}
+            >
               <summary>More services</summary>
-              <div>{navigation.slice(3).map(([path, name]) => <NavLink key={path} to={path} end={path === '/'}>{name}</NavLink>)}<NavLink to="/chat?civic=1">Civic evidence</NavLink></div>
+              <div aria-label="More Luqi services">
+                {additionalNavigation.map(([path, name]) => (
+                  <NavLink key={path} to={path} end={path === "/"} onClick={() => {
+                    if (moreMenu.current) moreMenu.current.open = false;
+                  }}>{name}</NavLink>
+                ))}
+                <NavLink to="/chat?civic=1" onClick={() => {
+                  if (moreMenu.current) moreMenu.current.open = false;
+                }}>Civic evidence</NavLink>
+              </div>
             </details>
           </nav>
           <div className="luqi-header-actions">
