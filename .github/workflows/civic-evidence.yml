@@ -1,0 +1,27 @@
+name: Luqi Civic Evidence Acceptance
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: civic-evidence-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Check source provenance, expiry, no invented citations and authenticated request controls
+        run: npx vitest run tests/civic-evidence.test.ts tests/civic-evidence-client.test.ts tests/civic-evidence-http.test.ts
+      - name: Strictly type-check civic UI and budgeted source selection
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/CivicEvidenceChat.tsx src/pages/CivicEvidenceDesk.tsx api/civic-evidence.ts

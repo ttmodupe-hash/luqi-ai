@@ -1,5 +1,6 @@
 /** The text-only paid HTTP entrypoint: authenticate, bound, validate, then reserve. */
 import { Hono } from 'hono';
+import { civicEvidence } from './civic-evidence';
 import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
@@ -62,6 +63,8 @@ aiPilot.use('*', async (c, next) => {
 aiPilot.use('*', bodyLimit({ maxSize: 32 * 1024,
   onError: c => c.json({ status: 'error', code: 'AI_INPUT_TOO_LARGE' }, 413),
 }));
+// Civic selection inherits all pilot authentication, enablement, body and budget controls.
+aiPilot.route('/civic-explain', civicEvidence);
 aiPilot.post('/', async c => {
   if (!/^application\/json(?:\s*;|$)/i.test(c.req.header('content-type') ?? '')) {
     return c.json({ status: 'error', code: 'INVALID_INPUT' }, 415);
