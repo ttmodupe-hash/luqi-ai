@@ -54,9 +54,14 @@ export function verifyDeferred(manifest, files) {
     // the dynamically imported route reuses a shared Content Studio module.
     // In that case resolve the single exact VideoStudioPage chunk by its
     // build output name; never accept a generic bundle or an unknown route.
-    const matching = Object.entries(manifest).filter(([candidate, output]) =>
-      key === 'src/pages/VideoStudioPage.tsx' && candidate !== key &&
-      /^assets\\/VideoStudioPage-[A-Za-z0-9_-]+\\.js$/.test(output?.file ?? ''));
+    const matching = Object.entries(manifest).filter(([candidate, output]) => {
+      const file = output?.file ?? '';
+      const prefix = 'assets/VideoStudioPage-';
+      const digest = file.startsWith(prefix) && file.endsWith('.js')
+        ? file.slice(prefix.length, -3) : '';
+      return key === 'src/pages/VideoStudioPage.tsx' && candidate !== key &&
+        /^[A-Za-z0-9_-]+$/.test(digest);
+    });
     const resolvedKey = manifest[key] ? key : matching.length === 1 ? matching[0][0] : key;
     const item = manifest[resolvedKey];
     assert.ok(item && typeof item.file === 'string',
