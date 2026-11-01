@@ -62,3 +62,9 @@
 .luqi-studio-audio-preview label { margin-top:8px; }
 .luqi-studio-audio .luqi-studio-audio-footnote { color:#abbfb1; font-size:12px; }
 @media(max-width:750px) { .luqi-studio-audio { padding:20px 16px; } .luqi-studio-audio-grid { grid-template-columns:minmax(0,1fr); gap:12px; } .luqi-studio-audio-grid > div { padding:12px; } .luqi-studio-audio-actions button { width:100%; } }
+
+/* Local motion rig loads on demand; existing video/audio flow remains unchanged. */
+.luqi-studio-motion-entry{margin:24px 0;padding:20px;border:1px solid #597d66;border-radius:18px;background:#152b22;min-width:0}
+.luqi-studio-motion-entry h2{color:#f0ffef;font-size:23px}
+.luqi-studio-motion-entry p{font-size:14px;color:#d5ebd9;line-height:1.6}
+.luqi-studio-motion-entry>button{background:#c9edb1;color:#18291c;border:1px solid #c9edb1;border-radius:8px;min-height:44px;padding:10px 14px;font-weight:700}
