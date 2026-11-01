@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import DiscoveryDeck from "../components/DiscoveryDeck";
 import HeroAiChatConsole from "../components/HeroAiChatConsole";
+import MoonNowPanel from "../components/MoonNowPanel";
 import CreatorPackPreview from "../components/CreatorPackPreview";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
@@ -84,6 +85,7 @@ export default function Home() {
           </div>
           <HeroAiChatConsole />
         </section>
+        <MoonNowPanel />
         <DiscoveryDeck />
         <CreatorPackPreview compact />
         <section

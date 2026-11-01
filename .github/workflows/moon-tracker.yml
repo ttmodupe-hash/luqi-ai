@@ -1,0 +1,27 @@
+name: LUQI Moon Tracker
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: moon-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  moon-calculation-and-privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Check lunar references, inputs, privacy and mirrored homepage
+        run: node --test tests/moon-tracker.test.mjs
+      - name: Install locked UI test dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --ignore-scripts
+      - name: Exercise optional location, live updates and manual controls
+        run: npx --no-install vitest run tests/moon-now.test.tsx
