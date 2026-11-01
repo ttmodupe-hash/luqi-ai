@@ -7,7 +7,7 @@ test('local course examples never send an arbitrary question or disguise it as a
   await page.route('**/v1/**', route => route.fulfill({ status: 503, json: { code: 'SYNTHETIC_UNAVAILABLE' } }));
   await page.goto('/#/cert-academy');
   await page.getByRole('button', { name: 'AI Exam Coach', exact: true }).click();
-  await page.getByText('Illustrative video lessons (not live generated footage)', { exact: true }).click();
+  await page.getByText('Explore animated lesson examples', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Browser narration: off', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Explain BGP Path Selection Mnemonic/ }).click();
   const headline = page.getByRole('heading', { name: /BGP Path Selection:/ });
