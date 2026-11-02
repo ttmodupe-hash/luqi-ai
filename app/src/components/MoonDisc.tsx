@@ -9,7 +9,7 @@ type View = 'phase' | 'surface';
  * only the phase mask is calculated on the device.
  */
 export const LRO_MOON_IMAGE =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Moon_nearside_LRO_color_mosaic.png/512px-Moon_nearside_LRO_color_mosaic.png';
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Moon_nearside_LRO_color_mosaic.png/500px-Moon_nearside_LRO_color_mosaic.png';
 export const LRO_MOON_SOURCE = 'https://www.usgs.gov/media/images/moon-lroc-wac-nearside-mosaic';
 
 type Crater = { x: number; y: number; r: number; brightness: number };
