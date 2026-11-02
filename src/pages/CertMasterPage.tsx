@@ -697,7 +697,7 @@ export default function CertMasterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-auto bg-slate-950 text-slate-100 pb-16">
       {/* Top Navbar */}
       <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
