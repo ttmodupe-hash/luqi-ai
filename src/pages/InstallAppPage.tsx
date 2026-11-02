@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Link } from "react-router";
 import { ArrowUpRight, CheckCircle2, Download, Share2, Smartphone } from "lucide-react";
+import { InstallBrowserCheck } from "../components/InstallBrowserCheck";
 import {
   installPromptAvailable, installationObserved, isLuqiStandalone,
   requestLuqiInstall, subscribeLuqiInstall,
@@ -64,6 +65,8 @@ export default function InstallAppPage() {
         </div>
       </div>
 
+      <InstallBrowserCheck />
+
       <div className="luqi-install-steps">
         <section aria-labelledby="install-android-title">
           <span className="luqi-install-step-icon"><Smartphone size={21} aria-hidden="true" /></span>
@@ -115,7 +118,7 @@ export default function InstallAppPage() {
       <section className="luqi-install-clarity" aria-labelledby="install-clarity-title">
         <h2 id="install-clarity-title">What gets installed?</h2>
         <p>This is the official Luqi website added as a <strong>progressive web app (PWA)</strong> or browser shortcut, depending on your device. It is not an App Store iOS download. Adding it does not require sideloading, payment or a browser extension.</p>
-        <p>Luqi's limited, consent-based AI text chat needs internet access and a Luqi account. Sessions and unsaved chats are held in this tab/app; installing or reopening the app may require signing in again. Offline access is limited to previously cached public pages and assets, not AI replies or private account data.</p>
+        <p>AI replies need internet access. Guest AI and signed-in AI have separate availability and allowance checks; installing Luqi does not itself require an account. Sessions and unsaved chats are held in this tab/app; installing or reopening the app may require signing in again. Offline access is limited to previously cached public pages and assets, not AI replies or private account data.</p>
         <p>Use the official address <strong>app.luqi-ai.com</strong>. Check it before signing in and avoid unofficial APKs and copies of the app.</p>
         <Link to="/privacy">Review privacy information</Link>
       </section>
