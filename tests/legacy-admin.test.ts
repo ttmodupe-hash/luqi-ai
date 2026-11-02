@@ -6,7 +6,8 @@ describe('legacy browser admin fail-closed boundary', () => {
   it('contains no shadow handler capable of returning the administrative passkey', () => {
     const source = readFileSync(new URL('../api/boot.ts', import.meta.url), 'utf8');
     expect(source).toContain('app.route("/", legacyAdminUnavailable)');
-    expect(source).not.toMatch(/app\\.post\\(['"]\\/api\\/v1\\/admin\\/verify['"]/);
+    expect(source).not.toContain("app.post('/api/v1/admin/verify'");
+    expect(source).not.toContain('app.post("/api/v1/admin/verify"');
     expect(source).not.toContain('token: passkey');
   });
   it.each(['GET', 'POST', 'PUT', 'DELETE'])('never grants a session through %s', async method => {
