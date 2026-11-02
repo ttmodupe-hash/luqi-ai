@@ -18,7 +18,7 @@ export default function LuqiDrivePage(){
   const [quizVisible,setQuizVisible]=useState(false);
   const [answer,setAnswer]=useState<number|null>(null);
   const [cached,setCached]=useState(false);
-  const [deepOpen,setDeepOpen]=useState(false);
+  const [deepOpen,setDeepOpen]=useState(false);\n  const [parkedConfirmed,setParkedConfirmed]=useState(false);
   const [message,setMessage]=useState("Location is off. Route packs and source links work without it.");
   const watchRef=useRef<number|null>(null);
   const wakeRef=useRef<WakeSentinel|null>(null);
@@ -27,12 +27,12 @@ export default function LuqiDrivePage(){
   const pack=useMemo(()=>LUQI_DRIVE_ROUTE_PACKS.find(item=>item.id===routeId)??LUQI_DRIVE_ROUTE_PACKS[0]!,[routeId]);
   const mode=driveStoryMode(speedKmh);
   const story=driveStory(pack,speedKmh);
-  const deepAllowed=speedKmh===null||speedKmh<30;
+  const deepAllowed=(typeof speedKmh==="number"&&speedKmh<30)||parkedConfirmed||passengerMode;
 
   useEffect(()=>{
     let active=true;
     void hasCachedDriveRoutePack(pack.id).then(value=>{if(active)setCached(value);}).catch(()=>{if(active)setCached(false);});
-    setQuizVisible(false);setAnswer(null);setDeepOpen(false);
+    setQuizVisible(false);setAnswer(null);setDeepOpen(false);setParkedConfirmed(false);
     return()=>{active=false;};
   },[pack.id]);
 
@@ -133,7 +133,7 @@ export default function LuqiDrivePage(){
           <div className="rounded-lg bg-slate-950 p-3"><dt className="text-slate-400">Speed context</dt><dd className="font-semibold">{speedKmh===null?"Not available":speedKmh+" km/h"}</dd></div>
           <div className="rounded-lg bg-slate-950 p-3"><dt className="text-slate-400">Privacy cell</dt><dd className="font-mono">{cell||"Not calculated"}</dd></div>
         </dl>
-        <label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={passengerMode} onChange={e=>{setPassengerMode(e.target.checked);setQuizVisible(false);setAnswer(null);}}/><span><strong>Passenger & family quiz mode</strong><br/><span className="text-xs text-slate-300">After a passenger-triggered briefing, show one quiz after two minutes. The question does not auto-play.</span></span></label>
+        <div className="space-y-2"><label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={passengerMode} onChange={e=>{setPassengerMode(e.target.checked);setQuizVisible(false);setAnswer(null);}}/><span><strong>Passenger & family quiz mode</strong><br/><span className="text-xs text-slate-300">A passenger may use deeper content while moving. After a passenger-triggered briefing, one silent quiz appears after two minutes.</span></span></label><label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={parkedConfirmed} onChange={e=>{setParkedConfirmed(e.target.checked);if(!e.target.checked&&speedKmh===null)setDeepOpen(false);}}/><span><strong>I am safely parked</strong><br/><span className="text-xs text-slate-300">Use this only when the vehicle is stationary. Luqi cannot independently verify parking when device speed is unavailable.</span></span></label></div>
       </div>
     </section>
 
@@ -148,7 +148,7 @@ export default function LuqiDrivePage(){
         <button type="button" onClick={()=>speak(story,true)} className="min-h-11 rounded-lg border border-slate-500 px-4 py-3 text-slate-100">Replay</button>
         <button type="button" disabled={!deepAllowed} onClick={()=>setDeepOpen(v=>!v)} className="min-h-11 rounded-lg border border-cyan-500 px-4 py-3 text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40">{deepOpen?"Close deep dive":"Open 3-minute-style deep dive"}</button>
       </div>
-      {!deepAllowed&&<p className="text-xs text-amber-100">Deep-dive controls stay disabled above 30 km/h. Use them when stopped or moving slowly with a passenger.</p>}
+      {!deepAllowed&&<p className="text-xs text-amber-100">Deep-dive controls stay disabled unless speed is confirmed below 30 km/h, a passenger is operating the device, or you explicitly confirm the vehicle is safely parked.</p>}
       {deepOpen&&deepAllowed&&<div className="rounded-xl border border-cyan-800 bg-slate-950 p-4"><p>{pack.deep}</p></div>}
     </section>
 
