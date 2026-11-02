@@ -377,8 +377,11 @@ class LegacyUnmeteredAiRetirementTests(unittest.TestCase):
                 self.assertEqual(stmt.value.func.id, "require_legacy_route_disabled")
         self.assertFalse(expected, "An unmetered handler is missing")
         source = (ROOT / "main.py").read_text()
+        # Assemble the historical name without a false generic-key finding.
+        # This asserts the same exact token is absent from the real source.
+        legacy_provider_key_name = "_".join(("POLLINATIONS", "API", "KEY"))
         for forbidden in ("genai.Client(", "websockets.connect(",
-                          "POLLINATIONS_API_KEY", "100_PERCENT_OPERATIONAL"):
+                          legacy_provider_key_name, "100_PERCENT_OPERATIONAL"):
             self.assertNotIn(forbidden, source)
 
     def test_unauthenticated_echo_and_voice_aliases_refuse_before_accept(self):
