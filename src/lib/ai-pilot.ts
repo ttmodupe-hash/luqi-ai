@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { recordLocalJourney } from './local-diagnostics';
 import { buildPilotInput, PilotInputError } from './pilot-input';
 import type { PilotConversationTurn } from './pilot-conversation';
 import { requestPilotJson, pilotFailureCode } from './pilot-request';
@@ -25,6 +26,7 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
   try {
     // Same normalization and complete input limit as the server and UI counter.
     buildPilotInput(question, language, history);
+    recordLocalJourney('signed_send');
     const response = await requestPilotJson(request, '/api/v1/luqi-core', {
       method: 'POST', signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -35,7 +37,9 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
     });
     if (response.status === 401) throw new PilotChatError('AUTH_REQUIRED');
     if (!response.ok) throw new PilotChatError(pilotFailureCode(response.status, response.body));
-    return reply.parse(response.body);
+    const parsed = reply.parse(response.body);
+    recordLocalJourney('signed_reply');
+    return parsed;
   } catch (error) {
     if (error instanceof PilotInputError) throw new PilotChatError(error.code);
     if (error instanceof PilotChatError) throw error;

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router';
 import { ArrowRight, Compass, Globe2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import AiPilotPage from './AiPilotPage';
@@ -8,6 +8,7 @@ import { GUIDE_EXAMPLES, GUIDE_NEXT_STEPS, guideLuqiNeed, MAX_GUIDE_NEED_CHARS }
 import { buildTravelEnquiry, MAX_TRAVEL_DESTINATION, MAX_TRAVEL_DETAIL } from '../lib/travel-enquiry';
 import SovereignRegionBar from '../components/SovereignRegionBar';
 import { getKhoroCriticalThinkingSteps } from '../services/panAfricanSovereignEngine';
+import { recordLocalJourney } from '../lib/local-diagnostics';
 import '../luqi-guide.css';
 
 const emptyTrip = () => ({ destination: '', dates: '', travellers: '2', budget: '', preferences: '' });
@@ -47,6 +48,13 @@ export default function AskLuqiPage() {
   }, [session?.token]);
 
   const result = guideLuqiNeed(submitted);
+  const lastObservedGuide = useRef('');
+  useEffect(() => {
+    if (submitted && submitted !== lastObservedGuide.current && guideLuqiNeed(submitted)) {
+      lastObservedGuide.current = submitted;
+      recordLocalJourney('guide_ready');
+    }
+  }, [submitted]);
   const urgentNeed = guideLuqiNeed(need)?.kind === 'urgent';
   function clearTravel() { setTrip(emptyTrip()); setTravelDraft(''); setCopyStatus(''); }
   function guide(event: FormEvent<HTMLFormElement>) {

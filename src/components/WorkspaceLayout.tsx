@@ -9,6 +9,8 @@ import "../experience.css";
 import { useContactPresence } from "./useContactPresence";
 import CollaborationDock from './CollaborationDock';
 import { isGuidePath } from '../lib/interaction-handoff';
+import { getLocalDiagnostics, recordLocalRoute, recordLocalActivation,
+  subscribeLocalDiagnostics } from '../lib/local-diagnostics';
 // Guide-only UI is fetched only on a guide route, never during homepage startup.
 const GuideHandoffNotice = lazy(() => import('./GuideHandoffNotice'));
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
@@ -47,6 +49,21 @@ const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(pat
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [calm, setCalm] = useState(readCalmPreference);
+  const [slowDiagnostics, setSlowDiagnostics] = useState(() => getLocalDiagnostics().conserveMotion);
+  useEffect(() => subscribeLocalDiagnostics(() => {
+    const slow = getLocalDiagnostics().conserveMotion;
+    setSlowDiagnostics(previous => previous === slow ? previous : slow);
+  }), []);
+  useEffect(() => { recordLocalRoute(location.pathname); }, [location.pathname]);
+  useEffect(() => {
+    const countControl = (event: MouseEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('button,a,[role="button"]'))
+        recordLocalActivation();
+    };
+    document.addEventListener('click', countControl, { capture: true, passive: true });
+    return () => document.removeEventListener('click', countControl, { capture: true });
+  }, []);
   const changeCalm = (value: boolean) => {
     setCalm(value);
     try { localStorage.setItem("luqi:calm-mode", String(value)); } catch { /* Preference works without storage. */ }
@@ -91,7 +108,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   }, [searchOpen]);
   const results = findWorkspaceTools(query);
   return (
-    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm ? "calm" : "auto"}>
+    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm || slowDiagnostics ? "calm" : "auto"}>
       <Toaster />
       <a
         className="luqi-skip"

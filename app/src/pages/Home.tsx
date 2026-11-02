@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import HomeExtras from "../components/HomeExtras";
+import { mayWarmOptionalRoute, recordLocalJourney } from "../lib/local-diagnostics";
 
 import MoonNowPanel from "../components/MoonNowPanel";
 import { findWorkspaceTools } from "../components/workspace-catalog";
@@ -39,7 +40,10 @@ export default function Home() {
   function openLocalGuide(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = homeNeed.trim().slice(0, 500);
-    if (value) navigate("/ask", { state: { luqiHomeNeed: value } });
+    if (value) {
+      recordLocalJourney('home_goal');
+      navigate("/ask", { state: { luqiHomeNeed: value } });
+    }
   }
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "preview">("all");
@@ -58,6 +62,11 @@ export default function Home() {
               <Search size={19} aria-hidden="true" />
               <input id="luqi-home-need" type="text" value={homeNeed} maxLength={500}
                 onChange={event => setHomeNeed(event.target.value)}
+                onFocus={() => {
+                  // Optional only after consent, on non-metered connections.
+                  // Preloading code never sends the user's question to a provider.
+                  if (mayWarmOptionalRoute()) void import("./AskLuqiPage").catch(() => {});
+                }}
                 autoComplete="off" spellCheck autoCorrect="on" autoCapitalize="sentences"
                 placeholder="Ask Luqi anything…" />
               <button type="submit" aria-label="Find my next step with Luqi" disabled={!homeNeed.trim()}>
