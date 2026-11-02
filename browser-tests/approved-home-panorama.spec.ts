@@ -70,3 +70,33 @@ test('narrow 320px phone remains usable without hidden links or horizontal scrol
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await page.screenshot({path:testInfo.outputPath('approved-home-320.png'),fullPage:true,scale:'css'});
 });
+
+
+test('desktop panorama aligns useful content without blank grid cells and keeps actual CTAs readable',async({page})=>{
+  await page.setViewportSize({width:1280,height:900});
+  await page.goto('/#/');
+  const alignment=await page.evaluate(()=>{
+    const area=document.querySelector('.luqi-panorama-top .luqi-hero')!.getBoundingClientRect();
+    const copy=document.querySelector('.luqi-panorama-top .luqi-hero-copy')!.getBoundingClientRect();
+    const card=document.querySelector('.luqi-panorama-top .luqi-chat-card')!.getBoundingClientRect();
+    return {left:copy.left-area.left,topDifference:Math.abs(copy.top-card.top),cardWidth:card.width};
+  });
+  expect(alignment.left).toBeLessThan(80);
+  expect(alignment.topDifference).toBeLessThanOrEqual(2);
+  expect(alignment.cardWidth).toBeGreaterThan(200);
+  const contrast=await page.locator('.luqi-pano-entry-actions .luqi-secondary').evaluateAll(nodes=>{
+    const brightness=(value:string)=>{
+      const numbers=(value.match(/[\d.]+/g)||[]).slice(0,3).map(Number).map(v=>{
+        const c=v/255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4);
+      });
+      return .2126*numbers[0]+.7152*numbers[1]+.0722*numbers[2];
+    };
+    return nodes.map(node=>{
+      const style=getComputedStyle(node),fg=brightness(style.color),bg=brightness(style.backgroundColor);
+      return (Math.max(fg,bg)+.05)/(Math.min(fg,bg)+.05);
+    });
+  });
+  expect(contrast.length).toBeGreaterThanOrEqual(2);
+  for(const ratio of contrast)expect(ratio).toBeGreaterThanOrEqual(4.5);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});

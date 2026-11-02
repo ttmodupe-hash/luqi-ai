@@ -109,7 +109,7 @@
   .luqi-home-screenshot .luqi-hero{min-height:320px}
   .luqi-pano-moon .luqi-moon{min-height:0}
   .luqi-history-cards{grid-template-columns:1fr 1fr}
-  .luqi-history-cards article:last-child{grid-column:1/-1}
+  .luqi-history-cards .luqi-history-card:last-child{grid-column:1/-1}
   .luqi-home-screenshot .luqi-history-showcase{padding:16px}
 }
 @media(max-width:750px){
@@ -123,7 +123,7 @@
   .luqi-history-intro{min-height:235px}
   .luqi-history-intro>h2{font-size:26px}
   .luqi-history-cards{grid-template-columns:1fr}
-  .luqi-history-cards article:last-child{grid-column:auto}
+  .luqi-history-cards .luqi-history-card:last-child{grid-column:auto}
   .luqi-pano-toolstrip{grid-template-columns:1fr}
   .luqi-pano-more{grid-column:1}
   .luqi-pano-tools a{min-width:76px}
@@ -193,4 +193,27 @@
 @media(max-width:1440px){
   .luqi-shell-home .luqi-desktop-nav{display:none}
   .luqi-shell-home .luqi-menu-button{display:flex}
+}
+
+
+/* Screenshot inspection caught an empty decorative div occupying grid cell 1
+   on wide home layouts. Artwork belongs in the background, never in tab order
+   or as a real content grid item. The hero copy and real trial card align. */
+.luqi-home-screenshot .luqi-hero-art{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+}
+.luqi-home-screenshot .luqi-pano-entry-actions .luqi-secondary{
+  color:#f7f9ef;
+  background:#123e31;
+  border-color:#b5cfbe;
+}
+.luqi-home-screenshot .luqi-pano-entry-actions .luqi-secondary:hover{
+  background:#235943;
+}
+.luqi-home-screenshot .luqi-pano-entry-actions .luqi-secondary:focus-visible{
+  outline:3px solid #f8dfa4;
+  outline-offset:3px;
 }
