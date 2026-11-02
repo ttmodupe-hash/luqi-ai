@@ -31,7 +31,7 @@
 .luqi-home .luqi-hero-moon .luqi-moon{margin:0;border:1px solid #577a6b;border-radius:20px;background:linear-gradient(135deg,#0a1b2b,#0b2731 70%,#16372d);color:#fffbef;padding:clamp(15px,1.8vw,24px);box-shadow:0 15px 35px #0005}
 .luqi-home .luqi-hero-moon .luqi-moon-heading{border-bottom:1px solid #ffffff2f;padding-bottom:10px}
 .luqi-home .luqi-hero-moon .luqi-moon h2{font:700 24px/1.15 Georgia,serif}
-.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,135px) minmax(0,1fr);gap:12px}
+.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:14px}
 .luqi-home .luqi-hero-moon .luqi-moon-facts{grid-template-columns:minmax(0,1fr);gap:7px}
 .luqi-home .luqi-hero-moon .luqi-moon-facts>div{display:flex;justify-content:space-between;gap:10px;align-items:baseline;border-bottom:1px solid #ffffff1d;padding-bottom:3px}
 .luqi-home .luqi-hero-moon .luqi-moon-facts dd{text-align:right}
@@ -72,7 +72,7 @@
 .luqi-home-lower{border:1px solid #d8d8c9;border-radius:20px;background:#f5f5ed;color:#19382b;padding:clamp(16px,2.6vw,30px);margin-top:20px}
 .luqi-home :is(.luqi-cinematic-hero,.luqi-history-showcase,.luqi-quick-tools) :focus-visible{outline:3px solid #dbb45d;outline-offset:3px}
 @media(max-width:1050px){.luqi-home .luqi-cinematic-hero{grid-template-columns:minmax(0,1fr) minmax(290px,.8fr);gap:16px;padding:24px}.luqi-history-banner{grid-template-columns:1fr}.luqi-history-figures{max-width:640px}}
-@media(max-width:750px){.luqi-home-inner{padding:12px 10px 30px}.luqi-home .luqi-cinematic-hero{grid-template-columns:minmax(0,1fr);padding:21px 17px;gap:22px;background-position:62% center}.luqi-home .luqi-cinematic-hero h1{font-size:clamp(37px,8.5vw,55px)}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,130px) minmax(0,1fr)}.luqi-history-tiles{grid-template-columns:1fr}.luqi-history-banner{padding:17px}.luqi-history-figures{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}.luqi-home .luqi-guest-guide .luqi-chat-card{display:block}.luqi-home .luqi-guest-guide .luqi-region-bar{margin:16px 0}}
+@media(max-width:750px){.luqi-home-inner{padding:12px 10px 30px}.luqi-home .luqi-cinematic-hero{grid-template-columns:minmax(0,1fr);padding:21px 17px;gap:22px;background-position:62% center}.luqi-home .luqi-cinematic-hero h1{font-size:clamp(37px,8.5vw,55px)}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,156px) minmax(0,1fr)}.luqi-history-tiles{grid-template-columns:1fr}.luqi-history-banner{padding:17px}.luqi-history-figures{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}.luqi-home .luqi-guest-guide .luqi-chat-card{display:block}.luqi-home .luqi-guest-guide .luqi-region-bar{margin:16px 0}}
 @media(max-width:375px){.luqi-home .luqi-cinematic-hero h1{font-size:36px}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:1fr}.luqi-history-intro h2{font-size:26px}}
 @media(prefers-reduced-motion:reduce){.luqi-home .luqi-quick-tools *{animation:none;transition:none}}
 
@@ -82,3 +82,7 @@
 .luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-footnote {color:#edf4e9}
 .luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-onboarding a,
 .luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-app a {color:#f6e8af;text-decoration:underline}
+
+/* The Moon is a real lunar surface visualization, not a flat phase icon. */
+.luqi-home .luqi-hero-moon .luqi-moon-visual{width:min(100%,220px)}
+@media(max-width:480px){.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:1fr}.luqi-home .luqi-hero-moon .luqi-moon-visual{width:min(100%,230px)}}
