@@ -13,6 +13,7 @@ audit evidence. Replace it with an authorized, owner-scoped database workflow
 before exposing this service to users or relying on it after a restart.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
@@ -194,7 +195,9 @@ class SelfHealingPipelineManager:
             },
         ]
         self.jobs[job.job_id] = job
-        return job
+        # A caller must never receive the registered mutable state; modifying
+        # a returned job must not forge deployment or test evidence in listings.
+        return deepcopy(job)
 
     def authorize_deployment(
         self, job_id: str, reviewer: str = "unverified"

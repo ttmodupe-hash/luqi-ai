@@ -146,6 +146,20 @@ class FailClosedHealingTests(unittest.TestCase):
             self.manager.trigger_self_healing("x" * 4001)
         self.assertEqual(self.manager.list_jobs(), [])
 
+    def test_returned_intake_job_cannot_forge_registered_state(self):
+        returned = self.manager.trigger_self_healing("Synthetic outage")
+        returned.status = "DEPLOYED_TO_PROD"
+        returned.reviewer = "Self-appointed approver"
+        returned.deployed = True
+        returned.ci_verified = True
+        returned.execution_trace[0]["status"] = "PASSED"
+        registered = self.manager.list_jobs()[0]
+        self.assertEqual(registered["status"], "AWAITING_EXTERNAL_REVIEW")
+        self.assertIsNone(registered["reviewer"])
+        self.assertFalse(registered["deployed"])
+        self.assertFalse(registered["ci_verified"])
+        self.assertEqual(registered["execution_trace"][0]["status"], "RECORDED")
+
     def test_returned_job_listing_does_not_allow_trace_mutation(self):
         self.manager.trigger_self_healing("Unverified possible outage")
         result = self.manager.list_jobs()
