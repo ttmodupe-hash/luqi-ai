@@ -75,3 +75,10 @@
 @media(max-width:750px){.luqi-home-inner{padding:12px 10px 30px}.luqi-home .luqi-cinematic-hero{grid-template-columns:minmax(0,1fr);padding:21px 17px;gap:22px;background-position:62% center}.luqi-home .luqi-cinematic-hero h1{font-size:clamp(37px,8.5vw,55px)}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,130px) minmax(0,1fr)}.luqi-history-tiles{grid-template-columns:1fr}.luqi-history-banner{padding:17px}.luqi-history-figures{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}.luqi-home .luqi-guest-guide .luqi-chat-card{display:block}.luqi-home .luqi-guest-guide .luqi-region-bar{margin:16px 0}}
 @media(max-width:375px){.luqi-home .luqi-cinematic-hero h1{font-size:36px}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:1fr}.luqi-history-intro h2{font-size:26px}}
 @media(prefers-reduced-motion:reduce){.luqi-home .luqi-quick-tools *{animation:none;transition:none}}
+
+/* More specific than the older light-home readability styles. */
+.luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-onboarding,
+.luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-app,
+.luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-footnote {color:#edf4e9}
+.luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-onboarding a,
+.luqi-home .luqi-cinematic-hero .luqi-hero-help .luqi-hero-app a {color:#f6e8af;text-decoration:underline}
