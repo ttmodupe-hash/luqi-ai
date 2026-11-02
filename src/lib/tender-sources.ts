@@ -38,6 +38,7 @@ export interface TenderNotice{
  briefingDate:string|null;briefingMandatory:boolean;
  category:string;details:string;specialCondition:string|null;
  sourceReviewedOn:string; statusNote:string;
+ originalSpecificationUrl?:string; addendumAudioUrl?:string; originalDocumentCheckedOn?:string;
 }
 export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
  {id:'dsbd-msme-market-access',title:'Study on enhancing MSME access to regional and continental markets',
@@ -67,9 +68,11 @@ export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
   deadlineDate:'2026-11-06',deadlineTimeSast:'11:00',
   officialUrl:'https://www.gcis.gov.za/content/latest-tenders',
   method:'confirm-original',briefingDate:'2026-10-30',briefingMandatory:false,category:'Language / accessibility services',
-  details:'Official GCIS RFQ for South African Sign Language interpretation and voice-over, with downloadable specifications and an addendum.',
-  specialCondition:'Noncompulsory briefing listed for 30 October 2026. Download the specification to verify exact submission method and attachments.',
-  sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Official GCIS listing with dated RFQ; not an eligibility or acceptance guarantee.'},
+  originalSpecificationUrl:'https://www.gcis.gov.za/sites/default/files/docs/gcis/pdf/RFQ%20012%202026%202027%20-%20Specification%20for%20the%20appointment%20of%20a%20service%20provider%20to%20render%20600%20hours%20of%20SASL%20interpreting%20and%20voice-over%20services%20to%20the%20GCIS.pdf',
+  addendumAudioUrl:'https://www.gcis.gov.za/sites/default/files/docs/gcis/pdf/Addendum%20Audio%20for%20RFQ%20South%20African%20Sign%20Language%20VO.mp3',originalDocumentCheckedOn:'2026-11-02',
+  details:'GCIS original PDF §§3.2.1 and 8: at least four SASL interpreters with SAQA-accredited NQF level 6 Language Practice qualifications, three signed client references, and two 10-minute videos. First: four interpreters interpreting the addendum script/audio. Second: previous simultaneous work by at least two interpreters with voice-over. Both videos must accompany the bid on a readable USB.',
+  specialCondition:'Original §8: sealed envelope marked RFQ 012-2026/2027. Hand-deliver to GCIS tender box, Tshedimosetso House, 1035 corner Francis Baard and Festival Streets, Hatfield, Pretoria, OR post to Head: SCM, GCIS, Private Bag X745, Pretoria 0002. No emailed bids. Bid and videos must ARRIVE by 6 November 2026, 11:00 SAST; late bids excluded. Noncompulsory briefing was 30 October. Check later changes with GCIS.',
+  sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Original PDF §§3.2.1 and 8 checked 2 November 2026. Audio addendum contents NOT inspected; later amendments, bid acceptance and applicant eligibility NOT verified.'},
  {id:'tshwane-gpm04',title:'Electrical maintenance, repairs and compliance certificates for city facilities',
   issuer:'City of Tshwane',province:'GP',reference:'GPM 04-2026/27',publishedOn:null,
   deadlineDate:'2026-11-06',deadlineTimeSast:'10:00',
@@ -126,7 +129,7 @@ export function filterTenders(opts:{
  return CURATED_TENDER_NOTICES.filter(n=>
  (!opts.province||!n.province||n.province===opts.province)
  &&(opts.includeHistory||tenderStatus(n,opts.now)==='source-review-needed')
- &&(!q||[n.title,n.issuer,n.reference||'',n.category,n.details].join(' ').toLowerCase().includes(q))
+ &&(!q||[n.title,n.issuer,n.reference||'',n.category,n.details,n.specialCondition||''].join(' ').toLowerCase().includes(q))
  ).sort((a,b)=>a.deadlineDate.localeCompare(b.deadlineDate)||a.deadlineTimeSast.localeCompare(b.deadlineTimeSast));
 }
 export function tenderReviewFresh(notice:TenderNotice,at:Date):boolean{
