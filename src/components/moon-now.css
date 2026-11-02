@@ -6,9 +6,14 @@
 .luqi-moon p { color: inherit; line-height: 1.6; font-size: .92rem; }
 .luqi-moon-eyebrow { margin: 0 0 .4rem; font-size: .72rem !important; letter-spacing: .08em; }
 .luqi-moon-badge { border: 1px solid #aebfb6; border-radius: 1rem; padding: .35rem .7rem; font-size: .78rem; }
-.luqi-moon-overview { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr); gap: 1.5rem; align-items: center; margin-top: 1.25rem; }
+.luqi-moon-overview { display: grid; grid-template-columns: minmax(0, 235px) minmax(0, 1fr); gap: clamp(1rem, 2.5vw, 2rem); align-items: center; margin-top: 1.25rem; }
 .luqi-moon figure { margin: 0; text-align: center; }
-.luqi-moon svg { display: block; width: 100%; max-width: 180px; height: auto; margin: auto; }
+.luqi-moon svg { display: block; width: 100%; max-width: 245px; height: auto; margin: auto; }
+.luqi-moon-visual { width: min(100%, 245px); margin-inline: auto; border-radius: 50%; background: radial-gradient(circle at 46% 43%, #233344 0%, #0c1621 64%, #071017 100%); box-shadow: 0 0 0 1px #9faca52a, 0 12px 35px #0007, 0 0 30px #b4caec14; }
+.luqi-moon-globe { overflow: visible; filter: drop-shadow(0 0 6px #c1d0d31c); }
+.luqi-moon-nasa-image { image-rendering: auto; }
+.luqi-moon figcaption { max-width: 300px; margin-inline: auto; }
+.luqi-moon .luqi-moon-actions button[aria-pressed="true"] { background: #f1e1b6; color: #12271f; border-color: #e6d29a; font-weight: 700; }
 .luqi-moon-dark { fill: #244e42; }
 .luqi-moon-lit { fill: #fff3cc; }
 .luqi-moon-rim { stroke: #b4c8bf; stroke-width: .5; }
@@ -27,4 +32,84 @@
 .luqi-moon-form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
 .luqi-moon-form label { flex: 1 1 140px; min-width: 0; font-size: .9rem; }
 .luqi-moon input { display: block; margin-top: .4rem; width: 100%; min-height: 44px; min-width: 0; background: #fffaf0; color: #133e32; border: 1px solid #c8d6cc; border-radius: .5rem; padding: .6rem; font: inherit; }
-@media (max-width: 520px) { .luqi-moon-overview { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .luqi-moon svg { max-width: 140px; } }
+@media (max-width: 520px) { .luqi-moon-overview { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .luqi-moon svg { max-width: 225px; } }
+
+
+/* Cinematic Moon presentation. Real local phase values are rendered as text/clip
+   by MoonNowContent; these effects are visual only, not a live camera claim. */
+.luqi-moon {
+  position:relative;
+  isolation:isolate;
+  background:
+    radial-gradient(2px 2px at 14% 18%, #d8e8ffb9 48%, transparent 80%),
+    radial-gradient(1px 1px at 72% 12%, #e1f3ffb0 48%, transparent 80%),
+    radial-gradient(1px 1px at 85% 66%, #cad9ff9a 48%, transparent 80%),
+    radial-gradient(1.5px 1.5px at 31% 74%, #c4efedac 48%, transparent 80%),
+    radial-gradient(ellipse at 21% 35%, #274b666e, transparent 54%),
+    linear-gradient(155deg, #040f20 0%, #0b2234 57%, #061c26 100%);
+  border-color:#63839f80;
+  box-shadow: 0 16px 36px #020d18a3, inset 0 0 0 1px #c2daef14;
+}
+.luqi-moon-heading {
+  border-bottom:1px solid #adcede35;
+  padding-bottom:.9rem;
+}
+.luqi-moon-eyebrow { color:#b1d6cb !important; font-weight:750; letter-spacing:.17em; }
+.luqi-moon h2 { font-family:Georgia,serif; font-size:clamp(1.7rem,3vw,2.35rem); letter-spacing:-.03em; text-shadow:0 2px 17px #cee7ff38; }
+.luqi-moon h3 { font-family:Georgia,serif; font-size:clamp(1.22rem,2vw,1.65rem); line-height:1.28; }
+.luqi-moon-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  border:1px solid #82d8ac;
+  color:#effff4;
+  background:linear-gradient(120deg,#145f45,#0f503d);
+  box-shadow:0 0 16px #39c78932;
+  font-size:.76rem;
+  font-weight:700;
+}
+.luqi-moon-badge::before { content:"";width:7px;height:7px;flex:none;border-radius:50%;background:#b3ffcd;box-shadow:0 0 9px #70ff9a; }
+.luqi-moon-visual {
+  position:relative;
+  width:min(100%,310px);
+  box-shadow:0 0 0 1px #b6d7ed24, 0 16px 42px #0009, 0 0 42px #a6d4fc24;
+  background:radial-gradient(circle at 47% 42%,#183648, #06111f 75%);
+}
+.luqi-moon-visual::after {
+  position:absolute;
+  z-index:-1;
+  content:"";
+  inset:-9%;
+  border-radius:50%;
+  pointer-events:none;
+  background:radial-gradient(circle,#b3d4ff25 15%,#d4eaff11 43%,transparent 72%);
+}
+.luqi-moon .luqi-moon-globe { max-width:310px; filter:drop-shadow(0 0 12px #d4e6f93a); }
+.luqi-moon .luqi-moon-overview { grid-template-columns:minmax(0,290px) minmax(0,1fr); align-items:center;gap:clamp(1rem,2.2vw,1.8rem); }
+.luqi-moon .luqi-moon-facts dt { letter-spacing:.02em; color:#abc9d3; }
+.luqi-moon .luqi-moon-facts dd { color:#fffdf5; font-variant-numeric:tabular-nums; }
+.luqi-moon .luqi-moon-facts>div { border-bottom:1px solid #b2d9e52a; padding-bottom:.55rem; }
+.luqi-moon .luqi-moon-facts>div:first-child dd { font-size:clamp(1.3rem,2.4vw,1.8rem); }
+.luqi-moon figcaption {max-width:33ch;color:#c5d9dd;font-size:.75rem;text-wrap:pretty}
+.luqi-moon .luqi-moon-actions button {min-height:44px;background:#163c42;color:#eefbf6;border:1px solid #5b9b90}
+.luqi-moon .luqi-moon-actions button[aria-pressed="true"] {background:#c7efd5;color:#08362a;border-color:#a2e7bd}
+.luqi-moon .luqi-moon-actions button:hover:not(:disabled) {border-color:#9fe4ba;background:#246b58;color:#fff}
+.luqi-moon .luqi-moon-actions button[aria-pressed="true"]:hover {background:#d3f9e1;color:#093b2a}
+.luqi-moon details {border-color:#b0d7db3a}
+.luqi-moon details summary {color:#faf2da}
+.luqi-moon-local {border-color:#9acbd457}
+@media (prefers-reduced-motion:no-preference) {
+  .luqi-moon-visual::after {animation:luqi-lunar-halo 8s ease-in-out infinite alternate}
+}
+@keyframes luqi-lunar-halo {from{opacity:.45;transform:scale(.98)}to{opacity:.8;transform:scale(1.015)}}
+@media(max-width:640px) {
+  .luqi-moon .luqi-moon-overview {grid-template-columns:1fr}
+  .luqi-moon .luqi-moon-visual {width:min(100%,280px)}
+  .luqi-moon .luqi-moon-globe {max-width:280px}
+  .luqi-moon .luqi-moon-actions button {flex:1 1 140px}
+}
+@media(max-width:375px) {
+  .luqi-moon .luqi-moon-visual {width:min(100%,242px)}
+  .luqi-moon .luqi-moon-globe {max-width:242px}
+  .luqi-moon {padding:.85rem}
+}
