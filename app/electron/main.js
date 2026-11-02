@@ -62,11 +62,12 @@ function createWindow() {
     mainWindow.webContents.on('did-fail-load', () => app.exit(1));
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
-        // Compact navigation can hide menu labels. Check the actual home
-        // heading and workspace shell rather than a responsive menu's text.
+        // Require the approved complete heading and the workspace shell.
+        // A line break may produce whitespace or no separator in textContent.
         const rendered = await mainWindow.webContents.executeJavaScript(`Boolean(
-          document.querySelector('#workspace-content main #workspace-title')?.textContent.includes('A little curiosity') &&
-          document.querySelector('a[aria-label="Luqi workspace home"]')
+          /^Knowledge[.] People[.]\\s*A Stronger Africa[.]$/.test(
+            document.querySelector('#workspace-content main #workspace-title')?.textContent ?? ''
+          ) && document.querySelector('a[aria-label="Luqi workspace home"]')
         )`);
         if (!rendered) throw new Error('Workspace did not render');
         console.log('Desktop workspace rendered successfully');
