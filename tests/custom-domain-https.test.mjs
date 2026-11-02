@@ -33,13 +33,13 @@ function fixture(change = {}) {
 }
 
 describe("custom-domain workflow rollout discipline", () => {
-  it("checks every main push and cancels superseded revision waits", () => {
+  it("checks every main push and isolates status deliveries", () => {
     const workflow = readFileSync(".github/workflows/custom-domain-https.yml", "utf8");
     const push = workflow.split("  push:")[1]?.split("  workflow_dispatch:")[0];
     assert.ok(push);
     assert.ok(push.includes("branches: [main]"));
     assert.ok(!push.includes("paths:"));
-    assert.ok(workflow.includes("cancel-in-progress: true"));
+    assert.ok(workflow.includes("github.run_id || github.ref")); assert.ok(workflow.includes("cancel-in-progress:"));
     assert.ok(workflow.includes("timeout-minutes: 11"));
   });
 });

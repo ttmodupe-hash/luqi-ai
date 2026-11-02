@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
 import SovereignRegionBar from "./SovereignRegionBar";
+import "../home-readability.css";
 
 /** Availability panel only. No provider SDK, credentials, inference or canned answers. */
 export function HeroAiChatConsole() {
@@ -19,7 +20,7 @@ export function HeroAiChatConsole() {
         <MessageCircle size={34} strokeWidth={1.4} />
       </div>
       <h2 id="chat-availability-heading">
-        Tell Luqi what you need.<br />
+        Tell Luqi what you need.{" "}<br />
         Find your next step.
       </h2>
       <p>

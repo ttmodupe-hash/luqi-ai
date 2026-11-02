@@ -3,7 +3,7 @@ import {filterPulseSources,PULSE_RECHECK_BY,PULSE_REVIEWED_ON,PULSE_SOURCES,puls
 
 describe("Local Pulse original publisher directory",()=>{
  it("links only to the specifically reviewed original publishers, with no rebroadcast URLs or live-availability claims",()=>{
-   const hosts = new Set(["www.primediaplus.com","www.sabc.co.za","www.sabcnews.com","www.ewn.co.za","www.kaya959.co.za"]);
+   const hosts = new Set(["www.primediaplus.com","www.sabc.co.za","www.sabcnews.com","www.ewn.co.za","www.kaya959.co.za","www.power987.co.za"]);
    expect(PULSE_REVIEWED_ON).toBe("30 October 2026");
    expect(new Date(PULSE_RECHECK_BY+"T23:59:59+02:00").getTime()).toBeGreaterThan(Date.parse("2026-10-30"));
    expect(PULSE_SOURCES.length).toBeGreaterThanOrEqual(6);
@@ -22,11 +22,11 @@ describe("Local Pulse original publisher directory",()=>{
  });
  it("filters only reviewed province-specific entries plus national sources",()=>{
    const gp=filterPulseSources("GP","talk","");
-   expect(gp.some(x=>x.id==="702")).toBe(true);
+   expect(gp.some(x=>x.id==="702")).toBe(true);\n   expect(gp.some(x=>x.id==="power987")).toBe(true);
    expect(gp.some(x=>x.id==="capetalk")).toBe(false);
    const wc=filterPulseSources("WC","talk","");
    expect(wc.some(x=>x.id==="capetalk")).toBe(true);
-   expect(wc.some(x=>x.id==="702")).toBe(false);
+   expect(wc.some(x=>x.id==="702")).toBe(false);\n   expect(wc.some(x=>x.id==="power987")).toBe(false);
    const other=filterPulseSources("other","all","");
    expect(other.length).toBeGreaterThan(0);
    expect(other.every(x=>x.region==="ZA")).toBe(true);
