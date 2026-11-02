@@ -19,8 +19,10 @@ test('first user registers, saves, reloads, signs in, exports and deletes owned 
     await page.getByLabel('Password', { exact: true }).fill(password);
   };
   await page.goto('/#/');
-  await page.getByRole('link', { name: 'Get started', exact: true }).click();
-  await page.getByRole('link', { name: 'Create your Luqi account' }).click();
+  // The revised homepage exposes account creation directly; keep the full
+  // real-MySQL registration, session, notes/export and deletion journey intact.
+  await page.getByRole('link', { name: 'Create account', exact: true }).click();
+  await expect(page).toHaveURL(/#\/join$/);
   await credentials();
   await page.getByLabel('Confirm password', { exact: true }).fill(password);
   const registration = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/register'));
