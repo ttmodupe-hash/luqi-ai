@@ -75,6 +75,11 @@ test('narrow 320px phone remains usable without hidden links or horizontal scrol
 test('desktop panorama aligns useful content without blank grid cells and keeps actual CTAs readable',async({page})=>{
   await page.setViewportSize({width:1280,height:900});
   await page.goto('/#/');
+  // The panorama is an intentionally lazy route. Wait for real page content
+  // before measuring layout; do not assert against the temporary loading shell.
+  await expect(page.locator('.luqi-panorama-top .luqi-hero')).toBeVisible();
+  await expect(page.locator('.luqi-panorama-top .luqi-hero-copy')).toBeVisible();
+  await expect(page.locator('.luqi-panorama-top .luqi-chat-card')).toBeVisible();
   const alignment=await page.evaluate(()=>{
     const area=document.querySelector('.luqi-panorama-top .luqi-hero')!.getBoundingClientRect();
     const copy=document.querySelector('.luqi-panorama-top .luqi-hero-copy')!.getBoundingClientRect();
