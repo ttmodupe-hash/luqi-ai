@@ -80,11 +80,12 @@ export default function MoonNowPanel() {
             <div className="luqi-moon-visual">
               <MoonDisc id={id} fraction={snapshot.fraction} rotation={snapshot.rotation}
                 view={view} detailed={detailed}
-                label={`${view === 'surface' ? 'Full near-side surface map' : snapshot.name}, ${(snapshot.fraction * 100).toFixed(0)} percent illuminated now`} />
+                label={view === 'surface' ? 'Full lunar near-side map for study, not current illumination' :
+                  `${snapshot.name}, ${(snapshot.fraction * 100).toFixed(0)} percent illuminated`} />
             </div>
             <figcaption>{view === 'surface'
               ? 'Full near-side surface for exploration, not today’s lunar illumination.'
-              : 'Calculated lunar phase over real near-side surface detail, not camera footage.'}
+              : 'Calculated lunar phase with surface detail, not camera footage. NASA LRO imagery loads when available.'}
               <br />{location ? 'Phase tilt estimated for your selected area.' : 'Moon orientation is approximate without a location.'}
               <br /><a href={LRO_MOON_SOURCE} target="_blank" rel="noopener noreferrer">NASA LRO surface source</a> · NASA/GSFC/Arizona State University
             </figcaption>
