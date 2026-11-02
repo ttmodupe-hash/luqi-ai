@@ -25,7 +25,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 it('retains the approved full headline, real moon position and three source-linked history sections', () => {
   const view = draw();
-  expect(screen.getByRole('heading', {level:1, name:/Knowledge. People. A Stronger Africa./})).toBeTruthy();
+  expect(screen.getByRole('heading', {level:1, name:/Knowledge\. People\.\s*A Stronger Africa\./})).toBeTruthy();
   expect(view.container.querySelector('.luqi-panorama-top .luqi-pano-moon')).toBeTruthy();
   expect(screen.getByRole('heading',{name:/African Peoples and Historical Evidence in Biblical Narratives/})).toBeTruthy();
   expect(view.container.querySelectorAll('.luqi-history-card')).toHaveLength(3);
