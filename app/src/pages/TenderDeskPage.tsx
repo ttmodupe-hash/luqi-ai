@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {Link} from 'react-router';
 import {TenderOriginalForms} from '../components/TenderOriginalForms';
 import {PROVINCES,type ProvinceCode} from '../lib/opportunity-sources';
@@ -38,7 +38,14 @@ export default function TenderDeskPage(){
  const [approvals,setApprovals]=useState<TenderHumanApprovals>(EMPTY_TENDER_APPROVALS);
  const [preview,setPreview]=useState(false);
  const [downloaded,setDownloaded]=useState('');
- const now=new Date();
+ const [now,setNow]=useState(()=>new Date());
+ useEffect(()=>{
+  const refresh=()=>setNow(new Date());
+  const timer=window.setInterval(refresh,1000);
+  document.addEventListener('visibilitychange',refresh);
+  window.addEventListener('focus',refresh);
+  return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh)};
+ },[]);
  const notices=filterTenders({province,query,includeHistory:showHistory,now});
  const chosen=CURATED_TENDER_NOTICES.find(n=>n.id===selectedId)||null;
  const readiness=chosen?assessTenderDraft(chosen,draft,approvals,now):null;
@@ -85,8 +92,13 @@ export default function TenderDeskPage(){
  }
  function download(approved:boolean){
   if(!chosen)return;
-  if(approved&&readiness?.status!=='ready-for-manual-submission')return;
-  const content=buildTenderWorksheet(chosen,draft,approvals,new Date());
+  // Reassess at the click itself: an idle/background tab must not export an
+  // approved pack using the previous render's deadline or review window.
+  const clickedAt=new Date();
+  if(approved&&assessTenderDraft(chosen,draft,approvals,clickedAt).status!=='ready-for-manual-submission'){
+   setNow(clickedAt);setDownloaded('The deadline or review conditions changed. Recheck the original issuer before exporting an approved pack.');return;
+  }
+  const content=buildTenderWorksheet(chosen,draft,approvals,clickedAt);
   saveTextFile(tenderDraftFileName(chosen),content);
   setDownloaded(approved?'Reviewed preparation pack exported. Nothing was sent to any tender portal.':
     'Draft worksheet saved on this device. It is not approved or submitted.');
@@ -118,6 +130,7 @@ export default function TenderDeskPage(){
   <section aria-label="Dated tender opportunities" className="space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-4">
    <div>
     <h2 className="text-xl font-semibold">Reviewed individual tender notices</h2>
+    <p className="text-sm text-amber-200">Source follow-up attempted on 2 November 2026: available listing extracts are not a complete check of the original bid files and amendments. The previous review dates below have not been renewed. Do not treat these notices as confirmed open opportunities.</p>
     <p className="text-sm text-slate-300">Reviewed {TENDER_REVIEWED_ON}. Confirm the original bid specification, compulsory briefing, any addendum, bid box and exact closing time before spending money or preparing an offer.</p>
    </div>
    <div className="grid gap-3 sm:grid-cols-2">
@@ -155,7 +168,7 @@ export default function TenderDeskPage(){
       {status==='past-deadline'?<p className="font-semibold text-red-200">Published closing time passed. Historical only.</p>
        :status==='mandatory-briefing-review'?<p className="font-semibold text-red-200">Past compulsory briefing. Verify attendance and eligibility with the issuer before bidding.</p>
        :<p className="text-sm text-amber-200">Source-listed; issuer confirmation required before calling this an active bid.</p>}
-      {!fresh&&<p className="text-xs text-amber-200">Reviewed details are over 48 hours old. Recheck the original publisher.</p>}
+      {!fresh&&<p className="text-xs text-amber-200">Source review is expired, due or cannot be verified for this date. Recheck the original publisher, bid documents and amendments.</p>}
       <a href={n.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Read original tender and download issuer documents</a>
       <div><button type="button" onClick={()=>pick(n)} aria-pressed={selectedId===n.id}
        className="rounded-lg border border-cyan-400 px-3 py-2 text-sm font-semibold text-cyan-100">

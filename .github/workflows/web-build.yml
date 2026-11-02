@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# Supersede only an older run of this workflow for the same pull request.
+# Main/manual runs retain separate evidence and cannot cancel one another.
+concurrency:
+  group: luqi-web-build-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   validate-web:
     runs-on: ubuntu-latest
@@ -22,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Verify queue controls preserve release and security boundaries
+        run: node --test tests/ci-queue-policy.test.mjs
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify opt-in local province location

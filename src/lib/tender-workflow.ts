@@ -66,7 +66,7 @@ export function assessTenderDraft(
  if(state==='past-deadline')return{status:'withdrawn-or-expired',missing:['Published closing time has passed. Recheck any official extension or corrigendum.'],submissionConnected:false};
  if(state==='mandatory-briefing-review')return{status:'check-briefing',missing:['Original notice lists a compulsory past briefing. Confirm attendance/eligibility with the procuring entity.'],submissionConnected:false};
  const missing:string[]=[];
- if(!tenderReviewFresh(notice,now))missing.push('Source review is older than 48 hours. Reconfirm official status, corrections and closing time.');
+ if(!tenderReviewFresh(notice,now))missing.push('Source review is older than 48 hours, due or invalid. Reconfirm official status, corrections and closing time.');
  if(!max(draft.supplierName,160))missing.push('Real, verified supplier trading name');
  if(!max(draft.tenderReference,100))missing.push('Official tender/RFQ number copied from original documents');
  else if(notice.reference&&draft.tenderReference.trim()!==notice.reference)

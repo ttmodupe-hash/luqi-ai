@@ -1,34 +1,29 @@
-# CI queue pressure: prevention and controlled recovery
+# Luqi release queue controls — 2 November 2026
 
-2 November 2026. Prepared separately from release PR #401 at owner request. Base main: `69fbfce48babdd09285d80f766987d1fa4315cd4`.
+## Incident and recovery
+PR #401 was delayed by queued GitHub Actions runs, including a large simultaneous routine Dependabot update batch. Recorded earlier snapshots included 452 queued runs, then 304 including 233 Dependabot-triggered runs. They are point-in-time workflow counts, not running-job counts or proof of an account billing limit or GitHub-wide outage.
 
-## Observed cause, not a claim of provider-wide outage
-The earlier checkpoint recorded 452 queued workflow runs. Fresh nearby API snapshots in this investigation returned 304 queued, including 233 Dependabot-triggered runs, and 16 in progress. These are moving snapshots, not a single atomic count or an account concurrency-limit measurement. The fall happened before any queue-control action and is NOT credited to this change. Seventeen open bot PRs (#403 through #419) were returned for 2 November. The newly expanded ungrouped version-update configuration allowed 10 Python, 10 root npm, 10 app npm and 5 Actions PRs. Each relevant PR can trigger the broad acceptance suite. Root npm coverage was newly added in main's #391 release; do not assume the observed early-morning batch was the configured 09:00 UTC scheduled run.
+The follow-up read returned zero queued repository runs. All 32 exact-head PR #401 workflows had independently completed SUCCESS before intervention. No workflow was manually cancelled and no safety check was skipped to manufacture that result. The owner-authorised release was then merged as 501b4a34f5145524b86c3f2dd57a13f7acb48d24, preserving the tested tree bda13d86a136497443a68472829229a1793a515c. Canonical Railway deployment 8a40f0b7-30e1-4f0d-8045-a4e942baeb2c reached SUCCESS at 06:38:05 SAST. Public-domain verification is a separate gate, not inferred from that status.
 
-The main Web Build workflow has no workflow-level concurrency group. Other workflows, including WebKit acceptance, already have one; do not claim every workflow lacks this safeguard. Repeated unrelated main releases also forced #401 to integrate and rerun acceptance twice. Older green heads are not evidence for the final combined head.
+## Controls implemented by this change
+The prior preparation commit 3b86cd24 is retained in history. Its unapplied patch file is superseded by an actual edit to `.github/workflows/web-build.yml`, not another installation instruction.
 
-## Prepared changes and exact activation status
-- This branch changes `.github/dependabot.yml`: retain all four ecosystems and weekly checks; stagger routine version checks across Monday through Thursday; bound routine open PRs to 3 root npm, 2 app npm, 2 Python and 1 Actions (8 total rather than 35 configured slots).
-- Minor/patch version updates are grouped, with runtime and development groups separate for npm. Groups explicitly apply only to `version-updates`. Root majors remain individually reviewable. Existing Python/app major-version ignore rules, reviewers and labels are preserved. No new ignore rules, cooldown, disabled rebasing, disabled updater or dependency-version edits.
-- `operations/web-build-pr-concurrency.patch` is a prepared, UNAPPLIED additive workflow patch. It cancels only superseded runs of Web Build for the same pull request. Main push and manual runs have distinct run-ID keys and retain their evidence. The patch changes no tests, events, permissions, timeouts or thresholds. Do not state it is active merely because this file exists.
-- No PR is opened in this step, avoiding another full suite behind #401. No main write, auto-merge or runtime deployment. The dependency configuration also is NOT active until reviewed and merged into the default branch. Existing queued jobs are not retroactively cleared by a future setting.
+1. Dependabot continues weekly checks for pip, root npm, /app npm and GitHub Actions. Routine version-update open-PR limits are 2, 3, 2 and 1 respectively: eight total configured slots instead of 35. Existing open work is not erased by this policy.
+2. Routine minor/patch updates are grouped. Root and /app npm keep production and development batches separate. All six grouping rules explicitly apply only to `version-updates`. Existing major-version exclusions for pip and /app remain; no new ignore conditions were added. Security updates are not disabled, grouped or deferred by these version-update limits.
+3. Weekly jobs run at 09:00 UTC (11:00 SAST): root npm Monday, /app npm Tuesday, pip Wednesday, GitHub Actions Thursday. These are update-discovery schedules, not guaranteed PR-creation times.
+4. Web Build has workflow-level concurrency keyed by event and pull-request number; only an older run of the same PR can be superseded. Main/manual runs use their distinct run IDs and do not cancel each other. No global lock, priority scheduler or cancellation API is introduced.
+5. Thirteen offline contract checks exercise group separation, mandatory checks, schedule, grouping and security-update boundaries inside the existing Web Build job. No additional workflow is introduced.
 
-## Tests actually executed
-15 parsed-YAML policy assertions passed locally: retained ecosystems, weekly/staggered schedules, nonzero limits, version-only minor/patch grouping, unchanged ignore scope, retained reviewer and npm runtime/development separation. The patch passed `git apply --check` and application on an exact-header synthetic workflow fixture; parsed keys other than concurrency remained identical. Five group-key scenarios passed: same-PR supersession; different-PR isolation; main-run isolation; manual-run isolation; event isolation. This is static/fixture evidence, NOT full application CI, GitHub scheduler acceptance, or an actual cancellation.
+## Validation and change boundaries
+The complete original Web Build was fetched at released commit 501b4a34 and its Git blob hash verified locally as e4758339dc06e1cf460e60cbf3e3396e7eb82192 before alteration. Removing only the new concurrency block and new test step reproduces the original byte-for-byte. Parsed YAML comparison also confirms that all prior triggers, permissions, jobs, steps, shell commands, timeouts and artifact rules remain unchanged. Local Node checks: 13 passed, zero failures/skips. The uploaded workflow blob matches the locally tested blob a5eaa8745e766d47fa3f2357749604184b42488e. These checks do not prove actual scheduler priority or future queue duration; full exact-candidate CI remains required before merge.
 
-## Immediate queue recovery and release ordering
-The installed GitHub connection exposes workflow reads and reruns but no cancellation action. Available-tool and plugin discovery found no additional cancellation integration; the local runtime has no authenticated GitHub CLI. No secrets were requested or extracted and no run was cancelled here. A cancellation URL in a read response is not a cancellation result.
+No application runtime or dependency version, lockfile, test threshold, customer data, account, provider budget, guest limit, payment, DNS, Railway setting or database schema is changed. Source-review and physical-device evidence issues remain separate. Do not attribute the earlier queue drain to controls that had not yet been merged.
 
-An authorised maintainer can use GitHub Actions to cancel only a demonstrably superseded PR run after rereading the PR's current head and confirming a replacement run for the same workflow/current head exists. Preserve latest-head acceptance, main/push/manual/deployment checks and security evidence. Deferring any still-current routine version PR requires explicit triage; do not blanket-cancel everything labelled Dependabot or assume the repository's `security` label means a particular advisory. Do not close PRs or disable security updates to manufacture green checks. Re-running queued checks adds load and is not a priority mechanism.
+## Release discipline
+Use one reviewed candidate, avoid unnecessary pushes or unrelated main merges during its final test window, and investigate genuine failures instead of rerunning to conceal them. Urgent security repairs remain eligible for explicit prioritisation. Never mass-cancel runs, disable security checks or deploy a different tree from the one accepted. Coordination comments are not an enforced repository lock.
 
-Coordination request is recorded in #394: avoid unrelated main merges, repeated rebases and unnecessary pushes while #401 is validating; continue read-only research and batch branch changes. This is not an enforced branch lock. A verified urgent security correction takes precedence. Do not modify automation schedules or repository protection rules as a side effect.
+## Official semantics checked
+- https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+- https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
 
-Keep #401 head `4ab33d648d3ce25c7cd4571da51fa4df709b2e71` unchanged unless a real defect or upstream conflict requires repair. Release only after its exact final integration has passed and canonical Railway/public-domain checks confirm the merged commit. This branch must not be used to bypass that gate.
-
-After #401: reconcile current main, review this configuration, apply the small workflow patch to the then-current full file using `git apply --check` first, inspect that only the concurrency block changed, validate YAML/workflow expressions and run all applicable exact-head acceptance. Review a grouped update's actual diff and dependency audit before merging; split incompatible groups rather than weakening tests. Maintain enough reviewer throughput that routine caps do not become neglected dependency backlog.
-
-## Primary platform references checked
-- https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference — version update limits and groups; security updates are separate from the version PR limit.
-- https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency — workflow groups and conditional cancellation.
-
-No claim is made that a GitHub billing limit, vendor outage, physical phone failure, source freshness issue, or production outage has been resolved by this preparation.
+Activation requires this change to be merged into the repository's default branch. Later releases must still be identified by exact Railway/public commit. A successful configuration rollout reduces avoidable work; it cannot guarantee GitHub capacity or a delay-free release.
