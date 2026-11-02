@@ -7,7 +7,7 @@ import PublicReleaseUpdateNotice from "./PublicReleaseUpdateNotice";
 import WorkspacePlaybar, { readCalmPreference } from "./WorkspacePlaybar";
 import "../experience.css";
 import { useContactPresence } from "./useContactPresence";
-import CollaborationDock from './CollaborationDock';
+const CollaborationDock = lazy(() => import('./CollaborationDock'));
 import { isGuidePath } from '../lib/interaction-handoff';
 // Guide-only UI is fetched only on a guide route, never during homepage startup.
 const GuideHandoffNotice = lazy(() => import('./GuideHandoffNotice'));
@@ -115,7 +115,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             </p>}
             <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
             <div className="luqi-tool-content">{guideNotice}{children}</div>
-            <CollaborationDock presence={presence} />
+            <RouteLoadBoundary><CollaborationDock presence={presence} /></RouteLoadBoundary>
           </div>
         </div>
       ) : (
@@ -230,7 +230,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         </p>}
         <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
         <div className="luqi-tool-content">{guideNotice}{children}</div>
-        <CollaborationDock presence={presence} />
+        <RouteLoadBoundary><CollaborationDock presence={presence} /></RouteLoadBoundary>
       </div>
       <footer className="luqi-footer">
         <div>
