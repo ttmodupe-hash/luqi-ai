@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { ArrowRight, BookOpen, Calculator, Compass, ExternalLink,
   Globe2, ShieldCheck, Sprout, TrendingUp } from 'lucide-react';
 import { calculateScenario, type Scenario } from '../lib/trade-scenario';
+import CapitalIntelligencePanel from '../components/CapitalIntelligencePanel';
 
 /**
  * The former "live" radar returned invented deadlines, viewer counts, NDVI,
@@ -66,6 +67,8 @@ export default function AfricanOpportunityRadarPage() {
           <span className="rounded-full border border-slate-500/60 px-3 py-2">Inputs stay in this tab</span>
         </div>
       </header>
+
+      <CapitalIntelligencePanel />
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section aria-labelledby="trade-heading" className="min-w-0 rounded-2xl border border-slate-700 bg-slate-900/75 p-5 sm:p-7">
