@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { legacyAdminUnavailable } from '../api/lib/legacyAdmin';
 
 describe('legacy browser admin fail-closed boundary', () => {
+  it('contains no shadow handler capable of returning the administrative passkey', () => {
+    const source = readFileSync(new URL('../api/boot.ts', import.meta.url), 'utf8');
+    expect(source).toContain('app.route("/", legacyAdminUnavailable)');
+    expect(source).not.toContain("app.post('/api/v1/admin/verify'");
+    expect(source).not.toContain('app.post("/api/v1/admin/verify"');
+    expect(source).not.toContain('token: passkey');
+  });
   it.each(['GET', 'POST', 'PUT', 'DELETE'])('never grants a session through %s', async method => {
     const response = await legacyAdminUnavailable.request('/api/v1/admin/verify', {
       method, headers: { 'Content-Type': 'application/json', 'x-luqi-admin-key': 'LUQI-ADMIN-2026' },

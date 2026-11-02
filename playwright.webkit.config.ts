@@ -11,11 +11,12 @@ export default defineConfig({
   // real-worker cases in the unchanged Chromium suite, not false WebKit proof.
   testIgnore: ['**/mobile-loading-worker.spec.ts', '**/public-cache-worker.spec.ts'],
   timeout: 30_000,
-  // The expanded verified journey set includes visa, social support and
-  // municipal and Near me journeys. Keep every test and its 30s limit;
-  // allow twelve minutes overall for slower shared CI runners.
-  // The workflow step independently limits the suite to thirteen minutes.
-  globalTimeout: 12 * 60_000,
+  // Run every desktop and iPhone journey, preserving 30s per-test deadlines,
+  // zero retries and existing failure thresholds. The 2 November run reached
+  // 421 passing tests, then its 12-minute global cap left 13 tests unrun.
+  // Allow a bounded 15 minutes for the complete suite on shared CI runners;
+  // the workflow step independently caps execution at 16 minutes.
+  globalTimeout: 15 * 60_000,
   workers: 2,
   maxFailures: 10,
   retries: 0,

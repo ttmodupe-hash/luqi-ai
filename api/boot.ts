@@ -790,18 +790,9 @@ app.get('/api/v1/exam-tutor/domains', (c) => {
   return c.json({ status: 'success', domains: DOMAIN_DIRECTIVES });
 });
 
-// Admin Verification Endpoint
-app.post('/api/v1/admin/verify', async (c) => {
-  try {
-    const { passkey } = await c.req.json();
-    if (adminKeyMatches(passkey)) {
-      return c.json({ success: true, token: passkey });
-    }
-    return c.json({ success: false, error: 'Invalid admin passkey' }, 401);
-  } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 400);
-  }
-});
+// The retired browser admin verification path is handled fail-closed by
+// legacyAdminUnavailable above. Do not re-register a shadow handler here:
+// the removed implementation returned the supplied master key as a token.
 
 // ── KHORO LEGAL & EDUCATIONAL ADVISOR ROUTE ─────────────────────────
 app.post('/api/khoro-legal', async (c) => {
