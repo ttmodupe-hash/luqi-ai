@@ -70,12 +70,13 @@ export function recordMetric(name: MetricName, value = 1, outcome: Outcome = 'ok
 }
 
 /** A permitted operation name, never a request URL, response or error string. */
-export async function measureApi<T>(name: ApiMetricName, work: () => Promise<T>): Promise<T> {
+export async function measureApi<T>(name: ApiMetricName, work: () => Promise<T>,
+  outcomeFor?: (result: T) => 'ok' | 'failed'): Promise<T> {
   if (!getAnalyticsConsent()) return work();
   const start = performance.now();
   try {
     const result = await work();
-    recordMetric(name, performance.now() - start, 'ok');
+    recordMetric(name, performance.now() - start, outcomeFor?.(result) || 'ok');
     return result;
   } catch (error) {
     const cancelled = error instanceof Error && error.name === 'AbortError';
