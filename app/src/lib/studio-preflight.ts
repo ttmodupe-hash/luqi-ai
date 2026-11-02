@@ -49,7 +49,7 @@ export function creativeBriefScenes(input: StudioCreativeBrief): StudioScene[] {
   const b = cleanBrief(input);
   const scenes: StudioScene[] = [
     { title: '01 · Introduce the idea',
-      caption: `${b.subject}. Set in ${b.setting}${b.audience ? ', for ' + b.audience : ''}.`,
+      caption: `${b.subject}. Set in ${b.setting}.`,
       question: 'Who is this story for, and what should viewers understand?' },
     { title: '02 · Establish the image',
       caption: `Camera: ${b.camera}. Lighting: ${b.lighting}. Use only artwork you own or may use.`,
@@ -64,7 +64,7 @@ export function creativeBriefScenes(input: StudioCreativeBrief): StudioScene[] {
       caption: `Show a real, relevant use case for ${b.subject}. Verify benefits, facts and prices before publishing.`,
       question: 'Which claims need independent evidence?' },
     { title: '06 · End with a clear action',
-      caption: `${b.callToAction || 'Invite customers to check your current details before visiting or ordering.'} Confirm the final call to action.`,
+      caption: `${b.audience ? 'For ' + b.audience + ': ' : ''}${b.callToAction || 'Invite customers to check your current details before visiting or ordering.'} Confirm the final call to action.`,
       question: 'Is this invitation accurate and easy to follow?' },
   ];
   if (scenes.some(scene => scene.title.length > 64 || scene.caption.length > 240 ||

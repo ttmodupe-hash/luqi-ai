@@ -38,12 +38,40 @@ describe('Luqi Studio no-provider creative preflight', () => {
     expect(content).not.toContain('Not specified');
     expect(content).not.toMatch(/100% success|guaranteed identity|rendered film ready/i);
   });
+  it('keeps all maximum-length browser inputs valid and preserves meaningful scene text', () => {
+    const brief = {
+      subject: 'S'.repeat(96), camera: 'C'.repeat(80),
+      lighting: 'L'.repeat(80), movement: 'M'.repeat(80),
+      setting: 'P'.repeat(80), audience: 'A'.repeat(64),
+      callToAction: 'T'.repeat(96), appearance: 'V'.repeat(96),
+    };
+    expect(studioPreflight(brief)).toMatchObject({ completed: 5, ready: true });
+    const scenes = creativeBriefScenes(brief);
+    expect(scenes).toHaveLength(6);
+    expect(scenes.every(scene => scene.caption.length <= 240 && scene.title.length <= 64 && scene.question.length <= 140)).toBe(true);
+    expect(scenes[0].caption).toContain(brief.subject);
+    expect(scenes[0].caption).toContain(brief.setting);
+    expect(scenes[1].caption).toContain(brief.camera);
+    expect(scenes[1].caption).toContain(brief.lighting);
+    expect(scenes[2].caption).toContain(brief.movement);
+    expect(scenes[3].caption).toContain(brief.appearance);
+    expect(scenes[5].caption).toContain(brief.audience);
+    expect(scenes[5].caption).toContain(brief.callToAction);
+    expect(() => storyboardJson(scenes, 'portrait', 2.5, 9.81, 5, 'story')).not.toThrow();
+    const exported = creativeBriefText(brief);
+    expect(exported).toContain(`Audience: ${brief.audience}`);
+    expect(exported).toContain(`Call to action: ${brief.callToAction}`);
+    expect(exported).toContain(`Scene 6: ${scenes[5].caption}`);
+  });
   it('rejects overlong and malformed fields without silently truncating claims', () => {
     const base = STUDIO_BRIEF_PRESETS[0].brief;
     expect(() => creativeBriefScenes({ ...base, subject: 'x'.repeat(300) })).toThrow(/length/);
     expect(() => creativeBriefScenes({ ...base, camera: '\n \n' })).toThrow(/Complete all five/);
     expect(() => creativeBriefText({ ...base, audience: 'x'.repeat(200) })).toThrow(/length/);
-    expect(creativeBriefScenes({ ...base, audience: '  local customers  ' })[0].caption).toContain('for local customers');
-    expect(() => creativeBriefScenes({ ...base, subject: 'x'.repeat(96), setting: 'x'.repeat(80), audience: 'x'.repeat(64) })).toThrow(/too long/);
+    expect(creativeBriefScenes({ ...base, audience: '  local customers  ' })[5].caption).toContain('For local customers');
+    const accepted = creativeBriefScenes({ ...base, subject: 'x'.repeat(96), setting: 'y'.repeat(80), audience: 'z'.repeat(64) });
+    expect(accepted[0].caption).toContain('y'.repeat(80));
+    expect(accepted[5].caption).toContain('z'.repeat(64));
+    expect(accepted.every(scene => scene.caption.length <= 240)).toBe(true);
   });
 });
