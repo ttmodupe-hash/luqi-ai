@@ -28,22 +28,29 @@ export default function LuqiDrivePage(){
   const pack=useMemo(()=>LUQI_DRIVE_ROUTE_PACKS.find(item=>item.id===routeId)??LUQI_DRIVE_ROUTE_PACKS[0]!,[routeId]);
   const mode=driveStoryMode(speedKmh);
   const story=driveStory(pack,speedKmh);
-  const deepAllowed=(typeof speedKmh==="number"&&speedKmh<30)||parkedConfirmed||passengerMode;
+  const knownMoving=typeof speedKmh==="number"&&speedKmh>=30;
+  const deepAllowed=passengerMode||(!knownMoving&&(parkedConfirmed||(typeof speedKmh==="number"&&speedKmh<30)));
 
   useEffect(()=>{
     let active=true;
     void hasCachedDriveRoutePack(pack.id).then(value=>{if(active)setCached(value);}).catch(()=>{if(active)setCached(false);});
+    if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}
     setQuizVisible(false);setAnswer(null);setDeepOpen(false);setParkedConfirmed(false);
     return()=>{active=false;};
   },[pack.id]);
 
-  useEffect(()=>()=>{if(watchRef.current!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watchRef.current);if(quizTimerRef.current)clearTimeout(quizTimerRef.current);void wakeRef.current?.release();if("speechSynthesis"in window)window.speechSynthesis.cancel();},[]);
+  useEffect(()=>()=>{if(watchRef.current!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watchRef.current);if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}void wakeRef.current?.release();if("speechSynthesis"in window)window.speechSynthesis.cancel();},[]);
 
   useEffect(()=>{
-    const onHidden=()=>{if(document.hidden){if("speechSynthesis"in window)window.speechSynthesis.cancel();void wakeRef.current?.release();wakeRef.current=null;}};
+    const onHidden=()=>{if(document.hidden){if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}setQuizVisible(false);setAnswer(null);if("speechSynthesis"in window)window.speechSynthesis.cancel();void wakeRef.current?.release();wakeRef.current=null;}};
     document.addEventListener("visibilitychange",onHidden);
     return()=>document.removeEventListener("visibilitychange",onHidden);
   },[]);
+
+  useEffect(()=>{
+    if(knownMoving)setParkedConfirmed(false);
+    if(!deepAllowed)setDeepOpen(false);
+  },[knownMoving,deepAllowed]);
 
   function stopLocation(){
     if(watchRef.current!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watchRef.current);
@@ -92,7 +99,7 @@ export default function LuqiDrivePage(){
     if(passengerMode){
       if(quizTimerRef.current)clearTimeout(quizTimerRef.current);
       setQuizVisible(false);setAnswer(null);
-      quizTimerRef.current=setTimeout(()=>setQuizVisible(true),120000);
+      quizTimerRef.current=setTimeout(()=>{quizTimerRef.current=null;setQuizVisible(true);},120000);
     }
   }
 
@@ -134,7 +141,7 @@ export default function LuqiDrivePage(){
           <div className="rounded-lg bg-slate-950 p-3"><dt className="text-slate-400">Speed context</dt><dd className="font-semibold">{speedKmh===null?"Not available":speedKmh+" km/h"}</dd></div>
           <div className="rounded-lg bg-slate-950 p-3"><dt className="text-slate-400">Privacy cell</dt><dd className="font-mono">{cell||"Not calculated"}</dd></div>
         </dl>
-        <div className="space-y-2"><label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={passengerMode} onChange={e=>{setPassengerMode(e.target.checked);setQuizVisible(false);setAnswer(null);}}/><span><strong>Passenger & family quiz mode</strong><br/><span className="text-xs text-slate-300">A passenger may use deeper content while moving. After a passenger-triggered briefing, one silent quiz appears after two minutes.</span></span></label><label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={parkedConfirmed} onChange={e=>{setParkedConfirmed(e.target.checked);if(!e.target.checked&&speedKmh===null)setDeepOpen(false);}}/><span><strong>I am safely parked</strong><br/><span className="text-xs text-slate-300">Use this only when the vehicle is stationary. Luqi cannot independently verify parking when device speed is unavailable.</span></span></label></div>
+        <div className="space-y-2"><label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={passengerMode} onChange={e=>{if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}setPassengerMode(e.target.checked);setQuizVisible(false);setAnswer(null);}}/><span><strong>Passenger & family quiz mode</strong><br/><span className="text-xs text-slate-300">A passenger may use deeper content while moving. After a passenger-triggered briefing, one silent quiz appears after two minutes.</span></span></label><label className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-600 p-3"><input className="mt-1" type="checkbox" checked={parkedConfirmed} onChange={e=>{setParkedConfirmed(e.target.checked&&!knownMoving);if(!e.target.checked)setDeepOpen(false);}}/><span><strong>I am safely parked</strong><br/><span className="text-xs text-slate-300">Use this only when the vehicle is stationary. Luqi cannot independently verify parking when device speed is unavailable.</span></span></label></div>
       </div>
     </section>
 
