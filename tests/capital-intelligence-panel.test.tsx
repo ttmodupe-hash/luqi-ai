@@ -30,6 +30,7 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    fireEvent.change(screen.getByLabelText('Project name'),{target:{value:'Community health project'}});
    fireEvent.change(screen.getByRole('textbox',{name:'Project summary'}),{target:{value:'Low-bandwidth community health support'}});
    fireEvent.click(screen.getByLabelText('Business plan'));
+   fireEvent.click(screen.getByLabelText('Concept note document'));
    const tia=screen.getByRole('article',{name:'TIA Seed Fund'});
    expect(tia.textContent).toContain('67%');
    fireEvent.click(within(tia).getByRole('button',{name:'Prepare review draft'}));
