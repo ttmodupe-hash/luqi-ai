@@ -1,0 +1,137 @@
+/* Screenshot-target Luqi homepage. Decorative art is original SVG, never a live image. */
+.luqi-shell-home{background:#092922;color:#f4f5ed}
+.luqi-shell-home .luqi-header{background:#09231f;border-bottom:1px solid #315049;color:#f8f5ea}
+.luqi-shell-home .luqi-brand span{font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,3vw,43px);font-weight:700;letter-spacing:-1.5px}
+.luqi-shell-home .luqi-home-tagline{font-family:system-ui,sans-serif;font-size:11px;max-width:98px;line-height:1.2;color:#d7e1d6;font-weight:400;letter-spacing:0;margin-left:7px}
+.luqi-shell-home .luqi-desktop-nav{gap:clamp(4px,.5vw,12px);min-width:0}
+.luqi-shell-home .luqi-desktop-nav a{font-size:12px;white-space:nowrap;padding-inline:9px}
+.luqi-shell-home .luqi-header-actions{gap:7px}
+.luqi-shell-home .luqi-header-actions .luqi-home-signin{border:1px solid #78958b;background:transparent;color:#fff;min-height:40px;padding:8px 16px;border-radius:9px;font-size:12px}
+.luqi-shell-home .luqi-header-actions .luqi-home-start{background:#19784e;color:white;border-radius:9px;padding:11px 18px;min-height:40px;font-weight:700;font-size:12px}
+.luqi-shell-home .luqi-header-actions .luqi-home-start:hover,.luqi-shell-home .luqi-header-actions .luqi-home-start:focus-visible{background:#278d60}
+.luqi-home-screenshot{background:linear-gradient(180deg,#0b3029 0,#092720 73%,#10241c 100%);color:#f4f7ec;overflow:visible}
+.luqi-home-screenshot .luqi-home-inner{max-width:1640px;padding:10px clamp(12px,1.4vw,26px) 40px}
+.luqi-panorama-top{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:10px;align-items:stretch;min-width:0}
+.luqi-home-screenshot .luqi-hero{display:block;position:relative;overflow:hidden;min-width:0;min-height:370px;padding:20px clamp(18px,2vw,36px) 16px;border:1px solid #31594d;border-radius:16px;background:#102d28 url("/luqi-panorama.svg") center/cover no-repeat}
+.luqi-home-screenshot .luqi-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,30,28,.76),rgba(6,32,29,.4) 65%,rgba(7,29,26,.15));pointer-events:none}
+.luqi-home-screenshot .luqi-hero-copy{position:relative;z-index:1;max-width:600px;min-width:0}
+.luqi-home-screenshot .luqi-pano-eyebrow{color:#f7e8b9;font-size:10px;font-weight:700;letter-spacing:.17em;margin:7px 0 20px}
+.luqi-home-screenshot .luqi-hero h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(32px,3.45vw,55px);font-weight:700;letter-spacing:-1.4px;line-height:1.06;color:#fffaf1;margin:0;text-shadow:0 3px 15px #061d19bb;max-width:650px}
+.luqi-home-screenshot .luqi-hero-description{color:#f3ecdd;font-family:Georgia,"Times New Roman",serif;font-size:clamp(14px,1.35vw,20px);line-height:1.4;max-width:530px;margin:14px 0}
+.luqi-home-screenshot .luqi-pano-ask{display:flex;align-items:center;gap:12px;border-radius:12px;background:#fbfaf5;color:#132e29;padding:6px 6px 6px 15px;min-height:57px;max-width:590px;box-shadow:0 7px 20px #0004}
+.luqi-home-screenshot .luqi-pano-ask svg{flex:none}
+.luqi-home-screenshot .luqi-pano-ask input{min-width:0;flex:1;background:transparent;border:0;color:#17332e;font-size:14px;min-height:44px;outline:none}
+.luqi-home-screenshot .luqi-pano-ask input:focus-visible{outline:2px solid #1d8955;border-radius:6px}
+.luqi-home-screenshot .luqi-pano-ask button{width:44px;height:44px;border-radius:50%;background:#0e6d48;color:#fff;display:grid;place-items:center;border:0;flex:none;cursor:pointer}
+.luqi-home-screenshot .luqi-pano-ask button:hover{background:#17835a}
+.luqi-home-screenshot .luqi-pano-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.luqi-home-screenshot .luqi-pano-chips a{display:inline-flex;align-items:center;min-height:32px;padding:6px 10px;border:1px solid #9ab8a188;border-radius:99px;color:#fffefa;background:#09261f99;font-size:11px;white-space:normal;line-height:1.2}
+.luqi-home-screenshot .luqi-pano-chips a:hover{border-color:#f2d597;background:#27513e}
+.luqi-home-screenshot .luqi-pano-trust{display:flex;gap:7px;align-items:flex-start;font-size:10px;color:#e0eada;line-height:1.5;margin:10px 0 0;max-width:555px}
+.luqi-home-screenshot .luqi-pano-trust svg{flex:none}
+.luqi-home-screenshot .luqi-pano-error{font-size:12px;color:#ffd9c2;background:#582e22db;padding:8px 10px;border-radius:7px;margin:8px 0}
+.luqi-pano-moon{min-width:0;align-self:stretch;display:flex}
+.luqi-pano-moon>.luqi-moon,.luqi-pano-moon>.luqi-info,.luqi-pano-moon>.luqi-moon-loading{width:100%;margin:0;max-width:none}
+.luqi-pano-moon .luqi-moon{background:radial-gradient(ellipse at 36% 44%,#284759 0,#071b29 55%,#03101c 100%);border:1px solid #789198;border-radius:16px;color:#fff4e2;padding:16px clamp(12px,1.4vw,24px);min-height:370px}
+.luqi-pano-moon .luqi-moon-heading{gap:8px}
+.luqi-pano-moon .luqi-moon h2{font-family:Georgia,"Times New Roman",serif;font-size:26px}
+.luqi-pano-moon .luqi-moon-eyebrow{font-size:10px!important;margin:0 0 3px;color:#c5e6da}
+.luqi-pano-moon .luqi-moon-badge{font-size:10px;background:#05633e;border-color:#228967;color:#def9d6;padding:4px 9px}
+.luqi-pano-moon .luqi-moon-overview{grid-template-columns:minmax(90px,135px) minmax(0,1fr);gap:12px;margin-top:12px}
+.luqi-pano-moon .luqi-moon svg{max-width:135px;filter:drop-shadow(0 1px 9px #c9d5cf44)}
+.luqi-pano-moon .luqi-moon-dark{fill:#213844}
+.luqi-pano-moon .luqi-moon-lit{fill:#f3ead1}
+.luqi-pano-moon .luqi-moon h3{font-family:Georgia,"Times New Roman",serif;font-size:18px;margin:0 0 7px}
+.luqi-pano-moon .luqi-moon-facts{gap:7px}
+.luqi-pano-moon .luqi-moon-facts dt{font-size:10px;color:#c2d5dd}
+.luqi-pano-moon .luqi-moon-facts dd{font-size:12px;margin-top:1px}
+.luqi-pano-moon .luqi-moon p{font-size:11px;line-height:1.45;margin:8px 0}
+.luqi-pano-moon .luqi-moon figcaption{font-size:10px}
+.luqi-pano-moon .luqi-moon-local{margin-top:10px;padding-top:8px}
+.luqi-pano-moon .luqi-moon-actions{margin:10px 0 4px;gap:5px}
+.luqi-pano-moon .luqi-moon button{padding:7px 9px;min-height:38px;font-size:11px;border-color:#66978c;background:#153b3d;color:#f2f8ed}
+.luqi-pano-moon .luqi-moon details{padding:6px 0}
+.luqi-pano-moon .luqi-moon summary{font-size:11px}
+.luqi-home-screenshot .luqi-history-showcase{position:relative;isolation:isolate;margin-top:10px;padding:20px 16px 14px;background:#faf5e9;color:#14231f;border-radius:18px;overflow:hidden;min-width:0;border:1px solid #e6d8c0}
+.luqi-history-art{position:absolute;z-index:-1;top:0;right:0;width:68%;height:250px;background:url("/luqi-history-art.svg") center/cover no-repeat;opacity:.86}
+.luqi-history-showcase:before{content:"";position:absolute;z-index:-1;inset:0 0 auto;height:265px;background:linear-gradient(90deg,#fbf5e8 0,#fbf5e8 31%,#fbf5e8bb 47%,#fbf5e800 75%);pointer-events:none}
+.luqi-history-intro{max-width:min(100%,900px);min-height:250px;padding:6px 0 14px}
+.luqi-history-intro>h2{font-family:Georgia,"Times New Roman",serif;font-size:clamp(24px,2.6vw,39px);line-height:1.14;letter-spacing:-.7px;max-width:600px;margin:10px 0 14px;color:#102523}
+.luqi-history-intro>p:not(.luqi-history-note):not(.luqi-pano-overline){font-family:Georgia,"Times New Roman",serif;font-size:clamp(13px,1.1vw,17px);line-height:1.4;max-width:560px}
+.luqi-history-showcase .luqi-pano-overline{display:flex;align-items:center;gap:8px;color:#29533c;font-size:10px;font-weight:750;letter-spacing:.06em;margin:0}
+.luqi-history-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.luqi-history-actions a{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;background:#102d38;color:white!important;border:1px solid #102d38;padding:10px 13px;border-radius:10px;font-size:12px;font-weight:650}
+.luqi-history-actions a:first-child{background:#147650;border-color:#147650}
+.luqi-history-actions a:hover{filter:brightness(1.15)}
+.luqi-history-note{color:#5c665d;font-size:10px;margin:10px 0 0;max-width:575px}
+.luqi-history-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;position:relative;z-index:1}
+.luqi-history-card{min-width:0;display:flex;flex-direction:column;padding:15px;border:1px solid #e5d7c5;border-radius:13px;background:#fffaf2f2;min-height:190px}
+.luqi-history-card-title{display:flex;align-items:center;gap:9px;color:#4e3427}
+.luqi-history-card h3{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(16px,1.3vw,20px);font-weight:700;color:#17231e}
+.luqi-history-card p{font-size:12px;line-height:1.6;color:#4c4b40;margin:10px 0 12px}
+.luqi-history-card ul{padding:0;margin:8px 0 12px;list-style:none}
+.luqi-history-card li{display:flex;flex-direction:column;gap:2px;padding:4px 0;border-bottom:1px solid #e9e0d2}
+.luqi-history-card li strong{font-size:12px}
+.luqi-history-card li span{font-size:10px;color:#6e6557}
+.luqi-history-card>a{display:inline-flex;align-items:center;gap:7px;margin-top:auto;font-size:12px;font-weight:700;min-height:35px;color:#0b563a;text-decoration:underline;text-underline-offset:3px}
+.luqi-pano-toolstrip{display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:10px;padding:12px 5px 4px;border-top:1px solid #e8dace;min-width:0}
+.luqi-pano-toolstrip-heading h2{font-family:Georgia,"Times New Roman",serif;font-size:19px;margin:5px 0;color:#112924}
+.luqi-pano-toolstrip-heading p:last-child{font-size:11px;color:#5b635d;margin:4px 0}
+.luqi-pano-tools{display:flex;gap:5px;min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:7px}
+.luqi-pano-tools a{min-width:79px;max-width:85px;min-height:94px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border-radius:9px;background:#f2eee4;border:1px solid #e1dccf;color:#162922;flex-shrink:0;text-align:center}
+.luqi-pano-tools a:hover{background:#e7e4d6;border-color:#618c75}
+.luqi-pano-toolnum{font-size:9px;color:#696c5e}
+.luqi-pano-toolname{font-size:10px;font-weight:650;line-height:1.15}
+.luqi-pano-more{display:inline-flex;gap:6px;align-items:center;min-height:44px;font-size:12px;color:#1d6244;font-weight:650;white-space:nowrap}
+.luqi-pano-discover{padding:12px 0;color:#eff2e6}
+.luqi-pano-guest-info{margin:8px 0;padding:8px 12px;border:1px solid #44675a;border-radius:10px;color:#e4f0df}
+.luqi-pano-guest-info>summary{cursor:pointer;min-height:32px;font-size:12px}
+.luqi-pano-guest-info .luqi-chat-card{margin:10px 0}
+.luqi-home-screenshot .luqi-tools-section{background:#f7f5e9;border-radius:16px;padding:22px 19px;margin-top:12px;color:#203628}
+.luqi-home-screenshot .luqi-tools-section .luqi-section-heading h2{font-family:Georgia,"Times New Roman",serif}
+.luqi-home-screenshot .luqi-progress-panel{background:#e5eadc;color:#203728}
+.luqi-home-screenshot .luqi-home-note{color:#e0e9d7}
+.luqi-home-screenshot .luqi-home-note strong{color:#f6f8e8}
+.luqi-home-screenshot .luqi-home-note a{color:#d9f1c8}
+@media(min-width:1280px){
+  .luqi-shell-home .luqi-page-content{display:block;padding-right:0}
+  .luqi-shell-home .luqi-tool-content{width:100%;max-width:none}
+  .luqi-shell-home .luqi-collaboration-dock{position:fixed;z-index:30;right:18px;bottom:18px;top:auto;grid-column:auto;grid-row:auto;align-self:auto;width:280px;height:auto;max-height:min(405px,72dvh);margin:0;border-color:#567468;background:#0b2028ee;box-shadow:0 12px 28px #0008;backdrop-filter:blur(12px)}
+  .luqi-shell-home .luqi-collaboration-dock .luqi-collaboration-panel{overflow:auto;max-height:260px}
+  .luqi-shell-home .luqi-pano-toolstrip{padding-right:295px}
+}
+@media(max-width:1279px){
+  .luqi-pano-toolstrip{grid-template-columns:180px minmax(0,1fr)}
+  .luqi-pano-more{grid-column:2}
+}
+@media(max-width:1060px){
+  .luqi-panorama-top{grid-template-columns:minmax(0,1fr)}
+  .luqi-home-screenshot .luqi-hero{min-height:320px}
+  .luqi-pano-moon .luqi-moon{min-height:0}
+  .luqi-history-cards{grid-template-columns:1fr 1fr}
+  .luqi-history-cards article:last-child{grid-column:1/-1}
+  .luqi-home-screenshot .luqi-history-showcase{padding:16px}
+}
+@media(max-width:750px){
+  .luqi-home-screenshot .luqi-home-inner{padding:8px 10px 28px}
+  .luqi-home-screenshot .luqi-hero{padding:19px 16px 16px;min-height:310px;border-radius:12px;background-position:60% center}
+  .luqi-home-screenshot .luqi-hero h1{font-size:clamp(31px,7vw,43px)}
+  .luqi-home-screenshot .luqi-hero-description{font-size:14px}
+  .luqi-pano-moon .luqi-moon{border-radius:12px}
+  .luqi-history-art{height:160px;width:100%;opacity:.45}
+  .luqi-history-showcase:before{height:195px;background:linear-gradient(90deg,#fbf5e8 0,#fbf5e8dd 75%,#fbf5e880)}
+  .luqi-history-intro{min-height:235px}
+  .luqi-history-intro>h2{font-size:26px}
+  .luqi-history-cards{grid-template-columns:1fr}
+  .luqi-history-cards article:last-child{grid-column:auto}
+  .luqi-pano-toolstrip{grid-template-columns:1fr}
+  .luqi-pano-more{grid-column:1}
+  .luqi-pano-tools a{min-width:76px}
+  .luqi-home-screenshot .luqi-tools-section{padding:16px 11px}
+}
+@media(max-width:370px){
+  .luqi-pano-moon .luqi-moon-overview{grid-template-columns:1fr}
+  .luqi-home-screenshot .luqi-hero h1{font-size:29px}
+  .luqi-history-actions a{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.luqi-home-screenshot *, .luqi-shell-home *{animation-duration:.01ms!important;transition-duration:.01ms!important}}

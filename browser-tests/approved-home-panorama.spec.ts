@@ -1,0 +1,62 @@
+import { test, expect } from '@playwright/test';
+
+test.beforeEach(async ({ page, baseURL }) => {
+  await page.addInitScript(() => localStorage.setItem('luqi_welcome_seen','true'));
+  await page.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== new URL(baseURL!).origin) return route.abort();
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/v1/')) {
+      return route.fulfill({ status:503, json:{code:'ISOLATED_SCREENSHOT_TEST'} });
+    }
+    return route.continue();
+  });
+});
+
+test('approved panoramic home is real, readable and has a functioning Moon without invented people',async({page},testInfo)=>{
+  const errors:string[]=[]; page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/#/');
+  await expect(page.getByRole('heading',{level:1,name:/Knowledge\. People\.\s*A Stronger Africa\./})).toBeVisible();
+  const hero=page.locator('.luqi-panorama-top .luqi-hero');
+  await expect(hero).toBeVisible();
+  expect(await hero.evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('luqi-panorama.svg');
+  await expect(page.locator('.luqi-panorama-top .luqi-moon')).toBeVisible();
+  await expect(page.locator('.luqi-moon').getByRole('img')).toHaveAttribute('aria-label',/illuminated/);
+  await expect(page.getByRole('heading',{name:/African Peoples and Historical Evidence in Biblical Narratives/})).toBeVisible();
+  await expect(page.locator('.luqi-history-cards .luqi-history-card')).toHaveCount(3);
+  const strip=page.locator('.luqi-pano-tools a');
+  expect(await strip.count()).toBeGreaterThanOrEqual(10);
+  await expect(page.getByRole('complementary',{name:'Luqi contacts'})).toBeVisible();
+  await expect(page.getByRole('dialog',{name:'Your contacts'})).toHaveCount(0);
+  await expect(page.getByText('3 online',{exact:false})).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  expect(errors).toEqual([]);
+  await page.screenshot({path:testInfo.outputPath('approved-home.png'),fullPage:true,scale:'css'});
+});
+
+test('real ask bar carries a private goal to the local Luqi guide without submitting paid AI',async({page})=>{
+  let paid=0;
+  page.on('request',req=>{if(req.method()==='POST'&&(req.url().includes('guest-chat')||req.url().includes('luqi-core')))paid++;});
+  await page.goto('/#/');
+  await page.getByRole('textbox',{name:'Ask Luqi anything'}).fill('How can I prepare to start a small shop?');
+  await page.getByRole('button',{name:'Explore my question with Luqi'}).click();
+  await expect(page).toHaveURL(/#\/ask$/);
+  await expect(page.getByLabel('What would you like help with?')).toHaveValue('How can I prepare to start a small shop?');
+  expect(paid).toBe(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
+test('home history buttons open the sourced lesson and practice; tool strip opens actual tools',async({page})=>{
+  await page.goto('/#/');
+  await page.getByRole('link',{name:/Explore the topics/}).click();
+  await expect(page).toHaveURL(/#\/comparative-evidence$/);
+  await expect(page.getByRole('button',{name:'Close African history study'})).toBeVisible();
+  await expect(page.getByRole('group',{name:'African biblical study topics'}).getByRole('button')).toHaveCount(7);
+  await page.goto('/#/');
+  await page.getByRole('link',{name:/Study questions/}).click();
+  await expect(page.getByText('Try four evidence-reading questions')).toBeVisible();
+  await expect(page.getByRole('radio',{name:'Cush',exact:true})).toBeVisible();
+  await page.goto('/#/');
+  await page.locator('.luqi-pano-tools').getByRole('link',{name:/Driver rights/}).click();
+  await expect(page).toHaveURL(/#\/driver-rights$/);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});

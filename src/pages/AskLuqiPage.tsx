@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { ArrowRight, Compass, Globe2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import AiPilotPage from './AiPilotPage';
 import LuqiPromptCoach from '../components/LuqiPromptCoach';
@@ -15,9 +15,15 @@ const emptyTrip = () => ({ destination: '', dates: '', travellers: '2', budget: 
 /** One entry into real local tools and an optional, consent-gated AI trial. No automatic actions. */
 export default function AskLuqiPage() {
   const { session } = useCustomerSession();
+  const location = useLocation();
+  // Home-to-guide handoff stays in in-memory Router state, never in a query URL.
+  const incoming = location.state && typeof location.state === 'object'
+    ? (location.state as { luqiHomeGoal?: unknown }).luqiHomeGoal : null;
+  const initialNeed = typeof incoming === 'string' && incoming.trim().length > 0 &&
+    incoming.trim().length <= MAX_GUIDE_NEED_CHARS ? incoming.trim() : '';
   const previousToken = useRef<string | null>(null);
-  const [need, setNeed] = useState('');
-  const [submitted, setSubmitted] = useState('');
+  const [need, setNeed] = useState(initialNeed);
+  const [submitted, setSubmitted] = useState(initialNeed);
   const [aiDraft, setAiDraft] = useState('');
   const [coachDraftReady, setCoachDraftReady] = useState(false);
   const [error, setError] = useState('');

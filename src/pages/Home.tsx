@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
+  Landmark,
+  MessageCircle,
   BriefcaseBusiness,
   GraduationCap,
   FlaskConical,
@@ -18,7 +20,8 @@ import {
 import HomeExtras from "../components/HomeExtras";
 import HeroAiChatConsole from "../components/HeroAiChatConsole";
 import MoonNowPanel from "../components/MoonNowPanel";
-import { findWorkspaceTools } from "../components/workspace-catalog";
+import { findWorkspaceTools, workspaceTools } from "../components/workspace-catalog";
+import "../home-panorama.css";
 import "../workspace.css";
 const icons = {
   notes: NotebookPen,
@@ -31,63 +34,119 @@ const icons = {
   study: GraduationCap,
 };
 
+const strip = [
+  {id:"spatial-vision",label:"Vision & 3D"}, {id:"visual-tutor",label:"Exam tutor"}, {id:"ai-trial",label:"AI Chat"},
+  {id:"driver-rights",label:"Driver rights"}, {id:"consumer-rights",label:"Rights"}, {id:"comparative-evidence",label:"African history"},
+  {id:"opportunity-compass",label:"Opportunities"}, {id:"notes",label:"Private notes"}, {id:"physics",label:"STEM lab"},
+  {id:"near-me",label:"Near me"}, {id:"languages",label:"Languages"}, {id:"academy",label:"Content studio"},
+  {id:"business",label:"Business desk"}
+] as const;
+
 export default function Home() {
+  const navigate = useNavigate();
+  const [heroNeed, setHeroNeed] = useState("");
+  const [heroError, setHeroError] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "preview">("all");
   const tools = findWorkspaceTools(query, filter);
   const readyCount = tools.filter(tool => tool.ready && !!tool.path).length;
   return (
-    <main className="luqi-home">
+    <main className="luqi-home luqi-home-screenshot">
       <div className="luqi-home-inner">
-        <section className="luqi-hero" aria-labelledby="workspace-title">
-          <div className="luqi-hero-copy">
-            <p className="luqi-eyebrow">
-              <span /> YOUR EVERYDAY WORKSPACE
-            </p>
-            <h1 id="workspace-title">
-              Knowledge. People.
-              <br />
-              <em>A Stronger Africa.</em>
-            </h1>
-            <p className="luqi-hero-description">
-              AI, tools and source-linked information for everyday life, learning,
-              business and opportunities across Africa. Ask Luqi a question or
-              explore the tools available today.
-            </p>
-            <div className="luqi-hero-actions">
-              <Link className="luqi-primary" to="/try">
-                Try Luqi free <ArrowUpRight size={19} aria-hidden="true" />
-              </Link>
-              <Link className="luqi-secondary" to="/join">
-                Create account <ArrowUpRight size={18} aria-hidden="true" />
-              </Link>
-              <Link className="luqi-secondary" to="/chat">
-                Already registered? Chat <ArrowUpRight size={18} aria-hidden="true" />
-              </Link>
-              <a
-                className="luqi-secondary"
-                href="#tools"
-                onClick={(event) => {
-                  event.preventDefault();
-                  document.getElementById("tools")?.scrollIntoView();
-                  document.getElementById("tools-heading")?.focus();
-                }}
-              >
-                Explore tools <ArrowRight size={18} aria-hidden="true" />
-              </a>
+        <div className="luqi-panorama-top">
+          <section className="luqi-hero" aria-labelledby="workspace-title">
+            <div className="luqi-hero-art" aria-hidden="true" />
+            <div className="luqi-hero-copy">
+              <p className="luqi-pano-eyebrow">LUQI · YOUR EVERYDAY WORKSPACE</p>
+              <h1 id="workspace-title">Knowledge. People.<br />A Stronger Africa.</h1>
+              <p className="luqi-hero-description">AI, tools and source-linked information for everyday life, learning, business and opportunities across Africa.</p>
+              <form className="luqi-pano-ask" onSubmit={event => {
+                event.preventDefault();
+                const goal = heroNeed.trim();
+                if (!goal || goal.length > 500) { setHeroError("Enter a question or goal in 500 characters or fewer."); return; }
+                setHeroError("");
+                navigate("/ask", { state: { luqiHomeGoal: goal } });
+              }}>
+                <MessageCircle size={23} aria-hidden="true" />
+                <label htmlFor="luqi-hero-need" className="luqi-sr-only">Ask Luqi anything</label>
+                <input id="luqi-hero-need" type="text" inputMode="text" autoComplete="off" maxLength={500}
+                  value={heroNeed} onChange={event => { setHeroNeed(event.target.value); if (heroError) setHeroError(""); }}
+                  placeholder="Ask Luqi anything…" />
+                <button type="submit" aria-label="Explore my question with Luqi"><ArrowRight size={24} aria-hidden="true" /></button>
+              </form>
+              {heroError && <p className="luqi-pano-error" role="alert">{heroError}</p>}
+              <nav className="luqi-pano-chips" aria-label="Start with a topic">
+                <Link to="/driver-rights">Try: Driver rights</Link>
+                <Link to="/study-desk">Matric Physics</Link>
+                <Link to="/tenders">Tender opportunities</Link>
+                <Link to="/business-desk">Start a business</Link>
+                <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"geography"}}>African history</Link>
+              </nav>
+              <p className="luqi-pano-trust"><ShieldCheck size={15} aria-hidden="true"/> Questions open Luqi’s free local guidance first. AI calls still require separate consent and are subject to availability.</p>
             </div>
-            <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link><span>Android or iPhone · No app store required</span></p>
-            <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
-            <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
-            <p className="luqi-hero-onboarding">Want to understand public records? <Link to="/chat?civic=1">Explore Luqi's Civic Evidence Desk</Link> with original source links.</p>
-            <p className="luqi-hero-footnote">
-              <ShieldCheck size={15} aria-hidden="true" /> Explore free tools without an account. Guest AI is available on a limited trial; additional AI use depends on consent and availability.
-            </p>
+          </section>
+          <div className="luqi-pano-moon"><MoonNowPanel /></div>
+        </div>
+
+        <section className="luqi-history-showcase" aria-labelledby="luqi-history-heading">
+          <div className="luqi-history-art" aria-hidden="true" />
+          <div className="luqi-history-intro">
+            <p className="luqi-pano-overline"><BookOpen size={23} aria-hidden="true" /> AFRICA · HISTORY · SOURCES</p>
+            <h2 id="luqi-history-heading">African Peoples and Historical Evidence in Biblical Narratives</h2>
+            <p>From the Table of Nations to Ebed-Melech and an African official in Acts, explore African places and people through ancient texts, material records and scholarly interpretation.</p>
+            <div className="luqi-history-actions">
+              <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"geography"}}>Explore the topics <ArrowRight size={17} aria-hidden="true"/></Link>
+              <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"ebed"}}>Key figures <ArrowUpRight size={17} aria-hidden="true"/></Link>
+              <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanPractice:true}}>Study questions <ArrowUpRight size={17} aria-hidden="true"/></Link>
+            </div>
+            <p className="luqi-history-note">Illustrated design, not historical portraits. Sources distinguish texts, artifacts and interpretations.</p>
           </div>
-          <HeroAiChatConsole />
+          <div className="luqi-history-cards">
+            <article className="luqi-history-card">
+              <div className="luqi-history-card-title"><Globe2 size={22} aria-hidden="true"/><h3>1. The Table of Nations</h3></div>
+              <p>Genesis 10 names Cush, Mizraim, Put and Canaan. Explore the ancient geography and why it cannot establish modern racial ancestry.</p>
+              <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"geography"}}>Explore the geography <ArrowRight size={16} aria-hidden="true"/></Link>
+            </article>
+            <article className="luqi-history-card">
+              <div className="luqi-history-card-title"><BookOpen size={22} aria-hidden="true"/><h3>2. African figures in the texts</h3></div>
+              <ul>
+                <li><strong>Ebed-Melech</strong><span>Jeremiah 38–39 · a Cushite rescuer</span></li>
+                <li><strong>Simon of Cyrene</strong><span>Mark 15 · North African hometown</span></li>
+                <li><strong>Taharqa</strong><span>Evidence from Kushite kingship; chronology matters</span></li>
+              </ul>
+              <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"ebed"}}>Compare text and evidence <ArrowRight size={16} aria-hidden="true"/></Link>
+            </article>
+            <article className="luqi-history-card">
+              <div className="luqi-history-card-title"><Landmark size={22} aria-hidden="true"/><h3>3. Early African Christianity</h3></div>
+              <p>Explore the African official in Acts 8, the Nubian royal title Candace and separately evidenced Christian history in Aksum.</p>
+              <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"acts"}}>Study the sources <ArrowRight size={16} aria-hidden="true"/></Link>
+            </article>
+          </div>
+          <div className="luqi-pano-toolstrip">
+            <div className="luqi-pano-toolstrip-heading">
+              <p className="luqi-pano-overline"><Layers3 size={17} aria-hidden="true"/> AVAILABLE IN LUQI</p>
+              <h2>Explore Luqi’s tools</h2><p>Tap a service to open its real workspace.</p>
+            </div>
+            <nav className="luqi-pano-tools" aria-label="Quick links to working Luqi tools">
+              {strip.map(({ id, label }, index) => {
+                const tool = workspaceTools.find(value => value.id === id && value.ready && value.path);
+                if (!tool?.path) return null;
+                const Icon = icons[tool.icon];
+                return <Link key={id} to={tool.path} title={tool.title}>
+                  <Icon size={23} aria-hidden="true"/>
+                  <span className="luqi-pano-toolnum">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="luqi-pano-toolname">{label}</span>
+                </Link>;
+              })}
+            </nav>
+            <a className="luqi-pano-more" href="#tools">More tools <ArrowRight size={16} aria-hidden="true"/></a>
+          </div>
         </section>
-        <MoonNowPanel />
-        <HomeExtras />
+        <div className="luqi-pano-discover"><HomeExtras /></div>
+        <details className="luqi-pano-guest-info">
+          <summary>How does Luqi’s AI trial work?</summary>
+          <HeroAiChatConsole />
+        </details>
         <section
           id="tools"
           className="luqi-tools-section"

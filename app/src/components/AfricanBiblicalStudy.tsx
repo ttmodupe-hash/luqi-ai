@@ -13,10 +13,11 @@ function SourceLinks({ ids }: { ids: readonly string[] }) {
 }
 
 /** Static, source-linked local study. Choices are neither stored nor sent to AI. */
-export default function AfricanBiblicalStudy({ now = new Date() }: { now?: Date }) {
+export default function AfricanBiblicalStudy({ now = new Date(), initiallyOpen = false, initialTopic, openPractice = false }:
+  { now?: Date; initiallyOpen?: boolean; initialTopic?: string; openPractice?: boolean }) {
   const id = useId();
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(BIBLICAL_STUDIES[0].id);
+  const [open, setOpen] = useState(initiallyOpen);
+  const [selected, setSelected] = useState(() => BIBLICAL_STUDIES.some(value => value.id === initialTopic) ? initialTopic! : BIBLICAL_STUDIES[0].id);
   const [layer, setLayer] = useState<BiblicalLayerId>('text');
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const current = biblicalStudyIsCurrent(now);
@@ -51,7 +52,7 @@ export default function AfricanBiblicalStudy({ now = new Date() }: { now?: Date 
           <p>{panel.body}</p>
           {layer === 'reflection' ? <p className="luqi-africa-meta">Luqi-designed activity, not a quoted source or a test of religious belief.</p> : <SourceLinks ids={panel.sourceIds} />}
         </article>
-        <details>
+        <details {...(openPractice ? { open: true } : {})}>
           <summary>Try four evidence-reading questions</summary>
           <p>Practise reading sources, not judging faith. Answers stay only in this page’s memory and reset on reload.</p>
           {BIBLICAL_QUIZ.map(question => {

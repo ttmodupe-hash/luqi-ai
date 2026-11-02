@@ -41,6 +41,11 @@ const navigation = [
 ] as const;
 // Keep the five most useful destinations visible on wide screens; the complete
 // directory remains in an accessible native disclosure and the narrow-screen menu.
+const homeNavigation = [
+  ["/", "Home"], ["/omega-tasks", "Tools"], ["/study-desk", "Learn"],
+  ["/comparative-evidence", "Africa"], ["/driver-rights", "Safety"],
+  ["/opportunities", "Opportunities"], ["/local-pulse", "News"], ["/start", "About"],
+] as const;
 const primaryPaths: ReadonlySet<string> = new Set(["/chat", "/", "/opportunities", "/local-pulse", "/content-studio"]);
 const primaryNavigation = navigation.filter(([path]) => primaryPaths.has(path));
 const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(path));
@@ -52,6 +57,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
     try { localStorage.setItem("luqi:calm-mode", String(value)); } catch { /* Preference works without storage. */ }
   };
   const isChatWorkspace = location.pathname === "/chat";
+  const isHomeWorkspace = location.pathname === "/";
   const guideNotice = isGuidePath(location.pathname) ? <RouteLoadBoundary><GuideHandoffNotice key={location.pathname} /></RouteLoadBoundary> : null;
   const customer = useOptionalCustomerSession();
   const presence = useContactPresence(customer?.session?.token);
@@ -91,7 +97,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   }, [searchOpen]);
   const results = findWorkspaceTools(query);
   return (
-    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm ? "calm" : "auto"}>
+    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : isHomeWorkspace ? "luqi-shell luqi-shell-home" : "luqi-shell"} data-motion={calm ? "calm" : "auto"}>
       <Toaster />
       <a
         className="luqi-skip"
@@ -135,9 +141,10 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             <span>
               Luqi
             </span>
+            {isHomeWorkspace && <small className="luqi-home-tagline">Your everyday workspace</small>}
           </Link>
           <nav aria-label="Primary navigation" className="luqi-desktop-nav">
-            {primaryNavigation.map(([path, name]) => (
+            {(isHomeWorkspace ? homeNavigation : primaryNavigation).map(([path, name]) => (
               <NavLink key={path} to={path} end={path === "/"}>
                 {name}
               </NavLink>
@@ -178,9 +185,12 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <span>Search</span>
               <kbd>⌘ K</kbd>
             </button>
-            <Link className="luqi-account-link" to="/chat">
+            {isHomeWorkspace ? <>
+              <Link className="luqi-home-signin" to={customer?.session ? "/chat" : "/login"}>{customer?.session ? "My chat" : "Sign in"}</Link>
+              <Link className="luqi-home-start" to={customer?.session ? "/chat" : "/try"}>{customer?.session ? "Open Luqi" : "Get started free"}</Link>
+            </> : <Link className="luqi-account-link" to="/chat">
               Ask Luqi <ArrowUpRight size={16} aria-hidden="true" />
-            </Link>
+            </Link>}
             {customer?.session && <button type="button" className="luqi-header-signout"
               aria-label="Log out of Luqi" onClick={customer.signOut}>Sign out</button>}
             <button
