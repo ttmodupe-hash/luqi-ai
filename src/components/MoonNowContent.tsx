@@ -86,7 +86,7 @@ export default function MoonNowPanel() {
             </div>
             <figcaption>{view === 'surface'
               ? 'Full near-side surface for exploration, not today’s lunar illumination.'
-              : 'Calculated lunar phase with crater detail, not camera footage. Choose the NASA image button for photographic surface detail.'}
+              : 'Locally illustrated lunar surface with a calculated live phase, not camera footage. Choose the NASA image button for a historic photographic mosaic.'}
               <br />{location ? 'Phase tilt estimated for your selected area.' : 'Moon orientation is approximate without a location.'}
               <br /><a href={LRO_MOON_SOURCE} target="_blank" rel="noopener noreferrer">NASA LRO surface source</a> · NASA/GSFC/Arizona State University
             </figcaption>
