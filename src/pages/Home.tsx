@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { lazy, Suspense, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -13,6 +13,8 @@ import {
   Search,
   ShieldCheck,
   Smartphone,
+  MessageCircle,
+  Compass,
   X,
 } from "lucide-react";
 import HomeExtras from "../components/HomeExtras";
@@ -20,6 +22,8 @@ import HeroAiChatConsole from "../components/HeroAiChatConsole";
 import MoonNowPanel from "../components/MoonNowPanel";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
+import "../home-cinematic.css";
+const AfricanBiblicalStudy = lazy(() => import("../components/AfricanBiblicalStudy"));
 const icons = {
   notes: NotebookPen,
   physics: FlaskConical,
@@ -32,6 +36,14 @@ const icons = {
 };
 
 export default function Home() {
+  const navigate = useNavigate();
+  const [homeNeed, setHomeNeed] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  function openLocalGuide(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = homeNeed.trim().slice(0, 500);
+    if (value) navigate("/ask", { state: { luqiHomeNeed: value } });
+  }
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "ready" | "preview">("all");
   const tools = findWorkspaceTools(query, filter);
@@ -39,55 +51,100 @@ export default function Home() {
   return (
     <main className="luqi-home">
       <div className="luqi-home-inner">
-        <section className="luqi-hero" aria-labelledby="workspace-title">
+        <section className="luqi-hero luqi-cinematic-hero" aria-labelledby="workspace-title">
           <div className="luqi-hero-copy">
-            <p className="luqi-eyebrow">
-              <span /> YOUR EVERYDAY WORKSPACE
-            </p>
-            <h1 id="workspace-title">
-              Knowledge. People.
-              <br />
-              <em>A Stronger Africa.</em>
-            </h1>
-            <p className="luqi-hero-description">
-              AI, tools and source-linked information for everyday life, learning,
-              business and opportunities across Africa. Ask Luqi a question or
-              explore the tools available today.
-            </p>
+            <p className="luqi-eyebrow"><span /> YOUR EVERYDAY WORKSPACE · AFRICA IN MIND</p>
+            <h1 id="workspace-title">Knowledge. People.<br /><em>A Stronger Africa.</em></h1>
+            <p className="luqi-hero-description">AI, tools and source-linked information for everyday life, learning, business and opportunities across Africa.</p>
+            <form aria-label="Ask Luqi from the homepage" className="luqi-home-ask" onSubmit={openLocalGuide}>
+              <label htmlFor="luqi-home-need" className="luqi-sr-only">Ask Luqi anything</label>
+              <MessageCircle size={19} aria-hidden="true" />
+              <input id="luqi-home-need" type="text" value={homeNeed} maxLength={500}
+                onChange={event => setHomeNeed(event.target.value)}
+                autoComplete="off" spellCheck autoCorrect="on" autoCapitalize="sentences"
+                placeholder="Ask Luqi anything…" />
+              <button type="submit" aria-label="Find my next step with Luqi" disabled={!homeNeed.trim()}>
+                <ArrowRight size={21} aria-hidden="true" />
+              </button>
+            </form>
+            <p className="luqi-home-ask-note">Opens a free local guide. No AI request is sent automatically.</p>
+            <nav className="luqi-hero-chips" aria-label="Popular Luqi starting points">
+              <Link to="/driver-rights">Driver rights</Link>
+              <Link to="/pendulum-lab">Matric physics</Link>
+              <Link to="/tenders">Small tenders &amp; RFQs</Link>
+              <Link to="/business-desk">Start a business</Link>
+              <Link to="/comparative-evidence">African history</Link>
+            </nav>
             <div className="luqi-hero-actions">
-              <Link className="luqi-primary" to="/try">
-                Try Luqi free <ArrowUpRight size={19} aria-hidden="true" />
-              </Link>
-              <Link className="luqi-secondary" to="/join">
-                Create account <ArrowUpRight size={18} aria-hidden="true" />
-              </Link>
-              <Link className="luqi-secondary" to="/chat">
-                Already registered? Chat <ArrowUpRight size={18} aria-hidden="true" />
-              </Link>
-              <a
-                className="luqi-secondary"
-                href="#tools"
-                onClick={(event) => {
-                  event.preventDefault();
-                  document.getElementById("tools")?.scrollIntoView();
-                  document.getElementById("tools-heading")?.focus();
-                }}
-              >
-                Explore tools <ArrowRight size={18} aria-hidden="true" />
-              </a>
+              <Link className="luqi-primary" to="/try">Try Luqi free <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              <Link className="luqi-secondary" to="/join">Create account <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              <Link className="luqi-secondary" to="/chat">Already registered? Chat <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              <a className="luqi-secondary" href="#tools" onClick={event => {
+                event.preventDefault(); document.getElementById("tools")?.scrollIntoView();
+                document.getElementById("tools-heading")?.focus();
+              }}>Explore tools <ArrowRight size={17} aria-hidden="true" /></a>
             </div>
-            <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link><span>Android or iPhone · No app store required</span></p>
-            <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
-            <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
-            <p className="luqi-hero-onboarding">Want to understand public records? <Link to="/chat?civic=1">Explore Luqi's Civic Evidence Desk</Link> with original source links.</p>
-            <p className="luqi-hero-footnote">
-              <ShieldCheck size={15} aria-hidden="true" /> Explore free tools without an account. Guest AI is available on a limited trial; additional AI use depends on consent and availability.
-            </p>
+            <details className="luqi-hero-help">
+              <summary>More ways to start · install, guidance and sources</summary>
+              <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link> Android or iPhone · No app store required</p>
+              <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
+              <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
+              <p className="luqi-hero-onboarding">Want to understand public records? <Link to="/chat?civic=1">Explore Luqi's Civic Evidence Desk</Link> with original source links.</p>
+              <p className="luqi-hero-footnote"><ShieldCheck size={15} aria-hidden="true" /> Explore free tools without an account. Guest AI is a consent-based limited trial.</p>
+            </details>
           </div>
-          <HeroAiChatConsole />
+          <div className="luqi-hero-moon"><MoonNowPanel /></div>
         </section>
-        <MoonNowPanel />
+        <section className="luqi-history-showcase" aria-labelledby="luqi-history-title">
+          <div className="luqi-history-banner">
+            <div className="luqi-history-intro">
+              <p className="luqi-history-eyebrow"><BookOpen size={17} aria-hidden="true" /> AFRICAN HISTORY · EVIDENCE · EXPLORATION</p>
+              <h2 id="luqi-history-title">African Peoples and Historical Evidence in Biblical Narratives</h2>
+              <p>Explore named African peoples, individuals, ancient places and manuscript traditions. Compare texts and historical interpretations with actual evidence.</p>
+              <div className="luqi-history-actions">
+                <button type="button" onClick={() => setHistoryOpen(value => !value)}
+                  aria-expanded={historyOpen} aria-controls="luqi-home-study">
+                  {historyOpen ? "Close the study" : "Explore the topics"} <ArrowRight size={17} aria-hidden="true" />
+                </button>
+                <Link to="/comparative-evidence">Research &amp; sources <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              </div>
+            </div>
+            <div className="luqi-history-figures" aria-label="Named figures in ancient sources; symbols are decorative, not historical portraits">
+              {[
+                ["Ebed-Melech", "Jeremiah 38–39"],
+                ["Zipporah", "Numbers 12"],
+                ["Tirhakah", "2 Kings 19"],
+                ["Ethiopian official", "Acts 8"],
+              ].map(([name, reference]) => <div className="luqi-history-figure" key={name}>
+                <span className="luqi-history-figure-icon" aria-hidden="true"><BookOpen size={19} /></span>
+                <strong>{name}</strong><small>{reference}</small>
+              </div>)}
+            </div>
+          </div>
+          <div className="luqi-history-tiles">
+            <Link to="/comparative-evidence"><BookOpen size={23} aria-hidden="true" /><span><strong>Read the source</strong><small>Texts, provenance and scholarly context</small></span><ArrowUpRight size={18} aria-hidden="true" /></Link>
+            <Link to="/comparative-evidence"><Globe2 size={23} aria-hidden="true" /><span><strong>Peoples &amp; places</strong><small>What the evidence can and cannot establish</small></span><ArrowUpRight size={18} aria-hidden="true" /></Link>
+            <Link to="/space-science"><FlaskConical size={23} aria-hidden="true" /><span><strong>Explore knowledge</strong><small>Science, astronomy and learning</small></span><ArrowUpRight size={18} aria-hidden="true" /></Link>
+          </div>
+          <p className="luqi-history-caution">Illustrations are symbolic, not authentic portraits or proof of historical claims. Interpretations may be disputed; check original sources.</p>
+          {historyOpen && <div id="luqi-home-study"><Suspense fallback={<p role="status">Opening the source-linked study…</p>}><AfricanBiblicalStudy /></Suspense></div>}
+        </section>
+        <nav className="luqi-quick-tools" aria-label="Quick access to Luqi's working tools">
+          <div className="luqi-quick-tools-intro"><h2>Explore Luqi’s tools</h2><p>Useful starting points.</p></div>
+          <Link to="/driver-rights"><ShieldCheck size={21} aria-hidden="true" /><span>Driver rights</span></Link>
+          <Link to="/study-desk"><GraduationCap size={21} aria-hidden="true" /><span>Education</span></Link>
+          <Link to="/tenders"><BriefcaseBusiness size={21} aria-hidden="true" /><span>Small tenders</span></Link>
+          <Link to="/near-me"><Compass size={21} aria-hidden="true" /><span>Near me</span></Link>
+          <Link to="/comparative-evidence"><BookOpen size={21} aria-hidden="true" /><span>African history</span></Link>
+          <Link to="/content-studio"><Layers3 size={21} aria-hidden="true" /><span>Studio</span></Link>
+          <a href="#tools" onClick={event => {
+            event.preventDefault(); document.getElementById("tools")?.scrollIntoView();
+            document.getElementById("tools-heading")?.focus();
+          }}><ArrowRight size={21} aria-hidden="true" /><span>All tools</span></a>
+        </nav>
+        <aside className="luqi-guest-guide" aria-label="Guest trial and country guide"><HeroAiChatConsole /></aside>
         <HomeExtras />
+        <div className="luqi-home-lower">
         <section
           id="tools"
           className="luqi-tools-section"
@@ -256,6 +313,7 @@ export default function Home() {
           <Link to="/service-status">
             Check service status <ArrowUpRight size={17} aria-hidden="true" />
           </Link>
+        </div>
         </div>
       </div>
     </main>
