@@ -40,7 +40,11 @@ export const subscribeLocalDiagnostics = (listen: () => void): (() => void) => {
   return () => { listeners.delete(listen); };
 };
 const announce = (next: LocalDiagnostics) => {
+  const wasReduced = current.conserveMotion;
   current = next;
+  if (wasReduced !== next.conserveMotion && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('luqi:diagnostic-motion', { detail:next.conserveMotion }));
+  }
   for (const listener of listeners) listener();
 };
 const publish = (next: LocalDiagnostics) => {
@@ -74,12 +78,42 @@ function observeVitals() {
     } catch { /* Unsupported entry type: other metrics remain useful. */ }
   }
 }
+let removeCapture: (() => void) | null = null;
+function installCapture() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const click = (event: MouseEvent) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('a,button,[role="button"]'))
+      recordLocalActivation();
+  };
+  const route = () => {
+    const value = window.location.hash;
+    // Only route groups survive; URL contents, query strings and fragments do not.
+    const path = (value.startsWith('#/') ? value.slice(1) : '/').split(/[?#]/,1)[0];
+    recordLocalRoute(path);
+  };
+  const homeGoal = () => recordLocalJourney('home_goal');
+  const homeFocus = () => {
+    if (mayWarmOptionalRoute()) void import('../pages/AskLuqiPage').catch(() => {});
+  };
+  document.addEventListener('click', click, true);
+  window.addEventListener('hashchange', route);
+  window.addEventListener('luqi:home-goal-submitted', homeGoal);
+  window.addEventListener('luqi:home-goal-focused', homeFocus);
+  removeCapture = () => {
+    document.removeEventListener('click', click, true);
+    window.removeEventListener('hashchange', route);
+    window.removeEventListener('luqi:home-goal-submitted', homeGoal);
+    window.removeEventListener('luqi:home-goal-focused', homeFocus);
+  };
+}
 export function setLocalDiagnosticsEnabled(enabled: boolean): void {
   if (current.enabled === enabled) return;
   for (const observer of observers.splice(0)) observer.disconnect();
+  removeCapture?.(); removeCapture = null;
   samples = 0;
   announce(fresh(enabled));
-  if (enabled) observeVitals();
+  if (enabled) { installCapture(); observeVitals(); }
 }
 export function clearLocalDiagnostics(): void {
   samples = 0;

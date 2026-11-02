@@ -9,8 +9,6 @@ import "../experience.css";
 import { useContactPresence } from "./useContactPresence";
 import CollaborationDock from './CollaborationDock';
 import { isGuidePath } from '../lib/interaction-handoff';
-import { getLocalDiagnostics, recordLocalRoute, recordLocalActivation,
-  subscribeLocalDiagnostics } from '../lib/local-diagnostics';
 // Guide-only UI is fetched only on a guide route, never during homepage startup.
 const GuideHandoffNotice = lazy(() => import('./GuideHandoffNotice'));
 // The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
@@ -49,23 +47,14 @@ const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(pat
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [calm, setCalm] = useState(readCalmPreference);
-  const [slowDiagnostics, setSlowDiagnostics] = useState(() => getLocalDiagnostics().conserveMotion);
+  // Public shell stays light: the diagnostics chunk is loaded only on explicit opt-in.
+  const [slowDiagnostics, setSlowDiagnostics] = useState(false);
   useEffect(() => {
-    let previous = getLocalDiagnostics().conserveMotion;
-    return subscribeLocalDiagnostics(() => {
-      const slow = getLocalDiagnostics().conserveMotion;
-      if (slow !== previous) { previous = slow; setSlowDiagnostics(slow); }
-    });
-  }, []);
-  useEffect(() => { recordLocalRoute(location.pathname); }, [location.pathname]);
-  useEffect(() => {
-    const countControl = (event: MouseEvent) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest('button,a,[role="button"]'))
-        recordLocalActivation();
+    const updateMotion = (event: Event) => {
+      setSlowDiagnostics((event as CustomEvent<boolean>).detail === true);
     };
-    document.addEventListener('click', countControl, { capture: true, passive: true });
-    return () => document.removeEventListener('click', countControl, { capture: true });
+    window.addEventListener('luqi:diagnostic-motion', updateMotion);
+    return () => window.removeEventListener('luqi:diagnostic-motion', updateMotion);
   }, []);
   const changeCalm = (value: boolean) => {
     setCalm(value);

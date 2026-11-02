@@ -16,7 +16,6 @@ import {
   X,
 } from "lucide-react";
 import HomeExtras from "../components/HomeExtras";
-import { mayWarmOptionalRoute, recordLocalJourney } from "../lib/local-diagnostics";
 
 import MoonNowPanel from "../components/MoonNowPanel";
 import { findWorkspaceTools } from "../components/workspace-catalog";
@@ -41,7 +40,8 @@ export default function Home() {
     event.preventDefault();
     const value = homeNeed.trim().slice(0, 500);
     if (value) {
-      recordLocalJourney('home_goal');
+      // Static event name only, no question or identity in the event payload.
+      window.dispatchEvent(new Event('luqi:home-goal-submitted'));
       navigate("/ask", { state: { luqiHomeNeed: value } });
     }
   }
@@ -65,7 +65,7 @@ export default function Home() {
                 onFocus={() => {
                   // Optional only after consent, on non-metered connections.
                   // Preloading code never sends the user's question to a provider.
-                  if (mayWarmOptionalRoute()) void import("./AskLuqiPage").catch(() => {});
+                  window.dispatchEvent(new Event('luqi:home-goal-focused'));
                 }}
                 autoComplete="off" spellCheck autoCorrect="on" autoCapitalize="sentences"
                 placeholder="Ask Luqi anything…" />
