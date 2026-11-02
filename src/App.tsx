@@ -10,7 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
-const Home = lazy(() => import("./pages/Home"));
+import Home from "./pages/Home";
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
