@@ -169,7 +169,7 @@ export default function TenderDeskPage(){
        :status==='mandatory-briefing-review'?<p className="font-semibold text-red-200">Past compulsory briefing. Verify attendance and eligibility with the issuer before bidding.</p>
        :<p className="text-sm text-amber-200">Source-listed; issuer confirmation required before calling this an active bid.</p>}
       {!fresh&&<p className="text-xs text-amber-200">Source review is expired, due or cannot be verified for this date. Recheck the original publisher, bid documents and amendments.</p>}
-      <p className="text-xs text-slate-300">{n.statusNote}</p>
+      {n.originalSpecificationUrl&&<p className="text-xs text-slate-300">{n.statusNote}</p>}
       <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-2">
        <a href={n.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Read original tender and download issuer documents</a>
        {n.originalSpecificationUrl&&<a href={n.originalSpecificationUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Original issuer specification (PDF)</a>}
