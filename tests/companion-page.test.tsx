@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import { cleanup, fireEvent, render as renderUI, screen, waitFor, act } from "@testing-library/react";
 import CompanionPage from "../src/pages/CompanionPage";
+import { CustomerSessionProvider } from "../src/providers/customer-session";
+const render = (element: React.ReactElement) => renderUI(<CustomerSessionProvider>{element}</CustomerSessionProvider>);
 
 const downloads = vi.hoisted(() => vi.fn());
 const allDownloads = vi.hoisted(() => vi.fn());

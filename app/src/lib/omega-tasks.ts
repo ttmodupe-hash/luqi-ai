@@ -88,6 +88,12 @@ export function omegaClient(token: string, request: typeof fetch = fetch) {
     list: (before?: string) => call(`/?limit=20${before ? `&before=${taskId.parse(before)}` : ""}`, z.object({ tasks: z.array(taskSchema).max(20) })),
     get: (id: string) => call(`/${taskId.parse(id)}`, one(id)),
     cancel: (id: string) => call(`/${taskId.parse(id)}/cancel`, one(id, true), { confirm: true }),
+    removeFinished: (id: string) => {
+      const expected = taskId.parse(id);
+      const response = z.object({ removed: z.literal(true), id: taskId }).strict()
+        .refine(result => result.id === expected);
+      return call(`/${expected}/remove`, response, { confirm: true });
+    },
     submit: (submitted: OmegaSubmission) => {
       const input = submissionSchema.parse(submitted);
       const saved = z.object({ created: z.boolean(), task: taskSchema }).superRefine((response, context) => {

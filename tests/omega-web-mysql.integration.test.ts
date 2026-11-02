@@ -142,6 +142,48 @@ describe.skipIf(!fixture).sequential('authenticated Node/Python Omega bridge on 
     expect((await request(owner.token, `/${finished.id}/cancel`, { confirm: true })).status).toBe(409);
   });
 
+  it('removes terminal non-billable owned tasks without permitting foreign or pending deletion', async () => {
+    const pending = await submit(owner.token);
+    const crossAccount = await request(other.token, `/${pending.id}/remove`, { confirm: true });
+    expect(crossAccount.status).toBe(404);
+    expect(await crossAccount.json()).toEqual({ code: 'OMEGA_TASK_NOT_FOUND' });
+    expect((await request(owner.token, `/${pending.id}/remove`, { confirm: true })).status).toBe(409);
+    for (const bad of [{}, { confirm: false }, { confirm: true, userId: owner.id }]) {
+      expect((await request(owner.token, `/${pending.id}/remove`, bad)).status).toBe(400);
+    }
+    const completed = await submit(owner.token);
+    expect((await worker(completed.id)).exit).toBe(0);
+    const finished = await request(owner.token, `/${completed.id}/remove`, { confirm: true });
+    expect(finished.status).toBe(200);
+    expect(await finished.json()).toEqual({ removed: true, id: completed.id });
+    const [deleted] = await pool.execute<RowDataPacket[]>('SELECT id FROM omega_tasks_v1 WHERE id=?', [completed.id]);
+    expect(deleted).toEqual([]);
+    expect((await request(owner.token, `/${completed.id}/remove`, { confirm: true })).status).toBe(404);
+    expect((await request(owner.token, `/${completed.id}`)).status).toBe(404);
+    expect((await request(owner.token, `/${pending.id}`)).status).toBe(200);
+    // A deleted idempotency reference does not cause a fictional recovered task:
+    // explicit reuse is a new, separately visible submission.
+    const replay = await request(owner.token, '/', { ...budget, idempotencyKey: 'reopened-reference-001' });
+    expect(replay.status).toBe(201);
+  });
+
+  it('keeps completed records on an interrupted deletion and never exposes database diagnostics', async () => {
+    const task = await submit(owner.token);
+    expect((await worker(task.id)).exit).toBe(0);
+    await pool.query("CREATE TRIGGER omega_fixture_no_delete BEFORE DELETE ON omega_tasks_v1 FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='private-delete-error'");
+    try {
+      const response = await request(owner.token, `/${task.id}/remove`, { confirm: true });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ code: 'OMEGA_STORAGE_UNAVAILABLE' });
+      const [rows] = await pool.execute<RowDataPacket[]>('SELECT state FROM omega_tasks_v1 WHERE id=?', [task.id]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].state).toBe('completed');
+    } finally {
+      await pool.query('DROP TRIGGER omega_fixture_no_delete');
+    }
+    expect((await request(owner.token, `/${task.id}/remove`, { confirm: true })).status).toBe(200);
+  });
+
   it('revokes API access after password reset and denies disabled/deleted accounts to workers', async () => {
     const accountA = await account();
     const task = await submit(accountA.token);
@@ -175,6 +217,13 @@ describe.skipIf(!fixture).sequential('authenticated Node/Python Omega bridge on 
     const replay = await request(quota.token, '/', { ...budget, idempotencyKey: Buffer.from(row.idempotency_key).toString() });
     expect(replay.status).toBe(200);
     expect((await replay.json()).task.id).toBe(first.id);
+    // A completed task can be removed, freeing exactly one account slot.
+    expect((await worker(first.id)).exit).toBe(0);
+    expect((await request(quota.token, `/${first.id}/remove`, { confirm: true })).status).toBe(200);
+    const fresh = await request(quota.token, '/', { ...budget, idempotencyKey: randomUUID() });
+    expect(fresh.status).toBe(201);
+    const [restored] = await pool.execute<RowDataPacket[]>('SELECT COUNT(*) AS total FROM omega_tasks_v1 WHERE owner_id=?', [row.owner_id]);
+    expect(Number(restored[0].total)).toBe(100);
   });
 
   it('refuses changed handler versions, side effects and injected private payload fields', async () => {

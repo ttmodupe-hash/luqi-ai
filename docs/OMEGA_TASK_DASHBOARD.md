@@ -1,9 +1,11 @@
 # Omega task dashboard
 
 The shared web frontends expose `/#/omega-tasks` through navigation, workspace
-search and the Omega card. The dashboard is an authenticated task-history viewer
-with explicit queued-task cancellation. It does not submit tasks, execute workers,
-enable providers, activate billing, apply migrations or provision services.
+search and the Omega card. The page now offers two no-account browser calculators alongside a separate
+authenticated task-history viewer, reviewed queue submission and queued-task
+cancellation when intake is enabled. Local calculations are not saved. The
+page does not execute workers, enable providers, activate billing, apply
+migrations or provision services.
 Production intake and workers remain disabled.
 
 ## User flow and outcome boundaries
@@ -28,6 +30,13 @@ Production intake and workers remain disabled.
   races with execution, times out or loses its acknowledgement, show an unconfirmed
   outcome, block another action and require a manual history refresh. No automatic
   retry is sent and the record is retained.
+- When intake is enabled, a separately confirmed `Remove saved task` action
+  removes only the selected completed, failed or cancelled account-owned web-v1
+  non-billable task from active MySQL. Running, queued, retry-wait, approval and
+  reconciliation-required tasks cannot be removed. Backups retain copies according
+  to their own retention; this is not account-wide erasure. A lost response is
+  unconfirmed and blocks new mutation actions until manual task refresh.
+  No automatic retry or background purge is allowed.
 - A 401 clears account/task state. Requests completing after sign-out, route
   unmount or a new account sign-in cannot restore the old account's data. Refresh
   clears old results before loading; failed reads do not leave a stale result
@@ -47,10 +56,11 @@ are checked to bypass the Omega API; the CI parity check covers both source tree
 All browser identities/results are synthetic. These checks do not prove a real
 production account, worker activity or production backup recovery.
 
-Still needed before broad task rollout: explicit migration and dedicated worker
-credentials, operating procedures and monitoring, retention/erasure policy,
-backup/restore validation, and designated production test-account acceptance.
-Task creation forms, running-task cancellation, general admin roles, live-domain
+Still needed before broad task rollout: explicit migration, separate and narrowly
+scoped web DELETE grant, dedicated worker credentials, operating procedures and
+monitoring, whole-account retention/erasure and backup policy, production-derived
+isolated restore validation, and designated production test-account acceptance.
+Live worker execution, running-task cancellation, general admin roles, live-domain
 feeds, autonomous execution and self-improvement are not implemented by this UI.
 The existing intake switch remains the rollout boundary. Rollback can revert this
 UI while preserving task rows and all existing user data.

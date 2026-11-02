@@ -40,7 +40,7 @@ test('a delayed tool announces loading without removing workspace navigation', a
   try {
     await page.goto('/#/pendulum-lab', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Loading this tool…' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'LUQI workspace home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Luqi workspace home' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   } finally { release(); }
   await expect(page.getByRole('heading', { name: physicsHeading, exact: true })).toBeVisible();

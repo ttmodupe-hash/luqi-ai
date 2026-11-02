@@ -1,5 +1,6 @@
-/** The sole paid HTTP entrypoint: authenticate, bound, validate, then reserve. */
+/** The text-only paid HTTP entrypoint: authenticate, bound, validate, then reserve. */
 import { Hono } from 'hono';
+import { civicEvidence } from './civic-evidence';
 import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
@@ -7,10 +8,16 @@ import { runBudgetedPilotChat } from './services/aiPilotGateway';
 import { PilotOutputError } from './services/pilotOutput';
 import { MAX_INPUT_CHARS, PilotBlocked, assertPilotEnabled } from './services/aiPilotBudget';
 import { authenticatePilotUser, PilotAuthError } from './services/pilotAuth';
+import { AFRICAN_REGION_CODES } from '../src/services/panAfricanSovereignEngine';
 
 const question = z.string().trim().min(1).max(MAX_INPUT_CHARS);
 const input = z.object({ user_input: question.optional(), prompt: question.optional(),
   language: z.string().trim().min(1).max(50).optional(),
+  // Optional independent OpenAI attempt; default remains Gemini then fallback.
+  // This never accepts a model, key, endpoint, account ID or spending override.
+  provider: z.literal('openai').optional(),
+  // Explicit opt-in country preference; never IP, account address or location.
+  regionContext: z.enum(AFRICAN_REGION_CODES).optional(),
   history: z.array(z.object({ sender: z.enum(['user', 'ai']), text: z.string().max(350) }).strict()).max(4).optional(),
 }).strict().refine(value => Boolean(value.user_input) !== Boolean(value.prompt));
 
@@ -56,6 +63,8 @@ aiPilot.use('*', async (c, next) => {
 aiPilot.use('*', bodyLimit({ maxSize: 32 * 1024,
   onError: c => c.json({ status: 'error', code: 'AI_INPUT_TOO_LARGE' }, 413),
 }));
+// Civic selection inherits all pilot authentication, enablement, body and budget controls.
+aiPilot.route('/civic-explain', civicEvidence);
 aiPilot.post('/', async c => {
   if (!/^application\/json(?:\s*;|$)/i.test(c.req.header('content-type') ?? '')) {
     return c.json({ status: 'error', code: 'INVALID_INPUT' }, 415);
@@ -63,10 +72,14 @@ aiPilot.post('/', async c => {
   const parsed = input.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ status: 'error', code: 'INVALID_INPUT',
     message: 'Provide one question of at most 6000 characters.' }, 400);
-  const { user_input, prompt, language, history } = parsed.data;
+  const { user_input, prompt, language, history, regionContext, provider } = parsed.data;
   // Keep the HTTP boundary truthful even if the gateway implementation changes.
   buildPilotInput((user_input ?? prompt)!, language, history);
-  const result = await runBudgetedPilotChat((user_input ?? prompt)!, c.get('pilotUserId'), language, history);
+  const result = provider
+    ? await runBudgetedPilotChat((user_input ?? prompt)!, c.get('pilotUserId'), language, history, regionContext, provider)
+    : regionContext
+    ? await runBudgetedPilotChat((user_input ?? prompt)!, c.get('pilotUserId'), language, history, regionContext)
+    : await runBudgetedPilotChat((user_input ?? prompt)!, c.get('pilotUserId'), language, history);
   return c.json({ status: 'success', agent: 'KHORO', provider: result.provider,
     provider_model: result.model, response: result.response });
 });

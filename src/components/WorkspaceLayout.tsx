@@ -1,30 +1,72 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { ArrowUpRight, Menu, Search, X } from "lucide-react";
 import { Toaster } from "./ui/toaster";
+import RouteLoadBoundary from "./RouteLoadBoundary";
+import PublicReleaseUpdateNotice from "./PublicReleaseUpdateNotice";
+import WorkspacePlaybar, { readCalmPreference } from "./WorkspacePlaybar";
+import "../experience.css";
+import { useContactPresence } from "./useContactPresence";
+import CollaborationDock from './CollaborationDock';
+import { isGuidePath } from '../lib/interaction-handoff';
+// Guide-only UI is fetched only on a guide route, never during homepage startup.
+const GuideHandoffNotice = lazy(() => import('./GuideHandoffNotice'));
+// The sidebar and its icons/styles are chat-only, never part of public homepage startup JS.
+const ChatSidebar = lazy(() => import("./ChatSidebar"));
 import { findWorkspaceTools } from "./workspace-catalog";
+import { useOptionalCustomerSession } from "../providers/customer-session";
+import { captureLuqiInstallPrompt } from "../lib/pwa-install";
 import "../workspace.css";
 
+captureLuqiInstallPrompt();
+
 const navigation = [
+  ["/chat", "Chat"],
+  ["/near-me", "Near me"],
+  ["/businesses", "Local businesses"],
+  ["/opportunities", "Opportunities"],
+  ["/local-pulse", "Local Pulse"],
+  ["/social-support", "SASSA & UIF"],
+  ["/tenders", "Tenders"],
+  ["/municipalities", "Municipal services"],
+  ["/township-economy", "Township business"],
+  ["/visa-entry", "Visa & Entry"],
+  ["/spatial-vision", "👁️ Spatial Vision & 3D Lab"],
   ["/", "Workspace"],
   ["/companion", "Private notes"],
-  ["/omega-tasks", "Omega tasks"],
-  ["/pendulum-lab", "Physics lab"],
+  ["/omega-tasks", "Luqi tools"],
   ["/content-studio", "Create"],
   ["/start", "Start here"],
+  ["/install", "Install"],
 ] as const;
+// Keep the five most useful destinations visible on wide screens; the complete
+// directory remains in an accessible native disclosure and the narrow-screen menu.
+const primaryPaths: ReadonlySet<string> = new Set(["/chat", "/", "/opportunities", "/local-pulse", "/content-studio"]);
+const primaryNavigation = navigation.filter(([path]) => primaryPaths.has(path));
+const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(path));
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const [calm, setCalm] = useState(readCalmPreference);
+  const changeCalm = (value: boolean) => {
+    setCalm(value);
+    try { localStorage.setItem("luqi:calm-mode", String(value)); } catch { /* Preference works without storage. */ }
+  };
+  const isChatWorkspace = location.pathname === "/chat";
+  const guideNotice = isGuidePath(location.pathname) ? <RouteLoadBoundary><GuideHandoffNotice key={location.pathname} /></RouteLoadBoundary> : null;
+  const customer = useOptionalCustomerSession();
+  const presence = useContactPresence(customer?.session?.token);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const moreMenu = useRef<HTMLDetailsElement>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     setMenuOpen(false);
     setSearchOpen(false);
-  }, [location.pathname]);
+    if (moreMenu.current) moreMenu.current.open = false;
+  }, [location.pathname, location.search]);
   useEffect(() => {
     const open = () => setSearchOpen(true);
     const keys = (event: KeyboardEvent) => {
@@ -49,7 +91,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   }, [searchOpen]);
   const results = findWorkspaceTools(query);
   return (
-    <div className="luqi-shell">
+    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm ? "calm" : "auto"}>
       <Toaster />
       <a
         className="luqi-skip"
@@ -63,6 +105,21 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
+      <PublicReleaseUpdateNotice />
+      {isChatWorkspace ? (
+        <div className="luqi-chat-shell">
+          <RouteLoadBoundary><ChatSidebar /></RouteLoadBoundary>
+          <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
+            {customer?.expired && <p role="status" className="luqi-info">
+              Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
+            </p>}
+            <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
+            <div className="luqi-tool-content">{guideNotice}{children}</div>
+            <CollaborationDock presence={presence} />
+          </div>
+        </div>
+      ) : (
+        <>
       <header
         className="luqi-header"
         onKeyDown={(event) => {
@@ -73,18 +130,41 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         }}
       >
         <div className="luqi-header-inner">
-          <Link to="/" className="luqi-brand" aria-label="LUQI workspace home">
+          <Link to="/" className="luqi-brand" aria-label="Luqi workspace home">
             <img className="luqi-brand-symbol" src="/luqi-mark.svg" alt="" aria-hidden="true" width="36" height="36" />
             <span>
-              LUQI<span className="luqi-brand-ai">AI</span>
+              Luqi
             </span>
           </Link>
           <nav aria-label="Primary navigation" className="luqi-desktop-nav">
-            {navigation.map(([path, name]) => (
+            {primaryNavigation.map(([path, name]) => (
               <NavLink key={path} to={path} end={path === "/"}>
                 {name}
               </NavLink>
             ))}
+            <details
+              ref={moreMenu}
+              className="luqi-more-services"
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && event.currentTarget.open) {
+                  event.preventDefault();
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector<HTMLElement>("summary")?.focus();
+                }
+              }}
+            >
+              <summary>More services</summary>
+              <div aria-label="More Luqi services">
+                {additionalNavigation.map(([path, name]) => (
+                  <NavLink key={path} to={path} end={path === "/"} onClick={() => {
+                    if (moreMenu.current) moreMenu.current.open = false;
+                  }}>{name}</NavLink>
+                ))}
+                <NavLink to="/chat?civic=1" onClick={() => {
+                  if (moreMenu.current) moreMenu.current.open = false;
+                }}>Civic evidence</NavLink>
+              </div>
+            </details>
           </nav>
           <div className="luqi-header-actions">
             <button
@@ -98,9 +178,11 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <span>Search</span>
               <kbd>⌘ K</kbd>
             </button>
-            <Link className="luqi-account-link" to="/companion">
-              Your notes <ArrowUpRight size={16} aria-hidden="true" />
+            <Link className="luqi-account-link" to="/chat">
+              Ask Luqi <ArrowUpRight size={16} aria-hidden="true" />
             </Link>
+            {customer?.session && <button type="button" className="luqi-header-signout"
+              aria-label="Log out of Luqi" onClick={customer.signOut}>Sign out</button>}
             <button
               ref={menuButton}
               className="luqi-menu-button"
@@ -135,16 +217,25 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
                 <ArrowUpRight size={16} aria-hidden="true" />
               </NavLink>
             ))}
+            {customer?.session && <button type="button" className="luqi-mobile-signout"
+              aria-label="Log out of Luqi" onClick={() => { customer.signOut(); setMenuOpen(false); }}>
+              Sign out of Luqi
+            </button>}
           </nav>
         )}
       </header>
       <div id="workspace-content" tabIndex={-1} className="luqi-page-content">
-        {children}
+        {customer?.expired && <p role="status" className="luqi-info">
+          Your session ended. <Link to="/login">Sign in again</Link> to use your Luqi account.
+        </p>}
+        <WorkspacePlaybar calm={calm} onCalm={changeCalm} />
+        <div className="luqi-tool-content">{guideNotice}{children}</div>
+        <CollaborationDock presence={presence} />
       </div>
       <footer className="luqi-footer">
         <div>
           <Link to="/" className="luqi-footer-brand">
-            LUQI AI
+            Luqi
           </Link>
           <p>Room for curiosity. Built with Africa in mind.</p>
         </div>
@@ -154,10 +245,13 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           <Link to="/terms">Terms</Link>
           <Link to="/contact">Help and feedback</Link>
           <Link to="/pricing">Plans</Link>
-          <Link to="/admin">Administration</Link>
+          <Link to="/payments">Payments</Link>
+          <Link to="/install">Install Luqi</Link>
         </nav>
-        <span>© {new Date().getFullYear()} LUQI AI</span>
+        <span>© {new Date().getFullYear()} Luqi</span>
       </footer>
+        </>
+      )}
       <dialog
         ref={dialog}
         className="luqi-search-dialog"
@@ -227,8 +321,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
           )}
         </div>
         <p className="luqi-dialog-note">
-          AI text has a separate signed-in trial with availability checks and
-          provider limits. Voice, payments and autonomous workers remain unavailable.
+          Guest AI trial and signed-in AI have separate availability and allowance checks. Recorded Studio audio is local; generated voice and autonomous workers are not enabled. Check Payments for any currently published offer.
         </p>
       </dialog>
     </div>

@@ -48,8 +48,13 @@ The operator process receives its existing protected MySQL `DATABASE_URL` and
 an independently generated 32-byte hex `LUQI_RUNTIME_DB_PASSWORD`. No secrets
 are accepted as arguments, printed or returned. Production connections must
 use Railway private DNS; the only loopback exception is the exact CI fixture.
-The command rejects a reused operator password and an enabled Omega intake.
-It also rejects any inherited role or extra grants when checking the result.
+The command rejects a reused operator password. Provisioning a **new** runtime
+identity while Omega intake is enabled remains prohibited. A separate **read-only**
+`--check` with `LUQI_OMEGA_WEB_ENABLED=true` can now validate the exact
+pre-existing Omega table grant after an independently approved migration and
+operator-issued grant. It does not create the table, user or privileges, activate
+Omega intake, start workers or write records. It rejects inherited roles and any
+extra or missing grants in either mode.
 
 Run the utility in an existing private Railway console/operator process, not
 an HTTP endpoint, web startup or automatic deployment hook. After verification,
@@ -78,6 +83,19 @@ database; grant no database-wide or global privileges and no GRANT OPTION:
 | auth_attempt_windows | SELECT, INSERT, UPDATE, DELETE |
 | ai_pilot_monthly_spend | SELECT, INSERT, UPDATE |
 | ai_pilot_daily_user_usage | SELECT, INSERT, UPDATE |
+
+The optional Omega queue needs exactly one additional table-level grant on
+`omega_tasks_v1`: `SELECT, INSERT, UPDATE, DELETE`. DELETE applies only to
+explicitly confirmed, authenticated, terminal, non-billable task removal; the
+Python worker retains a different restricted identity **without DELETE**.
+An authorized operator must migrate the task table and grant these privileges
+privately and separately. To validate after those steps, invoke the already
+packaged `prepare-mysql-runtime-role.js --check` with the **operator's private**
+connection and `LUQI_OMEGA_WEB_ENABLED=true` in that operator process.
+Check mode never updates users or grants. A core-only check continues to
+reject an extra Omega grant when its flag is false; do not grant globally
+to make a check pass. Do not enable Omega production intake without separately
+verified backups, retention/erasure, worker credentials and human acceptance.
 
 There is no runtime CREATE, ALTER, DROP, TRUNCATE, FILE, CREATE USER, GRANT, or
 access to unrelated legacy tables. Password recovery needs its own protected
@@ -149,3 +167,27 @@ its configuration rather than rolling back blindly. Root/operator credential
 revocation and designated human-account acceptance are not established here.
 The initial 941 MB backup and next scheduled backup were visible; no restore
 was run over production and no claim of production-derived recovery is made.
+
+
+## Optional private project vault (not activated, 25 October 2026)
+
+The signed-in encrypted project-vault foundation introduces an **independent,
+disabled-by-default** opt-in switch: LUQI_PROJECT_VAULT_ENABLED=true. The
+existing production web identity remains on its eight core grant sets; Omega
+remains another optional ninth set. The vault requires an explicit, separately
+reviewed table luqi_project_vault_v1 and grants **only SELECT, INSERT, UPDATE,
+DELETE on that table** to the restricted web runtime. No DDL, GRANT or
+credential is applied by startup or by the normal CI build.
+
+When enabled, runtime schema preflight requires the vault table's InnoDB
+ownership composite key, fields and types. The private operator --check
+requires exact grants for the combination of enabled modules, with no surplus
+grants or roles. --provision-new is disabled if either Omega or the vault
+flag is true. The worker must never inherit the vault permission set.
+
+A locally encrypted project is not a paid entitlement. The vault exposes no
+billing or subscription purchase controls. It must remain off in production
+until production-derived isolated restore, account deletion/retention,
+verified support and explicit operator approval have been completed. Do not
+run the synthetic MySQL CI job against Railway or substitute fixture recovery
+for a real production restore.

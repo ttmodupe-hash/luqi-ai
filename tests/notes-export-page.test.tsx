@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render as renderUI, screen, waitFor } from '@testing-library/react';
 import CompanionPage from '../src/pages/CompanionPage';
 import { NOTES_EXPORT_TIMEOUT_MS } from '../src/lib/notes-export-request';
+import { CustomerSessionProvider } from '../src/providers/customer-session';
+const render = (element: React.ReactElement) => renderUI(<CustomerSessionProvider>{element}</CustomerSessionProvider>);
 
 const exportRequest = vi.fn();
 const createUrl = vi.fn(() => 'blob:synthetic-notes');

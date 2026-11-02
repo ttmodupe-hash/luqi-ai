@@ -1,0 +1,108 @@
+import { test, expect, type Page } from '@playwright/test';
+// Dated source fixtures are distinct from the real runtime expiry test below.
+test.beforeEach(async ({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-02T10:00:00Z'));
+ await page.route('**/api/**',route=>route.fulfill({status:503,json:{code:'SYNTHETIC_UNAVAILABLE'}}));
+ await page.route('**/v1/**',route=>route.fulfill({json:{status:'configured_not_verified',checks:{persistence:'connected',ai_pilot:'configured_not_verified'}}}));
+});
+const answer={format:'luqi.civic-explanation.v1',edition:'2026-11-01.1',claimId:'clean-audit',reviewedOn:'2026-11-01',passageIds:['clean-limit'],outOfScope:false,provider:'gemini',provider_model:'synthetic-browser-fixture'};
+async function signInToEvidence(page:Page){
+ await page.route('**/api/v1/auth/login',route=>route.fulfill({json:{token:'synthetic-civic-session',user:{email:'civic-fixture@example.test',name:'Civic tester'}}}));
+ await page.goto('/#/chat');
+ // Follow the existing collapsed in-chat sign-in UI, as a visitor would.
+ await page.getByText('Prefer to sign in here?',{exact:true}).click();
+ const access=page.getByRole('region',{name:'Sign in to your Luqi account'});
+ await access.getByLabel('Email',{exact:true}).fill('civic-fixture@example.test');
+ await access.getByLabel('Password',{exact:true}).fill('synthetic-passphrase-only');
+ await access.getByRole('button',{name:'Sign in',exact:true}).click();
+ await expect(access).toHaveCount(0);
+ await page.getByRole('link',{name:'Civic evidence — understand public records and voting information',exact:true}).click();
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Reading a clean audit',exact:true})});
+ await card.getByRole('link',{name:'Ask Luqi about this evidence'}).click();
+}
+test('public civic evidence and free follow-up are useful at 320px without sign-in or inference',async({page},testInfo)=>{
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.setViewportSize({width:320,height:800});
+ await page.goto('/#/chat?civic=1');
+ await expect(page.getByRole('heading',{name:'Civic Evidence Desk',exact:true})).toBeVisible();
+ await expect(page.getByRole('article')).toHaveCount(5);
+ await page.getByLabel('Evidence topic').selectOption('Voting');
+ await expect(page.getByRole('article')).toHaveCount(1);
+ await expect(page.getByRole('link',{name:'Voter information centre',exact:true})).toHaveAttribute('href','https://www.elections.org.za/pw/voter/voter-information');
+ await page.getByLabel('Evidence topic').selectOption('Audits');
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Reading a clean audit',exact:true})});
+ await card.getByText('Read the evidence and limitations',{exact:true}).click();
+ await expect(card.getByText(/not a guarantee that every service works/)).toBeVisible();
+ await card.getByRole('link',{name:'Ask Luqi about this evidence'}).click();
+ await expect(page).toHaveURL(/#\/chat\?evidence=clean-audit$/);
+ await page.getByRole('button',{name:'What does it not prove?',exact:true}).click();
+ const log=page.getByRole('log',{name:'Civic explanation conversation'});
+ await expect(log.getByText(/does not show that every household/)).toBeVisible();
+ await expect(log.getByRole('link',{name:'Auditor-General of South Africa',exact:true})).toHaveAttribute('href','https://www.agsa.co.za/what-we-do');
+ await expect(page.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
+ expect(posts).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ await page.screenshot({path:testInfo.outputPath('civic-evidence-320.png'),fullPage:true});
+});
+test('shared Luqi login plus explicit approval sends only claim ID, question and bounded prior evidence IDs',async({page})=>{
+ const calls:any[]=[];
+ await page.route('**/api/v1/luqi-core/civic-explain',async route=>{calls.push(route.request().postDataJSON());await route.fulfill({json:answer});});
+ await signInToEvidence(page);
+ const form=page.getByRole('form',{name:'Ask the civic evidence supporter'});
+ expect(calls).toEqual([]);
+ await form.getByLabel('Question about this evidence',{exact:true}).fill('Does a clean audit prove every tap works?');
+ await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();
+ await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
+ const log=page.getByRole('log',{name:'Civic explanation conversation'});
+ await expect(log.getByText('AI-selected reviewed explanation',{exact:false})).toBeVisible();
+ expect(calls).toEqual([{claimId:'clean-audit',question:'Does a clean audit prove every tap works?'}]);
+ await expect(form.getByRole('checkbox', { name: /I approve sending this question/ })).not.toBeChecked();
+ await form.getByLabel('Question about this evidence',{exact:true}).fill('Why is that not a guarantee?');
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
+ await expect(log.getByText('Why is that not a guarantee?',{exact:true})).toBeVisible();
+ expect(calls[1]).toEqual({claimId:'clean-audit',question:'Why is that not a guarantee?',previousPassageIds:['clean-limit']});
+ const stored=await page.evaluate(()=>JSON.stringify([localStorage,sessionStorage]));
+ expect(stored).not.toContain('every tap');expect(stored).not.toContain('synthetic-civic-session');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});
+test('forged response is not rendered or retried, and sign-out clears the civic question and consent',async({page})=>{
+ let calls=0;
+ await page.route('**/api/v1/luqi-core/civic-explain',route=>{calls++;return route.fulfill({json:{...answer,text:'Invented political claim which must never render'}});});
+ await signInToEvidence(page);
+ const form=page.getByRole('form',{name:'Ask the civic evidence supporter'});
+ await form.getByLabel('Question about this evidence',{exact:true}).fill('private synthetic question marker');
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();await form.getByRole('button',{name:'Ask evidence supporter',exact:true}).click();
+ await expect(form.getByRole('status')).toContainText('not displayed');
+ await expect(page.getByText('Invented political claim which must never render')).toHaveCount(0);
+ await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
+ expect(calls).toBe(1);
+ const mobileOpen=page.getByRole('button',{name:'Open chat sidebar',exact:true});
+ if(await mobileOpen.isVisible())await mobileOpen.click();
+ await page.locator('button[title="Sign out of Luqi"]').click();
+ await expect(form.getByLabel('Question about this evidence',{exact:true})).toHaveValue('');
+ await expect(form.getByRole('checkbox', { name: /I approve sending this question/ })).not.toBeChecked();
+ await expect(form.getByRole('checkbox', { name: /I approve sending this question/ })).toBeDisabled();
+ expect(calls).toBe(1);
+});
+test('expired records remain dated and block AI; forged record links never become prompts',async({page})=>{
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.clock.setFixedTime(new Date('2026-11-10T10:00:00Z'));
+ await page.goto('/#/chat?evidence=clean-audit');
+ await expect(page.getByText('Review expired — reconfirm with the publisher',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Explain the meaning',exact:true}).click();
+ await expect(page.getByRole('log').getByText(/Source review expired/)).toBeVisible();
+ await page.goto('/#/chat?evidence=https%3A%2F%2Fevil.example');
+ await expect(page.getByRole('heading',{name:'That evidence record is not recognised',exact:true})).toBeVisible();
+ expect(posts).toEqual([]);
+});
+test('likely voter ID numbers cannot be approved for provider transmission',async({page})=>{
+ let calls=0;await page.route('**/api/v1/luqi-core/civic-explain',route=>{calls++;return route.fulfill({json:answer});});
+ await signInToEvidence(page);
+ const form=page.getByRole('form',{name:'Ask the civic evidence supporter'});
+ await form.getByLabel('Question about this evidence',{exact:true}).fill('My ID is ０１２３４５６７８９０１２');
+ await expect(form.getByRole('alert')).toContainText('Remove the personal ID');
+ await form.getByRole('checkbox', { name: /I approve sending this question/ }).check();await expect(form.getByRole('button',{name:'Ask evidence supporter',exact:true})).toBeDisabled();
+ expect(calls).toBe(0);
+});

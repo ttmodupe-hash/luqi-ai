@@ -1,0 +1,36 @@
+name: LUQI Local Tool Search
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/components/workspace-catalog.ts'
+      - tests/workspace-tool-search.test.mjs
+      - browser-tests/workspace-tool-search.spec.ts
+      - .github/workflows/workspace-tool-search.yml
+  push:
+    branches: [main]
+    paths:
+      - '**/components/workspace-catalog.ts'
+      - tests/workspace-tool-search.test.mjs
+      - browser-tests/workspace-tool-search.spec.ts
+      - .github/workflows/workspace-tool-search.yml
+permissions:
+  contents: read
+concurrency:
+  group: local-tool-search-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-local-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify both catalogs, literal matching, availability and local-only behavior
+        run: node --experimental-strip-types --test tests/workspace-tool-search.test.mjs
+      - name: Record acceptance scope
+        run: echo 'Offline search tests only. Full browser acceptance runs in Web Build and WebKit Launch Acceptance; no production accounts, DNS or provider calls.' >> "$GITHUB_STEP_SUMMARY"

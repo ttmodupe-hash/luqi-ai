@@ -1,0 +1,29 @@
+name: LUQI Legacy GCP Release Guard
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy.yml'
+      - 'cloudbuild.yaml'
+      - 'scripts/check-release-guard.mjs'
+      - '.github/workflows/release-guard-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy.yml'
+      - 'cloudbuild.yaml'
+      - 'scripts/check-release-guard.mjs'
+      - '.github/workflows/release-guard-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check legacy GCP deploy is disabled without using cloud credentials
+        run: node scripts/check-release-guard.mjs

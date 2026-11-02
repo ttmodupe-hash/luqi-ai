@@ -1,0 +1,164 @@
+.luqi-business {
+  max-width: 1240px;
+  width: 100%;
+  padding: 48px 26px 80px;
+  margin: 0 auto;
+  color: #edf4e9;
+}
+.luqi-business-heading { max-width: 880px; margin: 0 0 30px; }
+.luqi-business-heading h1 { font-size: clamp(34px, 4vw, 52px); font-weight: 650; letter-spacing: -1.2px; margin: 12px 0; line-height: 1.16; }
+.luqi-business h2 { font-size: 24px; font-weight: 620; margin: 0 0 12px; }
+.luqi-business h3 { font-size: 17px; font-weight: 620; margin: 0; }
+.luqi-business p { line-height: 1.65; }
+.luqi-business-note { font-size: 14px; color: #c7d6bf; }
+.luqi-business-note a { color: #d9f4a5; text-decoration: underline; }
+.luqi-business-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.luqi-business-panel { min-width: 0; border: 1px solid #465e47; border-radius: 16px; background: #17271e; padding: 26px; }
+.luqi-business-form { display: grid; gap: 16px; margin-top: 20px; }
+.luqi-business-form label { display: grid; gap: 7px; min-width: 0; font-size: 14px; font-weight: 550; }
+.luqi-business-form input { display: block; min-width: 0; width: 100%; height: 48px; padding: 10px 12px; background: #0f2017; color: #f1f6eb; border: 1px solid #8ba185; border-radius: 8px; font: inherit; font-size: 16px; }
+.luqi-business-form input:focus-visible, .luqi-business button:focus-visible { outline: 3px solid #d4ecaa; outline-offset: 2px; }
+.luqi-business-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.luqi-business-item-heading { display: flex; gap: 14px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.luqi-business-item-heading span { color: #c1d4be; font-size: 12px; }
+.luqi-business-row { min-width: 0; display: grid; gap: 14px; border: 1px solid #49634b; border-radius: 12px; padding: 14px; margin: 0; }
+.luqi-business-row legend { padding: 0 8px; font-size: 14px; font-weight: 600; }
+.luqi-business-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.luqi-business button { min-height: 44px; white-space: normal; }
+.luqi-business-small { color: #eaf5dc; border-radius: 8px; background: #294230; border: 1px solid #8ba185; padding: 10px 14px; cursor: pointer; }
+.luqi-business-small:hover { background: #36513b; }
+.luqi-business button:disabled { opacity: 0.55; cursor: not-allowed; }
+.luqi-business-error { border: 1px solid #ddaf77; border-radius: 8px; background: #493522; padding: 12px; margin: 14px 0 0; }
+.luqi-business-result { background: #e9f4dc; color: #193621; border-radius: 12px; padding: 20px; margin: 20px 0 0; overflow-wrap: anywhere; }
+.luqi-business-money { font-size: 28px; font-weight: 700; margin: 10px 0; }
+.luqi-business-result pre { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; border-top: 1px solid #aac9a7; padding-top: 16px; }
+.luqi-business-result dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 14px; }
+.luqi-business-result dt { color: #365643; }
+.luqi-business-result dd { margin: 0; font-weight: 650; }
+.luqi-business-download { background: #1c4025; color: #f2f6e6; border: 1px solid #1c4025; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+.luqi-business-result .luqi-business-result-note { color: #385440; font-size: 13px; }
+@media (max-width: 860px) {
+  .luqi-business-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .luqi-business { padding: 28px 14px 48px; }
+  .luqi-business-panel { padding: 18px; }
+  .luqi-business-two { grid-template-columns: minmax(0, 1fr); }
+  .luqi-business-result dl { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .luqi-business-result dd { margin-bottom: 8px; }
+}
+
+/* Reusable quote projects are local files only, never an account upload. */
+.luqi-business-project-actions {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #49634b;
+  padding-top: 14px;
+  margin-top: 20px;
+}
+.luqi-business-project-upload {
+  display: grid;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+.luqi-business-project-upload input[type="file"] {
+  border: 1px solid #8ba185;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
+  max-width: 100%;
+  background: #10221a;
+  color: #f1f6eb;
+}
+
+/* Local follow-up board — user-controlled JSON file, never account storage. */
+.luqi-sales-board { margin-top: 24px; }
+.luqi-sales-board h2 { margin-bottom: 12px; }
+.luqi-sales-board select,
+.luqi-sales-board .luqi-sales-files input[type="file"] {
+  background: #0f2017; color: #f1f6eb; border: 1px solid #8ba185;
+  border-radius: 8px; min-width: 0; width: 100%; min-height: 48px;
+  padding: 10px 12px; font: inherit; font-size: 16px;
+}
+.luqi-sales-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 22px 0; }
+.luqi-sales-stats > div { min-width: 0; border: 1px solid #415c45; border-radius: 10px; background: #213829; padding: 12px; display: grid; gap: 6px; }
+.luqi-sales-stats strong { font-size: clamp(16px, 2vw, 22px); overflow-wrap: anywhere; }
+.luqi-sales-stats span { font-size: 12px; color: #d1ddca; }
+.luqi-sales-suggestion { justify-self: start; }
+.luqi-sales-notice { color: #d9ebbf; font-size: 14px; }
+.luqi-sales-due { padding: 15px; border: 1px solid #a8a46b; border-radius: 10px; margin-top: 18px; }
+.luqi-sales-due h3 { margin: 0 0 12px; }
+.luqi-sales-due ul { padding-left: 20px; }
+.luqi-sales-records { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 24px 0; }
+.luqi-sales-records > li { min-width: 0; border: 1px solid #48654c; border-radius: 10px; padding: 16px; background: #1b3123; display: grid; gap: 14px; }
+.luqi-sales-card-title { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.luqi-sales-records label, .luqi-sales-files label { display: grid; gap: 7px; font-size: 14px; }
+.luqi-sales-files { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.luqi-sales-files label { flex: 1; min-width: 220px; }
+.luqi-sales-import { margin-top: 18px; border: 1px solid #a8a46b; border-radius: 10px; padding: 16px; background: #263a28; }
+@media (max-width: 740px) {
+  .luqi-sales-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .luqi-sales-records { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) {
+  .luqi-sales-files label { min-width: 0; width: 100%; }
+}
+
+/* WebKit file/date inputs must shrink inside the 320px Business Desk panel. */
+.luqi-sales-board, .luqi-sales-board *,
+.luqi-sales-files, .luqi-sales-files label {
+  box-sizing: border-box;
+}
+.luqi-sales-board .luqi-business-two,
+.luqi-sales-board .luqi-sales-files,
+.luqi-sales-board .luqi-sales-records,
+.luqi-sales-board .luqi-sales-records > li {
+  min-width: 0;
+  max-width: 100%;
+}
+.luqi-sales-board input[type="date"],
+.luqi-sales-board input[type="file"],
+.luqi-sales-board select {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+.luqi-sales-board input[type="date"] {
+  min-height: 48px;
+  border: 1px solid #8ba185;
+  border-radius: 8px;
+  background: #0f2017;
+  color: #f1f6eb;
+  padding: 10px;
+  font: inherit;
+  font-size: 16px;
+}
+.luqi-sales-board input[type="file"] {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.luqi-sales-files label { flex: 1 1 180px; min-width: 0; }
+
+/* Local project encryption is opt-in, never a subscription or cloud sync. */
+.luqi-business-encrypted { margin-top: 24px; padding: 20px; border: 1px solid #6d916b;
+  border-radius: 12px; background: #21382a; min-width: 0; overflow-wrap: anywhere; }
+.luqi-business-encrypted h3 { margin-bottom: 12px; }
+.luqi-business-encrypted h4 { font-size: 15px; font-weight: 650; margin: 0 0 8px; }
+.luqi-business-encrypted-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 18px; margin-top: 18px; }
+.luqi-business-encrypted-part { display: grid; min-width: 0; align-content: start; gap: 12px; }
+.luqi-business-encrypted-part label { min-width: 0; display: grid; gap: 7px; font-size: 14px; }
+.luqi-business-encrypted-part input { box-sizing: border-box; min-width: 0; width: 100%;
+  min-height: 48px; max-width: 100%; padding: 10px; background: #0f2017; color: #f1f6eb;
+  border: 1px solid #8ba185; border-radius: 8px; font: inherit; font-size: 16px; }
+.luqi-business-encrypted-part input[type="file"] { overflow: hidden; text-overflow: ellipsis; }
+.luqi-business-encrypted-part button { justify-self: start; }
+.luqi-business-import-confirm { margin-top: 16px; padding: 18px; background: #344934;
+  border: 1px solid #aec48e; border-radius: 10px; }
+@media (max-width: 940px) { .luqi-business-encrypted-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .luqi-business-encrypted { padding: 14px; } }

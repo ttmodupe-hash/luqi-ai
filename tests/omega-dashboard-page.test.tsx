@@ -4,12 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderUI,
   screen,
   act,
   within,
 } from "@testing-library/react";
 import OmegaTasksPage from "../src/pages/OmegaTasksPage";
+import { CustomerSessionProvider } from "../src/providers/customer-session";
 import {
   task,
   taskId,
@@ -17,6 +18,7 @@ import {
   disabled,
   budgetResult,
 } from "./fixtures/omega-dashboard";
+const render = (element: React.ReactElement) => renderUI(<CustomerSessionProvider>{element}</CustomerSessionProvider>);
 const request = vi.fn();
 const reply = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -107,6 +109,45 @@ describe("Omega task dashboard (synthetic account only)", () => {
     await screen.findByText("ZAR 140.35");
     expect(screen.queryByRole("button", { name: "Cancel task" })).toBeNull();
     expect(request).toHaveBeenCalledTimes(5);
+  });
+  it("removes finished tasks only after confirmation and preserves the account boundary", async () => {
+    const completed = { ...task, state: "completed", attempts: 1, result: budgetResult };
+    await login(configured, [completed]);
+    await selectTask(completed);
+    fireEvent.click(screen.getByRole("button", { name: "Remove saved task" }));
+    expect(request).toHaveBeenCalledTimes(4);
+    expect(screen.getByRole("region", { name: "Confirm saved task removal" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Keep saved task" }));
+    expect(request).toHaveBeenCalledTimes(4);
+    fireEvent.click(screen.getByRole("button", { name: "Remove saved task" }));
+    request.mockResolvedValueOnce(reply({ removed: true, id: taskId }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm removal" }));
+    await screen.findByText(/Finished task removed from active storage/);
+    expect(screen.queryByText("ZAR 140.35")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Travel budget/ })).toBeNull();
+    expect(request.mock.calls.at(-1)?.[0]).toBe(`/api/v1/omega/tasks/${taskId}/remove`);
+    expect(request.mock.calls.at(-1)?.[1]).toMatchObject({ method: "POST", body: '{"confirm":true}' });
+  });
+  it("does not offer record removal on queued or uncertain tasks", async () => {
+    await login();
+    await selectTask(task);
+    expect(screen.queryByRole("button", { name: "Remove saved task" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cancel task" })).toBeTruthy();
+  });
+  it("treats an unconfirmed removal as unresolved until manually refreshed", async () => {
+    const completed = { ...task, state: "completed", attempts: 1, result: budgetResult };
+    await login(configured, [completed]);
+    await selectTask(completed);
+    fireEvent.click(screen.getByRole("button", { name: "Remove saved task" }));
+    request.mockRejectedValueOnce(new TypeError("response lost"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm removal" }));
+    await screen.findByText(/Task removal could not be confirmed/);
+    expect((taskButton() as HTMLButtonElement).disabled).toBe(true);
+    expect(request.mock.calls.filter(([url]) => url === `/api/v1/omega/tasks/${taskId}/remove`)).toHaveLength(1);
+    request.mockResolvedValueOnce(reply(configured)).mockResolvedValueOnce(reply({ tasks: [] }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh tasks" }));
+    await screen.findByText(/Task information refreshed/);
+    expect(screen.queryByRole("button", { name: /Travel budget/ })).toBeNull();
   });
   it("confirms cancellation, retains the record, and never sends a worker execution request", async () => {
     await login();

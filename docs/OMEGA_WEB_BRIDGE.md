@@ -36,15 +36,25 @@ account ID as `luqi-user:<id>`, never from client data.
 | `GET /` | Owner-only list, default 20 and maximum 100; opaque UUID `before` cursor, ordered by UUID rather than creation time |
 | `GET /:id` | Owner-only task state/result; missing and other-owner tasks both return 404 |
 | `POST /:id/cancel` | Requires `{ "confirm": true }`; only pending/retry-wait tasks may be cancelled |
+| `POST /:id/remove` | Owner-only, explicitly confirmed removal of completed, failed or cancelled **non-billable web-v1** tasks; queued, running, retry-wait and reconciliation-required tasks are protected |
 
-There are no public run, approval, recovery, administration, deletion or handler
+There are no public run, approval, recovery, administration, bulk-erasure or handler
 registration endpoints. DTOs omit owner IDs, idempotency keys, audit actors and
 lease tokens. Inputs are limited to 16 KiB, with strict field and domain bounds.
 The queue has a fixed cap of **100 stored tasks per account**, including completed
 and cancelled tasks. Intake locks the persistent user row and checks count in
 the same transaction so replicas cannot race past that cap. Existing key replays
-still work at the cap. No periodic quota reset or automatic deletion exists.
-Retention and account-erasure rules must be completed before broad rollout.
+still work at the cap. A finished task now has a separately confirmed, one-record owner-only removal path
+to free a slot. Removing a record also discards its idempotency mapping: replaying
+an old request reference could create a new task and must not be automatic.
+No periodic quota reset, bulk deletion or automatic retention purge exists.
+This is active-table deletion, not immediate deletion from Railway snapshots,
+separately retained backups, exported files or all account data. Retention and
+whole-account erasure policies still need operational approval before broad rollout.
+The web database runtime needs narrowly scoped DELETE permission **only on**
+`omega_tasks_v1` for this specific operation; existing web grants must be
+reviewed by the authorized operator prior to enabling intake. The Python worker
+does not need DELETE privileges and must retain its separate identity.
 
 The `LUQI_OMEGA_WEB_ENABLED=true` setting is a deliberate intake opt-in. It does
 not claim a worker is connected. Storage failure or a missing migration returns

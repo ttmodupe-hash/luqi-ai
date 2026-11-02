@@ -1,0 +1,30 @@
+name: Luqi Guided Form Acceptance
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: tender-guidance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  guided-contact-fields:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify bounded local guidance and mirrored source
+        run: node --experimental-strip-types --test tests/tender-field-guide.test.mjs
+      - name: Install existing locked dependencies
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Check both controlled original-form implementations
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/TenderSupplierGuide.tsx src/components/TenderOriginalForms.tsx app/src/components/TenderSupplierGuide.tsx app/src/components/TenderOriginalForms.tsx
+      - name: Test guidance, original integrity, applicant approvals and account clearing
+        run: npx --no-install vitest run tests/tender-supplier-guide.test.tsx tests/tender-original-forms.test.tsx tests/tender-original-documents.test.ts tests/tender-original-review.test.ts

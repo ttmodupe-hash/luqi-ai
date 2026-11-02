@@ -42,6 +42,24 @@ describe("Omega dashboard HTTP boundary", () => {
       body: '{"confirm":true}',
     });
   });
+  it("removes only an explicitly confirmed terminal record with no automatic retry", async () => {
+    const request = vi.fn().mockResolvedValueOnce(reply({ removed: true, id: taskId }))
+      .mockResolvedValueOnce(reply({ removed: true, id: "ba9c1eb2-62f6-45fb-b7f9-a989521270ae" }));
+    const api = omegaClient("fixture-token", request);
+    await expect(api.removeFinished(taskId)).resolves.toEqual({ removed: true, id: taskId });
+    expect(request.mock.calls[0][0]).toBe(`/api/v1/omega/tasks/${taskId}/remove`);
+    expect(request.mock.calls[0][1]).toMatchObject({
+      method: "POST", cache: "no-store", credentials: "omit", redirect: "error",
+      headers: { Authorization: "Bearer fixture-token" },
+      body: '{"confirm":true}',
+    });
+    await expect(api.removeFinished(taskId)).rejects.toThrow();
+    expect(() => api.removeFinished("../someone")).toThrow();
+    expect(request).toHaveBeenCalledTimes(2);
+    const lost = vi.fn().mockRejectedValue(new TypeError("Request lost"));
+    await expect(omegaClient("fixture-token", lost).removeFinished(taskId)).rejects.toThrow();
+    expect(lost).toHaveBeenCalledTimes(1);
+  });
   it("accepts both supported status contracts without claiming worker verification", async () => {
     for (const status of [configured, disabled])
       expect(

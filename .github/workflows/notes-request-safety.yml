@@ -21,7 +21,9 @@ jobs:
         with:
           node-version: '22'
       - name: Verify bounded notes and account transport without dependencies or credentials
-        run: node --experimental-strip-types --test tests/conversation-request.test.mjs tests/account-request-contract.test.mjs tests/notes-export-request.test.mjs
+        run: node --experimental-strip-types --test tests/conversation-request.test.mjs tests/account-request-contract.test.mjs tests/notes-export-request.test.mjs tests/account-diagnosis.test.mjs
+      - name: Parse operator-only account diagnostic
+        run: node --check scripts/diagnose-account-access.mjs
       - name: Install locked application and test dependencies
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify integrated notes and account interaction assertions

@@ -5,24 +5,33 @@ import { routePath } from 'hono/route';
 import { ZodError } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { logger } from './logger';
+import { applyResponseFraming } from './framePolicy';
+import { createRequestBodyGuard } from './requestBodyGuard';
 
 export const privateResponsePolicy: MiddlewareHandler = async (c, next) => {
   await next();
+  applyResponseFraming(c);
   if (/^\/(?:api|auth|v1|trpc)(?:\/|$)/.test(c.req.path) || c.req.path === '/health') {
     c.header('Cache-Control', 'no-store');
     c.header('Pragma', 'no-cache');
   }
 };
 
+// boot.ts installs this shared request boundary after the IP throttle and before
+// routes. Keep the exported name for compatibility, but enforce the body ceiling
+// here as well: its later legacy guard skips requests without Content-Length.
+const requestBodyGuard = createRequestBodyGuard();
 export const requestTelemetry: MiddlewareHandler = async (c, next) => {
   const requestId = randomUUID();
   const start = Date.now();
   c.header('X-Request-Id', requestId);
-  await next();
+  const response = await requestBodyGuard(c, next);
   logger.info({ requestId, method: c.req.method,
     // The registered pattern contains no caller's parameter/query values.
-    path: routePath(c, -1) || 'unmatched', status: c.res.status,
+    path: routePath(c, -1) || 'unmatched',
+    status: response instanceof Response ? response.status : c.res.status,
     durationMs: Date.now() - start }, 'request');
+  return response;
 };
 
 export const redactedHttpError: ErrorHandler = (error, c) => {

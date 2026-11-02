@@ -61,4 +61,45 @@ describe('shared authentication route admission', () => {
       expect(bcrypt.compare).toHaveBeenCalledTimes(1);
     },
   );
+  for (const [description, duplicate] of [
+    ['direct', { code: 'ER_DUP_ENTRY', errno: 1062 }],
+    ['wrapped', { cause: { code: 'ER_DUP_ENTRY', errno: 1062 } }],
+  ] as const) {
+    it.each(['/auth/signup', '/auth/register', '/api/v1/auth/register'])(
+      `reports a concurrent unique-email insert as an existing account (%s, ${description})`,
+      async path => {
+        vi.mocked(reserveAuthenticationAttempt).mockResolvedValue();
+        vi.mocked(bcrypt.hash).mockResolvedValue('synthetic-hash' as never);
+        const limit = vi.fn().mockResolvedValue([]);
+        const values = vi.fn().mockRejectedValue(duplicate);
+        vi.mocked(getPersistentDb).mockResolvedValue({
+          select: () => ({ from: () => ({ where: () => ({ limit }) }) }),
+          insert: () => ({ values }),
+        } as never);
+        const response = await request(path);
+        expect(response.status).toBe(409);
+        expect(response.headers.get('Cache-Control')).toBe('no-store');
+        expect(await response.json()).toEqual({ detail: 'Account already exists' });
+        expect(values).toHaveBeenCalledTimes(1);
+        expect(reserveAuthenticationAttempt).toHaveBeenCalledExactlyOnceWith('signup', 'fixture@example.invalid');
+      },
+    );
+  }
+
+  it('does not convert unrelated SQL exceptions into an existing account', async () => {
+    vi.mocked(reserveAuthenticationAttempt).mockResolvedValue();
+    vi.mocked(bcrypt.hash).mockResolvedValue('synthetic-hash' as never);
+    const values = vi.fn().mockRejectedValue({ code: 'ER_BAD_FIELD_ERROR', errno: 1054, sqlMessage: 'PRIVATE-SQL-CONTENT' });
+    vi.mocked(getPersistentDb).mockResolvedValue({
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [] }) }) }),
+      insert: () => ({ values }),
+    } as never);
+    const response = await request('/api/v1/auth/register');
+    expect(response.status).toBe(503);
+    const message = JSON.stringify(await response.json());
+    expect(message).toContain('Registration temporarily unavailable');
+    expect(message).not.toContain('PRIVATE-SQL-CONTENT');
+    expect(message).not.toContain('Account already exists');
+  });
+
 });

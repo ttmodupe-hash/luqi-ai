@@ -1,0 +1,61 @@
+name: LUQI Official Tender Notice Watch
+on:
+  schedule:
+    # SAST 06:20 and 18:20; GitHub schedules may be delayed.
+    - cron: '20 4,16 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-tender-publishers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Preserve bounded original-publisher source status only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request,urllib.error,datetime
+          from pathlib import Path
+          report={'state':'unavailable','checkedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                  'scope':'fixed_official_tender_pages','checks':[]}
+          try:
+              req=urllib.request.Request('https://app.luqi-ai.com/api/v1/tender-watch',
+                  headers={'Accept':'application/json','User-Agent':'LuqiReadOnlyTenderPublisherAudit/1.0'},
+                  method='GET')
+              with urllib.request.urlopen(req,timeout=40) as response:
+                  if response.status!=200:raise ValueError('invalid HTTP status')
+                  raw=response.read(16385)
+                  if len(raw)>16384:raise ValueError('response exceeds size bound')
+                  data=json.loads(raw)
+              if data.get('status')!='publisher-pages-checked' or data.get('scope')!='fixed_official_tender_pages':
+                  raise ValueError('unexpected source-monitor schema')
+              notices=data.get('notices')
+              allowed={'reference-visible','listing-only','content-unconfirmed','publisher-unavailable'}
+              if not isinstance(notices,list) or len(notices)<7 or len(notices)>24:
+                  raise ValueError('unexpected curated notice set')
+              ids=set()
+              for n in notices:
+                  if not isinstance(n,dict) or n.get('state') not in allowed or n.get('note')!='not_live_bid_availability':
+                      raise ValueError('unsupported notice')
+                  ident=n.get('id')
+                  if not isinstance(ident,str) or len(ident)>100 or ident in ids:
+                      raise ValueError('duplicate or invalid source')
+                  ids.add(ident)
+              report={'state':'publisher-text-checked','checkedAt':data.get('checkedAt'),
+                      'scope':'fixed_official_tender_pages',
+                      'checks':[{'id':n['id'],'state':n['state']} for n in notices]}
+              for n in report['checks']:
+                  print(n['id']+': '+n['state'])
+              print('Reference-visible is not verified bidding availability; no application was submitted.')
+          except (ValueError,urllib.error.URLError,TimeoutError,OSError,json.JSONDecodeError,TypeError,KeyError) as e:
+              print('::warning::Official tender source check unavailable: '+type(e).__name__)
+          Path('tender-publisher-watch.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+          PY
+      - name: Retain source evidence without applicant details
+        uses: actions/upload-artifact@v4
+        with:
+          name: tender-publisher-watch
+          path: tender-publisher-watch.json
+          retention-days: 14
+          if-no-files-found: error

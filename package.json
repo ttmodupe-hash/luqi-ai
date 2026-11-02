@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node scripts/postbuild.js && npm run build:recovery && npm run build:database",
+    "build": "vite build && npm run build:checkout && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node scripts/postbuild.js && npm run build:recovery && npm run build:database",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "NODE_ENV=production node dist/boot.js",
@@ -19,7 +19,9 @@
     "build:recovery": "esbuild scripts/reset-account-password.ts --platform=node --bundle --format=esm --outfile=dist/reset-account-password.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "build:database": "esbuild scripts/prepare-mysql-schema.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-schema.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && esbuild scripts/prepare-mysql-runtime-role.ts --platform=node --bundle --format=esm --outfile=dist/prepare-mysql-runtime-role.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "db:check": "node dist/prepare-mysql-schema.js --check",
-    "db:apply": "node dist/prepare-mysql-schema.js --apply"
+    "p2p:preflight": "esbuild scripts/run-p2p-preflight.ts --platform=node --bundle --format=esm --outfile=dist/p2p-preflight.js --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\" && node dist/p2p-preflight.js",
+    "db:apply": "node dist/prepare-mysql-schema.js --apply",
+    "build:checkout": "vite build --config vite.checkout.config.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -33,7 +35,7 @@
     "@capacitor/ios": "^8.4.2",
     "@capacitor/splash-screen": "^8.0.2",
     "@google/genai": "^2.19.0",
-    "@hono/node-server": "^1.14.3",
+    "@hono/node-server": "2.1.5",
     "@hono/vite-dev-server": "^0.19.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^5.22.0",
@@ -80,6 +82,8 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.4",
     "embla-carousel-react": "^8.5.1",
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3",
     "firebase-admin": "^14.5.0",
     "framer-motion": "^11.15.0",
     "hono": "^4.6.0",
@@ -90,6 +94,7 @@
     "mysql2": "^3.11.0",
     "next-themes": "^0.4.4",
     "openai": "7.43.0",
+    "pdf-lib": "1.17.1",
     "prisma": "^5.22.0",
     "react": "^18.3.1",
     "react-day-picker": "^9.5.0",
@@ -137,6 +142,9 @@
     "@esbuild-kit/core-utils": {
       "esbuild": "$esbuild"
     },
-    "postcss-selector-parser": "^7.1.6"
+    "postcss-selector-parser": "^7.1.6",
+    "@hono/node-server": "2.1.5",
+    "glob": "14.0.3",
+    "minimatch": "11.0.3"
   }
 }

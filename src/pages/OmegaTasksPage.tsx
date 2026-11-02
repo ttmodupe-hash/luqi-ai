@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
 import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
+import OmegaLocalCalculators from "../components/OmegaLocalCalculators";
+import OmegaDomainGuide from "../components/OmegaDomainGuide";
 import { ConversationError, signIn } from "../lib/private-conversations";
+import { useCustomerSession } from "../providers/customer-session";
 import {
   omegaClient,
   OmegaError,
@@ -56,9 +60,9 @@ function TaskResult({ task }: { task: OmegaTask }) {
 const formatTime = (value: string) => new Date(value).toLocaleString();
 
 export default function OmegaTasksPage() {
-  const [session, setSession] = useState<Awaited<
-    ReturnType<typeof signIn>
-  > | null>(null);
+  const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const authenticatedHere = useRef(false);
+  const previousToken = useRef<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<OmegaStatus | null>(null);
@@ -68,6 +72,7 @@ export default function OmegaTasksPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [submission, setSubmission] = useState<OmegaSubmission | null>(null);
   const [submissionUncertain, setSubmissionUncertain] = useState(false);
@@ -82,6 +87,8 @@ export default function OmegaTasksPage() {
   useEffect(
     () => () => {
       epoch.current++;
+      locked.current = false;
+      previousToken.current = null; // StrictMode remount must refresh the account view.
     },
     [],
   );
@@ -89,7 +96,7 @@ export default function OmegaTasksPage() {
   function clearSession() {
     epoch.current++;
     locked.current = false;
-    setSession(null);
+    previousToken.current = null; signOutShared();
     setEmail("");
     setPassword("");
     setStatus(null);
@@ -98,6 +105,7 @@ export default function OmegaTasksPage() {
     setMore(false);
     setBusy(false);
     setConfirm(false);
+    setConfirmRemove(false);
     setUncertain(false);
     setSubmission(null);
     setSubmissionUncertain(false);
@@ -105,7 +113,7 @@ export default function OmegaTasksPage() {
   }
   async function run(
     action: (current: () => boolean) => Promise<void>,
-    mutation?: "cancel" | "submit",
+    mutation?: "cancel" | "submit" | "remove",
   ) {
     if (locked.current) return;
     locked.current = true;
@@ -132,6 +140,11 @@ export default function OmegaTasksPage() {
         setNotice(error instanceof OmegaError && error.status === 429
           ? "The task limit was reached. No new task was confirmed. Review saved tasks or contact your operator. No automatic retry was made."
           : "Submission could not be confirmed. Check saved tasks or retry this same submission. No automatic retry was made.");
+      } else if (mutation === "remove") {
+        setSelected(null);
+        setConfirmRemove(false);
+        setUncertain(true);
+        setNotice("Task removal could not be confirmed. Refresh saved tasks before taking another action. We have not retried automatically.");
       } else if (mutation === "cancel") {
         setSelected(null);
         setConfirm(false);
@@ -160,6 +173,7 @@ export default function OmegaTasksPage() {
     setSelected(null);
     setMore(false);
     setConfirm(false);
+    setConfirmRemove(false);
     const api = omegaClient(token),
       fresh = await api.status();
     if (!current()) return;
@@ -177,6 +191,26 @@ export default function OmegaTasksPage() {
       "Task information refreshed. Status changes appear when you refresh.",
     );
   }
+  // A shared sign-in unlocks this view; clear a former identity before paint.
+  useLayoutEffect(() => {
+    const boundary = customerSessionBoundary(session);
+    const token = session?.token ?? null;
+    if (boundary === previousToken.current) return;
+    const wasSignedIn = previousToken.current !== null;
+    previousToken.current = boundary;
+    if (wasSignedIn) {
+      epoch.current++; locked.current = false;
+      authenticatedHere.current = false;
+      setStatus(null); setTasks([]); setSelected(null); setMore(false); setBusy(false);
+      setConfirm(false); setConfirmRemove(false); setUncertain(false);
+      setSubmission(null); setSubmissionUncertain(false); setEmail(''); setPassword(''); setNotice('');
+      setFormVersion(value => value + 1);
+    }
+    if (!token) return;
+    if (authenticatedHere.current) { authenticatedHere.current = false; return; }
+    void run(current => refresh(token, current));
+  }, [customerSessionBoundary(session)]);
+
   function prepareSubmission(draft: OmegaDraft) {
     if (busy || locked.current || uncertain || submission || status?.intake !== "configured" ||
         !status.handlers.includes(draft.handler)) return;
@@ -210,6 +244,7 @@ export default function OmegaTasksPage() {
     if (!session) return;
     setSelected(null);
     setConfirm(false);
+    setConfirmRemove(false);
     void run(async (current) => {
       const result = await omegaClient(session.token).get(id);
       if (current()) {
@@ -225,7 +260,7 @@ export default function OmegaTasksPage() {
     <main className="omega-page">
       <header className="omega-heading">
         <p className="luqi-eyebrow">
-          <Layers3 size={16} aria-hidden="true" /> YOUR OMEGA WORKSPACE
+          <Layers3 size={16} aria-hidden="true" /> Luqi practical tools
         </p>
         <h1>Tasks, with a clear record.</h1>
         <p>Review your saved calculations, their status and their results.</p>
@@ -233,6 +268,8 @@ export default function OmegaTasksPage() {
           This dashboard does not start workers or generate AI responses.
         </p>
       </header>
+      <OmegaLocalCalculators />
+      <OmegaDomainGuide />
       {notice && (
         <p role="status" className="omega-notice">
           {notice}
@@ -248,14 +285,14 @@ export default function OmegaTasksPage() {
                 const account = await signIn(email, password);
                 if (!current()) return;
                 setPassword("");
-                setSession(account);
+                authenticatedHere.current = true; acceptSession(account);
                 await refresh(account.token, current);
               });
             }}
           >
             <LockKeyhole size={24} aria-hidden="true" />
             <h2>Sign in to your task history</h2>
-            <p>Use your existing LUQI account.</p>
+            <p>Use your existing Luqi account.</p>
             <label>
               Email
               <input
@@ -283,8 +320,8 @@ export default function OmegaTasksPage() {
               {busy ? "Signing in…" : "Sign in"}
             </button>
             <p className="omega-muted">
-              Your session stays in memory until you leave or reload this page.
-              Account recovery requires your LUQI administrator.
+              Your Luqi account stays signed in across customer tools in this tab. Reloading or signing out ends the session.
+              Account recovery requires your Luqi administrator.
             </p>
           </form>
           <section
@@ -309,7 +346,7 @@ export default function OmegaTasksPage() {
             </p>
             <p className="omega-muted">
               Availability is checked after sign-in. Autonomous agents and the
-              other Omega modules are still in development.
+              additional Luqi capabilities are still in development.
             </p>
           </section>
         </div>
@@ -526,6 +563,52 @@ export default function OmegaTasksPage() {
                         A running task cannot be cancelled from this dashboard.
                       </p>
                     )}
+                    {["completed", "failed", "cancelled"].includes(selected.state) &&
+                      !confirmRemove && (
+                        <button
+                          className="luqi-secondary"
+                          disabled={busy || uncertain || submissionUncertain}
+                          onClick={() => { setConfirm(false); setConfirmRemove(true); }}
+                        >
+                          Remove saved task
+                        </button>
+                      )}
+                    {confirmRemove && (
+                      <section className="omega-confirm" aria-label="Confirm saved task removal">
+                        <h3>Remove this finished task from Luqi?</h3>
+                        <p>
+                          This permanently removes the selected finished record from
+                          active task storage and frees a queue slot. Backups can
+                          retain copies until their retention period ends. Running,
+                          queued and uncertain tasks cannot be removed this way.
+                        </p>
+                        <button
+                          className="luqi-secondary"
+                          disabled={busy}
+                          onClick={() => setConfirmRemove(false)}
+                        >
+                          Keep saved task
+                        </button>
+                        <button
+                          className="luqi-primary"
+                          disabled={busy || uncertain || submissionUncertain}
+                          onClick={() => {
+                            const id = selected.id;
+                            void run(async current => {
+                              const response = await omegaClient(session.token).removeFinished(id);
+                              if (!current()) return;
+                              if (!response.removed || response.id !== id) return;
+                              setSelected(null);
+                              setTasks(previous => previous.filter(item => item.id !== id));
+                              setConfirmRemove(false);
+                              setNotice("Finished task removed from active storage. Backup copies may remain until the retention period ends.");
+                            }, "remove");
+                          }}
+                        >
+                          Confirm removal
+                        </button>
+                      </section>
+                    )}
                     {confirm && (
                       <section
                         className="omega-confirm"
@@ -583,7 +666,7 @@ export default function OmegaTasksPage() {
           )}
           <p className="omega-muted omega-privacy">
             Signing out clears this page; it does not delete saved tasks.
-            Storage administrators can access task records. Task deletion is not available in this dashboard. Unconfirmed submission inputs stay only in page memory; check saved tasks before starting another after leaving or reloading.
+            When intake is enabled, you can explicitly remove finished task records; pending and uncertain work is protected, and backups may retain copies. Storage administrators can access task records. Unconfirmed submission inputs stay only in page memory; check saved tasks before starting another after leaving or reloading.
           </p>
         </>
       )}

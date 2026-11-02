@@ -1,6 +1,6 @@
 /** Shared MySQL queue contract with omega_ai.mysql_workflow; no DDL or execution. */
 import { randomUUID } from 'node:crypto';
-import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { getPersistentMySqlPool } from '../queries/connection';
 import { canonicalJson, OMEGA_HANDLERS, OMEGA_OWNER_TASK_LIMIT, OMEGA_VERSION, omegaOwner,
   omegaState, omegaSubmission, validateOmegaResult, type OmegaSubmission } from './omegaTaskContract';
@@ -132,6 +132,32 @@ export const omegaTaskStore = {
         lease_token=NULL,lease_expires_at=NULL,document=? WHERE id=? AND owner_id=?`,
         [JSON.stringify(doc), id, Buffer.from(owner)]);
       return view(await owned(connection, owner, id));
+    });
+  },
+  async removeFinished(userId: number, id: string) {
+    const owner = omegaOwner(userId);
+    return transaction(async connection => {
+      // Lock the owning account too: a concurrent deactivation must not race
+      // an authenticated cleanup request into a successful write.
+      const [users] = await connection.execute<RowDataPacket[]>(
+        'SELECT id,is_active FROM users WHERE id=? FOR UPDATE', [userId]);
+      if (!users[0] || users[0].is_active !== 1)
+        throw new OmegaTaskError('AUTH_REQUIRED');
+      const row = await owned(connection, owner, id);
+      // Reject malformed/contradictory stored outcomes instead of silently
+      // removing records that might need operator investigation.
+      view(row);
+      if (!['completed', 'failed', 'cancelled'].includes(row.state))
+        throw new OmegaTaskError('OMEGA_TASK_CONFLICT');
+      const [deleted] = await connection.execute<ResultSetHeader>(
+        `DELETE FROM omega_tasks_v1
+         WHERE id=? AND owner_id=? AND
+               handler IN ('travel.budget','vehicle.schedule') AND
+               handler_version='web-v1' AND side_effects=0 AND
+               state IN ('completed','failed','cancelled')`,
+        [id, Buffer.from(owner)]);
+      if (deleted.affectedRows !== 1) throw new OmegaTaskError('OMEGA_TASK_CONFLICT');
+      return { removed: true as const, id };
     });
   },
 };

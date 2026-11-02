@@ -26,7 +26,7 @@ jobs:
       - name: Observe fixed public DNS names without credentials or writes
         if: github.event_name != 'pull_request'
         run: python3 scripts/audit-launch-dns.py
-      - name: Observe parent delegation and the reported authoritative nameservers
+      - name: Observe parent delegation and authoritative DNS, not Railway ownership
         if: github.event_name != 'pull_request'
         shell: bash
         run: |
@@ -42,10 +42,10 @@ jobs:
             echo "AUTHORITATIVE READ ONLY: $server"
             dig "@$server" luqi-ai.com SOA +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
             dig "@$server" app.luqi-ai.com CNAME +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
-            dig "@$server" _railway-verify.app.luqi-ai.com TXT +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
+            dig "@$server" www.luqi-ai.com CNAME +norecurse +time=2 +tries=1 +noall +comments +answer +authority || true
           done
       - name: Explain scope
         if: always()
         run: |
-          echo 'Read-only observation, NOT launch approval. Missing records or transport errors keep the domain gate blocked.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Read-only public DNS/HTTPS snapshot, NOT ownership, certificate or launch approval. Current Railway domain status must be checked separately.' >> "$GITHUB_STEP_SUMMARY"
           echo 'No account creation, paid AI, DNS writes, secret access, email changes, database access or deployment.' >> "$GITHUB_STEP_SUMMARY"

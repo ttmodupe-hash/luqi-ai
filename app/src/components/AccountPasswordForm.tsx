@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { changePassword, PasswordChangeRequestError } from '../lib/account-security';
 import { validAccountPassword } from '../lib/private-conversations';
+import PasswordField from './PasswordField';
 
 export default function AccountPasswordForm({ token, email, disabled, onBusyChange, onSessionEnd }: {
   token: string; email: string; disabled: boolean;
@@ -57,10 +58,13 @@ export default function AccountPasswordForm({ token, email, disabled, onBusyChan
       <input type="text" autoComplete="username" value={email} readOnly hidden aria-hidden="true" />
       <fieldset disabled={disabled || busy} className="space-y-3">
         <legend className="font-semibold">Choose a new account password</legend>
-        <label className="block">Current password<input type="password" className="luqi-access-input" autoComplete="current-password" required maxLength={72} value={current} onChange={event => setCurrent(event.target.value)} /></label>
-        <label className="block">New password<input type="password" className="luqi-access-input" autoComplete="new-password" required maxLength={72} aria-describedby="new-password-help" value={next} onChange={event => setNext(event.target.value)} /></label>
+        <PasswordField label="Current password" autoComplete="current-password" maxLength={72}
+          value={current} onChange={setCurrent} disabled={disabled || busy} />
+        <PasswordField label="New password" autoComplete="new-password" maxLength={72} describedBy="new-password-help"
+          value={next} onChange={setNext} disabled={disabled || busy} />
         <p id="new-password-help" className="text-sm text-slate-300">At least 12 characters and at most 72 UTF-8 bytes. Choose a unique password. You will need to sign in again.</p>
-        <label className="block">Confirm new password<input type="password" className="luqi-access-input" autoComplete="new-password" required maxLength={72} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>
+        <PasswordField label="Confirm new password" autoComplete="new-password" maxLength={72} describedBy="new-password-help"
+          value={confirmation} onChange={setConfirmation} disabled={disabled || busy} />
         <button className="luqi-primary" disabled={cooling}>{busy ? 'Changing password…' : 'Change password and sign out'}</button>
       </fieldset>
       {(notice || cooling) && <p role="status">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}

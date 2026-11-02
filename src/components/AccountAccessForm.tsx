@@ -1,13 +1,17 @@
+/// <reference types="vite/client" />
 import { useEffect, useRef, useState } from 'react';
 import { ConversationError, signIn, signUp, validAccountPassword, type AccountSession } from '../lib/private-conversations';
+import PasswordField from './PasswordField';
 
 export default function AccountAccessForm({ initialMode = 'signin', purpose = 'notes', onAuthenticated }: {
-  initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai'; onAuthenticated: (session: AccountSession) => void;
+  initialMode?: 'signin' | 'signup'; purpose?: 'notes' | 'ai' | 'account'; onAuthenticated: (session: AccountSession) => void;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [ambiguous, setAmbiguous] = useState(false);
@@ -41,7 +45,9 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     const version = epoch.current;
     const controller = new AbortController(); pending.current = controller;
     try {
-      const result = await (mode === 'signup' ? signUp : signIn)(email, password, controller.signal);
+      const result = await (mode === 'signup'
+        ? signUp(email, password, controller.signal, name, rememberMe)
+        : signIn(email, password, controller.signal, rememberMe));
       if (version !== epoch.current) return;
       setPassword(''); setConfirmation('');
       onAuthenticated(result);
@@ -52,7 +58,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         setCooldown(error.retryAfter ?? 30);
         setNotice('Too many authentication attempts. We will not retry automatically.');
       } else if (mode === 'signup' && error instanceof ConversationError && error.status === 409) {
-        setNotice('An account already uses this email. Use an existing account to sign in. Password recovery currently requires the LUQI administrator.');
+        setNotice('An account already uses this email. Use an existing account to sign in. Password recovery currently requires the Luqi administrator.');
       } else if (mode === 'signup' && error instanceof ConversationError && error.status === 400) {
         setNotice('Check your email and the password requirements, then try again.');
       } else if (mode === 'signup') uncertainSignup();
@@ -65,22 +71,29 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   }
   return <section className="luqi-access" aria-labelledby="account-access-heading">
     <p className="luqi-eyebrow">YOUR OWN SPACE</p>
-    <h2 id="account-access-heading">{mode === 'signup' ? 'Create your LUQI account' : 'Sign in to your LUQI account'}</h2>
-    <p>{purpose === 'ai' ? 'Use your LUQI account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
+    <h2 id="account-access-heading">{mode === 'signup' ? 'Create your Luqi account' : 'Sign in to your Luqi account'}</h2>
+    <p>{purpose === 'account' ? 'Use one Luqi account for Chat, Omega task history and optional private notes. Signing in does not automatically send a question to an AI provider.' : purpose === 'ai' ? 'Use your Luqi account for the limited text trial. Signing in does not send a question to an AI provider.' : 'Keep notes in your account and return to them later. This notes page does not generate AI replies.'}</p>
     {(notice || cooling) && <p role="status" className="luqi-access-notice">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-4">
+      {mode === 'signup' && <label className="block">What should Luqi call you? (optional)
+        <input className="luqi-access-input" autoComplete="given-name" maxLength={120} disabled={busy}
+          value={name} onChange={event => setName(event.target.value)} /></label>}
       <label className="block">Email<input className="luqi-access-input" type="email" autoComplete="username"
+        inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false}
         maxLength={254} required disabled={busy} value={email} onChange={event => setEmail(event.target.value)} /></label>
-      <label className="block">Password<input className="luqi-access-input" type="password"
-        autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required disabled={busy}
-        aria-describedby={mode === 'signup' ? 'account-password-help' : undefined}
-        value={password} onChange={event => setPassword(event.target.value)} /></label>
+      <PasswordField key={mode} label="Password" value={password} onChange={setPassword}
+        autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={busy}
+        describedBy={mode === 'signup' ? 'account-password-help' : undefined} />
       {mode === 'signup' && <>
         <p id="account-password-help" className="luqi-access-help">At least 12 characters; at most 72 UTF-8 bytes. Use a unique password from a password manager.</p>
-        <label className="block">Confirm password<input className="luqi-access-input" type="password"
-          autoComplete="new-password" required disabled={busy} value={confirmation}
-          onChange={event => setConfirmation(event.target.value)} /></label>
+        <PasswordField label="Confirm password" value={confirmation} onChange={setConfirmation}
+          autoComplete="new-password" disabled={busy} describedBy="account-password-help" />
       </>}
+      {import.meta.env.VITE_LUQI_CUSTOMER_RESUME_UI_APPROVED === 'true' ? <>
+        <label className="block"><input type="checkbox" checked={rememberMe} disabled={busy}
+          onChange={event => setRememberMe(event.target.checked)} /> Keep me signed in on this private device</label>
+        <p className="luqi-access-help">Opt in only on your private device. Secure session restoration lasts up to 24 hours, or up to 12 hours without a refresh; the server can revoke access sooner.</p>
+      </> : <p className="luqi-access-help">Secure remember-device sign-in is still being tested. Normal sign-in works now, but reopening or refreshing may require signing in again.</p>}
       <div className="luqi-access-actions">
         <button className="luqi-primary" disabled={busy || ambiguous || cooling}>
           {busy ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}
@@ -94,6 +107,12 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
     <button type="button" className="luqi-access-switch" disabled={busy} onClick={changeMode}>
       {mode === 'signup' ? 'Use an existing account' : 'Create an account'}
     </button>
-    <p className="luqi-access-help">Your session stays in this page’s memory and ends when you leave or reload it. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
+    {mode === 'signin' && <details className="mt-4 rounded-lg border border-slate-600 p-3">
+      <summary className="cursor-pointer font-semibold">Forgot your password?</summary>
+      <p className="luqi-access-help">Automatic password-reset emails are unavailable in this pilot. For a forgotten password, reply privately through your existing Luqi pilot invitation or verified administrator conversation. Account ownership must be checked before a reset.</p>
+      <p className="luqi-access-help">Do not post your email, password, one-time codes or account details in a public issue. Opening this help does not send an email or change your account.</p>
+      {!busy && <a className="luqi-access-switch" href="#/contact">Read account recovery guidance</a>}
+    </details>}
+    <p className="luqi-access-help">Your Luqi sign-in works across Chat, Notes and Omega in this tab. Secure account restoration will be available on trusted devices when enabled; otherwise a reload may require signing in again. Email verification and automatic password-reset emails are not available. Read the <a href="#/privacy">pilot privacy information</a> before saving notes.</p>
   </section>;
 }

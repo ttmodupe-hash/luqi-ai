@@ -53,7 +53,7 @@ test("disabled intake has honest availability, no task reads and no persistent s
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto("/#/");
   await page
-    .getByRole("link", { name: "Open omega tasks", exact: true })
+    .getByRole("link", { name: /Open luqi practical tools/i })
     .click();
   await expect(
     page.getByRole("heading", { name: "Tasks, with a clear record." }),
@@ -135,8 +135,13 @@ test("saved outcomes render on desktop and mobile with keyboard access and no ex
   });
   await signIn(page);
   const history = page.getByRole("region", { name: "Saved tasks" });
-  await history.getByRole("button", { name: /Travel budget/ }).focus();
-  await page.keyboard.press("Enter");
+  const budgetButton = history.getByRole("button", { name: /Travel budget/ });
+  // The account-owned list may render before the authenticated refresh has
+  // unlocked actions. WebKit must press Enter only once the action is enabled.
+  await expect(budgetButton).toBeEnabled();
+  await budgetButton.focus();
+  await expect(budgetButton).toBeFocused();
+  await budgetButton.press("Enter");
   await expect(page.getByText("ZAR 140.35", { exact: true })).toBeVisible();
   await expect(
     page
@@ -331,5 +336,72 @@ test("queue a reviewed vehicle schedule without inventing service advice", async
   await expect(page.getByRole("status")).toContainText("Task saved to the queue. It has not run.");
   expect(submitted).toMatchObject({ handler: vehicle.handler, payload: vehicle.payload });
   await expect(page.getByText("Service is due", { exact: true })).toHaveCount(0);
+  await noOverflow(page);
+});
+
+
+test("local Omega math works at 320px without a task or provider request", async ({ page }) => {
+  const omegaCalls: string[] = [];
+  await page.route("**/api/v1/omega/tasks**", route => {
+    omegaCalls.push(route.request().url());
+    return route.fulfill({ json: disabled });
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/#/omega-tasks");
+  await page.getByLabel("Local amounts (one per line)").fill("100.25\n40\n0.10");
+  await page.getByRole("button", { name: "Calculate in browser" }).click();
+  await expect(page.getByRole("status", { name: "Local calculation result" }))
+    .toContainText("ZAR 140.35");
+  expect(omegaCalls).toEqual([]);
+  await noOverflow(page);
+  await page.getByLabel("Choose a local calculation").selectOption("vehicle.schedule");
+  await expect(page.getByRole("status", { name: "Local calculation result" })).toHaveCount(0);
+  for (const [label, value] of [
+    ["Local current odometer (km)", "11000"],
+    ["Local odometer at last service (km)", "10000"],
+    ["Local manufacturer distance interval (km)", "10000"],
+    ["Local manufacturer time interval (days)", "365"],
+    ["Local date of last service", "2025-02-01"],
+    ["Local assessment date", "2025-03-01"],
+  ]) await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByRole("button", { name: "Calculate in browser" }).click();
+  await expect(page.getByRole("status", { name: "Local calculation result" }))
+    .toContainText("Service is not yet due");
+  await expect(page.getByRole("status", { name: "Local calculation result" }))
+    .toContainText("2026-02-01");
+  expect(omegaCalls).toEqual([]);
+  await noOverflow(page);
+});
+
+test("finished-task cleanup is owner-confirmed and does not start an Omega worker", async ({ page }) => {
+  const saved = { ...task, state: "completed", attempts: 1, result: budgetResult };
+  const calls: string[] = [];
+  await page.route("**/api/v1/omega/tasks**", route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    calls.push(request.method() + " " + path);
+    if (path.endsWith("/status")) return route.fulfill({ json: configured });
+    if (path.endsWith("/remove")) {
+      expect(request.method()).toBe("POST");
+      expect(request.postDataJSON()).toEqual({ confirm: true });
+      return route.fulfill({ json: { removed: true, id: task.id } });
+    }
+    return route.fulfill({ json: path.endsWith(task.id) ? { task: saved } : { tasks: [saved] } });
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await signIn(page);
+  const history = page.getByRole("region", { name: "Saved tasks" });
+  await history.getByRole("button", { name: /Travel budget/ }).click();
+  await expect(page.getByRole("button", { name: "Remove saved task" })).toBeVisible();
+  await page.getByRole("button", { name: "Remove saved task" }).click();
+  await expect(page.getByRole("region", { name: "Confirm saved task removal" })).toBeVisible();
+  expect(calls.filter(call => call.endsWith("/remove"))).toHaveLength(0);
+  await page.getByRole("button", { name: "Keep saved task" }).click();
+  await page.getByRole("button", { name: "Remove saved task" }).click();
+  await page.getByRole("button", { name: "Confirm removal" }).click();
+  await expect(page.getByRole("status")).toContainText("Finished task removed from active storage");
+  await expect(history.getByRole("button", { name: /Travel budget/ })).toHaveCount(0);
+  expect(calls.filter(call => call.endsWith("/remove"))).toHaveLength(1);
+  expect(calls.some(call => /\/(?:run|approve|recover)(?:\/|$)/.test(call))).toBe(false);
   await noOverflow(page);
 });

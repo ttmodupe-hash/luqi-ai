@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "vite build",
+    "build": "vite build && npm run build:checkout",
     "lint": "eslint .",
     "preview": "vite preview",
     "check": "tsc -b",
@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "build:checkout": "vite build --config vite.checkout.config.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -28,7 +29,7 @@
     "@capacitor/ios": "^8.4.2",
     "@capacitor/splash-screen": "^8.0.2",
     "@google/genai": "^2.19.0",
-    "@hono/node-server": "^1.14.3",
+    "@hono/node-server": "2.1.5",
     "@hono/vite-dev-server": "^0.19.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^5.22.0",
@@ -75,6 +76,8 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.4",
     "embla-carousel-react": "^8.5.1",
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3",
     "firebase-admin": "^14.5.0",
     "framer-motion": "^11.15.0",
     "hono": "^4.6.0",
@@ -85,6 +88,7 @@
     "mysql2": "^3.11.0",
     "next-themes": "^0.4.4",
     "openai": "7.43.0",
+    "pdf-lib": "1.17.1",
     "prisma": "^5.22.0",
     "react": "^18.3.1",
     "react-day-picker": "^9.5.0",
@@ -130,6 +134,9 @@
     "@esbuild-kit/core-utils": {
       "esbuild": "$esbuild"
     },
-    "postcss-selector-parser": "^7.1.6"
+    "postcss-selector-parser": "^7.1.6",
+    "@hono/node-server": "2.1.5",
+    "glob": "14.0.3",
+    "minimatch": "11.0.3"
   }
 }

@@ -49,3 +49,60 @@ test('real worker caches public assets but not private-looking, API or query res
   } finally { networkAvailable = true; await context.setOffline(false); }
   expect(writes).toEqual([]);
 });
+
+
+test('real worker preserves an already loaded public chunk after a deployment removes its hash', async ({ page, context, baseURL }) => {
+  test.setTimeout(60_000);
+  const oldChunk = '/assets/KhoroSpatialVisionLab-oldverified123.js';
+  const absentChunk = '/assets/KhoroSpatialVisionLab-neverloaded456.js';
+  const origin = new URL(baseURL!).origin;
+  let retired = false;
+  let deniedOldNetwork = 0;
+  const writes: string[] = [];
+  await context.route('**/*', route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin !== origin) return route.abort();
+    if (request.method() !== 'GET') { writes.push(url.pathname); return route.abort(); }
+    if (url.pathname === oldChunk || url.pathname === absentChunk) {
+      const deleted = retired || url.pathname === absentChunk;
+      if (deleted && url.pathname === oldChunk) deniedOldNetwork++;
+      return route.fulfill({
+        status: deleted ? 404 : 200,
+        contentType: deleted ? 'text/plain' : 'text/javascript',
+        headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' },
+        body: deleted ? 'Not Found' : 'export const previouslyVerified = true;',
+      });
+    }
+    if (/^\/(api|v1)\//.test(url.pathname)) return route.abort();
+    return route.continue();
+  });
+  await page.goto('/#/start');
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) await new Promise<void>(resolve => {
+      navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+    });
+  });
+  expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+
+  const load = (path: string) => page.evaluate(async url => {
+    const response = await fetch(url, { credentials: 'omit' });
+    return { status: response.status, body: await response.text() };
+  }, path);
+  expect(await load(oldChunk)).toEqual({ status: 200, body: 'export const previouslyVerified = true;' });
+  await expect.poll(async () => page.evaluate(async path => {
+    const cache = await caches.open('luqi-ai-public-v2');
+    return !!(await cache.match(path));
+  }, oldChunk)).toBe(true);
+
+  retired = true;
+  expect(await load(oldChunk)).toEqual({ status: 200, body: 'export const previouslyVerified = true;' });
+  expect(deniedOldNetwork).toBeGreaterThan(0); // Real origin 404 was handled by the worker.
+  expect(await load(absentChunk)).toEqual({ status: 404, body: 'Not Found' });
+  expect(await page.evaluate(async path => {
+    const cache = await caches.open('luqi-ai-public-v2');
+    return !!(await cache.match(path));
+  }, absentChunk)).toBe(false);
+  expect(writes).toEqual([]);
+});

@@ -1,0 +1,63 @@
+/* Scoped Luqi Spatial Vision Lab: no external fonts, trackers or animations. */
+.luqi-spatial { max-width:1220px; margin:0 auto; padding:34px 22px 70px; color:#e8f0ff; }
+.luqi-spatial-intro { max-width:950px; }
+.luqi-spatial h1 { font-size:clamp(27px,4vw,43px); font-weight:750; line-height:1.18; margin:8px 0 12px; color:#f4f8ff; }
+.luqi-spatial h2 { font-size:20px; font-weight:700; color:#f0f5ff; margin:0 0 12px; }
+.luqi-spatial h3 { font-size:18px; font-weight:650; margin:14px 0 8px; }
+.luqi-spatial h4 { font-size:15px; font-weight:650; margin:10px 0; }
+.luqi-spatial p { color:#c2d3ec; line-height:1.6; margin:9px 0 12px; }
+.luqi-spatial-eyebrow { font-size:11px; font-weight:800; letter-spacing:.13em; color:#9dc9ff!important; }
+.luqi-spatial-caveat { background:#132946; border-left:3px solid #76a9f5; border-radius:8px; padding:12px 14px; }
+.luqi-spatial-modes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:24px 0 16px; }
+.luqi-spatial-modes button { text-align:left; border:1px solid #37567e; border-radius:14px; background:#11233e; color:#dceaff; padding:14px; cursor:pointer; }
+.luqi-spatial-modes button.selected { border-color:#86b5ff; background:#1d3b65; box-shadow:inset 0 0 0 1px #4b8bea; }
+.luqi-spatial-modes button strong { display:block; font-size:15px; margin-bottom:4px; }
+.luqi-spatial-modes button span { font-size:12px; color:#bed1eb; }
+.luqi-spatial-signin { max-width:760px; margin:14px 0; border:1px solid #34547d; border-radius:16px; padding:18px; background:#10213b; }
+.luqi-spatial-signin h2 { margin:0 0 8px; }
+.luqi-spatial-controls { display:flex; flex-wrap:wrap; align-items:end; gap:12px 18px; padding:16px; border:1px solid #29476b; border-radius:15px; background:#0e1d35; }
+.luqi-spatial-controls label { font-size:13px; color:#d5e6ff; }
+.luqi-spatial-controls input[type=file] { display:block; max-width:100%; margin-top:8px; font-size:12px; }
+.luqi-spatial-controls .luqi-spatial-check { display:flex; gap:8px; align-items:center; }
+.luqi-spatial-grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:18px; margin-top:18px; align-items:start; }
+.luqi-spatial-image-panel,.luqi-spatial-results,.luqi-spatial-empty { border:1px solid #2b476c; background:#0d1d34; border-radius:18px; padding:16px; min-width:0; }
+.luqi-spatial-image-panel { position:relative; }
+.luqi-spatial-view-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.luqi-spatial-view-tabs button { padding:9px 13px; border-radius:10px; border:1px solid #3b5d8c; background:#142b4a; color:#dcecff; font-size:13px; }
+.luqi-spatial-view-tabs button[aria-pressed=true] { background:#2a5b98; border-color:#8cbcff; }
+.luqi-spatial-hint { font-size:12px; color:#b6cce9!important; }
+.luqi-spatial-image-wrap { position:relative; width:fit-content; max-width:100%; overflow:hidden; touch-action:none; cursor:crosshair; border-radius:12px; }
+.luqi-spatial-image-wrap img { display:block; width:auto; max-width:100%; max-height:480px; user-select:none; }
+.luqi-spatial-region { position:absolute; border:2px solid; border-radius:4px; pointer-events:none; box-sizing:border-box; }
+.luqi-spatial-region-ai { border-color:#70d9ff; box-shadow:0 0 0 1px #071326; }
+.luqi-spatial-region-ai span { position:absolute; top:0; left:0; background:#07557a; color:white; font-size:11px; padding:2px 5px; }
+.luqi-spatial-region-manual { border-color:#6ee7b7; }
+.luqi-spatial-region-redacted { border-color:#ff6b88; }
+.luqi-spatial-region-selected { border-color:#f9cd68; background:#f9cd681a; }
+.luqi-spatial-local-actions { display:flex; gap:9px; flex-wrap:wrap; margin-top:13px; }
+.luqi-spatial button { cursor:pointer; }
+.luqi-spatial button:disabled { opacity:.52; cursor:not-allowed; }
+.luqi-spatial-local-actions button,.luqi-spatial-secondary { border:1px solid #4a6891; border-radius:10px; background:#172e4e; color:#e3efff; padding:10px 13px; font-size:13px; }
+.luqi-spatial-primary { background:#2a7ce6; border:1px solid #5ba7ff; border-radius:11px; color:white; padding:12px 16px; font-weight:700; min-height:44px; }
+.luqi-spatial-results label { display:block; font-size:13px; color:#dceaff; margin:14px 0; }
+.luqi-spatial-results input[type=text],.luqi-spatial-results select { display:block; width:100%; max-width:100%; padding:10px; border-radius:10px; background:#09182b; border:1px solid #45638b; color:#f0f6ff; margin-top:6px; font-size:14px; }
+.luqi-spatial-results .luqi-spatial-consent { display:flex; align-items:flex-start; gap:10px; background:#132b4b; border:1px solid #3e618e; border-radius:11px; padding:12px; line-height:1.5; }
+.luqi-spatial-consent input { margin-top:4px; flex:none; accent-color:#4d9aff; }
+.luqi-spatial-disclosure,.luqi-spatial-model { font-size:12px; color:#b5cce7!important; }
+.luqi-spatial-warning { border-left:3px solid #f5ad6e; background:#32241b; border-radius:6px; padding:10px; color:#ffddbd!important; }
+.luqi-spatial-notice { background:#132a47; border:1px solid #446b9a; border-radius:12px; padding:12px 15px; margin:16px 0!important; }
+.luqi-spatial-signed-in button { border:0; background:transparent; text-decoration:underline; color:#a8cfff; padding:4px; }
+.luqi-spatial-analysis { margin-top:18px; border-top:1px solid #3c5c83; padding-top:12px; }
+.luqi-spatial-analysis ol { padding-left:20px; }
+.luqi-spatial-analysis li { margin:12px 0; }
+.luqi-spatial-analysis li p { font-size:13px; margin:4px 0; }
+.luqi-spatial-relief canvas { display:block; width:100%; height:auto; background:#071326; border-radius:12px; }
+.luqi-spatial-sliders { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px; }
+.luqi-spatial-sliders label { display:block; font-size:13px; }
+.luqi-spatial-sliders input { display:block; width:100%; margin-top:7px; }
+.luqi-spatial-empty { margin-top:18px; text-align:center; padding:50px 18px; }
+.luqi-spatial-bottom-links { display:flex; flex-wrap:wrap; gap:18px; margin-top:18px; }
+.luqi-spatial-bottom-links a { color:#a7d0ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-spatial :focus-visible { outline:2px solid #a6cfff; outline-offset:3px; }
+@media(max-width:850px) { .luqi-spatial-grid { grid-template-columns:1fr; } .luqi-spatial { padding:22px 14px 65px; } }
+@media(max-width:540px) { .luqi-spatial-modes { grid-template-columns:1fr; } .luqi-spatial-controls { padding:12px; } .luqi-spatial-image-panel,.luqi-spatial-results { padding:12px; } }

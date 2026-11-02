@@ -1,32 +1,62 @@
 import { lazy } from "react";
+import { lazyQueryPage } from "./providers/lazy-query-page";
 import RouteLoadBoundary from "./components/RouteLoadBoundary";
 import WorkspaceLayout from "./components/WorkspaceLayout";
-import ServiceStatusPage from "./pages/ServiceStatusPage";
+import { CustomerSessionProvider } from "./providers/customer-session";
+import { ChatWorkspaceProvider } from "./providers/chat-workspace";
+import { SovereignRegionProvider } from "./providers/sovereign-region";
+const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
 import { Toaster } from "@/components/ui/toaster";
-import { Routes, Route as RouterRoute, useLocation } from "react-router";
+import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
 import Home from "./pages/Home";
-import StartPage from "./pages/StartPage";
-import AiPilotPage from "./pages/AiPilotPage";
-import PricingPage from "./pages/PricingPage";
+const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
+const StartPage = lazy(() => import("./pages/StartPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import ContactPage from "./pages/ContactPage";
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
-import OmegaTasksPage from "./pages/OmegaTasksPage";
+import CustomerEntryPage from "./pages/CustomerEntryPage";
+import OmegaTasksPage from './pages/OmegaTasksPage';
 
 // Load optional tools only when their route is rendered. Keep account, notes,
-// start/help and release-observed core pages available in the initial bundle.
-const LabSimulatorPage = lazy(() => import("./pages/LabSimulatorPage"));
-const SelfHealingPage = lazy(() => import("./pages/SelfHealingPage"));
+// the release-observed core pages available in the initial bundle. Informational
+// help, privacy, and pricing routes load only when visited.
+const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
+const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
+const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
+const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
+const GuestTryPage = lazy(() => import("./pages/GuestTryPage"));
+const VisualTutorPage = lazy(() => import("./pages/VisualTutorPage"));
+const KhoroSpatialVisionLab = lazy(() => import("./components/KhoroSpatialVisionLab"));
+const LuqiChatWorkspacePage = lazy(() => import("./pages/LuqiChatWorkspacePage"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
+const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
+const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
+const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
+const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
+const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
+const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
+const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
+const NearMePage = lazy(() => import("./pages/NearMePage"));
+const LocalPulsePage = lazy(() => import("./pages/LocalPulsePage"));
+const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
+const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
+const MunicipalServicesPage = lazy(() => import("./pages/MunicipalServicesPage"));
+const TownshipEconomyPage = lazy(() => import("./pages/TownshipEconomyPage"));
+const VisaEntryGuidePage = lazy(() => import("./pages/VisaEntryGuidePage"));
+const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
-const ExperientialEducationPage = lazy(() => import("./pages/ExperientialEducationPage"));
+const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
 const MultimodalHubPage = lazy(() => import("./pages/MultimodalHubPage").then(module => ({ default: module.MultimodalHubPage })));
 const ExecutiveLabSuite = lazy(() => import("@/components/ExecutiveLabSuite"));
@@ -46,7 +76,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
       </div>
     );
-  return <WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout>;
+  return <CustomerSessionProvider><ChatWorkspaceProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></ChatWorkspaceProvider></CustomerSessionProvider>;
 }
 
 export default function App() {
@@ -55,10 +85,48 @@ export default function App() {
       <Routes>
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
+        <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
         <RouterRoute path="/start" element={<StartPage />} />
-        <RouterRoute path="/ai-trial" element={<AiPilotPage />} />
+        <RouterRoute path="/install" element={<InstallAppPage />} />
+        <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
+        <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
+        <RouterRoute path="/visual-tutor" element={<VisualTutorPage />} />
+        <RouterRoute path="/spatial-vision" element={<KhoroSpatialVisionLab />} />
+        <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
+        <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
+        <RouterRoute path="/payments" element={<PaymentsPage />} />
+        <RouterRoute path="/ask" element={<AskLuqiPage />} />
+        <RouterRoute path="/try" element={<GuestTryPage />} />
+        <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />
         <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
-        <RouterRoute path="/join" element={<CompanionPage key="join" initialMode="signup" />} />
+        <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
+        <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
+        <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
+        <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
+        <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
+        <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
+        <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
+        <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />
+        <RouterRoute path="/near-me" element={<NearMePage />} />
+        <RouterRoute path="/local-pulse" element={<LocalPulsePage />} />
+        <RouterRoute path="/news" element={<LocalPulsePage />} />
+        <RouterRoute path="/social-support" element={<SocialSupportPage />} />
+        <RouterRoute path="/sassa" element={<SocialSupportPage defaultAgency="sassa" />} />
+        <RouterRoute path="/uif" element={<SocialSupportPage defaultAgency="uif" />} />
+        <RouterRoute path="/tenders" element={<TenderDeskPage />} />
+        <RouterRoute path="/municipalities" element={<MunicipalServicesPage />} />
+        <RouterRoute path="/municipal-services" element={<Navigate to="/municipalities" replace />} />
+        <RouterRoute path="/township-economy" element={<TownshipEconomyPage />} />
+        <RouterRoute path="/visa-entry" element={<VisaEntryGuidePage />} />
+        <RouterRoute path="/visa" element={<Navigate to="/visa-entry" replace />} />
+        <RouterRoute path="/township-business" element={<Navigate to="/township-economy" replace />} />
+        <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
+        {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
+        {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
+        <RouterRoute path="/login" element={<CustomerEntryPage initialMode="signin" />} />
+        {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
+        <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />

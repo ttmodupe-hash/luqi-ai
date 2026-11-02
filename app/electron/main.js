@@ -62,8 +62,14 @@ function createWindow() {
     mainWindow.webContents.on('did-fail-load', () => app.exit(1));
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
-        const text = await mainWindow.webContents.executeJavaScript('document.body.innerText');
-        if (!text.includes('LUQI') || !text.includes('Workspace')) throw new Error('Workspace did not render');
+        // Require the approved complete heading and the workspace shell.
+        // A line break may produce whitespace or no separator in textContent.
+        const rendered = await mainWindow.webContents.executeJavaScript(`Boolean(
+          /^Knowledge[.] People[.]\\s*A Stronger Africa[.]$/.test(
+            document.querySelector('#workspace-content main #workspace-title')?.textContent ?? ''
+          ) && document.querySelector('a[aria-label="Luqi workspace home"]')
+        )`);
+        if (!rendered) throw new Error('Workspace did not render');
         console.log('Desktop workspace rendered successfully');
         clearTimeout(timeout);
         app.exit(0);

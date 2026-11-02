@@ -30,7 +30,8 @@ async function get(path, limit) {
     method: "GET", cache: "no-store", credentials: "omit", redirect: "error",
     headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(15_000),
   });
-  return { status: response.status, cache: response.headers.get("Cache-Control"), text: await read(response, limit) };
+  return { status: response.status, cache: response.headers.get("Cache-Control"),
+    contentType: response.headers.get("Content-Type"), text: await read(response, limit) };
 }
 function verify(ok) {
   if (!ok) throw new Error("Unexpected production response");
@@ -67,6 +68,14 @@ const checks = [
     ["/api/system/diagnostics-ledger", "LEGACY_OPERATION_UNAVAILABLE"],
     ["/api/v1/intelligence/corporate-report/release-probe", "LEGACY_OPERATION_UNAVAILABLE"],
   ].map(([path, code]) => ({ name: "Retired surface " + path, path, status: 503, code, private: true })),
+  // Synthetic names cannot be real customer files; never request actual
+  // credential paths or read private data during post-deployment acceptance.
+  ...[
+    "/.luqi-boundary-sentinel",
+    "/__luqi_boundary_sentinel__.env",
+    "/assets/__luqi_boundary_sentinel__.js",
+  ].map(path => ({ name: "Static fallback denial " + path, path, status: 404,
+    private: true, notFound: true })),
   ...[
     ["/api/trpc/ping", 200, '"ok":true'],
     ["/api/trpc/archive.listThreads", 503, "TRPC_PROCEDURE_UNAVAILABLE"],
@@ -94,10 +103,45 @@ for (let start = 0; start < checks.length; start += 3) {
     if (check.status !== undefined) verify(result.status === check.status);
     if (check.private) verify(result.cache === "no-store");
     if (check.code) verify(JSON.parse(result.text).code === check.code);
+    if (check.notFound) verify(result.contentType?.startsWith("application/json") &&
+      JSON.parse(result.text).error === "Not Found");
     if (check.accept) verify(check.accept(JSON.parse(result.text), result.status));
     if (check.contains) verify(result.text.includes(check.contains));
   })));
 }
+// Bounded, unauthenticated account entry checks against the exact deployed revision.
+// Deliberately do NOT follow a redirect or submit a registration/login request.
+// No query strings, user identifiers, passwords or email addresses are sent.
+for (const [path, target] of [
+  ["/signup", "/#/join"],
+  ["/login", "/#/login"],
+]) {
+  await run("Published account entry " + path, async () => {
+    const response = await fetch(origin + path, {
+      method: "GET", cache: "no-store", credentials: "omit", redirect: "manual",
+      headers: { "Cache-Control": "no-cache" }, signal: AbortSignal.timeout(15_000),
+    });
+    try {
+      verify(response.status === 302);
+      verify(response.headers.get("Location") === target);
+      verify(response.headers.get("Cache-Control") === "no-store");
+    } finally {
+      // These redirects have no useful body; never follow their destination.
+      void response.body?.cancel().catch(() => {});
+    }
+  });
+}
+await run("Legacy public login and administration pages are retired", async () => {
+  for (const [path, requiredText] of [
+    ["/login.html", "Sign in to LUQI"],
+    ["/admin.html", "Legacy administration is unavailable"],
+  ]) {
+    const result = await get(path, 16_384);
+    verify(result.status === 200 && result.text.includes(requiredText));
+    verify(!/<(?:form|input|script)\b/i.test(result.text));
+  }
+});
+
 await run("Published Omega and companion frontend", async () => {
   const home = await get("/", 131_072);
   verify(home.status === 200);

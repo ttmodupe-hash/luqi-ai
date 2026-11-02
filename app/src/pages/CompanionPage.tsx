@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState } from "react";
-import { conversationClient, ConversationError, downloadConversationExport, downloadPrivateNotesExport, type AccountSession, type Conversation, type SavedMessage } from "../lib/private-conversations";
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { conversationClient, ConversationError, downloadConversationExport, downloadPrivateNotesExport, type Conversation, type SavedMessage } from "../lib/private-conversations";
 import AccountAccessForm from '../components/AccountAccessForm';
 import AccountPasswordForm from '../components/AccountPasswordForm';
+import { useCustomerSession } from '../providers/customer-session';
 
 const modes = ["Luqi Prime — General", "Dr. Kwame — STEM", "Amina — Trade", "Chidi — Networks"];
 const control = "rounded-lg border border-slate-500 bg-slate-900 p-3 text-white disabled:opacity-50";
 
 export default function CompanionPage({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
-  // The session is deliberately held in memory; leaving this page requires signing in again.
-  const [session, setSession] = useState<AccountSession | null>(null);
+  // The same in-memory account is available across public LUQI routes in this tab.
+  const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const authenticatedHere = useRef(false);
+  const previousToken = useRef<string | null>(null);
   const [accessMode, setAccessMode] = useState(initialMode);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -26,12 +30,15 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
   const epoch = useRef(0);
   const locked = useRef(false);
   const notesExport = useRef<AbortController | null>(null);
-  useEffect(() => () => { epoch.current++; notesExport.current?.abort(); }, []);
+  useEffect(() => () => {
+    epoch.current++; notesExport.current?.abort(); locked.current = false;
+    previousToken.current = null; // StrictMode remount must reload authenticated data.
+  }, []);
 
   function clearSession() {
     notesExport.current?.abort(); notesExport.current = null;
     epoch.current++; locked.current = false;
-    setSession(null); setConversations([]); setSelected(null);
+    previousToken.current = null; signOutShared(); setConversations([]); setSelected(null);
     setMessages([]); setDraft(""); setTitle(""); setUncertain(false); setBusy(false); setPasswordBusy(false);
     setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false); setNotice("");
   }
@@ -69,6 +76,29 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
     });
   }
 
+  // Returning from Chat or Omega uses the existing account without another login.
+  // Clear a former identity before the browser paints the new account.
+  useLayoutEffect(() => {
+    const boundary = customerSessionBoundary(session);
+    const token = session?.token ?? null;
+    if (boundary === previousToken.current) return;
+    const wasSignedIn = previousToken.current !== null;
+    previousToken.current = boundary;
+    if (wasSignedIn) {
+      epoch.current++; notesExport.current?.abort(); locked.current = false;
+      authenticatedHere.current = false;
+      setConversations([]); setSelected(null); setMessages([]); setDraft(''); setTitle('');
+      setMoreConversations(false); setMoreMessages(false); setDeletePrompt(false);
+      setUncertain(false); setBusy(false); setPasswordBusy(false); setNotice('');
+    }
+    if (!token) return;
+    if (authenticatedHere.current) { authenticatedHere.current = false; return; }
+    void run(async current => {
+      const data = await conversationClient(token).list();
+      if (current()) { setConversations(data.conversations); setMoreConversations(data.conversations.length === 50); }
+    }, false, undefined, 'You are signed in, but saved history could not be loaded. Use Refresh saved history to try again.');
+  }, [customerSessionBoundary(session)]);
+
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 text-slate-100">
     <header><h1 className="text-3xl font-bold">Companion conversations</h1>
       <p className="mt-2 text-slate-300">Save private conversation notes to your account. AI replies and automatic learning are currently disabled.</p>
@@ -78,7 +108,7 @@ export default function CompanionPage({ initialMode = 'signin' }: { initialMode?
     {notice && <p role="status" className="rounded-lg border border-amber-500 p-3">{notice}</p>}
     {!session ? <AccountAccessForm initialMode={accessMode} onAuthenticated={result => {
       void run(async current => {
-        setAccessMode('signin'); setSession(result);
+        setAccessMode('signin'); authenticatedHere.current = true; acceptSession(result);
         const data = await conversationClient(result.token).list();
         if (current()) { setConversations(data.conversations); setMoreConversations(data.conversations.length === 50); }
       }, false, undefined, 'You are signed in, but saved history could not be loaded. Use Refresh saved history to try again.');
