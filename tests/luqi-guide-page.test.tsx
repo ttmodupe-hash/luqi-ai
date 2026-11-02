@@ -67,7 +67,9 @@ it('opens a homepage question as an immediate private guide result without a sec
   expect((screen.getByLabelText('What would you like help with?') as HTMLTextAreaElement).value).toBe(need);
   expect(screen.getByRole('heading', { name: 'Make learning more practical' })).toBeTruthy();
   expect(screen.getByRole('link', { name: /Open study desk/ }).getAttribute('href')).toBe('/study-desk');
-  expect(screen.getByRole('link', { name: 'Go to suggested next step' }).getAttribute('href')).toBe('#luqi-guide-result-title');
+  const jump = screen.getByRole('button', { name: 'Go to suggested next step' });
+  fireEvent.click(jump);
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Make learning more practical' }));
   expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
 });
 
@@ -76,7 +78,7 @@ it('rejects forged oversized homepage handoffs instead of silently shortening th
     <CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider>
   </MemoryRouter>);
   expect((screen.getByLabelText('What would you like help with?') as HTMLTextAreaElement).value).toBe('');
-  expect(screen.queryByRole('link', { name: 'Go to suggested next step' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Go to suggested next step' })).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Start with what matters to you' })).toBeNull();
   expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
 });
