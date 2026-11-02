@@ -6,9 +6,14 @@
 .luqi-moon p { color: inherit; line-height: 1.6; font-size: .92rem; }
 .luqi-moon-eyebrow { margin: 0 0 .4rem; font-size: .72rem !important; letter-spacing: .08em; }
 .luqi-moon-badge { border: 1px solid #aebfb6; border-radius: 1rem; padding: .35rem .7rem; font-size: .78rem; }
-.luqi-moon-overview { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr); gap: 1.5rem; align-items: center; margin-top: 1.25rem; }
+.luqi-moon-overview { display: grid; grid-template-columns: minmax(0, 235px) minmax(0, 1fr); gap: clamp(1rem, 2.5vw, 2rem); align-items: center; margin-top: 1.25rem; }
 .luqi-moon figure { margin: 0; text-align: center; }
-.luqi-moon svg { display: block; width: 100%; max-width: 180px; height: auto; margin: auto; }
+.luqi-moon svg { display: block; width: 100%; max-width: 245px; height: auto; margin: auto; }
+.luqi-moon-visual { width: min(100%, 245px); margin-inline: auto; border-radius: 50%; background: radial-gradient(circle at 46% 43%, #233344 0%, #0c1621 64%, #071017 100%); box-shadow: 0 0 0 1px #9faca52a, 0 12px 35px #0007, 0 0 30px #b4caec14; }
+.luqi-moon-globe { overflow: visible; filter: drop-shadow(0 0 6px #c1d0d31c); }
+.luqi-moon-nasa-image { image-rendering: auto; }
+.luqi-moon figcaption { max-width: 300px; margin-inline: auto; }
+.luqi-moon .luqi-moon-actions button[aria-pressed="true"] { background: #f1e1b6; color: #12271f; border-color: #e6d29a; font-weight: 700; }
 .luqi-moon-dark { fill: #244e42; }
 .luqi-moon-lit { fill: #fff3cc; }
 .luqi-moon-rim { stroke: #b4c8bf; stroke-width: .5; }
@@ -27,4 +32,4 @@
 .luqi-moon-form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
 .luqi-moon-form label { flex: 1 1 140px; min-width: 0; font-size: .9rem; }
 .luqi-moon input { display: block; margin-top: .4rem; width: 100%; min-height: 44px; min-width: 0; background: #fffaf0; color: #133e32; border: 1px solid #c8d6cc; border-radius: .5rem; padding: .6rem; font: inherit; }
-@media (max-width: 520px) { .luqi-moon-overview { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .luqi-moon svg { max-width: 140px; } }
+@media (max-width: 520px) { .luqi-moon-overview { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .luqi-moon svg { max-width: 225px; } }
