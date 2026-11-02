@@ -3,7 +3,7 @@ test('Opportunity Compass distinguishes latest DPSA issue from individually open
  const writes:string[]=[];page.on('request',r=>{if(r.method()!=='GET')writes.push(r.url());});
  await page.setViewportSize({width:320,height:720});
  await page.goto('/#/opportunities');
- await expect(page.getByText('Public Service Vacancy Circular 39 of 2026')).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Public Service Vacancy Circular 39 of 2026'})).toBeVisible();
  await expect(page.getByText(/Publisher posting: 2026-10-30/)).toBeVisible();
  await expect(page.getByText(/superseded as the newest listed edition/)).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
