@@ -8,7 +8,7 @@ import OpportunityVerificationPanel from '../components/OpportunityVerificationP
 import VerifiedGovernmentJobsPanel from '../components/VerifiedGovernmentJobsPanel';
 import {
  CATEGORIES,COUNTRY_ANCHORS,PROVINCES,OPPORTUNITY_REVIEWED_ON,
- deadlineState,matchOpportunitySources,
+ deadlineState,matchOpportunitySources,opportunitySourceReviewState,
  type OpportunityCountry,type OpportunityCategory,type OpportunityAudience,type ProvinceCode,
 } from '../lib/opportunity-sources';
 const audienceChoices:{id:OpportunityAudience|'all';label:string}[]=[
@@ -78,6 +78,9 @@ export default function OpportunityCompassPage(){
            <h3 className="text-lg font-semibold">{item.title}</h3><p className="text-sm text-slate-300">{item.summary}</p>
            {item.deadline&&<p className="text-sm font-medium">{deadlineState(item.deadline,today)==='deadline-passed'?'Published deadline has passed':'Dated call — check official deadline'}: {item.deadline}. Verify its official notice before applying.</p>}
            {item.notice&&<p className="text-xs text-amber-200">{item.notice}</p>}
+           {item.verifiedOn&&<p className="text-xs text-slate-300">Publisher posting: {item.publishedOn??'not established'} · Original-page review: {item.verifiedOn} · Next source review due: {item.reviewDueOn??'not set'}. {item.evidenceSection}</p>}
+           {opportunitySourceReviewState(item,today)==='review-overdue'&&<p role="note" className="text-xs text-amber-200">This source review is overdue. Check the latest edition directly with the issuer before acting.</p>}
+           {opportunitySourceReviewState(item,today)==='invalid'&&<p role="note" className="text-xs text-amber-200">This source review is not verifiable from its date metadata. Do not assume the listing is current.</p>}
            <a href={item.url} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline underline-offset-2">Read the official source</a>
            <OpportunityVerificationPanel source={item}/>
          </article>)}
@@ -93,7 +96,7 @@ export default function OpportunityCompassPage(){
        {scan&&<div className="space-y-2 text-sm"><p>Last publisher check: {new Date(scan.checkedAt).toLocaleString('en-ZA')}</p>
          {scan.sources.map(s=><p key={s.id}>{s.status==='reachable'?'● Reachable publisher':'○ Publisher check unavailable'}: {s.id}{s.publication?' · '+s.publication:''}</p>)}
        </div>}
-       <p className="text-xs text-slate-300">Reviewed source directory: {OPPORTUNITY_REVIEWED_ON}. Publisher reachability is not confirmation of an open job, bursary or sponsorship.</p>
+       <p className="text-xs text-slate-300">Source directory baseline: {OPPORTUNITY_REVIEWED_ON}; separately checked records show their own dates. Publisher reachability is not confirmation of an open job, bursary or sponsorship.</p>
      </section>
      <section className="space-y-2 rounded-xl border border-slate-700 bg-slate-900 p-4">
        <h2 className="text-lg font-semibold">Prepare with Luqi, apply through the real provider</h2>
