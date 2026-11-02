@@ -91,16 +91,21 @@ export default function MoonDisc({ id, fraction, rotation, view, detailed, label
               fill="#858d88" opacity={crater.brightness}/>
           </g>)}
         </g>
-        {detailed && <image href={LRO_MOON_IMAGE} x="6" y="6" width="88" height="88"
-          preserveAspectRatio="xMidYMid meet" aria-hidden="true"
-          className="luqi-moon-nasa-image" />}
       </g>
     </defs>
     <circle cx="50" cy="50" r="44.6" fill="#04080d" />
     {/* Very faint Earthshine preserves surface detail on the unlit side. */}
-    <g clipPath={`url(#${disc})`} opacity=".14"><use href={`#${sphere}`} /></g>
+    <g clipPath={`url(#${disc})`} opacity=".14">
+      <use href={`#${sphere}`} />
+      {detailed && <image href={LRO_MOON_IMAGE} x="6" y="6" width="88" height="88"
+        preserveAspectRatio="xMidYMid meet" aria-hidden="true" pointerEvents="none"
+        className="luqi-moon-nasa-image" />}
+    </g>
     <g clipPath={`url(#${mask})`}>
       <use href={`#${sphere}`} />
+      {detailed && <image href={LRO_MOON_IMAGE} x="6" y="6" width="88" height="88"
+        preserveAspectRatio="xMidYMid meet" aria-hidden="true" pointerEvents="none"
+        className="luqi-moon-nasa-image" />}
       <circle cx="50" cy="50" r="44" fill={`url(#${sphereShade})`} />
     </g>
     <circle cx="50" cy="50" r="44" fill="none" stroke="#bdc7c5" strokeOpacity=".56" strokeWidth=".25" />
