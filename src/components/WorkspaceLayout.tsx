@@ -50,10 +50,13 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [calm, setCalm] = useState(readCalmPreference);
   const [slowDiagnostics, setSlowDiagnostics] = useState(() => getLocalDiagnostics().conserveMotion);
-  useEffect(() => subscribeLocalDiagnostics(() => {
-    const slow = getLocalDiagnostics().conserveMotion;
-    setSlowDiagnostics(previous => previous === slow ? previous : slow);
-  }), []);
+  useEffect(() => {
+    let previous = getLocalDiagnostics().conserveMotion;
+    return subscribeLocalDiagnostics(() => {
+      const slow = getLocalDiagnostics().conserveMotion;
+      if (slow !== previous) { previous = slow; setSlowDiagnostics(slow); }
+    });
+  }, []);
   useEffect(() => { recordLocalRoute(location.pathname); }, [location.pathname]);
   useEffect(() => {
     const countControl = (event: MouseEvent) => {
