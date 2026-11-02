@@ -1560,13 +1560,13 @@ export default function CertMasterPage() {
                           Binary Bit Representation (Network vs Host Partition)
                         </span>
                         <div className="font-mono text-xs space-y-1">
-                          <div className="flex items-center justify-between text-slate-400">
-                            <span>IP Binary:</span>
-                            <span className="text-amber-300">{subnetCalculations.binaryIp}</span>
+                          <div className="flex flex-wrap items-start justify-between gap-2 text-slate-400 min-w-0">
+                            <span className="shrink-0">IP Binary:</span>
+                            <span className="min-w-0 break-all text-right text-amber-300">{subnetCalculations.binaryIp}</span>
                           </div>
-                          <div className="flex items-center justify-between text-slate-400">
-                            <span>Mask Binary:</span>
-                            <span className="text-emerald-300">{subnetCalculations.binaryMask}</span>
+                          <div className="flex flex-wrap items-start justify-between gap-2 text-slate-400 min-w-0">
+                            <span className="shrink-0">Mask Binary:</span>
+                            <span className="min-w-0 break-all text-right text-emerald-300">{subnetCalculations.binaryMask}</span>
                           </div>
                         </div>
                       </div>
