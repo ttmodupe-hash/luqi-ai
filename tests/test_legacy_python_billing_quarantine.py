@@ -1,5 +1,6 @@
 """P0 security tests: legacy Python billing can neither authorize nor mint money."""
 import ast
+import asyncio
 import importlib.util
 import os
 from pathlib import Path
@@ -7,9 +8,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, WebSocket
+from starlette.websockets import WebSocketDisconnect
 from fastapi.testclient import TestClient
-from backend.legacy_route_security import require_legacy_route_disabled
+from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -217,6 +219,117 @@ class QuarantinedBillingTests(unittest.TestCase):
             self.assertIsInstance(statement.value.func, ast.Name, name)
             self.assertEqual(statement.value.func.id, "require_legacy_route_disabled")
 
+
+
+class LegacyWorkspaceRetirementTests(unittest.TestCase):
+    def test_websocket_refused_before_accept_with_spoofed_identity(self):
+        app = FastAPI()
+        accepted = []
+
+        @app.websocket("/workspace/stream/{user_id}")
+        async def legacy_socket(websocket: WebSocket, user_id: str):
+            await reject_legacy_websocket(websocket)
+            accepted.append(user_id)
+
+        with TestClient(app) as client:
+            for identity in ("victim@example.invalid", "forged-admin"):
+                with self.subTest(identity=identity):
+                    with self.assertRaises(WebSocketDisconnect) as caught:
+                        with client.websocket_connect("/workspace/stream/" + identity):
+                            self.fail("Legacy websocket must never connect")
+                    self.assertEqual(caught.exception.code, 1008)
+        self.assertEqual(accepted, [])
+
+    def test_all_legacy_workspace_http_aliases_are_unconditionally_retired(self):
+        root = ast.parse((ROOT / "main.py").read_text())
+        expected = {
+            "/api/v1/workspace/upload-asset", "/workspace/upload-asset",
+            "/api/v1/workspace/calendar/book", "/workspace/calendar/book",
+            "/api/v1/workspace/submit-critique", "/workspace/submit-critique",
+            "/api/v1/workspace/critiques", "/workspace/critiques",
+        }
+        protected = {
+            "upload_workspace_file", "create_calendar_appointment",
+            "register_user_critique", "get_system_critiques",
+        }
+        found = set()
+        for node in root.body:
+            if not isinstance(node, ast.AsyncFunctionDef):
+                continue
+            for decorator in node.decorator_list:
+                if not isinstance(decorator, ast.Call) or not decorator.args:
+                    continue
+                if not isinstance(decorator.args[0], ast.Constant):
+                    continue
+                route = decorator.args[0].value
+                if route not in expected:
+                    continue
+                found.add(route)
+                deps = next(
+                    (kw.value for kw in decorator.keywords if kw.arg == "dependencies"),
+                    None,
+                )
+                self.assertIsInstance(deps, ast.List, route)
+                self.assertTrue(any(
+                    isinstance(d, ast.Call)
+                    and isinstance(d.func, ast.Name) and d.func.id == "Depends"
+                    and d.args and isinstance(d.args[0], ast.Name)
+                    and d.args[0].id == "require_legacy_route_disabled"
+                    for d in deps.elts
+                ), "Legacy workspace alias can bypass dependency: " + route)
+            if node.name in protected:
+                self.assertEqual(len(node.body), 1, node.name)
+                stmt = node.body[0]
+                self.assertIsInstance(stmt, ast.Expr, node.name)
+                self.assertIsInstance(stmt.value, ast.Call, node.name)
+                self.assertIsInstance(stmt.value.func, ast.Name, node.name)
+                self.assertEqual(stmt.value.func.id, "require_legacy_route_disabled")
+                protected.remove(node.name)
+        self.assertEqual(found, expected)
+        self.assertEqual(protected, set(), "Some direct-call guards were not found")
+
+    def test_real_legacy_websocket_entrypoint_refuses_before_accept(self):
+        root = ast.parse((ROOT / "main.py").read_text())
+        socket = next(
+            node for node in root.body
+            if isinstance(node, ast.AsyncFunctionDef)
+            and node.name == "enterprise_websocket_endpoint"
+        )
+        self.assertEqual(
+            sorted(
+                deco.args[0].value for deco in socket.decorator_list
+                if isinstance(deco, ast.Call) and deco.args
+                and isinstance(deco.args[0], ast.Constant)
+            ),
+            ["/api/v1/workspace/stream/{user_id}", "/workspace/stream/{user_id}"],
+        )
+        last = socket.body[-1]
+        self.assertIsInstance(last, ast.Expr)
+        self.assertIsInstance(last.value, ast.Await)
+        call = last.value.value
+        self.assertIsInstance(call, ast.Call)
+        self.assertIsInstance(call.func, ast.Name)
+        self.assertEqual(call.func.id, "reject_legacy_websocket")
+        self.assertEqual(len(call.args), 1)
+        self.assertIsInstance(call.args[0], ast.Name)
+        self.assertEqual(call.args[0].id, "websocket")
+        self.assertFalse(any(
+            isinstance(x, ast.Attribute) and x.attr == "accept"
+            for x in ast.walk(socket)
+        ), "Never accept a legacy anonymous websocket")
+
+    def test_retired_workspace_never_claims_completed_work_or_seeds_fake_critiques(self):
+        source = (ROOT / "main.py").read_text()
+        tree = ast.parse(source)
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "_system_critiques_ledger"
+                for t in node.targets
+            ):
+                self.assertIsInstance(node.value, ast.List)
+                self.assertEqual(node.value.elts, [])
+                return
+        self.fail("No empty retired critique ledger found")
 
 if __name__ == "__main__":
     unittest.main()

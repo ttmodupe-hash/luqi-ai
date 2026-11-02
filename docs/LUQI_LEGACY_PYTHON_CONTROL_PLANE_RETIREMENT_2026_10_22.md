@@ -33,3 +33,16 @@ Even fully green offline CI does not establish that an externally exposed legacy
 6. Merge and deploy only under approved change management and with a rollback plan; the Railway connector access issue is independent.
 
 **No live payment processor, credentials, DNS or environment has been changed by this draft.**
+
+
+## Additional legacy workspace identity/asset quarantine (2 Nov 2026)
+
+Source inspection found the separate old Python `/workspace/*` and `/api/v1/workspace/*` direct handlers were not covered by the earlier billing-router quarantine. The RTC WebSocket accepted a URL-supplied `user_id` as identity and relayed presence/signalling without a session; the upload endpoint wrote unchecked user-named content to local `/tmp` and reported a cloud asset URL without actually uploading; booking and critique endpoints acknowledged in-memory/fabricated work, and critique history was publicly retrievable. These are credible **source-level** confidentiality, integrity and misleading-success risks, NOT evidence of a live exploit or proof that the Python service is serving production traffic.
+
+Both WebSocket aliases now **close before accept** with policy code 1008, and all eight HTTP workspace aliases unconditionally return `503 LEGACY_API_RETIRED` at the dependency level and via direct handler calls. No uploaded bytes are read, no local file is written, no presence signal is sent, and no appointment/critique is recorded. Synthetic FastAPI WebSocket handshake tests exercise forged identities; static route/AST tests verify both alias sets, mandatory dependencies, direct-call denial and no fabricated starter critique.
+
+**Scope/impact:** Only the insecure old Python workspace endpoints are retired. KHORO remains integrated under LUQI's existing single login; modern Node-authenticated presence, guest access, media, payments, privacy controls, allocations and PWA mobile compatibility are untouched. The old Python workspace endpoints remain unavailable until a separate, owner-authorised secure migration with verified session ownership, tenant ACLs, bounded/scanned uploads, durable events and real asset provenance.
+
+**Independent security handoff:** Verify the actual serving topology and consumers; inspect all alias routes and WebSocket pre-accept close semantics on an isolated staging application, including spoofed identity and malicious filename cases. Review the exact branch/merge SHA and all Python 3.10/3.11/3.12 CI jobs; passing tests are not a deployment or independent review. This old stacked branch diverges from current main and must be reconciled in a separately reviewed minimal integration; do not merge this stack wholesale.
+
+**Rollback:** If any issue is found *before merge*, revert this one legacy-workspace-quarantine commit on the review branch through an ordinary, independently reviewed revert; rerun exact-head tests. If eventually approved and deployed, use the established release owner's separately authorised revert/redeployment procedure, never force-push, re-enable unsigned legacy endpoints via config or bypass safeguards.

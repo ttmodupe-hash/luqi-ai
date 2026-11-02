@@ -24,3 +24,12 @@ def require_legacy_route_disabled() -> None:
             ),
         },
     )
+
+
+async def reject_legacy_websocket(websocket) -> None:
+    """Refuse unauthenticated legacy RTC identity before accepting a socket.
+
+    WebSocket handshake cannot use the old HTTP-only FastAPI dependency.
+    The URL user_id and headers alone are NOT verified authenticated identity.
+    """
+    await websocket.close(code=1008, reason="LEGACY_API_RETIRED")

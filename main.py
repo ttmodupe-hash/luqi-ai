@@ -40,7 +40,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import settings
-from backend.legacy_route_security import require_legacy_route_disabled
+from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket
 
 # ── Logging ──────────────────────────────────────────────────────────────
 logger = logging.getLogger("luqi")
@@ -1010,38 +1010,16 @@ presence_server = PresenceManager()
 @app.websocket("/api/v1/workspace/stream/{user_id}")
 @app.websocket("/workspace/stream/{user_id}")
 async def enterprise_websocket_endpoint(websocket: WebSocket, user_id: str):
-    await presence_server.connect_user(user_id, websocket)
-    try:
-        while True:
-            raw_data = await websocket.receive_text()
-            try:
-                message_data = json.loads(raw_data)
-                if message_data.get("type") == "SET_VISIBILITY":
-                    await presence_server.update_visibility_setting(user_id, message_data["setting"])
-                elif message_data.get("type") == "RTC_SIGNAL":
-                    target = message_data.get("target_recipient")
-                    if target in presence_server.active_connections:
-                        await presence_server.active_connections[target]["socket"].send_text(raw_data)
-            except Exception:
-                pass
-    except WebSocketDisconnect:
-        presence_server.disconnect_user(user_id)
+    # A URL user_id never proves ownership. Deny before websocket.accept().
+    # The separately authenticated LUQI realtime product is unaffected.
+    await reject_legacy_websocket(websocket)
 
-@app.post("/api/v1/workspace/upload-asset")
-@app.post("/workspace/upload-asset")
+@app.post("/api/v1/workspace/upload-asset", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/workspace/upload-asset", dependencies=[Depends(require_legacy_route_disabled)])
 async def upload_workspace_file(file: UploadFile = File(...), user_id: str = "anonymous"):
-    try:
-        clean_filename = f"workspace_{int(datetime.utcnow().timestamp())}_{file.filename}"
-        local_target_path = f"/tmp/{clean_filename}"
-        with open(local_target_path, "wb") as buffer:
-            buffer.write(await file.read())
-            
-        bucket_name = os.environ.get("GOOGLE_CLOUD_STORAGE_BUCKET", "luqi-vault")
-        asset_url = f"https://storage.googleapis.com/{bucket_name}/workspace_assets/{clean_filename}"
-        return {"success": True, "asset_url": asset_url, "filename": clean_filename}
-    except Exception as e:
-        dispatch_emergency_telemetry_alert(f"File asset upload failure: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"File asset processing failed: {str(e)}")
+    # No caller-verified ownership, file type/size, storage ACL, or real asset URL.
+    # Deny direct calls as well as HTTP requests before reading or writing bytes.
+    require_legacy_route_disabled()
 
 class MeetingRequest(BaseModel):
     title: str
@@ -1051,23 +1029,11 @@ class MeetingRequest(BaseModel):
 
 _calendar_ledger = []
 
-@app.post("/api/v1/workspace/calendar/book")
-@app.post("/workspace/calendar/book")
+@app.post("/api/v1/workspace/calendar/book", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/workspace/calendar/book", dependencies=[Depends(require_legacy_route_disabled)])
 async def create_calendar_appointment(payload: MeetingRequest):
-    appointment = {
-        "id": f"CAL-{len(_calendar_ledger) + 101}",
-        "title": payload.title,
-        "start_time": payload.start_time,
-        "attendees": payload.attendees,
-        "ai_assistant_assigned": "KHORO Cognitive Architecture Companion",
-        "created_at": datetime.utcnow().isoformat()
-    }
-    _calendar_ledger.append(appointment)
-    return {
-        "success": True,
-        "message": "Meeting successfully finalized. AI assistant synced to task session parameters.",
-        "appointment": appointment
-    }
+    # The old in-memory ledger could promise bookings without durable scheduling.
+    require_legacy_route_disabled()
 
 class CritiquePayload(BaseModel):
     user_id: Optional[str] = "anonymous"
@@ -1076,54 +1042,19 @@ class CritiquePayload(BaseModel):
     user_complaint_text: str
     associated_page_url: Optional[str] = ""
 
-_system_critiques_ledger = [
-    {
-        "critique_id": 1,
-        "user_id": "student_johannesburg@network.co.za",
-        "critique_type": "UI_FLAW",
-        "severity_rating": 3,
-        "user_complaint_text": "Pendulum lab sliders require tactile feedback on smaller mobile displays.",
-        "associated_page_url": "/pendulum-lab.html",
-        "agent_remediation_status": "AUTO_PATCHED_LIVE",
-        "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    }
-]
+_system_critiques_ledger = []  # No fabricated AUTO_PATCHED_LIVE seed records.
 
-@app.post("/api/v1/workspace/submit-critique")
-@app.post("/workspace/submit-critique")
+@app.post("/api/v1/workspace/submit-critique", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/workspace/submit-critique", dependencies=[Depends(require_legacy_route_disabled)])
 async def register_user_critique(payload: CritiquePayload):
-    try:
-        record = {
-            "critique_id": len(_system_critiques_ledger) + 1,
-            "user_id": payload.user_id or "anonymous",
-            "critique_type": payload.critique_type,
-            "severity_rating": payload.severity_rating,
-            "user_complaint_text": payload.user_complaint_text,
-            "associated_page_url": payload.associated_page_url or "",
-            "agent_remediation_status": "PENDING_AGENT_OPTIMIZATION",
-            "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-        }
-        _system_critiques_ledger.insert(0, record)
+    # Anonymous calls must not claim an agent queued, patched or logged evidence.
+    require_legacy_route_disabled()
 
-        alert_text = (
-            f"🚨 *NEW APP CRITIQUE SUBMITTED [{payload.critique_type.upper()}] (Severity: {payload.severity_rating}/5)*\n"
-            f"*User Complaint:* \"{payload.user_complaint_text}\"\n"
-            f"*Location URL:* {payload.associated_page_url}"
-        )
-        dispatch_emergency_telemetry_alert(alert_text)
-
-        return {
-            "success": True,
-            "message": "Critique logged successfully. The self-improving agent matrix has queued this item for optimization.",
-            "record": record
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Critique Ingestion Failure: {str(e)}")
-
-@app.get("/api/v1/workspace/critiques")
-@app.get("/workspace/critiques")
+@app.get("/api/v1/workspace/critiques", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/workspace/critiques", dependencies=[Depends(require_legacy_route_disabled)])
 async def get_system_critiques():
-    return _system_critiques_ledger
+    # No unauthenticated cross-user incident/critique listing.
+    require_legacy_route_disabled()
 
 @app.post("/api/khoro-legal")
 @app.post("/api/v1/khoro-legal")
