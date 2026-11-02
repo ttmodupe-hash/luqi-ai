@@ -28,7 +28,7 @@ import OmegaTasksPage from './pages/OmegaTasksPage';
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
-const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
+const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingUnavailablePage"));
 const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
 const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
 const GuestTryPage = lazy(() => import("./pages/GuestTryPage"));
