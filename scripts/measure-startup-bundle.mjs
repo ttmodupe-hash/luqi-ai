@@ -63,7 +63,7 @@ export function assertProviderFree(report) {
 }
 
 export function assertKnownQueryConsumers(consumers) {
-  const wrapped = new Set(['src/pages/LabSimulatorPage.tsx', 'src/pages/SelfHealingPage.tsx',
+  const wrapped = new Set(['src/pages/LabSimulatorPage.tsx',
     'src/pages/ExperientialEducationPage.tsx', 'src/providers/trpc.tsx']);
   if (!Array.isArray(consumers) || consumers.some(row => !wrapped.has(row.source.replaceAll('\\', '/')))) {
     throw new Error('An unreviewed query consumer needs an explicit provider boundary and tests');
