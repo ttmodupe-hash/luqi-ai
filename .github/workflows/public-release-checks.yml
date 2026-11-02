@@ -16,13 +16,17 @@ on:
       - ".github/workflows/public-release-checks.yml"
       - "scripts/check-canonical-railway-status.mjs"
       - "tests/canonical-railway-status.test.mjs"
+      - "tests/release-status-concurrency.test.mjs"
 
 permissions:
   contents: read
 
+# Railway environments can share a status context. Isolate status deliveries
+# BEFORE job-level filtering so a skipped preview event cannot cancel production.
+# Non-status runs retain normal per-ref supersession; all original guards remain.
 concurrency:
-  group: luqi-public-release-${{ github.event_name }}-${{ github.ref }}-${{ github.event.context || 'none' }}
-  cancel-in-progress: true
+  group: luqi-public-release-${{ github.event_name }}-${{ github.event_name == 'status' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'status' }}
 
 jobs:
   verify-current-public-release:
@@ -49,7 +53,7 @@ jobs:
       - name: Verify canonical event and event-ordering contracts with no network
         run: |
           node --check scripts/check-canonical-railway-status.mjs
-          node --test tests/canonical-railway-status.test.mjs
+          node --test tests/canonical-railway-status.test.mjs tests/release-status-concurrency.test.mjs
       - name: Reject foreign, stale or unsuccessful Railway status events
         if: github.event_name == 'status'
         env:
