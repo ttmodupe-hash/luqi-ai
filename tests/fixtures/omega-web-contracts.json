@@ -1,0 +1,459 @@
+[
+  {
+    "name": "exact money arithmetic",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "100.25",
+        "40",
+        "0.10"
+      ]
+    },
+    "valid": true,
+    "result": {
+      "total": "140.35",
+      "currency": "ZAR",
+      "basis": "user_supplied",
+      "notice": "Arithmetic from supplied amounts; no live prices or FX rates."
+    }
+  },
+  {
+    "name": "upper budget bound",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "KES",
+      "amounts": [
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99",
+        "999999999.99"
+      ]
+    },
+    "valid": true,
+    "result": {
+      "total": "49999999999.50",
+      "currency": "KES",
+      "basis": "user_supplied",
+      "notice": "Arithmetic from supplied amounts; no live prices or FX rates."
+    }
+  },
+  {
+    "name": "service schedule",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": true,
+    "result": {
+      "kmRemaining": 1500,
+      "serviceDueDate": "2027-01-01",
+      "overdueByKm": false,
+      "overdueByDate": false,
+      "needsService": false,
+      "basis": "user_supplied",
+      "notice": "Scheduling aid only; follow manufacturer instructions and a mechanic's advice."
+    }
+  },
+  {
+    "name": "leap day service due",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 30000,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2024-02-29",
+      "today": "2025-02-28",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": true,
+    "result": {
+      "kmRemaining": -4000,
+      "serviceDueDate": "2025-02-28",
+      "overdueByKm": true,
+      "overdueByDate": true,
+      "needsService": true,
+      "basis": "user_supplied",
+      "notice": "Scheduling aid only; follow manufacturer instructions and a mechanic's advice."
+    }
+  },
+  {
+    "name": "numeric amount",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        1
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "negative amount",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "-1"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "exponent amount",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "1e3"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "too precise",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "1.001"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "too large",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "1000000000"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "leading zero",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "01.00"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "empty amounts",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": []
+    },
+    "valid": false
+  },
+  {
+    "name": "too many amounts",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "lower currency",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "zar",
+      "amounts": [
+        "100.25",
+        "40",
+        "0.10"
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "spoof owner",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "100.25",
+        "40",
+        "0.10"
+      ],
+      "owner_id": "bob"
+    },
+    "valid": false
+  },
+  {
+    "name": "arbitrary provider",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "100.25",
+        "40",
+        "0.10"
+      ],
+      "provider": "openai"
+    },
+    "valid": false
+  },
+  {
+    "name": "free text",
+    "handler": "travel.budget",
+    "payload": {
+      "currency": "ZAR",
+      "amounts": [
+        "100.25",
+        "40",
+        "0.10"
+      ],
+      "description": "private text"
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid calendar",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-02-30",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "future history",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2027-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "reversed odometer",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 25000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "boolean distance",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": true,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "fractional distance",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 1.5,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "zero interval",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 0
+    },
+    "valid": false
+  },
+  {
+    "name": "huge interval",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 3651
+    },
+    "valid": false
+  },
+  {
+    "name": "compact date",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "20261023",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "personal plate",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "2026-10-23",
+      "intervalKm": 10000,
+      "intervalDays": 365,
+      "plate": "PRIVATE"
+    },
+    "valid": false
+  },
+  {
+    "name": "unbounded year",
+    "handler": "vehicle.schedule",
+    "payload": {
+      "odometerKm": 24500,
+      "lastServiceKm": 16000,
+      "lastServiceDate": "2026-01-01",
+      "today": "9999-01-01",
+      "intervalKm": 10000,
+      "intervalDays": 365
+    },
+    "valid": false
+  },
+  {
+    "name": "arbitrary handler",
+    "handler": "shell.exec",
+    "payload": {},
+    "valid": false
+  }
+]

@@ -1,0 +1,71 @@
+name: Luqi Business Connect
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: business-connect-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  durable-business-profiles:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      GITHUB_ACTIONS: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npx vitest run tests/business-connect-mysql.integration.test.ts --no-file-parallelism
+      - run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/business-connect.ts api/services/businessConnectStore.ts db/prepareBusinessStorage.ts src/pages/BusinessConnectPage.tsx src/pages/BusinessDirectoryPage.tsx src/pages/BusinessReviewPage.tsx
+      - name: Build isolated operator image
+        run: docker build --file ops/Dockerfile.business-setup --tag luqi-business-setup-ci .
+      - name: Operator image refuses missing scope without touching a database
+        run: |
+          set +e
+          docker run --rm luqi-business-setup-ci > /tmp/business-refusal.txt 2>&1
+          result=$?
+          set -e
+          test "$result" = 1
+          test "$(cat /tmp/business-refusal.txt)" = BUSINESS_SETUP_UNAVAILABLE
+      - run: npm run build
+        env:
+          NODE_ENV: production
+      - name: Prepare disposable HTTPS business server
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/luqi-business.key -out /tmp/luqi-business.crt -days 1 -subj '/CN=127.0.0.1' -addext 'subjectAltName=IP:127.0.0.1'
+          chmod 600 /tmp/luqi-business.key
+          npx esbuild scripts/ci-business-server.ts --bundle --platform=node --format=esm --outfile=/tmp/luqi-business-server.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+      - name: Verify real owner and reviewer flow on Chromium and iPhone-sized WebKit
+        run: |
+          image='mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d'
+          docker run --rm --init --network host --ipc host -v "$PWD:/work" -w /work \
+            -v /tmp/luqi-business-server.js:/tmp/luqi-business-server.js:ro -v /tmp/luqi-business.key:/tmp/luqi-business.key:ro -v /tmp/luqi-business.crt:/tmp/luqi-business.crt:ro \
+            -e LUQI_MYSQL_CI_FIXTURE -e DATABASE_URL -e GITHUB_ACTIONS=true -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            "$image" npx --no-install playwright test --config playwright.business.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: business-profile-browser-evidence
+          path: test-results/
+          if-no-files-found: ignore

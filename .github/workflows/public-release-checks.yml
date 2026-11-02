@@ -1,0 +1,67 @@
+name: LUQI Public Release Checks
+
+on:
+  push:
+    branches: [main]
+  status:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/verify-public-release.mjs"
+      - "scripts/verify-deployed-release.mjs"
+      - "api/lib/releaseIdentity.ts"
+      - "tests/release-identity.test.ts"
+      - "tests/release-observation.test.ts"
+      - ".github/workflows/public-release-checks.yml"
+      - "scripts/check-canonical-railway-status.mjs"
+      - "tests/canonical-railway-status.test.mjs"
+      - "tests/release-status-concurrency.test.mjs"
+
+permissions:
+  contents: read
+
+# Railway environments can share a status context. Isolate status deliveries
+# BEFORE job-level filtering so a skipped preview event cannot cancel production.
+# Non-status runs retain normal per-ref supersession; all original guards remain.
+concurrency:
+  group: luqi-public-release-${{ github.event_name }}-${{ github.event_name == 'status' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'status' }}
+
+jobs:
+  verify-current-public-release:
+    if: >-
+      github.event_name != 'status' ||
+      (github.event.state == 'success' &&
+       github.event.context == 'kind-spontaneity - web' &&
+       github.event.sha == github.sha &&
+       startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7') &&
+       contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check probe syntax
+        run: |
+          node --check scripts/verify-public-release.mjs
+          node --check scripts/verify-deployed-release.mjs
+      - name: Verify canonical event and event-ordering contracts with no network
+        run: |
+          node --check scripts/check-canonical-railway-status.mjs
+          node --test tests/canonical-railway-status.test.mjs tests/release-status-concurrency.test.mjs
+      - name: Reject foreign, stale or unsuccessful Railway status events
+        if: github.event_name == 'status'
+        env:
+          LUQI_MAIN_SHA: ${{ github.sha }}
+        run: node scripts/check-canonical-railway-status.mjs
+      - name: Wait for the expected live commit and verify its public safety boundaries
+        if: github.event_name == 'status' || github.event_name == 'workflow_dispatch'
+        env:
+          LUQI_VERIFY_PUBLIC: "true"
+          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || github.sha }}
+        run: node scripts/verify-deployed-release.mjs

@@ -41,6 +41,27 @@ class TestAuthManager(unittest.TestCase):
     def test_admin_key_from_env(self):
         self.assertTrue(self.auth.is_admin("admin-secret"))
 
+    def test_malformed_keys_fail_closed_without_database_access(self):
+        from unittest.mock import patch
+        for key in (None, 123, b"admin-secret", "", "x" * 4097):
+            with self.subTest(key_type=type(key).__name__):
+                with patch.object(self.pool, "fetchone") as fetchone:
+                    self.assertIsNone(self.auth.validate(key))
+                    self.assertFalse(self.auth.is_admin(key))
+                    fetchone.assert_not_called()
+
+    def test_unicode_key_does_not_raise_or_authenticate(self):
+        self.assertIsNone(self.auth.validate("🔒-invalid"))
+        self.assertFalse(self.auth.is_admin("🔒-invalid"))
+
+    def test_admin_secret_uses_constant_time_comparison(self):
+        from unittest.mock import patch
+        import secrets
+        with patch("web_core.security.auth.secrets.compare_digest",
+                   wraps=secrets.compare_digest) as compare:
+            self.assertTrue(self.auth.is_admin("admin-secret"))
+            compare.assert_called_once_with(b"admin-secret", b"admin-secret")
+
     def test_non_admin_key(self):
         key = self.auth.create_key("regular")
         self.assertFalse(self.auth.is_admin(key))

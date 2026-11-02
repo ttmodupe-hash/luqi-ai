@@ -1,0 +1,591 @@
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { stageGuide, readChatReturn, clearGuideHandoff, isGuidePath } from '../lib/interaction-handoff';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import AccountAccessForm from '../components/AccountAccessForm';
+import { askPilot, pilotAvailability, PilotChatError, type PilotReply } from '../lib/ai-pilot';
+import { useCustomerSession } from '../providers/customer-session';
+import { useSovereignRegion } from '../providers/sovereign-region';
+import { AFRICAN_REGIONAL_PROFILES } from '../services/panAfricanSovereignEngine';
+import { MAX_PILOT_QUESTION_CHARS, buildPilotInput } from '../lib/pilot-input';
+import { previewPilotHistory, type PilotConversationTurn } from '../lib/pilot-conversation';
+import { guideLuqiNeed } from '../lib/luqi-intent-guide';
+import { detectDriverMode } from '../lib/driver-rights';
+import { detectConsumerCategory } from '../lib/consumer-rights-guide';
+import { EVIDENCE_CASES, detectEvidenceTopic } from '../lib/comparative-evidence';
+import ConsumerQuickCard from '../components/ConsumerQuickCard';
+import DriverQuickCard from '../components/DriverQuickCard';
+import ConnectionStatusBadge from '../components/ConnectionStatusBadge';
+import { detectOpportunityIntent } from '../lib/opportunity-sources';
+import { detectTenderIntent } from '../lib/tender-sources';
+import { detectVisaEntryIntent } from '../lib/visa-entry-sources';
+import { detectMunicipalIntent,detectTownshipEconomyIntent } from '../lib/municipal-economy';
+import { socialSupportPathForInput } from '../lib/social-support-sources';
+import { proposeStudioVideo, isVideoApprovalMessage } from '../lib/video-plan';
+import SafePilotText from '../components/SafePilotText';
+import { Send, Sparkles } from 'lucide-react';
+import { useOptionalChatWorkspace } from '../providers/chat-workspace';
+import CompanionNotePicker, { type SharedCompanionNote } from '../components/CompanionNotePicker';
+import LuqiPromptCoach from '../components/LuqiPromptCoach';
+import { prepareCompanionQuestion } from '../lib/companion-context';
+import '../chat.css';
+import LanguageSelectorDropdown from '../components/LanguageSelectorDropdown';
+import LuqiPersonalWelcome from '../components/LuqiPersonalWelcome';
+import { getStoredLanguage, LANGUAGES } from '../lib/languages';
+
+export default function AiPilotPage({ embedded = false, initialQuestion = '', workspaceMode = false }: { embedded?: boolean; initialQuestion?: string; workspaceMode?: boolean } = {}) {
+  const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const navigate = useNavigate();
+  const [language, setLanguage] = useState(getStoredLanguage);
+  useEffect(() => {
+    const change = (event: Event) => {
+      const code = (event as CustomEvent).detail?.language?.code;
+      const selected = LANGUAGES.find(item => item.code === code);
+      if (selected) setLanguage(selected);
+    };
+    window.addEventListener('luqi:language-changed', change);
+    return () => window.removeEventListener('luqi:language-changed', change);
+  }, []);
+  const optionalChatWorkspace = useOptionalChatWorkspace();
+  const workspace = workspaceMode ? optionalChatWorkspace : null;
+  const previouslySignedIn = useRef(!!session);
+  useEffect(() => {
+    if (workspace && session && !previouslySignedIn.current) {
+      document.getElementById('ai-question')?.focus({ preventScroll: true });
+    }
+    previouslySignedIn.current = !!session;
+  }, [session, workspace]);
+  const { region } = useSovereignRegion();
+  const [shareRegion, setShareRegion] = useState(false);
+  const previousToken = useRef<string | null>(null);
+  const [available, setAvailable] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [prompt, setPrompt] = useState(''); const [consent, setConsent] = useState(false);
+  // Workspace approval is explicit once per signed-in tab, never stored.
+  // Every provider attempt still requires the user's Send action.
+  const consentGranted = workspace ? workspace.providerAcknowledged : consent;
+  const [answer, setAnswer] = useState<PilotReply | null>(null);
+  const [busy, setBusy] = useState(false); const [notice, setNotice] = useState('');
+  const [uncertain, setUncertain] = useState(false);
+  const [turns, setTurns] = useState<PilotConversationTurn[]>([]);
+  const [shareContext, setShareContext] = useState(false);
+  const [copyQuestionToGuide, setCopyQuestionToGuide] = useState(false);
+  const [companionMode, setCompanionMode] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
+  const [shareNote, setShareNote] = useState(false);
+  const languageControl = <div><LanguageSelectorDropdown compact />
+    <p>Reply language: {language.nativeName}. AI language accuracy can vary.</p></div>;
+  const personalWelcome = session ? <LuqiPersonalWelcome key={session.user.email}
+    name={session.user.name} language={language} disabled={busy || uncertain} /> : null;
+  // Changing a country invalidates prior optional provider-processing approval.
+  useEffect(() => { setShareRegion(false); }, [region]);
+  const questionLength = prompt.trim().length;
+  const tooLong = questionLength > MAX_PILOT_QUESTION_CHARS;
+  const contextPreview = shareContext ? previewPilotHistory(turns) : [];
+  const contextTooLong = (() => {
+    if (!prompt.trim() || tooLong) return false;
+    try { buildPilotInput(prepareCompanionQuestion(prompt.trim(), companionMode, shareNote ? selectedNote?.content : undefined), language.name, contextPreview); return false; }
+    catch { return true; }
+  })();
+  const epoch = useRef(0); const locked = useRef(false);
+  const pending = useRef<AbortController | null>(null);
+  const availabilityPending = useRef<AbortController | null>(null);
+  const mounted = useRef(false);
+  const selectionSeen = useRef<number | null>(null);
+
+  // A transient startup failure must not force a reload (and lose the session).
+  // Only this public GET is repeatable. Never replay an AI request or clear its
+  // uncertain outcome when the user checks configuration again.
+  const checkAvailability = useCallback(async () => {
+    if (!mounted.current || availabilityPending.current) return;
+    const controller = new AbortController(); availabilityPending.current = controller;
+    setChecking(true); setAvailable(false);
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const value = await pilotAvailability(controller.signal);
+      if (!controller.signal.aborted && availabilityPending.current === controller) setAvailable(value);
+    } catch { /* Keep requests paused; no inference or automatic retry. */ }
+    finally {
+      clearTimeout(timer);
+      if (mounted.current && availabilityPending.current === controller) {
+        availabilityPending.current = null; setChecking(false);
+      }
+    }
+  }, []);
+
+  // Clear the former identity before paint; never forward its question or consent.
+  useLayoutEffect(() => {
+    const boundary = customerSessionBoundary(session);
+    if (previousToken.current && previousToken.current !== boundary) {
+      epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+      setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
+      setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
+    }
+    previousToken.current = boundary;
+  }, [customerSessionBoundary(session)]);
+
+  // Switching chats cancels pending work and resets optional sharing.
+  // Provider acknowledgement remains scoped to the same signed-in account.
+  // The history is limited to confirmed replies in this tab, never storage.
+  useLayoutEffect(() => {
+    if (!workspace || selectionSeen.current === workspace.selectionVersion) return;
+    selectionSeen.current = workspace.selectionVersion;
+    const wasPending = locked.current;
+    epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+    setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
+    setTurns(workspace.activeThread?.turns ?? []);
+    setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setBusy(false); setUncertain(false);
+    setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
+  }, [workspace?.selectionVersion]);
+
+  useEffect(() => {
+    mounted.current = true;
+    void checkAvailability();
+    return () => {
+      mounted.current = false; epoch.current++;
+      availabilityPending.current?.abort(); availabilityPending.current = null;
+      pending.current?.abort();
+    };
+  }, [checkAvailability]);
+
+  useEffect(() => {
+    if (initialQuestion && initialQuestion.trim() && initialQuestion.length <= MAX_PILOT_QUESTION_CHARS) {
+      setPrompt(initialQuestion);
+    }
+  }, [initialQuestion]);
+
+  useEffect(() => {
+    if (!workspaceMode) return; // Embedded helpers cannot consume the main Chat draft.
+    const draft = readChatReturn(customerSessionBoundary(session));
+    if (draft !== null) { setPrompt(draft); clearGuideHandoff(); }
+  }, []);
+  function openGuide(path: string) {
+    if (!isGuidePath(path) || busy || uncertain) return;
+    const selection = path === '/consumer-rights' ? detectConsumerCategory(prompt)
+      : path === '/driver-rights' ? detectDriverMode(prompt)
+      : path === '/comparative-evidence' ? detectEvidenceTopic(prompt) : null;
+    stageGuide(customerSessionBoundary(session), path, prompt, selection, copyQuestionToGuide);
+    navigate(path);
+  }
+  function signOut() {
+    epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
+    previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
+    setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+  }
+  function newChat() {
+    if (locked.current) return;
+    if (workspace) { workspace.startNewChat(); return; }
+    epoch.current++;
+    setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false); setCopyQuestionToGuide(false);
+    setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+  }
+  async function submit(preferAi = false) {
+    if (!preferAi && localGuidePath) { openGuide(localGuidePath); return; }
+    if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
+    const submittedQuestion = prompt;
+    const actualProviderQuestion = prepareCompanionQuestion(submittedQuestion, companionMode,
+      shareNote ? selectedNote?.content : undefined);
+    const approvedHistory = shareContext ? previewPilotHistory(turns) : [];
+    const approvedRegion = shareRegion && region !== 'PAN_AFRICAN_AU' ? region : undefined;
+    // Keep the last confirmed reply visible while a follow-up is pending or
+    // fails. The next successful reply replaces it; errors never erase it.
+    locked.current = true; setBusy(true); setNotice('');
+    // Sharing is a one-request decision; subsequent prompts default to no context.
+    if (!workspace) setShareContext(false); // Visible workspace consent persists within this chat.
+    setShareRegion(false); setShareNote(false);
+    const version = epoch.current; const controller = new AbortController(); pending.current = controller;
+    const timer = setTimeout(() => controller.abort(), 45_000);
+    try {
+      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name);
+      if (epoch.current === version) {
+        setAnswer(result);
+        setTurns(previous => {
+          const next: PilotConversationTurn[] = [
+            ...previous,
+            { sender: 'user', text: submittedQuestion },
+            { sender: 'ai', text: result.response },
+          ];
+          return next.slice(-8);
+        });
+        setPrompt('');
+        workspace?.recordConfirmedReply(submittedQuestion, result);
+      }
+    } catch (error) {
+      if (epoch.current !== version) return;
+      const code = error instanceof PilotChatError ? error.code : 'RESPONSE_UNCONFIRMED';
+      if (code === 'AUTH_REQUIRED') { signOut(); setNotice('Your session ended. Sign in again.'); return; }
+      if (code === 'RESPONSE_UNCONFIRMED') {
+        setUncertain(true); setNotice('The reply could not be confirmed. A provider attempt may have been charged. We will not retry automatically.');
+      } else if (code === 'AI_INPUT_TOO_LARGE' || code === 'INVALID_INPUT') {
+        setNotice('Your question could not be sent as entered. Shorten or correct it; no provider attempt was started.');
+      } else if (code === 'AI_RESPONSE_BLOCKED') {
+        setNotice('The provider declined the request or withheld its reply. No further provider was tried after that decision. The attempt may still count toward your allowance.');
+      } else if (code === 'AI_REPLY_INCOMPLETE') {
+        setNotice('The provider stopped before completing a reply. Unfinished text was not shown and no automatic continuation was requested. The attempt may still count toward your allowance. You can ask for a brief first part in a new question.');
+      } else if (code === 'AI_RESPONSE_INVALID') {
+        setNotice('The provider reply could not be verified. It was not shown or retried automatically. The attempt may still count toward your allowance.');
+      } else if (code === 'AI_USER_DAILY_QUOTA_EXHAUSTED') setNotice('Your daily allowance of 20 provider attempts has been reached. Try another UTC day.');
+      else if (code === 'AI_PROVIDER_BUDGET_EXHAUSTED') setNotice('The monthly provider allowance has been reached. No further attempt was started on that provider.');
+      else setNotice('AI replies are unavailable. Failed provider attempts may still count toward the allowance.');
+    } finally {
+      clearTimeout(timer);
+      if (epoch.current === version) { locked.current = false; pending.current = null; setBusy(false); }
+    }
+  }
+
+  // The next-step link comes only from the customer's own verified question,
+  // never from model output or an untrusted tool command. No tool runs automatically.
+  const latestVideoQuestion = turns.at(-2)?.sender === 'user' ? turns.at(-2)!.text : '';
+  const videoPlan = answer && latestVideoQuestion ? proposeStudioVideo(latestVideoQuestion, answer.response) : null;
+  const typedVideoApproval = !!videoPlan && isVideoApprovalMessage(prompt);
+  // Recognised public guides use no consent, login or billable inference.
+  const driverMode = detectDriverMode(prompt);
+  const consumerCategory = !driverMode ? detectConsumerCategory(prompt) : null;
+  const evidenceTopic = !driverMode && !consumerCategory ? detectEvidenceTopic(prompt) : null;
+  const socialPath = !driverMode && !consumerCategory && !evidenceTopic ? socialSupportPathForInput(prompt) : null;
+  const visaIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && detectVisaEntryIntent(prompt);
+  const townshipIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && detectTownshipEconomyIntent(prompt);
+  const municipalIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && !townshipIntent && detectMunicipalIntent(prompt);
+  const tenderIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && !townshipIntent && !municipalIntent && detectTenderIntent(prompt);
+  const opportunityIntent = !driverMode && !consumerCategory && !evidenceTopic && !socialPath && !visaIntent && !townshipIntent && !municipalIntent && !tenderIntent && detectOpportunityIntent(prompt);
+  const localGuidePath = driverMode ? '/driver-rights' : consumerCategory ? '/consumer-rights' : evidenceTopic ? '/comparative-evidence' : socialPath ? socialPath : visaIntent ? '/visa-entry' : townshipIntent ? '/township-economy' : municipalIntent ? '/municipalities' : tenderIntent ? '/tenders' : opportunityIntent ? '/opportunities' : null;
+  const nextStep = answer ? guideLuqiNeed(turns.at(-2)?.text) : null;
+  const actionablePath = !videoPlan && nextStep?.primaryPath && nextStep.primaryPath !== '/ai-trial' ? nextStep.primaryPath : null;
+  function approveVideoPlan() {
+    // This is the user's separate approval of the displayed storyboard, never an AI tool call.
+    if (!workspace || !videoPlan || busy || uncertain || !workspace.stageStudioPlan(videoPlan)) return;
+    navigate('/content-studio');
+  }
+  if (workspace) {
+    const canSend = localGuidePath ? !busy && !uncertain && !tooLong :
+      typedVideoApproval ? !!session && !busy && !uncertain :
+      !!session && !checking && available && consentGranted && !!prompt.trim() &&
+      !tooLong && !contextTooLong && !busy && !uncertain;
+    return <main className={'luqi-chat-canvas' + (!session ? ' luqi-chat-canvas-guest' : '')} aria-labelledby="luqi-workspace-chat-heading">
+      <header className="luqi-chat-canvas-header">
+        <div>
+          <h1 id="luqi-workspace-chat-heading">Luqi Chat</h1>
+          <p>Chat with Luqi, or choose a thoughtful companion conversation. Both use the same protected text gateway.</p>
+        </div>
+        <span className="luqi-chat-canvas-tag">Limited text pilot</span>
+      </header>
+      <div className="px-3"><ConnectionStatusBadge /></div>
+      <details className="luqi-chat-guide-directory space-y-1 px-3 text-sm"><summary>Browse free Luqi guides</summary>
+        <p><Link to="/driver-rights" onClick={event => { event.preventDefault(); openGuide('/driver-rights'); }} className="text-cyan-200 underline underline-offset-2">Roadside help: free South African driver rights (no sign-in or AI request)</Link></p>
+        <p><Link to="/consumer-rights" onClick={event => { event.preventDefault(); openGuide('/consumer-rights'); }} className="text-cyan-200 underline underline-offset-2">Consumer rights: three-step guidance and complaint preparation</Link></p>
+        <p><Link to="/comparative-evidence" onClick={event => { event.preventDefault(); openGuide('/comparative-evidence'); }} className="text-cyan-200 underline underline-offset-2">Faith, history and scientific evidence: source-linked comparisons</Link></p>
+        <p><Link to="/opportunities" onClick={event => { event.preventDefault(); openGuide('/opportunities'); }} className="text-cyan-200 underline underline-offset-2">Government jobs, youth funding, bursaries and graduates: Opportunity Compass</Link></p>
+        <p><Link to="/tenders" onClick={event => { event.preventDefault(); openGuide('/tenders'); }} className="text-cyan-200 underline underline-offset-2">Government tenders, original SBD forms and assisted bidder preparation: Tender Desk</Link></p>
+        <p><Link to="/municipalities" onClick={event => { event.preventDefault(); openGuide('/municipalities'); }} className="text-cyan-200 underline underline-offset-2">Municipal services, permits, rates and indigent support: find your council</Link></p>
+        <p><Link to="/township-economy" onClick={event => { event.preventDefault(); openGuide('/township-economy'); }} className="text-cyan-200 underline underline-offset-2">Township economy: spaza, business permits, funding and local plans</Link></p>
+        <p><Link to="/visa-entry" onClick={event => { event.preventDefault(); openGuide('/visa-entry'); }} className="text-cyan-200 underline underline-offset-2">Visa & Entry: review official South African and African immigration sources</Link></p>
+        <p><Link to="/social-support" onClick={event => { event.preventDefault(); openGuide('/social-support'); }} className="text-cyan-200 underline underline-offset-2">SASSA grants, UIF claims, status and appeals: free official support</Link></p>
+      </details>
+      {languageControl}
+      {personalWelcome}
+      {session && <div className="luqi-chat-availability-row">
+        <span role="status">{checking ? 'Checking AI readiness…' :
+          available ? 'AI text gateway configured · live replies are not guaranteed' :
+            'AI requests paused · your draft remains in this tab'}</span>
+        {!checking && !available && <button type="button" disabled={busy}
+          onClick={() => { void checkAvailability(); }}>Retry readiness</button>}
+        <Link to="/service-status">Service status</Link>
+      </div>}
+      {notice && <p role="alert" className="luqi-chat-notice">{notice}</p>}
+      {driverMode && <DriverQuickCard mode={driverMode} onOpen={() => openGuide('/driver-rights')} />}
+      {consumerCategory && <ConsumerQuickCard category={consumerCategory} onOpen={() => openGuide('/consumer-rights')} />}
+      {socialPath && <section aria-label="Free social benefit support guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Luqi public benefits guide — government sources</h2>
+        <p className="text-sm">See official SASSA or UIF rules, current portals, documents, status and appeals. Never share identity numbers, OTPs, bank details or passwords with Luqi. Luqi cannot file or inspect a claim.</p>
+        <Link to={socialPath} onClick={event => { event.preventDefault(); openGuide(socialPath); }} className="text-cyan-200 underline underline-offset-2">Open free {socialPath==='/uif'?'UIF':'SASSA'} support guide</Link>
+      </section>}
+      {visaIntent && <section aria-label="Free visa and entry guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Visa and entry — verify with the real government</h2>
+        <p className="text-sm">Choose passport nationality, destination and purpose. Read official visa/ETA guidance and review dates without uploading documents or making a paid AI request. Entry and eligibility are not guaranteed.</p>
+        <Link to="/visa-entry" onClick={event => { event.preventDefault(); openGuide('/visa-entry'); }} className="text-cyan-200 underline underline-offset-2">Open Visa &amp; Entry Guide</Link>
+      </section>}
+      {municipalIntent && <section aria-label="Free municipal service guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Find your municipality and service</h2>
+        <p className="text-sm">Choose a council using the government directory. Check local rates, service complaints, indigent relief and trading permits, without entering private account data.</p>
+        <Link to="/municipalities" onClick={event => { event.preventDefault(); openGuide('/municipalities'); }} className="text-cyan-200 underline underline-offset-2">Open municipal support</Link>
+      </section>}
+      {townshipIntent && <section aria-label="Free township economy guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Township and rural enterprise planning</h2>
+        <p className="text-sm">Build a local action plan, confirm municipal trading rules, and explore original TREP and Spaza Fund guidance. Funding is not guaranteed and loan products may be repayable.</p>
+        <Link to="/township-economy" onClick={event => { event.preventDefault(); openGuide('/township-economy'); }} className="text-cyan-200 underline underline-offset-2">Open free township business planner</Link>
+      </section>}
+      {tenderIntent && <section aria-label="Free tender preparation guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Luqi Tender Desk — prepare with human control</h2>
+        <p className="text-sm">Find the original tender notice, review eligibility and SBD/MBD documents, draft your answers locally and approve pricing and declarations yourself. Final submission and signatures are not automated.</p>
+        <Link to="/tenders" onClick={event => { event.preventDefault(); openGuide('/tenders'); }} className="text-cyan-200 underline underline-offset-2">Open free Tender Desk</Link>
+      </section>}
+      {opportunityIntent && <section aria-label="Free opportunity quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Luqi Opportunity Compass — start with official sources</h2>
+        <ol className="list-inside list-decimal space-y-2 text-sm"><li>Choose your province and opportunity type.</li><li>Read the official advertiser’s post, requirements and deadline.</li><li>Apply directly through its verified instructions. Never pay someone to secure a public job.</li></ol>
+        <Link to="/opportunities" onClick={event => { event.preventDefault(); openGuide('/opportunities'); }} className="text-cyan-200 underline underline-offset-2">Explore opportunities in Luqi</Link>
+        <p className="text-xs text-slate-300">This is an official source directory, not a confirmed live vacancy or a paid AI request.</p>
+      </section>}
+      {evidenceTopic && <section aria-label="Comparative evidence quick guidance" className="m-3 space-y-2 rounded-xl border border-cyan-600 bg-slate-900 p-4 text-slate-100">
+        <h2 className="font-semibold">Explore a scholarly comparison with Luqi</h2>
+        <p className="text-sm">Selected topic: {EVIDENCE_CASES.find(item => item.id === evidenceTopic)?.title}. Compare traditional accounts, scientific evidence, manuscripts and interpretations without ranking faiths. No provider call is made.</p>
+        <Link to="/comparative-evidence" onClick={event => { event.preventDefault(); openGuide('/comparative-evidence'); }} className="text-cyan-200 underline underline-offset-2">Open comparative evidence guide</Link>
+      </section>}
+      <section className="luqi-chat-transcript" aria-label="Confirmed conversation in this tab">
+        {!turns.length ? <div className="luqi-chat-welcome">
+          <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
+          <h2>What can Luqi help you with?</h2>
+          <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning.</p>
+          <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> Voice, other file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
+          {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
+            {[
+              ['Study with Luqi', 'Explain a useful study technique with a simple example.'],
+              ['Plan my business', 'Help me plan the first three steps for a small business idea.'],
+              ['Write a message', 'Help me draft a friendly response to a customer.'],
+              ['Explore Africa', 'What should I research before visiting a new African country?'],
+              ['Talk it through', 'I want to talk through a challenge. Please listen and help me think about the next step.'],
+            ].map(([label, text]) => <button type="button" key={label} disabled={busy || uncertain}
+              onClick={() => { setPrompt(text); if (label === 'Talk it through') setCompanionMode(true); document.getElementById('ai-question')?.focus(); }}>{label}</button>)}
+          </div>}
+        </div> : <>
+          {turns.map((turn, index) => <article key={index}
+            className={'luqi-chat-message ' + (turn.sender === 'user' ? 'luqi-chat-message-user' : 'luqi-chat-message-ai')}>
+            <strong>{turn.sender === 'user' ? 'You' : 'Luqi Chat'}</strong>
+            {turn.sender === 'user' ? <p>{turn.text}</p> :
+              <div className="luqi-chat-richtext"><SafePilotText text={turn.text} /></div>}
+          </article>)}
+          {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
+          {videoPlan && <section className="luqi-video-proposal" aria-label="Video production proposal">
+            <h2>Here's how Luqi will make your video</h2>
+            <p><strong>{videoPlan.audience}</strong> · {videoPlan.sceneSeconds * 6} seconds · {videoPlan.theme === 'gravity' ? 'Animated gravity demonstration' : 'Illustrative story graphics'}</p>
+            <p>{videoPlan.explanation} The first Studio export is silent with captions. You can add your own recorded voice or rights-cleared music; generated voice and cinematic footage are not enabled.</p>
+            <ol aria-label="Proposed video scenes">{videoPlan.scenes.map((scene, index) => <li key={index}>
+              <strong>{scene.title}</strong><span>{scene.caption}</span>
+            </li>)}</ol>
+            <p>Does this plan work? You can ask for changes, or type “approve the plan” and Send to open Studio without another AI charge. You can still edit every scene in Studio.</p>
+            <div className="luqi-video-proposal-actions">
+              <button type="button" disabled={busy || uncertain} onClick={approveVideoPlan}>Approve and generate silent video in Studio</button>
+              <button type="button" disabled={busy || uncertain} onClick={() => {
+                setPrompt('Please revise this video plan: ' + videoPlan.goal + '. My changes: ');
+                document.getElementById('ai-question')?.focus();
+              }}>Change the plan with Luqi</button>
+            </div>
+          </section>}
+          {actionablePath && <p className="luqi-chat-next-step">Continue using a real tool: <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This suggestion is based on your question, not a verified AI action.</p>}
+        </>}
+      </section>
+      {!session ? <section className="luqi-chat-login" aria-label="Sign in to Luqi Chat">
+        <div className="luqi-chat-login-top">
+          <span className="luqi-chat-login-orb"><Sparkles size={20} aria-hidden="true" /></span>
+          <div>
+            <h2>Keep the conversation going</h2>
+            <p>One Luqi sign-in gives you Chat and your other signed-in tools. Just opening Chat does not send a paid AI request.</p>
+          </div>
+        </div>
+        <div className="luqi-chat-login-actions">
+          <Link className="luqi-chat-login-action" to="/login">Sign in to Luqi</Link>
+          <Link className="luqi-chat-login-secondary" to="/join">Create account</Link>
+          <Link className="luqi-chat-login-secondary" to="/try">Try three replies without registering</Link>
+        </div>
+        <p className="luqi-chat-free-guide">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or AI request is needed to prepare a question.</p>
+        <details className="luqi-chat-signin-inline">
+          <summary>Prefer to sign in here?</summary>
+          <AccountAccessForm purpose="ai" onAuthenticated={value => {
+            epoch.current++; acceptSession(value); setNotice(''); setAnswer(null);
+            setTurns([]); setShareContext(false); setCopyQuestionToGuide(false);
+          }} />
+        </details>
+      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
+        <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
+        <div className="luqi-chat-compose-input">
+          <textarea id="ai-question" rows={2} required value={prompt}
+            aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
+            disabled={busy || uncertain}
+            placeholder="Message Luqi…"
+            spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
+            onChange={event => setPrompt(event.target.value)}
+            onKeyDown={event => {
+              // Only a ready, explicitly approved draft can be sent with Enter.
+              // Shift+Enter inserts a newline; IME composition never sends.
+              if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey &&
+                  !event.altKey && !event.metaKey && !event.nativeEvent.isComposing &&
+                  !event.repeat && canSend) {
+                event.preventDefault(); if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit();
+              }
+            }} />
+          <button type="submit" className="luqi-chat-send" disabled={!canSend}
+            aria-label={driverMode ? 'Open free driver rights guide' : consumerCategory ? 'Open free consumer rights guide' : evidenceTopic ? 'Open free comparative evidence guide' : socialPath ? 'Open free SASSA and UIF guide' : visaIntent ? 'Open free Visa & Entry guide' : townshipIntent ? 'Open free township business guide' : municipalIntent ? 'Open free municipal guide' : tenderIntent ? 'Open free tender desk' : opportunityIntent ? 'Open free opportunity compass' : busy ? 'Waiting for a reply…' : 'Send question'}>
+            <Send size={18} aria-hidden="true" /><span>{localGuidePath ? 'Open guide' : busy ? 'Waiting…' : 'Send'}</span>
+          </button>
+        </div>
+        {localGuidePath && <div className="space-y-2 px-3 py-2 text-sm">
+          <label className="flex items-start gap-2"><input type="checkbox" checked={copyQuestionToGuide} disabled={busy || uncertain} onChange={event => setCopyQuestionToGuide(event.target.checked)} />Use this question in the free guide on this device only (optional).</label>
+          <p>Open guide keeps your unsent Chat draft in this tab. No AI request is made.</p>
+          <button type="button" className="min-h-11 rounded border border-cyan-600 px-3 py-2" disabled={!session || !consentGranted || checking || !available || busy || uncertain || tooLong || contextTooLong || !prompt.trim()} onClick={() => { void submit(true); }}>Ask AI instead (uses my allowance)</button>
+        </div>}
+        <div className="luqi-chat-compose-meta">
+          <span id="ai-question-limit" className="luqi-chat-limit">
+            {questionLength}/{MAX_PILOT_QUESTION_CHARS} characters
+            {contextTooLong && ' · Question and optional context exceed the allowed input'}
+            {tooLong && ' · Shorten your question. It will not be sent or shortened automatically.'}
+          </span>
+          <span className="luqi-chat-keyboard-hint">Enter to send · Shift+Enter for a new line</span>
+        </div>
+        {!workspace.providerAcknowledged ? <label className="luqi-chat-consent luqi-chat-first-consent">
+          <input type="checkbox" checked={workspace.providerAcknowledged} disabled={busy || uncertain}
+            onChange={event => workspace.setProviderAcknowledged(event.target.checked)} />
+          <span>I understand AI text may go to Gemini or OpenAI within the trial limits. I'll avoid sensitive information.</span>
+        </label> : <p className="luqi-chat-consent-confirmed">
+          <span>AI text sharing approved for this signed-in tab. Each message still needs Send.</span>
+          <button type="button" disabled={busy || uncertain}
+            onClick={() => workspace.setProviderAcknowledged(false)}>Change consent</button>
+        </p>}
+        {!workspace.providerAcknowledged && <p className="luqi-chat-consent-privacy"><Link to="/privacy">Privacy information</Link></p>}
+        {workspace.providerAcknowledged && <div className="luqi-chat-continuity">
+          <label><input type="checkbox" checked={shareContext} disabled={busy || uncertain}
+            onChange={event => setShareContext(event.target.checked)} />
+            Keep recent conversation context with my follow-up messages (this chat only)
+          </label>
+          <p>Optional: enable once to help Luqi understand corrections such as “for an AI?”. Only up to four bounded messages from this chat go to the chosen provider; you can turn this off at any time.</p>
+          {shareContext && <details><summary>Review the context included with your next question</summary>
+            <ol>{contextPreview.map((turn, index) => <li key={index}>
+              <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
+            </li>)}</ol></details>}
+        </div>}
+        <details className="luqi-chat-compose-more">
+          <summary>More options: companion, context and writing help</summary>
+          <LuqiPromptCoach key={customerSessionBoundary(session)} draft={prompt} disabled={busy || uncertain}
+            onApply={value => setPrompt(value)} />
+          <label className="luqi-chat-companion-mode">
+          <input type="checkbox" checked={companionMode} disabled={busy || uncertain}
+            onChange={event => setCompanionMode(event.target.checked)} />
+          <span>Companion conversation — ask Luqi to listen thoughtfully and support your thinking (text only, not a person or emergency service).</span>
+        </label>
+          <details className="luqi-chat-compose-details">
+          <summary>Conversation context, country guide and limits (optional)</summary>
+          <p>Prior chat context is shared only when you enable the visible continuity option. Private notes, account email, browsing and voice are not attached automatically.</p>
+          <details className="luqi-chat-companion-personalise">
+            <summary>Personalise this reply with one saved private note</summary>
+            <CompanionNotePicker key={customerSessionBoundary(session)} token={session.token} disabled={busy || uncertain}
+              selected={selectedNote} onSelect={note => { setSelectedNote(note); setShareNote(false); }} />
+            {selectedNote && <label className="luqi-chat-companion-share">
+              <input type="checkbox" checked={shareNote} disabled={busy || uncertain}
+                onChange={event => setShareNote(event.target.checked)} />
+              Include the selected note in this one provider request. Off by default; review the note above.
+            </label>}
+            <p>No private note is sent merely by loading, selecting or saving it. A reply requires provider acknowledgement and your separate Send action.</p>
+          </details>
+          {region !== 'PAN_AFRICAN_AU' && <label><input type="checkbox" checked={shareRegion} disabled={busy}
+            onChange={event => setShareRegion(event.target.checked)} /> Include selected guide for {AFRICAN_REGIONAL_PROFILES[region].country} in this one request</label>}
+          <p>Country context requires a separate opt-in. <Link to="/ask">Choose a country in the local guide</Link>. Neither this guide nor the text model makes a booking or legal filing.</p>
+          <p>20 provider attempts per account per UTC day, maximum 1024 reply tokens, limited shared provider budget. Fallback may consume another attempt.</p>
+          <p>Chat history remains only in this tab, with up to four recent exchanges per thread. Switching chats or reloading discards unsent drafts. AI replies are not automatically saved as private notes or long-term memories.</p>
+          <p>Provider acknowledgement lasts for this signed-in tab only. Recent conversation continuity is a separate, switchable opt-in for this chat. Optional notes and country context still require approval per request.</p>
+          <Link to="/privacy">Privacy and provider information</Link>
+          </details>
+        </details>
+        <div className="luqi-chat-compose-footer">
+          {uncertain ? <button type="button" className="luqi-chat-compose-secondary" onClick={() => {
+            setUncertain(false); setPrompt(''); setNotice('');
+          }}>Start a new question</button> : <button type="button" className="luqi-chat-compose-secondary luqi-chat-new-in-composer" disabled={busy} onClick={newChat}>New chat</button>}
+          <span>Text-only pilot · review important answers</span>
+        </div>
+      </form>}
+      <p className="luqi-chat-caption">
+        Only completed AI replies appear here. Important facts still need checking. A timeout is never retried automatically.
+        This in-tab history is cleared on sign-out or reload; it is not cloud-saved.
+        <Link to="/service-status"> Service status</Link> · <Link to="/privacy">Privacy</Link>
+      </p>
+    </main>;
+  }
+
+  const Root = embedded ? 'section' : 'main';
+  const Heading = embedded ? 'h2' : 'h1';
+  const Subheading = embedded ? 'h3' : 'h2';
+  return <Root className={embedded ? 'luqi-info luqi-guide-ai' : 'luqi-info'} aria-labelledby="ai-trial-heading">
+    <p className="luqi-eyebrow">SIGNED-IN TEXT TRIAL</p><Heading id="ai-trial-heading">Try a question with Luqi</Heading>
+    <p>Chat with Luqi for help with writing, studying, ideas and planning. Review the answer: AI can make mistakes.</p>
+    <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> Voice, other file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
+    {languageControl}
+    {personalWelcome}
+    <p role="status">{checking ? 'Checking AI configuration…' : available
+      ? 'Provider access is configured. Live replies remain subject to provider availability and shared spending limits.'
+      : 'AI requests are paused or unavailable. No question can be sent from this page.'}</p>
+    <div className="luqi-chat-availability">
+      <button className="luqi-secondary" type="button" disabled={checking || busy} onClick={() => { void checkAvailability(); }}>
+        {checking ? 'Checking availability…' : 'Check availability again'}
+      </button>
+      {!checking && !available && <p>Your sign-in and question stay here while you check again. This check does not send a question.</p>}
+    </div>
+    <p>Up to 20 provider attempts per account per UTC day. Replies are limited to 1024 tokens.</p>
+    {notice && <p role="alert">{notice}</p>}
+    {!session ? <AccountAccessForm purpose="ai" onAuthenticated={value => { epoch.current++; acceptSession(value); setNotice(''); setAnswer(null); setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); }} /> : <>
+      <section><p>Signed in as {session.user.email}.</p>
+        <div className="luqi-chat-actions">
+          <button className="luqi-secondary" type="button" disabled={busy} onClick={newChat}>New chat</button>
+          <button className="luqi-secondary" type="button" onClick={signOut}>Sign out</button>
+        </div>
+      </section>
+      <section><Subheading>Ask Luqi</Subheading>
+        <p>Ask in your own words, or try a starting question. Only your question is sent by default.</p>
+        <form onSubmit={event => { event.preventDefault(); void submit(); }}>
+          {!turns.length && !prompt && <fieldset className="luqi-chat-starters" disabled={busy || uncertain}>
+            <legend>Try a starting question</legend>
+            {[
+              ['Help me study', 'Explain one useful study technique and give me a short example.'],
+              ['Plan an idea', 'Help me turn a small business idea into three practical first steps.'],
+              ['Draft a message', 'Help me write a polite message to a customer about a delayed delivery.'],
+            ].map(([label, question]) => <button className="luqi-secondary" key={label} type="button" onClick={() => {
+              setPrompt(question); document.getElementById('ai-question')?.focus();
+            }}>{label}</button>)}
+          </fieldset>}
+          <label className="block" htmlFor="ai-question">Your question</label>
+          <textarea id="ai-question" className="luqi-access-input" rows={5}
+            aria-describedby="ai-question-limit" aria-invalid={tooLong || contextTooLong || undefined}
+            disabled={busy || uncertain} required value={prompt}
+            spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
+            onChange={event => setPrompt(event.target.value)} />
+          <LuqiPromptCoach key={customerSessionBoundary(session)} draft={prompt} disabled={busy || uncertain}
+            onApply={value => { setPrompt(value); setConsent(false); }} />
+          <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters.
+            {tooLong && ' Shorten your question. It will not be sent or shortened automatically.'}
+            {contextTooLong && ' Your question plus selected conversation context exceeds the input limit. Shorten the question or turn off context; nothing will be sent.'}</p>
+          {turns.length > 0 && <div className="luqi-chat-context">
+            <label className="block"><input type="checkbox" checked={shareContext} disabled={busy}
+              onChange={event => setShareContext(event.target.checked)} /> Include recent conversation context in this request (optional)</label>
+            <p>Off by default. Review the exact preview before including recent messages.</p>
+            {shareContext && <details open><summary>Review the conversation context to be sent</summary>
+              <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}</li>)}</ol>
+            </details>}
+          </div>}
+          {region !== 'PAN_AFRICAN_AU' && <label className="block"><input type="checkbox" checked={shareRegion} disabled={busy}
+            onChange={event => setShareRegion(event.target.checked)} /> Include my selected country guide ({AFRICAN_REGIONAL_PROFILES[region].country}) for this one AI request. It is not verified geolocation or legal advice; country information goes to the provider only if I opt in.</label>}
+          <label className="block"><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} /> I understand my question goes to Google Gemini and may also go to OpenAI. I will use ordinary test content.</label>
+          <p><Link to="/privacy">Read the provider privacy information</Link></p>
+          <button className="luqi-primary" disabled={!available || !consent || !prompt.trim() || tooLong || contextTooLong || busy || uncertain}>
+            {busy ? 'Waiting for a reply…' : 'Send question'}
+          </button>
+        </form>
+        {uncertain && <button className="luqi-secondary" type="button" onClick={() => { setUncertain(false); setPrompt(''); setNotice(''); }}>Start a new question</button>}
+      </section>
+      {turns.length > 2 && <section aria-label="Earlier conversation turns"><Subheading>Earlier conversation</Subheading>
+        <ol>{turns.slice(0, -2).map((turn, index) => <li key={index}>
+          <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{turn.text}</span>
+        </li>)}</ol>
+      </section>}
+      {answer && <section aria-labelledby="ai-reply-heading"><Subheading id="ai-reply-heading">AI reply</Subheading>
+        <p><strong>Your question:</strong> {turns.at(-2)?.text}</p>
+        <div className="luqi-chat-richtext"><SafePilotText text={answer.response} /></div>
+        <p>Provider: {answer.provider} · Model: {answer.provider_model}</p>
+        {actionablePath && <p className="luqi-chat-next-step">Want to continue using a real Luqi tool? <Link to={actionablePath}>{nextStep?.primaryLabel}</Link>. This is based on your question, not a fact checked by the AI; nothing is sent or booked automatically. Copy anything you want to keep before leaving Chat.</p>}
+      </section>}
+    </>}
+    <details className="luqi-chat-details">
+      <summary>How Chat works</summary>
+      <p>Gemini answers first, with OpenAI as a separately limited fallback. A fallback uses another provider attempt. This is an experimental text-only trial. No browsing, sources, tools, files, voice or autonomous actions are enabled. African-language accuracy has not been independently evaluated.</p>
+      <p>Only your question is sent by default. Optionally include a short, reviewed conversation preview for a follow-up: up to four recent turns, shortened to 350 characters each. Request formatting uses the rest of the 6000-character input limit. Your private notes and account email are never attached.</p>
+      <p>Questions and replies stay in this page’s memory; leaving, reloading or signing out clears them. New chat clears this conversation and provider consent while keeping you signed in. Your Luqi login works across customer tools in this tab; a full reload ends it.</p>
+    </details>
+    <p>Notes are optional. This conversation stays in this page's memory and is not saved to Notes. <Link to="/start">Explore other tools</Link></p>
+  </Root>;
+}

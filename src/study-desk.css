@@ -1,0 +1,42 @@
+/* Study Desk: private, browser-only, no external assets. */
+.luqi-study { max-width: 1240px; padding: 42px 24px 70px; margin: 0 auto; color: #f2f8ee; }
+.luqi-study-heading { max-width: 850px; margin-bottom: 28px; }
+.luqi-study-heading h1 { font-size: clamp(34px, 4vw, 52px); line-height: 1.13; letter-spacing: -1.2px; margin: 12px 0; font-weight: 650; }
+.luqi-study p { line-height: 1.65; margin: 10px 0; }
+.luqi-study h2 { font-size: 23px; font-weight: 620; line-height: 1.32; margin: 0 0 14px; }
+.luqi-study h3 { font-size: 17px; font-weight: 650; margin: 16px 0 10px; }
+.luqi-study-note { color: #c7d8c2; font-size: 13px; }
+.luqi-study-note a, .luqi-study-footer a { color: #d9f6a8; text-decoration: underline; }
+.luqi-study-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.luqi-study-side { min-width: 0; display: grid; gap: 22px; }
+.luqi-study-panel { min-width: 0; border: 1px solid #45634b; background: #192b20; border-radius: 14px; padding: 24px; }
+.luqi-study-field { display: grid; gap: 8px; font-size: 14px; margin: 12px 0; min-width: 0; }
+.luqi-study-field input, .luqi-study-field textarea {
+  display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%;
+  background: #101e16; color: #f5f9ee; border: 1px solid #8aab82; border-radius: 8px;
+  padding: 12px; font: inherit; font-size: 16px; min-height: 46px;
+}
+.luqi-study-field textarea { resize: vertical; line-height: 1.5; }
+.luqi-study-field input[type=file] { height: auto; overflow-wrap: anywhere; }
+.luqi-study input:focus-visible, .luqi-study textarea:focus-visible, .luqi-study button:focus-visible { outline: 3px solid #d8e89a; outline-offset: 2px; }
+.luqi-study button { min-height: 44px; white-space: normal; }
+.luqi-study button:disabled { opacity: 0.5; cursor: not-allowed; }
+.luqi-study-form { display: grid; gap: 8px; margin: 14px 0; }
+.luqi-study-form > button { justify-self: start; }
+.luqi-study-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.luqi-study-secondary { color: #eef8e6; background: #2c4632; padding: 10px 14px; border: 1px solid #8eaa82; border-radius: 8px; cursor: pointer; }
+.luqi-study-secondary:hover { background: #3b5840; }
+.luqi-study-card-list { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 12px; }
+.luqi-study-card-list li { background: #112017; border: 1px solid #466047; border-radius: 10px; padding: 15px; min-width: 0; overflow-wrap: anywhere; display: grid; gap: 8px; }
+.luqi-study-card-list small { color: #c4d6b9; }
+.luqi-study-practice { min-width: 0; background: #e7f2d8; color: #1a3822; padding: 18px; border-radius: 10px; margin: 18px 0; overflow-wrap: anywhere; }
+.luqi-study-practice .luqi-study-secondary { color: #213822; background: #e4eddc; border-color: #627e67; }
+.luqi-study-practice p { white-space: pre-wrap; }
+.luqi-study-file { border-top: 1px solid #59745a; margin-top: 25px; padding-top: 12px; }
+.luqi-study-plan { padding: 18px; border-radius: 10px; margin: 16px 0 0; background: #e7f2d8; color: #1a3822; }
+.luqi-study-figure { font-size: clamp(21px, 3vw, 30px); font-weight: 700; }
+.luqi-study-error { padding: 12px; border-radius: 9px; border: 1px solid #efb987; background: #523b2b; }
+.luqi-study-footer { margin: 25px 0; }
+.luqi-study-notice { border: 1px solid #a8a46b; border-radius: 10px; background: #303625; padding: 14px 18px; }
+@media (max-width: 820px) { .luqi-study-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 400px) { .luqi-study { padding: 28px 14px 45px; } .luqi-study-panel { padding: 17px; } }

@@ -1,0 +1,84 @@
+name: LUQI Mobile Loading
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  payload-and-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 8be7570a59d1325c18d3b9d5b34c4dc6c8b58d6a
+          path: .mobile-baseline
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test graph accounting before dependency installation
+        run: node --test tests/mobile-bundle.test.mjs
+      - name: Install exact application dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Verify safe loading and recovery with synthetic components
+        run: npx --no-install vitest run tests/route-load-boundary.test.tsx
+      - name: Strictly check both error-boundary implementations
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/RouteLoadBoundary.tsx app/src/components/RouteLoadBoundary.tsx
+      - name: Verify every existing route and iframe target is preserved
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          for (const path of ['src/App.tsx', 'app/src/App.tsx']) {
+            const before = fs.readFileSync('.mobile-baseline/' + path, 'utf8');
+            const after = fs.readFileSync(path, 'utf8');
+            const routePattern = /\bpath="([^"]+)"/g;
+            const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
+            const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
+            // Preserve every existing route. The packaged app additionally gains
+            // the already-public, provider-free consumer-rights page, reviewed
+            // comparative evidence source guide and
+            // reviewed municipal services, township enterprise guides, Chat, Ask, Login and payment-availability
+            // entries. The reviewed Luqi PWA install and download-alias routes
+            // are also allowed. Local Pulse adds reviewed /local-pulse and /news source-directory routes.
+            // /space-science adds provider-free calculations and reviewed publisher links.
+            // /near-me adds optional on-device province discovery and deliberate external map searches.
+            // Guest /try has a separate server-enforced monthly allowance. Gated P2P routes and the packaged private admin
+            // entry, consented visual tutor and lazy Spatial Vision Lab are reviewed additions; every older
+            // route and iframe stays required.
+            const routes = matches(after, routePattern);
+            const approved = path.startsWith('app/')
+              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/driver-rights', '/install', '/local-pulse', '/login', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
+              : ['/ask', '/business-connect', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/circles', '/comparative-evidence', '/download', '/driver-rights', '/install', '/local-pulse', '/login', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
+            const additions = routes.filter(route => approved.includes(route));
+            assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
+            assert.deepEqual(routes.filter(route => !approved.includes(route)),
+              matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
+            assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
+              'Existing iframe targets changed: ' + path);
+          }
+          console.log('All legacy routes and iframe targets preserved; reviewed Chat, Luqi PWA install and payment availability routes added.');
+          JS
+      - name: Compare eager and deferred routers using the same current dependencies and source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/App.tsx "$RUNNER_TEMP/luqi-candidate-App.tsx"
+          trap 'cp "$RUNNER_TEMP/luqi-candidate-App.tsx" src/App.tsx' EXIT
+          cp .mobile-baseline/src/App.tsx src/App.tsx
+          node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-before"
+          cp "$RUNNER_TEMP/luqi-candidate-App.tsx" src/App.tsx
+          node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-after"
+          node scripts/verify-mobile-bundle.mjs "$RUNNER_TEMP/luqi-mobile-before" "$RUNNER_TEMP/luqi-mobile-after" | tee mobile-bundle-report.json
+      - name: Preserve measured payload evidence only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-bundle-report
+          path: mobile-bundle-report.json
+          if-no-files-found: error

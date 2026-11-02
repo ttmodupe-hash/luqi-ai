@@ -1,0 +1,129 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { requestAccountJson } from '../src/lib/account-request';
+import { CUSTOMER_RESUME_HINT, clearCustomerResumeHint, hasCustomerResumeHint,
+  restoreCustomerSession, revokeCustomerSession } from '../src/lib/customer-resume';
+
+let cookieText = '';
+let writes: string[] = [];
+const user = { token: 'signed-synthetic-token', user: { email: 'pilot@example.invalid' } };
+function valid() { return Response.json(user); }
+
+beforeEach(() => {
+  cookieText = ''; writes = [];
+  Object.defineProperty(document, 'cookie', {
+    configurable: true,
+    get: () => cookieText,
+    set: (value: string) => { writes.push(value); cookieText = value.includes('Max-Age=0') ? '' : value.split(';')[0]; },
+  });
+});
+afterEach(() => { vi.restoreAllMocks(); });
+
+describe('one-shot trusted-device session restoration', () => {
+  it('does not probe the network for a guest without the non-secret marker', async () => {
+    const request = vi.fn();
+    expect(hasCustomerResumeHint()).toBe(false);
+    expect(await restoreCustomerSession(undefined, request)).toBeNull();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('restores only one JSON response over same-origin POST and never calls AI', async () => {
+    cookieText = CUSTOMER_RESUME_HINT + '=1';
+    const request = vi.fn(async () => valid());
+    expect(await restoreCustomerSession(undefined, request)).toEqual(user);
+    expect(request).toHaveBeenCalledOnce();
+    const [path, options] = request.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe('/api/v1/auth/session');
+    expect(options).toMatchObject({ method: 'POST', credentials: 'same-origin', redirect: 'error', cache: 'no-store' });
+    expect((options.headers as Record<string, string>)['X-Luqi-Session-Intent']).toBe('restore');
+  });
+
+  it('clears a definitively rejected hint, but retains one during an outage', async () => {
+    cookieText = CUSTOMER_RESUME_HINT + '=1';
+    expect(await restoreCustomerSession(undefined, async () => new Response(null, { status: 401 }))).toBeNull();
+    expect(writes.some(value => value.includes('Max-Age=0'))).toBe(true);
+    cookieText = CUSTOMER_RESUME_HINT + '=1'; writes = [];
+    await expect(restoreCustomerSession(undefined, async () => new Response(null, { status: 503 }))).rejects.toThrow('AUTH_RESTORE_UNAVAILABLE');
+    expect(writes.at(-1)).toContain('=pending');
+    expect(hasCustomerResumeHint()).toBe(true);
+    const request = vi.fn();
+    expect(await restoreCustomerSession(undefined, request)).toBeNull();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed, redirected, oversized, or incomplete data', async () => {
+    cookieText = CUSTOMER_RESUME_HINT + '=1';
+    for (const answer of [
+      () => Response.json({ ...user, user: { email: 'invalid' } }),
+      () => new Response('not-json', { headers: { 'Content-Type': 'text/html' } }),
+      () => new Response('{}', { headers: { 'Content-Type': 'application/json', 'Content-Length': '9000' } }),
+      () => new Response('{"token":', { headers: { 'Content-Type': 'application/json' } }),
+    ]) {
+      cookieText = CUSTOMER_RESUME_HINT + '=1';
+      await expect(restoreCustomerSession(undefined, async () => answer())).rejects.toThrow();
+    }
+    expect(hasCustomerResumeHint()).toBe(true);
+  });
+
+  it('does not issue a second request on an ambiguous abort, and cannot show a late reply', async () => {
+    cookieText = CUSTOMER_RESUME_HINT + '=1';
+    const abort = new AbortController();
+    let resolve!: (value: Response) => void;
+    const request = vi.fn(() => new Promise<Response>(r => { resolve = r; }));
+    const pending = restoreCustomerSession(abort.signal, request);
+    abort.abort();
+    await expect(pending).rejects.toThrow('AUTH_REQUEST_UNCONFIRMED');
+    expect(request).toHaveBeenCalledOnce();
+    resolve(valid());
+    await restoreCustomerSession(undefined, request);
+    expect(request).toHaveBeenCalledOnce();
+  });
+
+  it('logs out only on a confirmed same-origin POST and clears the hint once', async () => {
+    cookieText = CUSTOMER_RESUME_HINT + '=1';
+    const request = vi.fn(async () => new Response(null, { status: 204 }));
+    await revokeCustomerSession(request);
+    expect(request).toHaveBeenCalledOnce();
+    expect(request.mock.calls[0][0]).toBe('/api/v1/auth/logout');
+    expect(request.mock.calls[0][1]).toMatchObject({ method: 'POST', credentials: 'same-origin', redirect: 'error' });
+    expect(writes.some(value => value.includes('Max-Age=0'))).toBe(true);
+    cookieText = CUSTOMER_RESUME_HINT + '=1'; writes = [];
+    await expect(revokeCustomerSession(async () => new Response(null, { status: 503 }))).rejects.toThrow('LOGOUT_UNCONFIRMED');
+    expect(writes).toHaveLength(0);
+  });
+
+  it('clear-only writes an inert cookie and never writes credentials or storage', () => {
+    cookieText = CUSTOMER_RESUME_HINT + '=1';
+    clearCustomerResumeHint();
+    expect(writes).toEqual([expect.stringContaining('Max-Age=0')]);
+    expect(writes.join('')).not.toContain(user.token);
+  });
+});
+
+
+it('serializes a pending rotation, logout and new login to prevent late cookie overwrite', async () => {
+  cookieText = CUSTOMER_RESUME_HINT + '=1';
+  let release!: (value: Response) => void;
+  let queue = Promise.resolve<unknown>(undefined);
+  const locks = { request: vi.fn((_name: string, work: () => Promise<unknown>) => {
+    const next = queue.then(work); queue = next.catch(() => {}); return next;
+  }) };
+  vi.stubGlobal('navigator', { locks });
+  const paths: string[] = [];
+  const request = vi.fn((path: string) => {
+    paths.push(path);
+    return path.endsWith('/session') ? new Promise<Response>(yes => { release = yes; })
+      : Promise.resolve(path.endsWith('/logout') ? new Response(null, { status: 204 }) : valid());
+  });
+  try {
+    const restoring = restoreCustomerSession(undefined, request);
+    const loggingOut = revokeCustomerSession(request);
+    const loggingIn = requestAccountJson(request, '/api/v1/auth/login', { email: user.user.email, password: 'Synthetic-New-Account-Password!', rememberMe: true });
+    await Promise.resolve(); await Promise.resolve();
+    expect(paths).toEqual(['/api/v1/auth/session']);
+    release(valid());
+    await Promise.all([restoring, loggingOut, loggingIn]);
+    expect(paths).toEqual(['/api/v1/auth/session', '/api/v1/auth/logout', '/api/v1/auth/login']);
+    expect(locks.request).toHaveBeenCalledTimes(3);
+  } finally { vi.unstubAllGlobals(); }
+});

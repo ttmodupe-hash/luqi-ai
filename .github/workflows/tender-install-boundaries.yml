@@ -1,0 +1,30 @@
+name: Luqi Tender and Install Boundaries
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: tender-install-boundaries-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify exact deadlines, review limits and private local diagnostics
+        run: node --experimental-strip-types --test tests/tender-install-boundaries.test.mjs
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Check both frontend implementations
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/pages/InstallAppPage.tsx app/src/pages/InstallAppPage.tsx src/pages/TenderDeskPage.tsx app/src/pages/TenderDeskPage.tsx
+      - name: Exercise browser-check UI and preserved tender workflows
+        run: npx --no-install vitest run tests/install-browser-check.test.tsx tests/tender-deadline-ui.test.tsx tests/tender-sources.test.ts tests/tender-workflow.test.ts tests/tender-desk-page.test.tsx

@@ -1,0 +1,30 @@
+.luqi-moon { margin: 1.5rem 0; padding: clamp(1rem, 3vw, 2rem); border: 1px solid #aebfb6; border-radius: 1.5rem; background: #133e32; color: #fffaf0; min-width: 0; overflow-wrap: anywhere; }
+.luqi-moon *, .luqi-moon *::before, .luqi-moon *::after { box-sizing: border-box; }
+.luqi-moon-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.luqi-moon h2 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); color: inherit; }
+.luqi-moon h3 { color: inherit; margin: .5rem 0 1rem; font-size: 1.15rem; }
+.luqi-moon p { color: inherit; line-height: 1.6; font-size: .92rem; }
+.luqi-moon-eyebrow { margin: 0 0 .4rem; font-size: .72rem !important; letter-spacing: .08em; }
+.luqi-moon-badge { border: 1px solid #aebfb6; border-radius: 1rem; padding: .35rem .7rem; font-size: .78rem; }
+.luqi-moon-overview { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr); gap: 1.5rem; align-items: center; margin-top: 1.25rem; }
+.luqi-moon figure { margin: 0; text-align: center; }
+.luqi-moon svg { display: block; width: 100%; max-width: 180px; height: auto; margin: auto; }
+.luqi-moon-dark { fill: #244e42; }
+.luqi-moon-lit { fill: #fff3cc; }
+.luqi-moon-rim { stroke: #b4c8bf; stroke-width: .5; }
+.luqi-moon figcaption { font-size: .75rem; line-height: 1.5; margin-top: .6rem; }
+.luqi-moon-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); gap: .8rem; margin: 0; }
+.luqi-moon-facts dt { font-size: .78rem; color: #d3e1d8; }
+.luqi-moon-facts dd { margin: .25rem 0 0; font-size: 1rem; font-weight: 600; }
+.luqi-moon-local { padding-top: 1rem; border-top: 1px solid #54766a; margin-top: 1rem; }
+.luqi-moon-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.luqi-moon button { min-height: 44px; max-width: 100%; border: 1px solid #c8d6cc; border-radius: .6rem; padding: .65rem .85rem; background: #fffaf0; color: #133e32; font: inherit; font-size: .9rem; cursor: pointer; white-space: normal; }
+.luqi-moon button:disabled { opacity: .7; cursor: wait; }
+.luqi-moon a { color: #fff3cc; text-decoration: underline; }
+.luqi-moon :focus-visible { outline: 3px solid #f4d98b; outline-offset: 3px; }
+.luqi-moon details { border-top: 1px solid #54766a; padding: .8rem 0; }
+.luqi-moon summary { cursor: pointer; min-height: 32px; line-height: 1.6; }
+.luqi-moon-form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
+.luqi-moon-form label { flex: 1 1 140px; min-width: 0; font-size: .9rem; }
+.luqi-moon input { display: block; margin-top: .4rem; width: 100%; min-height: 44px; min-width: 0; background: #fffaf0; color: #133e32; border: 1px solid #c8d6cc; border-radius: .5rem; padding: .6rem; font: inherit; }
+@media (max-width: 520px) { .luqi-moon-overview { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .luqi-moon svg { max-width: 140px; } }

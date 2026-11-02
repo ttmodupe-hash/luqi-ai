@@ -3,10 +3,6 @@
 // =====================================================================
 
 import { useState } from "react";
-import VisualNetworkingLab from "@/components/VisualNetworkingLab";
-import AfricaSkillsNavigator from "@/components/AfricaSkillsNavigator";
-import AfricaOpportunityFinder from "@/components/AfricaOpportunityFinder";
-import FundingApplicationGuide from "@/components/FundingApplicationGuide";
 import { Link } from "react-router";
 import {
   GraduationCap,
@@ -26,7 +22,7 @@ import {
 import { trpc } from "@/providers/trpc";
 import { toast } from "sonner";
 import { ExperientialSimulatorSandbox } from "@/components/ExperientialSimulatorSandbox";
-import { type GradeTier, type EducationalModuleRecord } from "@/api/services/experientialEducationOrchestrator";
+import type { GradeTier, EducationalModuleRecord } from "../../api/services/experientialEducationOrchestrator";
 
 const DEFAULT_MODULES: EducationalModuleRecord[] = [
   {
@@ -162,12 +158,12 @@ export default function ExperientialEducationPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-indigo-500 to-pink-500 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-purple-500/20"
+              className="w-10 h-10 rounded-xl bg-linear-to-br from-purple-500 via-indigo-500 to-pink-500 flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-purple-500/20"
             >
               🎓
             </Link>
@@ -201,10 +197,6 @@ export default function ExperientialEducationPage() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <FundingApplicationGuide />
-        <AfricaOpportunityFinder />
-        <AfricaSkillsNavigator />
-        <VisualNetworkingLab />
         {/* Grade Tier Selector Buttons */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(
@@ -332,7 +324,7 @@ export default function ExperientialEducationPage() {
                   type="text"
                   value={newConceptName}
                   onChange={(e) => setNewConceptName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-hidden focus:border-purple-500"
                   required
                 />
               </div>
@@ -344,7 +336,7 @@ export default function ExperientialEducationPage() {
                 <select
                   value={newTier}
                   onChange={(e) => setNewTier(e.target.value as GradeTier)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-hidden focus:border-purple-500"
                 >
                   <option value="PRE_SCHOOL">Pre-School (Visual & Folklore Storytelling)</option>
                   <option value="PRIMARY">Primary (Puzzles & Arithmetic Sliders)</option>
@@ -361,7 +353,7 @@ export default function ExperientialEducationPage() {
                   value={newTheoreticalText}
                   onChange={(e) => setNewTheoreticalText(e.target.value)}
                   rows={4}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-purple-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 focus:outline-hidden focus:border-purple-500 font-mono"
                   required
                 />
               </div>
@@ -376,7 +368,7 @@ export default function ExperientialEducationPage() {
                   value={newVerificationSuite}
                   onChange={(e) => setNewVerificationSuite(e.target.value)}
                   rows={5}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-teal-300 focus:outline-none focus:border-purple-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-teal-300 focus:outline-hidden focus:border-purple-500 font-mono"
                   required
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
@@ -387,7 +379,7 @@ export default function ExperientialEducationPage() {
               <button
                 type="submit"
                 disabled={isCompiling}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-pink-500 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+                className="w-full py-3.5 rounded-xl bg-linear-to-r from-purple-500 via-indigo-500 to-pink-500 hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
               >
                 {isCompiling ? (
                   <>

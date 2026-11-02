@@ -1,25 +1,23 @@
 import { z } from "zod";
-import { createRouter, protectedQuery } from "./middleware";
-import { getPrivateDb, assertOwnUserId } from "./security/access";
+import { createRouter, publicQuery } from "./middleware";
+import { getDb } from "./queries/connection";
 import { studentProfiles, adaptiveHistory } from "../db/schema";
 import { eq, desc, sql, count } from "drizzle-orm";
 
-const ownAccount = z.object({ userId: z.number().int().positive().optional() }).optional();
-
 export const adaptiveRouter = createRouter({
-  getProfile: protectedQuery
-    .input(ownAccount)
-    .query(async ({ input, ctx }) => {
-      assertOwnUserId(input?.userId, ctx.user.id);
-      const db = await getPrivateDb();
-      const [profile] = await db.select()
+  getProfile: publicQuery
+    .input(z.object({ userId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const [profile] = await db
+        .select()
         .from(studentProfiles)
-        .where(eq(studentProfiles.userId, ctx.user.id))
+        .where(eq(studentProfiles.userId, input.userId))
         .limit(1);
-
+      
       if (profile) {
         return {
-          userId: ctx.user.id,
+          userId: profile.userId!,
           frameworkKey: profile.frameworkKey ?? undefined,
           currentDifficulty: profile.currentDifficulty,
           masteryScore: parseFloat(profile.masteryScore ?? "0"),
@@ -28,34 +26,39 @@ export const adaptiveRouter = createRouter({
           preferredLanguage: profile.preferredLanguage ?? "en",
         };
       }
+      
+      // Create new profile
       await db.insert(studentProfiles).values({
-        userId: ctx.user.id,
+        userId: input.userId,
         currentDifficulty: "beginner",
         masteryScore: "0",
         streakDays: 0,
         preferredLanguage: "en",
       });
+      
       return {
-        userId: ctx.user.id, currentDifficulty: "beginner",
-        masteryScore: 0, streakDays: 0, preferredLanguage: "en",
+        userId: input.userId,
+        currentDifficulty: "beginner",
+        masteryScore: 0,
+        streakDays: 0,
+        preferredLanguage: "en",
       };
     }),
 
-  recordAttempt: protectedQuery
+  recordAttempt: publicQuery
     .input(z.object({
-      userId: z.number().int().positive().optional(),
-      labSlug: z.string().trim().min(1).max(255),
-      difficulty: z.string().trim().min(1).max(50),
+      userId: z.number(),
+      labSlug: z.string(),
+      difficulty: z.string(),
       score: z.number().min(0).max(100),
-      timeSpentSeconds: z.number().int().min(0).max(86400),
-      hintsUsed: z.number().int().min(0).max(1000).default(0),
+      timeSpentSeconds: z.number(),
+      hintsUsed: z.number().default(0),
       completed: z.boolean(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      assertOwnUserId(input.userId, ctx.user.id);
-      const db = await getPrivateDb();
+    .mutation(async ({ input }) => {
+      const db = await getDb();
       await db.insert(adaptiveHistory).values({
-        studentId: ctx.user.id,
+        studentId: input.userId,
         labSlug: input.labSlug,
         difficultyAttempted: input.difficulty,
         score: input.score,
@@ -66,21 +69,25 @@ export const adaptiveRouter = createRouter({
       return { recorded: true };
     }),
 
-  getRecommendations: protectedQuery
-    .input(ownAccount)
-    .query(async ({ input, ctx }) => {
-      assertOwnUserId(input?.userId, ctx.user.id);
-      const db = await getPrivateDb();
-      const recent = await db.select({
-        labSlug: adaptiveHistory.labSlug,
-        avgScore: sql<number>`AVG(score)`,
-        attempts: count(),
-      }).from(adaptiveHistory)
-        .where(eq(adaptiveHistory.studentId, ctx.user.id))
+  getRecommendations: publicQuery
+    .input(z.object({ userId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      
+      const recent: Array<{ labSlug: string | null; avgScore: number | string | null; attempts: number }> = await db
+        .select({
+          labSlug: adaptiveHistory.labSlug,
+          avgScore: sql<number>`AVG(score)`,
+          attempts: count(),
+        })
+        .from(adaptiveHistory)
+        .where(eq(adaptiveHistory.studentId, input.userId))
         .groupBy(adaptiveHistory.labSlug)
         .orderBy(desc(sql`AVG(score)`))
         .limit(5);
-      const struggling = recent.filter((r) => (r.avgScore ?? 0) < 60);
+
+      const struggling = recent.filter((r) => Number(r.avgScore ?? 0) < 60);
+      
       return {
         suggestedDifficulty: "intermediate",
         suggestedLabs: struggling.map((s) => s.labSlug),

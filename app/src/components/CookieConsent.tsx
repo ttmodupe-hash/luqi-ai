@@ -27,7 +27,7 @@ export default function CookieConsent() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border p-4 shadow-lg">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <Cookie size={20} className="text-cyan-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+        <Cookie size={20} className="text-cyan-500 shrink-0 mt-0.5 sm:mt-0" />
         <p className="text-sm text-muted-foreground flex-1">
           We use cookies to enhance your experience, analyze site traffic, and serve
           personalized content. By continuing to use LUQI AI, you consent to our use of
@@ -39,7 +39,7 @@ export default function CookieConsent() {
             Privacy Policy
           </button>
         </p>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={() => handleAccept("essential")}
             className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:bg-accent transition-colors"

@@ -35,12 +35,13 @@ export async function getHistory(sessionId: string, limit = MAX_HISTORY_TURNS): 
   if (!process.env.DATABASE_URL && !process.env.DB_HOST) return [];
   try {
     const db = await getDb();
-    const rows = await db
+    const rows: Array<Pick<typeof chatSessions.$inferSelect, "role" | "content">> = await db
       .select()
       .from(chatSessions)
       .where(eq(chatSessions.sessionId, sessionId))
       .orderBy(asc(chatSessions.createdAt), asc(chatSessions.id));
-    return rows.slice(-limit).map((r) => ({ role: r.role as "user" | "assistant", content: r.content }));
+    return rows.slice(-limit).flatMap((r): SessionTurn[] =>
+      r.role === "user" || r.role === "assistant" ? [{ role: r.role, content: r.content }] : []);
   } catch {
     return [];
   }

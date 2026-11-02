@@ -17,6 +17,13 @@ if [ -f "dist/boot.js" ]; then
     exec node dist/boot.js
 fi
 
+# A production container must run the verified compiled API, never a
+# source-code interpreter or an unintended alternate Python server.
+if [ "${NODE_ENV:-}" = "production" ]; then
+    echo "[start.sh] FATAL: verified dist/boot.js is missing in production" >&2
+    exit 1
+fi
+
 # 2. If TypeScript source entrypoint exists, launch via tsx
 if [ -f "api/boot.ts" ]; then
     echo "[start.sh] Launching TypeScript runtime on 0.0.0.0:${PORT} (api/boot.ts)..."

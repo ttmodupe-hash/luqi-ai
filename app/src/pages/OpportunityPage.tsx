@@ -70,7 +70,7 @@ export default function OpportunityPage() {
           placeholder="Search opportunities..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:border-cyan-500"
+          className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-hidden focus:border-cyan-500"
         />
 
         {/* Filters */}
@@ -92,7 +92,7 @@ export default function OpportunityPage() {
 
         {/* Predictive Macro-Historical Radar */}
         {radar.length > 0 && (
-          <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 to-neutral-900 p-4 space-y-3">
+          <div className="rounded-xl border border-indigo-500/30 bg-linear-to-br from-indigo-500/10 to-neutral-900 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <History size={18} className="text-indigo-400" />
               <h2 className="font-semibold text-white">Predictive History Radar</h2>

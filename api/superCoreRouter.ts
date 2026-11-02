@@ -3,31 +3,43 @@
 // =====================================================================
 
 import { z } from "zod";
-import { createRouter, publicQuery, adminQuery } from "./middleware";
-import { proposeAgentImprovement, getAgentProposalTelemetry } from "./services/agentReview";
+import { createRouter, publicQuery } from "./middleware";
+import { superIntelligenceCore } from "./services/superIntelligenceCore";
 import { experientialEducationOrchestrator, type GradeTier } from "./services/experientialEducationOrchestrator";
 import { afriLearnAdaptiveEngine } from "./services/afriLearnAdaptiveEngine";
 
 export const superCoreRouter = createRouter({
-  getTelemetry: adminQuery.query(() => getAgentProposalTelemetry(25)),
+  getTelemetry: publicQuery.query(async () => {
+    const summary = superIntelligenceCore.getSummary();
+    const records = superIntelligenceCore.getRecords(25);
+    return {
+      summary,
+      records,
+    };
+  }),
 
-  runAutonomousRefinement: adminQuery
-    .input(z.object({
-      taskName: z.string().trim().min(1).max(150),
-      taskDescription: z.string().trim().min(1).max(3000),
-      assertions: z.string().trim().min(1).max(2000),
-      maxCycles: z.number().int().min(1).max(5).default(3),
-    }))
-    .mutation(async ({ input, ctx }) => proposeAgentImprovement({
-      taskName: input.taskName!,
-      taskDescription: input.taskDescription!,
-      assertions: input.assertions!,
-      maxCycles: input.maxCycles ?? 3,
-    }, ctx.user.id)),
+  runAutonomousRefinement: publicQuery
+    .input(
+      z.object({
+        taskName: z.string().min(1),
+        taskDescription: z.string().min(1),
+        assertions: z.string().min(1),
+        maxCycles: z.number().min(1).max(5).default(3),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const result = await superIntelligenceCore.executeAutonomousLoop(
+        input.taskName,
+        input.taskDescription,
+        input.assertions,
+        input.maxCycles
+      );
+      return result;
+    }),
 
-  getHistoricalPatches: adminQuery.query(async () => {
-    const review = await getAgentProposalTelemetry(15);
-    return review.records;
+  getHistoricalPatches: publicQuery.query(async () => {
+    const records = superIntelligenceCore.getRecords(15);
+    return records.filter((r) => r.attemptsBeforeSuccess > 1 || r.optimizedPromptDelta.length > 15);
   }),
 
   // ─── Experiential Super-Intelligence Education ───
@@ -41,7 +53,7 @@ export const superCoreRouter = createRouter({
       return experientialEducationOrchestrator.getModule(input.conceptHash);
     }),
 
-  compileEducationalSimulation: adminQuery
+  compileEducationalSimulation: publicQuery
     .input(
       z.object({
         conceptName: z.string().min(1),
@@ -59,12 +71,12 @@ export const superCoreRouter = createRouter({
       );
     }),
 
-  getEducationalTelemetry: adminQuery.query(async () => {
+  getEducationalTelemetry: publicQuery.query(async () => {
     return experientialEducationOrchestrator.getTelemetry();
   }),
 
   // ─── AfriLearn Adaptive Bandwidth Pipeline ───
-  compileAdaptiveLesson: adminQuery
+  compileAdaptiveLesson: publicQuery
     .input(
       z.object({
         conceptTheory: z.string().min(1),

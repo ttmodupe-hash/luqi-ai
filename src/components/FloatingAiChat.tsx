@@ -174,7 +174,7 @@ Under **Section 129 & Section 130 of the National Credit Act (NCA No. 34 of 2005
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:brightness-110 text-white font-bold text-xs shadow-2xl shadow-orange-500/30 transition-all hover:scale-105 active:scale-95 group ring-2 ring-white/20"
+            className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-linear-to-r from-amber-500 via-orange-500 to-red-500 hover:brightness-110 text-white font-bold text-xs shadow-2xl shadow-orange-500/30 transition-all hover:scale-105 active:scale-95 group ring-2 ring-white/20"
             title="Chat with Luqi AI"
             aria-label="Open Floating AI Chat"
           >
@@ -193,7 +193,7 @@ Under **Section 129 & Section 130 of the National Credit Act (NCA No. 34 of 2005
           {/* Header */}
           <div className="p-3.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+              <div className="w-7 h-7 rounded-xl bg-linear-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-xs shadow-xs">
                 L
               </div>
               <div>
@@ -236,7 +236,7 @@ Under **Section 129 & Section 130 of the National Credit Act (NCA No. 34 of 2005
                   className={`flex gap-2 ${isUser ? "justify-end" : "justify-start"}`}
                 >
                   {!isUser && (
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-linear-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
                       L
                     </div>
                   )}
@@ -307,12 +307,12 @@ Under **Section 129 & Section 130 of the National Credit Act (NCA No. 34 of 2005
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Type any question here (just like sending a WhatsApp message)..."
-                className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs focus:outline-none focus:border-amber-500"
+                className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 placeholder-slate-400 text-xs focus:outline-hidden focus:border-amber-500"
               />
               <button
                 type="submit"
                 disabled={!query.trim() || isLoading}
-                className="p-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="p-2 rounded-xl bg-linear-to-r from-amber-500 to-orange-500 text-white font-bold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

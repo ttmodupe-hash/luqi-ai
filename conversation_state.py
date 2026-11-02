@@ -10,6 +10,8 @@ class ConversationState:
 
     def __init__(self, session_id: str = None):
         self.session_id = session_id or f"sess_{int(time.time())}"
+        # Legacy callers used this session identifier as user_id.
+        self.user_id = self.session_id
         self.turns: List[Dict] = []
         self.context: Dict[str, Any] = {}
         self.created_at = time.time()
@@ -29,6 +31,11 @@ class ConversationState:
 
     def set_context(self, key: str, value: Any):
         self.context[key] = value
+        self.last_active = time.time()
+
+    def update_context(self, updates: Dict[str, Any]):
+        """Merge context fields without overwriting unrelated entries."""
+        self.context.update(updates)
         self.last_active = time.time()
 
     def get_history(self, limit: int = 10) -> List[Dict]:

@@ -1,0 +1,190 @@
+name: LUQI MySQL Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "app/package.json"
+      - "db/**"
+      - "api/services/aiPilotBudget.ts"
+      - "api/services/pilotAuth.ts"
+      - "api/services/accountRecovery.ts"
+      - "api/services/passwordChange.ts"
+      - "api/account-security.ts"
+      - "src/components/AccountPasswordForm.tsx"
+      - "src/lib/account-security.ts"
+      - "tests/password-change-mysql.integration.test.ts"
+      - "api/services/authThrottle.ts"
+      - "tests/auth-throttle-mysql.integration.test.ts"
+      - "api/lib/passwordPolicy.ts"
+      - "scripts/reset-account-password.ts"
+      - "scripts/prepare-mysql-schema.ts"
+      - "tests/mysql-runtime-role.integration.test.ts"
+      - "api/rest-compat.ts"
+      - "api/private-conversations.ts"
+      - "api/offline.ts"
+      - "api/middleware.ts"
+      - "api/context.ts"
+      - "api/trpc-http.ts"
+      - "tests/private-conversations.test.ts"
+      - "api/boot.ts"
+      - "src/App.tsx"
+      - "src/components/AccountAccessForm.tsx"
+      - "src/pages/CompanionPage.tsx"
+      - "src/pages/StartPage.tsx"
+      - "src/lib/private-conversations.ts"
+      - "playwright.mysql.config.ts"
+      - "mysql-browser-tests/**"
+      - "api/lib/mysqlConfig.ts"
+      - "api/lib/userToken.ts"
+      - "tests/mysql-live.integration.test.ts"
+      - "tests/mysql-backup-fixture.integration.test.ts"
+      - "scripts/ci-mysql-restore.sh"
+      - "scripts/backup.sh"
+      - "tests/test_backup_script.py"
+      - ".github/workflows/mysql-live-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-real-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # ONLY for an isolated disposable GitHub Actions fixture. These flags
+      # exercise the reservation library directly and cannot make AI API calls:
+      # no AI provider keys are present and the production Railway service is
+      # unchanged. Never use this CI flag or fixture URL outside the job.
+      LUQI_MYSQL_CI_FIXTURE: "true"
+      DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci"
+      LUQI_AI_PROVIDER_ENABLED: "true"
+      LUQI_AI_BILLING_APPROVED: "true"
+      LUQI_AI_MONTHLY_USD: "100"
+      LUQI_GEMINI_MONTHLY_USD: "60"
+      LUQI_OPENAI_MONTHLY_USD: "40"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      # Avoid the optional npm cache: storage egress failures stalled setup
+      # for 10 minutes. npm ci installs from the committed lockfile below.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Test real InnoDB schema, concurrent quotas and fail-closed rollback
+        run: |
+          npx vitest run tests/mysql-live.integration.test.ts --no-file-parallelism
+          npx vitest run tests/auth-throttle-mysql.integration.test.ts --no-file-parallelism
+          npx vitest run tests/password-change-mysql.integration.test.ts --no-file-parallelism
+
+  test-logical-backup-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: "true"
+      DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci"
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: "false"
+      LUQI_AI_BILLING_APPROVED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      # Avoid the optional npm cache: storage egress failures stalled setup
+      # for 10 minutes. npm ci installs from the committed lockfile below.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Seed isolated MySQL 8.4 account and reservation fixtures
+        run: npx vitest run tests/mysql-backup-fixture.integration.test.ts
+      - name: Export and restore real MySQL dump to isolated target
+        run: bash scripts/ci-mysql-restore.sh
+
+  test-restricted-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: "true"
+      DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci"
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: "false"
+      LUQI_AI_BILLING_APPROVED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      # Avoid the optional npm cache: storage egress failures stalled setup
+      # for 10 minutes. npm ci installs from the committed lockfile below.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Build actual production web and operator bundles
+        run: npm run build
+      - name: Verify restricted MySQL role, restart persistence and pre-listener schema refusal
+        run: npx vitest run tests/mysql-runtime-role.integration.test.ts --no-file-parallelism
+      - name: Prepare Chromium for real MySQL browser acceptance
+        timeout-minutes: 4
+        run: |
+          luqi_browser_path="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$luqi_browser_path" ]; then
+            echo "LUQI_CHROMIUM_PATH=$luqi_browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium --only-shell
+          fi
+      - name: Verify first-user browser flow against real restricted MySQL
+        run: npx playwright test --config playwright.mysql.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: password-settings-layouts
+          path: test-results/**/password-settings.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: mysql-browser-failure-evidence
+          path: test-results/

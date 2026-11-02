@@ -1,13 +1,12 @@
 import { z } from "zod";
-import { createRouter, publicQuery, adminQuery } from "./middleware";
+import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { getPrivateDb } from "./security/access";
 import { knowledgeArticles } from "../db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 export const knowledgeRouter = createRouter({
   getArticles: publicQuery
-    .input(z.object({ category: z.string().optional(), limit: z.number().default(50) }).optional())
+    .input(z.object({ category: z.string().max(255).optional(), limit: z.number().int().min(1).max(100).default(50) }).optional())
     .query(async ({ input }) => {
       const db = await getDb();
       let query = db.select().from(knowledgeArticles).orderBy(desc(knowledgeArticles.createdAt));
@@ -17,10 +16,10 @@ export const knowledgeRouter = createRouter({
       return query.limit(input?.limit ?? 50);
     }),
 
-  saveArticle: adminQuery
+  saveArticle: publicQuery
     .input(z.object({ title: z.string(), content: z.string(), category: z.string(), sourceUrl: z.string().optional() }))
     .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
+      const db = await getDb();
       const [result] = await db.insert(knowledgeArticles).values({
         title: input.title,
         content: input.content,
@@ -31,7 +30,7 @@ export const knowledgeRouter = createRouter({
     }),
 
   searchLearning: publicQuery
-    .input(z.object({ query: z.string(), limit: z.number().default(20) }))
+    .input(z.object({ query: z.string().trim().min(1).max(500), limit: z.number().int().min(1).max(100).default(20) }))
     .query(async ({ input }) => {
       const db = await getDb();
       const results = await db
@@ -47,7 +46,7 @@ export const knowledgeRouter = createRouter({
     .input(z.object({ topic: z.string(), difficulty: z.string().default("medium"), count: z.number().default(5) }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      const articles = await db
+      const articles: Array<typeof knowledgeArticles.$inferSelect> = await db
         .select()
         .from(knowledgeArticles)
         .where(sql`title LIKE ${'%' + input.topic + '%'} OR content LIKE ${'%' + input.topic + '%'}`)

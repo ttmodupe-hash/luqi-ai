@@ -527,7 +527,7 @@ export default function HealthPage() {
               <Card key={alert.alert_id} className={getAlertColor(alert.severity)}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-6 w-6 text-red-400 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="h-6 w-6 text-red-400 shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-medium text-white">{alert.title}</p>
@@ -701,7 +701,7 @@ export default function HealthPage() {
                             <ul className="space-y-1">
                               {topResult.condition.first_steps.map((step, i) => (
                                 <li key={i} className="text-sm text-neutral-300 flex items-start gap-2">
-                                  <ArrowRight className="h-4 w-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                                  <ArrowRight className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
                                   {step}
                                 </li>
                               ))}
@@ -713,7 +713,7 @@ export default function HealthPage() {
                               <ul className="space-y-1">
                                 {topResult.condition.warning_signs.map((sign, i) => (
                                   <li key={i} className="text-sm text-red-300 flex items-start gap-2">
-                                    <AlertTriangle className="h-3 w-3 text-red-400 flex-shrink-0 mt-1" />
+                                    <AlertTriangle className="h-3 w-3 text-red-400 shrink-0 mt-1" />
                                     {sign}
                                   </li>
                                 ))}
@@ -759,7 +759,7 @@ export default function HealthPage() {
             <Card className="bg-red-500/10 border-red-500/20">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-6 w-6 text-red-400 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-6 w-6 text-red-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-red-400">Medical Emergency?</p>
                     <p className="text-sm text-neutral-300 mt-1">
@@ -828,7 +828,7 @@ export default function HealthPage() {
                             <ol className="space-y-1">
                               {condition.first_steps.map((step, i) => (
                                 <li key={i} className="flex items-start gap-2 text-sm text-neutral-300">
-                                  <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                  <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold shrink-0">
                                     {i + 1}
                                   </span>
                                   {step}
@@ -843,7 +843,7 @@ export default function HealthPage() {
                               <ul className="space-y-1">
                                 {condition.warning_signs.map((sign, i) => (
                                   <li key={i} className="text-sm text-red-300 flex items-start gap-2">
-                                    <AlertTriangle className="h-3 w-3 text-red-400 flex-shrink-0 mt-1" />
+                                    <AlertTriangle className="h-3 w-3 text-red-400 shrink-0 mt-1" />
                                     {sign}
                                   </li>
                                 ))}
@@ -1113,7 +1113,7 @@ export default function HealthPage() {
                       <ul className="space-y-1">
                         {alert.actions.map((action, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-neutral-300">
-                            <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" />
+                            <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0 mt-0.5" />
                             {action}
                           </li>
                         ))}

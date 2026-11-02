@@ -1,37 +1,36 @@
-let configuredApiKey = "";
+/**
+ * Browser-only API credential helper.
+ * No credentials are bundled into the client or sent to third-party origins.
+ * Key checks here are syntactic only; the server always decides authorization.
+ */
+const STORAGE_KEY = "luqi_api_key";
 
 export function getApiKey(): string {
-  return configuredApiKey;
+  try { return window.sessionStorage.getItem(STORAGE_KEY) ?? ""; }
+  catch { return ""; }
+}
+
+export function validateApiKey(key: string): boolean {
+  return typeof key === "string" && key.trim().length >= 12;
 }
 
 export function setApiKey(value: string): void {
-  configuredApiKey = typeof value === "string" ? value.trim() : "";
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("luqi:api-key-updated", { detail: { key: configuredApiKey } }));
-  }
+  const key = value.trim();
+  if (!key) return clearApiKey();
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, key);
+    window.dispatchEvent(new CustomEvent("luqi:api-key-updated"));
+  } catch { /* unavailable storage: auth remains server-enforced */ }
 }
 
 export function clearApiKey(): void {
-  setApiKey("");
+  try {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent("luqi:api-key-updated", { detail: { key: "" } }));
+  } catch { /* unavailable storage */ }
 }
 
-export function validateApiKey(value: string): boolean {
-  const key = typeof value === "string" ? value.trim() : "";
-  return key.length >= 20 && !/placeholder|your[-_ ]?key|example|mock/i.test(key);
-}
-
-export function getAuthHeaders(extra: HeadersInit = {}): Record<string, string> {
-  const headers: Record<string, string> = {};
-  if (extra instanceof Headers) {
-    extra.forEach((value, key) => { headers[key] = value; });
-  } else if (Array.isArray(extra)) {
-    for (const [key, value] of extra) headers[key] = value;
-  } else if (extra) {
-    Object.assign(headers, extra);
-  }
+export function getAuthHeaders(extra: Record<string, string> = {}): Record<string, string> {
   const key = getApiKey();
-  if (key && !Object.keys(headers).some((name) => name.toLowerCase() === "x-api-key")) {
-    headers["X-API-KEY"] = key;
-  }
-  return headers;
+  return key ? { ...extra, "X-API-KEY": key } : { ...extra };
 }

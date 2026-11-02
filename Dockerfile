@@ -1,40 +1,29 @@
-FROM node:20-alpine
+# LUQI web/API: Node service. Python workloads use Dockerfile.python separately.
+FROM node:22-alpine
 
-WORKDIR /app
+# /app collides with this repository's app/ tree in Vite's absolute-URL resolver.
+# Use a non-colliding physical root; preserve /app for existing operator commands.
+WORKDIR /srv/luqi
+RUN ln -s /srv/luqi /app
+RUN apk add --no-cache bash openssl ca-certificates
 
-# Install system dependencies including curl, bash, python3, and py3-pip
-RUN apk add --no-cache curl bash python3 py3-pip build-base
-
-# Copy requirements and install python dependencies with standard pip install (no --mount flag)
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt --break-system-packages || pip install --no-cache-dir -r requirements.txt || true
-
-# Copy package files from root (package-lock.json included when present)
 COPY package*.json ./
+RUN npm ci --legacy-peer-deps --include=dev
+ENV PATH="/srv/luqi/node_modules/.bin:${PATH}"
 
-# Install ALL dependencies including devDependencies
-RUN npm install --legacy-peer-deps --include=dev
-
-# Add node_modules/.bin to PATH so vite/esbuild are found
-ENV PATH="/app/node_modules/.bin:${PATH}"
-
-# Copy all application source, api, scripts, and configs from repo root
 COPY . .
-
-# Ensure start.sh is copied and made executable
-COPY start.sh ./
 RUN chmod +x ./start.sh
 
-# Build the application (verify gate → frontend → backend bundle → postbuild)
-RUN node scripts/verify-build.mjs && npx vite build && npx esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);" && node scripts/postbuild.js
+# Do not suppress errors: verify the graph and bytes inside the real image.
+RUN node scripts/verify-build.mjs \
+    && npm run build \
+    && node scripts/verify-production-frontend.mjs
 
-# Verify build output exists
-RUN test -f dist/boot.js || (echo "ERROR: dist/boot.js not created" && exit 1)
-RUN test -f dist/public/index.html || (echo "ERROR: dist/public/index.html not created" && exit 1)
+RUN test -s dist/boot.js && test -s dist/public/index.html && test -s dist/reset-account-password.js && test -s dist/prepare-mysql-schema.js && test -s dist/prepare-mysql-runtime-role.js
 
 ENV NODE_ENV=production
 ENV PORT=3000
-
 EXPOSE 3000
-
+# The web process needs readable bundles and network/database access, not root.
+USER node
 ENTRYPOINT ["/bin/bash", "./start.sh"]

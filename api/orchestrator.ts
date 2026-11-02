@@ -1,20 +1,18 @@
 import { z } from "zod";
-import { createRouter, publicQuery, protectedQuery, adminQuery } from "./middleware";
-import { reserveAiRequest } from "./security/aiBudget";
+import { createRouter, publicQuery } from "./middleware";
 import { orchestrateRequest } from "./services/orchestrator";
 
 export const orchestratorRouter = createRouter({
-  generate: protectedQuery
+  generate: publicQuery
     .input(z.object({
-      query: z.string().min(1).max(2000),
-      context: z.string().max(5000).optional(),
-      systemPrompt: z.string().max(2000).optional(),
+      query: z.string().min(1).max(10000),
+      context: z.string().max(50000).optional(),
+      systemPrompt: z.string().max(10000).optional(),
       useSearch: z.boolean().default(false),
       forceProvider: z.enum(["openai", "anthropic", "google", "kimi"]).optional(),
-      forceModel: z.string().max(100).optional(),
+      forceModel: z.string().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      await reserveAiRequest(ctx.user.id, "orchestrator.generate");
+    .mutation(async ({ input }) => {
       return orchestrateRequest({
         query: input.query,
         context: input.context,
@@ -31,11 +29,11 @@ export const orchestratorRouter = createRouter({
       return classifyIntent(input.query);
     }),
 
-  status: adminQuery.query(() => {
+  status: publicQuery.query(() => {
     return getOrchestratorStatus();
   }),
 
-  logs: adminQuery
+  logs: publicQuery
     .input(z.object({ limit: z.number().min(1).max(100).default(20) }))
     .query(async ({ input }) => {
       return getRecentLogs(input.limit);

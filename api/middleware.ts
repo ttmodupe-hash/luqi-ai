@@ -1,50 +1,62 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
-import { rateLimitBucket, reserveRateLimit } from "./security/rateLimit";
+import { authenticatePilotUser, PilotAuthError } from "./services/pilotAuth";
+import { BoundedRateLimiter } from "./lib/httpGuard";
 
+// Explicit procedure/type pairs. New procedures fail closed until reviewed;
+// an ordinary account or a deployment secret is never an administrator role.
+const publicReads = new Set([
+  "ping", "knowledge.getArticles", "knowledge.searchLearning",
+  "content.getHealthTips", "content.getAgricultureNews", "content.getSportsNews",
+  "content.getBusinessTips", "content.getGovernmentInfo", "content.getTourismInfo",
+]);
+const accountProcedures: Record<string, "query" | "mutation"> = {
+  "offline.queueAction": "mutation", "offline.getPending": "query",
+  "offline.markSynced": "mutation", "offline.resolveConflict": "query",
+};
+const safeMessages = new Set([
+  "TRPC_PROCEDURE_UNAVAILABLE", "AUTH_UNAVAILABLE", "AUTH_REQUIRED",
+  "OFFLINE_STORAGE_UNAVAILABLE", "OFFLINE_QUEUE_LIMIT",
+]);
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    // Never serialize SQL, credentials, input payloads or stack traces.
+    return { ...shape,
+      message: safeMessages.has(error.message) ? error.message : error.code,
+      data: { code: shape.data.code, httpStatus: shape.data.httpStatus },
+    };
+  },
 });
-
 export const createRouter = t.router;
-export const publicQuery = t.procedure;
-
-// Fail-closed guard for older routes without proven per-user/per-object access
-// control. These are intentionally unavailable even to signed-in users until
-// they are replaced with authenticated, authorised and tested procedures.
-export const legacyRestrictedProcedure = t.procedure.use(() => {
-  throw new TRPCError({
-    code: "FORBIDDEN",
-    message: "This feature is temporarily unavailable pending security verification.",
-  });
-});
-
-// ── AUTHENTICATION MIDDLEWARE ──────────────────────────────────────
-// Never bypass authentication based on NODE_ENV. Identity is established
-// from a validated, unexpired database session in api/context.ts.
-export const protectedQuery = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Please sign in to continue." });
+export const publicQuery = t.procedure.use(async ({ ctx, path, type, next }) => {
+  if (publicReads.has(path) && type === "query") return next({ ctx });
+  if (!Object.hasOwn(accountProcedures, path) || accountProcedures[path] !== type) {
+    throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "TRPC_PROCEDURE_UNAVAILABLE" });
   }
-  return next({ ctx: { ...ctx, user: ctx.user } });
-});
-
-/**
- * Server-validated administrator access, reserved for internal telemetry,
- * audit and agent-management operations. Never trust a role passed as input.
- */
-export const adminQuery = protectedQuery.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required." });
+  let userId: number;
+  try {
+    userId = await authenticatePilotUser(ctx.req.headers.get("authorization") ?? undefined);
+  } catch (error) {
+    const unavailable = error instanceof PilotAuthError && error.code === "AUTH_UNAVAILABLE";
+    throw new TRPCError({ code: unavailable ? "SERVICE_UNAVAILABLE" : "UNAUTHORIZED",
+      message: unavailable ? "AUTH_UNAVAILABLE" : "AUTH_REQUIRED" });
   }
-  return next({ ctx });
+  return next({ ctx: { ...ctx, userId } });
 });
 
-// ── DISTRIBUTED RATE LIMITING ──────────────────────────────────────
-// Persistent InnoDB row locks serialize reservations across Cloud Run instances.
-// No client-controlled x-forwarded-for/x-real-ip value is trusted.
-export const rateLimitedQuery = t.procedure.use(async ({ ctx, next }) => {
-  await reserveRateLimit(rateLimitBucket(ctx.user?.id));
+// Shares the route policy; no development bypass and no shared APP_SECRET.
+export const protectedQuery = publicQuery.use(({ ctx, next }) => {
+  if (!("userId" in ctx) || !Number.isSafeInteger(ctx.userId) || Number(ctx.userId) < 1) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "AUTH_REQUIRED" });
+  }
+  return next({ ctx: { ...ctx, userId: Number(ctx.userId) } });
+});
+
+const throttle = new BoundedRateLimiter(100, 60_000, 5000);
+export const rateLimitedQuery = publicQuery.use(({ ctx, next }) => {
+  const key = ctx.req.headers.get("x-forwarded-for") ?? "unknown";
+  if (!throttle.permit(key)) throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
   return next({ ctx });
 });

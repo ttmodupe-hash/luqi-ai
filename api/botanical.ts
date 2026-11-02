@@ -1,8 +1,6 @@
 import { z } from "zod";
-import { createRouter, publicQuery, protectedQuery, adminQuery } from "./middleware";
-import { reserveAiRequest } from "./security/aiBudget";
+import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { getPrivateDb } from "./security/access";
 import { botanicalEntries } from "../db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { orchestrateRequest } from "./services/orchestrator";
@@ -33,11 +31,10 @@ export const botanicalRouter = createRouter({
       return entry ?? null;
     }),
 
-  ask: protectedQuery
-    .input(z.object({ question: z.string().trim().min(1).max(2000), plantId: z.number().int().positive().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      await reserveAiRequest(ctx.user.id, "botanical.ask");
-      const db = await getPrivateDb();
+  ask: publicQuery
+    .input(z.object({ question: z.string(), plantId: z.number().optional() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
       
       let context = "";
       if (input.plantId) {
@@ -60,10 +57,10 @@ export const botanicalRouter = createRouter({
       return { answer: result.content, model: result.model };
     }),
 
-  verify: adminQuery
+  verify: publicQuery
     .input(z.object({ id: z.number(), verifiedBy: z.string(), notes: z.string().optional() }))
     .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
+      const db = await getDb();
       await db
         .update(botanicalEntries)
         .set({

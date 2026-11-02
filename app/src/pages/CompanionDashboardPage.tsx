@@ -448,7 +448,7 @@ function NotificationToast({ item, onClose }: { item: NotificationItem; onClose:
   }, [onClose]);
 
   return (
-    <div style={{ animation: "slideIn 0.3s ease" }} className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/50 backdrop-blur shadow-lg min-w-[280px] max-w-[360px]">
+    <div style={{ animation: "slideIn 0.3s ease" }} className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700/50 backdrop-blur-sm shadow-lg min-w-[280px] max-w-[360px]">
       <Icon size={18} style={{ color, marginTop: 2, flexShrink: 0 }} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-slate-100">{item.title}</p>
@@ -684,10 +684,10 @@ export default function CompanionDashboardPage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur border-b border-slate-800/50">
+      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
               <Heart size={16} className="text-white" />
             </div>
             <div>
@@ -716,7 +716,7 @@ export default function CompanionDashboardPage() {
             <select
               value={activeCompanion}
               onChange={(e) => setActiveCompanion(e.target.value)}
-              className="bg-slate-900/50 border border-slate-800/50 rounded-lg px-3 py-1.5 text-xs font-medium outline-none focus:border-cyan-500/50"
+              className="bg-slate-900/50 border border-slate-800/50 rounded-lg px-3 py-1.5 text-xs font-medium outline-hidden focus:border-cyan-500/50"
             >
               {COMPANION_PROFILES.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -727,7 +727,7 @@ export default function CompanionDashboardPage() {
       </header>
 
       {/* Tabs */}
-      <div className="sticky top-[60px] z-30 bg-slate-950/80 backdrop-blur border-b border-slate-800/50">
+      <div className="sticky top-[60px] z-30 bg-slate-950/80 backdrop-blur-sm border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => (
@@ -760,8 +760,8 @@ export default function CompanionDashboardPage() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        msg.role === "user" ? "bg-cyan-500/20 text-cyan-400" : "bg-gradient-to-br from-purple-500 to-pink-500 text-white"
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        msg.role === "user" ? "bg-cyan-500/20 text-cyan-400" : "bg-linear-to-br from-purple-500 to-pink-500 text-white"
                       }`}>
                         {msg.role === "user" ? "U" : companion.avatar}
                       </div>
@@ -786,7 +786,7 @@ export default function CompanionDashboardPage() {
                   ))}
                   {isTyping && (
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
+                      <div className="w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
                         {companion.avatar}
                       </div>
                       <div className="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50">
@@ -809,7 +809,7 @@ export default function CompanionDashboardPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={`Message ${companion.name}...`}
-                    className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-500/50 transition-colors placeholder:text-slate-500"
+                    className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm outline-hidden focus:border-cyan-500/50 transition-colors placeholder:text-slate-500"
                   />
                   <button
                     onClick={sendMessage}
@@ -827,7 +827,7 @@ export default function CompanionDashboardPage() {
               {/* Companion card */}
               <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/50">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${companion.color} flex items-center justify-center text-lg font-bold text-white`}>
+                  <div className={`w-10 h-10 rounded-full bg-linear-to-br ${companion.color} flex items-center justify-center text-lg font-bold text-white`}>
                     <companion.icon size={20} />
                   </div>
                   <div>
@@ -875,8 +875,8 @@ export default function CompanionDashboardPage() {
                   onClick={toggleVoice}
                   className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
                     isVoiceActive
-                      ? "bg-gradient-to-r from-red-500 to-pink-500 shadow-lg shadow-red-500/30 animate-pulse"
-                      : "bg-gradient-to-r from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30"
+                      ? "bg-linear-to-r from-red-500 to-pink-500 shadow-lg shadow-red-500/30 animate-pulse"
+                      : "bg-linear-to-r from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/30"
                   }`}
                 >
                   {isVoiceActive ? <MicOff size={28} className="text-white" /> : <Mic size={28} className="text-white" />}
@@ -943,7 +943,7 @@ export default function CompanionDashboardPage() {
                       : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600/50"
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${c.color} flex items-center justify-center text-lg font-bold text-white mb-3 group-hover:scale-110 transition-transform`}>
+                  <div className={`w-12 h-12 rounded-full bg-linear-to-br ${c.color} flex items-center justify-center text-lg font-bold text-white mb-3 group-hover:scale-110 transition-transform`}>
                     <c.icon size={24} />
                   </div>
                   <h3 className="text-sm font-bold">{c.name}</h3>
@@ -1021,7 +1021,7 @@ export default function CompanionDashboardPage() {
                       <span className="font-medium">{session.progress}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all" style={{ width: `${session.progress}%` }} />
+                      <div className="h-full rounded-full bg-linear-to-r from-cyan-500 to-blue-500 transition-all" style={{ width: `${session.progress}%` }} />
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3">
@@ -1068,7 +1068,7 @@ export default function CompanionDashboardPage() {
                   value={memorySearch}
                   onChange={(e) => setMemorySearch(e.target.value)}
                   placeholder="Search memories..."
-                  className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-cyan-500/50 transition-colors placeholder:text-slate-500"
+                  className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-hidden focus:border-cyan-500/50 transition-colors placeholder:text-slate-500"
                 />
               </div>
               <div className="flex gap-2 flex-wrap">

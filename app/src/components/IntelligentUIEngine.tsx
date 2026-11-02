@@ -45,7 +45,7 @@ export const InteractiveCalculator: React.FC<CalculatorProps> = ({
   }, [inputValue, baseFormula]);
 
   return (
-    <div className="my-3 p-4 rounded-2xl border border-amber-500/30 bg-slate-900/90 text-slate-100 shadow-xl max-w-sm backdrop-blur-sm">
+    <div className="my-3 p-4 rounded-2xl border border-amber-500/30 bg-slate-900/90 text-slate-100 shadow-xl max-w-sm backdrop-blur-xs">
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -80,7 +80,7 @@ export const InteractiveCalculator: React.FC<CalculatorProps> = ({
               type="number"
               value={inputValue}
               onChange={(e) => setInputValue(Number(e.target.value))}
-              className="w-28 px-2.5 py-1 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-amber-500"
+              className="w-28 px-2.5 py-1 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-slate-100 focus:outline-hidden focus:border-amber-500"
             />
             <div className="flex gap-1">
               <button
@@ -147,7 +147,7 @@ export const IntelligentChart: React.FC<{ data: ChartData; label: string; unit?:
               </div>
               <div
                 style={{ height: `${heightPercent}%` }}
-                className="w-full bg-gradient-to-t from-teal-600 via-teal-400 to-cyan-300 rounded-t-lg transition-all duration-300 group-hover:brightness-125 shadow-sm"
+                className="w-full bg-linear-to-t from-teal-600 via-teal-400 to-cyan-300 rounded-t-lg transition-all duration-300 group-hover:brightness-125 shadow-xs"
               />
               <span className="text-[10px] text-slate-400 font-medium truncate max-w-full text-center">
                 {data.labels[idx] || `#${idx + 1}`}
@@ -216,7 +216,7 @@ export const IntelligentMap: React.FC<{ config: MapConfig; label: string }> = ({
           className="grayscale contrast-125 brightness-90 hover:grayscale-0 transition-all duration-500"
           loading="lazy"
         />
-        <div className="absolute bottom-2 left-2 bg-slate-950/80 backdrop-blur text-[10px] font-mono px-2 py-0.5 rounded border border-slate-800 text-slate-300">
+        <div className="absolute bottom-2 left-2 bg-slate-950/80 backdrop-blur-sm text-[10px] font-mono px-2 py-0.5 rounded border border-slate-800 text-slate-300">
           {config.latitude.toFixed(4)}, {config.longitude.toFixed(4)}
         </div>
       </div>

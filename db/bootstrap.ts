@@ -1,14 +1,22 @@
 // =====================================================================
 // DATABASE BOOTSTRAP
-// Development/test convenience schema bootstrap. Production DDL MUST run
-// separately under an approved, backed-up database migration; starting the
-// application must not implicitly create or change production tables.
-// The historical demo credential is never seeded.
+// Creates application tables and dedicated guard ledgers when absent.
+// Explicit operator/CI operation only; never run by the web runtime.
+// Idempotent CREATE IF NOT EXISTS, without seeds or existing-table ALTERs.
 // =====================================================================
 
 import mysql from "mysql2/promise";
+import { parseMySqlConnectionSettings } from '../api/lib/mysqlConfig';
 
-const CREATE_STATEMENTS: string[] = [
+export const CREATE_STATEMENTS: string[] = [
+  `CREATE TABLE IF NOT EXISTS auth_attempt_windows (
+    scope ENUM('login_global','login_subject','signup_global','signup_subject') NOT NULL,
+    subject_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    reset_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (scope, subject_key),
+    INDEX auth_attempt_windows_expiry (reset_at)
+  ) ENGINE=InnoDB;`,
   `CREATE TABLE IF NOT EXISTS \`ab_test_results\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
 	\`test_id\` int NOT NULL,
@@ -110,55 +118,6 @@ const CREATE_STATEMENTS: string[] = [
 	\`created_at\` timestamp DEFAULT (now()),
 	\`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT \`botanical_entries_id\` PRIMARY KEY(\`id\`)
-);`,
-  `CREATE TABLE IF NOT EXISTS \`ai_global_daily_quota\` (
-  \`day_key\` varchar(10) NOT NULL,
-  \`jobs\` int NOT NULL DEFAULT 0,
-  PRIMARY KEY (\`day_key\`),
-  CONSTRAINT \`ai_global_daily_quota_nonnegative\` CHECK (\`jobs\` >= 0)
-);`,
-  `CREATE TABLE IF NOT EXISTS \`video_global_daily_quota\` (
-  \`day_key\` varchar(10) NOT NULL,
-  \`jobs\` int NOT NULL DEFAULT 0,
-  PRIMARY KEY (\`day_key\`)
-);`,
-  `CREATE TABLE IF NOT EXISTS \`video_credit_wallets\` (
-  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
-  \`user_key\` varchar(255) NOT NULL,
-  \`credits\` int NOT NULL DEFAULT 0,
-  \`updated_at\` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`video_credit_wallets_user_key_unique\` (\`user_key\`)
-);`,
-  `CREATE TABLE IF NOT EXISTS \`video_credit_ledger\` (
-  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
-  \`reference\` varchar(100) NOT NULL,
-  \`user_key\` varchar(255) NOT NULL,
-  \`entry_type\` varchar(30) NOT NULL,
-  \`delta_credits\` int NOT NULL,
-  \`balance_after\` int NOT NULL,
-  \`created_at\` timestamp DEFAULT (now()),
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`video_credit_ledger_reference_unique\` (\`reference\`),
-  INDEX \`video_credit_ledger_user_key_idx\` (\`user_key\`)
-);`,
-  `CREATE TABLE IF NOT EXISTS \`video_render_requests\` (
-  \`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
-  \`request_key\` varchar(64) NOT NULL,
-  \`user_id\` int NOT NULL,
-  \`user_key\` varchar(255) NOT NULL,
-  \`project_id\` int NOT NULL,
-  \`request_digest\` varchar(64) NOT NULL,
-  \`asset_key\` varchar(400),
-  \`charge_credits\` int NOT NULL,
-  \`mode\` varchar(30) NOT NULL DEFAULT 'silent_mp4',
-  \`status\` varchar(30) NOT NULL DEFAULT 'PROCESSING',
-  \`error_message\` text,
-  \`created_at\` timestamp DEFAULT (now()),
-  \`completed_at\` timestamp,
-  PRIMARY KEY (\`id\`),
-  UNIQUE KEY \`video_render_requests_request_key_unique\` (\`request_key\`),
-  INDEX \`video_render_requests_user_id_idx\` (\`user_id\`)
 );`,
   `CREATE TABLE IF NOT EXISTS \`credit_wallets\` (
 	\`id\` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -507,78 +466,49 @@ const CREATE_STATEMENTS: string[] = [
 	\`executed_at\` timestamp,
 	\`created_at\` timestamp DEFAULT (now()),
 	CONSTRAINT \`voice_commands_id\` PRIMARY KEY(\`id\`)
-);`
+);`,
+  // Dedicated AI pilot budget reservations. InnoDB PKs enable row locking
+  // across web replicas. All paid calls remain disabled without explicit
+  // owner approval and a separate provider-side spending cap.
+  `CREATE TABLE IF NOT EXISTS ai_pilot_monthly_spend (
+    month_utc CHAR(7) NOT NULL,
+    provider VARCHAR(16) NOT NULL,
+    reserved_cents INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (month_utc, provider),
+    CHECK (provider IN ('gemini', 'openai'))
+  ) ENGINE=InnoDB;`,
+  `CREATE TABLE IF NOT EXISTS ai_pilot_daily_user_usage (
+    day_utc CHAR(10) NOT NULL,
+    user_id BIGINT NOT NULL,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (day_utc, user_id)
+  ) ENGINE=InnoDB;`,
 ];
 
-function resolveConnectionConfig(): mysql.ConnectionOptions | null {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl) {
-    return { uri: databaseUrl };
-  }
-
-  const host = process.env.DB_HOST;
-  if (!host) {
-    return null;
-  }
-
-  return {
-    host,
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "luqi_ai",
-    port: parseInt(process.env.DB_PORT || "3306", 10),
-  };
-}
-
-export async function bootstrapDatabase(): Promise<void> {
-  const config = resolveConnectionConfig();
-
-  if (!config) {
-    console.log("[Bootstrap] No database configuration found (DATABASE_URL or DB_HOST) — skipping table creation");
-    return;
-  }
-
+export async function bootstrapDatabase(environment: Record<string, string | undefined> = process.env): Promise<void> {
   let connection: mysql.Connection | null = null;
-
+  let deadline: ReturnType<typeof setTimeout> | undefined;
   try {
-    connection = await mysql.createConnection(config);
-
-    if (process.env.NODE_ENV !== "production") {
-      for (const statement of CREATE_STATEMENTS) {
-        await connection.execute(statement);
-      }
-      console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} development tables`);
-    } else {
-      console.log("[Bootstrap] Production schema writes disabled; reviewed migrations required");
+    const config = parseMySqlConnectionSettings(environment);
+    if (!config) throw new Error('DATABASE_REQUIRED');
+    connection = await mysql.createConnection({ ...config, connectTimeout: 4_000 });
+    const activeConnection = connection;
+    deadline = setTimeout(() => activeConnection.destroy(), 120_000);
+    for (const statement of CREATE_STATEMENTS) {
+      await connection.query({ sql: statement, timeout: 10_000 });
     }
 
-    // Never provision a known-password demo account. Deactivate the historical
-    // default only if its stored hash still matches the compromised password.
-    // Do not alter accounts whose passwords have already been changed.
-    if (process.env.NODE_ENV === "production") {
-      const [rows] = await connection.query(
-        "SELECT id, password_hash FROM users WHERE email = ? LIMIT 1",
-        ["demo@luqi.ai"],
-      );
-      const demo = (rows as Array<{ id: number; password_hash: string }>)[0];
-      if (demo?.password_hash) {
-        const bcrypt = (await import("bcryptjs")).default;
-        if (await bcrypt.compare("demo123", demo.password_hash)) {
-          await connection.execute("UPDATE users SET is_active = 0 WHERE id = ?", [demo.id]);
-          console.warn("[Bootstrap] Insecure default-password demonstration account disabled");
-        }
-      }
-    }
+    console.log(`[Bootstrap] Verified/created ${CREATE_STATEMENTS.length} tables`);
 
-  } catch (error) {
-    console.error("[Bootstrap] Table creation failed (non-fatal):", error);
+    // SECURITY: Never auto-create a demo login or any account with a
+    // public fixed password. Every real account must go through signup.
+
+  } catch {
+    throw new Error("MYSQL_SCHEMA_APPLY_FAILED");
   } finally {
-    if (connection) {
-      try {
-        await connection.end();
-      } catch {
-        // Connection cleanup failure is non-fatal
-      }
-    }
+    if (deadline) clearTimeout(deadline);
+    connection?.destroy();
   }
 }

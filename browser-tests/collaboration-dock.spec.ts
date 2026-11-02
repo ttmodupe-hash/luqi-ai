@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test';
+test('inline bottom-right Circles uses the current login and only explicit approved-contact reads',async({page},testInfo)=>{
+ let logins=0,paid=0,contactReads=0;
+ page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/luqi-core'))paid++});
+ await page.route('**/v1/readiness',r=>r.fulfill({json:{checks:{persistence:'connected',ai_pilot:'configured_not_verified'}}}));
+ await page.route('**/api/v1/auth/login',r=>{logins++;return r.fulfill({json:{token:'synthetic-dock-token',user:{email:'dock@example.invalid',name:'Naledi'}}})});
+ await page.route('**/api/v1/p2p/status',r=>r.fulfill({json:{enabled:true,userId:7,eligibility:'verified_adult',circles:[],blockedPeers:[]}}));
+ await page.route('**/api/v1/p2p/contacts',r=>{contactReads++;return r.fulfill({json:{contacts:[{circleId:'552987fe-97a1-41df-a090-a5df75eb8de8',userId:8,name:'Approved study partner',accountActive:true,presence:'not_shared'}]}})});
+ await page.goto('/#/login');
+ await page.getByLabel('Email',{exact:true}).fill('dock@example.invalid');
+ await page.getByLabel('Password',{exact:true}).fill('Synthetic-Private-Password-2026!');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await expect(page.getByLabel('Your question')).toBeVisible();
+ await page.getByLabel('Your question').fill('Keep this unsent draft');
+ const trigger=page.getByRole('button',{name:'Contacts',exact:true});
+ const access=page.getByRole('complementary',{name:'Luqi contacts'});
+ expect(await access.evaluate(element=>getComputedStyle(element).position)).toBe(page.viewportSize()!.width >= 1280 ? 'sticky' : 'static');
+ expect(await trigger.getAttribute('aria-haspopup')).toBeNull();
+
+ const dialog=page.getByRole('region',{name:'Your contacts',exact:true});
+ await expect(page.getByRole('dialog',{name:'Your contacts'})).toHaveCount(0);
+ await expect(trigger).toHaveAttribute('aria-expanded','true');
+ expect(await dialog.evaluate(element=>getComputedStyle(element).position)).toBe('static');
+ await expect(dialog.getByRole('link',{name:'Approved study partner'})).toBeVisible();
+ expect(contactReads).toBeGreaterThan(0);
+ await expect(dialog.getByRole('link',{name:'Sign in to Luqi'})).toHaveCount(0);
+ await expect(dialog.getByText('Status not shared',{exact:true})).toBeVisible();
+ await page.screenshot({path:testInfo.outputPath('circles-bottom-right.png'),fullPage:true});
+ await trigger.focus();await page.keyboard.press('Escape');await expect(dialog).not.toBeVisible();
+ await expect(trigger).toBeFocused();await expect(page.getByLabel('Your question')).toHaveValue('Keep this unsent draft');
+ await trigger.click();await dialog.getByRole('link',{name:'Manage contacts & circles'}).click();
+ await expect(page.getByRole('heading',{name:'🔐 P2P Circles & Chat'})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Sign in to Luqi'})).toHaveCount(0);
+ expect(logins).toBe(1);expect(paid).toBe(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});

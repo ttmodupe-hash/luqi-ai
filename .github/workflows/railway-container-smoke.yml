@@ -1,0 +1,139 @@
+name: LUQI Railway Container Smoke Test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "railway.json"
+      - "start.sh"
+      - "package.json"
+      - "package-lock.json"
+      - "app/**"
+      - "api/**"
+      - "src/**"
+      - ".github/workflows/railway-container-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container-build-and-start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact Railway Dockerfile
+        run: docker build --progress=plain --file Dockerfile --tag luqi-railway-smoke:ci .
+      - name: Verify operator CLIs are included in the production image
+        run: docker run --rm --entrypoint /bin/sh luqi-railway-smoke:ci -c 'test -s /app/dist/reset-account-password.js && test -s /app/dist/prepare-mysql-schema.js && test -s /app/dist/prepare-mysql-runtime-role.js'
+      - name: Start production container without privileged credentials
+        run: |
+          docker run --detach --name luqi-smoke \
+            --publish 127.0.0.1:18765:3000 \
+            --env NODE_ENV=production \
+            --env PORT=3000 \
+            --env JWT_SECRET=ci-only-not-a-real-key-1234567890123456789012 \
+            --env RAILWAY_GIT_COMMIT_SHA=1111111111111111111111111111111111111111 \
+            luqi-railway-smoke:ci
+      - name: Verify actual HTTP health and frontend
+        run: |
+          trap 'docker logs luqi-smoke; docker rm -f luqi-smoke >/dev/null 2>&1 || true' EXIT
+          healthy=0
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --max-time 3 http://127.0.0.1:18765/v1/health > /tmp/luqi-health.json; then
+              healthy=1
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' luqi-smoke)" != "true" ]; then
+              echo "LUQI container exited before becoming healthy"
+              exit 1
+            fi
+            sleep 2
+          done
+          test "$healthy" -eq 1 || { echo "Health never became ready"; exit 1; }
+          # Exercise the actual built container's default execution identity.
+          luqi_runtime_uid=$(docker exec luqi-smoke id -u)
+          test "$luqi_runtime_uid" -ne 0 || { echo "Web runtime must not run as Linux root"; exit 1; }
+          echo "Verified non-root web runtime UID: $luqi_runtime_uid"
+          cat /tmp/luqi-health.json
+          grep -q '"status":"healthy"' /tmp/luqi-health.json
+          curl --fail --silent --max-time 5 http://127.0.0.1:18765/ -o /tmp/luqi-index.html
+          grep -qi '<html' /tmp/luqi-index.html
+          # Synthetic commit metadata exercises the actual bundled route in
+          # the non-root image. This is not production deployment evidence.
+          node --input-type=module -e '
+            const response = await fetch("http://127.0.0.1:18765/v1/release");
+            const body = await response.json();
+            if (response.status !== 200 || response.headers.get("cache-control") !== "no-store" ||
+                body.format !== "luqi.release.v1" || body.commit !== "1".repeat(40) ||
+                Object.keys(body).length !== 2) throw new Error("Bundled release identity failed");
+            console.log("Bundled release identity and cache policy verified with synthetic metadata");
+          '
+          # With no AI or DB credentials supplied by CI, readiness must fail
+          # closed. A liveness response alone must not claim LUQI is AI-ready.
+          code=$(curl --silent --show-error --output /tmp/luqi-readiness.json \
+            --write-out '%{http_code}' http://127.0.0.1:18765/v1/readiness)
+          test "$code" = "503"
+          grep -q '"status":"degraded"' /tmp/luqi-readiness.json
+          grep -q '"ai_pilot":"disabled"' /tmp/luqi-readiness.json
+          # No external key means no false-success AI conversation.
+          code=$(curl --silent --show-error --max-time 8 --output /tmp/luqi-ai-unavailable.json \
+            --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"user_input":"Explain photosynthesis in one sentence"}' \
+            http://127.0.0.1:18765/api/v1/luqi-core)
+          test "$code" = "503"
+          grep -q '"code":"AI_DISABLED"' /tmp/luqi-ai-unavailable.json
+
+          # Legacy AI endpoints must not bypass the pilot budget allocation.
+          legacy_code=$(curl --silent --show-error --max-time 8 \
+            --output /tmp/luqi-legacy-block.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"message":"Say hello"}' \
+            http://127.0.0.1:18765/api/v25/chat)
+          test "$legacy_code" = "503"
+          grep -q '"code":"AI_LEGACY_ROUTE_DISABLED"' /tmp/luqi-legacy-block.json
+
+          # Unimplemented support routes must fail closed in the shipped image.
+          support_status=$(curl --silent --show-error --max-time 8 \
+            --output /tmp/luqi-support-unavailable.json --write-out '%{http_code}' \
+            http://127.0.0.1:18765/api/v25/support/tickets)
+          test "$support_status" = "503"
+          grep -q '"code":"SUPPORT_TICKETING_UNAVAILABLE"' /tmp/luqi-support-unavailable.json
+          grep -q '"success":false' /tmp/luqi-support-unavailable.json
+
+          # Production must never advertise successful registration/login with
+          # no persistent database. The old API returned fake timestamp JWTs.
+          for route in /api/v1/auth/login /auth/login /api/v1/auth/register /auth/register; do
+            result=$(curl --silent --show-error --max-time 8 \
+              --output /tmp/luqi-auth-response.json --write-out '%{http_code}' \
+              --header 'Content-Type: application/json' \
+              --data '{"email":"fixture@example.invalid","password":"Strong-CI-password-2026!"}' \
+              "http://127.0.0.1:18765$route")
+            test "$result" = "503"
+            ! grep -q '"access_token"' /tmp/luqi-auth-response.json
+            ! grep -q '"success":true' /tmp/luqi-auth-response.json
+          done
+          # Workspace integrations must never fabricate successful side effects.
+          for prefix in /api/v1/workspace /workspace; do
+            for action in upload-asset calendar/book submit-critique critiques; do
+              code=$(curl --silent --show-error --max-time 8 \
+                --output /tmp/luqi-workspace.json --write-out '%{http_code}' \
+                --request POST --header 'Content-Type: application/json' \
+                --data '{"user_id":"forged-owner"}' \
+                "http://127.0.0.1:18765$prefix/$action")
+              test "$code" = "503"
+              grep -q '"code":"WORKSPACE_INTEGRATION_NOT_CONFIGURED"' /tmp/luqi-workspace.json
+              ! grep -q '"success":true' /tmp/luqi-workspace.json
+            done
+          done
+
+          # The visual boundary must remain unavailable with billing disabled.
+          code=$(curl --silent --show-error --max-time 8 --output /tmp/luqi-visual.json \
+            --write-out '%{http_code}' --header 'Content-Type: application/json' \
+            --data '{"question":"Describe","consent":true}' \
+            http://127.0.0.1:18765/api/v1/visual-tutor)
+          test "$code" = "503"
+          grep -q '"code":"AI_DISABLED"' /tmp/luqi-visual.json

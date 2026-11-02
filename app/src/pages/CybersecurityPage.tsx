@@ -1184,7 +1184,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
   return (
     <div className="min-h-screen bg-neutral-900 text-zinc-100 font-sans">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 border-b border-zinc-800 bg-neutral-900/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-zinc-800 bg-neutral-900/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
@@ -1208,14 +1208,14 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
       {/* DAILY SECURITY TIP */}
       <div className="border-b border-zinc-800 bg-zinc-800/30">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-3">
-          <Lightbulb className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+          <Lightbulb className="h-4 w-4 text-yellow-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-zinc-300 truncate">
               <span className="text-yellow-400 font-semibold mr-2">Security Tip:</span>
               {SECURITY_TIPS[securityTipIndex].tip}
             </p>
           </div>
-          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-xs flex-shrink-0">
+          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-xs shrink-0">
             {SECURITY_TIPS[securityTipIndex].category}
           </Badge>
         </div>
@@ -1344,7 +1344,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                             </div>
                             <p className="text-sm text-zinc-200 mb-1">{finding.description}</p>
                             <p className="text-xs text-emerald-400 flex items-start gap-1.5">
-                              <CheckCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              <CheckCircle className="h-3 w-3 mt-0.5 shrink-0" />
                               {finding.recommendation}
                             </p>
                           </div>
@@ -1392,7 +1392,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
               <CardContent>
                 <div className="flex items-center gap-4 overflow-x-auto pb-2">
                   {learningPath.map((mod, i) => (
-                    <div key={mod.module_id} className="flex items-center gap-4 flex-shrink-0">
+                    <div key={mod.module_id} className="flex items-center gap-4 shrink-0">
                       <div
                         className="w-48 p-3 rounded-lg border border-zinc-700/50 bg-zinc-900/50 cursor-pointer hover:border-emerald-500/30 transition-colors"
                         onClick={() => { setSelectedModule(mod); setTrainingTab("modules"); }}
@@ -1405,7 +1405,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                         <p className="text-[10px] text-zinc-500">{mod.lessons_count} lessons</p>
                       </div>
                       {i < learningPath.length - 1 && (
-                        <ChevronRight className="h-4 w-4 text-zinc-600 flex-shrink-0" />
+                        <ChevronRight className="h-4 w-4 text-zinc-600 shrink-0" />
                       )}
                     </div>
                   ))}
@@ -1537,7 +1537,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                                 if (match) {
                                   return (
                                     <div key={i} className="flex gap-2 mb-2 ml-4">
-                                      <span className="text-emerald-400 font-semibold text-sm flex-shrink-0">{match[1]}:</span>
+                                      <span className="text-emerald-400 font-semibold text-sm shrink-0">{match[1]}:</span>
                                       <span className="text-zinc-300 text-sm">{match[2]}</span>
                                     </div>
                                   );
@@ -1568,7 +1568,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                           <ul className="space-y-2">
                             {selectedLesson.key_takeaways.map((tk, i) => (
                               <li key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                                <CheckCircle className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                                <CheckCircle className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
                                 {tk}
                               </li>
                             ))}
@@ -1612,7 +1612,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                                 </div>
                                 {quizSubmitted && (
                                   <div className="flex items-start gap-1.5 text-[10px] text-zinc-400 bg-zinc-900/50 p-2 rounded">
-                                    <HelpCircle className="h-3 w-3 mt-0.5 flex-shrink-0 text-blue-400" />
+                                    <HelpCircle className="h-3 w-3 mt-0.5 shrink-0 text-blue-400" />
                                     {q.explanation}
                                   </div>
                                 )}
@@ -1667,7 +1667,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                             {lab.description}
                           </CardDescription>
                         </div>
-                        <div className="text-right flex-shrink-0 ml-4">
+                        <div className="text-right shrink-0 ml-4">
                           <span className="text-xs text-zinc-400 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {lab.duration_minutes}m
@@ -1688,7 +1688,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                             <ul className="space-y-1 ml-6">
                               {lab.objectives.map((obj, i) => (
                                 <li key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                                  <CheckCircle className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                                  <CheckCircle className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
                                   {obj}
                                 </li>
                               ))}
@@ -1706,7 +1706,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                             <ol className="space-y-2 ml-6">
                               {lab.steps.map((step, i) => (
                                 <li key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                                  <span className="text-emerald-400 font-mono text-[10px] mt-0.5 flex-shrink-0 w-4">{i + 1}.</span>
+                                  <span className="text-emerald-400 font-mono text-[10px] mt-0.5 shrink-0 w-4">{i + 1}.</span>
                                   {step}
                                 </li>
                               ))}
@@ -1783,7 +1783,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                               {phase.steps.map((step) => (
                                 <div key={step.number} className="text-xs space-y-1">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-mono flex-shrink-0">
+                                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-mono shrink-0">
                                       {step.number}
                                     </span>
                                     <p className="text-zinc-200 leading-tight">{step.description}</p>
@@ -1902,11 +1902,11 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                         <div className="space-y-2">
                           {threatResult.indicators.map((ind, i) => (
                             <div key={i} className="flex items-center gap-3 p-2 rounded bg-zinc-900/50 border border-zinc-700/30">
-                              <Badge variant="outline" className="bg-zinc-800 text-zinc-300 border-zinc-600 text-[10px] font-mono flex-shrink-0 w-16 text-center">
+                              <Badge variant="outline" className="bg-zinc-800 text-zinc-300 border-zinc-600 text-[10px] font-mono shrink-0 w-16 text-center">
                                 {ind.type}
                               </Badge>
                               <span className="text-xs text-zinc-200 font-mono flex-1 truncate">{ind.value}</span>
-                              <span className="text-xs text-red-400 flex-shrink-0">{ind.threat}</span>
+                              <span className="text-xs text-red-400 shrink-0">{ind.threat}</span>
                             </div>
                           ))}
                         </div>
@@ -1918,7 +1918,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                           <ul className="space-y-1">
                             {threatResult.recommendations.map((rec, i) => (
                               <li key={i} className="flex items-start gap-2 text-xs text-zinc-300">
-                                <ChevronRight className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                                <ChevronRight className="h-3 w-3 text-emerald-400 mt-0.5 shrink-0" />
                                 {rec}
                               </li>
                             ))}
@@ -2053,7 +2053,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                               <ul className="space-y-1">
                                 {g.obligations.map((o, j) => (
                                   <li key={j} className="flex items-start gap-2 text-[10px] text-zinc-400">
-                                    <CheckCircle className="h-2.5 w-2.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                                    <CheckCircle className="h-2.5 w-2.5 text-emerald-400 mt-0.5 shrink-0" />
                                     {o}
                                   </li>
                                 ))}
@@ -2080,7 +2080,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                         <div className="space-y-2">
                           {DATA_SUBJECT_RIGHTS.map((right, i) => (
                             <div key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-700/30">
-                              <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-mono flex-shrink-0">
+                              <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-mono shrink-0">
                                 {i + 1}
                               </span>
                               <span className="text-xs text-zinc-300">{right}</span>
@@ -2160,7 +2160,7 @@ ${assessmentResult.findings.map((f) => `[${f.severity.toUpperCase()}] ${f.catego
                           <p className="text-[10px] text-zinc-500 uppercase">Suggestions</p>
                           {passwordResult.suggestions.map((s, i) => (
                             <p key={i} className="text-xs text-yellow-400 flex items-start gap-1.5">
-                              <Lightbulb className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              <Lightbulb className="h-3 w-3 mt-0.5 shrink-0" />
                               {s}
                             </p>
                           ))}

@@ -2,15 +2,16 @@ import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-dotenv.config({ override: true });
+dotenv.config({ override: false });
 
 import { resolveGeminiApiKey } from '../lib/apiKeyResolver';
 
 // Initialize Client SDKs safely from environment variables
 const getGemini = () => {
   const apiKey = resolveGeminiApiKey();
+  if (!apiKey) throw new Error("Gemini API key is not configured");
   return new GoogleGenAI({
-    apiKey: apiKey || undefined,
+    apiKey,
     httpOptions: {
       headers: {
         'User-Agent': 'aistudio-build',
@@ -129,7 +130,7 @@ export class MultiModelMasterOrchestrator {
       if (role === 'VISUAL_3D_LAB') {
         const output = await invokeGeminiEngine(userPrompt, systemPrompt, 0.3);
         if (output.trim()) {
-          return { model: 'Gemini 2.5 Flash (Multimodal/3D Frontier)', output, role, costZar: 0.0032 };
+          return { model: 'Gemini 3.8 Flash (Multimodal)', output, role, };
         }
       }
 
@@ -150,11 +151,10 @@ export class MultiModelMasterOrchestrator {
                 model: 'Claude 3.5 Sonnet (Agentic Coding & Architecture)',
                 output,
                 role,
-                costZar: 0.0085
-              };
+                };
             }
           } catch (anthropicErr) {
-            console.warn('[Multi-Model Router] Anthropic invocation failed, cascading to Gemini...', anthropicErr);
+            console.warn('[Multi-Model Router] Anthropic unavailable; trying another provider.');
           }
         }
       }
@@ -172,10 +172,10 @@ export class MultiModelMasterOrchestrator {
             });
             const output = res.choices[0]?.message?.content || '';
             if (output.trim()) {
-              return { model: 'OpenAI GPT-6 Astra / GPT-4o (Enterprise & Cybersecurity)', output, role, costZar: 0.0075 };
+              return { model: 'OpenAI GPT-4o', output, role, };
             }
           } catch (openAiErr: any) {
-            console.warn('[Multi-Model Router] OpenAI invocation failed, cascading to Gemini...', openAiErr?.message);
+            console.warn('[Multi-Model Router] OpenAI unavailable; trying another provider.');
           }
         }
       }
@@ -198,11 +198,10 @@ export class MultiModelMasterOrchestrator {
                 model: 'Kimi Moonshot AI (Long-Context & Deep Synthesis)',
                 output,
                 role,
-                costZar: 0.0028
-              };
+                };
             }
           } catch (kimiErr: any) {
-            console.warn('[Multi-Model Router] Kimi Moonshot paused (account suspended/balance required), cascading to Gemini...', kimiErr?.message);
+            console.warn('[Multi-Model Router] Kimi unavailable; trying another provider.');
           }
         }
       }
@@ -220,40 +219,22 @@ export class MultiModelMasterOrchestrator {
             });
             const output = res.choices[0]?.message?.content || '';
             if (output.trim()) {
-              return { model: 'DeepSeek-V3 (Bulk Logic & Testing)', output, role, costZar: 0.0018 };
+              return { model: 'DeepSeek-V3 (Bulk Logic & Testing)', output, role, };
             }
           } catch (deepseekErr: any) {
-            console.warn('[Multi-Model Router] DeepSeek invocation failed (balance/quota), cascading to Gemini...', deepseekErr?.message);
+            console.warn('[Multi-Model Router] DeepSeek unavailable; trying another provider.');
           }
         }
       }
 
-      // Default & Guaranteed Engine: Gemini 2.5 Flash
+      // Default live provider, if and only if its credentials work.
       const output = await invokeGeminiEngine(userPrompt, systemPrompt, 0.4);
-      return {
-        model: 'Gemini 2.5 Flash (Sovereign High-Speed Engine)',
-        output: output || "Hello! I am Luqi-AI (powered by KHORO — The Digital Council of Wisdom), your African and Global super-intelligence companion.",
-        role,
-        costZar: 0.0025
-      };
-    } catch (err: any) {
-      console.warn(`[Multi-Model Router Warning] Cascading to resilient circuit breaker...`);
-      try {
-        const fallbackText = await invokeGeminiEngine(userPrompt, systemPrompt, 0.4);
-        return {
-          model: 'Gemini 2.5 Flash (Sovereign Circuit-Breaker)',
-          output: fallbackText || "Hello! I am Luqi-AI, your African and Global super-intelligence companion.",
-          role,
-          costZar: 0.0015
-        };
-      } catch (finalErr: any) {
-        return {
-          model: 'Gemini 2.5 Flash (Local Kernel)',
-          output: `I am Luqi-AI, created in South Africa as a next-generation Pan-African super-intelligence platform combining classical STEM mechanics, enterprise finance, and multilingual conversational intelligence. I received your inquiry: "${userPrompt.slice(0, 80)}" and will synchronize live data once connectivity re-establishes.`,
-          role,
-          costZar: 0
-        };
-      }
+      if (!output.trim()) throw new Error("Empty AI provider response");
+      return { model: 'Gemini 3.8 Flash (or configured Flash alias)', output, role };
+    } catch {
+      // A missing/failed provider must never be advertised as a live model.
+      console.warn('[Multi-Model Router] No configured model produced a valid reply.');
+      throw new Error('AI_PROVIDER_UNAVAILABLE');
     }
   }
 }

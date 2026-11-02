@@ -262,7 +262,7 @@ export default function ChatPage() {
               className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {msg.role === "assistant" && (
-                <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center shrink-0 mt-1">
                   <Bot size={16} className="text-black" />
                 </div>
               )}
@@ -306,7 +306,7 @@ export default function ChatPage() {
                 </div>
               </div>
               {msg.role === "user" && (
-                <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0 mt-1">
+                <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center shrink-0 mt-1">
                   <User size={16} className="text-neutral-300" />
                 </div>
               )}
@@ -315,7 +315,7 @@ export default function ChatPage() {
 
           {loading && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center shrink-0">
                 <Bot size={16} className="text-black animate-pulse" />
               </div>
               <Card className="bg-neutral-800 border-neutral-700">

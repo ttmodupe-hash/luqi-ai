@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="p-8 text-center">
           <h2 className="text-xl font-bold text-red-500 mb-2">Something went wrong</h2>
           <p className="text-gray-400">{this.state.error?.message}</p>
-          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-600 rounded">
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-600 rounded-sm">
             Reload Page
           </button>
         </div>

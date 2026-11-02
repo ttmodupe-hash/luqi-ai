@@ -153,9 +153,14 @@ export async function orchestrateAgent(options: {
       };
     }
 
-    // Execute each tool call for real, then re-invoke with results
+    // Validate the complete batch before any tool side effect. The SDK also
+    // models custom tool calls; these are not in LUQI's function registry.
+    const toolCalls = message.tool_calls.map((call) => {
+      if (call.type !== "function") throw new Error("Unsupported agent tool call type");
+      return call;
+    });
     messages.push(message as ChatCompletionMessageParam);
-    for (const toolCall of message.tool_calls) {
+    for (const toolCall of toolCalls) {
       const fnName = toolCall.function.name;
       let args: Record<string, any> = {};
       try {

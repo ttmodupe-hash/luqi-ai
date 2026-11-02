@@ -455,7 +455,7 @@ export const PhysicsRobotics3DViewer: React.FC = () => {
         <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
         {/* Real-Time Joint Telemetry Floating HUD (Top Left) */}
-        <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-800 p-3 rounded-2xl pointer-events-none text-xs flex flex-col gap-1.5 shadow-xl max-w-xs">
+        <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-sm border border-slate-800 p-3 rounded-2xl pointer-events-none text-xs flex flex-col gap-1.5 shadow-xl max-w-xs">
           <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
             <span className="flex items-center gap-1 text-sky-400">
               <Activity className="w-3.5 h-3.5" /> Telemetry Stream

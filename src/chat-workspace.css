@@ -1,0 +1,419 @@
+/* LUQIChat app shell. Original customer tools and their CSS remain unchanged. */
+.luqi-shell-chat { background: #0d120f; color: #eef4ed; }
+.luqi-chat-shell { display: grid; grid-template-columns: 270px minmax(0, 1fr); min-height: 100dvh; }
+.luqi-chat-shell:has(.luqi-chat-rail-compact) { grid-template-columns: 76px minmax(0, 1fr); }
+.luqi-chat-shell > .luqi-page-content { min-width: 0; background: #0d120f; }
+.luqi-chat-rail {
+  position: sticky; top: 0; height: 100dvh; min-height: 0; display: flex;
+  flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
+  background: #141a16; border-right: 1px solid #334037; padding: 22px 14px 13px;
+  z-index: 31; scrollbar-width: thin; scrollbar-color: #556a54 transparent;
+}
+.luqi-chat-rail-top, .luqi-chat-rail-primary, .luqi-chat-rail-recent-heading { display: flex; align-items: center; gap: 8px; }
+.luqi-chat-rail-top { justify-content: space-between; min-height: 40px; padding: 0 7px 18px; border-bottom: 1px solid #334238; }
+.luqi-chat-rail-brand { display: inline-flex; align-items: center; gap: 9px; color: #f1f5ec; font-size: 18px; letter-spacing: -.045em; font-weight: 750; white-space: nowrap; }
+.luqi-chat-rail-brand strong { color: #badf92; font-weight: 700; }
+.luqi-chat-rail-brand img { width: 30px; height: 30px; }
+.luqi-chat-rail-collapse, .luqi-chat-mobile-bar button { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 9px; background: transparent; color: #cedbc9; flex: none; }
+.luqi-chat-rail-collapse:hover, .luqi-chat-mobile-bar button:hover { background: #29352c; }
+.luqi-chat-rail-primary { padding: 20px 0 10px; flex-direction: column; align-items: stretch; }
+.luqi-chat-rail-primary button, .luqi-chat-rail-services a, .luqi-chat-rail-threads button, .luqi-chat-rail-bottom > a, .luqi-chat-rail-bottom > button {
+  width: 100%; display: flex; gap: 12px; align-items: center; min-height: 43px; padding: 9px 12px;
+  color: #d5e0d3; border: 1px solid transparent; background: transparent; border-radius: 10px;
+  font-size: 13px; font-weight: 540; text-align: left; line-height: 1.4; cursor: pointer;
+}
+.luqi-chat-rail-primary svg, .luqi-chat-rail-services svg, .luqi-chat-rail-threads svg, .luqi-chat-rail-bottom svg { flex: none; }
+.luqi-chat-rail-primary button:hover, .luqi-chat-rail-services a:hover, .luqi-chat-rail-threads button:hover, .luqi-chat-rail-bottom > a:hover, .luqi-chat-rail-bottom > button:hover { background: #29382c; color: #fff; }
+.luqi-chat-rail-primary .luqi-chat-rail-new { background: #2a4130; border-color: #4b674b; color: #f1fbeb; font-weight: 710; }
+.luqi-chat-rail-services { display: grid; gap: 2px; padding: 8px 0 14px; border-bottom: 1px solid #334238; }
+.luqi-chat-rail-section-label { text-transform: uppercase; font-size: 10px; font-weight: 720; letter-spacing: .14em; color: #a6b8a3; margin: 4px 12px 9px; }
+.luqi-chat-rail-services a.active, .luqi-chat-rail-threads button.active { background: #304434; color: #f3f9ed; border-color: #45644b; }
+.luqi-chat-rail-recent { display: flex; flex-direction: column; flex: 1; gap: 11px; padding-top: 20px; min-height: 110px; }
+.luqi-chat-rail-recent-heading { justify-content: space-between; padding: 0 10px; }
+.luqi-chat-rail-recent-heading h2 { font-size: 12px; font-weight: 760; color: #edf4e7; margin: 0; }
+.luqi-chat-rail-recent-heading > span { font-size: 10px; color: #abbbac; }
+.luqi-chat-rail-recent > p { color: #afc0af; font-size: 12px; line-height: 1.65; margin: 0 10px; }
+.luqi-chat-rail-filter { display:flex; gap: 8px; align-items: center; border: 1px solid #536756; border-radius: 9px; background: #1c271f; color: #a6b8a5; min-height: 38px; padding: 0 10px; }
+.luqi-chat-rail-filter input { width: 100%; min-width: 0; background: transparent; border: 0; outline: none; color: #f2f5ec; font-size: 12px; }
+.luqi-chat-rail-filter input::placeholder { color: #b1c1af; }
+.luqi-chat-rail-threads { display: grid; gap: 3px; align-content: start; }
+.luqi-chat-rail-threads button { min-width: 0; }
+.luqi-chat-rail-threads button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.luqi-chat-rail-bottom { margin-top: auto; padding-top: 15px; border-top: 1px solid #334238; }
+.luqi-chat-rail-bottom > p { color: #aebead; font-size: 11px; line-height: 1.5; margin: 12px 10px 0; }
+.luqi-chat-rail-bottom > p a { color: #d7f1bb; text-decoration: underline; }
+.luqi-chat-rail-compact { align-items: center; padding: 22px 8px 12px; }
+.luqi-chat-rail-compact .luqi-chat-rail-top, .luqi-chat-rail-compact .luqi-chat-rail-primary,
+.luqi-chat-rail-compact .luqi-chat-rail-services, .luqi-chat-rail-compact .luqi-chat-rail-bottom { width: 100%; }
+.luqi-chat-rail-compact .luqi-chat-rail-top { padding-left: 0; padding-right: 0; }
+.luqi-chat-rail-compact .luqi-chat-rail-brand > span, .luqi-chat-rail-compact .luqi-chat-rail-recent,
+.luqi-chat-rail-compact .luqi-chat-rail-section-label, .luqi-chat-rail-compact .luqi-chat-rail-primary button span,
+.luqi-chat-rail-compact .luqi-chat-rail-services a span, .luqi-chat-rail-compact .luqi-chat-rail-bottom > a span,
+.luqi-chat-rail-compact .luqi-chat-rail-bottom > button span, .luqi-chat-rail-compact .luqi-chat-rail-bottom > p { display: none; }
+.luqi-chat-rail-compact .luqi-chat-rail-primary button, .luqi-chat-rail-compact .luqi-chat-rail-services a,
+.luqi-chat-rail-compact .luqi-chat-rail-bottom > a, .luqi-chat-rail-compact .luqi-chat-rail-bottom > button { justify-content: center; padding: 9px; }
+.luqi-chat-mobile-bar, .luqi-chat-backdrop { display: none; }
+
+/* Chat remains the center of the app, with actual confirmed AI turns only. */
+.luqi-chat-main { min-width: 0; max-width: 1100px; padding: 26px 30px 26px; margin: 0 auto; }
+.luqi-chat-main .luqi-chat-region { margin: 0 0 12px; }
+.luqi-chat-canvas { display: flex; flex-direction: column; min-height: calc(100dvh - 82px); width: 100%; margin: 0 auto; max-width: 880px; }
+.luqi-chat-canvas-header { display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid #2b3d31; padding: 10px 0 19px; }
+.luqi-chat-canvas-header h1 { color:#f5f8f2; font-size: 24px; letter-spacing: -.035em; font-weight: 760; margin: 0; }
+.luqi-chat-canvas-header p { margin: 4px 0 0; color: #bbd3bc; font-size: 12px; }
+.luqi-chat-canvas-tag { color:#d6eabc; border:1px solid #597359; background:#223326; border-radius: 20px; padding:6px 10px; font-size:11px; white-space:nowrap; }
+.luqi-chat-transcript { display:flex; flex-direction:column; gap:22px; flex: 1; min-height: 240px; padding: 36px 0 28px; }
+.luqi-chat-welcome { margin:auto; max-width:700px; text-align:center; }
+.luqi-chat-welcome-symbol { display:grid; place-items:center; margin:0 auto 16px; width:52px; height:52px; border-radius:18px; color:#dcf1c7; background:#24382a; border:1px solid #56745a; }
+.luqi-chat-welcome h2 { color:#f4f8f0; font-size:clamp(25px,3.6vw,38px); letter-spacing:-.04em; font-weight:720; margin:0 0 8px; }
+.luqi-chat-welcome p { color:#c4d4c5; line-height:1.65; font-size:14px; margin:0 auto 24px; max-width:510px; }
+.luqi-chat-quick-prompts { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+.luqi-chat-quick-prompts button { font-size:13px; color:#e2eedc; background:#1e2b22; border:1px solid #506451; border-radius:12px; padding:12px 14px; min-height:45px; cursor:pointer; }
+.luqi-chat-quick-prompts button:hover { background:#2c4330; }
+.luqi-chat-message { max-width:88%; padding:14px 17px; border-radius:18px; line-height:1.7; overflow-wrap:anywhere; color:#e8efe5; }
+.luqi-chat-message p { margin:6px 0 0; white-space:pre-wrap; }
+.luqi-chat-message strong { font-size:12px; color:#d1e8be; }
+.luqi-chat-message-user { align-self:flex-end; background:#293b2d; border:1px solid #426247; border-bottom-right-radius:5px; }
+.luqi-chat-message-ai { align-self:stretch; background:#151e18; border:1px solid #2d4133; border-bottom-left-radius:5px; }
+.luqi-chat-provider { margin:0 0 16px; color:#b4c7af; font-size:11px; }
+.luqi-chat-compose-panel { position:sticky; bottom:12px; z-index:3; padding:18px 19px; background:#1b2820; border:1px solid #657d65; border-radius:20px; box-shadow:0 15px 40px #0005; }
+.luqi-chat-compose-panel label, .luqi-chat-compose-panel legend { color:#e8f0e2; font-size:13px; }
+.luqi-chat-compose-panel textarea { display:block; width:100%; min-height:72px; max-height:230px; resize:vertical; background:#111b15; color:#f4f8f0; border:1px solid #6d846b; padding:14px; border-radius:13px; font:inherit; font-size:15px; line-height:1.5; }
+.luqi-chat-compose-panel textarea::placeholder { color:#aabda6; }
+.luqi-chat-compose-panel .luqi-chat-consent { display:flex; gap:9px; align-items:flex-start; font-size:12px; line-height:1.5; color:#e3ecde; margin:12px 0 8px; }
+.luqi-chat-compose-panel .luqi-chat-consent input { margin-top:3px; }
+.luqi-chat-compose-actions { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:13px; }
+.luqi-chat-compose-actions button { min-height:43px; border:1px solid #526e53; border-radius:11px; background:#24382a; color:#eaf4e5; padding:10px 15px; font-weight:650; }
+.luqi-chat-compose-actions button[type=submit] { background:#c9e9ac; color:#172a1e; border-color:#c9e9ac; margin-left:auto; }
+.luqi-chat-compose-actions button:disabled { opacity:.5; cursor:not-allowed; }
+.luqi-chat-compose-actions .luqi-chat-limit { color:#b7cbb3; font-size:11px; }
+.luqi-chat-compose-details { margin-top:12px; border-top:1px solid #3f5444; padding:10px 0 0; }
+.luqi-chat-compose-details summary { color:#d3e6c4; cursor:pointer; min-height:36px; font-size:12px; }
+.luqi-chat-compose-details label { display:block; margin:12px 0; font-size:12px; line-height:1.6; }
+.luqi-chat-compose-details li { margin:8px 0; font-size:12px; overflow-wrap:anywhere; }
+.luqi-chat-notice { padding:12px 15px; border-radius:11px; background:#3d3220; color:#ffe2aa; border:1px solid #896e42; margin:15px 0; font-size:13px; }
+.luqi-chat-availability-row { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding:15px 0; font-size:12px; color:#c7d6c4; }
+.luqi-chat-availability-row button { background:transparent; border:1px solid #647b62; border-radius:10px; color:#e9f2e5; padding:10px 13px; }
+.luqi-chat-caption { font-size:11px; color:#a9bfa9; line-height:1.6; padding:15px 4px 0; }
+.luqi-chat-caption a { color:#d5eeb9; text-decoration:underline; }
+.luqi-chat-login { border:1px solid #476048; border-radius:19px; padding:25px; background:#16251c; max-width:600px; margin:0 auto 15px; width:100%; }
+.luqi-chat-login .luqi-access { max-width:none; border:0; border-radius:0; padding:0; background:transparent; }
+.luqi-chat-login .luqi-access > p { margin:10px 0; }
+.luqi-chat-login .luqi-access .luqi-access-help { font-size:12px; line-height:1.55; }
+.luqi-chat-workspace-links { display:flex; flex-wrap:wrap; gap:14px; margin:22px 0 0; font-size:13px; }
+.luqi-chat-workspace-links a { color:#cfe7c4; text-decoration:underline; }
+.luqi-chat-main :focus-visible, .luqi-chat-rail :focus-visible { outline:3px solid #d4f1b0; outline-offset:3px; }
+.luqi-chat-canvas .luqi-chat-next-step { max-width:850px; }
+
+@media(max-width: 900px) {
+  .luqi-chat-shell, .luqi-chat-shell:has(.luqi-chat-rail-compact) { display:block; }
+  .luqi-chat-mobile-bar { display:flex; position:sticky; top:0; z-index:30; align-items:center; justify-content:space-between; gap:8px; height:62px; padding:0 14px; background:#151d17; border-bottom:1px solid #384939; }
+  .luqi-chat-mobile-bar a { color:#f0f4eb; font-size:18px; font-weight:750; letter-spacing:-.04em; }
+  .luqi-chat-mobile-bar a span { color:#c8e6ae; }
+  .luqi-chat-backdrop { display:block; position:fixed; inset:0; z-index:38; width:100%; height:100%; border:0; background:#0009; }
+  .luqi-chat-rail { position:fixed; z-index:39; inset:0 auto 0 0; width:min(300px,86vw); height:100dvh; transform:translateX(-105%); visibility:hidden; transition:transform .16s ease; }
+  .luqi-chat-rail-open { visibility:visible; }
+  .luqi-chat-rail-open { transform:translateX(0); }
+  .luqi-chat-rail-collapse { display:none; }
+  .luqi-chat-rail-compact .luqi-chat-rail-recent, .luqi-chat-rail-compact .luqi-chat-rail-section-label,
+  .luqi-chat-rail-compact .luqi-chat-rail-brand > span, .luqi-chat-rail-compact .luqi-chat-rail-primary button span,
+  .luqi-chat-rail-compact .luqi-chat-rail-services a span, .luqi-chat-rail-compact .luqi-chat-rail-bottom > a span,
+  .luqi-chat-rail-compact .luqi-chat-rail-bottom > button span, .luqi-chat-rail-compact .luqi-chat-rail-bottom > p { display: initial; }
+  .luqi-chat-main { padding:16px 16px 30px; }
+  .luqi-chat-canvas { min-height:calc(100dvh - 115px); }
+}
+@media(max-width: 580px) {
+  .luqi-chat-canvas-header h1 { font-size:21px; }
+  .luqi-chat-canvas-header { gap:10px; }
+  .luqi-chat-canvas-tag { font-size:10px; }
+  .luqi-chat-transcript { padding-top:22px; min-height:210px; }
+  .luqi-chat-message { max-width:100%; font-size:14px; }
+  .luqi-chat-compose-panel { padding:13px; bottom:6px; border-radius:17px; }
+  .luqi-chat-compose-panel textarea { min-height:65px; font-size:16px; }
+  .luqi-chat-compose-actions .luqi-chat-limit { flex-basis:100%; }
+  .luqi-chat-main { padding:12px 12px 25px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .luqi-chat-rail { transition:none; }
+}
+
+
+/* Preserve a useful conversation viewport on 320px phones without hiding consent. */
+.luqi-chat-availability-row > span { flex: 1; min-width: 150px; }
+.luqi-chat-availability-row > button { flex: none; min-height: 38px; white-space: nowrap; }
+@media(max-width:580px) {
+  .luqi-chat-availability-row { gap: 8px; padding: 11px 0; font-size: 11px; }
+  .luqi-chat-availability-row > span { min-width: 0; }
+  .luqi-chat-availability-row > button { font-size: 11px; padding: 8px 9px; }
+  .luqi-chat-transcript { min-height: 150px; padding: 14px 0 18px; }
+  .luqi-chat-message { padding: 11px 12px; }
+  .luqi-chat-welcome-symbol { margin-bottom: 10px; }
+  .luqi-chat-welcome h2 { font-size: 26px; }
+  .luqi-chat-welcome p { font-size: 12px; line-height: 1.45; margin-bottom: 12px; }
+  .luqi-chat-compose-panel { padding: 10px; }
+  .luqi-chat-login { padding: 15px; }
+  .luqi-chat-compose-panel textarea { min-height: 54px; max-height: 180px; padding: 10px; }
+  .luqi-chat-compose-panel .luqi-chat-consent { margin: 7px 0 5px; gap: 7px; font-size: 11px; }
+  .luqi-chat-compose-details { margin-top: 5px; padding-top: 5px; }
+  .luqi-chat-compose-details summary { min-height: 24px; font-size: 11px; }
+  .luqi-chat-compose-actions { gap: 6px; margin-top: 6px; }
+  .luqi-chat-compose-actions .luqi-chat-limit { flex-basis: auto; font-size: 10px; }
+  .luqi-chat-compose-actions button { padding: 8px 12px; min-height: 40px; font-size: 12px; }
+  .luqi-chat-new-in-composer { display: none !important; }
+  .luqi-chat-canvas-header { padding: 5px 0 12px; }
+  .luqi-chat-canvas-header h1 { font-size: 20px; }
+}
+
+
+/* Mobile is a first-class conversation surface, not a compressed desktop sidebar. */
+.luqi-chat-mobile-dock { display:none; }
+.luqi-chat-login { max-width: 690px; border-color: #496b4d; background:radial-gradient(circle at 95% 5%, #42694443,transparent 40%),linear-gradient(145deg,#1f3426,#16251c); }
+.luqi-chat-login-top { display:flex; align-items:flex-start; gap:16px; }
+.luqi-chat-login-top h2 { margin: 0 0 8px; font-weight:760; letter-spacing:-.035em; font-size: clamp(18px,3vw,24px); line-height:1.2; color:#f2fae9; }
+.luqi-chat-login-top p { margin:0; font-size:13px; line-height:1.7; color:#d2e4cb; }
+.luqi-chat-login-orb { display:grid; place-items:center; width:43px; height:43px; border-radius:14px; flex:none; background:#36503b; color:#dff4c3; border:1px solid #68896b; }
+.luqi-chat-login-actions { display:flex; gap:11px; flex-wrap:wrap; margin:18px 0 0; align-items:center; }
+.luqi-chat-login-actions a { display:inline-flex; align-items:center; justify-content:center; min-height:46px; border-radius:11px; padding:11px 17px; font-size:13px; font-weight:750; }
+.luqi-chat-login-action { color:#16291d; background:#ccedb0; border:1px solid #ccedb0; }
+.luqi-chat-login-secondary { color:#edfae5; background:#2a4130; border:1px solid #668466; }
+.luqi-chat-signin-inline { margin-top:15px; border-top:1px solid #4b6651; padding-top:10px; }
+.luqi-chat-signin-inline > summary { display:list-item; cursor:pointer; min-height:38px; padding:8px 5px; color:#cfedb7; font-size:12px; }
+.luqi-chat-signin-inline[open] .luqi-access { margin:10px auto 5px; }
+.luqi-chat-signin-inline .luqi-access .luqi-access-help { font-size:11px; }
+.luqi-chat-rail-thread-row { display:flex; align-items:center; gap:3px; min-width:0; }
+.luqi-chat-rail-threads .luqi-chat-rail-thread-row > button:first-child { flex:1; min-width:0; }
+.luqi-chat-rail-thread-row > .luqi-chat-rail-thread-forget { display:grid; place-items:center; flex:none; width:34px; height:38px; min-height:38px; padding:0; border-radius:9px; opacity:.75; color:#c7d2be; }
+.luqi-chat-rail-thread-row > .luqi-chat-rail-thread-forget:hover { color:#ffe0d1; opacity:1; background:#4d3029; }
+.luqi-chat-rail-more { display:block; width:calc(100% - 20px); margin:3px 10px; min-height:39px; border:1px solid #597159; border-radius:10px; background:#223427; color:#e4f3d8; font-size:12px; }
+.luqi-chat-rail-counter { color:#a9b7a9!important; font-size:11px!important; }
+.luqi-chat-rail-forget-confirm { display:flex; flex-wrap:wrap; gap:7px; background:#2c2820; border:1px solid #97774e; border-radius:11px; padding:12px; margin:4px 8px; }
+.luqi-chat-rail-forget-confirm p { flex-basis:100%; color:#f5dfbd; font-size:12px; line-height:1.5; margin:0; }
+.luqi-chat-rail-forget-confirm button { border:1px solid #94794d; border-radius:8px; background:#56422b; min-height:38px; padding:8px 10px; color:#fce9c8; font-size:12px; }
+.luqi-chat-rail-recent { scroll-margin-top:16px; }
+@media (max-width: 900px) {
+  .luqi-chat-mobile-bar { height:56px; padding:0 16px; background:linear-gradient(120deg,#18251d,#172119 70%,#233d2b); }
+  .luqi-chat-mobile-bar a { font-size:19px; letter-spacing:-.03em; }
+  .luqi-chat-mobile-dock {
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:center;
+    position:fixed; inset:auto 0 0; z-index:28;
+    min-height:calc(58px + env(safe-area-inset-bottom));
+    padding:5px 8px calc(5px + env(safe-area-inset-bottom));
+    background:rgba(16,28,20,.98); border-top:1px solid #4e6a4e;
+    box-shadow:0 -10px 25px #0005;
+  }
+  .luqi-chat-mobile-dock > a,.luqi-chat-mobile-dock > button {
+    display:flex; flex-direction:column; gap:3px; justify-content:center; align-items:center;
+    border:0; min-width:0; min-height:48px; padding:6px 4px;
+    background:transparent; color:#c4d3c1; font-size:11px; font-weight:660; border-radius:10px;
+  }
+  .luqi-chat-mobile-dock > a[aria-current=page] { color:#dbf5c0; background:#294230; }
+  .luqi-chat-mobile-dock > button:hover,.luqi-chat-mobile-dock > a:hover { color:#eef9e7; background:#294230; }
+  .luqi-chat-mobile-dock svg { width:20px; height:20px; }
+  .luqi-chat-main { padding-bottom:calc(82px + env(safe-area-inset-bottom)); }
+  .luqi-chat-canvas { min-height:calc(100dvh - 132px - env(safe-area-inset-bottom)); }
+  .luqi-chat-compose-panel { bottom:calc(65px + env(safe-area-inset-bottom)); }
+  .luqi-chat-rail { padding-bottom:calc(22px + env(safe-area-inset-bottom)); }
+  .luqi-chat-rail-open { box-shadow:0 0 0 100vmax #0000, 10px 0 42px #000b; }
+}
+@media (max-width: 580px) {
+  .luqi-chat-login { padding:17px; border-radius:18px; }
+  .luqi-chat-login-top { gap:11px; }
+  .luqi-chat-login-orb { width:36px; height:36px; border-radius:12px; }
+  .luqi-chat-login-top h2 { font-size:19px; }
+  .luqi-chat-login-top p { font-size:12px; line-height:1.55; }
+  .luqi-chat-login-actions { gap:8px; }
+  .luqi-chat-login-actions a { min-height:43px; font-size:12px; flex:1; }
+  .luqi-chat-welcome h2 { color:#f3f9ed; font-size:clamp(23px,6.7vw,31px); }
+  .luqi-chat-welcome { background:radial-gradient(ellipse at center top,#2a453027,transparent 70%); border-radius:20px; padding:12px 7px; }
+  .luqi-chat-quick-prompts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .luqi-chat-quick-prompts button { text-align:left; padding:10px; font-size:11px; border-color:#546e56; }
+  .luqi-chat-canvas-header p { font-size:11px; }
+  .luqi-chat-caption { font-size:10px; line-height:1.5; }
+  .luqi-chat-workspace-links { font-size:11px; gap:10px; margin-top:9px; }
+}
+
+
+/* An explicit, bounded notes preview. A network error never blanks active Chat. */
+.luqi-saved-notes-peek { border-top:1px solid #3d4e3d; margin-top:15px; padding:16px 6px 20px; }
+.luqi-saved-notes-header { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+.luqi-saved-notes-header h3 { display:flex; gap:7px; align-items:center; margin:0; font-size:12px; color:#f0f6eb; font-weight:740; }
+.luqi-saved-notes-header > a { color:#cde5b4; font-size:11px; text-decoration:underline; white-space:nowrap; }
+.luqi-saved-notes-disclaimer, .luqi-saved-notes-status { font-size:11px; color:#b2c4b1; line-height:1.55; margin:10px 1px; }
+.luqi-saved-notes-load, .luqi-saved-notes-error button { display:inline-flex; align-items:center; gap:7px; min-height:39px; margin:7px 0 0; border:1px solid #58745a; background:#283e2e; color:#e6f4dc; border-radius:9px; padding:8px 11px; font-size:11px; font-weight:670; }
+.luqi-saved-notes-error { border:1px solid #9a7744; background:#342c1e; padding:11px; border-radius:10px; }
+.luqi-saved-notes-error p { margin:0; font-size:11px; line-height:1.55; color:#ffdfb9; }
+.luqi-saved-notes-list { display:grid; gap:3px; margin:10px 0; max-height:285px; overflow-y:auto; scrollbar-width:thin; }
+.luqi-saved-notes-list a { display:flex; gap:8px; align-items:center; color:#d7e6d1; border-radius:8px; min-height:38px; padding:6px 8px; font-size:11px; background:#1c2920; }
+.luqi-saved-notes-list a:hover { background:#334b38; color:#fff; }
+.luqi-saved-notes-list a svg { flex:none; }
+.luqi-saved-notes-list a span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.luqi-chat-rail-compact .luqi-saved-notes-peek { display:none; }
+
+
+/* Guests can reach account actions without crossing a full-height transcript. */
+.luqi-chat-canvas-guest { min-height:0; }
+.luqi-chat-canvas-guest .luqi-chat-transcript { flex:none; min-height:0; }
+@media (max-width:580px) {
+  .luqi-chat-canvas-guest .luqi-chat-transcript { padding:15px 0 12px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome { padding:8px 2px 5px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome-symbol { height:37px; width:37px; border-radius:12px; margin-bottom:8px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome-symbol svg { height:21px; width:21px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome h2 { font-size:25px; margin-bottom:7px; }
+  .luqi-chat-canvas-guest .luqi-chat-welcome p { font-size:11px; line-height:1.45; margin-bottom:0; }
+  .luqi-chat-canvas-guest .luqi-chat-login { margin:6px auto 0; }
+  .luqi-chat-canvas-header { padding-top:3px; }
+}
+
+/* Optional companion support stays inside the existing consented Chat surface. */
+.luqi-chat-companion-mode { display:flex; align-items:flex-start; gap:9px; padding:9px 0 2px; color:#dcead7; font-size:12px; line-height:1.55; }
+.luqi-chat-companion-mode input { margin-top:3px; flex:none; }
+.luqi-chat-compose-details .luqi-chat-companion-personalise { margin:11px 0; padding:11px 12px; border:1px solid #536b57; border-radius:13px; background:#16251b; }
+.luqi-chat-companion-personalise > summary { color:#dcefcf; font-weight:650; }
+.luqi-chat-companion-share { display:flex!important; align-items:flex-start; gap:9px; padding:10px; margin:9px 0!important; border:1px solid #789473; border-radius:9px; background:#203a27; }
+.luqi-chat-companion-share input { margin-top:4px; flex:none; }
+.luqi-companion-notes { min-width:0; margin:8px 0; font-size:12px; color:#d8e7d3; }
+.luqi-companion-notes p { margin:8px 0; line-height:1.55; overflow-wrap:anywhere; }
+.luqi-companion-note-actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
+.luqi-companion-note-actions a { color:#e4f4d6; text-decoration:underline; }
+.luqi-companion-notes button { border:1px solid #657e63; border-radius:9px; padding:8px 11px; min-height:39px; max-width:100%; background:#27402c; color:#edf9e6; text-align:left; }
+.luqi-companion-notes button:disabled { opacity:.55; cursor:not-allowed; }
+.luqi-companion-note-list { display:flex; flex-wrap:wrap; gap:6px; padding:10px 0; max-height:190px; overflow-y:auto; }
+.luqi-companion-note-list button[aria-pressed=true], .luqi-companion-note-message button[aria-pressed=true] { background:#53734e; border-color:#b9deb0; }
+.luqi-companion-note-messages { display:grid; gap:8px; padding:6px 0; max-height:280px; overflow-y:auto; }
+.luqi-companion-note-message, .luqi-companion-note-selected { min-width:0; padding:9px; border:1px solid #435b47; border-radius:9px; background:#1d3023; }
+.luqi-companion-note-message p, .luqi-companion-note-selected p { white-space:pre-wrap; }
+.luqi-companion-note-selected { margin-top:10px; border-color:#95b68a; }
+@media (max-width:580px) {
+  .luqi-chat-compose-details .luqi-chat-companion-personalise { padding:8px; }
+  .luqi-companion-note-actions { align-items:stretch; }
+}
+
+/* On narrow phones, an expanded prompt guide must not cover the availability
+   controls, confirmed replies or other page actions. Keep the fixed mobile
+   dock but allow the complete composer to flow and scroll with the document. */
+@media (max-width: 900px) {
+  .luqi-chat-compose-panel { position: relative; bottom: auto; }
+  .luqi-chat-availability-row { scroll-margin-top: 74px; }
+}
+
+/* Chat-first composer: calmer midnight-blue styling and a clear Send action.
+   These rules are scoped to Chat, not the public site or other customer tools. */
+.luqi-shell-chat { background:#071326; color:#e9f1ff; }
+.luqi-shell-chat .luqi-chat-shell > .luqi-page-content {
+  background:radial-gradient(ellipse at 65% 2%,rgba(41,89,170,.16),transparent 54%),#071326;
+}
+.luqi-shell-chat .luqi-chat-rail { background:#0a172b; border-right-color:#243a5c; scrollbar-color:#49628a transparent; }
+.luqi-shell-chat .luqi-chat-rail-top { border-bottom-color:#294062; }
+.luqi-shell-chat .luqi-chat-rail-primary button:hover,
+.luqi-shell-chat .luqi-chat-rail-services a:hover,
+.luqi-shell-chat .luqi-chat-rail-threads button:hover { background:#1a3152; }
+.luqi-shell-chat .luqi-chat-canvas-header { border-bottom-color:#263e60; }
+.luqi-shell-chat .luqi-chat-canvas-header h1,
+.luqi-shell-chat .luqi-chat-welcome h2 { color:#f1f6ff; }
+.luqi-shell-chat .luqi-chat-canvas-header p,
+.luqi-shell-chat .luqi-chat-welcome p { color:#b8cbea; }
+.luqi-shell-chat .luqi-chat-canvas-tag { background:#142a48; color:#b8d6ff; border-color:#3b5b8b; }
+.luqi-shell-chat .luqi-chat-welcome-symbol { color:#bba7ff; background:#192c50; border-color:#415b8c; }
+.luqi-shell-chat .luqi-chat-quick-prompts button { background:#10223c; border-color:#304c77; color:#e5efff; }
+.luqi-shell-chat .luqi-chat-quick-prompts button:hover { background:#203a60; }
+.luqi-shell-chat .luqi-chat-message-user { background:#1a3157; border-color:#4166a0; }
+.luqi-shell-chat .luqi-chat-message-ai { background:#0c1b32; border-color:#263e63; }
+.luqi-shell-chat .luqi-chat-message strong { color:#b9d8ff; }
+.luqi-shell-chat .luqi-chat-availability-row { color:#b8cdec; }
+.luqi-shell-chat .luqi-chat-availability-row button { background:#152c4a; border-color:#3d5b85; color:#dcecff; }
+.luqi-shell-chat .luqi-chat-availability-row a { color:#9ac8ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-shell-chat .luqi-chat-compose-panel {
+  padding:16px; border-radius:20px;
+  border:1px solid #35527b;
+  background:linear-gradient(145deg,#101f37,#0a172b);
+  box-shadow:0 18px 42px rgba(0,0,0,.36);
+}
+.luqi-shell-chat .luqi-chat-composer-label { display:block; font-size:12px; color:#bed1ef; margin-bottom:8px; }
+.luqi-shell-chat .luqi-chat-compose-input {
+  display:flex; align-items:flex-end; gap:9px; padding:8px;
+  border:1px solid #3a5886; border-radius:16px;
+  background:#08162a; transition:border-color .15s ease,box-shadow .15s ease;
+}
+.luqi-shell-chat .luqi-chat-compose-input:focus-within {
+  border-color:#73a7ff; box-shadow:0 0 0 2px rgba(87,145,240,.24);
+}
+.luqi-shell-chat .luqi-chat-compose-input textarea {
+  flex:1; min-width:0; min-height:56px; max-height:210px; padding:10px;
+  border:0; border-radius:9px; background:transparent; color:#f4f8ff;
+  resize:vertical; font-size:16px; line-height:1.5;
+}
+.luqi-shell-chat .luqi-chat-compose-input textarea:focus-visible { outline:none; }
+.luqi-shell-chat .luqi-chat-compose-input textarea::placeholder { color:#9eb7d8; }
+.luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  min-width:92px; min-height:45px; padding:10px 13px; flex:none;
+  border:1px solid #65a6ff; border-radius:12px;
+  color:#fff; background:linear-gradient(135deg,#297cf0,#1c5cc9);
+  font-size:13px; font-weight:750; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send:not(:disabled):hover { background:#397fff; }
+.luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send:disabled { opacity:.48; cursor:not-allowed; }
+.luqi-shell-chat .luqi-chat-compose-meta {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  gap:4px 12px; margin:9px 2px 0; font-size:11px; color:#adc2df;
+}
+.luqi-shell-chat .luqi-chat-compose-meta .luqi-chat-limit { color:#adc2df; font-size:11px; }
+.luqi-shell-chat .luqi-chat-keyboard-hint { color:#8ea9cf; }
+.luqi-shell-chat .luqi-chat-first-consent {
+  display:flex; gap:10px; align-items:flex-start;
+  margin:12px 0 6px; padding:12px; border:1px solid #3c5880;
+  border-radius:12px; background:#162946; font-size:12px; line-height:1.55;
+}
+.luqi-shell-chat .luqi-chat-first-consent input { flex:none; margin-top:3px; accent-color:#4a98ff; width:17px; height:17px; }
+.luqi-shell-chat .luqi-chat-first-consent a,
+.luqi-shell-chat .luqi-chat-consent-confirmed button { color:#a8d1ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-shell-chat .luqi-chat-consent-privacy { margin:2px 0 4px; font-size:11px; }
+.luqi-shell-chat .luqi-chat-consent-privacy a { color:#a8d1ff; text-decoration:underline; text-underline-offset:3px; }
+.luqi-shell-chat .luqi-chat-consent-confirmed {
+  display:flex; align-items:center; flex-wrap:wrap; gap:7px 13px;
+  margin:9px 0 4px; font-size:11px; line-height:1.5; color:#afc9e7;
+}
+.luqi-shell-chat .luqi-chat-consent-confirmed button {
+  border:0; background:transparent; padding:4px 0; font-size:11px; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-consent-confirmed button:disabled { opacity:.5; }
+.luqi-shell-chat .luqi-chat-compose-more { margin-top:7px; padding-top:7px; border-top:1px solid #293f60; }
+.luqi-shell-chat .luqi-chat-compose-more > summary {
+  cursor:pointer; padding:7px 2px; color:#b5d4fa; font-size:12px; min-height:33px;
+}
+.luqi-shell-chat .luqi-chat-compose-more[open] { padding-bottom:8px; }
+.luqi-shell-chat .luqi-chat-compose-more .luqi-chat-companion-mode { color:#d4e3f9; }
+.luqi-shell-chat .luqi-chat-compose-details { border-color:#2f486a; }
+.luqi-shell-chat .luqi-chat-compose-details summary { color:#bedaff; }
+.luqi-shell-chat .luqi-chat-compose-footer {
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+  gap:9px; margin-top:6px; color:#91acd0; font-size:11px;
+}
+.luqi-shell-chat .luqi-chat-compose-footer .luqi-chat-compose-secondary {
+  min-height:34px; border:0; background:transparent; color:#b8d6ff;
+  font-size:12px; padding:5px 4px; text-decoration:underline;
+  text-underline-offset:3px; cursor:pointer;
+}
+.luqi-shell-chat .luqi-chat-compose-footer button:disabled { opacity:.5; cursor:not-allowed; }
+.luqi-shell-chat .luqi-chat-caption { color:#a0b7d5; }
+.luqi-shell-chat .luqi-chat-caption a,
+.luqi-shell-chat .luqi-chat-workspace-links a { color:#a9ceff; }
+.luqi-shell-chat .luqi-chat-login { background:linear-gradient(145deg,#112542,#0b1a30); border-color:#35537d; }
+.luqi-shell-chat .luqi-chat-login-top h2 { color:#f0f6ff; }
+.luqi-shell-chat .luqi-chat-login-top p { color:#bed0e9; }
+.luqi-shell-chat .luqi-chat-login-orb { background:#1b3558; border-color:#42689b; color:#b8d4ff; }
+.luqi-shell-chat .luqi-chat-login-action { background:#3287ed; border-color:#3287ed; color:#fff; }
+.luqi-shell-chat .luqi-chat-login-secondary { background:#182e4b; border-color:#3d5b84; color:#e8f3ff; }
+.luqi-shell-chat .luqi-chat-mobile-bar { background:#0d1c34; border-bottom-color:#29446a; }
+.luqi-shell-chat .luqi-chat-mobile-dock { background:rgba(9,24,44,.98); border-top-color:#314e78; }
+.luqi-shell-chat .luqi-chat-mobile-dock > a[aria-current=page] { background:#204a82; color:#fff; }
+.luqi-chat-main :focus-visible, .luqi-chat-rail :focus-visible { outline-color:#8fc0ff; }
+@media(max-width:580px) {
+  .luqi-shell-chat .luqi-chat-compose-panel { padding:11px; border-radius:16px; }
+  .luqi-shell-chat .luqi-chat-compose-input { padding:5px; gap:5px; }
+  .luqi-shell-chat .luqi-chat-compose-input textarea { min-height:52px; padding:9px; font-size:16px; }
+  .luqi-shell-chat .luqi-chat-compose-input .luqi-chat-send { min-width:68px; min-height:43px; padding:9px; }
+  .luqi-shell-chat .luqi-chat-keyboard-hint { display:none; }
+  .luqi-shell-chat .luqi-chat-compose-footer .luqi-chat-new-in-composer { display:inline-flex!important; }
+  .luqi-shell-chat .luqi-chat-first-consent { padding:9px; font-size:11px; }
+}

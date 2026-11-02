@@ -37,7 +37,11 @@ class AuthManager(Authenticator):
 
     def validate(self, key: str) -> Optional[Dict[str, Any]]:
         """Return key info or None if invalid."""
-        if self._admin_key and key == self._admin_key:
+        if not isinstance(key, str) or not key or len(key) > 4096:
+            return None
+        if self._admin_key and secrets.compare_digest(
+            key.encode("utf-8"), self._admin_key.encode("utf-8")
+        ):
             return {"name": "admin_env", "is_admin": True, "hash": "admin"}
         key_hash = self._hash(key)
         row = self.pool.fetchone("SELECT * FROM api_keys WHERE key_hash = ?", (key_hash,))
@@ -52,8 +56,6 @@ class AuthManager(Authenticator):
         return None
 
     def is_admin(self, key: str) -> bool:
-        if self._admin_key and key == self._admin_key:
-            return True
         info = self.validate(key)
         return info["is_admin"] if info else False
 

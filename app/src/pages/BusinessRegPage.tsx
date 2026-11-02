@@ -847,7 +847,7 @@ export default function BusinessRegPage() {
                           <ul className="space-y-1">
                             {step.tips.map((tip, i) => (
                               <li key={i} className="text-sm text-neutral-300 flex items-start gap-2">
-                                <Info className="h-3 w-3 text-blue-400 flex-shrink-0 mt-1" />
+                                <Info className="h-3 w-3 text-blue-400 shrink-0 mt-1" />
                                 {tip}
                               </li>
                             ))}
@@ -1065,7 +1065,7 @@ export default function BusinessRegPage() {
 
                 <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                    <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-blue-400">Small Business Corporation (SBC) Rates</p>
                       <p className="text-sm text-neutral-300 mt-1">

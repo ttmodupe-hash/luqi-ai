@@ -1,16 +1,16 @@
-# Production deployment is intentionally disabled until the verified target,
-# workload identity, secret references, rollback and staging gates are configured.
-# This workflow cannot deploy or mutate DNS.
-name: LUQI Production Deployment Guard
+# LEGACY GOOGLE CLOUD DEPLOYMENT RETIRED. Railway is the current LUQI web host.
+# Explicit dispatch is a refusal, not authorization to deploy or access secrets.
+name: LUQI Legacy GCP Deployment Disabled
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  deployment-guard:
+  disabled:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Block unsafe legacy deployment
+      - name: Refuse obsolete production deployment
         run: |
-          echo "::error::Production deployment disabled: verify GCP project, Cloud Run region/service, Artifact Registry, workload identity, secrets, staging tests and rollback."
+          echo "Legacy GCP deployment is retired. Use a separately reviewed, approved target-specific release process."
           exit 1

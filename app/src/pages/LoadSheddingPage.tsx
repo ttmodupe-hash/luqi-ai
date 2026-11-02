@@ -294,7 +294,7 @@ const ChecklistItemRow = ({ item, onToggle }: { item: ChecklistItem; onToggle: (
       item.completed ? "bg-green-500/10 border border-green-500/20" : "bg-neutral-800 hover:bg-neutral-750 border border-transparent"
     }`}
   >
-    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
       item.completed ? "bg-green-500 border-green-500" : "border-neutral-600"
     }`}>
       {item.completed && <CheckCircle2 className="h-3 w-3 text-white" />}

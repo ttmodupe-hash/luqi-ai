@@ -189,7 +189,7 @@ export default function AIBrainPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
             {msg.role === "assistant" && (
-              <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
                 <Sparkles size={16} className="text-cyan-500" />
               </div>
             )}
@@ -219,7 +219,7 @@ export default function AIBrainPage() {
               )}
             </div>
             {msg.role === "user" && (
-              <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center shrink-0">
                 <User size={16} />
               </div>
             )}
@@ -251,7 +251,7 @@ export default function AIBrainPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask LUQI AI anything..."
-            className="flex-1 px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-none focus:border-cyan-500 text-sm"
+            className="flex-1 px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white placeholder-neutral-500 focus:outline-hidden focus:border-cyan-500 text-sm"
           />
           <button
             type="submit"

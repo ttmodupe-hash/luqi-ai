@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   GraduationCap,
   Cloud,
@@ -69,35 +69,47 @@ export const SocraticExamTutor: React.FC = () => {
 
   // Blueprint mastery state
   const [userStats, setUserStats] = useState<Record<string, { total: number; correct: number }>>({
-    People: { total: 4, correct: 3 },
-    Process: { total: 6, correct: 5 },
-    "Business Environment": { total: 2, correct: 2 },
+    People: { total: 0, correct: 0 },
+    Process: { total: 0, correct: 0 },
+    "Business Environment": { total: 0, correct: 0 },
   });
 
+  const bankEpoch = useRef(0);
+  const bankPending = useRef<AbortController | null>(null);
+  const [bankNotice, setBankNotice] = useState('');
   const fetchQuestionBank = async () => {
+    const epoch = ++bankEpoch.current;
+    bankPending.current?.abort();
+    setQuestions([]); setBankNotice('');
+    if (selectedDomain !== 'PROJECT_MANAGEMENT_PMP') { setIsLoadingQuestion(false); return; }
+    const controller = new AbortController(); bankPending.current = controller;
+    const timer = setTimeout(() => controller.abort(), 10000);
     setIsLoadingQuestion(true);
     try {
-      const res = await fetch("/api/v1/exam-tutor/pmp-question-bank");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.questions && data.questions.length > 0) {
-          setQuestions(data.questions);
-          setCurrentIdx(0);
-          setSelectedKey(null);
-          setSubmitted(false);
-        }
-      }
-    } catch (err) {
-      console.warn("Failed fetching question bank, using fallback:", err);
+      const res = await fetch('/api/v1/exam-tutor/pmp-question-bank', { signal: controller.signal, cache: 'no-store' });
+      if (!res.ok) throw new Error('Question bank unavailable');
+      const data = await res.json();
+      if (!Array.isArray(data.questions) || data.questions.length > 100 || !data.questions.every((q: any) =>
+        q && typeof q.id === 'string' && typeof q.domain === 'string' && typeof q.scenario === 'string' &&
+        typeof q.question === 'string' && typeof q.correctKey === 'string' && Array.isArray(q.options) && q.options.length >= 2 && q.options.length <= 8 &&
+        q.options.every((o: any) => o && typeof o.key === 'string' && typeof o.text === 'string') &&
+        q.options.some((o: any) => o.key === q.correctKey) && q.rationale && typeof q.rationale.whyCorrect === 'string' &&
+        q.rationale.distractorAnalysis && typeof q.rationale.distractorAnalysis === 'object' &&
+        Object.values(q.rationale.distractorAnalysis).every(value => typeof value === 'string'))) throw new Error('Unrecognised question bank');
+      if (bankEpoch.current !== epoch || controller.signal.aborted) return;
+      setQuestions(data.questions); setCurrentIdx(0); setSelectedKey(null); setSubmitted(false);
+    } catch {
+      if (bankEpoch.current === epoch) setBankNotice('The selected question bank could not be confirmed. No unrelated questions or invented progress were substituted.');
     } finally {
-      setIsLoadingQuestion(false);
+      clearTimeout(timer);
+      if (bankEpoch.current === epoch) { bankPending.current = null; setIsLoadingQuestion(false); }
     }
   };
-
-  // Load questions on mount
   useEffect(() => {
-    fetchQuestionBank();
-  }, []);
+    setCurrentIdx(0); setSelectedKey(null); setSubmitted(false); setChatResponse(null);
+    void fetchQuestionBank();
+    return () => { bankEpoch.current++; bankPending.current?.abort(); bankPending.current = null; };
+  }, [selectedDomain]);
 
   const currentQ = questions[currentIdx] || null;
 
@@ -108,7 +120,7 @@ export const SocraticExamTutor: React.FC = () => {
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedKey || !currentQ) return;
+    if (!selectedKey || !currentQ || submitted) return;
     setSubmitted(true);
 
     const isCorrect = selectedKey === currentQ.correctKey;
@@ -143,28 +155,15 @@ export const SocraticExamTutor: React.FC = () => {
     e.preventDefault();
     if (!chatPrompt.trim()) return;
 
-    setChatLoading(true);
-    setChatResponse(null);
-
-    try {
-      const res = await fetch("/api/v1/exam-tutor/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: chatPrompt }),
-      });
-      const data = await res.json();
-      setChatResponse(data);
-    } catch (err: any) {
-      setChatResponse({ error: err.message });
-    } finally {
-      setChatLoading(false);
-    }
+    setChatLoading(false);
+    setChatResponse({ error: 'This legacy research tutor is not enabled. Use the signed-in Luqi Chat for a consent-controlled study question. No request was sent.' });
   };
 
   return (
     <div className="space-y-6">
+      {bankNotice && <p role="status">{bankNotice}</p>}
       {/* Header Banner */}
-      <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-6 rounded-3xl border border-amber-500/30 bg-linear-to-r from-amber-500/10 via-slate-900 to-slate-900 flex flex-wrap items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
             DYNAMIC DOMAIN-DRIVEN RAG
@@ -173,7 +172,7 @@ export const SocraticExamTutor: React.FC = () => {
             Enterprise IT & Certification Exam Tutor
           </h2>
           <p className="text-xs text-slate-300 mt-0.5">
-            Grounded in official blueprints for PMP (PMBOK 7th Ed), AWS Cloud Solutions Architect, DevSecOps CKA, and Cisco CCNP/CCNA.
+            Practice examples only. Coverage varies by selected subject; check current official examination blueprints separately.
           </p>
         </div>
 
@@ -261,6 +260,7 @@ export const SocraticExamTutor: React.FC = () => {
       {/* ================================================================== */}
       {/* MODE 1: SOCRATIC SITUATIONAL QUIZZER */}
       {/* ================================================================== */}
+      {tutorMode === 'QUIZZER' && !currentQ && <p role="status">{isLoadingQuestion ? 'Loading the selected question bank…' : 'No question bank is confirmed for this selection. No unrelated course has been substituted.'}</p>}
       {tutorMode === "QUIZZER" && currentQ && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Question Panel (2 cols) */}
@@ -272,7 +272,7 @@ export const SocraticExamTutor: React.FC = () => {
                   <span className="text-xs font-black uppercase tracking-wider text-amber-400">
                     Question {currentIdx + 1} of {questions.length}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                  <span className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-800 text-slate-300 font-mono">
                     {currentQ.domain} {currentQ.domainPercentage ? `(${currentQ.domainPercentage}%)` : ""}
                   </span>
                 </div>
@@ -373,12 +373,12 @@ export const SocraticExamTutor: React.FC = () => {
                   {selectedKey === currentQ.correctKey ? (
                     <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                       <CheckCircle2 className="w-5 h-5 shrink-0" />
-                      <span>Correct! Option {currentQ.correctKey} aligns with official guidelines.</span>
+                      <span>Correct! Option {currentQ.correctKey} matches this practice example.</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
                       <XCircle className="w-5 h-5 shrink-0" />
-                      <span>Incorrect. Option {currentQ.correctKey} is the correct standard choice.</span>
+                      <span>Incorrect. Option {currentQ.correctKey} is this practice example’s expected choice.</span>
                     </div>
                   )}
                 </div>
@@ -424,7 +424,7 @@ export const SocraticExamTutor: React.FC = () => {
                 {/* Citation */}
                 {currentQ.pmbokReference && (
                   <div className="text-[10px] text-slate-500 font-mono">
-                    Official Reference: {currentQ.pmbokReference}
+                    Listed reference (not independently verified here): {currentQ.pmbokReference}
                   </div>
                 )}
               </div>
@@ -520,7 +520,7 @@ export const SocraticExamTutor: React.FC = () => {
               rows={3}
               value={chatPrompt}
               onChange={(e) => setChatPrompt(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono text-white focus:outline-hidden focus:border-amber-500"
               placeholder="Ask an exam question (e.g. AWS VPC routing tables, PMP scope creep, OSPF neighbor states)..."
             />
             <div className="flex flex-wrap items-center justify-between gap-2">

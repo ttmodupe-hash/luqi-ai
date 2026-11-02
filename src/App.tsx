@@ -1,273 +1,133 @@
-import { useState, useEffect } from "react";
+import { lazy } from "react";
+import { lazyQueryPage } from "./providers/lazy-query-page";
+import RouteLoadBoundary from "./components/RouteLoadBoundary";
+import WorkspaceLayout from "./components/WorkspaceLayout";
+import { CustomerSessionProvider } from "./providers/customer-session";
+import { ChatWorkspaceProvider } from "./providers/chat-workspace";
+import { SovereignRegionProvider } from "./providers/sovereign-region";
+const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
 import { Toaster } from "@/components/ui/toaster";
-import { Routes, Route as RouterRoute, useNavigate, useLocation, Link } from "react-router";
-import { useTheme } from "@/hooks/useTheme";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
 import Home from "./pages/Home";
-import LabSimulatorPage from "./pages/LabSimulatorPage";
-import SelfHealingPage from "./pages/SelfHealingPage";
-import VideoStudioPage from "./pages/VideoStudioPage";
-import ArchiveVaultPage from "./pages/ArchiveVaultPage";
-import PricingPage from "./pages/PricingPage";
-import ApiBillingDashboardPage from "./pages/ApiBillingDashboardPage";
+const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
+const StartPage = lazy(() => import("./pages/StartPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import ContactPage from "./pages/ContactPage";
-import AfricanOpportunityRadarPage from "./pages/AfricanOpportunityRadarPage";
-import AfricanKnowledgeArchivePage from "./pages/AfricanKnowledgeArchivePage";
-import VocationalSkillsPage from "./pages/VocationalSkillsPage";
-import CertMasterPage from "./pages/CertMasterPage";
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
-import TelemetryDashboardPage from "./pages/TelemetryDashboardPage";
-import ExperientialEducationPage from "./pages/ExperientialEducationPage";
-import PendulumLabPage from "./pages/PendulumLabPage";
-import { MultimodalHubPage } from "./pages/MultimodalHubPage";
-import ExecutiveLabSuite from "@/components/ExecutiveLabSuite";
+import CustomerEntryPage from "./pages/CustomerEntryPage";
+import OmegaTasksPage from './pages/OmegaTasksPage';
 
-// Components
-import WelcomeModal from "@/components/WelcomeModal";
-import ReportBugButton from "@/components/ReportBugButton";
-import { GlobalSearchTrigger } from "@/components/GlobalCommandPalette";
-import LanguageSelectorDropdown from "@/components/LanguageSelectorDropdown";
-import FloatingAiChat from "@/components/FloatingAiChat";
-import { LiveVoiceFloatingCopilot } from "@/components/LiveVoiceFloatingCopilot";
-import AdminSovereignPortal from "@/components/AdminSovereignPortal";
-import ConsumerRightsAssistant from "@/components/ConsumerRightsAssistant";
-import PublicPlatformView from "@/components/PublicPlatformView";
-import AdminKnowledgeAndGradingConsole from "@/components/AdminKnowledgeAndGradingConsole";
-import FloatingCritiqueWidget from "@/components/FloatingCritiqueWidget";
+// Load optional tools only when their route is rendered. Keep account, notes,
+// the release-observed core pages available in the initial bundle. Informational
+// help, privacy, and pricing routes load only when visited.
+const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
+const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
+const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
+const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));
+const VideoStudioPage = lazy(() => import("./pages/VideoStudioPage"));
+const AskLuqiPage = lazy(() => import("./pages/AskLuqiPage"));
+const GuestTryPage = lazy(() => import("./pages/GuestTryPage"));
+const VisualTutorPage = lazy(() => import("./pages/VisualTutorPage"));
+const KhoroSpatialVisionLab = lazy(() => import("./components/KhoroSpatialVisionLab"));
+const LuqiChatWorkspacePage = lazy(() => import("./pages/LuqiChatWorkspacePage"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
+const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
+const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
+const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
+const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
+const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
+const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
+const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
+const NearMePage = lazy(() => import("./pages/NearMePage"));
+const LocalPulsePage = lazy(() => import("./pages/LocalPulsePage"));
+const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
+const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
+const MunicipalServicesPage = lazy(() => import("./pages/MunicipalServicesPage"));
+const TownshipEconomyPage = lazy(() => import("./pages/TownshipEconomyPage"));
+const VisaEntryGuidePage = lazy(() => import("./pages/VisaEntryGuidePage"));
+const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePage"));
+const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
+const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
+const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
+const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
+const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
+const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
+const MultimodalHubPage = lazy(() => import("./pages/MultimodalHubPage").then(module => ({ default: module.MultimodalHubPage })));
+const ExecutiveLabSuite = lazy(() => import("@/components/ExecutiveLabSuite"));
+const AdminSovereignPortal = lazy(() => import("@/components/AdminSovereignPortal"));
+const ConsumerRightsAssistant = lazy(() => import("@/components/ConsumerRightsAssistant"));
 
-// Icons
-import {
-  Menu,
-  X,
-  Search,
-  Lock,
-  MessageSquare,
-  GraduationCap,
-  Activity,
-  CreditCard,
-  Sparkles
-} from "lucide-react";
-
-// App Layout Component with Global Navigation Header & 22-Language Dropdown
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-
-  // If on admin route or admin subdomain, render AdminSovereignPortal directly
   const isAdmin =
     location.pathname.startsWith("/admin") ||
-    (typeof window !== "undefined" && window.location.hostname.toLowerCase().startsWith("admin."));
-
-  if (isAdmin) {
+    (typeof window !== "undefined" &&
+      window.location.hostname.toLowerCase().startsWith("admin."));
+  if (isAdmin)
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <div className="min-h-screen bg-slate-950 text-slate-100">
         <Toaster />
-        <AdminSovereignPortal />
+        <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
       </div>
     );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <Toaster />
-      <WelcomeModal />
-      <GlobalSearchTrigger />
-      <FloatingAiChat />
-      <LiveVoiceFloatingCopilot />
-
-      {/* Global Navigation Header with 4 Simplified Public Tabs */}
-      <header className="border-b border-slate-800/80 bg-slate-950/95 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
-          {/* Brand Logo & Name */}
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center font-bold text-sm text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
-                L
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold tracking-tight text-white group-hover:text-amber-400 transition-colors">
-                  LUQI AI
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium hidden sm:inline leading-none">
-                  Smart Everyday Assistant
-                </span>
-              </div>
-            </Link>
-
-            {/* 4 Clean, Human-Friendly Public Navigation Tabs */}
-            <nav className="hidden lg:flex items-center gap-1.5 ml-2 border-l border-slate-800/80 pl-4">
-              <Link
-                to="/"
-                className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
-                  location.pathname === "/"
-                    ? "bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30"
-                    : "text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent"
-                }`}
-              >
-                <span>💬 Ask Luqi-AI (Chat)</span>
-              </Link>
-
-              <Link
-                to="/pendulum-lab"
-                className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
-                  location.pathname.includes("pendulum") ||
-                  location.pathname.includes("lab") ||
-                  location.pathname.includes("multimodal")
-                    ? "bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30"
-                    : "text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent"
-                }`}
-              >
-                <span>🎓 School & STEM Labs</span>
-              </Link>
-
-              <Link
-                to="/african-knowledge"
-                className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
-                  location.pathname.startsWith("/african-knowledge")
-                    ? "bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30"
-                    : "text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent"
-                }`}
-              >
-                <span>🌍 African Knowledge</span>
-              </Link>
-
-              <Link
-                to="/cert-academy"
-                className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
-                  location.pathname.includes("cert") || location.pathname.includes("academy")
-                    ? "bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30"
-                    : "text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent"
-                }`}
-              >
-                <span>🎬 Tech & Career Academy</span>
-              </Link>
-
-              <Link
-                to="/pricing"
-                className={`text-xs px-3 py-1.5 rounded-xl transition-all font-medium flex items-center gap-1.5 ${
-                  location.pathname.includes("pricing") || location.pathname.includes("plan")
-                    ? "bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30"
-                    : "text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent"
-                }`}
-              >
-                <span>💳 Plans & Top-Up</span>
-              </Link>
-            </nav>
-          </div>
-
-          {/* Right Header Actions */}
-          <div className="flex items-center gap-2">
-            {/* Quick Search Palette Trigger */}
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent("luqi:open-search"))}
-              className="text-xs px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-amber-500/40 transition-all flex items-center gap-1.5 font-medium shadow-sm"
-              title="Quick Search (Cmd+K)"
-            >
-              <Search className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden md:inline">Search</span>
-              <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
-                ⌘K
-              </kbd>
-            </button>
-
-            {/* Language Selection Dropdown */}
-            <LanguageSelectorDropdown />
-
-            {/* Mobile Navigation Menu Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen((v) => !v)}
-              className="lg:hidden p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
-              aria-label="Toggle navigation"
-            >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-800 bg-slate-950 px-4 py-3 space-y-1 text-xs animate-in slide-in-from-top-2 duration-150">
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
-            >
-              <span>💬 Ask Luqi-AI (Chat)</span>
-            </Link>
-            <Link
-              to="/pendulum-lab"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
-            >
-              <span>🎓 School & STEM Labs</span>
-            </Link>
-            <Link
-              to="/african-knowledge"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
-            >
-              <span>🌍 African Knowledge Library</span>
-            </Link>
-            <Link
-              to="/cert-academy"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
-            >
-              <span>🎬 Tech & Career Academy</span>
-            </Link>
-            <Link
-              to="/pricing"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-200 hover:bg-slate-900 font-medium"
-            >
-              <span>💳 Plans & Top-Up</span>
-            </Link>
-          </div>
-        )}
-      </header>
-
-      {/* Main Content View */}
-      <div className="flex-1">
-        {children}
-      </div>
-
-      {/* Clean Public Footer with Discreet Admin Lock */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 px-4 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          <p>© 2026 Luqi-AI. Built for everyone in South Africa and across the world.</p>
-          <div className="flex items-center gap-4">
-            <Link to="/terms" className="hover:text-slate-400 transition">Terms</Link>
-            <Link to="/privacy" className="hover:text-slate-400 transition">Privacy</Link>
-            <Link to="/african-knowledge" className="hover:text-slate-400 transition">African Knowledge</Link>
-            <Link to="/contact" className="hover:text-slate-400 transition">Contact</Link>
-            <Link to="/api-billing" className="hover:text-slate-400 transition">API Cost Planner</Link>
-            <Link
-              to="/admin"
-              className="p-1 rounded-md text-slate-600 hover:text-slate-400 transition"
-              title="Admin Command Center"
-            >
-              <Lock className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      </footer>
-      <FloatingCritiqueWidget />
-    </div>
-  );
+  return <CustomerSessionProvider><ChatWorkspaceProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></ChatWorkspaceProvider></CustomerSessionProvider>;
 }
 
 export default function App() {
   return (
     <AppLayout>
       <Routes>
+        <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
-        <RouterRoute path="/african-knowledge" element={<AfricanKnowledgeArchivePage />} />
-        <RouterRoute path="/vocational-skills" element={<VocationalSkillsPage />} />
+        <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
+        <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/install" element={<InstallAppPage />} />
+        <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
+        <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
+        <RouterRoute path="/visual-tutor" element={<VisualTutorPage />} />
+        <RouterRoute path="/spatial-vision" element={<KhoroSpatialVisionLab />} />
+        <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
+        <RouterRoute path="/circles" element={<Navigate to="/p2p" replace />} />
+        <RouterRoute path="/payments" element={<PaymentsPage />} />
+        <RouterRoute path="/ask" element={<AskLuqiPage />} />
+        <RouterRoute path="/try" element={<GuestTryPage />} />
+        <RouterRoute path="/ai-trial" element={<Navigate to="/chat" replace />} />
+        <RouterRoute path="/content-studio" element={<VideoStudioPage />} />
+        <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
+        <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
+        <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
+        <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
+        <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
+        <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
+        <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
+        <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />
+        <RouterRoute path="/near-me" element={<NearMePage />} />
+        <RouterRoute path="/local-pulse" element={<LocalPulsePage />} />
+        <RouterRoute path="/news" element={<LocalPulsePage />} />
+        <RouterRoute path="/social-support" element={<SocialSupportPage />} />
+        <RouterRoute path="/sassa" element={<SocialSupportPage defaultAgency="sassa" />} />
+        <RouterRoute path="/uif" element={<SocialSupportPage defaultAgency="uif" />} />
+        <RouterRoute path="/tenders" element={<TenderDeskPage />} />
+        <RouterRoute path="/municipalities" element={<MunicipalServicesPage />} />
+        <RouterRoute path="/municipal-services" element={<Navigate to="/municipalities" replace />} />
+        <RouterRoute path="/township-economy" element={<TownshipEconomyPage />} />
+        <RouterRoute path="/visa-entry" element={<VisaEntryGuidePage />} />
+        <RouterRoute path="/visa" element={<Navigate to="/visa-entry" replace />} />
+        <RouterRoute path="/township-business" element={<Navigate to="/township-economy" replace />} />
+        <RouterRoute path="/comparative-evidence" element={<ComparativeEvidencePage />} />
+        {/* Fixed local aliases only: no return URL, credential or query forwarding. */}
+        {["/signin", "/sign-in"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/login" replace />} />)}
+        <RouterRoute path="/login" element={<CustomerEntryPage initialMode="signin" />} />
+        {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
+        <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
+        <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />
         <RouterRoute path="/ai-companion" element={<CompanionPage />} />
@@ -302,7 +162,6 @@ export default function App() {
         <RouterRoute path="/archive" element={<ArchiveVaultPage />} />
         <RouterRoute path="/vault" element={<ArchiveVaultPage />} />
         <RouterRoute path="/pricing" element={<PricingPage />} />
-        <RouterRoute path="/api-billing" element={<ApiBillingDashboardPage />} />
         <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
@@ -318,8 +177,8 @@ export default function App() {
         <RouterRoute path="/consumer-rights" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
         <RouterRoute path="/cpa" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
         <RouterRoute path="/dispute" element={<div className="max-w-5xl mx-auto px-4 py-8"><ConsumerRightsAssistant /></div>} />
-        <RouterRoute path="/public" element={<div className="max-w-7xl mx-auto py-8"><PublicPlatformView /></div>} />
-        <RouterRoute path="/portal" element={<div className="max-w-7xl mx-auto py-8"><PublicPlatformView /></div>} />
+        <RouterRoute path="/public" element={<Home />} />
+        <RouterRoute path="/portal" element={<Home />} />
         <RouterRoute path="/admin" element={<AdminSovereignPortal />} />
         <RouterRoute path="/admin/knowledge-grading" element={<AdminSovereignPortal />} />
         <RouterRoute path="*" element={<NotFoundPage />} />

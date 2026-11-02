@@ -66,7 +66,7 @@ export default function WalletCard() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-neutral-800 to-neutral-850 border border-neutral-700 rounded-xl p-4">
+    <div className="bg-linear-to-br from-neutral-800 to-neutral-850 border border-neutral-700 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
@@ -93,7 +93,7 @@ export default function WalletCard() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Amount (R)"
-            className="flex-1 px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-white text-sm placeholder-neutral-500 focus:outline-none focus:border-emerald-500"
+            className="flex-1 px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-700 text-white text-sm placeholder-neutral-500 focus:outline-hidden focus:border-emerald-500"
           />
           <button
             onClick={handleTopup}

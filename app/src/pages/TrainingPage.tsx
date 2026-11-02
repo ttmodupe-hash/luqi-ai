@@ -427,7 +427,7 @@ export default function TrainingPage() {
   return (
     <div className="min-h-screen bg-neutral-900 text-white">
       {/* Header */}
-      <div className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xs sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
           <div className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30">
             <GraduationCap className="h-6 w-6 text-indigo-400" />
@@ -526,7 +526,7 @@ export default function TrainingPage() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="px-3 py-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-300 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -537,7 +537,7 @@ export default function TrainingPage() {
               <select
                 value={selectedDifficulty}
                 onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="px-3 py-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="px-3 py-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-300 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
               >
                 {difficulties.map((diff) => (
                   <option key={diff} value={diff}>

@@ -1,12 +1,12 @@
-/**
- * Resolve the configured Google Gemini key on the server only.
- * Never read a client-supplied key or expose this value to browser code.
- */
-export function resolveGeminiApiKey(): string {
-  const candidates = [
+/** Resolve Gemini credentials only from the server environment. */
+export function resolveGeminiApiKey(): string | undefined {
+  const possible = [
     process.env.GEMINI_API_KEY,
+    process.env.GOOGLE_GENAI_API_KEY,
     process.env.GOOGLE_API_KEY,
-    process.env.GOOGLE_GEMINI_API_KEY,
   ];
-  return candidates.find((value) => typeof value === "string" && value.trim().length > 0)?.trim() || "";
+  return possible.find((key) => {
+    const value = key?.trim();
+    return Boolean(value && value.length >= 20 && !/(placeholder|example|your[-_ ]?key|mock)/i.test(value));
+  })?.trim();
 }

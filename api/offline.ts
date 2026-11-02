@@ -1,74 +1,68 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createRouter, protectedQuery, publicQuery } from "./middleware";
-import { getPrivateDb, assertOwnUserId } from "./security/access";
-import { offlineSyncQueue } from "../db/schema";
-import { and, eq, desc, inArray } from "drizzle-orm";
+import { createRouter, protectedQuery } from "./middleware";
+import { getPersistentDb } from "./queries/connection";
+import { offlineSyncQueue, users } from "../db/schema";
+import { eq, and, asc, count, gt, inArray } from "drizzle-orm";
+
+const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+const deviceId = z.string().trim().min(1).max(255);
+const payload = z.record(z.string(), z.unknown()).refine(
+  value => Buffer.byteLength(JSON.stringify(value), "utf8") <= 8192,
+  "Payload exceeds 8192 bytes",
+);
+// Includes acknowledged rows: intake cannot grow storage indefinitely by
+// repeatedly acknowledging entries. Retention/erasure requires a separate review.
+export const OFFLINE_MAX_STORED = 1000;
+async function storage<T>(operation: (db: Awaited<ReturnType<typeof getPersistentDb>>) => Promise<T>): Promise<T> {
+  try { return await operation(await getPersistentDb()); }
+  catch (error) {
+    if (error instanceof TRPCError) throw error;
+    throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "OFFLINE_STORAGE_UNAVAILABLE" });
+  }
+}
 
 export const offlineRouter = createRouter({
-  queueAction: protectedQuery
-    .input(z.object({
-      userId: z.number().int().positive().optional(),
-      deviceId: z.string().trim().min(8).max(255),
-      action: z.string().trim().min(1).max(255),
-      payload: z.record(z.string(), z.unknown()),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      assertOwnUserId(input.userId, ctx.user.id);
-      const payloadJson = JSON.stringify(input.payload);
-      if (payloadJson.length > 50000) {
-        throw new (await import("@trpc/server")).TRPCError({ code: "BAD_REQUEST", message: "Sync item is too large." });
-      }
-      const db = await getPrivateDb();
-      const [result] = await db.insert(offlineSyncQueue).values({
-        userId: ctx.user.id,
-        deviceId: input.deviceId,
-        action: input.action,
-        payloadJson,
-        synced: false,
-      });
-      return { id: Number(result.insertId), queued: true };
-    }),
+  queueAction: protectedQuery.input(z.object({
+    deviceId, action: z.string().trim().min(1).max(255), payload,
+  }).strict()).mutation(({ input, ctx }) => storage(db => db.transaction(async (tx: any) => {
+    // Serialize intake for this owner across processes before counting rows.
+    const [owner] = await tx.select({ id: users.id }).from(users)
+      .where(and(eq(users.id, ctx.userId), eq(users.isActive, true))).for("update");
+    if (!owner) throw new TRPCError({ code: "UNAUTHORIZED", message: "AUTH_REQUIRED" });
+    const [total] = await tx.select({ total: count() }).from(offlineSyncQueue)
+      .where(eq(offlineSyncQueue.userId, ctx.userId));
+    if (Number(total.total) >= OFFLINE_MAX_STORED) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "OFFLINE_QUEUE_LIMIT" });
+    }
+    const [result] = await tx.insert(offlineSyncQueue).values({
+      userId: ctx.userId, deviceId: input.deviceId, action: input.action,
+      payloadJson: JSON.stringify(input.payload), synced: false,
+    });
+    return { id: Number(result.insertId), queued: true };
+  }))),
 
-  getPending: protectedQuery
-    .input(z.object({ deviceId: z.string().trim().min(8).max(255) }))
-    .query(async ({ input, ctx }) => {
-      const db = await getPrivateDb();
-      return db.select().from(offlineSyncQueue)
-        .where(and(
-          eq(offlineSyncQueue.userId, ctx.user.id),
-          eq(offlineSyncQueue.deviceId, input.deviceId),
-          eq(offlineSyncQueue.synced, false),
-        ))
-        .orderBy(desc(offlineSyncQueue.createdAt)).limit(100);
-    }),
+  getPending: protectedQuery.input(z.object({
+    deviceId, after: id.optional(), limit: z.number().int().min(1).max(100).default(50),
+  }).strict()).query(({ input, ctx }) => storage(db => db.select().from(offlineSyncQueue)
+    .where(and(eq(offlineSyncQueue.userId, ctx.userId), eq(offlineSyncQueue.deviceId, input.deviceId),
+      eq(offlineSyncQueue.synced, false), input.after ? gt(offlineSyncQueue.id, input.after) : undefined))
+    .orderBy(asc(offlineSyncQueue.id)).limit(input.limit))),
 
-  markSynced: protectedQuery
-    .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(100) }))
-    .mutation(async ({ input, ctx }) => {
-      const db = await getPrivateDb();
-      const ids = [...new Set(input.ids)];
-      // Every mutation is user-scoped in SQL, even if client supplied other IDs.
-      await db.update(offlineSyncQueue)
-        .set({ synced: true, syncedAt: new Date() })
-        .where(and(
-          eq(offlineSyncQueue.userId, ctx.user.id),
-          inArray(offlineSyncQueue.id, ids),
-        ));
-      return { processed: true };
-    }),
+  markSynced: protectedQuery.input(z.object({
+    deviceId, ids: z.array(id).min(1).max(100),
+  }).strict()).mutation(({ input, ctx }) => storage(async db => {
+    await db.update(offlineSyncQueue).set({ synced: true, syncedAt: new Date() })
+      .where(and(eq(offlineSyncQueue.userId, ctx.userId), eq(offlineSyncQueue.deviceId, input.deviceId),
+        eq(offlineSyncQueue.synced, false), inArray(offlineSyncQueue.id, input.ids)));
+    // Same response for absent/foreign IDs; no row-existence oracle.
+    return { synced: true };
+  })),
 
-  // Pure conflict-merging utility: no server-side state or identity access.
-  resolveConflict: publicQuery
-    .input(z.object({
-      localData: z.record(z.string(), z.unknown()),
-      serverData: z.record(z.string(), z.unknown()),
-      strategy: z.enum(["server_wins", "client_wins", "merge"]).default("server_wins"),
-    }))
-    .query(({ input }) => {
-      switch (input.strategy) {
-        case "server_wins": return input.serverData;
-        case "client_wins": return input.localData;
-        case "merge": return { ...input.serverData, ...input.localData };
-      }
-    }),
+  resolveConflict: protectedQuery.input(z.object({
+    localData: payload, serverData: payload,
+    strategy: z.enum(["server_wins", "client_wins", "merge"]).default("server_wins"),
+  }).strict()).query(({ input }) => input.strategy === "merge"
+    ? { ...input.serverData, ...input.localData }
+    : input.strategy === "client_wins" ? input.localData : input.serverData),
 });

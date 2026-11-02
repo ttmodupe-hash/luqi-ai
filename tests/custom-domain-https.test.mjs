@@ -1,0 +1,136 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { CUSTOM_ORIGIN, verifyCustomDomain, domainCheckFailureMessage } from "../scripts/verify-custom-domain.mjs";
+
+const revision = "a".repeat(40);
+const reply = (body, headers = {}) => new Response(JSON.stringify(body), {
+  status: 200, headers: { "Content-Type": "application/json", ...headers },
+});
+function fixture(change = {}) {
+  const calls = [];
+  const request = async (url, options) => {
+    calls.push({ url, method: options.method, redirect: options.redirect,
+      credentials: options.credentials, body: options.body });
+    if (!url.startsWith(CUSTOM_ORIGIN + "/")) throw Error("unexpected origin");
+    const path = url.slice(CUSTOM_ORIGIN.length);
+    if (path === "/v1/health") return change.health ?? reply({ status: "healthy" });
+    if (path === "/v1/release") return change.release ??
+      reply({ format: "luqi.release.v1", commit: revision }, { "Cache-Control": "no-store" });
+    if (path === "/signup" || path === "/login") return change[path] ??
+      new Response(null, { status: 302, headers: {
+        "Location": path === "/signup" ? "/#/join" : "/#/login",
+        "Cache-Control": "no-store",
+      } });
+    if (path === "/__luqi_boundary_sentinel__.env" ||
+        path === "/assets/__luqi_boundary_sentinel__.js") return change[path] ??
+      new Response('{"error":"Not Found"}', { status: 404, headers: {
+        "Content-Type": "application/json", "Cache-Control": "no-store",
+      } });
+    throw Error("unexpected route");
+  };
+  return { request, calls };
+}
+
+describe("custom-domain workflow rollout discipline", () => {
+  it("checks every main push and isolates status deliveries", () => {
+    const workflow = readFileSync(".github/workflows/custom-domain-https.yml", "utf8");
+    const push = workflow.split("  push:")[1]?.split("  workflow_dispatch:")[0];
+    assert.ok(push);
+    assert.ok(push.includes("branches: [main]"));
+    assert.ok(!push.includes("paths:"));
+    assert.ok(workflow.includes("github.run_id || github.ref")); assert.ok(workflow.includes("cancel-in-progress:"));
+    assert.ok(workflow.includes("timeout-minutes: 11"));
+  });
+});
+
+describe("deployment versus HTTPS failure classification", () => {
+  it("labels an unobserved revision as NOT TESTED, never as a proven HTTPS failure", () => {
+    assert.match(domainCheckFailureMessage("preflight"), /not authorized/);
+    assert.match(domainCheckFailureMessage("deployment"), /UNVERIFIED_DEPLOYMENT/);
+    assert.match(domainCheckFailureMessage("deployment"), /NOT tested/i);
+    assert.doesNotMatch(domainCheckFailureMessage("deployment"), /UNVERIFIED_CUSTOM_HTTPS/);
+    assert.match(domainCheckFailureMessage("https"), /UNVERIFIED_CUSTOM_HTTPS/);
+    assert.match(domainCheckFailureMessage("static"), /UNVERIFIED_STATIC_BOUNDARY/);
+    assert.throws(() => domainCheckFailureMessage("bad"), /INVALID_CHECK_STAGE/);
+  });
+});
+
+describe("fixed LUQI custom-domain HTTPS checks", () => {
+  it("checks only six fixed read-only GET URLs without credentials, queries or provider calls", async () => {
+    const f = fixture();
+    const result = await verifyCustomDomain(revision, f.request);
+    assert.deepEqual(f.calls.map(c => c.url), [
+      CUSTOM_ORIGIN + "/v1/health", CUSTOM_ORIGIN + "/v1/release",
+      CUSTOM_ORIGIN + "/signup", CUSTOM_ORIGIN + "/login",
+      CUSTOM_ORIGIN + "/__luqi_boundary_sentinel__.env",
+      CUSTOM_ORIGIN + "/assets/__luqi_boundary_sentinel__.js",
+    ]);
+    assert.deepEqual(f.calls.map(c => c.redirect),
+      ["error", "error", "manual", "manual", "error", "error"]);
+    assert.ok(f.calls.every(c => c.method === "GET" && c.credentials === "omit" && c.body === undefined));
+    assert.equal(result.matched_commit, revision);
+    assert.equal(result.status, "verified");
+    assert.equal(result.static_boundary_verified, true);
+    for (const name of ["account_registration_executed", "customer_login_executed",
+      "support_mail_verified", "launch_approved"]) assert.equal(result[name], false);
+  });
+
+  it("rejects a non-revision before issuing any request", async () => {
+    const f = fixture();
+    await assert.rejects(verifyCustomDomain("short", f.request), /INVALID_EXPECTED_REVISION/);
+    assert.equal(f.calls.length, 0);
+  });
+
+  it("rejects an old release or unavailable cache assurance", async () => {
+    const wrong = fixture({ release: reply({ format: "luqi.release.v1", commit: "b".repeat(40) },
+      { "Cache-Control": "no-store" }) });
+    await assert.rejects(verifyCustomDomain(revision, wrong.request), /UNVERIFIED_CUSTOM_REVISION/);
+    const cached = fixture({ release: reply({ format: "luqi.release.v1", commit: revision }) });
+    await assert.rejects(verifyCustomDomain(revision, cached.request), /UNVERIFIED_CUSTOM_REVISION/);
+  });
+
+  it("rejects extra release metadata and false health", async () => {
+    const extra = fixture({ release: reply({ format: "luqi.release.v1", commit: revision, user: "private" },
+      { "Cache-Control": "no-store" }) });
+    await assert.rejects(verifyCustomDomain(revision, extra.request), /UNVERIFIED_CUSTOM_REVISION/);
+    const degraded = fixture({ health: reply({ status: "degraded" }) });
+    await assert.rejects(verifyCustomDomain(revision, degraded.request), /UNVERIFIED_HEALTH/);
+  });
+
+  it("rejects redirects to arbitrary hosts or query-bearing destinations", async () => {
+    for (const location of ["https://example.invalid/login", "/#/join?token=private", "/#/companion"]) {
+      const f = fixture({ "/signup": new Response(null, { status: 302,
+        headers: { "Location": location, "Cache-Control": "no-store" } }) });
+      await assert.rejects(verifyCustomDomain(revision, f.request), /UNVERIFIED_REDIRECT/);
+    }
+  });
+
+  it("rejects a success payload larger than 4 KiB and a wrong content type", async () => {
+    const large = fixture({ health: reply({ status: "healthy", data: "a".repeat(4100) }) });
+    await assert.rejects(verifyCustomDomain(revision, large.request), /UNVERIFIED_BODY/);
+    const html = fixture({ health: new Response("<html>SPA fallback</html>", {
+      status: 200, headers: { "Content-Type": "text/html" } }) });
+    await assert.rejects(verifyCustomDomain(revision, html.request), /UNVERIFIED_HTTPS_JSON/);
+  });
+
+  it("rejects SPA HTML or wrong cache/MIME on synthetic missing-file paths", async () => {
+    for (const path of ["/__luqi_boundary_sentinel__.env", "/assets/__luqi_boundary_sentinel__.js"]) {
+      for (const response of [
+        new Response("<html>SPA shell</html>", { status: 200, headers: { "Content-Type": "text/html" } }),
+        new Response("{}", { status: 404, headers: { "Content-Type": "application/json" } }),
+        new Response("{}", { status: 404, headers: { "Content-Type": "text/html", "Cache-Control": "no-store" } }),
+      ]) {
+        const f = fixture({ [path]: response });
+        await assert.rejects(verifyCustomDomain(revision, f.request), /UNVERIFIED_STATIC_DENIAL/);
+        assert.ok(f.calls.every(c => c.method === "GET" && c.credentials === "omit" && c.body === undefined));
+      }
+    }
+  });
+
+  it("fails on DNS/TLS-style transport error instead of inventing a successful response", async () => {
+    await assert.rejects(verifyCustomDomain(revision, async () => {
+      throw new TypeError("network unreachable");
+    }));
+  });
+});

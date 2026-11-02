@@ -1,0 +1,27 @@
+name: LUQI Validator Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-patched-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install committed dependency graph
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify collection limits and SDK compatibility without network providers
+        run: npx --no-install vitest run tests/validator-upgrade.test.ts tests/ai-pilot-route.test.ts tests/password-change.test.ts tests/private-conversations.test.ts tests/omega-tasks.test.ts tests/trpc-authorization.test.ts
+      - name: Strictly check migration regression code
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop tests/validator-upgrade.test.ts

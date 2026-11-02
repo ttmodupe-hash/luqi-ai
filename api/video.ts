@@ -1,19 +1,18 @@
+import { readSqlCount } from "./lib/queryResults";
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import { createRouter, publicQuery, protectedQuery, adminQuery } from "./middleware";
-import { getPrivateDb, assertOwnUserId } from "./security/access";
+import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { videoProjects, creditWallets, paymentEvents, videoCreditWallets } from "../db/schema";
-import { initializeTopup, paymentsConfigured } from "./services/payments";
+import { videoProjects } from "../db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import {
   calculateJobCost,
+  getCreditBalance,
+  addCredits,
   getApiRequirementsStatus,
   SUBSCRIPTION_TIERS,
   CREDIT_PACKS,
 } from "./services/credits";
-import { paidVideoAvailable, renderPaidVideo } from "./services/paidVideo";
-import { quotePaidVideoCredits, reservePaidVideo, completePaidVideo, refundPaidVideo, getPaidVideoRequest, reconcileStalledVideo, reconcileAllStalledVideo } from "./services/paidVideoLedger";
+import { executeAnimationPipeline } from "./services/animation";
 
 const VALID_LANGUAGES = [
   "en", "zu", "xh", "af", "ns", "tn", "st", "ts", "ss", "ve", "nr",
@@ -34,32 +33,14 @@ export const videoRouter = createRouter({
       return breakdown;
     }),
 
-  getBalance: protectedQuery
-    .input(z.object({ userKey: z.string().trim().email().optional() }).optional())
-    .query(async ({ input, ctx }) => {
-      if (input?.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
-      }
-      await reconcileStalledVideo(ctx.user.id);
-      const db = await getPrivateDb();
-      const [wallet] = await db.select().from(creditWallets)
-        .where(eq(creditWallets.userKey, ctx.user.email.toLowerCase())).limit(1);
-      const [videoWallet] = await db.select().from(videoCreditWallets)
-        .where(eq(videoCreditWallets.userKey, ctx.user.email.toLowerCase())).limit(1);
-      return {
-        userKey: ctx.user.email.toLowerCase(),
-        balanceCents: wallet?.balanceCents ?? 0,
-        currency: wallet?.currency ?? "ZAR",
-        credits: videoWallet?.credits ?? 0,
-        spendableVideoCredits: videoWallet?.credits ?? 0,
-        videoRenderingEnabled: paidVideoAvailable(),
-        narratedVideoEnabled: paidVideoAvailable("narrated_mp4"),
-      };
+  getBalance: publicQuery
+    .input(z.object({ userKey: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const key = input?.userKey || "guest@luqi.ai";
+      return getCreditBalance(key);
     }),
 
-  // Provider credential presence and configuration state are internal-only details.
-  // Do not reveal infrastructure status to unauthenticated callers.
-  getApiStatus: adminQuery.query(() => {
+  getApiStatus: publicQuery.query(() => {
     return getApiRequirementsStatus();
   }),
 
@@ -70,66 +51,33 @@ export const videoRouter = createRouter({
     };
   }),
 
-  topupCredits: protectedQuery
+  topupCredits: publicQuery
     .input(z.object({
-      userKey: z.string().trim().email().optional(),
-      credits: z.number().int().positive(),
-      packId: z.string().min(1).max(50),
+      userKey: z.string().optional(),
+      credits: z.number().min(10),
+      packId: z.string().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      if (input.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
-      }
-      const pack = CREDIT_PACKS.find((p) => p.id === input.packId && p.credits === input.credits);
-      if (!pack) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Select an available credit pack." });
-      }
-      if (!paymentsConfigured()) {
-        throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Payment provider is not configured." });
-      }
-      if (!paidVideoAvailable()) {
-        throw new TRPCError({
-          code: "SERVICE_UNAVAILABLE",
-          message: "Video credit purchases cannot begin until the real renderer and durable storage are configured.",
-        });
-      }
-      const db = await getPrivateDb();
-      const amountCents = Math.round(pack.priceZar * 100);
-      const checkout = await initializeTopup(ctx.user.email.toLowerCase(), amountCents, "ZAR");
-      if (!checkout) {
-        throw new TRPCError({ code: "BAD_GATEWAY", message: "Could not create a verified checkout." });
-      }
-      await db.insert(paymentEvents).values({
-        reference: checkout.reference,
-        userKey: ctx.user.email.toLowerCase(),
-        eventType: "topup_initialized",
-        amountCents,
-        currency: "ZAR",
-        status: "pending",
-        payloadJson: JSON.stringify({ product: "video_credit_pack", packId: pack.id, credits: pack.credits }),
-      });
-      return {
-        pending: true,
-        credited: false,
-        authorizationUrl: checkout.authorizationUrl,
-        reference: checkout.reference,
-        creditsRequested: pack.credits,
-      };
+    .mutation(async ({ input }) => {
+      const key = input.userKey || "guest@luqi.ai";
+      const result = await addCredits(
+        key,
+        input.credits,
+        `Credit Pack Top-Up (${input.credits} Luqi Credits)`
+      );
+      return result;
     }),
 
-  // Personal video projects: all access is based on a validated session,
-  // not a caller-supplied user ID. Unowned historical records are not visible.
-  create: protectedQuery
+  // ── Project Management Endpoints ──────────────────────────────────
+  create: publicQuery
     .input(z.object({
-      title: z.string().trim().min(1).max(255),
+      title: z.string().min(1).max(255),
       description: z.string().max(5000).optional(),
-      prompt: z.string().trim().min(1).max(10000),
+      prompt: z.string().min(1).max(10000),
       language: z.enum(VALID_LANGUAGES).default("en"),
-      userId: z.number().int().positive().optional(),
+      userId: z.number().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      assertOwnUserId(input.userId, ctx.user.id);
-      const db = await getPrivateDb();
+    .mutation(async ({ input }) => {
+      const db = await getDb();
       const [result] = await db.insert(videoProjects).values({
         title: input.title,
         description: input.description ?? null,
@@ -137,79 +85,86 @@ export const videoRouter = createRouter({
         language: input.language,
         status: "PENDING",
         progress: 0,
-        userId: ctx.user.id,
+        userId: input.userId ?? null,
       });
       return { id: Number(result.insertId), created: true };
     }),
 
-  list: protectedQuery
+  list: publicQuery
     .input(z.object({
       status: z.enum(VALID_STATUSES).optional(),
-      language: z.string().min(2).max(10).optional(),
-      limit: z.number().int().min(1).max(100).default(50),
-      offset: z.number().int().min(0).max(10000).default(0),
+      language: z.string().optional(),
+      limit: z.number().min(1).max(100).default(50),
+      offset: z.number().min(0).default(0),
     }).optional())
-    .query(async ({ input, ctx }) => {
-      const db = await getPrivateDb();
-      const conditions = [
-        eq(videoProjects.userId, ctx.user.id),
-        input?.status ? eq(videoProjects.status, input.status) : undefined,
-        input?.language ? eq(videoProjects.language, input.language) : undefined,
-      ].filter((item): item is NonNullable<typeof item> => item !== undefined);
-      return db.select().from(videoProjects)
-        .where(and(...conditions))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const limit = input?.limit ?? 50;
+      const offset = input?.offset ?? 0;
+      let conditions = undefined;
+      if (input?.status) {
+        conditions = eq(videoProjects.status, input.status);
+      }
+      if (input?.language) {
+        conditions = conditions
+          ? and(conditions, eq(videoProjects.language, input.language))
+          : eq(videoProjects.language, input.language);
+      }
+      const rows = await db
+        .select()
+        .from(videoProjects)
+        .where(conditions)
         .orderBy(desc(videoProjects.createdAt))
-        .limit(input?.limit ?? 50)
-        .offset(input?.offset ?? 0);
+        .limit(limit)
+        .offset(offset);
+      return rows;
     }),
 
-  get: protectedQuery
-    .input(z.object({ id: z.number().int().positive() }))
-    .query(async ({ input, ctx }) => {
-      const db = await getPrivateDb();
-      const [row] = await db.select().from(videoProjects)
-        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)))
+  get: publicQuery
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const [row] = await db
+        .select()
+        .from(videoProjects)
+        .where(eq(videoProjects.id, input.id))
         .limit(1);
       return row ?? null;
     }),
 
-  update: protectedQuery
+  update: publicQuery
     .input(z.object({
-      id: z.number().int().positive(),
-      title: z.string().trim().min(1).max(255).optional(),
+      id: z.number(),
+      title: z.string().min(1).max(255).optional(),
       description: z.string().max(5000).optional(),
-      prompt: z.string().trim().min(1).max(10000).optional(),
+      prompt: z.string().min(1).max(10000).optional(),
       language: z.enum(VALID_LANGUAGES).optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const db = await getPrivateDb();
-      const [owned] = await db.select({ id: videoProjects.id }).from(videoProjects)
-        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)))
-        .limit(1);
-      if (!owned) return { updated: false };
+    .mutation(async ({ input }) => {
+      const db = await getDb();
       const { id, ...updates } = input;
-      await db.update(videoProjects).set({ ...updates, updatedAt: new Date() })
-        .where(and(eq(videoProjects.id, id), eq(videoProjects.userId, ctx.user.id)));
+      await db
+        .update(videoProjects)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(videoProjects.id, id));
       return { updated: true };
     }),
 
-  delete: protectedQuery
-    .input(z.object({ id: z.number().int().positive() }))
-    .mutation(async ({ input, ctx }) => {
-      const db = await getPrivateDb();
-      const [owned] = await db.select({ id: videoProjects.id }).from(videoProjects)
-        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)))
-        .limit(1);
-      if (!owned) return { deleted: false };
-      await db.delete(videoProjects)
-        .where(and(eq(videoProjects.id, input.id), eq(videoProjects.userId, ctx.user.id)));
+  delete: publicQuery
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db.delete(videoProjects).where(eq(videoProjects.id, input.id));
       return { deleted: true };
     }),
 
-  startProcessing: adminQuery
+  startProcessing: publicQuery
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
+      const db = await getDb();
       await db
         .update(videoProjects)
         .set({
@@ -221,13 +176,13 @@ export const videoRouter = createRouter({
       return { status: "PROCESSING" };
     }),
 
-  updateProgress: adminQuery
+  updateProgress: publicQuery
     .input(z.object({
       id: z.number(),
       progress: z.number().min(0).max(100),
     }))
     .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
+      const db = await getDb();
       await db
         .update(videoProjects)
         .set({
@@ -238,7 +193,7 @@ export const videoRouter = createRouter({
       return { progress: input.progress };
     }),
 
-  markSuccess: adminQuery
+  markSuccess: publicQuery
     .input(z.object({
       id: z.number(),
       videoUrl: z.string(),
@@ -247,7 +202,7 @@ export const videoRouter = createRouter({
       modelUsed: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
+      const db = await getDb();
       await db
         .update(videoProjects)
         .set({
@@ -264,13 +219,13 @@ export const videoRouter = createRouter({
       return { status: "SUCCESS" };
     }),
 
-  markFailed: adminQuery
+  markFailed: publicQuery
     .input(z.object({
       id: z.number(),
       errorMessage: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const db = await getPrivateDb();
+      const db = await getDb();
       await db
         .update(videoProjects)
         .set({
@@ -283,12 +238,12 @@ export const videoRouter = createRouter({
       return { status: "FAILED" };
     }),
 
-  stats: adminQuery.query(async () => {
-    const db = await getPrivateDb();
+  stats: publicQuery.query(async () => {
+    const db = await getDb();
     const total = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(videoProjects)
-      .then((r) => Number(r[0]?.count ?? 0));
+      .then(readSqlCount);
     const byStatus = await db
       .select({
         status: videoProjects.status,
@@ -308,107 +263,82 @@ export const videoRouter = createRouter({
     return { total, byStatus, byLanguage };
   }),
 
-  // Internal recovery: always deduplicates refunds in the database transaction.
-  reconcileStalled: adminQuery
-    .input(z.object({ limit: z.number().int().min(1).max(100).default(25) }).optional())
-    .mutation(async ({ input }) => reconcileAllStalledVideo(input?.limit ?? 25)),
-
-  // Explicit, auditable quote for genuine MP4, with optional provider narration.
-  // No unapproved soundtrack charges, fictional credits or hidden fallback.
-  quoteRender: publicQuery
+  // ── Native Animation Pipeline Generation (Chained API Execution) ──
+  generate: publicQuery
     .input(z.object({
-      durationSeconds: z.number().int().min(2).max(10),
-      mode: z.enum(["silent_mp4", "narrated_mp4"]).default("silent_mp4"),
-      narration: z.string().max(500).optional(),
-    }))
-    .query(({ input }) => ({
-      durationSeconds: input.durationSeconds,
-      creditsRequired: quotePaidVideoCredits(input.durationSeconds, input.mode, input.narration),
-      mode: input.mode,
-      soundtrackIncluded: input.mode === "narrated_mp4",
-    })),
-
-  getRenderStatus: protectedQuery
-    .input(z.object({ requestKey: z.string().uuid() }))
-    .query(async ({ input, ctx }) => {
-      await reconcileStalledVideo(ctx.user.id);
-      return getPaidVideoRequest(ctx.user.id, input.requestKey);
-    }),
-
-  /**
-   * Paid rendering: idempotent, user-scoped debit before the provider call,
-   * real MP4 stored in private object storage, atomic refund on failures.
-   * Unlike the former legacy pipeline this never uses in-memory credits,
-   * mock MP4s, fake audio or caller-controlled account identifiers.
-   */
-  generate: protectedQuery
-    .input(z.object({
-      requestKey: z.string().uuid(),
-      mode: z.enum(["silent_mp4", "narrated_mp4"]),
-      narration: z.string().max(500).optional(),
-      confirmedCredits: z.number().int().min(20).max(104),
-      prompt: z.string().trim().min(1).max(1000),
-      title: z.string().trim().min(1).max(255),
+      prompt: z.string().min(1).max(5000),
+      title: z.string().min(1).max(255),
       language: z.enum(VALID_LANGUAGES).default("en"),
-      durationSeconds: z.number().int().min(2).max(10),
-      userKey: z.string().trim().email().optional(),
+      description: z.string().max(5000).optional(),
+      dialogue: z.string().max(2000).optional(),
+      durationSeconds: z.number().min(2).max(60).default(5),
+      userKey: z.string().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      if (input.userKey && input.userKey.toLowerCase() !== ctx.user.email.toLowerCase()) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Access denied." });
-      }
-      // Validate price and narration before any database change or provider call.
-      quotePaidVideoCredits(input.durationSeconds, input.mode, input.narration);
-      if (!paidVideoAvailable(input.mode)) {
-        throw new TRPCError({
-          code: "SERVICE_UNAVAILABLE",
-          message: "Real video, narration, FFmpeg, or private storage is not configured for this mode.",
-        });
-      }
-      await reconcileStalledVideo(ctx.user.id);
-      const job = await reservePaidVideo({
-        userId: ctx.user.id,
-        email: ctx.user.email.toLowerCase(),
-        requestKey: input.requestKey,
-        prompt: input.prompt,
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const userKey = input.userKey || "guest@luqi.ai";
+      const duration = input.durationSeconds || 5;
+
+      // 1. Create project entry in PENDING state
+      const [insertResult] = await db.insert(videoProjects).values({
         title: input.title,
+        description: input.description ?? null,
+        prompt: input.prompt,
         language: input.language,
-        durationSeconds: input.durationSeconds,
-        confirmedCredits: input.confirmedCredits,
-        mode: input.mode,
-        narration: input.narration,
+        status: "PROCESSING",
+        progress: 15,
+        durationSeconds: duration,
       });
-      if (!job.started) return {
-        ...job,
-        videoUrl: job.status === "SUCCESS" ? `/api/video/assets/${input.requestKey}` : null,
-      };
+      const projectId = Number(insertResult.insertId);
+
       try {
-        const result = await renderPaidVideo({
-          userId: ctx.user.id, requestKey: input.requestKey,
-          prompt: input.prompt, durationSeconds: input.durationSeconds,
-          mode: input.mode, narration: input.narration,
+        // 2. Execute Animation Pipeline (ElevenLabs + Replicate WAN 2.1 + Storyboard)
+        const pipelineResult = await executeAnimationPipeline({
+          title: input.title,
+          scenePrompt: input.prompt,
+          dialogue: input.dialogue || input.description || `Welcome to Luqi AI. Visualizing ${input.title}.`,
+          durationSeconds: duration,
+          userKey,
+          language: input.language,
         });
-        await completePaidVideo(input.requestKey, result.objectKey, result.provider);
+
+        // 3. Mark as SUCCESS with generated assets & model info
+        await db
+          .update(videoProjects)
+          .set({
+            status: "SUCCESS",
+            progress: 100,
+            videoUrl: pipelineResult.videoUrl,
+            thumbnailUrl: pipelineResult.videoUrl,
+            durationSeconds: duration,
+            modelUsed: `${pipelineResult.videoProvider} + ${pipelineResult.voiceProvider}`,
+            processedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(videoProjects.id, projectId));
+
         return {
-          ...job, status: "SUCCESS" as const,
-          videoUrl: `/api/video/assets/${input.requestKey}`,
-          provider: result.provider,
+          projectId,
+          status: "SUCCESS",
+          videoUrl: pipelineResult.videoUrl,
+          audioUrl: pipelineResult.audioUrl,
+          model: `${pipelineResult.videoProvider} + ${pipelineResult.voiceProvider}`,
+          creditsDeducted: pipelineResult.creditsDeducted,
+          costBreakdown: pipelineResult.costBreakdown,
+          scriptContent: pipelineResult.scriptContent,
         };
-      } catch {
-        try {
-          await refundPaidVideo(input.requestKey, "Video generation failed");
-        } catch {
-          // Preserve the transaction and stop unsafe retries if payment
-          // recovery is unavailable; operator reconciliation is required.
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Video request requires billing reconciliation. Do not retry with a new request key.",
-          });
-        }
-        throw new TRPCError({
-          code: "BAD_GATEWAY",
-          message: "The video could not be produced. Your reserved credits were refunded.",
-        });
+      } catch (err: any) {
+        await db
+          .update(videoProjects)
+          .set({
+            status: "FAILED",
+            errorMessage: err.message ?? "Animation generation failed",
+            processedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(videoProjects.id, projectId));
+
+        throw new Error(err.message || "Animation generation failed");
       }
     }),
 });

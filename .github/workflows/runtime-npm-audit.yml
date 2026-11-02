@@ -1,0 +1,146 @@
+name: LUQI Dependency Audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "bun.lock"
+      - "api/**"
+      - "app/**"
+      - "edge/**"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - "tests/test_dependency_compatibility.py"
+      - "backend/auth.py"
+      - "tests/test_legacy_auth_security.py"
+      - "scripts/report-runtime-audit.mjs"
+      - "scripts/verify-glob-consumers.mjs"
+      - ".github/workflows/runtime-npm-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-edge-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: edge
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install isolated edge tooling from lockfile
+        run: npm ci --include=dev
+      - name: Audit complete edge tooling tree
+        run: npm audit --include=dev --audit-level=low
+      - name: Validate Worker bundle without credentials or deployment
+        run: npm run validate
+
+  report-runtime-advisories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # Install from lockfiles without the optional, egress-limited npm cache.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install exact LUQI dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify glob and lint consumer APIs after security updates
+        run: node scripts/verify-glob-consumers.mjs
+      - name: Audit production dependency tree
+        shell: bash
+        run: |
+          # npm audit returns 1 for vulnerabilities, not just transport errors.
+          # The parser fails if it cannot prove that npm returned a real report.
+          npm audit --omit=dev --json > /tmp/luqi-runtime-audit.json || true
+          node scripts/report-runtime-audit.mjs /tmp/luqi-runtime-audit.json
+      - name: Block high and critical advisories in build and test dependencies
+        env:
+          LUQI_AUDIT_SCOPE: all
+          LUQI_AUDIT_FAIL_ON_CRITICAL: "true"
+          LUQI_AUDIT_FAIL_ON_HIGH: "true"
+        shell: bash
+        run: |
+          npm audit --include=dev --json > /tmp/luqi-full-audit.json || true
+          node scripts/report-runtime-audit.mjs /tmp/luqi-full-audit.json
+      - name: Verify unchanged build and runtime entrypoints
+        run: npm run build
+
+  audit-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install auditor
+        run: python -m pip install pip-audit==2.10.1
+      - name: Audit complete resolved Python runtime (no advisory exclusions)
+        run: pip-audit --strict -r requirements.txt --format=json --output=python-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-audit-${{ matrix.python }}
+          path: python-audit.json
+
+  audit-bun-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Check manifest consistency without lifecycle scripts
+        run: bun install --frozen-lockfile --ignore-scripts --lockfile-only
+      - name: Audit Bun lockfile (any finding or scan error fails)
+        run: bun audit
+
+  audit-app-and-desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      # Install from lockfiles without the optional, egress-limited npm cache.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install and audit standalone frontend
+        run: |
+          npm ci --legacy-peer-deps --include=dev
+          npm audit --include=dev --audit-level=low
+      - name: Build standalone frontend
+        run: npm run build
+      - name: Verify standalone dependency consumer APIs
+        run: node ../scripts/verify-glob-consumers.mjs app
+      - name: Install and audit desktop dependencies
+        working-directory: app/electron
+        run: |
+          npm ci --legacy-peer-deps --include=dev
+          npm audit --include=dev --audit-level=low
+      - name: Build Linux directory (no publishing or code signing)
+        working-directory: app/electron
+        run: npm run build -- --linux --dir --publish=never
+      - name: Verify desktop archive and matching APIs
+        working-directory: app/electron
+        run: node ../../scripts/verify-glob-consumers.mjs app/electron
+      - name: Smoke-test packaged desktop workspace
+        run: xvfb-run -a release/linux-unpacked/luqi-ai --no-sandbox --luqi-smoke-test

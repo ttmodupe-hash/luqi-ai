@@ -10,7 +10,7 @@ function Menubar({ className, ...props }: React.ComponentProps<typeof MenubarPri
   return (
     <MenubarPrimitive.Root
       data-slot="menubar"
-      className={cn("flex h-9 items-center gap-1 rounded-md border bg-background p-1 shadow-sm", className)}
+      className={cn("flex h-9 items-center gap-1 rounded-md border bg-background p-1 shadow-xs", className)}
       {...props}
     />
   )
@@ -24,7 +24,7 @@ function MenubarTrigger({ className, ...props }: React.ComponentProps<typeof Men
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
-      className={cn("flex cursor-default select-none items-center rounded-sm px-3 py-1 text-sm font-medium outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground", className)}
+      className={cn("flex cursor-default select-none items-center rounded-sm px-3 py-1 text-sm font-medium outline-hidden focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground", className)}
       {...props}
     />
   )
@@ -49,7 +49,7 @@ function MenubarItem({ className, inset, ...props }: React.ComponentProps<typeof
   return (
     <MenubarPrimitive.Item
       data-slot="menubar-item"
-      className={cn("relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50", inset && "pl-8", className)}
+      className={cn("relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50", inset && "pl-8", className)}
       {...props}
     />
   )
@@ -59,7 +59,7 @@ function MenubarCheckboxItem({ className, children, checked, ...props }: React.C
   return (
     <MenubarPrimitive.CheckboxItem
       data-slot="menubar-checkbox-item"
-      className={cn("relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50", className)}
+      className={cn("relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50", className)}
       checked={checked}
       {...props}
     >
@@ -77,7 +77,7 @@ function MenubarRadioItem({ className, children, ...props }: React.ComponentProp
   return (
     <MenubarPrimitive.RadioItem
       data-slot="menubar-radio-item"
-      className={cn("relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50", className)}
+      className={cn("relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50", className)}
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
@@ -128,7 +128,7 @@ function MenubarSubTrigger({ className, children, ...props }: React.ComponentPro
   return (
     <MenubarPrimitive.SubTrigger
       data-slot="menubar-sub-trigger"
-      className={cn("flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground", className)}
+      className={cn("flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground", className)}
       {...props}
     >
       {children}

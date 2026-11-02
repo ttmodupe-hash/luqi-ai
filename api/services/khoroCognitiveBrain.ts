@@ -40,21 +40,10 @@ export class KhoroCognitiveBrain {
     history: ChatTurn[] = [],
     preferredLanguage: string = 'Auto-Detect (Flexible Code-Switching)'
   ) {
-    const lower = (userPrompt || '').toLowerCase();
-
-    // Immediate authoritative detection for car arrears / repossession queries
-    if (
-      (lower.includes('car') || lower.includes('vehicle') || lower.includes('motor')) &&
-      (lower.includes('month') || lower.includes('not pay') || lower.includes('arrear') || lower.includes('repossession') || lower.includes('repo') || lower.includes('tow'))
-    ) {
-      return {
-        agentName: SOVEREIGN_AGENT_NAME,
-        translation: SOVEREIGN_AGENT_TRANSLATION,
-        response: this.getCarArrearsShieldResponse()
-      };
-    }
-
+    // The API route must never classify a canned paragraph as a successful
+    // live reasoning response. Other providers are tried by the outer router.
     const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return null;
     const systemInstruction = `
       You are ${SOVEREIGN_AGENT_NAME} (${SOVEREIGN_AGENT_TRANSLATION}), the hyper-intelligent sovereign brain and voice companion powering Luqi-AI.
       
@@ -103,31 +92,11 @@ export class KhoroCognitiveBrain {
           };
         }
       } catch (err: any) {
-        console.warn('Khoro cognitive brain primary call note:', err?.message);
+        console.warn('[Khoro] Primary model unavailable; trying configured providers.');
       }
     }
 
-    // Dynamic, domain-accurate fallback instead of static placeholder
-    if (lower.includes('debt') || lower.includes('loan') || lower.includes('interest') || lower.includes('bank')) {
-      return {
-        agentName: SOVEREIGN_AGENT_NAME,
-        translation: SOVEREIGN_AGENT_TRANSLATION,
-        response:
-          `**KHORO FINANCIAL ADVICE & NCA RIGHTS**\n\n` +
-          `In South Africa, all credit agreements are strictly regulated under the National Credit Act (NCA 34 of 2005).\n\n` +
-          `- **Section 129 Notice Rights:** Credit providers cannot institute court summons until you have been in arrears for 20 business days and given 10 business days written notice.\n` +
-          `- **Illegal Seizures:** No debt collector or bank agent can confiscate your assets without a certified Court Order and Sheriff of the Court.\n` +
-          `- **Credit Life Insurance:** Check if your loan agreement includes mandatory credit life insurance which covers installments in the event of income loss or illness.\n` +
-          `- **Help Desk:** Contact the National Financial Ombud Scheme (NFO) at 0860 800 900 or the NCR at 0860 627 627.`
-      };
-    }
-
-    return {
-      agentName: SOVEREIGN_AGENT_NAME,
-      translation: SOVEREIGN_AGENT_TRANSLATION,
-      response:
-        `Hello & Eita! KHORO has analyzed your query: "${userPrompt}".\n\n` +
-        `I am fully equipped to break down South African law, financial calculations, academic concepts, or technical systems. Please specify the exact scenario details so we can deliver a precise, step-by-step solution.`
-    };
+    // A model outage is an outage, not a successful simulated conversation.
+    return null;
   }
 }

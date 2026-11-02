@@ -163,7 +163,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask Luqi AI anything, or search all capabilities, labs, simulations, and tools..."
-            className="w-full bg-transparent text-sm sm:text-base text-slate-100 placeholder-slate-400 focus:outline-none"
+            className="w-full bg-transparent text-sm sm:text-base text-slate-100 placeholder-slate-400 focus:outline-hidden"
           />
           {query ? (
             <button
@@ -178,7 +178,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
             </button>
           ) : null}
           <div className="flex items-center gap-1.5 shrink-0">
-            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[11px] font-mono text-slate-400 bg-slate-800/80 border border-slate-700 rounded">
+            <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[11px] font-mono text-slate-400 bg-slate-800/80 border border-slate-700 rounded-sm">
               ESC
             </kbd>
           </div>
@@ -194,7 +194,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition-all ${
                   isSelected
-                    ? "bg-amber-500 text-slate-950 font-bold shadow-sm"
+                    ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
                 }`}
               >
@@ -241,7 +241,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
                   onMouseEnter={() => setHighlightedIndex(idx)}
                   className={`group relative flex items-start sm:items-center justify-between gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                     isSelected
-                      ? "bg-gradient-to-r from-amber-500/15 via-slate-800 to-slate-800/90 border border-amber-500/40 shadow-sm"
+                      ? "bg-linear-to-r from-amber-500/15 via-slate-800 to-slate-800/90 border border-amber-500/40 shadow-xs"
                       : "hover:bg-slate-800/50 border border-transparent"
                   }`}
                 >
@@ -265,7 +265,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
                         >
                           {page.title}
                         </span>
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${page.badgeColor}`}>
+                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-sm border ${page.badgeColor}`}>
                           {page.badge}
                         </span>
                       </div>
@@ -310,19 +310,19 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
 
           <div className="hidden sm:flex items-center gap-3 text-[11px] text-slate-400">
             <span>
-              <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">
+              <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded-sm text-slate-300 font-mono">
                 &uarr;&darr;
               </kbd>{" "}
               navigate
             </span>
             <span>
-              <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">
+              <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded-sm text-slate-300 font-mono">
                 &crarr;
               </kbd>{" "}
               open
             </span>
             <span>
-              <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">
+              <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded-sm text-slate-300 font-mono">
                 esc
               </kbd>{" "}
               close
@@ -370,7 +370,7 @@ export function GlobalSearchTrigger() {
         >
           <Search className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
           <span className="text-xs font-semibold tracking-wide pr-1">Omni-Query (⌘K)</span>
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded">
+          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-sm">
             ⌘K
           </kbd>
         </button>

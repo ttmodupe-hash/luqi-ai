@@ -1,0 +1,81 @@
+name: LUQI Isolated Restore Drill
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/verify-local-mysql-backup.py'
+      - 'scripts/ci-isolated-restore-drill.sh'
+      - 'scripts/backup.sh'
+      - 'tests/test_local_mysql_restore.py'
+      - 'tests/mysql-backup-fixture.integration.test.ts'
+      - 'db/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/isolated-restore-drill.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-local-mysql-backup.py'
+      - 'scripts/ci-isolated-restore-drill.sh'
+      - 'scripts/backup.sh'
+      - 'tests/test_local_mysql_restore.py'
+      - 'tests/mysql-backup-fixture.integration.test.ts'
+      - 'db/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/isolated-restore-drill.yml'
+permissions:
+  contents: read
+concurrency:
+  group: isolated-restore-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  local-recovery-guards:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check guards without a database or dependencies
+        run: |
+          python3 -m unittest discover -s tests -p test_local_mysql_restore.py -v
+          bash -n scripts/ci-isolated-restore-drill.sh
+  real-isolated-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: 'mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci'
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install locked fixture dependencies
+        run: npm ci --legacy-peer-deps --include=dev
+      - name: Seed disposable account and quota fixtures
+        run: npx --no-install vitest run tests/mysql-backup-fixture.integration.test.ts
+      - name: Exercise a real export against the local-only restore tool
+        run: bash scripts/ci-isolated-restore-drill.sh
+      - name: Remove only labelled disposable drill containers after interruption
+        if: always()
+        shell: bash
+        run: |
+          docker ps --all --quiet --filter label=luqi.restore-drill=isolated | xargs --no-run-if-empty docker rm --force --volumes

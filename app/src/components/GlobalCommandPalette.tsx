@@ -163,7 +163,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask Luqi AI anything, or search all capabilities, labs, simulations, and tools..."
-            className="w-full bg-transparent text-sm sm:text-base text-slate-100 placeholder-slate-400 focus:outline-none"
+            className="w-full bg-transparent text-sm sm:text-base text-slate-100 placeholder-slate-400 focus:outline-hidden"
           />
           {query ? (
             <button
@@ -194,7 +194,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition-all ${
                   isSelected
-                    ? "bg-amber-500 text-slate-950 font-bold shadow-sm"
+                    ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
                 }`}
               >
@@ -241,7 +241,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
                   onMouseEnter={() => setHighlightedIndex(idx)}
                   className={`group relative flex items-start sm:items-center justify-between gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                     isSelected
-                      ? "bg-gradient-to-r from-amber-500/15 via-slate-800 to-slate-800/90 border border-amber-500/40 shadow-sm"
+                      ? "bg-linear-to-r from-amber-500/15 via-slate-800 to-slate-800/90 border border-amber-500/40 shadow-xs"
                       : "hover:bg-slate-800/50 border border-transparent"
                   }`}
                 >

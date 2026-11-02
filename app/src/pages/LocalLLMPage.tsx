@@ -43,7 +43,7 @@ export default function LocalLLMPage() {
 
         {/* Info Banner */}
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm text-amber-400 font-medium">Experimental Feature</p>
             <p className="text-xs text-neutral-400 mt-1">

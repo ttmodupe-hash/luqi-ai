@@ -1,18 +1,10 @@
-# LUQI verification-only Cloud Build configuration.
-# The legacy file previously deployed to Cloud Run and sent 100% of traffic
-# on any Cloud Build invocation. This is no longer permitted.
-# A production deployment requires a separate, manually approved release
-# workflow with validated target, immutable image digest, staging evidence,
-# rollback instructions and workload identity. No secret substitution here.
+# Legacy Cloud Build configuration is validation-only.
+# An external Cloud Build trigger may still invoke this file and incur build
+# costs. It cannot push an image, change Cloud Run traffic, or deploy LUQI.
+# Railway remains LUQI's source-linked production host.
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-only'
-    args:
-      - 'build'
-      - '--pull'
-      - '-t'
-      - 'luqi-ai-validation:$SHORT_SHA'
-      - '.'
+    args: ['build', '--file', 'Dockerfile', '--tag', 'luqi-validation-only:local', '.']
 options:
   logging: CLOUD_LOGGING_ONLY
-timeout: '1800s'

@@ -170,7 +170,7 @@ export default function WisdomPage() {
 
           {/* Proverb */}
           <div className="flex gap-3 mb-4">
-            <Quote size={18} className="text-neutral-500 mt-1 flex-shrink-0" />
+            <Quote size={18} className="text-neutral-500 mt-1 shrink-0" />
             <p className="text-white text-sm leading-relaxed italic">
               {proverb}
             </p>
@@ -286,7 +286,7 @@ export default function WisdomPage() {
                 <select
                   value={selectedTradition}
                   onChange={(e) => handleTraditionChange(e.target.value)}
-                  className="appearance-none bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer min-w-[180px]"
+                  className="appearance-none bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-4 py-2 pr-10 focus:outline-hidden focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer min-w-[180px]"
                 >
                   <option value="">All Traditions</option>
                   {TRADITIONS.map((t) => (

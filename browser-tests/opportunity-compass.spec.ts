@@ -1,0 +1,204 @@
+import { test, expect } from '@playwright/test';
+// Source-specific fixtures describe the dated 29 October review. Pin only test
+// time; the explicit expired-notice case below still exercises runtime expiry.
+test.beforeEach(async ({page}) => {
+ await page.clock.setFixedTime(new Date('2026-10-29T10:00:00Z'));
+});
+test('Opportunity Compass is useful at 320px without private data or unapproved inference', async ({page}) => {
+  await page.setViewportSize({width:320,height:740});
+  const posts:string[]=[];
+  page.on('request',req=>{if(req.method()==='POST')posts.push(req.url())});
+  await page.goto('/#/start');
+  await page.getByRole('link',{name:'Explore opportunities'}).click();
+  await expect(page).toHaveURL(/#\/opportunities$/);
+  await expect(page.getByRole('heading',{name:/Opportunity Compass/})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toBeVisible();
+  await page.getByRole('button',{name:'Select Gauteng'}).click();
+  await expect(page.getByRole('status').filter({hasText:'Selected Gauteng'})).toBeVisible();
+  await page.getByLabel('Opportunity category').selectOption('sponsorship');
+  await expect(page.getByRole('heading',{name:'National Arts Council calls'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+  expect(posts).toEqual([]);
+});
+test('read-only publisher monitor is only called after visitor clicks and never claims real vacancies', async ({page}) => {
+ const requests:string[]=[];
+ await page.route('**/api/v1/opportunity-watch',route=>{
+   requests.push(route.request().method());
+   return route.fulfill({json:{status:'sources_checked',scope:'publisher-pages-only',checkedAt:'2026-10-28T16:00:00Z',sources:[
+     {id:'gov-jobs',status:'reachable',checkedAt:'2026-10-28T16:00:00Z',publication:'Public Service Vacancy Circular 38 of 2026'},
+     {id:'nyda',status:'unavailable',checkedAt:'2026-10-28T16:00:00Z'},
+     {id:'nrf',status:'reachable',checkedAt:'2026-10-28T16:00:00Z'}
+   ]}});
+ });
+ await page.goto('/#/opportunities');
+ expect(requests).toEqual([]);
+ await page.getByRole('button',{name:'Check official source pages'}).click();
+ await expect(page.getByText(/Publisher-page check completed/)).toBeVisible();
+ await expect(page.getByRole('region',{name:'Official opportunity source monitor'}).getByText(/Circular 38 of 2026/)).toBeVisible();
+ expect(requests).toEqual(['GET']);
+ await expect(page.getByText(/does not mean an advertised position is open/)).toBeVisible();
+});
+test('other country choice does not fabricate 54-country opportunities',async({page})=>{
+ await page.goto('/#/opportunities');
+ await page.getByLabel('Country view').selectOption('KE');
+ await expect(page.getByText(/Opportunities for Kenya have not been sourced and reviewed yet/)).toBeVisible();
+ await expect(page.getByRole('heading',{name:'2027 NSFAS applications'})).toHaveCount(0);
+});
+test('Chat links directly to opportunities without a paid provider request',async({page})=>{
+ const paid:string[]=[];
+ page.on('request',req=>{if(req.method()==='POST'&&/\/api\/v1\/luqi-core/.test(req.url()))paid.push(req.url())});
+ await page.goto('/#/chat');
+  await page.getByText('Browse free Luqi guides', { exact: true }).click();
+ await page.getByRole('link',{name:/Government jobs, youth funding, bursaries and graduates/}).click();
+ await expect(page).toHaveURL(/#\/opportunities$/);
+ expect(paid).toEqual([]);
+});
+
+test('Luqi explains government application steps with original Z83 source, locally at 320px',async({page})=>{
+ await page.setViewportSize({width:320,height:740});
+ const unwanted:string[]=[];
+ page.on('request',request=>{
+   if(request.method()!=='GET'||/\/api\/v1\/(?:luqi-core|guest-chat)/.test(request.url()))unwanted.push(request.url());
+ });
+ await page.goto('/#/opportunities');
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Public Service Vacancy Circular 38 of 2026'})});
+ await card.getByText('How to verify and apply with Luqi').click();
+ await expect(card.getByRole('region',{name:'Verify the original opportunity'})).toBeVisible();
+ await expect(card.getByRole('region',{name:'Official application steps'})).toBeVisible();
+ await expect(card.getByRole('link',{name:/DPSA public service vacancy instructions and current Z83/}))
+   .toHaveAttribute('href','https://www.dpsa.gov.za/newsroom/psvc/');
+ await card.getByRole('textbox',{name:/Your question/}).fill('How do I apply?');
+ await card.getByRole('button',{name:'Luqi, explain the verified steps'}).click();
+ await expect(card.getByRole('status').getByText(/advertising department, not DPSA/)).toBeVisible();
+ await expect(card.getByRole('status').getByRole('link',{name:'Check the official source for this answer'}))
+   .toHaveAttribute('href',/dpsa.gov.za/);
+ expect(unwanted).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});
+test('Luqi explains a dated NSFAS source without claiming an open application',async({page})=>{
+ await page.goto('/#/opportunities');
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'2027 NSFAS applications'})});
+ await card.getByText('How to verify and apply with Luqi').click();
+ await card.getByRole('textbox',{name:/Your question/}).fill('Is it still open?');
+ await card.getByRole('button',{name:'Luqi, explain the verified steps'}).click();
+ await expect(card.getByRole('status').getByText(/not proof the portal is accepting submissions now/)).toBeVisible();
+ await expect(card.getByRole('status').getByText(/2026-10-31/)).toBeVisible();
+});
+
+
+test('the real province map filters reviewed individual adverts, and never markets withdrawn posts',async({page})=>{
+  const paid:string[]=[];page.on('request',req=>{if(req.method()==='POST')paid.push(req.url());});
+  await page.setViewportSize({width:320,height:740});
+  await page.goto('/#/opportunities');
+  const records=page.getByRole('region',{name:'Individual government job matches'});
+  await expect(records.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})).toBeVisible();
+  await page.getByRole('button',{name:'Select Gauteng'}).click();
+  await expect(records.getByRole('heading',{name:'Administrative Clerk: Management Support Services'})).toBeVisible();
+  await expect(records.getByRole('heading',{name:'Client Service Officer: COID'})).toHaveCount(0);
+  await page.getByRole('button',{name:'Select Eastern Cape'}).click();
+  await expect(records.getByRole('heading',{name:'Office Administrator'})).toBeVisible();
+  await expect(records.getByRole('heading',{name:'Personnel Officer: Human Resources Management'})).toHaveCount(0);
+  await records.getByLabel(/Include withdrawn posts/).check();
+  const withdrawn=records.getByRole('article').filter({hasText:'Personnel Officer: Human Resources Management'});
+  await expect(withdrawn.getByText(/Withdrawn by the employer/)).toBeVisible();
+  await expect(withdrawn.getByRole('link',{name:'Official withdrawal notice'})).toHaveAttribute('href',/labour.gov.za\/erratum-withdrawal/);
+  expect(paid).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});
+test('fixed job evidence checker is requested only on demand and cannot certify active hiring',async({page})=>{
+ const calls:string[]=[];await page.route('**/api/v1/opportunity-watch/notices',route=>{
+  calls.push(route.request().method());
+  return route.fulfill({json:{checkedAt:'2026-10-29T08:00:00Z',scope:'fixed_official_individual_adverts_only',checks:[
+   {id:'labour-gp-carletonville-clerk',reference:'HR4/4/4/09/47',state:'reference-and-deadline-found',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-mp-sabie-coid',reference:'HR4/4/7/97',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-mp-ict',reference:'HR 4/4/7/96',state:'content-unconfirmed',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-ec-office-administrator',reference:'HR4/4/1/105',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-kzn-employer-services',reference:'HR4/4/9/29',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'cogta-gp-scm',reference:'SSCMDSPR',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'kouga-ec-town-planner-intern',reference:'263/2026',state:'reference-and-deadline-found',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'mp-traffic-officer-learnership',reference:'DCSSL/05/2026',state:'content-unconfirmed',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-gp-bronkhorstspruit-ies',reference:'HR4/4/4/08/04',state:'publisher-unavailable',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'},
+   {id:'labour-ec-withdrawn-personnel',reference:'HR4/4/1/13',state:'withdrawn',checkedAt:'2026-10-29T08:00:00Z',note:'text_evidence_only_not_live_availability'}
+  ]}});
+ });
+ await page.goto('/#/opportunities');const region=page.getByRole('region',{name:'Individual government job matches'});
+ expect(calls).toEqual([]);
+ await region.getByRole('button',{name:'Recheck published job notices'}).click();
+ await expect(region.getByText(/Publisher text check complete/)).toBeVisible();
+ const carletonville=region.getByRole('article').filter({hasText:'Administrative Clerk: Management Support Services'});
+ await expect(carletonville.getByText(/matching reference and deadline/)).toBeVisible();
+ await expect(carletonville.getByText(/current acceptance status must be confirmed/)).toBeVisible();
+ expect(calls).toEqual(['GET']);
+});
+
+test('new official internship and learnership cards disclose pay units and evidence limits on a 320px phone',async({page})=>{
+ // This test verifies the reviewed advert before its real closing date.
+ // Runtime expiry must remain live; the wall clock must not erase this fixture.
+ await page.clock.setFixedTime(new Date('2026-10-29T10:00:00Z'));
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.setViewportSize({width:320,height:740});
+ await page.goto('/#/opportunities');
+ const board=page.getByRole('region',{name:'Individual government job matches'});
+ const kouga=board.getByRole('article').filter({hasText:'Town Planner Internship'});
+ const salary=kouga.getByText(/Advertised salary:/);
+  await expect(salary).toContainText('per month');
+  const salaryText=await salary.innerText();
+  expect(salaryText.match(/R([0-9\s.,\u00a0\u202f]+)/)?.[1]?.replace(/[^0-9]/g,'')).toBe('10000');
+ await expect(kouga.getByText(/current acceptance status must be confirmed/)).toBeVisible();
+ await expect(kouga.getByRole('link',{name:'Original government advert'})).toHaveAttribute('href','https://www.kouga.gov.za/vacancy/town-planner-internship');
+ const learn=board.getByRole('article').filter({hasText:'Basic Traffic Officers Diploma Learnership 2026\/27'});
+ const stipend=learn.getByText(/Advertised stipend:/);
+  await expect(stipend).toContainText('per month');
+  const stipendText=await stipend.innerText();
+  expect(stipendText.match(/R([0-9\s.,\u00a0\u202f]+)/)?.[1]?.replace(/[^0-9]/g,'')).toBe('5000');
+ await expect(learn.getByText(/exact cutoff time unconfirmed/)).toBeVisible();
+ expect(posts).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});
+
+test('geographic province explorer works by shape, keyboard and touch-sized names at 320px',async({page},testInfo)=>{
+ await page.setViewportSize({width:320,height:850});
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.goto('/#/opportunities');
+ const explorer=page.getByRole('region',{name:'Choose a South African province'});
+ const map=explorer.getByRole('group',{name:/South Africa province map/});
+ await expect(map.getByRole('button')).toHaveCount(9);
+ const gp=map.getByRole('button',{name:'Explore Gauteng on the map'});
+ await gp.focus();await gp.press('Enter');
+ await expect(explorer.getByRole('button',{name:'Select Gauteng'})).toHaveAttribute('aria-pressed','true');
+ await expect(explorer.getByRole('status')).toContainText('Selected Gauteng');
+ const board=page.getByRole('region',{name:'Individual government job matches'});
+ await expect(board.getByRole('heading',{name:'Client Service Officer: COID'})).toHaveCount(0);
+ await explorer.getByRole('button',{name:'Select Northern Cape'}).click();
+ await expect(explorer.getByText(/No matching notice in this collection yet/)).toBeVisible();
+ await explorer.getByRole('button',{name:'Show all South Africa'}).click();
+ await expect(board.getByRole('heading',{name:'Client Service Officer: COID'})).toBeVisible();
+ for(const button of await explorer.getByRole('group',{name:'Province selection',exact:true}).getByRole('button').all()){
+  const box=await button.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(44);
+ }
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ expect(posts).toEqual([]);
+ await page.evaluate(()=>{(document.activeElement as HTMLElement)?.blur();});
+ const screenshotStyle='.luqi-header,.luqi-skip,.luqi-collaboration-dock{visibility:hidden !important}';
+ await explorer.screenshot({path:testInfo.outputPath('province-map-320.png'),style:screenshotStyle});
+ await page.setViewportSize({width:1440,height:1050});
+ await explorer.getByRole('button',{name:'Select Gauteng'}).click();
+ await explorer.screenshot({path:testInfo.outputPath('province-map-desktop.png'),style:screenshotStyle});
+ await explorer.getByRole('button',{name:'View reviewed notices'}).click();
+ await expect(board.getByRole('heading',{name:'Real public-sector posts, internships and learnerships'})).toBeInViewport();
+});
+
+test('passed deadlines stay excluded and explicitly expired when history is opened',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-10T10:00:00Z'));
+ const posts:string[]=[];page.on('request',req=>{if(req.method()==='POST')posts.push(req.url());});
+ await page.goto('/#/opportunities');
+ const board=page.getByRole('region',{name:'Individual government job matches'});
+ await expect(board.getByRole('heading',{name:'Administrative Clerk: Management Support Services',exact:true})).toHaveCount(0);
+ await board.getByLabel(/Include withdrawn posts/).check();
+ const expired=board.getByRole('article').filter({has:page.getByRole('heading',{name:'Administrative Clerk: Management Support Services',exact:true})});
+ await expect(expired.getByText('Published closing date passed. Not an active listing.',{exact:true})).toBeVisible();
+ await expect(expired.getByText(/source review is older than 48 hours/)).toBeVisible();
+ await expect(expired.getByText(/current acceptance status must be confirmed/)).toHaveCount(0);
+ expect(posts).toEqual([]);
+});

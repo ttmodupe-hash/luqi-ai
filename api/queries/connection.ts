@@ -10,31 +10,29 @@
 
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-
-const hasDbConfig = Boolean(process.env.DATABASE_URL || process.env.DB_HOST);
+import { parseMySqlConnectionSettings } from "../lib/mysqlConfig";
 
 let pool: mysql.Pool | null = null;
 let realDrizzleDb: any = null;
+let dbConfigurationError = false;
 
-if (hasDbConfig) {
-  try {
-    pool = process.env.DATABASE_URL
-      ? mysql.createPool(process.env.DATABASE_URL)
-      : mysql.createPool({
-          host: process.env.DB_HOST || "localhost",
-          user: process.env.DB_USER || "root",
-          password: process.env.DB_PASSWORD || "",
-          database: process.env.DB_NAME || "luqi_ai",
-          port: parseInt(process.env.DB_PORT || "3306", 10),
-          waitForConnections: true,
-          connectionLimit: 10,
-          queueLimit: 0,
-          enableKeepAlive: true,
-        });
+try {
+  const configuration = parseMySqlConnectionSettings(process.env);
+  if (configuration) {
+    pool = mysql.createPool({
+      ...configuration,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      connectTimeout: 4000,
+      enableKeepAlive: true,
+    });
     realDrizzleDb = drizzle(pool);
-  } catch (err) {
-    console.warn("[DB] Pool creation failed, in-memory store active:", err);
   }
+} catch {
+  // Never reveal database URLs or credentials in logs.
+  dbConfigurationError = true;
+  console.error("[DB] Incompatible or incomplete database configuration. Persistent storage unavailable.");
 }
 
 // ── In-Memory Tables Store (Fallback) ────────────────────────────────
@@ -210,33 +208,45 @@ const memoryDb = {
 
 export const db = realDrizzleDb || memoryDb;
 
-export async function getDb() {
-  if (realDrizzleDb && pool) {
-    try {
-      const conn = await pool.getConnection();
-      conn.release();
-      return realDrizzleDb;
-    } catch {
-      // Database connection unreachable; non-auth features may use the memory fallback.
-      return memoryDb;
-    }
-  }
-  return memoryDb;
-}
-
-/**
- * Authentication must fail closed: never authenticate against the in-memory
- * query-builder fallback, whose intentionally simplified filters are not secure.
- */
-export async function getAuthDb() {
-  if (!realDrizzleDb || !pool) return null;
+/** Checks a live query, not just whether a DB variable exists. */
+export async function checkPersistentDatabase(): Promise<
+  { status: "connected" | "unconfigured" | "configuration_error" | "unreachable"; dialect: "mysql" }
+> {
+  if (dbConfigurationError) return { status: "configuration_error", dialect: "mysql" };
+  if (!pool) return { status: "unconfigured", dialect: "mysql" };
   try {
     const conn = await pool.getConnection();
-    conn.release();
-    return realDrizzleDb;
+    try {
+      await conn.query("SELECT 1");
+    } finally {
+      conn.release();
+    }
+    return { status: "connected", dialect: "mysql" };
   } catch {
-    return null;
+    return { status: "unreachable", dialect: "mysql" };
   }
+}
+
+/** Use for any user data or transaction requiring durable persistence. */
+export async function getPersistentDb() {
+  const health = await checkPersistentDatabase();
+  if (health.status !== "connected" || !realDrizzleDb) {
+    throw new Error("Persistent MySQL storage is unavailable");
+  }
+  return realDrizzleDb;
+}
+
+/** Backwards-compatible demo accessor. Never use for user/financial writes. */
+export async function getDb() {
+  if (realDrizzleDb && pool) {
+    const health = await checkPersistentDatabase();
+    if (health.status === "connected") return realDrizzleDb;
+  }
+  if (process.env.NODE_ENV === "production") {
+    // Never silently acknowledge production writes in volatile demo memory.
+    throw new Error("Persistent database required in production");
+  }
+  return memoryDb;
 }
 
 export async function closeDb() {
@@ -247,4 +257,12 @@ export async function closeDb() {
       // non-fatal
     }
   }
+}
+
+/** Raw transaction access for the versioned Python/Node Omega queue contract.
+ * Never falls back to the demo store, creates tables or exposes credentials.
+ */
+export function getPersistentMySqlPool(): mysql.Pool {
+  if (!pool || dbConfigurationError) throw new Error("Persistent MySQL required");
+  return pool;
 }

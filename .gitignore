@@ -107,3 +107,10 @@ session_data/
 node_modules/
 web_ui/node_modules/
 web_ui/dist/
+
+/playwright-report/
+/test-results/
+
+# Generated desktop UI bundle
+app/electron/ui/
+app/release/

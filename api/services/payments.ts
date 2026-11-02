@@ -13,12 +13,11 @@
 
 import crypto from "node:crypto";
 
-function paystackSecret(): string { return process.env.PAYSTACK_SECRET_KEY || ""; }
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 const PAYSTACK_BASE = "https://api.paystack.co";
 
 export function paymentsConfigured(): boolean {
-  const secret = paystackSecret();
-  return secret.startsWith("sk_") && secret.length > 10;
+  return PAYSTACK_SECRET.startsWith("sk_") && PAYSTACK_SECRET.length > 10;
 }
 
 // ── Initialize a hosted-checkout transaction ─────────────────────────
@@ -34,7 +33,7 @@ export async function initializeTopup(
     const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${paystackSecret()}`,
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -62,9 +61,8 @@ export async function initializeTopup(
 // ── Webhook signature verification (HMAC-SHA512, timing-safe) ────────
 
 export function verifyWebhookSignature(rawBody: string, signature: string | undefined): boolean {
-  const secret = paystackSecret();
-  if (!signature || !secret) return false;
-  const computed = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
+  if (!signature || !PAYSTACK_SECRET) return false;
+  const computed = crypto.createHmac("sha512", PAYSTACK_SECRET).update(rawBody).digest("hex");
   const a = Buffer.from(computed, "utf8");
   const b = Buffer.from(String(signature), "utf8");
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -77,11 +75,11 @@ export async function verifyTransaction(
 ): Promise<{ amountCents: number; currency: string; channel: string; email: string } | null> {
   try {
     const res = await fetch(`${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`, {
-      headers: { Authorization: `Bearer ${paystackSecret()}` },
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
     });
     const data = (await res.json()) as any;
     const t = data?.data;
-    if (!res.ok || !t || t.status !== "success" || t.reference !== reference) return null;
+    if (!res.ok || !t || t.status !== "success") return null;
     return {
       amountCents: Number(t.amount),
       currency: t.currency || "ZAR",

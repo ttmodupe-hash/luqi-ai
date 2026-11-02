@@ -189,7 +189,7 @@ export const MotherTongueExamEngine: React.FC = () => {
           <select
             value={motherTongue}
             onChange={e => setMotherTongue(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-hidden focus:border-emerald-500"
           >
             {SA_MOTHER_TONGUES.map(lang => (
               <option key={lang} value={lang}>{lang}</option>
@@ -202,7 +202,7 @@ export const MotherTongueExamEngine: React.FC = () => {
           <select
             value={subject}
             onChange={e => setSubject(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400"
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-hidden focus:border-cyan-400"
           >
             {DBE_SUBJECTS.map(sub => (
               <option key={sub} value={sub}>{sub}</option>
@@ -215,7 +215,7 @@ export const MotherTongueExamEngine: React.FC = () => {
           <select
             value={grade}
             onChange={e => setGrade(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-purple-400"
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-hidden focus:border-purple-400"
           >
             <option value="Grade 10–12 (Matric NSC)">Grade 10–12 (Matric NSC)</option>
             <option value="Grade 8–9 (Senior Phase)">Grade 8–9 (Senior Phase)</option>
@@ -249,7 +249,7 @@ export const MotherTongueExamEngine: React.FC = () => {
           value={examQuestion}
           onChange={e => setExamQuestion(e.target.value)}
           placeholder="Paste any English exam paper question here..."
-          className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+          className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-emerald-500"
         />
         <button
           type="submit"

@@ -27,8 +27,8 @@ class CacheManager:
 
     def set(self, key: str, value: Any, ttl: int = 300):
         self._store[key] = value
-        if ttl > 0:
-            self._ttl[key] = time.time() + ttl
+        # TTL of zero (or negative) means immediately expired, never unlimited.
+        self._ttl[key] = time.time() + ttl
 
     def delete(self, key: str) -> bool:
         if key in self._store:

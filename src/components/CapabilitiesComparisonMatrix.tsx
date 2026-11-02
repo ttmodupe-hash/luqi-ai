@@ -248,7 +248,7 @@ export default function CapabilitiesComparisonMatrix() {
     }
 
     if (isLuqi) {
-      style = "bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-amber-500/50 text-amber-200 font-bold shadow-sm shadow-amber-500/10";
+      style = "bg-linear-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-amber-500/50 text-amber-200 font-bold shadow-xs shadow-amber-500/10";
       icon = <Sparkles className="w-3.5 h-3.5 text-amber-400" />;
     }
 
@@ -296,7 +296,7 @@ export default function CapabilitiesComparisonMatrix() {
       </div>
 
       {/* Responsive Comparison Table Container */}
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/60 shadow-xl overflow-hidden backdrop-blur">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900/60 shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[760px]">
             <thead>
@@ -304,7 +304,7 @@ export default function CapabilitiesComparisonMatrix() {
                 <th className="py-4 px-4 font-semibold w-[26%]">Capability & Architecture</th>
                 <th className="py-4 px-4 font-bold text-amber-300 bg-amber-500/5 border-x border-amber-500/20 w-[28%]">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-md bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-[10px]">
+                    <div className="w-5 h-5 rounded-md bg-linear-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-[10px]">
                       L
                     </div>
                     <span>Luqi AI Sovereign Core</span>
@@ -359,7 +359,7 @@ export default function CapabilitiesComparisonMatrix() {
 
           <Link
             to="/pendulum-lab"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:brightness-110 text-white font-bold text-xs shadow-md shadow-sky-500/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-sky-500 to-blue-600 hover:brightness-110 text-white font-bold text-xs shadow-md shadow-sky-500/20 transition-all"
           >
             <span>Launch Physics Lab Simulator</span>
             <ArrowRight className="w-3.5 h-3.5" />
