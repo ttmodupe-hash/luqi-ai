@@ -1,4 +1,3 @@
-import { fetchWithLocalDiagnostics } from './local-diagnostics';
 /** Bounded AI-trial transport. A timeout cannot undo or refund a provider attempt. */
 export const MAX_PILOT_RESPONSE_BYTES = 65_536;
 export const PILOT_READINESS_TIMEOUT_MS = 10_000;
@@ -41,8 +40,7 @@ export async function requestPilotJson(
   parent?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(abort, path === '/v1/readiness' ? PILOT_READINESS_TIMEOUT_MS : PILOT_REPLY_TIMEOUT_MS);
   const operation = async (): Promise<PilotJsonResult> => {
-    const response = await fetchWithLocalDiagnostics(
-      path === '/v1/readiness' ? 'pilot_availability' : 'pilot_reply', request, path, { ...init,
+    const response = await request(path, { ...init,
       method: path === '/v1/readiness' ? 'GET' : 'POST',
       signal: controller.signal, credentials: 'omit', cache: 'no-store', redirect: 'error',
     });
