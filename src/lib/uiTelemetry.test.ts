@@ -106,6 +106,34 @@ describe('consent-gated local diagnostics', () => {
       count: 1, total: 0.14, max: 0.14,
     });
   });
+  it('marks a fulfilled degraded readiness response as failed without hiding the response', async () => {
+    setAnalyticsConsent(true);
+    const response = await measureApi('readiness_request', async () => ({ status: 'degraded' as const }),
+      result => result.status === 'degraded' ? 'failed' : 'ok');
+    expect(response.status).toBe('degraded');
+    expect(readLocalMetrics().map(metric => metric.outcome)).toEqual(['failed']);
+  });
+  it('honours revocation from another browser tab', () => {
+    setAnalyticsConsent(true);
+    recordMetric('tender_prepare');
+    storage.delete('luqi_analytics_consent');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'luqi_analytics_consent' }));
+    expect(readLocalMetrics()).toEqual([]);
+    expect(FakeObserver.instances.every(observer => observer.closed)).toBe(true);
+  });
+  it('fails closed if previously granted consent cannot be removed from storage', () => {
+    setAnalyticsConsent(true);
+    recordMetric('tender_prepare');
+    vi.stubGlobal('localStorage', {
+      getItem: () => 'yes',
+      setItem: () => {},
+      removeItem: () => { throw new Error('storage denied'); },
+    });
+    expect(setAnalyticsConsent(false)).toBe(false);
+    recordMetric('tender_prepare');
+    expect(readLocalMetrics()).toEqual([]);
+    expect(FakeObserver.instances.every(observer => observer.closed)).toBe(true);
+  });
   it('safely refuses tracking if storage is inaccessible', () => {
     vi.stubGlobal('localStorage', {
       getItem: () => { throw new Error('unavailable'); },
