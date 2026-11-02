@@ -75,7 +75,8 @@ for (const width of [320, 390, 768, 1280]) {
     });
     for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(4.5);
 
-    const country = page.getByLabel('Country and continental view', { exact: true });
+    // The nested label includes option text; the accessible control name does not.
+    const country = page.getByRole('combobox', { name: 'Country and continental view', exact: true });
     await country.focus();
     await expect(country).toBeFocused();
     const next = await country.locator('option').nth(1).getAttribute('value');
