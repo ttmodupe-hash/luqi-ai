@@ -42,7 +42,7 @@ const navigation = [
 // Keep the five most useful destinations visible on wide screens; the complete
 // directory remains in an accessible native disclosure and the narrow-screen menu.
 const homeNavigation = [
-  ["/", "Home"], ["/chat", "Chat"], ["/omega-tasks", "Tools"], ["/study-desk", "Learn"],
+  ["/", "Workspace"], ["/chat", "Chat"], ["/omega-tasks", "Tools"], ["/study-desk", "Learn"],
   ["/comparative-evidence", "Africa"], ["/driver-rights", "Safety"],
   ["/opportunities", "Opportunities"], ["/local-pulse", "News"], ["/start", "About"],
 ] as const;

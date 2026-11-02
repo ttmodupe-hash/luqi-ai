@@ -9,10 +9,10 @@
 .luqi-shell-home .luqi-header-actions .luqi-home-signin{border:1px solid #78958b;background:transparent;color:#fff;min-height:40px;padding:8px 16px;border-radius:9px;font-size:12px}
 .luqi-shell-home .luqi-header-actions .luqi-home-start{background:#19784e;color:white;border-radius:9px;padding:11px 18px;min-height:40px;font-weight:700;font-size:12px}
 .luqi-shell-home .luqi-header-actions .luqi-home-start:hover,.luqi-shell-home .luqi-header-actions .luqi-home-start:focus-visible{background:#278d60}
-.luqi-home-screenshot{background:linear-gradient(180deg,#0b3029 0,#092720 73%,#10241c 100%);color:#f4f7ec;overflow:visible}
+.luqi-home-screenshot{background:#0b3029 linear-gradient(180deg,#0b3029 0,#092720 73%,#10241c 100%);color:#f4f7ec;overflow:visible}
 .luqi-home-screenshot .luqi-home-inner{max-width:1640px;padding:10px clamp(12px,1.4vw,26px) 40px}
 .luqi-panorama-top{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:10px;align-items:stretch;min-width:0}
-.luqi-home-screenshot .luqi-hero{display:block;position:relative;overflow:hidden;min-width:0;min-height:370px;padding:20px clamp(18px,2vw,36px) 16px;border:1px solid #31594d;border-radius:16px;background:#102d28 url("/luqi-panorama.svg") center/cover no-repeat}
+.luqi-home-screenshot .luqi-hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(250px,.9fr);gap:clamp(12px,1.2vw,22px);align-items:start;position:relative;overflow:hidden;min-width:0;min-height:370px;padding:20px clamp(18px,2vw,36px) 16px;border:1px solid #31594d;border-radius:16px;background:#102d28 url("/luqi-panorama.svg") center/cover no-repeat}
 .luqi-home-screenshot .luqi-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,30,28,.76),rgba(6,32,29,.4) 65%,rgba(7,29,26,.15));pointer-events:none}
 .luqi-home-screenshot .luqi-hero-copy{position:relative;z-index:1;max-width:600px;min-width:0}
 .luqi-home-screenshot .luqi-pano-eyebrow{color:#f7e8b9;font-size:10px;font-weight:700;letter-spacing:.17em;margin:7px 0 20px}
@@ -163,4 +163,34 @@
 }
 @media(max-width:1279px){
  .luqi-shell-home .luqi-home-chat{display:none}
+}
+
+
+/* Keep the existing, operational guest-trial/country card visible inside the
+   panorama rather than burying it in an unopened disclosure. No duplicate
+   panel, fake guest count or automatic AI traffic. */
+.luqi-home-screenshot .luqi-hero .luqi-chat-card{
+  position:relative;z-index:1;min-width:0;align-self:start;
+  padding:18px 15px;border:1px solid #769b90;
+  box-shadow:0 10px 24px #0006;
+}
+.luqi-home.luqi-home-screenshot .luqi-hero-onboarding{
+  color:#f2f4e8;
+}
+.luqi-home.luqi-home-screenshot .luqi-hero-onboarding a{
+  color:#f8e8af;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.luqi-home.luqi-home-screenshot .luqi-hero-onboarding a:focus-visible{
+  outline:3px solid #ffe0a5;outline-offset:3px;
+}
+@media(max-width:1199px){
+  .luqi-home-screenshot .luqi-hero{grid-template-columns:minmax(0,1fr)}
+}
+/* The established shell switches to its accessible mobile menu through 1440px.
+   Do not force a crowded desktop menu on 1107/1440px tablets and laptops. */
+@media(max-width:1440px){
+  .luqi-shell-home .luqi-desktop-nav{display:none}
+  .luqi-shell-home .luqi-menu-button{display:flex}
 }

@@ -98,6 +98,7 @@ export default function Home() {
               <p className="luqi-hero-onboarding">Want to understand public records? <Link to="/chat?civic=1">Explore Luqi's Civic Evidence Desk</Link> with original source links.</p>
               <p className="luqi-pano-trust"><ShieldCheck size={15} aria-hidden="true"/> Questions open Luqi’s free local guidance first. AI calls still require separate consent and are subject to availability.</p>
             </div>
+            <HeroAiChatConsole />
           </section>
           <div className="luqi-pano-moon"><MoonNowPanel /></div>
         </div>
@@ -116,12 +117,12 @@ export default function Home() {
             <p className="luqi-history-note">Illustrated design, not historical portraits. Sources distinguish texts, artifacts and interpretations.</p>
           </div>
           <div className="luqi-history-cards">
-            <article className="luqi-history-card">
+            <div className="luqi-history-card">
               <div className="luqi-history-card-title"><Globe2 size={22} aria-hidden="true"/><h3>1. The Table of Nations</h3></div>
               <p>Genesis 10 names Cush, Mizraim, Put and Canaan. Explore the ancient geography and why it cannot establish modern racial ancestry.</p>
               <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"geography"}}>Explore the geography <ArrowRight size={16} aria-hidden="true"/></Link>
-            </article>
-            <article className="luqi-history-card">
+            </div>
+            <div className="luqi-history-card">
               <div className="luqi-history-card-title"><BookOpen size={22} aria-hidden="true"/><h3>2. African figures in the texts</h3></div>
               <ul>
                 <li><strong>Ebed-Melech</strong><span>Jeremiah 38–39 · a Cushite rescuer</span></li>
@@ -129,12 +130,12 @@ export default function Home() {
                 <li><strong>Taharqa</strong><span>Evidence from Kushite kingship; chronology matters</span></li>
               </ul>
               <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"ebed"}}>Compare text and evidence <ArrowRight size={16} aria-hidden="true"/></Link>
-            </article>
-            <article className="luqi-history-card">
+            </div>
+            <div className="luqi-history-card">
               <div className="luqi-history-card-title"><Landmark size={22} aria-hidden="true"/><h3>3. Early African Christianity</h3></div>
               <p>Explore the African official in Acts 8, the Nubian royal title Candace and separately evidenced Christian history in Aksum.</p>
               <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"acts"}}>Study the sources <ArrowRight size={16} aria-hidden="true"/></Link>
-            </article>
+            </div>
           </div>
           <div className="luqi-pano-toolstrip">
             <div className="luqi-pano-toolstrip-heading">
@@ -159,7 +160,8 @@ export default function Home() {
         <div className="luqi-pano-discover"><HomeExtras /></div>
         <details className="luqi-pano-guest-info">
           <summary>How does Luqi’s AI trial work?</summary>
-          <HeroAiChatConsole />
+          <p>Luqi’s guest AI replies are limited and require consent. The free guide and public sources remain available without registering. No prompt is sent to a paid provider from the homepage.</p>
+          <Link to="/try">Check the guest trial</Link>
         </details>
         <section
           id="tools"
