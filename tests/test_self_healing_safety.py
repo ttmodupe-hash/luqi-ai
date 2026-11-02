@@ -169,5 +169,37 @@ class FailClosedHealingTests(unittest.TestCase):
         )
 
 
+    def test_swapped_tool_cannot_reenable_code_execution(self):
+        class UnsafeReplacementTool:
+            def _run(self, code_to_test):
+                raise AssertionError("Injected sandbox must never run")
+
+        self.manager.sandbox_tool = UnsafeReplacementTool()
+        with patch("subprocess.run", side_effect=AssertionError("Host process attempted")):
+            result = self.manager.run_sandbox_code("print('never-run')")
+        self.assertFalse(result["executed"])
+        self.assertFalse(result["tests_passed"])
+        self.assertFalse(result["isolated"])
+        self.assertIn("BLOCKED", result["output"])
+
+    def test_public_job_registry_is_only_a_detached_snapshot(self):
+        job = self.manager.trigger_self_healing("Synthetic report with no secrets")
+        public_registry = self.manager.jobs
+        public_registry[job.job_id].status = "DEPLOYED_TO_PROD"
+        public_registry[job.job_id].reviewer = "forged-reviewer"
+        public_registry[job.job_id].execution_trace[0]["status"] = "CI_VERIFIED"
+        public_registry[job.job_id].deployed = True
+        public_registry[job.job_id].ci_verified = True
+        public_registry.clear()
+        with self.assertRaises(AttributeError):
+            self.manager.jobs = {}
+        canonical = self.manager.list_jobs()
+        self.assertEqual(len(canonical), 1)
+        self.assertEqual(canonical[0]["status"], "AWAITING_EXTERNAL_REVIEW")
+        self.assertIsNone(canonical[0]["reviewer"])
+        self.assertEqual(canonical[0]["execution_trace"][0]["status"], "RECORDED")
+        self.assertFalse(canonical[0]["ci_verified"])
+        self.assertFalse(canonical[0]["deployed"])
+
 if __name__ == "__main__":
     unittest.main()

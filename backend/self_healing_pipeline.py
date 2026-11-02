@@ -27,6 +27,11 @@ MAX_REPORT_LENGTH = 4000
 MAX_JOBS_IN_MEMORY = 100
 _SAFE_PATH = re.compile(r"^[a-zA-Z0-9_./-]{1,180}$")
 _REPORT_WITHHELD = "[REPORT_WITHHELD]"
+# Shared refusal string; never delegate the manager boundary to an injectable tool.
+_SANDBOX_BLOCKED = (
+    "BLOCKED: application-host code execution is disabled. "
+    "No sandbox was started, no tests were run."
+)
 # In-memory-only keyed fingerprint; never treat as durable incident evidence.
 _FINGERPRINT_KEY = secrets.token_bytes(32)
 
@@ -79,10 +84,7 @@ class SandboxedExecutionTool:
 
     def _run(self, code_to_test: str) -> str:
         # Deliberately do not inspect, write to disk, shell out or evaluate code.
-        return (
-            "BLOCKED: application-host code execution is disabled. "
-            "No sandbox was started, no tests were run."
-        )
+        return _SANDBOX_BLOCKED
 
 
 class GitHubPRTool:
@@ -132,13 +134,25 @@ class SelfHealingPipelineManager:
     """
 
     def __init__(self) -> None:
-        self.jobs: Dict[str, PipelineJob] = {}
+        # Never expose the canonical state as a caller-mutable public dict.
+        self._jobs: Dict[str, PipelineJob] = {}
         self.sandbox_tool = SandboxedExecutionTool()
         self.pr_tool = GitHubPRTool()
 
+    @property
+    def jobs(self) -> Dict[str, PipelineJob]:
+        """Detached compatibility snapshot; writes cannot forge review evidence.
+
+        This is not a security boundary against code already executing in the
+        Python process. External access still requires authenticated routes.
+        """
+        return deepcopy(self._jobs)
+
     def run_sandbox_code(self, code_to_test: str) -> Dict[str, Any]:
+        # Refuse directly. A replaced or monkeypatched sandbox_tool must not
+        # turn this compatibility endpoint into arbitrary code execution.
         return {
-            "output": self.sandbox_tool._run(code_to_test),
+            "output": _SANDBOX_BLOCKED,
             "duration_seconds": 0,
             "circuit_breaker_timeout": None,
             "isolated": False,
@@ -152,7 +166,7 @@ class SelfHealingPipelineManager:
         withheld = _sanitize_report(bug_report)
         advisory_path = _safe_target(target_file)
         category = _heuristic_category(bug_report)
-        if len(self.jobs) >= MAX_JOBS_IN_MEMORY:
+        if len(self._jobs) >= MAX_JOBS_IN_MEMORY:
             raise RuntimeError(
                 "In-memory proposal capacity reached; durable reviewed queue required."
             )
@@ -194,7 +208,7 @@ class SelfHealingPipelineManager:
                 "timestamp": job.created_at,
             },
         ]
-        self.jobs[job.job_id] = job
+        self._jobs[job.job_id] = job
         # A caller must never receive the registered mutable state; modifying
         # a returned job must not forge deployment or test evidence in listings.
         return deepcopy(job)
@@ -204,7 +218,7 @@ class SelfHealingPipelineManager:
     ) -> Tuple[bool, str]:
         # The caller's reviewer string is NOT proof of identity.
         # In-process approval cannot merge/deploy or change the job to deployed.
-        if job_id not in self.jobs:
+        if job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,
@@ -217,7 +231,7 @@ class SelfHealingPipelineManager:
         self, job_id: str, reason: str = "Requires manual code review",
         reviewer: str = "unverified"
     ) -> Tuple[bool, str]:
-        if job_id not in self.jobs:
+        if job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,
@@ -249,7 +263,7 @@ class SelfHealingPipelineManager:
                 "ci_verified": job.ci_verified,
                 "deployed": job.deployed,
             }
-            for job in reversed(list(self.jobs.values()))
+            for job in reversed(list(self._jobs.values()))
         ]
 
 
