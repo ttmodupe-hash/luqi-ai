@@ -30,7 +30,19 @@ test('320px Capital Intelligence prepares a real local document and blocks false
   await expect(page.getByRole('link',{name:'Download preparation worksheet'}))
     .toHaveAttribute('download','luqi-funding-preparation.txt');
   expect(risky).toEqual([]);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+  const viewportReport=await page.evaluate(()=>({
+    viewport:window.innerWidth,
+    pageWidth:document.documentElement.scrollWidth,
+    // Keep the actual 320px assertion. Report culprits if width still breaks.
+    excessNodes:Array.from(document.querySelectorAll('main *'))
+      .filter(el=>el.getBoundingClientRect().right>window.innerWidth+1)
+      .slice(0,8)
+      .map(el=>({tag:el.tagName,
+        role:el.getAttribute('aria-label')||'',
+        className:el.getAttribute('class')||'',
+        right:Math.round(el.getBoundingClientRect().right)})),
+  }));
+  expect(viewportReport.pageWidth,JSON.stringify(viewportReport)).toBeLessThanOrEqual(viewportReport.viewport+1);
 });
 test('Capital Intelligence requires a recheck when publisher review expires',async({page})=>{
   await page.clock.setFixedTime(new Date('2027-01-10T12:00:00+02:00'));
