@@ -58,6 +58,14 @@ jobs:
         run: npx vitest run tests/comparative-evidence.test.ts tests/comparative-evidence-page.test.tsx
       - name: Type-check comparative evidence and local consumer/Chat routing
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/comparative-evidence.ts src/pages/ComparativeEvidencePage.tsx src/lib/consumer-rights-guide.ts src/components/ConsumerQuickCard.tsx src/lib/luqi-intent-guide.ts src/pages/AiPilotPage.tsx
+      - name: Verify source-grounded Capital Intelligence, private drafts and retired fake sensing
+        run: |
+          npx --no-install vitest run tests/capital-intelligence.test.ts tests/capital-intelligence-panel.test.tsx tests/sensing-truth-guard.test.ts tests/trade-scenario.test.ts tests/african-opportunity-page.test.tsx
+          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/lib/capital-intelligence.ts src/components/CapitalIntelligencePanel.tsx src/pages/AfricanOpportunityRadarPage.tsx
+          cmp src/lib/capital-intelligence.ts app/src/lib/capital-intelligence.ts
+          cmp src/components/CapitalIntelligencePanel.tsx app/src/components/CapitalIntelligencePanel.tsx
+          cmp src/pages/AfricanOpportunityRadarPage.tsx app/src/pages/AfricanOpportunityRadarPage.tsx
+          cmp src/lib/trade-scenario.ts app/src/lib/trade-scenario.ts
       - name: Verify official opportunity guidance, publisher watch and honest connection statuses
         run: npx vitest run tests/opportunity-sources.test.ts tests/opportunity-scan.test.ts tests/opportunity-compass-page.test.tsx tests/workspace-experience.test.tsx tests/publisher-signals.test.tsx tests/publisher-cache.test.ts tests/connection-status-badge.test.tsx
       - name: Type-check opportunity sources, source scanner and public view
