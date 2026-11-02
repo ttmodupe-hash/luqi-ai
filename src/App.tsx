@@ -10,7 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
-import Home from "./pages/Home";
+const Home = lazy(() => import("./pages/Home"));
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
@@ -84,7 +84,13 @@ export default function App() {
     <AppLayout>
       <Routes>
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
-        <RouterRoute path="/" element={<Home />} />
+        <RouterRoute path="/" element={
+          <RouteLoadBoundary loading={
+            <main className="luqi-home luqi-home-screenshot" aria-busy="true" aria-label="Luqi homepage loading">
+              <p role="status" aria-live="polite">Opening Luqi’s homepage…</p>
+            </main>
+          }><Home /></RouteLoadBoundary>
+        } />
         <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/install" element={<InstallAppPage />} />
