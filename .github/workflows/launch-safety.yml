@@ -29,3 +29,5 @@ jobs:
         run: node --test tests/canonical-railway-status.test.mjs
       - name: Verify mirrored LUQIChat workspace and in-tab privacy boundaries
         run: node --test tests/chat-workspace-contract.test.mjs
+      - name: Verify retired self-healing has an honest zero-poll fallback
+        run: node --test tests/self-healing-unavailable-route.test.mjs
