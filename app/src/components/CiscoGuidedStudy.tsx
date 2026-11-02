@@ -22,7 +22,7 @@ export default function CiscoGuidedStudy() {
     </div>
     <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a networking lesson">
       {CCNA_GUIDED_LESSONS.map((item,i) => <button
-        key={item.id} type="button" aria-label={String(i+1).padStart(2,'0')+' '+item.domain.replace(/^\\d+\\.0 /,'')} aria-pressed={activeId === item.id}
+        key={item.id} type="button" aria-label={String(i+1).padStart(2,'0')+' '+item.domain.split(' ').slice(1).join(' ')} aria-pressed={activeId === item.id}
         onClick={() => setActiveId(item.id)}
         className={'min-h-11 rounded-lg border px-3 py-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-emerald-300 '+(activeId===item.id?'border-emerald-300 bg-emerald-900 text-white':'border-slate-600 bg-slate-950 text-slate-200 hover:bg-slate-800')}
       ><span className="mr-2 text-emerald-300">{String(i+1).padStart(2,'0')}</span>{item.domain.replace(/^\d+\.0 /,'')}{answers[item.id] === item.answerIndex?' ✓':''}</button>)}
