@@ -28,7 +28,7 @@ for (const width of [390,1280]) {
     await contacts.getByRole('link',{name:'Approved study partner'}).click();
     await expect(page).toHaveURL(/#\/chat\/people\?circle=552987fe/);
     await expect(page.locator('.luqi-chat-shell')).toBeVisible();
-    await expect(page.getByRole('heading',{name:'🔐 P2P Circles & Chat'})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Private conversations'})).toBeVisible();
     await expect(rail.getByRole('heading',{name:'People & private chat'})).toBeVisible();
     await expect(page.getByRole('link',{name:'Sign in to Luqi'})).toHaveCount(0);
     expect(logins).toBe(1);expect(paid).toBe(0);
@@ -46,6 +46,6 @@ test('guest mobile People is in Luqi and never reads account contacts',async({pa
   await page.goto('/#/chat/people');
   await expect(page.getByRole('navigation',{name:'Mobile chat navigation'})).toBeVisible();
   await expect(page.getByRole('link',{name:'People',exact:true})).toBeVisible();
-  await expect(page.getByRole('heading',{name:'🔐 P2P Circles & Chat'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Private conversations'})).toBeVisible();
   expect(reads).toBe(0);
 });
