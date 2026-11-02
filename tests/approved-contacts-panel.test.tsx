@@ -49,11 +49,13 @@ it('does not represent service health as contact presence',async()=>{
  expect(screen.queryByText('Online',{exact:true})).toBeNull();
 });
 
-it('renders separately verified online, offline and hidden contacts',async()=>{
- mocks.contacts.mockResolvedValue({contacts:['online','offline','not_shared'].map((presence,index)=>({circleId:crypto.randomUUID(),userId:index+8,name:'Person '+index,accountActive:true,presence}))});
- draw();await screen.findByRole('link',{name:'Person 0'});
+it('renders separately verified online, away, offline and hidden contacts',async()=>{
+ mocks.contacts.mockResolvedValue({contacts:['online','away','offline','not_shared'].map((presence,index)=>({circleId:crypto.randomUUID(),userId:index+8,name:'Person '+index,accountActive:true,presence}))});
+ const view=draw();await screen.findByRole('link',{name:'Person 0'});
  expect(screen.getByText('Online',{exact:true})).toBeTruthy();
- expect(screen.getByText('Offline or away')).toBeTruthy();
+ expect(screen.getByText('Away',{exact:true})).toBeTruthy();
+ expect(screen.getByText('Offline',{exact:true})).toBeTruthy();
+ expect(view.container.querySelectorAll('.luqi-contact-avatar.is-away')).toHaveLength(1);
  expect(screen.getByText('Status not shared')).toBeTruthy();
  expect(screen.getByText('1 contact online').textContent).toContain('1 contact online');
 });
