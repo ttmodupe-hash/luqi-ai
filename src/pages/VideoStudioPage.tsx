@@ -1,2 +1,6 @@
-// Legacy animation aliases now use the real local studio, with no credit or provider simulation.
-export { default } from './ContentStudioPage';
+// Preserve the public Studio route as a genuine deferred entry point.
+// The authoring/editor page and character-video recorder load only on demand.
+import ContentStudioPage from './ContentStudioPage';
+export default function VideoStudioPage() {
+  return <ContentStudioPage />;
+}
