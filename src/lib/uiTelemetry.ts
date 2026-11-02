@@ -34,10 +34,12 @@ const CONSENT_KEY = 'luqi_analytics_consent';
 const MAX_METRICS = 48;
 const buckets = new Map<string, Metric>();
 let started = false;
+// Always honour opt-out even when browser storage refuses a removal.
+let forcedOff = false;
 let teardown: (() => void) | null = null;
 
 export function getAnalyticsConsent(): boolean {
-  try { return typeof window !== 'undefined' && window.localStorage.getItem(CONSENT_KEY) === 'yes'; }
+  try { return !forcedOff && typeof window !== 'undefined' && window.localStorage.getItem(CONSENT_KEY) === 'yes'; }
   catch { return false; }
 }
 
@@ -89,27 +91,31 @@ function observeVitals(): () => void {
   const observers: PerformanceObserver[] = [];
   let clsMax = 0, windowValue = 0, windowStart = 0, lastShift = 0;
   let lcpMs = 0, clsSeen = false, finished = false, lcpFinished = false;
+  let clsObserver: PerformanceObserver | null = null;
+  let lcpObserver: PerformanceObserver | null = null;
+  const processShifts = (items: PerformanceEntry[]) => {
+    for (const item of items) {
+      const entry = item as LayoutShiftEntry;
+      if (entry.hadRecentInput || !Number.isFinite(entry.value)) continue;
+      if (!clsSeen || entry.startTime - lastShift >= 1000 ||
+          entry.startTime - windowStart >= 5000) {
+        windowStart = entry.startTime;
+        windowValue = 0;
+      }
+      clsSeen = true;
+      windowValue += entry.value;
+      lastShift = entry.startTime;
+      clsMax = Math.max(clsMax, windowValue);
+    }
+  };
   const supported = PerformanceObserver.supportedEntryTypes || [];
 
   if (supported.includes('layout-shift')) {
     try {
-      const observer = new PerformanceObserver(list => {
-        for (const item of list.getEntries()) {
-          const entry = item as LayoutShiftEntry;
-          if (entry.hadRecentInput || !Number.isFinite(entry.value)) continue;
-          if (!clsSeen || entry.startTime - lastShift >= 1000 ||
-              entry.startTime - windowStart >= 5000) {
-            windowStart = entry.startTime;
-            windowValue = 0;
-          }
-          clsSeen = true;
-          windowValue += entry.value;
-          lastShift = entry.startTime;
-          clsMax = Math.max(clsMax, windowValue);
-        }
-      });
+      const observer = new PerformanceObserver(list => processShifts(list.getEntries()));
       // No buffered entries: never retrospectively inspect pre-consent activity.
       observer.observe({ type: 'layout-shift', buffered: false });
+      clsObserver = observer;
       observers.push(observer);
     } catch { /* Older browser: vital unavailable, not zero. */ }
   }
@@ -119,23 +125,24 @@ function observeVitals(): () => void {
         for (const entry of list.getEntries()) lcpMs = Math.max(lcpMs, entry.startTime);
       });
       observer.observe({ type: 'largest-contentful-paint', buffered: false });
+      lcpObserver = observer;
       observers.push(observer);
     } catch { /* Unsupported: no invented LCP value. */ }
   }
   const finalizeLcp = () => {
     if (lcpFinished) return;
     lcpFinished = true;
+    // Flush any performance entries buffered just before the first interaction.
+    for (const entry of lcpObserver?.takeRecords() || []) lcpMs = Math.max(lcpMs, entry.startTime);
+    lcpObserver?.disconnect();
     if (lcpMs > 0) recordMetric('lcp', lcpMs);
   };
   const finalize = () => {
     if (finished) return;
     finished = true;
-    for (const observer of observers) {
-      observer.takeRecords().forEach(entry => {
-        // Remaining observations are best-effort; final callbacks may be delayed.
-        if (entry.entryType === 'largest-contentful-paint') lcpMs = Math.max(lcpMs, entry.startTime);
-      });
-    }
+    // Flush buffered shifts before recording the final CLS session score.
+    if (clsObserver) processShifts(clsObserver.takeRecords());
+
     finalizeLcp();
     if (clsSeen) recordMetric('cls', clsMax);
     for (const observer of observers) observer.disconnect();
@@ -192,14 +199,21 @@ export function startUiTelemetry(): void {
 }
 /** Return false if the browser refuses to store consent; never enable silently. */
 export function setAnalyticsConsent(granted: boolean): boolean {
+  if (!granted) {
+    forcedOff = true;
+    teardown?.();
+    teardown = null;
+    clearLocalMetrics();
+  }
   try {
     if (granted) window.localStorage.setItem(CONSENT_KEY, 'yes');
     else window.localStorage.removeItem(CONSENT_KEY);
   } catch {
-    if (!granted) { teardown?.(); teardown = null; clearLocalMetrics(); }
+    // In inaccessible storage, consent cannot be granted and opt-out still wins.
+    if (granted) { forcedOff = true; synchronizeConsent(); }
     return false;
   }
-  if (granted) startUiTelemetry();
+  if (granted) { forcedOff = false; startUiTelemetry(); }
   synchronizeConsent();
   return getAnalyticsConsent();
 }
