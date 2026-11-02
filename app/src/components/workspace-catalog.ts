@@ -37,7 +37,7 @@ export const workspaceTools = [
   },
   {
     id: "comparative-evidence", title: "Faith, history & scientific evidence", category: "Comparative religion and scholarly verification",
-    description: "Seven source-linked studies of faith narratives, scientific methods, manuscripts and historical interpretation. No religion rankings.",
+    description: "Seven source-linked comparisons plus four African history and Islamic scholarship lessons, with claim-level citations and dated reviews. Not live retrieval or religion rankings.",
     status: "Free · no account", ready: true, path: "/comparative-evidence", icon: "academy",
   },
   {
