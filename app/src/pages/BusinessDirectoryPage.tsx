@@ -8,11 +8,11 @@ import {PROVINCES} from '../lib/opportunity-sources';
 import BusinessPublicCard from '../components/BusinessPublicCard';
 const field='mt-1 w-full min-w-0 rounded-lg border border-slate-500 bg-slate-950 p-3 text-white';
 const button='min-h-11 rounded-lg border border-cyan-500 px-4 py-2 text-cyan-100 disabled:opacity-50';
-export default function BusinessDirectoryPage(){const{id}=useParams();const[params]=useSearchParams();const token=useOptionalCustomerSession()?.session?.token;return <Directory key={(id??'list')+(token??'guest')+params.get('province')} id={id} token={token} initialProvince={parseProvince(params.get('province'))??''}/>;}
-function Directory({id,token,initialProvince}:{id?:string;token?:string;initialProvince:string}){
- const [province,setProvince]=useState(initialProvince),[category,setCategory]=useState(''),[q,setQ]=useState('');
+export default function BusinessDirectoryPage(){const{id}=useParams();const[params]=useSearchParams();const token=useOptionalCustomerSession()?.session?.token;const initialProvince=parseProvince(params.get('province'))??'';const initialQuery=(params.get('q')??'').trim().slice(0,80);return <Directory key={(id??'list')+(token??'guest')+initialProvince+initialQuery} id={id} token={token} initialProvince={initialProvince} initialQuery={initialQuery}/>;}
+function Directory({id,token,initialProvince,initialQuery}:{id?:string;token?:string;initialProvince:string;initialQuery:string}){
+ const [province,setProvince]=useState(initialProvince),[category,setCategory]=useState(''),[q,setQ]=useState(initialQuery);
  const [results,setResults]=useState<PublicBusiness[]>([]),[next,setNext]=useState<string|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState('Loading published business profiles…');
- const [applied,setApplied]=useState<Record<string,string>>({...(initialProvince?{province:initialProvince}:{})});
+ const [applied,setApplied]=useState<Record<string,string>>({...(initialProvince?{province:initialProvince}:{}),...(initialQuery?{q:initialQuery}:{})});
  const [reason,setReason]=useState('misleading'),[note,setNote]=useState(''),[reporting,setReporting]=useState(false),[reportMessage,setReportMessage]=useState('');
  const epoch=useRef(0),pending=useRef(false),reportPending=useRef(false);
  const client=businessClient(token);

@@ -43,7 +43,7 @@ const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
 const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
 const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
 const NearMePage = lazy(() => import("./pages/NearMePage"));
-const LocalPulsePage = lazy(() => import("./pages/LocalPulsePage"));
+const LocalPulsePage = lazy(() => import("./pages/LocalPulsePage"));\nconst LuqiDrivePage = lazy(() => import("./pages/LuqiDrivePage"));
 const SocialSupportPage = lazy(() => import("./pages/SocialSupportPage"));
 const TenderDeskPage = lazy(() => import("./pages/TenderDeskPage"));
 const MunicipalServicesPage = lazy(() => import("./pages/MunicipalServicesPage"));
@@ -94,7 +94,7 @@ export default function App() {
         <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
         <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
         <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />
-        <RouterRoute path="/near-me" element={<NearMePage />} />
+        <RouterRoute path="/near-me" element={<NearMePage />} />\n        <RouterRoute path="/drive" element={<LuqiDrivePage />} />\n        <RouterRoute path="/luqi-drive" element={<LuqiDrivePage />} />
         <RouterRoute path="/local-pulse" element={<LocalPulsePage />} />
         <RouterRoute path="/news" element={<LocalPulsePage />} />
         <RouterRoute path="/social-support" element={<SocialSupportPage />} />
