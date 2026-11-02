@@ -18,7 +18,8 @@ export default function LuqiDrivePage(){
   const [quizVisible,setQuizVisible]=useState(false);
   const [answer,setAnswer]=useState<number|null>(null);
   const [cached,setCached]=useState(false);
-  const [deepOpen,setDeepOpen]=useState(false);\n  const [parkedConfirmed,setParkedConfirmed]=useState(false);
+  const [deepOpen,setDeepOpen]=useState(false);
+  const [parkedConfirmed,setParkedConfirmed]=useState(false);
   const [message,setMessage]=useState("Location is off. Route packs and source links work without it.");
   const watchRef=useRef<number|null>(null);
   const wakeRef=useRef<WakeSentinel|null>(null);
