@@ -1,64 +1,212 @@
 /**
- * Privacy-minimising frontend diagnostics. Deliberately no raw URLs, input values,
- * text, IPs, identifiers, or payloads. Consent is OFF by default.
- * Emits local aggregates only; an authenticated ingestion endpoint must be reviewed
- * separately before any transmission is enabled.
+ * Consent-gated, on-device diagnostics.
+ * No network transport, identifiers, URLs, free text, request bodies or AI inference.
+ * Only static registry keys can be recorded. No observers are active without consent.
  */
 export type MetricKind = 'action' | 'navigation' | 'api' | 'web-vital';
-export type Metric = { kind: MetricKind; name: string; count: number; totalMs: number; maxMs: number };
+type Unit = 'count' | 'ms' | 'score';
+type Outcome = 'ok' | 'failed' | 'cancelled';
+
+const catalog = {
+  tender_prepare: { kind: 'action', unit: 'count' },
+  tender_document_open: { kind: 'action', unit: 'count' },
+  tender_sources_check: { kind: 'action', unit: 'count' },
+  route_change: { kind: 'navigation', unit: 'count' },
+  readiness_request: { kind: 'api', unit: 'ms' },
+  tender_sources_request: { kind: 'api', unit: 'ms' },
+  cls: { kind: 'web-vital', unit: 'score' },
+  lcp: { kind: 'web-vital', unit: 'ms' },
+} as const satisfies Record<string, { kind: MetricKind; unit: Unit }>;
+
+export type MetricName = keyof typeof catalog;
+export type ApiMetricName = 'readiness_request' | 'tender_sources_request';
+export type Metric = {
+  kind: MetricKind;
+  name: MetricName;
+  unit: Unit;
+  outcome: Outcome;
+  count: number;
+  total: number;
+  max: number;
+};
+
+const CONSENT_KEY = 'luqi_analytics_consent';
+const MAX_METRICS = 48;
 const buckets = new Map<string, Metric>();
-const names = /^[a-z][a-z0-9_-]{0,47}$/;
 let started = false;
-const bounded = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(120000, Math.round(value))) : 0;
-const consented = () => { try { return localStorage.getItem('luqi_analytics_consent') === 'yes'; } catch { return false; } };
-export function recordMetric(kind: MetricKind, name: string, durationMs = 0): void {
-  if (!consented() || !names.test(name)) return;
-  const key = kind + ':' + name;
-  const previous = buckets.get(key);
-  const sample = bounded(durationMs);
-  if (previous) {
-    previous.count = Math.min(1000000, previous.count + 1);
-    previous.totalMs = Math.min(120000000, previous.totalMs + sample);
-    previous.maxMs = Math.max(previous.maxMs, sample);
-  } else if (buckets.size < 100) buckets.set(key, { kind, name, count: 1, totalMs: sample, maxMs: sample });
+let teardown: (() => void) | null = null;
+
+export function getAnalyticsConsent(): boolean {
+  try { return typeof window !== 'undefined' && window.localStorage.getItem(CONSENT_KEY) === 'yes'; }
+  catch { return false; }
 }
-export function readLocalMetrics(): Metric[] { return Array.from(buckets.values()).map(x => ({ ...x })); }
+
 export function clearLocalMetrics(): void { buckets.clear(); }
-export function setAnalyticsConsent(granted: boolean): void {
-  try { if (granted) localStorage.setItem('luqi_analytics_consent', 'yes');
-    else localStorage.removeItem('luqi_analytics_consent'); } catch { /* private mode */ }
-  if (!granted) clearLocalMetrics();
+
+export function readLocalMetrics(): Metric[] {
+  if (!getAnalyticsConsent()) return [];
+  return Array.from(buckets.values(), metric => ({ ...metric }));
 }
-/** Wrap a known API call; never record endpoints or request/response data. */
-export async function measureApi<T>(operation: string, work: () => Promise<T>): Promise<T> {
+
+/** Runtime guard intentionally checks untrusted HTML attribute values too. */
+export function recordMetric(name: MetricName, value = 1, outcome: Outcome = 'ok'): void {
+  if (!getAnalyticsConsent() || !Object.prototype.hasOwnProperty.call(catalog, name) ||
+      !['ok', 'failed', 'cancelled'].includes(outcome) || !Number.isFinite(value)) return;
+  const definition = catalog[name];
+  const max = definition.unit === 'score' ? 10 : definition.unit === 'ms' ? 120000 : 1;
+  const safe = Math.round(Math.max(0, Math.min(max, value)) * 10000) / 10000;
+  const key = name + ':' + outcome;
+  const existing = buckets.get(key);
+  if (existing) {
+    existing.count = Math.min(existing.count + 1, 1000000);
+    existing.total = Math.min(existing.total + safe, 120000000);
+    existing.max = Math.max(existing.max, safe);
+  } else if (buckets.size < MAX_METRICS) {
+    buckets.set(key, { name, kind: definition.kind, unit: definition.unit, outcome,
+      count: 1, total: safe, max: safe });
+  }
+}
+
+/** A permitted operation name, never a request URL, response or error string. */
+export async function measureApi<T>(name: ApiMetricName, work: () => Promise<T>): Promise<T> {
+  if (!getAnalyticsConsent()) return work();
   const start = performance.now();
-  try { return await work(); }
-  finally { recordMetric('api', operation, performance.now() - start); }
+  try {
+    const result = await work();
+    recordMetric(name, performance.now() - start, 'ok');
+    return result;
+  } catch (error) {
+    const cancelled = error instanceof Error && error.name === 'AbortError';
+    recordMetric(name, performance.now() - start, cancelled ? 'cancelled' : 'failed');
+    throw error;
+  }
 }
-export function startUiTelemetry(): void {
-  if (started || typeof document === 'undefined') return;
-  started = true;
-  document.addEventListener('click', event => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    // Only developer-labelled interactions; no scraping of labels or text.
-    const action = target.closest('[data-telemetry-action]')?.getAttribute('data-telemetry-action');
-    if (action) recordMetric('action', action);
-  }, { passive: true });
-  window.addEventListener('hashchange', () => recordMetric('navigation', 'route_change'));
-  if (typeof PerformanceObserver !== 'undefined') {
+
+type LayoutShiftEntry = PerformanceEntry & { value: number; hadRecentInput: boolean };
+
+function observeVitals(): () => void {
+  if (typeof PerformanceObserver === 'undefined') return () => {};
+  const observers: PerformanceObserver[] = [];
+  let clsMax = 0, windowValue = 0, windowStart = 0, lastShift = 0;
+  let lcpMs = 0, clsSeen = false, finished = false, lcpFinished = false;
+  const supported = PerformanceObserver.supportedEntryTypes || [];
+
+  if (supported.includes('layout-shift')) {
     try {
       const observer = new PerformanceObserver(list => {
-        for (const entry of list.getEntries()) {
-          if (entry.entryType === 'layout-shift' && !(entry as PerformanceEntry & { hadRecentInput?: boolean }).hadRecentInput)
-            recordMetric('web-vital', 'layout_shift', (entry as PerformanceEntry & { value: number }).value * 1000);
-          if (entry.entryType === 'largest-contentful-paint')
-            recordMetric('web-vital', 'lcp', entry.startTime);
+        for (const item of list.getEntries()) {
+          const entry = item as LayoutShiftEntry;
+          if (entry.hadRecentInput || !Number.isFinite(entry.value)) continue;
+          if (!clsSeen || entry.startTime - lastShift >= 1000 ||
+              entry.startTime - windowStart >= 5000) {
+            windowStart = entry.startTime;
+            windowValue = 0;
+          }
+          clsSeen = true;
+          windowValue += entry.value;
+          lastShift = entry.startTime;
+          clsMax = Math.max(clsMax, windowValue);
         }
       });
-      const supported = PerformanceObserver.supportedEntryTypes || [];
-      const types = ['layout-shift', 'largest-contentful-paint'].filter(type => supported.includes(type));
-      if (types.length) observer.observe({ entryTypes: types });
-    } catch { /* unsupported browser */ }
+      // No buffered entries: never retrospectively inspect pre-consent activity.
+      observer.observe({ type: 'layout-shift', buffered: false });
+      observers.push(observer);
+    } catch { /* Older browser: vital unavailable, not zero. */ }
   }
+  if (supported.includes('largest-contentful-paint') && document.readyState === 'loading') {
+    try {
+      const observer = new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) lcpMs = Math.max(lcpMs, entry.startTime);
+      });
+      observer.observe({ type: 'largest-contentful-paint', buffered: false });
+      observers.push(observer);
+    } catch { /* Unsupported: no invented LCP value. */ }
+  }
+  const finalizeLcp = () => {
+    if (lcpFinished) return;
+    lcpFinished = true;
+    if (lcpMs > 0) recordMetric('lcp', lcpMs);
+  };
+  const finalize = () => {
+    if (finished) return;
+    finished = true;
+    for (const observer of observers) {
+      observer.takeRecords().forEach(entry => {
+        // Remaining observations are best-effort; final callbacks may be delayed.
+        if (entry.entryType === 'largest-contentful-paint') lcpMs = Math.max(lcpMs, entry.startTime);
+      });
+    }
+    finalizeLcp();
+    if (clsSeen) recordMetric('cls', clsMax);
+    for (const observer of observers) observer.disconnect();
+  };
+  const onVisibility = () => { if (document.visibilityState === 'hidden') finalize(); };
+  document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('pagehide', finalize);
+  document.addEventListener('pointerdown', finalizeLcp, { once: true, passive: true });
+  document.addEventListener('keydown', finalizeLcp, { once: true, passive: true });
+  return () => {
+    for (const observer of observers) observer.disconnect();
+    document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('pagehide', finalize);
+    document.removeEventListener('pointerdown', finalizeLcp);
+    document.removeEventListener('keydown', finalizeLcp);
+  };
+}
+
+function attach(): () => void {
+  const onClick = (event: MouseEvent) => {
+    if (!(event.target instanceof Element)) return;
+    const name = event.target.closest('[data-telemetry-action]')?.getAttribute('data-telemetry-action');
+    if (name) recordMetric(name as MetricName);
+  };
+  const onRoute = () => recordMetric('route_change');
+  document.addEventListener('click', onClick, { passive: true });
+  window.addEventListener('hashchange', onRoute);
+  const releaseVitals = observeVitals();
+  return () => {
+    document.removeEventListener('click', onClick);
+    window.removeEventListener('hashchange', onRoute);
+    releaseVitals();
+  };
+}
+
+function synchronizeConsent(): void {
+  if (!started) return;
+  if (getAnalyticsConsent()) {
+    if (!teardown) teardown = attach();
+  } else {
+    teardown?.();
+    teardown = null;
+    clearLocalMetrics();
+  }
+}
+function onStorage(event: StorageEvent): void {
+  if (event.key === CONSENT_KEY || event.key === null) synchronizeConsent();
+}
+export function startUiTelemetry(): void {
+  if (started || typeof window === 'undefined' || typeof document === 'undefined') return;
+  started = true;
+  window.addEventListener('storage', onStorage);
+  synchronizeConsent();
+}
+/** Return false if the browser refuses to store consent; never enable silently. */
+export function setAnalyticsConsent(granted: boolean): boolean {
+  try {
+    if (granted) window.localStorage.setItem(CONSENT_KEY, 'yes');
+    else window.localStorage.removeItem(CONSENT_KEY);
+  } catch {
+    if (!granted) { teardown?.(); teardown = null; clearLocalMetrics(); }
+    return false;
+  }
+  if (granted) startUiTelemetry();
+  synchronizeConsent();
+  return getAnalyticsConsent();
+}
+/** Explicitly detach observers; used by tests and recoverable route shells. */
+export function stopUiTelemetry(): void {
+  teardown?.();
+  teardown = null;
+  if (started && typeof window !== 'undefined') window.removeEventListener('storage', onStorage);
+  started = false;
 }
