@@ -1012,7 +1012,7 @@ presence_server = PresenceManager()
 async def enterprise_websocket_endpoint(websocket: WebSocket, user_id: str):
     # A URL user_id never proves ownership. Deny before websocket.accept().
     # The separately authenticated LUQI realtime product is unaffected.
-    await reject_legacy_websocket(websocket)
+    return await reject_legacy_websocket(websocket)
 
 @app.post("/api/v1/workspace/upload-asset", dependencies=[Depends(require_legacy_route_disabled)])
 @app.post("/workspace/upload-asset", dependencies=[Depends(require_legacy_route_disabled)])

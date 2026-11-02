@@ -228,7 +228,7 @@ class LegacyWorkspaceRetirementTests(unittest.TestCase):
 
         @app.websocket("/workspace/stream/{user_id}")
         async def legacy_socket(websocket: WebSocket, user_id: str):
-            await reject_legacy_websocket(websocket)
+            return await reject_legacy_websocket(websocket)
             accepted.append(user_id)
 
         with TestClient(app) as client:
@@ -304,7 +304,7 @@ class LegacyWorkspaceRetirementTests(unittest.TestCase):
             ["/api/v1/workspace/stream/{user_id}", "/workspace/stream/{user_id}"],
         )
         last = socket.body[-1]
-        self.assertIsInstance(last, ast.Expr)
+        self.assertIsInstance(last, ast.Return)
         self.assertIsInstance(last.value, ast.Await)
         call = last.value.value
         self.assertIsInstance(call, ast.Call)
