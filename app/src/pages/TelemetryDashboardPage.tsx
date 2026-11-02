@@ -31,7 +31,7 @@ export default function TelemetryDashboardPage() {
         <span>Enable private diagnostics for this tab</span>
       </label>
       {signals.enabled ? <>
-        <div className="grid grid-cols-2 gap-3" aria-label="Observed diagnostic counters">
+        <dl className="grid grid-cols-2 gap-3" aria-label="Observed diagnostic counters">
           <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Page-group views</dt>
             <dd><output aria-label="Page-group views recorded">{totalVisits}</output></dd></div>
           <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Control activations</dt>
@@ -52,7 +52,7 @@ export default function TelemetryDashboardPage() {
             <dd><output aria-label="Largest content paint">{signals.vitals.lcpMs === null ? 'Not measured' : signals.vitals.lcpMs+' ms'}</output></dd></div>
           <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Layout shifts / long tasks</dt>
             <dd><output aria-label="Layout shifts and long tasks">{(signals.vitals.clsMilli/1000).toFixed(3)} / {signals.vitals.longTasks}</output></dd></div>
-        </div>
+        </dl>
         <p role="status" className="text-sm text-teal-200">
           {signals.conserveMotion
             ? 'Measured slow rendering: decorative motion is reduced for the rest of this opted-in session.'

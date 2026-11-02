@@ -36,6 +36,8 @@ jobs:
         run: npm ci --legacy-peer-deps --include=dev
       - name: Prevent stale website links and PWA descriptions
         run: node --test tests/domain-site-freshness.test.mjs
+      - name: Verify bounded opt-in local diagnostic and privacy boundaries
+        run: npx vitest run tests/local-diagnostics.test.ts tests/local-diagnostics-dashboard.test.tsx
       - name: Verify opt-in local province location
         run: npx vitest run tests/location-province.test.tsx tests/nearby-discovery.test.tsx tests/business-connect-contract.test.ts tests/business-connect-page.test.tsx
       - name: Verify inline Circles controls and frontend parity

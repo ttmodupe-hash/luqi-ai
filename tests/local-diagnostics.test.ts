@@ -1,0 +1,109 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { clearLocalDiagnostics, fetchWithLocalDiagnostics, getLocalDiagnostics,
+  mayWarmOptionalRoute, recordLocalActivation, recordLocalJourney, recordLocalRequest,
+  recordLocalRoute, recordLocalVital, setLocalDiagnosticsEnabled,
+  subscribeLocalDiagnostics } from '../src/lib/local-diagnostics';
+
+beforeEach(() => { setLocalDiagnosticsEnabled(false); clearLocalDiagnostics(); });
+afterEach(() => { setLocalDiagnosticsEnabled(false); vi.unstubAllGlobals(); });
+
+describe('no-upload, opt-in local UX diagnostics', () => {
+  it('starts disabled and never records user interaction before opt-in', () => {
+    recordLocalRoute('/chat?private=SECRETPROMPT');
+    recordLocalJourney('home_goal');
+    recordLocalActivation();
+    recordLocalRequest('pilot_reply',200,25);
+    expect(getLocalDiagnostics().enabled).toBe(false);
+    expect(getLocalDiagnostics().controls).toBe(0);
+    expect(getLocalDiagnostics().journey.home_goal).toBe(0);
+    expect(getLocalDiagnostics().api.pilot_reply.calls).toBe(0);
+  });
+  it('stores bounded aggregate categories, never user text, URLs or identifiers', () => {
+    setLocalDiagnosticsEnabled(true);
+    recordLocalRoute('/chat');
+    recordLocalRoute('/chat?secret=SECRETPROMPT');
+    recordLocalJourney('home_goal');
+    recordLocalJourney('guide_ready');
+    recordLocalActivation();
+    recordLocalActivation();
+    const state=getLocalDiagnostics();
+    expect(state.routes.chat).toBe(1);
+    expect(state.routes.other).toBe(1);
+    expect(state.journey.home_goal).toBe(1);
+    expect(state.controls).toBe(2);
+    expect(JSON.stringify(state)).not.toContain('SECRETPROMPT');
+    expect(Object.keys(state.routes).sort()).toEqual(['chat','guest','guide','home','join','other','telemetry']);
+  });
+  it('has no outgoing analytics call and preserves exact GET options and responses', async () => {
+    setLocalDiagnosticsEnabled(true);
+    const response=Response.json({ enabled:true });
+    const fetcher=vi.fn(async () => response) as unknown as typeof fetch;
+    const controller=new AbortController();
+    const init={ method:'GET', signal:controller.signal, credentials:'same-origin' as RequestCredentials };
+    expect(await fetchWithLocalDiagnostics('guest_availability',fetcher,'/api/v1/guest-chat',init)).toBe(response);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledWith('/api/v1/guest-chat',init);
+    expect(getLocalDiagnostics().api.guest_availability.calls).toBe(1);
+    expect(getLocalDiagnostics().api.guest_availability.failed).toBe(0);
+  });
+  it('counts HTTP errors and ambiguous network failures without retries or sensitive error data', async () => {
+    setLocalDiagnosticsEnabled(true);
+    const forbidden=Response.json({ message:'PRIVATE-TOKEN' },{status:429});
+    const fetcher=vi.fn(async () => forbidden) as unknown as typeof fetch;
+    expect(await fetchWithLocalDiagnostics('guest_reply',fetcher,'/api/v1/guest-chat',{method:'POST'})).toBe(forbidden);
+    const error=new Error('PRIVATE-NETWORK-DETAIL');
+    const rejected=vi.fn(async () => { throw error; }) as unknown as typeof fetch;
+    await expect(fetchWithLocalDiagnostics('pilot_reply',rejected,'/api/v1/luqi-core',{method:'POST'})).rejects.toBe(error);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(rejected).toHaveBeenCalledTimes(1);
+    expect(getLocalDiagnostics().api.guest_reply).toMatchObject({calls:1,failed:1});
+    expect(getLocalDiagnostics().api.pilot_reply).toMatchObject({calls:1,failed:1});
+    expect(JSON.stringify(getLocalDiagnostics())).not.toMatch(/PRIVATE-|guest cookie|Authorization/i);
+  });
+  it('switches to reduced motion after measured rendering strain, without automatic cache or provider calls', () => {
+    setLocalDiagnosticsEnabled(true);
+    vi.stubGlobal('navigator',{onLine:true,connection:{saveData:false,effectiveType:'4g'},deviceMemory:4});
+    expect(mayWarmOptionalRoute()).toBe(true);
+    recordLocalVital('longtask',60);
+    recordLocalVital('longtask',75);
+    expect(getLocalDiagnostics().conserveMotion).toBe(false);
+    recordLocalVital('longtask',85);
+    expect(getLocalDiagnostics().conserveMotion).toBe(true);
+    expect(mayWarmOptionalRoute()).toBe(false);
+    clearLocalDiagnostics();
+    expect(getLocalDiagnostics().conserveMotion).toBe(false);
+    expect(getLocalDiagnostics().controls).toBe(0);
+  });
+  it('honours connection data-saving and rejects invalid performance samples', () => {
+    setLocalDiagnosticsEnabled(true);
+    vi.stubGlobal('navigator',{onLine:true,connection:{saveData:true,effectiveType:'4g'},deviceMemory:4});
+    expect(mayWarmOptionalRoute()).toBe(false);
+    recordLocalVital('cls',NaN);
+    recordLocalVital('lcp',-1);
+    expect(getLocalDiagnostics().vitals).toMatchObject({lcpMs:null,clsMilli:0,longTasks:0});
+    recordLocalVital('cls',0.12);
+    expect(getLocalDiagnostics().conserveMotion).toBe(true);
+  });
+  it('clears all measurements and unsubscribes cleanly, including on disable', () => {
+    const notify=vi.fn();
+    const unsubscribe=subscribeLocalDiagnostics(notify);
+    setLocalDiagnosticsEnabled(true);
+    recordLocalJourney('guest_send');
+    recordLocalRequest('guest_reply',503,50000);
+    expect(getLocalDiagnostics().api.guest_reply.slow).toBe(1);
+    setLocalDiagnosticsEnabled(false);
+    expect(getLocalDiagnostics().enabled).toBe(false);
+    expect(getLocalDiagnostics().journey.guest_send).toBe(0);
+    expect(getLocalDiagnostics().api.guest_reply.calls).toBe(0);
+    const callCount=notify.mock.calls.length;
+    unsubscribe();
+    setLocalDiagnosticsEnabled(true);
+    expect(notify.mock.calls.length).toBe(callCount);
+  });
+  it('caps per-tab events and never turns into an unbounded click history', () => {
+    setLocalDiagnosticsEnabled(true);
+    for(let i=0;i<2550;i++) recordLocalActivation();
+    expect(getLocalDiagnostics().controls).toBe(2500);
+    expect(getLocalDiagnostics().truncated).toBe(true);
+  });
+});
