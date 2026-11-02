@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { BookOpen, BriefcaseBusiness, ChevronLeft, ChevronRight, CircleHelp, Compass,
   Globe2, GraduationCap, History, LayoutGrid, Menu, MessageCircle, PanelLeftClose, PanelLeftOpen,
-  PenLine, Plus, Search, ShieldCheck, Smartphone, Trash2, UserRound, X } from 'lucide-react';
+  PenLine, Plus, Search, ShieldCheck, Smartphone, Trash2, UserRound, Users, X } from 'lucide-react';
 import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import { useOptionalCustomerSession } from '../providers/customer-session';
 import SavedNotesPeek from './SavedNotesPeek';
@@ -11,6 +11,7 @@ import '../chat-workspace.css';
 
 const shortcuts = [
   { path: '/chat', label: 'Luqi Chat', icon: MessageCircle },
+  { path: '/chat/people', label: 'People & private chat', icon: Users },
   { path: '/opportunities', label: 'Opportunities', icon: Compass },
   { path: '/social-support', label: 'SASSA & UIF', icon: ShieldCheck },
   { path: '/tenders', label: 'Tenders & bids', icon: BriefcaseBusiness },
@@ -166,7 +167,8 @@ export default function ChatSidebar() {
       </nav>
     </aside>
     <nav className="luqi-chat-mobile-dock" aria-label="Mobile chat navigation">
-      <Link to="/chat" aria-current="page" onClick={close}><MessageCircle size={19} aria-hidden="true" /><span>Chat</span></Link>
+      <Link to="/chat" aria-current={location.pathname === '/chat' ? 'page' : undefined} onClick={close}><MessageCircle size={19} aria-hidden="true" /><span>Chat</span></Link>
+      <Link to="/chat/people" aria-current={location.pathname === '/chat/people' ? 'page' : undefined} onClick={close}><Users size={19} aria-hidden="true" /><span>People</span></Link>
       <button type="button" onClick={() => showSidebar('services')} aria-label="Browse services">
         <LayoutGrid size={19} aria-hidden="true" /><span>Services</span>
       </button>
