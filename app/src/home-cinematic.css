@@ -1,0 +1,77 @@
+/* Luqi hybrid: disciplined emerald shell + original African landscape art. */
+.luqi-home{background:#0b2018;color:#e9f3e8;overflow-x:clip}
+.luqi-home-inner{max-width:1400px;padding:20px clamp(12px,2.2vw,32px) 40px}
+.luqi-home .luqi-cinematic-hero{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1.17fr) minmax(330px,.83fr);gap:clamp(18px,3vw,45px);align-items:start;min-width:0;padding:clamp(24px,3.7vw,52px);border:1px solid #277a5b;border-radius:24px;overflow:hidden;background:linear-gradient(90deg,#092019ed 0%,#0c241be6 32%,#152c23aa 65%,#082018e8 100%),url('/luqi-african-horizon.svg') center/cover no-repeat;box-shadow:0 18px 40px #06160d55}
+.luqi-home .luqi-cinematic-hero .luqi-hero-copy{min-width:0;z-index:1}
+.luqi-home .luqi-cinematic-hero .luqi-eyebrow{color:#d5ebcf;margin:0 0 17px}
+.luqi-home .luqi-cinematic-hero .luqi-eyebrow span{background:#e8b86d}
+.luqi-home .luqi-cinematic-hero h1{font-family:Georgia,serif;font-size:clamp(35px,4.3vw,63px);line-height:1.06;font-weight:700;letter-spacing:-1.8px;color:#fff8eb;margin:0;text-shadow:0 4px 25px #0009}
+.luqi-home .luqi-cinematic-hero h1 em{font-family:Georgia,serif;font-weight:650;font-style:normal;letter-spacing:-1.3px;color:#f4daac}
+.luqi-home .luqi-cinematic-hero .luqi-hero-description{color:#e8f2e9;line-height:1.65;font-size:clamp(14px,1.25vw,17px);max-width:55ch;margin:16px 0}
+.luqi-home-ask{display:flex;align-items:center;gap:10px;background:#fffdf6;border:2px solid #e2ebdb;color:#173a29;border-radius:36px;padding:5px 5px 5px 18px;max-width:550px;min-height:56px;box-shadow:0 6px 24px #0005}
+.luqi-home-ask input{flex:1;min-width:0;min-height:42px;border:0;background:transparent;color:#153527;font:inherit;font-size:14px;outline:0}
+.luqi-home-ask input::placeholder{color:#5c7164;opacity:1}
+.luqi-home-ask:focus-within{outline:3px solid #f9d98b;outline-offset:3px}
+.luqi-home-ask>svg{flex:0 0 auto}
+.luqi-home-ask button{display:grid;place-items:center;width:44px;height:44px;min-height:44px;border:0;border-radius:50%;flex:0 0 44px;background:#167b50;color:white;cursor:pointer}
+.luqi-home-ask button:disabled{background:#78978a;cursor:default}
+.luqi-home-ask-note{color:#f2ebd6;font-size:11px;margin:8px 0 14px;line-height:1.6}
+.luqi-hero-chips{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0 18px}
+.luqi-hero-chips a{display:inline-flex;align-items:center;padding:7px 11px;min-height:35px;border-radius:20px;color:#eaffe9;background:#0b2c21d9;border:1px solid #719f81;font-size:12px;font-weight:650}
+.luqi-hero-chips a:hover{background:#1d6545}
+.luqi-home .luqi-cinematic-hero .luqi-hero-actions{gap:8px}
+.luqi-home .luqi-cinematic-hero .luqi-hero-actions a{min-height:40px;padding:9px 11px;gap:7px;font-size:12px;border-radius:10px}
+.luqi-home .luqi-cinematic-hero .luqi-primary{background:#248256;border-color:#248256;color:white}
+.luqi-home .luqi-cinematic-hero .luqi-secondary{background:#09291fe0;border-color:#9fba9c;color:#fcf9e9}
+.luqi-hero-help{border-top:1px solid #dbe9da44;padding-top:11px;margin-top:18px;color:#e8f2df;font-size:12px}
+.luqi-hero-help summary{cursor:pointer;min-height:36px;color:#fff4d3;text-decoration:underline;text-underline-offset:4px}
+.luqi-home .luqi-hero-help :is(p,.luqi-hero-onboarding,.luqi-hero-footnote){color:#edf4e9;font-size:12px;line-height:1.65;margin:10px 0}
+.luqi-home .luqi-hero-help a{color:#f6e8af;text-decoration:underline;text-underline-offset:3px}
+.luqi-hero-moon{min-width:0;position:relative;z-index:1}
+.luqi-home .luqi-hero-moon .luqi-moon{margin:0;border:1px solid #577a6b;border-radius:20px;background:linear-gradient(135deg,#0a1b2b,#0b2731 70%,#16372d);color:#fffbef;padding:clamp(15px,1.8vw,24px);box-shadow:0 15px 35px #0005}
+.luqi-home .luqi-hero-moon .luqi-moon-heading{border-bottom:1px solid #ffffff2f;padding-bottom:10px}
+.luqi-home .luqi-hero-moon .luqi-moon h2{font:700 24px/1.15 Georgia,serif}
+.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,135px) minmax(0,1fr);gap:12px}
+.luqi-home .luqi-hero-moon .luqi-moon-facts{grid-template-columns:minmax(0,1fr);gap:7px}
+.luqi-home .luqi-hero-moon .luqi-moon-facts>div{display:flex;justify-content:space-between;gap:10px;align-items:baseline;border-bottom:1px solid #ffffff1d;padding-bottom:3px}
+.luqi-home .luqi-hero-moon .luqi-moon-facts dd{text-align:right}
+.luqi-home .luqi-hero-moon .luqi-moon button{background:#155d44;color:white;border-color:#90b49f}
+.luqi-home .luqi-hero-moon .luqi-moon-badge{background:#165c42;border-color:#8db89e;color:#eefded}
+.luqi-home .luqi-hero-moon .luqi-moon-lit{fill:#f8edda}
+.luqi-history-showcase{margin:20px 0 14px;background:#f4f0e5;color:#18392c;border:1px solid #d6c9b4;border-radius:22px;padding:clamp(13px,2.2vw,27px)}
+.luqi-history-banner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr);gap:20px;min-height:270px;border:1px solid #d5c2a5;border-radius:17px;padding:clamp(17px,2.4vw,32px);background:linear-gradient(90deg,#f9f6ec 0%,#f6f0e7e9 40%,#f6f0e78c 74%),url('/luqi-history-panorama.svg') right center/cover no-repeat;overflow:hidden}
+.luqi-history-intro{min-width:0}
+.luqi-history-eyebrow{font-size:10px;color:#467354;font-weight:750;display:flex;align-items:center;gap:8px;letter-spacing:.1em}
+.luqi-history-intro h2{font:700 clamp(25px,2.7vw,39px)/1.13 Georgia,serif;max-width:24ch;margin:10px 0 13px;color:#113627}
+.luqi-history-intro>p:not(.luqi-history-eyebrow){font-size:13px;line-height:1.6;color:#364c3d;max-width:55ch}
+.luqi-history-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.luqi-history-actions :is(button,a){display:inline-flex;align-items:center;gap:7px;min-height:44px;border:1px solid #16744c;border-radius:10px;padding:9px 14px;background:#16744c;color:white;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer}
+.luqi-history-actions a{background:#152e37;border-color:#152e37}
+.luqi-history-figures{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-content:end;gap:7px;min-width:0}
+.luqi-history-figure{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:10px 5px;border:1px solid #cfbfa2;border-radius:13px;background:#fff9ebd9}
+.luqi-history-figure-icon{display:grid;place-items:center;width:clamp(42px,4.3vw,62px);height:clamp(42px,4.3vw,62px);border-radius:50%;border:2px solid #b78d55;background:radial-gradient(circle at 35% 20%,#f7e1b6,#a77e56 66%,#1b4936 67%);color:#1d4a32}
+.luqi-history-figure strong{font-size:11px;line-height:1.2;overflow-wrap:anywhere}.luqi-history-figure small{font-size:10px;color:#465644;line-height:1.35}
+.luqi-history-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.luqi-history-tiles a{display:flex;align-items:center;gap:10px;min-height:86px;padding:13px;border-radius:14px;border:1px solid #d7cfbe;background:#fffdf6;color:#173c2d;text-decoration:none}
+.luqi-history-tiles a>svg:first-child{flex-shrink:0;color:#936b40}
+.luqi-history-tiles span{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}.luqi-history-tiles strong{font-size:14px}.luqi-history-tiles small{font-size:11px;color:#5d6b59;line-height:1.4}
+.luqi-history-caution{font-size:11px;line-height:1.6;color:#536553;margin:11px 0}
+#luqi-home-study{margin-top:18px}
+.luqi-quick-tools{display:flex;gap:8px;overflow-x:auto;padding:13px;background:#f6f4ec;border:1px solid #d6d1bd;border-radius:17px;color:#193629;margin:14px 0}
+.luqi-quick-tools-intro{flex:1 0 160px;padding:5px;align-self:center}
+.luqi-quick-tools-intro h2{font:700 19px/1.2 Georgia,serif;margin:0 0 6px;color:#153c2b}.luqi-quick-tools-intro p{font-size:11px;color:#596c5b;margin:0}
+.luqi-quick-tools>a{display:flex;flex:1 0 98px;max-width:140px;min-height:78px;align-items:center;justify-content:center;flex-direction:column;gap:5px;padding:10px 6px;background:#ebeae1;border:1px solid #e0dbcd;border-radius:11px;color:#183d2e;text-decoration:none;font-size:11px;text-align:center;font-weight:700}
+.luqi-quick-tools>a:hover{background:#dbeadc}
+.luqi-guest-guide{margin:14px 0 20px}
+.luqi-home .luqi-guest-guide .luqi-chat-card{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);gap:10px 25px;align-items:start;max-width:none;border:1px solid #4d8267;padding:20px}
+.luqi-home .luqi-guest-guide .luqi-region-bar{grid-column:2;grid-row:1/span 5;margin:0}
+.luqi-home .luqi-guest-guide .luqi-chat-bottom{grid-column:1}
+.luqi-home .luqi-guest-guide .luqi-chat-card h2{font-size:24px}
+.luqi-home .luqi-guest-guide .luqi-assistant-symbol{margin:5px 0 2px;width:42px;height:42px}
+.luqi-home .luqi-guest-guide .luqi-chat-card>p{max-width:none}
+.luqi-home-lower{border:1px solid #d8d8c9;border-radius:20px;background:#f5f5ed;color:#19382b;padding:clamp(16px,2.6vw,30px);margin-top:20px}
+.luqi-home :is(.luqi-cinematic-hero,.luqi-history-showcase,.luqi-quick-tools) :focus-visible{outline:3px solid #dbb45d;outline-offset:3px}
+@media(max-width:1050px){.luqi-home .luqi-cinematic-hero{grid-template-columns:minmax(0,1fr) minmax(290px,.8fr);gap:16px;padding:24px}.luqi-history-banner{grid-template-columns:1fr}.luqi-history-figures{max-width:640px}}
+@media(max-width:750px){.luqi-home-inner{padding:12px 10px 30px}.luqi-home .luqi-cinematic-hero{grid-template-columns:minmax(0,1fr);padding:21px 17px;gap:22px;background-position:62% center}.luqi-home .luqi-cinematic-hero h1{font-size:clamp(37px,8.5vw,55px)}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:minmax(0,130px) minmax(0,1fr)}.luqi-history-tiles{grid-template-columns:1fr}.luqi-history-banner{padding:17px}.luqi-history-figures{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}.luqi-home .luqi-guest-guide .luqi-chat-card{display:block}.luqi-home .luqi-guest-guide .luqi-region-bar{margin:16px 0}}
+@media(max-width:375px){.luqi-home .luqi-cinematic-hero h1{font-size:36px}.luqi-home .luqi-hero-moon .luqi-moon-overview{grid-template-columns:1fr}.luqi-history-intro h2{font-size:26px}}
+@media(prefers-reduced-motion:reduce){.luqi-home .luqi-quick-tools *{animation:none;transition:none}}
