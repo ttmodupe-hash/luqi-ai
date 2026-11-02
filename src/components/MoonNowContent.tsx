@@ -10,7 +10,8 @@ export default function MoonNowPanel() {
   const [now, setNow] = useState(() => new Date());
   const [paused, setPaused] = useState(false);
   const [view, setView] = useState<'phase' | 'surface'>('phase');
-  const [detailed, setDetailed] = useState(true);
+  // The homepage remains local-only until the visitor explicitly opts into a third-party image.
+  const [detailed, setDetailed] = useState(false);
   const [location, setLocation] = useState<MoonLocation | null>(null);
   const [locationLabel, setLocationLabel] = useState('');
   const [latitude, setLatitude] = useState('');
@@ -85,7 +86,7 @@ export default function MoonNowPanel() {
             </div>
             <figcaption>{view === 'surface'
               ? 'Full near-side surface for exploration, not today’s lunar illumination.'
-              : 'Calculated lunar phase with surface detail, not camera footage. NASA LRO imagery loads when available.'}
+              : 'Calculated lunar phase with crater detail, not camera footage. Choose the NASA image button for photographic surface detail.'}
               <br />{location ? 'Phase tilt estimated for your selected area.' : 'Moon orientation is approximate without a location.'}
               <br /><a href={LRO_MOON_SOURCE} target="_blank" rel="noopener noreferrer">NASA LRO surface source</a> · NASA/GSFC/Arizona State University
             </figcaption>
@@ -116,7 +117,7 @@ export default function MoonNowPanel() {
         <button type="button" aria-pressed={view === 'phase'} onClick={() => setView('phase')}>Current phase</button>
         <button type="button" aria-pressed={view === 'surface'} onClick={() => setView('surface')}>Explore full surface</button>
         <button type="button" aria-pressed={!detailed} onClick={() => setDetailed(value => !value)}>
-          {detailed ? 'Use low-data Moon' : 'Show detailed Moon'}
+          {detailed ? 'Use low-data Moon' : 'Show NASA Moon image'}
         </button>
         <button type="button" onClick={() => setNow(new Date())}>Refresh now</button>
         <button type="button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume live updates' : 'Pause live updates'}</button>
@@ -149,7 +150,7 @@ export default function MoonNowPanel() {
       <details>
         <summary>Calculation sources and privacy</summary>
         <p>These educational estimates use the SunCalc 2.0.1 lunar equations, adapted locally. Device clock errors, atmospheric refraction and horizon assumptions affect results. A missing rise or set means the bounded search found no event, not that one never occurs.</p>
-        <p>The familiar lunar near side comes from the public-domain NASA Lunar Reconnaissance Orbiter mosaic; the detailed image is served by Wikimedia Commons. When detailed mode is enabled, your browser contacts Wikimedia to load a small image. The low-data version is an on-device textured illustration that makes no image request. Neither representation is a current telescope picture, eclipse renderer or exact libration simulation.</p>
+        <p>The familiar lunar near side comes from the public-domain NASA Lunar Reconnaissance Orbiter mosaic; the detailed image is served by Wikimedia Commons. Your browser contacts Wikimedia only if you select Show NASA Moon image; the initial view makes no external image request. The low-data version is an on-device textured illustration that makes no image request. Neither representation is a current telescope picture, eclipse renderer or exact libration simulation.</p>
         <p>No account, paid AI/provider request, microphone, camera, background location tracking or location storage is used by this panel. The Moon phase and local position are calculated on-device. Refresh pauses when the page is hidden and resumes when it is visible.</p>
         <p><a href="https://github.com/mourner/suncalc/tree/bbc91f689ede3ff7173011947d435b3fb6c0485d" target="_blank" rel="noreferrer noopener">Calculation source</a> · <a href="/licenses/luqi-moon-suncalc.txt" target="_blank" rel="noreferrer noopener">Open-source licence</a></p>
       </details>
