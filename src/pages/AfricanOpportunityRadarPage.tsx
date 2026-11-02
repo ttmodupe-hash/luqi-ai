@@ -166,7 +166,7 @@ export default function AfricanOpportunityRadarPage() {
         <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-5">
           <TrendingUp className="h-6 w-6 text-emerald-300" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-semibold">Funding and grants</h2>
-          <p className="mt-2 text-sm text-slate-300">No live award amounts, grant matches, open deadlines or application success rates are verified by LUQI.</p>
+          <p className="mt-2 text-sm text-slate-300">Explore publisher programme references and prepare your documents. Current grant calls, award amounts and approval rates are not verified.</p>
         </section>
         <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-5">
           <Sprout className="h-6 w-6 text-emerald-300" aria-hidden="true" />

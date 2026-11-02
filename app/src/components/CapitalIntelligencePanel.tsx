@@ -88,7 +88,7 @@ export default function CapitalIntelligencePanel(){
         <legend className="px-1 text-sm font-semibold">Documents you already have (self-reported, not verified)</legend>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{allArtifacts.map(a=>
           <label key={a} className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" checked={artifacts.includes(a)} onChange={e=>{setArtifacts(current=>e.target.checked?[...current,a]:current.filter(v=>v!==a));reset();}}
+            <input type="checkbox" checked={artifacts.includes(a)} onChange={e=>{const checked=e.target.checked;setArtifacts(current=>checked?[...current,a]:current.filter(v=>v!==a));reset();}}
               className="h-5 w-5 accent-cyan-500" />{ARTIFACT_LABELS[a]}
           </label>)}</div>
       </fieldset>

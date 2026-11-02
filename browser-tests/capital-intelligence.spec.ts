@@ -6,7 +6,9 @@ test('320px Capital Intelligence prepares a real local document and blocks false
   page.on('request',request=>{
     if(request.method()==='POST'||/\/api\/v1\/sensing\//.test(request.url()))risky.push(request.url());
   });
-  await page.goto('/#/african-radar');
+  await page.goto('/#/opportunities');
+  await page.getByRole('link',{name:'Prepare a funding shortlist'}).click();
+  await expect(page).toHaveURL(/#\/african-radar$/);
   await expect(page.getByRole('heading',{name:'Luqi Capital Intelligence'})).toBeVisible();
   const nyda=page.getByRole('article',{name:'NYDA Grant Programme'});
   await expect(nyda).toContainText('Not currently aligned');
@@ -22,9 +24,9 @@ test('320px Capital Intelligence prepares a real local document and blocks false
   await expect(tia).toContainText('Suggested documents prepared: 33%');
   await tia.getByRole('button',{name:'Prepare review draft'}).click();
   const field=page.getByRole('textbox',{name:'Funding preparation draft text'});
-  await expect(field).toContainText('Community Innovation');
-  await expect(field).toContainText('No application has been submitted');
-  await expect(field).toContainText('CURRENT FUNDING WINDOW: NOT VERIFIED');
+  await expect(field).toHaveValue(/Community Innovation/);
+  await expect(field).toHaveValue(/No application has been submitted/);
+  await expect(field).toHaveValue(/CURRENT FUNDING WINDOW: NOT VERIFIED/);
   await expect(page.getByRole('link',{name:'Download preparation worksheet'}))
     .toHaveAttribute('download','luqi-funding-preparation.txt');
   expect(risky).toEqual([]);
