@@ -31,6 +31,13 @@ export const PULSE_SOURCES: readonly PulseSource[] = [
     action: "Open 702 on Primedia+",
   },
   {
+    id: "power987", name: "POWER 98.7", publisher: "POWER 987 (Pty) Ltd / MSG Afrika", region: "GP", kind: "talk",
+    languages: "English with multilingual South African discussion",
+    description: "Gauteng commercial talk radio covering current affairs, public life, business and community discussion. ICASA describes the licensed format as up to 70% talk and at least 30% music.",
+    url: "https://www.power987.co.za/",
+    action: "Open POWER 98.7 official site",
+  },
+  {
     id: "capetalk", name: "CapeTalk", publisher: "Primedia", region: "WC", kind: "talk",
     languages: "English",
     description: "Western Cape talk radio with community, public-service and current-affairs discussions.",
