@@ -46,6 +46,7 @@ import { Slider } from "@/components/ui/slider";
 import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
 import AiPilotPage from "./AiPilotPage";
 import { evaluatePracticeCommand } from "../lib/certification-client";
+import { CERT_PATHWAYS, CERT_REVIEWED_ON, LUQI_PRACTICE_GOAL } from "../lib/certification-standards";
 import { calculateIPv4Subnet } from "../lib/network-planner";
 import NetworkVlsmPlanner from "../components/NetworkVlsmPlanner";
 
@@ -102,15 +103,15 @@ const QUESTION_BANK: Question[] = [
       { key: "D", text: "Progress iteratively with feedback" }
     ],
     correctKey: "B",
-    explanation: "'Start where you are' mandates that an organization assess, understand, and leverage existing services, data provenance, and process baselines before attempting wholesale transformation or deploying uncalibrated foundation models.",
+    explanation: "'Start where you are' encourages teams to assess existing services, data quality and operational baselines before deciding where AI adds value. In this Luqi scenario, that principle helps avoid replacing a working process without understanding it.",
     trapWarning: "While 'Keep it simple' sounds plausible, the specific failure to evaluate current data pipelines and baseline systems directly breaches 'Start where you are'.",
-    reference: "ITIL 5 AI Governance Framework — Section 3.2: Guiding Principles in Cognitive Systems"
+    reference: "PeopleCert ITIL AI Governance (Version 5) · Luqi original service-improvement scenario"
   },
   {
     id: "itil-2",
     trackId: "itil_ai_v5",
     domain: "AI Risk & ISO 42001",
-    question: "According to ISO/IEC 42001 and EU AI Act risk tiers integrated into ITIL 5, an AI system used to autonomously control high-voltage electrical grid routing without human intervention is classified as:",
+    question: "The EU AI Act Annex III identifies safety components in the supply of electricity as a high-risk area. Which risk category should be assessed for an AI system performing that safety function?",
     options: [
       { key: "A", text: "Minimal Risk" },
       { key: "B", text: "Limited / Transparency Risk" },
@@ -118,15 +119,15 @@ const QUESTION_BANK: Question[] = [
       { key: "D", text: "Unacceptable Risk (Prohibited)" }
     ],
     correctKey: "C",
-    explanation: "AI management in critical physical infrastructure (energy grids, transport, water networks) falls directly into the High-Risk category under EU AI Act and ISO 42001 Annex A. It requires mandatory conformity assessments, continuous event logging, and human oversight gates.",
-    trapWarning: "Critical infrastructure is NOT automatically 'Unacceptable/Prohibited' (which is reserved for social scoring and biometric cognitive manipulation); rather it is strictly regulated as 'High Risk'.",
-    reference: "ISO/IEC 42001:2023 Clause 6.1 & EU AI Act Annex III"
+    explanation: "EU Regulation 2024/1689 Annex III(2) lists AI systems used as safety components in the management or operation of critical infrastructure, including electricity supply. A real system's legal classification still depends on its intended purpose, applicable exceptions and regulatory scope. ISO/IEC 42001 is an AI management system standard, not a set of the EU AI Act's four risk tiers.",
+    trapWarning: "High-risk and prohibited practices are different legal categories. Check intended purpose and the Regulation's current scope before classifying a real system.",
+    reference: "EUR-Lex: Regulation (EU) 2024/1689, Annex III(2) (safety components in critical infrastructure)"
   },
   {
     id: "itil-3",
     trackId: "itil_ai_v5",
     domain: "AI Ethics & Lifecycle",
-    question: "When an LLM agent begins making erroneous predictions due to changes in consumer terminology and seasonal purchasing patterns after 6 months in production, ITIL 5 MLOps classifies this degradation specifically as:",
+    question: "An AI forecasting model sees a sustained shift in customer input terminology and seasonal demand patterns. Which phenomenon should the monitoring team investigate first?",
     options: [
       { key: "A", text: "Algorithmic Inversion" },
       { key: "B", text: "Data Drift (Input Covariate Shift)" },
@@ -136,13 +137,13 @@ const QUESTION_BANK: Question[] = [
     correctKey: "B",
     explanation: "Data Drift (Covariate Shift) occurs when the statistical distribution of real-world input variables changes over time relative to the distribution on which the model was trained, while Concept Drift refers to changes in the relationship between input features and target labels.",
     trapWarning: "Do not confuse Data Drift (input distribution change) with Model Hallucination or security-related Prompt Poisoning.",
-    reference: "ITIL 5 Continuous AI Assurance & MLOps Lifecycle"
+    reference: "Luqi AI operations scenario · data drift versus concept drift"
   },
   {
     id: "itil-4",
     trackId: "itil_ai_v5",
     domain: "Human-in-the-Loop Architecture",
-    question: "What is the primary role of a 'Human-in-the-Loop' (HITL) gate in an ITIL 5 compliant autonomous operational pipeline?",
+    question: "In a high-impact operational AI workflow, what is the main purpose of a human-approval gate before an irreversible change?",
     options: [
       { key: "A", text: "Manually re-typing prompt tokens into LLM interfaces" },
       { key: "B", text: "Serving as a mandatory approval checkpoint before high-impact, irreversible actions are executed" },
@@ -150,12 +151,12 @@ const QUESTION_BANK: Question[] = [
       { key: "D", text: "Rewriting model weights directly in the neural network layers" }
     ],
     correctKey: "B",
-    explanation: "HITL gates decouple autonomous reasoning from irreversible write actions. Agents can autonomously draft code or propose transactions, but the execution node must hold for cryptographic human sign-off.",
+    explanation: "Human approval checkpoints separate proposed AI actions from their actual execution. High-impact changes are reviewed under the organisation's access controls, policy and evidence requirements. Cryptographic signatures are an optional technical mechanism, not a universal ITIL rule.",
     trapWarning: "Reviewing low-level read queries would destroy scalability; HITL specifically guards irreversible, high-impact state transitions.",
-    reference: "NIST AI RMF & ITIL 5 Change Enablement for Agentic Systems"
+    reference: "NIST AI Risk Management Framework · Luqi human-approval workflow scenario"
   },
 
-  // CISCO CCNA (200-301)
+  // CISCO CCNA (200-301 v1.1, issuer checked 1 November 2026)
   {
     id: "ccna-1",
     trackId: "ccna_200_301",
@@ -186,7 +187,7 @@ const QUESTION_BANK: Question[] = [
     correctKey: "C",
     explanation: "In 802.1D STP: Blocking drops all frames; Listening processes BPDUs only (does not populate MAC table); Learning populates the switch MAC table from incoming source addresses but does not forward frames yet; Forwarding both learns and forwards frames.",
     trapWarning: "Listening state does NOT learn MAC addresses; only Learning state builds the CAM/MAC table.",
-    reference: "IEEE 802.1D STP State Machine & CCNA Exam Topic 2.5"
+    reference: "IEEE 802.1D classic STP foundations; Cisco CCNA 200-301 v1.1 topic 2.5 covers Rapid PVST+"
   },
   {
     id: "ccna-3",
@@ -203,6 +204,55 @@ const QUESTION_BANK: Question[] = [
     explanation: "OSPF strictly requires unique 32-bit Router IDs within the autonomous system. If two neighbors have identical Router IDs on the same segment, they will ignore each other's Hello packets or detect the collision, preventing the 2-WAY and FULL adjacency states.",
     trapWarning: "Routers never automatically increment their own Router ID; it must be manually corrected or derived from another active loopback/physical interface.",
     reference: "RFC 2328 OSPF Version 2 & CCNA Exam Topic 3.4"
+  },
+
+  {
+    id: "ccna-4",
+    trackId: "ccna_200_301",
+    domain: "Automation & AI Network Operations",
+    question: "A network team analyses several months of interface counters to forecast congestion before customers experience it. Which description is most accurate?",
+    options: [
+      { key: "A", text: "Predictive AI estimates future load from observed patterns; generated text could separately explain the forecast." },
+      { key: "B", text: "Only generative AI can work with network telemetry." },
+      { key: "C", text: "Every prediction made by a network tool is proof of a verified physical network event." },
+      { key: "D", text: "An AI assistant must automatically apply configuration changes whenever it forecasts congestion." }
+    ],
+    correctKey: "A",
+    explanation: "Predictive approaches estimate likely future values or events using observed measurements; generative systems can produce summaries or suggested actions. Neither removes the need for telemetry quality checks or human-approved configuration changes.",
+    trapWarning: "A forecast is not an observed outage and should not be treated as one.",
+    reference: "Cisco CCNA 200-301 v1.1 release notes, topic 6.4: AI and machine learning in network operations"
+  },
+  {
+    id: "ccna-5",
+    trackId: "ccna_200_301",
+    domain: "Infrastructure as Code",
+    question: "Which combination best describes the purpose of Ansible and Terraform in network automation?",
+    options: [
+      { key: "A", text: "Both are Layer 2 packet-switching protocols." },
+      { key: "B", text: "Ansible automates configuration tasks while Terraform declaratively provisions and manages infrastructure state." },
+      { key: "C", text: "Terraform always replaces all routing protocols in an enterprise." },
+      { key: "D", text: "Ansible is a subnet mask and Terraform is a VLAN ID." }
+    ],
+    correctKey: "B",
+    explanation: "Ansible is commonly used for automation and configuration tasks; Terraform is used to describe and manage infrastructure resources declaratively. Lab exercises should show how both fit a change-controlled network workflow.",
+    trapWarning: "Infrastructure tools are not the same as the network protocols they help manage.",
+    reference: "Cisco CCNA 200-301 v1.1 release notes, topic 6.6: Ansible and Terraform"
+  },
+  {
+    id: "ccna-6",
+    trackId: "ccna_200_301",
+    domain: "Network Access · VLAN Trunks",
+    question: "A switch trunk carries traffic for several VLANs using IEEE 802.1Q. How does a receiver determine the VLAN of a tagged Ethernet frame?",
+    options: [
+      { key: "A", text: "A VLAN tag in the Ethernet frame carries the VLAN identifier." },
+      { key: "B", text: "All frames on a trunk belong to VLAN 1 by definition." },
+      { key: "C", text: "A router automatically embeds the VLAN in the IPv4 destination address." },
+      { key: "D", text: "802.1Q changes the frame into an OSPF hello packet." }
+    ],
+    correctKey: "A",
+    explanation: "IEEE 802.1Q specifies a VLAN identification field in a tagged Ethernet frame. In practical labs, check native VLAN handling and allowed VLAN configuration separately.",
+    trapWarning: "A VLAN tag is an Ethernet-layer field, not an IP address or routing protocol.",
+    reference: "Cisco CCNA 200-301 v1.1: network access and VLAN trunking"
   },
 
   // CISCO CCNP (350-401 ENCOR & ENARSI)
@@ -254,7 +304,7 @@ const QUESTION_BANK: Question[] = [
     correctKey: "B",
     explanation: "PHP allows the second-to-last (penultimate) router in the LSP to pop the top MPLS label before handing the packet to the egress PE router. This spares the egress PE router from having to do both an LFIB label lookup and a subsequent FIB/IP lookup, boosting forwarding throughput.",
     trapWarning: "Label 0 is Explicit Null (retains QoS bits), whereas Label 3 is Implicit Null (triggers PHP).",
-    reference: "RFC 3031 & Cisco Service Provider IP Routing (CCIP/SPRI)"
+    reference: "RFC 3031 (MPLS) · Cisco 300-510 SPRI advanced routing topics"
   },
   {
     id: "ccip-2",
@@ -299,7 +349,7 @@ const FLASHCARDS: Flashcard[] = [
     id: "fc-3",
     trackId: "itil_ai_v5",
     domain: "ITIL 5 AI Guiding Principles",
-    front: "List the 7 ITIL 5 Guiding Principles applied to Generative & Autonomous AI.",
+    front: "Apply the seven ITIL guiding principles to an AI-service improvement project.",
     back: "1. Focus on value (outcome > token vanity)\n2. Start where you are (audit data pipelines first)\n3. Progress iteratively with feedback (RLHF/evals)\n4. Collaborate and promote visibility (transparency)\n5. Think and work holistically (ethics + infra + SLAs)\n6. Keep it simple and practical (avoid over-agentification)\n7. Optimize and automate (guardrails & observability)",
     mnemonic: "V-A-I-C-H-S-A (Value, As-is, Iterate, Collaborate, Holistic, Simple, Automate)",
     keyRule: "Never build autonomous write-access without an asynchronous Human-in-the-Loop gate."
@@ -325,9 +375,9 @@ const FLASHCARDS: Flashcard[] = [
     id: "fc-6",
     trackId: "itil_ai_v5",
     domain: "ISO 42001 & AI Risk",
-    front: "What are the 4 EU AI Act & ISO 42001 risk classification tiers?",
-    back: "1. Unacceptable: Cognitive behavioral distortion, biometric social scoring (BANNED)\n2. High-Risk: Critical infrastructure, medical diagnostics, legal, HR filtering (Strict audits & human oversight)\n3. Limited/Transparency: Chatbots, deepfakes (Must disclose AI nature)\n4. Minimal: Spam filters, AI spell check",
-    keyRule: "ITIL 5 requires high-risk systems to implement continuous telemetry and audit logs."
+    front: "How does the EU AI Act's risk-based approach differ from ISO/IEC 42001?",
+    back: "The EU AI Act prohibits defined practices, regulates specified high-risk AI systems and imposes transparency duties in some cases. ISO/IEC 42001:2023 is an AI management-system standard. It does not itself set the EU Act's legal risk categories.",
+    keyRule: "Use appropriate governance, risk evaluation and oversight based on the actual system; avoid treating AI Act categories as an ISO 42001 grading system."
   }
 ];
 
@@ -518,7 +568,7 @@ export default function CertMasterPage() {
     });
     const total = filteredQuestions.length;
     const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const passed = selectedTrack === "itil_ai_v5" ? percentage >= 75 : percentage >= 82.5;
+    const passed = percentage >= LUQI_PRACTICE_GOAL;
     return { correct, total, percentage, passed };
   }, [filteredQuestions, selectedAnswers, selectedTrack]);
 
@@ -672,7 +722,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                 </Badge>
               </div>
               <p className="text-xs text-slate-400">
-                Advanced AI Governance, CCNA, CCNP & CCIP Hands-On Training
+                AI Governance, CCNA, CCNP Enterprise & Service Provider Learning
               </p>
             </div>
           </div>
@@ -696,13 +746,45 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
 
       {/* Main Hub Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <p className="rounded-xl border border-amber-700 p-3 text-sm text-amber-100">Luqi practice material, not official examination questions or a verified current certification syllabus. Confirm course versions, requirements and standards with the awarding organisation. Simulator output is illustrative, not real network activity.</p>
+        <section aria-label="Official certification pathways" className="rounded-xl border border-emerald-700 bg-slate-900 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-white">Learn the skills. Follow the official certification pathway.</h2>
+              <p className="text-sm text-slate-200">Choose an awarding-body pathway, practise with Luqi's exercises, then use its current exam guide and training outline.</p>
+              <p className="text-xs text-emerald-200">Official exam details reviewed {CERT_REVIEWED_ON}.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-950"
+                href={CERT_PATHWAYS[selectedTrack].examUrl} target="_blank" rel="noopener noreferrer">Official exam details <ExternalLink size={16} aria-hidden="true" /></a>
+              <a className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-500 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                href={CERT_PATHWAYS[selectedTrack].learningUrl} target="_blank" rel="noopener noreferrer">Official training <ExternalLink size={16} aria-hidden="true" /></a>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+            <div className="rounded-lg border border-slate-700 bg-slate-950 p-4">
+              <h3 className="font-semibold text-emerald-200">{CERT_PATHWAYS[selectedTrack].title}</h3>
+              <p className="mt-1 text-sm text-slate-200">{CERT_PATHWAYS[selectedTrack].code} · {CERT_PATHWAYS[selectedTrack].duration}</p>
+              <p className="mt-2 text-xs text-slate-300">{CERT_PATHWAYS[selectedTrack].status}</p>
+              <p className="mt-2 text-xs text-slate-400">{CERT_PATHWAYS[selectedTrack].examFacts}</p>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-950 p-4">
+              <h3 className="font-semibold text-emerald-200">Skills to practise</h3>
+              <ul className="mt-2 grid gap-1 text-xs text-slate-300">
+                {CERT_PATHWAYS[selectedTrack].topics.map(topic => <li key={topic}>• {topic}</li>)}
+              </ul>
+            </div>
+          </div>
+          <details className="mt-3 text-sm text-slate-300">
+            <summary className="min-h-10 cursor-pointer py-2 font-medium text-slate-200">How Luqi practice works</summary>
+            <p className="max-w-4xl pb-2 text-xs leading-relaxed">Luqi creates its own study questions and local teaching scenarios, not copies of protected certification exam items. The network topology is a practice simulation and does not connect to actual routers. Awarding-body links above provide the official exam requirements; the {LUQI_PRACTICE_GOAL}% mastery goal measures progress only within Luqi.</p>
+          </details>
+        </section>
         {/* Track Selection Ribbon */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             {
               id: "itil_ai_v5" as TrackId,
-              title: "ITIL® AI Governance (v5)",
+              title: "ITIL AI Governance · Version 5",
               code: "ITIL-AI-V5",
               tag: "AI Ethics & ISO 42001",
               icon: Shield,
@@ -710,7 +792,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             },
             {
               id: "ccna_200_301" as TrackId,
-              title: "Cisco CCNA (200-301)",
+              title: "Cisco CCNA · 200-301 v1.1",
               code: "200-301 CCNA",
               tag: "Routing, Switching & VLSM",
               icon: Network,
@@ -718,7 +800,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             },
             {
               id: "ccnp_encor" as TrackId,
-              title: "Cisco CCNP Enterprise",
+              title: "Cisco CCNP Enterprise · ENCOR",
               code: "350-401 ENCOR",
               tag: "BGP, Advanced OSPF & QoS",
               icon: Cpu,
@@ -726,9 +808,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             },
             {
               id: "ccip_sp" as TrackId,
-              title: "Cisco CCIP / Service Provider",
+              title: "Cisco Service Provider Advanced Routing",
               code: "300-510 SPRI",
-              tag: "MPLS, LDP & Carrier VPNs",
+              tag: "SPRI v1.1 · Routing, MPLS & Segment Routing",
               icon: Layers,
               color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
             }
@@ -1093,9 +1175,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     </div>
                     <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
                       <div className="text-2xl font-extrabold text-slate-300">
-                        {selectedTrack === "itil_ai_v5" ? "75%" : "82.5%"}
+                        {LUQI_PRACTICE_GOAL + "%"}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">Practice Target (not official)</div>
+                      <div className="text-xs text-slate-400 mt-1">Luqi mastery goal</div>
                     </div>
                   </div>
 
@@ -1105,8 +1187,8 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     </h4>
                     <p className="text-xs text-slate-400 leading-relaxed">
                       {scoreStats.passed
-                        ? "Exceptional performance! You met this local practice target. This does not establish certification readiness or an official exam result."
-                        : "Review required on missed domains. Use the Spaced Repetition Flashcards and Hands-On Cisco CLI sandbox to drill command syntax and RFC protocol tie-breakers."}
+                        ? "Great progress. Your Luqi practice score reached the mastery goal. Continue with the next topic and the awarding body's official learning path."
+                        : "Build your score: revisit missed topics, use the flashcards and practise with the networking tools before trying again."}
                     </p>
                   </div>
 
@@ -1264,7 +1346,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                     Multi-Area OSPF & BGP Enterprise Spine-Leaf Topology
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-400">
-                    Illustrative packet-flow examples. Buttons animate predetermined teaching scenarios; timings and delivery outcomes are not live measurements.
+                    Explore the OSPF and BGP exchange step by step. This playback illustrates protocol behaviour, not measurements from a connected router.
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -1656,9 +1738,9 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
         {/* The selected practice question is a draft, never an automatic AI request. */}
         {activeTab === 'coach' && <section className="min-w-0 space-y-5" aria-label="Luqi study coach">
           <h2 className="text-xl font-bold">Ask Luqi about your course</h2>
-          <p className="text-sm text-slate-300">Course: {selectedTrack}. Use your existing Luqi account and approve each request. AI explanations are practice help, not official marking or certification. Your selected question is editable before Send.</p>
+          <p className="text-sm text-slate-300">Course: {CERT_PATHWAYS[selectedTrack].title}. Ask Luqi about any concept, review the response and keep practising. Sending a question uses your existing consent-controlled Chat workflow.</p>
           <AiPilotPage key={selectedTrack} embedded initialQuestion={coachQuery} />
-          <details><summary className="min-h-11 cursor-pointer py-3">Illustrative video lessons (not live generated footage)</summary><CertMasterVideoCoach /></details>
+          <details><summary className="min-h-11 cursor-pointer py-3">Explore animated lesson examples</summary><CertMasterVideoCoach /></details>
         </section>}
       </main>
     </div>

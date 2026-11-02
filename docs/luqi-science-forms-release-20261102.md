@@ -1,0 +1,9 @@
+# Combined owner-requested repair candidate — 2 November 2026
+
+The owner requested both #393 release repairs and the guided form milestone. Consolidate #400's reviewed eleven-file addition into #393's release candidate, preserving both commit histories and current main bb6e95fc. This permits full acceptance of the actual combined source and one controlled deployment rather than treating independent green checks as proof of integration.
+
+#400's initial e710a4f5 focused workflow 41359714625 passed 17 Node and 38 DOM/original-document/review tests plus strict checks of both frontends. A subsequent review also bounded the guidance focus effect to each deliberate navigation request so a completed processing operation does not steal focus. A ninth DOM regression covers that case; the final combined candidate must rerun the full suites. Source/consent/approval/submission boundaries remain unchanged.
+
+Science exact-label repair and concise startup catalog copy retain the original startup/performance/security gates. The attempted Omega lazy split was reversed after the unchanged mobile gate correctly detected loss of required core release-observer markers; no dead marker strings or weakened assertions were added. All original task and private-note controls remain in the initial bundle.
+
+No automatic source-date renewal, secrets, account operations, provider inference, budget/DNS/config/schema changes or real applications were performed. Component and local test evidence is not canonical deployment or physical-device acceptance. Record final exact-head checks, merge tree and canonical Railway/public release verification before claiming the feature live.

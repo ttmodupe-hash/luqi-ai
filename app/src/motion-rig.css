@@ -22,3 +22,12 @@
 @media(max-width:820px){.luqi-motion-layout{grid-template-columns:1fr}}
 @media(max-width:440px){.luqi-motion-grid{grid-template-columns:1fr}.luqi-motion-keys button{padding:7px 2px}}
 @media(prefers-reduced-motion:reduce){.luqi-motion-rig *{animation:none!important;transition:none!important}}
+
+/* Character rig video recorder: separate capture buffer, shared local audio. */
+.luqi-motion-export{position:relative;min-width:0;padding:16px;border:1px solid #648d72;border-radius:14px;background:#10271e}
+.luqi-motion-export h3{font-size:19px;color:#efffed;margin:0 0 8px}
+.luqi-motion-export p{font-size:12px;line-height:1.6;color:#cce5cf;margin:8px 0}
+.luqi-motion-capture-canvas{position:absolute;width:1px!important;height:1px!important;opacity:0;pointer-events:none}
+.luqi-motion-export-result{display:grid;gap:12px;min-width:0;margin-top:14px}
+.luqi-motion-export-result video{display:block;width:100%;max-height:480px;aspect-ratio:16/9;object-fit:contain;background:#000}
+.luqi-motion-export-result a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;background:#c4ebad;color:#183223;text-decoration:none;border-radius:8px;font-weight:700}

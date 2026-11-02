@@ -61,3 +61,44 @@ export function rigSvg(id:RigId,title:string,p:Pose):string{
  <path d="M308 132 Q320 143 333 132" stroke="#493124" fill="none" stroke-width="3" stroke-linecap="round"/></g></g>
  <text x="20" y="336" font-family="sans-serif" font-size="16" fill="#fff">${label}</text></svg>`;
 }
+
+/** Render the same original six-joint rig into a Canvas2D frame for actual
+ * browser MediaRecorder.captureStream exports. No image uploads, fake 3D,
+ * offscreen workers or generated speech. Paired with the on-screen SVG rig.
+ */
+export function drawRigCanvas(
+  ctx: CanvasRenderingContext2D, width: number, height: number,
+  id: RigId, title: string, frames: readonly Keyframe[], seconds: number,
+): void {
+  if (!Number.isFinite(width) || width < 1 || width > 4096 ||
+      !Number.isFinite(height) || height < 1 || height > 4096 ||
+      !Object.hasOwn(LUQI_RIGS, id)) throw Error('Invalid recording canvas');
+  const palette = LUQI_RIGS[id], position = frameAt(frames, seconds);
+  const safe = safeTitle(title);
+  const limb = (x: number, y: number, angle: number, color: string, length: number) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle * Math.PI / 180);
+    ctx.fillStyle = color; ctx.fillRect(-12, 0, 24, length);
+    ctx.beginPath(); ctx.arc(0, length, 12, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  ctx.save();
+  ctx.scale(width / 640, height / 360);
+  ctx.fillStyle = palette.backdrop; ctx.fillRect(0, 0, 640, 360);
+  ctx.strokeStyle = palette.accent; ctx.lineWidth = 3; ctx.globalAlpha = .7;
+  ctx.beginPath(); ctx.moveTo(0, 305); ctx.lineTo(640, 305); ctx.stroke();
+  ctx.globalAlpha = .2; ctx.beginPath(); ctx.arc(320, 150, 125, 0, Math.PI * 2); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.translate(320, 165); ctx.rotate(position.torso * Math.PI / 180); ctx.translate(-320, -165);
+  limb(302, 232, position.leftLeg, '#243448', 90);
+  limb(338, 232, position.rightLeg, '#243448', 90);
+  ctx.fillStyle = palette.coat; ctx.fillRect(283, 145, 74, 96);
+  limb(283, 160, position.leftArm, palette.skin, 98);
+  limb(357, 160, position.rightArm, palette.skin, 98);
+  ctx.save(); ctx.translate(320, 116); ctx.rotate(position.head * Math.PI / 180); ctx.translate(-320, -116);
+  ctx.fillStyle = palette.skin; ctx.beginPath(); ctx.arc(320, 110, 40, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#22272C'; ctx.beginPath(); ctx.arc(307, 114, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(333, 114, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.restore();
+  ctx.save(); ctx.scale(width / 640, height / 360);
+  ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.fillText(safe, 20, 337, 600);
+  ctx.restore();
+}

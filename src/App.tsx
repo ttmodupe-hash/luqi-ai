@@ -11,6 +11,7 @@ import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-route
 
 // Pages
 import Home from "./pages/Home";
+const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
@@ -84,6 +85,7 @@ export default function App() {
       <Routes>
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
+        <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
