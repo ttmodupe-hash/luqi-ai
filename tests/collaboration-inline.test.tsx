@@ -11,7 +11,7 @@ it('always renders People inside Luqi without a popup, trigger or focus trap', a
   render(<MemoryRouter><label>Draft<input defaultValue="Keep this draft" /></label><CollaborationDock /></MemoryRouter>);
   const rail = screen.getByRole('complementary', { name: 'Luqi contacts' });
   const panel = screen.getByRole('region', { name: 'Your contacts' });
-  expect(rail).toContainElement(panel);
+  expect(rail.contains(panel)).toBe(true);
   expect(screen.getByRole('heading', { name: 'People & private chat' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Contacts' })).toBeNull();
   expect(screen.queryByRole('dialog')).toBeNull();
