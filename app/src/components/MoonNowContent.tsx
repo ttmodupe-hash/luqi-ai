@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { compassDirection, illuminatedPath, moonSnapshot, nextMoonEvents, parseMoonLocation,
+import { compassDirection, moonSnapshot, nextMoonEvents, parseMoonLocation,
   validMoonLocation, MOON_REFRESH_MS, type MoonLocation } from '../lib/moon-tracker.mjs';
+import MoonDisc, { LRO_MOON_SOURCE } from './MoonDisc';
 import './moon-now.css';
 
 /** On-device ephemeris, not an image feed. No network, accounts, storage or paid AI. */
@@ -8,6 +9,8 @@ export default function MoonNowPanel() {
   const id = useId();
   const [now, setNow] = useState(() => new Date());
   const [paused, setPaused] = useState(false);
+  const [view, setView] = useState<'phase' | 'surface'>('phase');
+  const [detailed, setDetailed] = useState(true);
   const [location, setLocation] = useState<MoonLocation | null>(null);
   const [locationLabel, setLocationLabel] = useState('');
   const [latitude, setLatitude] = useState('');
@@ -74,12 +77,17 @@ export default function MoonNowPanel() {
       {!snapshot ? <p role="alert">Check your device clock. Moon calculations support dates from 1900 to 2100.</p> : <>
         <div className="luqi-moon-overview">
           <figure>
-            <svg viewBox="0 0 100 100" role="img" aria-label={`${snapshot.name}, ${(snapshot.fraction * 100).toFixed(0)} percent illuminated`}>
-              <circle cx="50" cy="50" r="44" className="luqi-moon-dark" />
-              <path d={illuminatedPath(snapshot.fraction)} transform={`rotate(${snapshot.rotation} 50 50)`} className="luqi-moon-lit" />
-              <circle cx="50" cy="50" r="44" fill="none" className="luqi-moon-rim" />
-            </svg>
-            <figcaption>Phase illustration, not camera footage.<br />{location ? 'Zenith-up view for the selected area.' : 'Celestial north is up.'}</figcaption>
+            <div className="luqi-moon-visual">
+              <MoonDisc id={id} fraction={snapshot.fraction} rotation={snapshot.rotation}
+                view={view} detailed={detailed}
+                label={`${view === 'surface' ? 'Full near-side surface map' : snapshot.name}, ${(snapshot.fraction * 100).toFixed(0)} percent illuminated now`} />
+            </div>
+            <figcaption>{view === 'surface'
+              ? 'Full near-side surface for exploration, not today’s lunar illumination.'
+              : 'Calculated lunar phase over real near-side surface detail, not camera footage.'}
+              <br />{location ? 'Phase tilt estimated for your selected area.' : 'Moon orientation is approximate without a location.'}
+              <br /><a href={LRO_MOON_SOURCE} target="_blank" rel="noopener noreferrer">NASA LRO surface source</a> · NASA/GSFC/Arizona State University
+            </figcaption>
           </figure>
           <div>
             <h3>{snapshot.name}</h3>
@@ -104,6 +112,11 @@ export default function MoonNowPanel() {
         </div>}
       </>}
       <div className="luqi-moon-actions">
+        <button type="button" aria-pressed={view === 'phase'} onClick={() => setView('phase')}>Current phase</button>
+        <button type="button" aria-pressed={view === 'surface'} onClick={() => setView('surface')}>Explore full surface</button>
+        <button type="button" aria-pressed={!detailed} onClick={() => setDetailed(value => !value)}>
+          {detailed ? 'Use low-data Moon' : 'Show detailed Moon'}
+        </button>
         <button type="button" onClick={() => setNow(new Date())}>Refresh now</button>
         <button type="button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume live updates' : 'Pause live updates'}</button>
         <button type="button" onClick={requestLocation} disabled={locating}>{locating ? 'Requesting location…' : 'Use my location (optional)'}</button>
@@ -135,7 +148,8 @@ export default function MoonNowPanel() {
       <details>
         <summary>Calculation sources and privacy</summary>
         <p>These educational estimates use the SunCalc 2.0.1 lunar equations, adapted locally. Device clock errors, atmospheric refraction and horizon assumptions affect results. A missing rise or set means the bounded search found no event, not that one never occurs.</p>
-        <p>No account, provider request, microphone, camera, background location tracking or location storage is used by this panel. Refresh pauses when the page is hidden and resumes when it is visible.</p>
+        <p>The familiar lunar near side comes from the public-domain NASA Lunar Reconnaissance Orbiter mosaic; the detailed image is served by Wikimedia Commons. When detailed mode is enabled, your browser contacts Wikimedia to load a small image. The low-data version is an on-device textured illustration that makes no image request. Neither representation is a current telescope picture, eclipse renderer or exact libration simulation.</p>
+        <p>No account, paid AI/provider request, microphone, camera, background location tracking or location storage is used by this panel. The Moon phase and local position are calculated on-device. Refresh pauses when the page is hidden and resumes when it is visible.</p>
         <p><a href="https://github.com/mourner/suncalc/tree/bbc91f689ede3ff7173011947d435b3fb6c0485d" target="_blank" rel="noreferrer noopener">Calculation source</a> · <a href="/licenses/luqi-moon-suncalc.txt" target="_blank" rel="noreferrer noopener">Open-source licence</a></p>
       </details>
     </section>
