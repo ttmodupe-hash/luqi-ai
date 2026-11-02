@@ -25,7 +25,7 @@ export type P2PStatus = z.infer<typeof p2pStatus>;
 export const p2pApprovedContact = z.object({
   circleId: p2pId, userId: z.number().int().positive().safe(),
   name: z.string().min(1).max(120), accountActive: z.literal(true),
-  presence: z.enum(['online','offline','not_shared']),
+  presence: z.enum(['online','away','offline','not_shared']),
 }).strict();
 export const p2pApprovedContacts = z.object({
   contacts: z.array(p2pApprovedContact).max(24),
