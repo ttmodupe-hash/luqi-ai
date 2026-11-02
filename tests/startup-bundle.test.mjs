@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { summarizeBundle, assertProviderFree, assertKnownQueryConsumers, isLegacyQueryModule } from '../scripts/measure-startup-bundle.mjs';
@@ -67,4 +68,16 @@ test('unresolved static imports and CSS fail closed', () => {
 test('missing module evidence or invalid guard report fails closed', () => {
   assert.throws(() => summarizeBundle([entry({ modules: null })]));
   assert.throws(() => assertProviderFree({}));
+});
+
+// A lazy contacts dock must not add a second generic page-level h1 while another
+// route is still loading. Verify the two shipped frontend trees remain identical.
+test('deferred contacts dock keeps single route loading heading and frontend parity', () => {
+  const root = readFileSync(new URL('../src/components/WorkspaceLayout.tsx', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../app/src/components/WorkspaceLayout.tsx', import.meta.url), 'utf8');
+  assert.equal(root, app, 'mirrored WorkspaceLayout copies must match');
+  assert.match(root, /const CollaborationDock = lazy\(\(\) => import\(['"]\.\/CollaborationDock['"]\)\);/);
+  assert.doesNotMatch(root, /^import CollaborationDock\b/m);
+  const expected = '<RouteLoadBoundary loading={<p className="luqi-collaboration-privacy" aria-busy="true">Loading contacts…</p>}><CollaborationDock presence={presence} /></RouteLoadBoundary>';
+  assert.equal(root.split(expected).length - 1, 2, 'both workspace variants need a non-h1 loading message');
 });
