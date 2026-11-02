@@ -1,3 +1,5 @@
+> **Updated 2 November 2026:** Luqi is owned by one GitHub maintainer. Routine reviewed source-only releases need that owner's explicit approval and enforced exact-commit CI, not a fabricated second reviewer. The independent-evidence fields below apply only to the separate high-risk P0 operational/paid-launch evidence review and do not block ordinary low-risk frontend improvements.
+
 # LUQI — P0 operator-evidence handoff (25 October 2026)
 
 **This is documentary completeness, not launch approval.** The optional tool reads

@@ -41,7 +41,7 @@ function fixture(options = {}) {
       state.ai++;
       if (options.aiTransportFailure) throw new Error('PRIVATE-UPSTREAM-SECRET');
       if (options.aiFailure) return json({ code: 'AI_PROVIDER_UNAVAILABLE', detail: 'PRIVATE-UPSTREAM' }, 503);
-      return json({ status: 'success', provider: 'gemini', provider_model: 'fixture-model',
+      return json({ status: 'success', provider: options.replyProvider ?? 'gemini', provider_model: 'fixture-model',
         response: options.wrongReply ? 'invented generic success' : body.user_input.split('exact text: ')[1] });
     }
     const base = '/api/v1/companion/conversations';
@@ -106,6 +106,28 @@ test('all requests stay on the fixed TLS origin and refuse redirects, cookies an
 test('no paid traffic without separate explicit approval', async () => {
   const { state, report } = await run({}, false);
   assert.equal(report.success, true); assert.equal(state.ai, 0); assert.equal(report.providerRequestSubmitted, false);
+});
+test('independent OpenAI acceptance sends one explicitly selected request and verifies its provider identity', async () => {
+  const f = fixture({ replyProvider: 'openai' });
+  const report = await runAcceptance({ expectedCommit: sha, writesApproved: true, paidApproved: true,
+    provider: 'openai', request: f.request });
+  assert.equal(report.success, true); assert.equal(report.provider, 'openai');
+  assert.equal(report.requestedProvider, 'openai'); assert.equal(f.state.ai, 1);
+  assert.equal(f.state.calls.find(x => x.path === '/api/v1/luqi-core').body.provider, 'openai');
+  assert.equal(report.cleanup.sessions, 'revoked_and_verified');
+});
+test('a complete Gemini reply cannot pass independent OpenAI acceptance and is never retried', async () => {
+  const f = fixture();
+  const report = await runAcceptance({ expectedCommit: sha, writesApproved: true, paidApproved: true,
+    provider: 'openai', request: f.request });
+  assert.equal(report.success, false); assert.equal(report.providerReplyVerified, false); assert.equal(f.state.ai, 1);
+  assert.equal(report.cleanup.sessions, 'revoked_and_verified');
+});
+test('invalid provider choices are rejected before any account or provider traffic', async () => {
+  let calls = 0;
+  await assert.rejects(runAcceptance({ expectedCommit: sha, writesApproved: true, paidApproved: true,
+    provider: 'arbitrary', request: async () => { calls++; } }), CheckFailure);
+  assert.equal(calls, 0);
 });
 test('AI request contains only a new synthetic challenge, not private notes or account information', async () => {
   const { state } = await run();

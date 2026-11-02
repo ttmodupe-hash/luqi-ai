@@ -1,14 +1,14 @@
 version: 2
 updates:
-  # Python dependencies
+  # Routine version updates are bounded and staggered; security updates remain separate.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "wednesday"
       time: "09:00"
       timezone: "UTC"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 2
     reviewers:
       - "ttmodupe-hash"
     labels:
@@ -20,16 +20,49 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+    groups:
+      python-routine:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
-  # Frontend dependencies
+  # Root production dependencies: two routine groups plus room for an individual major review.
   - package-ecosystem: "npm"
-    directory: "/app"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
       timezone: "UTC"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
+    reviewers:
+      - "ttmodupe-hash"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps(root)"
+      include: "scope"
+    groups:
+      root-runtime-routine:
+        applies-to: version-updates
+        dependency-type: production
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      root-development-routine:
+        applies-to: version-updates
+        dependency-type: development
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 2
     reviewers:
       - "ttmodupe-hash"
     labels:
@@ -41,16 +74,26 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+    groups:
+      frontend-runtime-routine:
+        applies-to: version-updates
+        dependency-type: production
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      frontend-development-routine:
+        applies-to: version-updates
+        dependency-type: development
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
-  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "thursday"
       time: "09:00"
       timezone: "UTC"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     reviewers:
       - "ttmodupe-hash"
     labels:
@@ -59,3 +102,8 @@ updates:
     commit-message:
       prefix: "deps(ci)"
       include: "scope"
+    groups:
+      actions-routine:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

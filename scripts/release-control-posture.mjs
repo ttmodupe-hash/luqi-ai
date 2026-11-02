@@ -29,7 +29,7 @@ function stamp(value) {
 
 const ACTION = Object.freeze({
   GITHUB_MAIN_UNPROTECTED:
-    'GitHub owner: create or enable an enforced main branch ruleset. Require a PR, independent approval, required checks, and prohibit force pushes/deletions.',
+    'GitHub sole owner: enforce main PRs and passing checks with zero required second-person approvals; block force pushes/deletion and record explicit owner sign-off.',
   RAILWAY_WAIT_FOR_CI_OFF:
     'Railway owner: review the web service Source settings and enable Wait for CI only after confirming required main push workflows and rollback.',
   DEPLOYED_REVISION_MISMATCH:
@@ -86,7 +86,7 @@ export function assessReleaseControlPosture(packet, { asOf = new Date() } = {}) 
     format:'luqi.release-control-review.v1',
     scope:'LUQI main -> kind-spontaneity / production / web',
     assessed_at_utc:asOf.toISOString(),
-    status:problems.length ? 'RELEASE_CONTROLS_BLOCKED' : 'HUMAN_REVIEW_REQUIRED',
+    status:problems.length ? 'RELEASE_CONTROLS_BLOCKED' : 'OWNER_RELEASE_SIGNOFF_REQUIRED',
     blocking_findings:problems,
     recommended_operator_actions:problems.map(code => ({code, action:ACTION[code]})),
     main_matches_deployed_sha:g.sha===r.deployment_sha,
@@ -95,6 +95,7 @@ export function assessReleaseControlPosture(packet, { asOf = new Date() } = {}) 
     branch_protection_reported:g.protected,
     railway_wait_for_ci_reported:r.wait_for_ci,
     required_pr_review_rules_independently_verified:false,
+    owner_release_signoff_verified_by_this_tool:false,
     exact_commit_checks_independently_verified:false,
     operator_observations_authenticated_by_this_tool:false,
     production_derived_restore_verified_by_this_tool:false,

@@ -41,10 +41,21 @@ jobs:
             const routePattern = /\bpath="([^"]+)"/g;
             const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
             const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
-            // The only approved public additions are two reviewed, lazy,
-            // provider-free routes. Legacy routes/iframes stay identical.
+            // Preserve every existing route. The packaged app additionally gains
+            // the already-public, provider-free consumer-rights page, reviewed
+            // comparative evidence source guide and
+            // reviewed municipal services, township enterprise guides, Chat, Ask, Login and payment-availability
+            // entries. The reviewed Luqi PWA install and download-alias routes
+            // are also allowed. Local Pulse adds reviewed /local-pulse and /news source-directory routes.
+            // /space-science adds provider-free calculations and reviewed publisher links.
+            // /near-me adds optional on-device province discovery and deliberate external map searches.
+            // Guest /try has a separate server-enforced monthly allowance. Gated P2P routes and the packaged private admin
+            // entry, consented visual tutor and lazy Spatial Vision Lab are reviewed additions; every older
+            // route and iframe stays required.
             const routes = matches(after, routePattern);
-            const approved = ['/business-desk', '/study-desk'];
+            const approved = path.startsWith('app/')
+              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/driver-rights', '/install', '/local-pulse', '/login', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
+              : ['/ask', '/business-connect', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/circles', '/comparative-evidence', '/download', '/driver-rights', '/install', '/local-pulse', '/login', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),
@@ -52,7 +63,7 @@ jobs:
             assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
               'Existing iframe targets changed: ' + path);
           }
-          console.log('Pre-existing routes and iframe targets preserved; only two reviewed local tools are new.');
+          console.log('All legacy routes and iframe targets preserved; reviewed Chat, Luqi PWA install and payment availability routes added.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash

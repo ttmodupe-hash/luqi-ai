@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Layers3, LockKeyhole, RefreshCw } from "lucide-react";
 import OmegaSubmissionForm from "../components/OmegaSubmissionForm";
 import OmegaLocalCalculators from "../components/OmegaLocalCalculators";
 import OmegaDomainGuide from "../components/OmegaDomainGuide";
 import { ConversationError, signIn } from "../lib/private-conversations";
+import { useCustomerSession } from "../providers/customer-session";
 import {
   omegaClient,
   OmegaError,
@@ -58,9 +60,9 @@ function TaskResult({ task }: { task: OmegaTask }) {
 const formatTime = (value: string) => new Date(value).toLocaleString();
 
 export default function OmegaTasksPage() {
-  const [session, setSession] = useState<Awaited<
-    ReturnType<typeof signIn>
-  > | null>(null);
+  const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
+  const authenticatedHere = useRef(false);
+  const previousToken = useRef<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<OmegaStatus | null>(null);
@@ -85,6 +87,8 @@ export default function OmegaTasksPage() {
   useEffect(
     () => () => {
       epoch.current++;
+      locked.current = false;
+      previousToken.current = null; // StrictMode remount must refresh the account view.
     },
     [],
   );
@@ -92,7 +96,7 @@ export default function OmegaTasksPage() {
   function clearSession() {
     epoch.current++;
     locked.current = false;
-    setSession(null);
+    previousToken.current = null; signOutShared();
     setEmail("");
     setPassword("");
     setStatus(null);
@@ -187,6 +191,26 @@ export default function OmegaTasksPage() {
       "Task information refreshed. Status changes appear when you refresh.",
     );
   }
+  // A shared sign-in unlocks this view; clear a former identity before paint.
+  useLayoutEffect(() => {
+    const boundary = customerSessionBoundary(session);
+    const token = session?.token ?? null;
+    if (boundary === previousToken.current) return;
+    const wasSignedIn = previousToken.current !== null;
+    previousToken.current = boundary;
+    if (wasSignedIn) {
+      epoch.current++; locked.current = false;
+      authenticatedHere.current = false;
+      setStatus(null); setTasks([]); setSelected(null); setMore(false); setBusy(false);
+      setConfirm(false); setConfirmRemove(false); setUncertain(false);
+      setSubmission(null); setSubmissionUncertain(false); setEmail(''); setPassword(''); setNotice('');
+      setFormVersion(value => value + 1);
+    }
+    if (!token) return;
+    if (authenticatedHere.current) { authenticatedHere.current = false; return; }
+    void run(current => refresh(token, current));
+  }, [customerSessionBoundary(session)]);
+
   function prepareSubmission(draft: OmegaDraft) {
     if (busy || locked.current || uncertain || submission || status?.intake !== "configured" ||
         !status.handlers.includes(draft.handler)) return;
@@ -236,7 +260,7 @@ export default function OmegaTasksPage() {
     <main className="omega-page">
       <header className="omega-heading">
         <p className="luqi-eyebrow">
-          <Layers3 size={16} aria-hidden="true" /> YOUR OMEGA WORKSPACE
+          <Layers3 size={16} aria-hidden="true" /> Luqi practical tools
         </p>
         <h1>Tasks, with a clear record.</h1>
         <p>Review your saved calculations, their status and their results.</p>
@@ -261,14 +285,14 @@ export default function OmegaTasksPage() {
                 const account = await signIn(email, password);
                 if (!current()) return;
                 setPassword("");
-                setSession(account);
+                authenticatedHere.current = true; acceptSession(account);
                 await refresh(account.token, current);
               });
             }}
           >
             <LockKeyhole size={24} aria-hidden="true" />
             <h2>Sign in to your task history</h2>
-            <p>Use your existing LUQI account.</p>
+            <p>Use your existing Luqi account.</p>
             <label>
               Email
               <input
@@ -296,8 +320,8 @@ export default function OmegaTasksPage() {
               {busy ? "Signing in…" : "Sign in"}
             </button>
             <p className="omega-muted">
-              Your session stays in memory until you leave or reload this page.
-              Account recovery requires your LUQI administrator.
+              Your Luqi account stays signed in across customer tools in this tab. Reloading or signing out ends the session.
+              Account recovery requires your Luqi administrator.
             </p>
           </form>
           <section
@@ -322,7 +346,7 @@ export default function OmegaTasksPage() {
             </p>
             <p className="omega-muted">
               Availability is checked after sign-in. Autonomous agents and the
-              other Omega modules are still in development.
+              additional Luqi capabilities are still in development.
             </p>
           </section>
         </div>
@@ -551,7 +575,7 @@ export default function OmegaTasksPage() {
                       )}
                     {confirmRemove && (
                       <section className="omega-confirm" aria-label="Confirm saved task removal">
-                        <h3>Remove this finished task from LUQI?</h3>
+                        <h3>Remove this finished task from Luqi?</h3>
                         <p>
                           This permanently removes the selected finished record from
                           active task storage and frees a queue slot. Backups can

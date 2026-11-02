@@ -1,0 +1,33 @@
+.luqi-motion-rig{margin:20px 0;padding:clamp(15px,2.6vw,28px);border-radius:18px;border:1px solid #547e69;background:#142c27;color:#f2fff4;min-width:0}
+.luqi-motion-rig header>p:first-child{color:#bceecb;font-size:11px;letter-spacing:.08em;font-weight:700}
+.luqi-motion-rig h2{color:#f2fff4;font-size:clamp(22px,3vw,29px);margin:4px 0}
+.luqi-motion-rig p{color:#c8e5cf;font-size:13px;line-height:1.6}
+.luqi-motion-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px}
+.luqi-motion-stage{background:#0c211c;border:1px solid #436957;border-radius:12px;padding:12px;min-width:0}
+.luqi-motion-stage svg{display:block;width:100%;height:auto;aspect-ratio:16/9}
+.luqi-motion-rig label{display:flex;flex-direction:column;gap:6px;min-width:0;color:#def0e4;font-size:13px}
+.luqi-motion-stage>label{margin-top:12px}
+.luqi-motion-rig select,.luqi-motion-rig input{min-height:44px;min-width:0;width:100%;border:1px solid #7ba88b;border-radius:8px;background:#0c211c;color:white;padding:8px}
+.luqi-motion-rig input[type=range]{padding:2px;min-height:30px;accent-color:#b9ecbe}
+.luqi-motion-controls{display:grid;gap:12px;min-width:0}
+.luqi-motion-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.luqi-motion-rig fieldset{min-width:0;padding:12px;border:1px solid #557f68;border-radius:12px}
+.luqi-motion-rig legend{font-size:14px;color:#dbf8df;padding:0 6px}
+.luqi-motion-keys{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-bottom:12px}
+.luqi-motion-keys button[aria-pressed=true]{background:#c4ecc6;color:#143523}
+.luqi-motion-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.luqi-motion-rig button{min-height:44px;padding:9px 12px;border:1px solid #86af8d;border-radius:8px;background:#295346;color:#fff;cursor:pointer}
+.luqi-motion-rig button:hover{background:#3b6754}
+.luqi-motion-note{border-top:1px solid #4a7360;margin-top:16px!important;padding-top:12px}
+@media(max-width:820px){.luqi-motion-layout{grid-template-columns:1fr}}
+@media(max-width:440px){.luqi-motion-grid{grid-template-columns:1fr}.luqi-motion-keys button{padding:7px 2px}}
+@media(prefers-reduced-motion:reduce){.luqi-motion-rig *{animation:none!important;transition:none!important}}
+
+/* Character rig video recorder: separate capture buffer, shared local audio. */
+.luqi-motion-export{position:relative;min-width:0;padding:16px;border:1px solid #648d72;border-radius:14px;background:#10271e}
+.luqi-motion-export h3{font-size:19px;color:#efffed;margin:0 0 8px}
+.luqi-motion-export p{font-size:12px;line-height:1.6;color:#cce5cf;margin:8px 0}
+.luqi-motion-capture-canvas{position:absolute;width:1px!important;height:1px!important;opacity:0;pointer-events:none}
+.luqi-motion-export-result{display:grid;gap:12px;min-width:0;margin-top:14px}
+.luqi-motion-export-result video{display:block;width:100%;max-height:480px;aspect-ratio:16/9;object-fit:contain;background:#000}
+.luqi-motion-export-result a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;background:#c4ebad;color:#183223;text-decoration:none;border-radius:8px;font-weight:700}

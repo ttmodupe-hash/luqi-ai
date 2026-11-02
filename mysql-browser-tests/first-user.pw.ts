@@ -19,14 +19,19 @@ test('first user registers, saves, reloads, signs in, exports and deletes owned 
     await page.getByLabel('Password', { exact: true }).fill(password);
   };
   await page.goto('/#/');
-  await page.getByRole('link', { name: 'Get started', exact: true }).click();
-  await page.getByRole('link', { name: 'Create your notes account' }).click();
+  // The revised homepage exposes account creation directly; keep the full
+  // real-MySQL registration, session, notes/export and deletion journey intact.
+  await page.getByRole('link', { name: 'Create account', exact: true }).click();
+  await expect(page).toHaveURL(/#\/join$/);
   await credentials();
   await page.getByLabel('Confirm password', { exact: true }).fill(password);
   const registration = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/register'));
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   expect((await registration).status()).toBe(201);
-  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open saved private notes' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open saved private notes' }).click();
+  await expect(page.getByLabel('Conversation title')).toBeVisible();
   await page.getByLabel('Conversation title').fill(title);
   await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
   await page.getByLabel('Your message', { exact: true }).fill(content);
@@ -41,7 +46,9 @@ test('first user registers, saves, reloads, signs in, exports and deletes owned 
   await expect(page.getByRole('status')).toContainText('Message saved');
   await page.reload();
   await expect(page.getByText(content, { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Use an existing account' }).click();
+  // A full reload deliberately expires the tab-memory token; Notes now opens
+  // its sign-in form directly, with no account creation or AI provider call.
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   await credentials();
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByRole('button', { name: title, exact: true }).click();
@@ -95,7 +102,10 @@ test('a user changes a known password, signs in again and keeps saved notes', as
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open saved private notes' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open saved private notes' }).click();
+  await expect(page.getByLabel('Conversation title')).toBeVisible();
   await page.getByLabel('Conversation title').fill('Preserved after password change');
   await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Conversation saved');

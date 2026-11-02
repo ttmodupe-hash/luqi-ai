@@ -14,8 +14,14 @@ import { runtimeLiveness } from './lib/runtimeLiveness';
 import { appRouter } from "./router";
 import { restCompat } from "./rest-compat";
 import { privateConversations } from "./private-conversations";
+import { p2p } from './p2p';
+import { opportunityWatch } from './opportunity-scan';
+import { tenderWatch } from './tender-watch';
 import { accountSecurity } from "./account-security";
+import { customerResumeRoutes } from "./services/customerResume";
+import { hostedCheckout } from "./hosted-checkout";
 import { omegaTasks } from "./omega-tasks";
+import { businessConnect } from "./business-connect";
 import { privateProjectVault } from "./private-project-vault";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
@@ -27,6 +33,9 @@ import { closeCache } from "./services/cache";
 import { SuperIntelligenceOrchestrator, GlobalLedger } from "./services/superCore";
 import { MultiModelMasterOrchestrator } from "./services/multiModelMasterCore";
 import { aiPilot } from "./ai-pilot";
+import { guestTrial } from "./guest-trial";
+import { visualTutor } from "./visual-tutor";
+import { spatialVision } from "./spatial-vision";
 import { checkPilotCredentials } from "./services/pilotCredentialCheck";
 import { checkPilotGatewayReadiness } from "./services/aiPilotBudget";
 import { isUnbudgetedAiRoute } from "./lib/legacyAiRoutes";
@@ -67,8 +76,11 @@ app.use("/*", async (c, next) => {
   c.header("X-Content-Type-Options", "nosniff");
   c.header("X-Frame-Options", "DENY");
   c.header("X-XSS-Protection", "1; mode=block");
-  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  c.header("Referrer-Policy", c.req.path === '/paystack-checkout.html' || c.req.path.startsWith('/api/v1/commerce/')
+    ? 'no-referrer' : 'strict-origin-when-cross-origin');
+  // First-party Studio may request a microphone only after a user clicks Record;
+  // cross-origin frames and camera remain denied; device location is same-origin only.
+  c.header("Permissions-Policy", "camera=(), microphone=(self), geolocation=(self)");
   if (process.env.NODE_ENV === "production") {
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
@@ -112,9 +124,15 @@ app.use("*", async (c, next) => {
 
 app.route("/api/v1/companion/conversations", privateConversations);
 app.route("/api/v1/account", accountSecurity);
+app.route("/api/v1/auth", customerResumeRoutes);
+app.route("/api/v1/p2p", p2p);
+app.route("/api/v1/opportunity-watch", opportunityWatch);
+app.route("/api/v1/tender-watch", tenderWatch);
+app.route("/api/v1/commerce", hostedCheckout);
 app.route("/api/v1/omega/tasks", omegaTasks);
 // Authenticated encrypted project sync is disabled without an explicit rollout flag.
 app.route("/api/v1/projects", privateProjectVault);
+app.route("/api/v1/business-connect", businessConnect);
 
 // ── tRPC ───────────────────────────────────────────────────────────
 app.route("/api/trpc", createTrpcHttp(appRouter));
@@ -130,7 +148,7 @@ for (const path of ["/signup", "/register", "/sign-up", "/join"]) {
 for (const path of ["/login", "/signin", "/sign-in"]) {
   app.get(path, c => {
     c.header("Cache-Control", "no-store");
-    return c.redirect("/#/companion", 302);
+    return c.redirect("/#/login", 302);
   });
 }
 
@@ -171,6 +189,10 @@ app.route("/", restCompat);
 
 // The budgeted text trial is isolated from all legacy provider routes.
 app.route('/api/v1/luqi-core', aiPilot);
+// Anonymous introductory text is separately metered, same-origin and cookie-bound.
+app.route('/api/v1/guest-chat', guestTrial);
+app.route('/api/v1/visual-tutor', visualTutor);
+app.route('/api/v1/spatial-vision', spatialVision);
 
 // 2. Consumer Rights Legal & Dispute Action Plan Endpoint
 app.post('/api/v1/consumer-rights', async (c) => {
@@ -768,18 +790,9 @@ app.get('/api/v1/exam-tutor/domains', (c) => {
   return c.json({ status: 'success', domains: DOMAIN_DIRECTIVES });
 });
 
-// Admin Verification Endpoint
-app.post('/api/v1/admin/verify', async (c) => {
-  try {
-    const { passkey } = await c.req.json();
-    if (adminKeyMatches(passkey)) {
-      return c.json({ success: true, token: passkey });
-    }
-    return c.json({ success: false, error: 'Invalid admin passkey' }, 401);
-  } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 400);
-  }
-});
+// The retired browser admin verification path is handled fail-closed by
+// legacyAdminUnavailable above. Do not re-register a shadow handler here:
+// the removed implementation returned the supplied master key as a token.
 
 // ── KHORO LEGAL & EDUCATIONAL ADVISOR ROUTE ─────────────────────────
 app.post('/api/khoro-legal', async (c) => {
@@ -1262,6 +1275,17 @@ if (env.isProduction) {
     const { checkRuntimeSchema } = await import('../db/runtimeSchema');
     const schema = await checkRuntimeSchema();
     logger.info(schema, 'Database runtime schema preflight');
+    if (process.env.LUQI_P2P_ENABLED === 'true') {
+      const { checkP2PReadiness } = await import('../db/p2pPreflight');
+      await checkP2PReadiness();
+    }
+    if(process.env.LUQI_BUSINESS_CONNECT_ENABLED==='true'){
+      const {businessConnectStore}=await import('./services/businessConnectStore');
+      await businessConnectStore.ready();
+      let running=false;
+      const clean=async()=>{if(running)return;running=true;try{await businessConnectStore.cleanup();}catch{logger.warn('Business Connect retention sweep failed (details redacted)');}finally{running=false;}};
+      void clean();setInterval(()=>void clean(),60*60*1000).unref();
+    }
     const { serve } = await import("@hono/node-server");
     const { serveStaticFiles } = await import("./lib/vite");
     serveStaticFiles(app);

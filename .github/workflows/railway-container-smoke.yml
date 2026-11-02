@@ -129,3 +129,11 @@ jobs:
               ! grep -q '"success":true' /tmp/luqi-workspace.json
             done
           done
+
+          # The visual boundary must remain unavailable with billing disabled.
+          code=$(curl --silent --show-error --max-time 8 --output /tmp/luqi-visual.json \
+            --write-out '%{http_code}' --header 'Content-Type: application/json' \
+            --data '{"question":"Describe","consent":true}' \
+            http://127.0.0.1:18765/api/v1/visual-tutor)
+          test "$code" = "503"
+          grep -q '"code":"AI_DISABLED"' /tmp/luqi-visual.json

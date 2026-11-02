@@ -5,6 +5,7 @@ import {
   makeCard, planStudy, reviewCard, todayLocal, type StudyCard, type StudyPlan,
 } from '../lib/study-desk';
 import '../study-desk.css';
+import KhoroExamConceptBridge from '../components/KhoroExamConceptBridge';
 
 function saveDeck(json: string) {
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }));
@@ -224,6 +225,7 @@ export default function StudyDeskPage() {
             <p>This is an even arithmetic split. Reserve time for revision and adjust for the difficulty of individual topics.</p>
           </section>}
         </section>
+        <KhoroExamConceptBridge />
         <p className="luqi-study-note">Need explanations? <Link to="/ai-trial">The separate AI text trial</Link> may be available after sign-in and consent, subject to strict shared limits. It does not automatically read this study deck.</p>
       </div>
     </div>

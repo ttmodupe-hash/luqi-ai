@@ -15,6 +15,8 @@ for (const operation of ['save', 'export'] as const) {
     await page.route('**/*', route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== new URL(baseURL!).origin) { unexpected.push('external'); return route.abort(); }
+      // Embedded Contacts performs a bounded first-party read after sign-in.
+      if (url.pathname === '/api/v1/p2p/status' && request.method() === 'GET') return route.fulfill({ json: { enabled: false, userId: 7, eligibility: 'verification_needed', circles: [], blockedPeers: [] } });
       if (url.pathname === '/api/v1/auth/login') return route.fulfill({ json: {
         token: 'synthetic-browser-token', user: { email: 'browser@example.invalid' },
       } });

@@ -12,8 +12,8 @@ try {
   }
   const report=assessReleaseControlPosture(JSON.parse(Buffer.concat(chunks).toString('utf8')));
   process.stdout.write(JSON.stringify(report,null,2)+'\n');
-  // Exit 0 means safe to put before a HUMAN review, NEVER launch approved.
-  process.exitCode=report.status==='HUMAN_REVIEW_REQUIRED'?0:2;
+  // Exit 0 means still pending deliberate sole-owner release signoff, NEVER auto-approved.
+  process.exitCode=report.status==='OWNER_RELEASE_SIGNOFF_REQUIRED'?0:2;
 } catch {
   process.stderr.write('Release-control observations are missing, invalid or unsafe. No source values echoed.\n');
   process.exitCode=1;

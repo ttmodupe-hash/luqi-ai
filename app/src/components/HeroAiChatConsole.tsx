@@ -1,5 +1,7 @@
 import { Link } from "react-router";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
+import SovereignRegionBar from "./SovereignRegionBar";
+import "../home-readability.css";
 
 /** Availability panel only. No provider SDK, credentials, inference or canned answers. */
 export function HeroAiChatConsole() {
@@ -9,25 +11,25 @@ export function HeroAiChatConsole() {
       aria-labelledby="chat-availability-heading"
     >
       <div className="luqi-chat-top">
-        <span className="luqi-mini-label">LUQI ASSISTANT</span>
+        <span className="luqi-mini-label">Luqi assistant</span>
         <span className="luqi-paused">
-          Text trial
+          Guest preview
         </span>
       </div>
       <div className="luqi-assistant-symbol" aria-hidden="true">
         <MessageCircle size={34} strokeWidth={1.4} />
       </div>
       <h2 id="chat-availability-heading">
-        A space for your <br />
-        next good question.
+        Tell Luqi what you need.{" "}<br />
+        Find your next step.
       </h2>
       <p>
-        Sign in to check the limited AI text trial. Questions use shared
-        spending limits and separate provider processing.
+        Try up to three real replies from Luqi without registering. Ask a useful question, see how Luqi can help, and create one account when you want more. AI text requires consent and is subject to a shared guest limit.
       </p>
+      <SovereignRegionBar compact />
       <div className="luqi-chat-bottom">
-        <span>Check AI trial availability</span>
-        <Link to="/ai-trial" aria-label="Open AI text trial">
+        <span>Try Luqi free without registering</span>
+        <Link to="/try" aria-label="Try Luqi free without registering">
           <ArrowUpRight size={21} aria-hidden="true" />
         </Link>
       </div>

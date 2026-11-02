@@ -1,0 +1,25 @@
+name: LUQI HTTP Ingress Security
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: http-ingress-security-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  verify-ingress-and-token-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install locked test dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --ignore-scripts
+      - name: Exercise synthetic ingress and token abuse regressions
+        run: npx --no-install vitest run tests/http-ingress-security.test.ts

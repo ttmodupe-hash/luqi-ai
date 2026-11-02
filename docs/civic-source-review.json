@@ -1,0 +1,67 @@
+{
+  "edition": "2026-11-01.1",
+  "reviewedOn": "2026-11-01",
+  "scope": "Retained excerpts only; not full-document snapshots or live verification. Initial source review is automated, not independent human editorial approval.",
+  "sources": [
+    {
+      "id": "agsa-audits",
+      "publisher": "Auditor-General of South Africa",
+      "title": "What we do — understanding audits",
+      "url": "https://www.agsa.co.za/what-we-do",
+      "publishedOn": null,
+      "locator": "Audit process — what is a clean audit?",
+      "reviewMethod": "Publisher page retrieved for this dated review.",
+      "reviewedOn": "2026-11-01",
+      "excerptSha256": "cc69dc2aefc9b680f5698540b666f5109f344fc0207af176abfedfa02103c6e3",
+      "retainedExcerptLocation": "src/lib/civic-evidence.ts: CIVIC_SOURCES[agsa-audits]"
+    },
+    {
+      "id": "agsa-compliance",
+      "publisher": "Auditor-General of South Africa",
+      "title": "Why the auditor-general focuses on compliance",
+      "url": "https://www.agsa.co.za/news/why-auditor-general-focuses-compliance-and-why-protects-public",
+      "publishedOn": "2026-04-13",
+      "locator": "Irregular expenditure: a compliance finding, not an automatic finding of corruption",
+      "reviewMethod": "Publisher page retrieved for this dated review.",
+      "reviewedOn": "2026-11-01",
+      "excerptSha256": "dc6f7f7dd912c227b121c75db23d5d89fa026946b98ff0a636a31e3502946c82",
+      "retainedExcerptLocation": "src/lib/civic-evidence.ts: CIVIC_SOURCES[agsa-compliance]"
+    },
+    {
+      "id": "treasury-data",
+      "publisher": "National Treasury / Municipal Money",
+      "title": "Municipal Finance API documentation",
+      "url": "https://municipaldata.treasury.gov.za/docs",
+      "publishedOn": null,
+      "locator": "Where is the data from? / Audits by the auditor general",
+      "reviewMethod": "Publisher documentation retrieved for this dated review.",
+      "reviewedOn": "2026-11-01",
+      "excerptSha256": "781db0cf478bec581d3349c7a4c835fc8777643edb7e0adfb71787644a457c2d",
+      "retainedExcerptLocation": "src/lib/civic-evidence.ts: CIVIC_SOURCES[treasury-data]"
+    },
+    {
+      "id": "parliament-oversight",
+      "publisher": "Parliament of South Africa",
+      "title": "Oversight",
+      "url": "https://www.parliament.gov.za/oversight",
+      "publishedOn": null,
+      "locator": "What is oversight? / Constitutional mandate",
+      "reviewMethod": "Publisher page retrieved for this dated review.",
+      "reviewedOn": "2026-11-01",
+      "excerptSha256": "ed026d97a439a13b2a3abb0d177c2b19aa7e58cb78e6a93771b82842bcdf68c8",
+      "retainedExcerptLocation": "src/lib/civic-evidence.ts: CIVIC_SOURCES[parliament-oversight]"
+    },
+    {
+      "id": "iec-voter",
+      "publisher": "Electoral Commission of South Africa",
+      "title": "Voter information centre",
+      "url": "https://www.elections.org.za/pw/voter/voter-information",
+      "publishedOn": null,
+      "locator": "My voter registration",
+      "reviewMethod": "Official publisher search excerpt reviewed; direct page retrieval unavailable. Open IEC to confirm current service.",
+      "reviewedOn": "2026-11-01",
+      "excerptSha256": "f87ae9968ce5ba9cb6be65fd6a15fa6e1bb2e68ee912e2421921dc0ee190809f",
+      "retainedExcerptLocation": "src/lib/civic-evidence.ts: CIVIC_SOURCES[iec-voter]"
+    }
+  ]
+}

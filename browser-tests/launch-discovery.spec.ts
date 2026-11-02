@@ -14,8 +14,10 @@ async function isolate(page: Page, baseURL: string) {
   return writes;
 }
 async function trialPage(page: Page, writes: string[]) {
-  await expect(page.getByRole('heading', { name: 'Try a question with LUQI' })).toBeVisible();
-  await expect(page.getByText(/Live replies remain subject to provider availability/)).toBeVisible();
+  await expect(page).toHaveURL(/#\/chat$/);
+  await expect(page.getByRole('heading', { name: 'Luqi Chat' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Keep the conversation going' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in to Luqi' })).toBeVisible();
   await expect(page.locator('#ai-question')).toHaveCount(0);
   expect(writes).toEqual([]);
 }
@@ -30,7 +32,7 @@ test('workspace search can find the trial and retains truthful availability labe
   await page.goto('/#/start');
   await page.getByRole('button', { name: 'Search workspace', exact: true }).click();
   await page.getByRole('textbox', { name: 'Search tools', exact: true }).fill('AI text');
-  await expect(page.getByText(/signed-in trial with availability checks/)).toBeVisible();
+  await expect(page.getByText(/Guest AI trial and signed-in AI have separate availability and allowance checks/)).toBeVisible();
   await page.getByRole('link', { name: 'AI text trial', exact: true }).click();
   await trialPage(page, writes);
 });

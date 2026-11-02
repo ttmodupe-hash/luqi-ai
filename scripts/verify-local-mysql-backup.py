@@ -152,7 +152,7 @@ def verify_isolation(observation: dict) -> None:
         raise DrillError('Disposable container isolation did not match the required policy.')
 
 
-def execute_drill(driver: LocalDocker, sql: Path, work: Path) -> dict:
+def execute_drill(driver: LocalDocker, sql: Path, work: Path, require_device_sessions: bool = False) -> dict:
     image_id = driver.run(['image', 'inspect', '--format', '{{.Id}}', IMAGE], capture=True)
     name = 'luqi-restore-' + uuid.uuid4().hex
     args = container_arguments(name, image_id)
@@ -185,7 +185,7 @@ def execute_drill(driver: LocalDocker, sql: Path, work: Path) -> dict:
                      f"WHERE TABLE_SCHEMA='{SCHEMA}' AND TABLE_TYPE='BASE TABLE'")
         raw = driver.run(mysql_arguments(name) + ['--execute', table_sql], capture=True)
         engines = dict(line.split('\t', 1) for line in raw.splitlines())
-        if any(engines.get(table) != 'InnoDB' for table in TABLES):
+        if any(engines.get(table) != 'InnoDB' for table in (*TABLES, *(('customer_device_sessions_v1',) if require_device_sessions else ()))):
             raise DrillError('Restored backup is missing an enabled transactional runtime table.')
         # Read all restored rows via mysqldump, to a private local temporary file.
         # No SQL, email, password hash or note content is printed or uploaded.
@@ -228,6 +228,7 @@ def main(argv=None) -> int:
     parser.add_argument('--sha256', required=True, help='Independently recorded hash of the gzip export.')
     parser.add_argument('--source-kind', choices=['fixture', 'production-derived'], required=True)
     parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--require-device-sessions', action='store_true', help='Require the device-session table in the isolated restored backup before session rollout.')
     parser.add_argument('--execute', action='store_true', help='Actually create and remove a local temporary container.')
     args = parser.parse_args(argv)
     try:
@@ -246,7 +247,7 @@ def main(argv=None) -> int:
                       'backup_sha256': digest, 'expanded_bytes': size,
                       'result': 'preflight_only', 'launch_approved': False}
             if args.execute:
-                report.update(execute_drill(LocalDocker(work), work / 'input.sql', work))
+                report.update(execute_drill(LocalDocker(work), work / 'input.sql', work, args.require_device_sessions))
             write_report(args.report, report)
         print('PASS: isolated restore evidence recorded; no launch clearance.' if args.execute else
               'PRECHECK ONLY: checksum and format validated; no restore performed.')

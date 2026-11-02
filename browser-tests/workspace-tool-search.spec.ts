@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { workspaceTools } from '../src/components/workspace-catalog';
 
 // Search acceptance is local-only and never signs into a real account.
 async function prepare(page: Page, baseURL: string | undefined) {
@@ -29,7 +30,7 @@ test('mobile search announces visible available-tool counts without network acce
   const forbidden = await prepare(page, baseURL);
   const status = page.locator('.luqi-tool-count');
   const search = page.getByLabel('Filter workspace tools', { exact: true });
-  await expect(status).toContainText('9 matching tools');
+  await expect(status).toContainText(`${workspaceTools.length} matching tools`);
   await expect(search).toHaveAttribute('type', 'search');
   await expect(search).toHaveAttribute('enterkeyhint', 'search');
   await search.fill('STUDIO content');
@@ -41,7 +42,7 @@ test('mobile search announces visible available-tool counts without network acce
   await page.getByRole('button', { name: 'Ready to use', exact: true }).click();
   await expect(status).toContainText('No matching tools');
   await page.getByRole('button', { name: 'Show all tools', exact: true }).click();
-  await expect(status).toContainText('9 matching tools');
+  await expect(status).toContainText(`${workspaceTools.length} matching tools`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await expectLocalOnly(page, forbidden);
 });
@@ -101,7 +102,7 @@ test('320px search handles literal input and recovers with the keyboard without 
   const reset = page.getByRole('button', { name: 'Show all tools', exact: true });
   await reset.focus(); await page.keyboard.press('Enter');
   await expect(search).toHaveValue('');
-  await expect(page.locator('.luqi-tool-card')).toHaveCount(9);
+  await expect(page.locator('.luqi-tool-card')).toHaveCount(workspaceTools.length);
   await search.fill('  STUDIO   content  ');
   await expect(page.locator('.luqi-tool-card')).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
@@ -112,11 +113,11 @@ test('Omega local calculators are discoverable at 320px without account or netwo
   await page.setViewportSize({ width: 320, height: 740 });
   const forbidden = await prepare(page, baseURL);
   await page.getByRole('button', { name: 'Ready to use', exact: true }).click();
-  await page.getByLabel('Filter workspace tools', { exact: true }).fill('omega travel budget');
+  await page.getByLabel('Filter workspace tools', { exact: true }).fill('Luqi travel budget');
   const card = page.locator('.luqi-tool-card');
   await expect(card).toHaveCount(1);
   await expect(card.getByText('Local · no account', { exact: true })).toBeVisible();
-  await card.getByRole('link', { name: 'Open omega tasks' }).click();
+  await card.getByRole('link', { name: 'Open Luqi practical tools' }).click();
   await expect(page.getByRole('heading', { name: 'Tasks, with a clear record.' })).toBeVisible();
   await page.getByLabel('Local amounts (one per line)').fill('100.25\\n40\\n0.10'.replaceAll('\\n', '\n'));
   await page.getByRole('button', { name: 'Calculate in browser' }).click();

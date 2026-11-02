@@ -5,7 +5,7 @@ import { findWorkspaceTools, workspaceTools } from '../src/components/workspace-
 for (const query of ['AI text', 'Gemini', 'OpenAI']) {
   test(`the limited trial is discoverable by ${query}`, () => {
     const matches = findWorkspaceTools(query, 'ready');
-    assert.ok(matches.some(tool => tool.id === 'ai-trial' && tool.path === '/ai-trial'));
+    assert.ok(matches.some(tool => tool.id === 'ai-trial' && tool.path === '/chat'));
   });
 }
 test('trial listing describes sign-in, separate availability checks and private-note exclusion', () => {
@@ -22,14 +22,17 @@ for (const path of ['components/workspace-catalog.ts', 'components/WorkspaceLayo
       await readFile(new URL('../app/src/' + path, import.meta.url), 'utf8'));
   });
 }
-test('search no longer incorrectly declares the text trial disabled', async () => {
+test('search accurately separates guest and signed-in AI availability without claiming generated voice', async () => {
   const content = await readFile(new URL('../src/components/WorkspaceLayout.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(content, /AI chat and payments are not/);
-  assert.match(content, /signed-in trial with availability checks/);
+  assert.match(content, /Guest AI trial and signed-in AI have separate availability and allowance checks/);
+  assert.match(content, /Recorded Studio audio is local/);
+  assert.match(content, /generated voice and autonomous workers are not enabled/);
+  assert.match(content, /Check Payments for any currently published offer/);
 });
 
-test('Omega local budget and vehicle tools are discoverable without implying active workers', () => {
-  const matches = findWorkspaceTools('omega travel budget', 'ready');
+test('Luqi local budget and vehicle tools are discoverable without implying active workers', () => {
+  const matches = findWorkspaceTools('Luqi travel budget', 'ready');
   assert.equal(matches.length, 1);
   assert.equal(matches[0].id, 'agents');
   assert.equal(matches[0].path, '/omega-tasks');

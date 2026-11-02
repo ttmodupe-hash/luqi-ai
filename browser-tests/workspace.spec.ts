@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { workspaceTools } from "../src/components/workspace-catalog";
 
 test.beforeEach(async ({ page, baseURL }) => {
   await page.route("**/*", (route) => {
@@ -23,19 +24,22 @@ test("workspace filters distinguish usable tools from previews without making AI
       requests.push(request.url());
   });
   await page.goto("/#/");
-  await expect(
-    page.getByText("Check AI trial availability"),
-  ).toBeVisible();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByText("Try Luqi free without registering")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Try Luqi free without registering" }))
+    .toHaveAttribute("href", "#/try");
+  await expect(page.getByRole("article")).toHaveCount(workspaceTools.length);
+  await expect(page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Spatial Vision & 3D Lab" }) })
+    .getByRole("link")).toHaveAttribute("href", "#/spatial-vision");
   // The signed-in trial is one new discoverable card; all existing tools remain.
-  await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText([
-    "AI text trial", "Private notes", "Physics lab", "Service status",
-    "African languages", "Content studio", "Omega tasks", "Business desk", "Study desk",
-  ]);
+  await expect(page.getByRole("article").getByRole("heading", { level: 3 })).toHaveText(workspaceTools.map(tool=>tool.title));
+  expect(workspaceTools.map(x=>x.id)).toEqual([...new Set(workspaceTools.map(x=>x.id))]);
+  for(const title of ["SASSA & UIF Support","Municipal Services · Find Your Council","Township & Rural Business Support"]){
+    await expect(page.getByRole("article").getByRole("heading", {name:title,exact:true})).toBeVisible();
+  }
   await page.getByRole("button", { name: "Ready to use", exact: true }).click();
-  await expect(page.getByRole("article")).toHaveCount(8);
-  await expect(page.getByRole("article").getByRole("link")).toHaveCount(8);
-  await expect(page.getByRole("article").getByText("Limited trial · sign-in required", { exact: true })).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(workspaceTools.filter(tool=>tool.ready&&!!tool.path).length);
+  await expect(page.getByRole("article").getByRole("link")).toHaveCount(workspaceTools.filter(tool=>tool.ready&&!!tool.path).length);
+  await expect(page.getByRole("article").filter({ has: page.getByRole("heading", { name: "AI text trial", exact: true }) }).getByText("Limited trial · sign-in required", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "In development", exact: true })
     .click();
@@ -46,14 +50,14 @@ test("workspace filters distinguish usable tools from previews without making AI
     page.getByRole("heading", { name: "No tools match your search." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Show all tools" }).click();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article")).toHaveCount(workspaceTools.length);
   await page.getByLabel("Filter workspace tools").fill("  PHYSICS  ");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
     page.getByRole("article").getByRole("heading", { name: "Physics lab" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear tool search" }).click();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article")).toHaveCount(workspaceTools.length);
   expect(requests).toEqual([]);
 });
 
@@ -64,16 +68,16 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   // A freshly loaded SPA may not have mounted the keyboard shortcut listener.
   // Wait for real workspace controls before pressing the key, rather than
   // bypassing the keyboard path with a click or programmatic focus.
-  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Luqi workspace home" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search workspace" })).toBeVisible();
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Find your next step" });
   await expect(dialog).toBeVisible();
   const search = dialog.getByLabel("Search tools");
   await expect(search).toBeFocused();
-  await search.fill("Omega");
+  await search.fill("travel budget");
   await expect(
-    dialog.getByRole("link", { name: "Omega tasks" }),
+    dialog.getByRole("link", { name: "Luqi practical tools" }),
   ).toBeVisible();
   await expect(dialog.getByRole("link")).toHaveCount(1);
   for (let i = 0; i < 5; i++) {
@@ -92,7 +96,9 @@ test("keyboard search contains focus, closes with Escape and navigates to privat
   ).toBe(true);
   await page.screenshot({
     path: test.info().outputPath("search.png"),
+    // Preserve the entire long homepage without exceeding WebKit’s pixel limit on a 3x iPhone.
     fullPage: true,
+    scale: "css",
   });
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
@@ -119,7 +125,7 @@ test("navigation and skip link work at small widths without changing hash routes
   // assertion or programmatically focusing the skip link.
   const skipLink = page.getByRole("link", { name: "Skip to content" });
   await expect(skipLink).toBeAttached();
-  await expect(page.getByRole("link", { name: "LUQI workspace home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Luqi workspace home" })).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(skipLink).toBeFocused();
   await page.keyboard.press("Enter");
@@ -157,7 +163,7 @@ test("navigation and skip link work at small widths without changing hash routes
   await expect(page).toHaveURL(/#\/$/);
   await page.screenshot({
     path: test.info().outputPath("small-workspace.png"),
-    fullPage: true,
+    fullPage: false,
   });
 });
 

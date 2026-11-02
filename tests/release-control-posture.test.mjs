@@ -43,7 +43,7 @@ describe('LUQI exact-scope release safeguards stay fail closed',()=>{
    railway_web:{...packet().railway_web,wait_for_ci:true}});
   const result=report(val);
   assert.deepEqual(result.blocking_findings,[]);
-  assert.equal(result.status,'HUMAN_REVIEW_REQUIRED');
+  assert.equal(result.status,'OWNER_RELEASE_SIGNOFF_REQUIRED');
   assert.equal(result.required_pr_review_rules_independently_verified,false);
   assert.equal(result.exact_commit_checks_independently_verified,false);
   assert.equal(result.public_or_paid_launch_approved,false);
@@ -118,4 +118,38 @@ describe('LUQI exact-scope release safeguards stay fail closed',()=>{
   assert.match(workflow,/  validate-web:/);
   assert.doesNotMatch(header,/paths:\s*\n/);
  });
+});
+
+it('single-owner reports never manufacture an approval',()=>{
+ const claimed=packet({github_main:{branch:'main',sha,protected:true},
+ railway_web:{...packet().railway_web,wait_for_ci:true}});
+ const result=report(claimed);
+ assert.equal(result.status,'OWNER_RELEASE_SIGNOFF_REQUIRED');
+ assert.equal(result.owner_release_signoff_verified_by_this_tool,false);
+ assert.equal(result.public_or_paid_launch_approved,false);
+ assert.match(readFileSync('docs/RELEASE_CONTROL_LOCKDOWN_2026_10_25.md','utf8'),/zero required approvals/i);
+});
+it('global required checks have unfiltered pull_request and main push triggers',()=>{
+ for(const [file,job] of [
+  ['web-build.yml','validate-web'],
+  ['webkit-acceptance.yml','verify-webkit-journeys'],
+  ['mobile-loading.yml','payload-and-recovery'],
+  ['luqi-http-ingress-security.yml','verify-ingress-and-token-boundaries'],
+  ['launch-safety.yml','public-cache-contract']]){
+  const text=readFileSync('.github/workflows/'+file,'utf8');
+  const header=text.split(/\npermissions:/)[0];
+  assert.match(header,/\n  pull_request:/);
+  assert.match(header,/\n  push:\n    branches: \[main\]/);
+  assert.doesNotMatch(header,/\n    paths:/);
+  assert.ok(text.includes('  '+job+':'),'missing '+job);
+  assert.match(text,/permissions:\n  contents: read/);
+ }
+});
+it('required push workflow conclusions cannot be cancelled by later main pushes',()=>{
+ for(const file of ['webkit-acceptance.yml','luqi-http-ingress-security.yml']){
+  const text=readFileSync('.github/workflows/'+file,'utf8');
+  assert.ok(text.includes("group: "+(file==='webkit-acceptance.yml'?'webkit-acceptance':'http-ingress-security')+"-\${{ github.event_name }}-\${{ github.event.pull_request.number || github.run_id }}"));
+  assert.ok(text.includes("cancel-in-progress: \${{ github.event_name == 'pull_request' }}"));
+  assert.doesNotMatch(text,/cancel-in-progress: true/);
+ }
 });

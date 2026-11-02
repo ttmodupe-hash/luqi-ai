@@ -1,5 +1,5 @@
-/** Durable, fail-closed monthly AI spend reservations for pilot chat only.
- * Reserves a deliberately padded 10 US cents BEFORE each text-only call.
+/** Durable, fail-closed monthly AI spend reservations for pilot chat and the bounded visual tutor.
+ * Reserves a deliberately padded 10 US cents BEFORE each bounded provider call.
  * This is a conservative application allocation, not an external billing cap.
  * Uses atomic MySQL row locking across app replicas. Failed calls retain their
  * reservation, to avoid double-spend after ambiguous network failures.
@@ -21,10 +21,41 @@ export class PilotBlocked extends Error {
 }
 export const PILOT_CENTS = Object.freeze({ gemini: 6000, openai: 4000 });
 export const PILOT_TOTAL_CENTS = 10000;
+// Approved 27 October 2026 for the existing application ceiling only. Neither
+// profile proves a provider-side hard limit or actual settled provider costs.
+export const PILOT_EXPANDED_CENTS = Object.freeze({ gemini: 16500, openai: 13500 });
+/** Exact, fail-closed approved profiles. Never infer caps from a single env var. */
+export function readApprovedPilotCaps(env: NodeJS.ProcessEnv = process.env) {
+  if (env.LUQI_AI_MONTHLY_USD === "100" &&
+      env.LUQI_GEMINI_MONTHLY_USD === "60" &&
+      env.LUQI_OPENAI_MONTHLY_USD === "40") return PILOT_CENTS;
+  if (env.LUQI_AI_MONTHLY_USD === "300" &&
+      env.LUQI_GEMINI_MONTHLY_USD === "165" &&
+      env.LUQI_OPENAI_MONTHLY_USD === "135") return PILOT_EXPANDED_CENTS;
+  throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+}
 export const RESERVE_PER_ATTEMPT_CENTS = 10;
+/** A longer text reply reserves twice the existing short/visual attempt amount.
+ * These are conservative ledger reservations, NOT settled provider invoices. */
+export const TEXT_REPLY_RESERVE_CENTS = 20;
+/** Read the selected provider cap at reservation time. Never exceed it. */
+export function hasPilotReservationCapacity(
+  spentCents: number, provider: PilotProvider, env: NodeJS.ProcessEnv = process.env,
+  reservationCents: number = RESERVE_PER_ATTEMPT_CENTS
+): boolean {
+  if (reservationCents !== RESERVE_PER_ATTEMPT_CENTS &&
+      reservationCents !== TEXT_REPLY_RESERVE_CENTS) {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
+  if (!Number.isSafeInteger(spentCents) || spentCents < 0) {
+    throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
+  }
+  return spentCents + reservationCents <= readApprovedPilotCaps(env)[provider];
+}
 export const MAX_INPUT_CHARS = MAX_PILOT_INPUT_CHARS;
 export const PILOT_USER_DAILY_MAX_ATTEMPTS = 20;
-export const MAX_OUTPUT_TOKENS = 512;
+export const MAX_OUTPUT_TOKENS = 512; // Existing Visual Tutor / image routes unchanged.
+export const MAX_TEXT_OUTPUT_TOKENS = 1024; // Chat only.
 
 export function utcDay(now: Date = new Date()): string {
   if (Number.isNaN(now.getTime())) throw new Error("Invalid clock");
@@ -42,11 +73,9 @@ export function assertPilotEnabled(env: NodeJS.ProcessEnv = process.env): void {
   if (env.LUQI_AI_BILLING_APPROVED !== "true") {
     throw new PilotBlocked("BILLING_NOT_APPROVED");
   }
-  if (env.LUQI_AI_MONTHLY_USD !== "100" ||
-      env.LUQI_GEMINI_MONTHLY_USD !== "60" ||
-      env.LUQI_OPENAI_MONTHLY_USD !== "40") {
-    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
-  }
+  // Requiring an exact, explicitly approved triplet prevents accidentally
+  // accepting a partial or inflated budget configuration.
+  readApprovedPilotCaps(env);
 }
 
 let pool: Pool | undefined;
@@ -83,7 +112,8 @@ function isTransientSqlConflict(error: unknown): boolean {
 }
 
 async function reserveOnce(
-  provider: PilotProvider, userId: number, period: string, day: string
+  provider: PilotProvider, userId: number, period: string, day: string,
+  reservationCents: number
 ): Promise<void> {
   let conn: Awaited<ReturnType<Pool["getConnection"]>> | undefined;
   let begun = false;
@@ -121,7 +151,7 @@ async function reserveOnce(
     if (!Number.isSafeInteger(spent) || spent < 0) {
       throw new PilotBlocked("AI_BUDGET_STORE_UNAVAILABLE");
     }
-    if (spent + RESERVE_PER_ATTEMPT_CENTS > PILOT_CENTS[provider]) {
+    if (!hasPilotReservationCapacity(spent, provider, process.env, reservationCents)) {
       throw new PilotBlocked("AI_PROVIDER_BUDGET_EXHAUSTED");
     }
 
@@ -130,7 +160,7 @@ async function reserveOnce(
       [day, userId]);
     await conn.execute(
       "UPDATE ai_pilot_monthly_spend SET reserved_cents=reserved_cents+? WHERE month_utc=? AND provider=?",
-      [RESERVE_PER_ATTEMPT_CENTS, period, provider]);
+      [reservationCents, period, provider]);
     await conn.commit();
     begun = false;
   } catch (error) {
@@ -152,9 +182,14 @@ async function reserveOnce(
 
 /** Reserve before any external AI invocation; never refund a possible spend. */
 export async function reservePilotAttempt(
-  provider: PilotProvider, userId: number, now: Date = new Date()
+  provider: PilotProvider, userId: number, now: Date = new Date(),
+  reservationCents: number = RESERVE_PER_ATTEMPT_CENTS
 ): Promise<void> {
   assertPilotEnabled();
+  if (reservationCents !== RESERVE_PER_ATTEMPT_CENTS &&
+      reservationCents !== TEXT_REPLY_RESERVE_CENTS) {
+    throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
+  }
   if (provider !== "gemini" && provider !== "openai") {
     throw new PilotBlocked("AI_BUDGET_CONFIGURATION_INVALID");
   }
@@ -165,7 +200,7 @@ export async function reservePilotAttempt(
   const day = utcDay(now);
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      await reserveOnce(provider, userId, period, day);
+      await reserveOnce(provider, userId, period, day, reservationCents);
       return;
     } catch (error) {
       if (!(error instanceof TransientReservationConflict)) throw error;
@@ -203,13 +238,19 @@ export async function checkPilotGatewayReadiness(): Promise<
 }
 
 /** For offline tests and account dashboards; provider billing is authoritative. */
-export function budgetSnapshot(reservedCents: number, provider: PilotProvider) {
+export function budgetSnapshot(reservedCents: number, provider: PilotProvider,
+  env: NodeJS.ProcessEnv = process.env) {
   if (!Number.isSafeInteger(reservedCents) || reservedCents < 0) {
     throw new Error("Invalid reservation balance");
   }
+  // The no-configuration form remains useful for historical, offline $100
+  // fixtures. In a configured environment, never report the wrong allowance.
+  const hasConfig = ["LUQI_AI_MONTHLY_USD", "LUQI_GEMINI_MONTHLY_USD", "LUQI_OPENAI_MONTHLY_USD"]
+    .some(name => env[name] !== undefined);
+  const cap = (hasConfig ? readApprovedPilotCaps(env) : PILOT_CENTS)[provider];
   return {
-    provider, monthlyUsd: PILOT_CENTS[provider] / 100,
+    provider, monthlyUsd: cap / 100,
     reservedUsd: reservedCents / 100,
-    remainingUsd: Math.max(0, PILOT_CENTS[provider] - reservedCents) / 100,
+    remainingUsd: Math.max(0, cap - reservedCents) / 100,
   };
 }

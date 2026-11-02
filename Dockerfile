@@ -5,7 +5,7 @@ FROM node:22-alpine
 # Use a non-colliding physical root; preserve /app for existing operator commands.
 WORKDIR /srv/luqi
 RUN ln -s /srv/luqi /app
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash openssl ca-certificates
 
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps --include=dev

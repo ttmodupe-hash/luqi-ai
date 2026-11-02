@@ -99,8 +99,15 @@ def load_evidence(path: Path, expected_sha256: str) -> tuple[dict, str]:
 def assess(evidence: dict, now: datetime) -> dict:
     """Compare supplied totals. Source authenticity/mapping remain declarations."""
     require(now.tzinfo is not None and now.utcoffset() == timedelta(0))
-    data = exact_keys(evidence, "format provenance month_utc cutoff_utc ledger providers")
-    require(data["format"] == "luqi.pilot-spend-evidence.v1")
+    mixed = evidence.get("format") == "luqi.pilot-spend-evidence.v2"
+    data = exact_keys(evidence, "format provenance month_utc cutoff_utc ledger providers" + (" budget_profile" if mixed else ""))
+    require(data["format"] in ("luqi.pilot-spend-evidence.v1", "luqi.pilot-spend-evidence.v2"))
+    caps = CAPS
+    if mixed:
+        require(data["budget_profile"] in ("approved-100-v1", "approved-300-v1"))
+        if data["budget_profile"] == "approved-300-v1":
+            caps = {"gemini": Decimal("165"), "openai": Decimal("135")}
+    total_cap = sum(caps.values(), Decimal(0))
     require(data["provenance"] in ("fixture", "production"))
     month = data["month_utc"]
     require(type(month) is str and re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", month) is not None)
@@ -142,7 +149,7 @@ def assess(evidence: dict, now: datetime) -> dict:
     result = {}
     if cutoff < end and now - cutoff > MAX_AGE:
         findings.append("snapshot_stale")
-    for provider, cap in CAPS.items():
+    for provider, cap in caps.items():
         item = {"approved_cap_usd": usd(cap), "reserved_usd": None,
                 "reservation_attempts": None, "reported_usage_usd": None,
                 "reported_cost_status": "missing", "cost_comparable": False,
@@ -154,7 +161,11 @@ def assess(evidence: dict, now: datetime) -> dict:
             cents = rows[provider]
             reserve = Decimal(cents) / 100
             item.update(reserved_usd=usd(reserve), unallocated_reservation_usd=usd(max(Decimal(0), cap - reserve)))
-            if cents % ATTEMPT_CENTS:
+            if mixed:
+                # Guest 1c, legacy/visual 10c, longer text 20c: money cannot
+                # establish request counts or successful customer replies.
+                item["reservation_attempts"] = None
+            elif cents % ATTEMPT_CENTS:
                 findings.append(provider + ":reservation_step_invalid")
             else:
                 item["reservation_attempts"] = cents // ATTEMPT_CENTS
@@ -201,14 +212,14 @@ def assess(evidence: dict, now: datetime) -> dict:
         result[provider] = item
     comparable_total = all(item["reported_usage_usd"] is not None for item in result.values())
     actual_total = sum((Decimal(item["reported_usage_usd"]) for item in result.values()), Decimal(0)) if comparable_total else None
-    if actual_total is not None and actual_total >= TOTAL_CAP:
+    if actual_total is not None and actual_total >= total_cap:
         findings.append("total_reported_cost_cap_reached_or_exceeded")
     return {
-        "format": "luqi.pilot-spend-review.v1", "provenance": data["provenance"],
+        "format": "luqi.pilot-spend-review.v2" if mixed else "luqi.pilot-spend-review.v1", "provenance": data["provenance"],
         "month_utc": month, "cutoff_utc": data["cutoff_utc"],
         "reviewed_at_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "comparison_status": "incomplete" if incomplete else "findings_require_review" if findings else "no_comparison_flags",
-        "approved_total_usd": usd(TOTAL_CAP),
+        "approved_total_usd": usd(total_cap),
         "total_reported_usage_usd": usd(actual_total) if actual_total is not None else None,
         "providers": result, "findings": sorted(findings),
         "source_authenticity_verified": False, "production_reconciliation_complete": False,
@@ -216,6 +227,7 @@ def assess(evidence: dict, now: datetime) -> dict:
         "settings_changed": False,
         "limitations": ["Operator-normalized totals; no provider or database was queried.",
                         "Reservations are not invoices, successful calls, or safe-to-spend funds.",
+                        "Mixed reservation rates cannot be converted into attempt counts.",
                         "Zero/low reported cost may reflect delayed billing or provider pricing arrangements.",
                         "No comparison flags does not verify completeness, authorization, or future spending."]
     }
