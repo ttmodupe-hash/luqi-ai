@@ -135,3 +135,16 @@
   .luqi-history-actions a{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.luqi-home-screenshot *, .luqi-shell-home *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Keep the full desktop navigation visible on wide screens and prevent mobile header overflow. */
+@media(min-width:1280px){
+ .luqi-shell-home .luqi-header-inner{max-width:1640px;gap:12px;padding-inline:22px}
+ .luqi-shell-home .luqi-desktop-nav{display:flex;gap:2px}
+ .luqi-shell-home .luqi-desktop-nav a{padding-inline:7px;font-size:11px}
+ .luqi-shell-home .luqi-menu-button{display:none}
+}
+@media(max-width:700px){
+ .luqi-shell-home .luqi-home-tagline,.luqi-shell-home .luqi-home-signin,.luqi-shell-home .luqi-home-start{display:none}
+ .luqi-shell-home .luqi-header-inner{padding-inline:14px;gap:8px}
+ .luqi-shell-home .luqi-brand span{font-size:28px}
+}

@@ -76,6 +76,7 @@ export default function Home() {
               </form>
               {heroError && <p className="luqi-pano-error" role="alert">{heroError}</p>}
               <nav className="luqi-pano-chips" aria-label="Start with a topic">
+                <Link to="/try">Try Luqi free</Link>
                 <Link to="/driver-rights">Try: Driver rights</Link>
                 <Link to="/study-desk">Matric Physics</Link>
                 <Link to="/tenders">Tender opportunities</Link>
