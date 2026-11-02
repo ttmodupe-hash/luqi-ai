@@ -83,6 +83,19 @@ export default function Home() {
                 <Link to="/business-desk">Start a business</Link>
                 <Link to="/comparative-evidence" state={{openAfricanStudy:true,africanTopic:"geography"}}>African history</Link>
               </nav>
+              <div className="luqi-hero-actions luqi-pano-entry-actions" aria-label="Account and tool access">
+                <Link className="luqi-primary" to="/join">Create account <ArrowUpRight size={18} aria-hidden="true" /></Link>
+                <Link className="luqi-secondary" to="/chat">Already registered? Chat <ArrowUpRight size={18} aria-hidden="true" /></Link>
+                <a className="luqi-secondary" href="#tools" onClick={event => {
+                  event.preventDefault();
+                  document.getElementById("tools")?.scrollIntoView();
+                  document.getElementById("tools-heading")?.focus();
+                }}>Explore tools <ArrowRight size={18} aria-hidden="true" /></a>
+              </div>
+              <p className="luqi-hero-app"><Smartphone size={20} aria-hidden="true" /><Link to="/install">Install Luqi on your phone</Link><span>Android or iPhone · No app store required</span></p>
+              <p className="luqi-hero-onboarding">Not sure how to ask? <Link to="/ask">Tell Luqi what you need</Link> for free local guidance. No account or perfect prompt needed.</p>
+              <p className="luqi-hero-onboarding">New to Luqi? <Link to="/start">Get started</Link> with a guided introduction.</p>
+              <p className="luqi-hero-onboarding">Want to understand public records? <Link to="/chat?civic=1">Explore Luqi's Civic Evidence Desk</Link> with original source links.</p>
               <p className="luqi-pano-trust"><ShieldCheck size={15} aria-hidden="true"/> Questions open Luqi’s free local guidance first. AI calls still require separate consent and are subject to availability.</p>
             </div>
           </section>
