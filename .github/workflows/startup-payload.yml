@@ -60,7 +60,7 @@ jobs:
             const line = `${metric}: ${before[metric]} -> ${after[metric]} bytes (${(reduction * 100).toFixed(2)}% smaller)`;
             console.log(line); fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + '\n\n');
           }
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, 'Equivalent build bytes only; not measured page-load time, network compression or full launch approval. Query runtime remains available to its three deferred tools. No production accounts, secrets or paid inference used.\n');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, 'Equivalent build bytes only; not measured page-load time, network compression or full launch approval. Query runtime remains available to the reviewed deferred tools; the inactive repair page makes no queries. No production accounts, secrets or paid inference used.\n');
           JS
       - name: Preserve measured build evidence
         if: always()

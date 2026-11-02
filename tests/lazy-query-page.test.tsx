@@ -52,9 +52,11 @@ for (const [name, loader, trpc] of [['root', rootLoader, rootTrpc], ['app', appL
 it('both route trees explicitly wrap every known query consumer and retain mirrored loading helpers', () => {
   for (const base of ['src', 'app/src']) {
     const source = readFileSync(`${base}/App.tsx`, 'utf8');
-    for (const name of ['LabSimulatorPage', 'SelfHealingPage', 'ExperientialEducationPage']) {
+    for (const name of ['LabSimulatorPage', 'ExperientialEducationPage']) {
       expect(source).toContain(`const ${name} = lazyQueryPage(() => import("./pages/${name}"));`);
     }
+    expect(source).toContain('const SelfHealingPage = lazy(() => import("./pages/SelfHealingUnavailablePage"));');
+    expect(source).not.toContain('const SelfHealingPage = lazyQueryPage(() => import("./pages/SelfHealingPage"));');
   }
   expect(readFileSync('src/providers/lazy-query-page.tsx', 'utf8')).toBe(readFileSync('app/src/providers/lazy-query-page.tsx', 'utf8'));
 });
