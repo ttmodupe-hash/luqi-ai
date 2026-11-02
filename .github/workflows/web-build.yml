@@ -32,6 +32,8 @@ jobs:
         run: node --test tests/ci-queue-policy.test.mjs
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
+      - name: Prevent stale website links and PWA descriptions
+        run: node --test tests/domain-site-freshness.test.mjs
       - name: Verify opt-in local province location
         run: npx vitest run tests/location-province.test.tsx tests/nearby-discovery.test.tsx tests/business-connect-contract.test.ts tests/business-connect-page.test.tsx
       - name: Verify inline Circles controls and frontend parity
