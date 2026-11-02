@@ -70,6 +70,22 @@ describe('zero-credit studio preflight in the real LUQI editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep existing storyboard' }));
     expect(apply).not.toHaveBeenCalled();
   });
+  it('makes history-source limits visible in the preview and downloaded brief', () => {
+    const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
+    const apply = vi.fn(), exportBrief = vi.fn();
+    render(<StudioPreflightPanel disabled={false} onApply={apply} onExport={exportBrief} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Creative template' }), { target: { value: 'history' } });
+    expect((screen.getByRole('textbox', { name: 'Subject and action' }) as HTMLInputElement).value)
+      .toMatch(/check original sources/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Preview six-scene replacement' }));
+    expect(screen.getByRole('region', { name: 'Review scene replacement' }).textContent)
+      .toContain('Luqi has not independently checked original sources for this script');
+    expect(apply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Download creative production brief' }));
+    expect(exportBrief).toHaveBeenCalledTimes(1);
+    expect(exportBrief.mock.calls[0][0]).toContain('Luqi has not independently checked original sources');
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it('prevents storyboard changes during recording and discards preview when source changes', () => {
     const apply = vi.fn();
     const { rerender } = render(<StudioPreflightPanel disabled={false} onApply={apply} onExport={vi.fn()} />);
