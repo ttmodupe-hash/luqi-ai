@@ -51,7 +51,8 @@ export function ApiSystemStatusDashboard({ humanReadable = false }: { humanReada
           measure = (await import('../lib/uiTelemetry')).measureApi;
         }
       } catch { /* Storage or diagnostics import unavailable: perform the normal check. */ }
-      const data = measure ? await measure('readiness_request', request) : await request();
+      const data = measure ? await measure('readiness_request', request,
+        result => result.status === 'degraded' ? 'failed' : 'ok') : await request();
       if (!controller.signal.aborted) { setResult(data); setCheckedAt(new Date()); }
     } catch {
       if (!controller.signal.aborted) setError(true);
