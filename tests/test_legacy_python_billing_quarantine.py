@@ -331,5 +331,101 @@ class LegacyWorkspaceRetirementTests(unittest.TestCase):
                 return
         self.fail("No empty retired critique ledger found")
 
+
+class LegacyUnmeteredAiRetirementTests(unittest.TestCase):
+    """Negative paths for the exact legacy Python route declarations."""
+
+    def test_unmetered_http_aliases_have_route_and_direct_call_guards(self):
+        tree = ast.parse((ROOT / "main.py").read_text())
+        expected = {
+            "process_luqi_intelligence": {"/api/v1/luqi-core"},
+            "query_african_sovereignty": {"/api/v1/african-sovereignty"},
+            "get_system_api_matrix": {"/api/v1/system-api-matrix"},
+            "generate_production_storyboard": {"/api/v1/media/orchestrate", "/media/orchestrate"},
+            "generate_african_cartoon_endpoint": {
+                "/api/v1/animation/generate-african-cartoon", "/animation/generate-african-cartoon"
+            },
+            "handle_user_submission": {"/api/khoro/chat"},
+        }
+        for fn in tree.body:
+            if not isinstance(fn, ast.AsyncFunctionDef) or fn.name not in expected:
+                continue
+            with self.subTest(handler=fn.name):
+                paths = set()
+                for decorator in fn.decorator_list:
+                    self.assertIsInstance(decorator, ast.Call)
+                    self.assertIsInstance(decorator.func, ast.Attribute)
+                    self.assertIn(decorator.func.attr, ("get", "post"))
+                    self.assertIsInstance(decorator.args[0], ast.Constant)
+                    paths.add(decorator.args[0].value)
+                    dependency = next((kw.value for kw in decorator.keywords
+                                       if kw.arg == "dependencies"), None)
+                    self.assertIsInstance(dependency, ast.List)
+                    self.assertEqual(len(dependency.elts), 1)
+                    call = dependency.elts[0]
+                    self.assertIsInstance(call, ast.Call)
+                    self.assertIsInstance(call.func, ast.Name)
+                    self.assertEqual(call.func.id, "Depends")
+                    self.assertIsInstance(call.args[0], ast.Name)
+                    self.assertEqual(call.args[0].id, "require_legacy_route_disabled")
+                self.assertEqual(paths, expected.pop(fn.name))
+                self.assertEqual(len(fn.body), 1, "Direct invocation must fail closed")
+                stmt = fn.body[0]
+                self.assertIsInstance(stmt, ast.Expr)
+                self.assertIsInstance(stmt.value, ast.Call)
+                self.assertIsInstance(stmt.value.func, ast.Name)
+                self.assertEqual(stmt.value.func.id, "require_legacy_route_disabled")
+        self.assertFalse(expected, "An unmetered handler is missing")
+        source = (ROOT / "main.py").read_text()
+        for forbidden in ("genai.Client(", "websockets.connect(",
+                          "POLLINATIONS_API_KEY", "100_PERCENT_OPERATIONAL"):
+            self.assertNotIn(forbidden, source)
+
+    def test_unauthenticated_echo_and_voice_aliases_refuse_before_accept(self):
+        tree = ast.parse((ROOT / "main.py").read_text())
+        expected = {
+            "websocket_chat": {"/ws/chat"},
+            "khoro_live_websocket": {"/ws/khoro-live", "/ws/jarvis-live"},
+        }
+        for fn in tree.body:
+            if not isinstance(fn, ast.AsyncFunctionDef) or fn.name not in expected:
+                continue
+            with self.subTest(handler=fn.name):
+                paths = {d.args[0].value for d in fn.decorator_list
+                         if isinstance(d, ast.Call) and d.args
+                         and isinstance(d.args[0], ast.Constant)}
+                self.assertEqual(paths, expected.pop(fn.name))
+                self.assertEqual(len(fn.body), 1)
+                stmt = fn.body[0]
+                self.assertIsInstance(stmt, ast.Return)
+                self.assertIsInstance(stmt.value, ast.Await)
+                call = stmt.value.value
+                self.assertIsInstance(call, ast.Call)
+                self.assertIsInstance(call.func, ast.Name)
+                self.assertEqual(call.func.id, "reject_legacy_websocket")
+                self.assertEqual(len(call.args), 1)
+                self.assertIsInstance(call.args[0], ast.Name)
+                self.assertEqual(call.args[0].id, "websocket")
+                self.assertFalse(any(
+                    isinstance(x, ast.Attribute) and x.attr in ("accept", "connect")
+                    for x in ast.walk(fn)
+                ))
+        self.assertFalse(expected)
+        app = FastAPI()
+        async def refused(websocket: WebSocket):
+            return await reject_legacy_websocket(websocket)
+        for path in ("/ws/chat", "/ws/khoro-live", "/ws/jarvis-live"):
+            app.websocket(path)(refused)
+        with TestClient(app) as client:
+            for path in ("/ws/chat", "/ws/khoro-live", "/ws/jarvis-live"):
+                for headers in ({}, {"Authorization": "Bearer forged-admin"}):
+                    with self.subTest(path=path, headers=headers):
+                        with self.assertRaises(WebSocketDisconnect) as caught:
+                            with client.websocket_connect(path, headers=headers):
+                                self.fail("Legacy socket unexpectedly accepted")
+                        self.assertEqual(caught.exception.code, 1008)
+
+
+
 if __name__ == "__main__":
     unittest.main()

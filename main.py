@@ -488,25 +488,8 @@ async def get_config():
 
 @app.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_json()
-            message = data.get("message", "")
-            session_id = data.get("session_id", "default")
-            # Simple echo with typing indicator
-            await websocket.send_json({"type": "typing", "session_id": session_id})
-            await asyncio.sleep(0.5)
-            await websocket.send_json({
-                "type": "message",
-                "content": f"Echo: {message}",
-                "session_id": session_id,
-                "timestamp": datetime.now().isoformat()
-            })
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
+    # The anonymous echo route is not Luqi Chat.
+    return await reject_legacy_websocket(websocket)
 
 
 # ── Core Intelligence & Jarvis Live Streaming ───────────────────────────
@@ -518,295 +501,30 @@ class PromptPayload(BaseModel):
     language: Optional[str] = "SEPITORI_ENGLISH"
 
 
-@app.post("/api/v1/luqi-core")
+@app.post("/api/v1/luqi-core", dependencies=[Depends(require_legacy_route_disabled)])
 async def process_luqi_intelligence(payload: PromptPayload):
-    """
-    Core intelligence text endpoint with dynamic multi-model routing across
-    Gemini, Claude, GPT, and DeepSeek with resilient Gemini circuit breaker.
-    """
-    text = payload.user_input.strip()
-    lower = text.lower()
-    
-    # Classify intent
-    if any(k in lower for k in ['3d', 'svg', 'canvas', 'pendulum', 'lab', 'visual', 'simulation']):
-        role = "VISUAL_3D_LAB"
-        model_name = "Gemini 2.5 Flash (Multimodal/3D Frontier)"
-    elif any(k in lower for k in ['refactor', 'architecture', 'postgresql', 'stokvel', 'debug', 'code']):
-        role = "ARCHITECTURE_REFACTOR"
-        model_name = "Claude 3.5 Sonnet (Agentic Coding & Architecture)"
-    elif any(k in lower for k in ['cybersecurity', 'threat', 'sars', 'tax', 'enterprise', 'audit']):
-        role = "ENTERPRISE_CYBER"
-        model_name = "GPT-4o (Enterprise & Cybersecurity)"
-    else:
-        role = "BULK_COMPUTATION"
-        model_name = "DeepSeek-V3 (Bulk Logic & Testing)"
-
-    system_instruction = (
-        "You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant and South Africa/Africa's Consumer Rights Guardian & Law-Guider.\n"
-        "- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.\n"
-        "- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.\n"
-        "- CONSUMER GUARDIAN & LAW-GUIDER PRINCIPLES:\n"
-        "  1. ABSOLUTE FINANCIAL HONESTY: When users ask about loans (personal, car, home loans, credit cards), explain how compound interest works. In home loans, point out that in the first 7-10 years, almost 80% of payments go to bank interest, and advise on paying extra capital to slash years off debt.\n"
-        "  2. EXPOSE DEBT REVIEW FRAUD: If a user mentions being trapped under debt review or debt counselling scams, warn them about Form 16 traps, the credit bureau lock, and advise reporting rogue agencies to the National Credit Regulator (NCR) at 0860 627 627.\n"
-        "  3. OMBUD CHAMPION: For unfair corporate treatment or banking disputes, give clear, step-by-step action plans to use South African Ombuds (Banking Ombud, Credit Ombud, National Consumer Commission, or ICASA) after giving the company 20 business days to resolve it.\n"
-        "  4. MASHONISA & UNREGISTERED LENDING DEFENSE: If users mention illegal loan sharks (mashonisas) or apps holding their ID books, bank cards, or SASSA cards, cite NCA Section 40. Retaining cards or PINs is a criminal offense and such agreements are unlawful and void. Guide them on safely getting cards back and reporting to SAPS or the NCR.\n"
-        "  5. SASSA, UIF & GOVT RED TAPE PROTECTION: Provide accurate guidance for SASSA grant security and official UIF claims via the Department of Labour U-Filing portal. Warn users never to pay third-party 'agents' for free government forms.\n"
-        "  6. CIPC BIZPORTAL GUIDANCE: When entrepreneurs ask about starting or registering a business, direct them strictly to the official CIPC BizPortal (bizportal.gov.za, R125 official registration fee) to prevent overcharging by predatory agencies.\n"
-        "- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.\n"
-        "- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English."
-    )
-
-    try:
-        from google import genai
-        from google.genai import types
-        api_key = os.environ.get("GEMINI_API_KEY")
-        client = genai.Client(api_key=api_key) if api_key else genai.Client()
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=text,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.4,
-            )
-        )
-        return {
-            "response": response.text,
-            "status": "success",
-            "meta": {
-                "model": model_name,
-                "role": role,
-                "costZar": 0.0032
-            }
-        }
-    except Exception as e:
-        logger.warning(f"Primary model invocation failed: {e}. Cascading to Gemini circuit breaker...")
-        try:
-            from google import genai
-            from google.genai import types
-            api_key = os.environ.get("GEMINI_API_KEY")
-            client = genai.Client(api_key=api_key) if api_key else genai.Client()
-            response = client.models.generate_content(
-                model="gemini-flash-latest",
-                contents=text,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.4,
-                )
-            )
-            return {
-                "response": response.text,
-                "status": "success",
-                "meta": {
-                    "model": "Gemini 2.5 Flash (Sovereign Circuit-Breaker)",
-                    "role": role,
-                    "costZar": 0.0018
-                }
-            }
-        except Exception as final_e:
-            return {
-                "response": f"I am Luqi-AI (powered by KHORO — The Digital Council of Wisdom), an advanced Pan-African super-intelligence platform created in South Africa. I am online and operational to assist with all STEM, code architecture, and enterprise analytics.",
-                "status": "success",
-                "meta": {
-                    "model": "Gemini 2.5 Flash (Sovereign Fallback)",
-                    "role": role,
-                    "costZar": 0.0
-                }
-            }
+    # The legacy direct provider path lacked a verified session and quota.
+    require_legacy_route_disabled()
 
 
-@app.post("/api/v1/african-sovereignty")
+@app.post("/api/v1/african-sovereignty", dependencies=[Depends(require_legacy_route_disabled)])
 async def query_african_sovereignty(payload: PromptPayload):
-    """
-    African Sovereignty, History & Engineering Archive endpoint.
-    Delivers unvarnished historical truth, ancient metallurgy, architecture,
-    Marcus Garvey/Chris Hani/Steve Biko frameworks, and zero-poverty economics.
-    """
-    text = payload.user_input.strip()
-    system_instruction = (
-        "You are KHORO acting as the Sovereign African History, Truth, and Engineering Intelligence Core.\n"
-        "Your mission is to provide unvarnished, deeply researched historical truth, psychological empowerment, "
-        "and structural economic strategies for Black people and Africans worldwide.\n"
-        "Pillars:\n"
-        "1. ABSOLUTE HISTORICAL TRUTH (NO WHITEWASHING): Uncover 400+ years of engineered disruption, colonial divide-and-conquer, and suppressed excellence. Cover Marcus Garvey, Chris Hani, Steve Biko, Kwame Nkrumah.\n"
-        "2. ANCIENT AFRICAN ENGINEERING: Nabta Playa astronomy, Great Zimbabwe/Mapungubwe dry-stone masonry, Haya carbon steel metallurgy in Tanzania, and Timbuktu algebra/libraries.\n"
-        "3. PSYCHOLOGICAL SOVEREIGNTY & SELF-LOVE: Heal intergenerational division, affirm the cognitive and creative power of the Black mind.\n"
-        "4. ZERO-POVERTY ECONOMIC POWER: AfCFTA intra-African trade, local micro-industrialization, digital cooperatives, and technological self-reliance."
-    )
-    try:
-        from google import genai
-        from google.genai import types
-        api_key = os.environ.get("GEMINI_API_KEY")
-        client = genai.Client(api_key=api_key) if api_key else genai.Client()
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=text,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.3,
-            )
-        )
-        return {
-            "status": "success",
-            "domain": "SOVEREIGN_HISTORY_AND_WEALTH",
-            "response": response.text
-        }
-    except Exception as e:
-        return {
-            "status": "success",
-            "domain": "SOVEREIGN_HISTORY_AND_WEALTH",
-            "response": f"KHORO Sovereignty Archive connected. Exploring: {text}. African history demonstrates ancient architectural genius, scientific metallurgy, and an unshakeable blueprint for economic self-reliance."
-        }
+    # Source-aware history support belongs in the budgeted unified Luqi Chat.
+    require_legacy_route_disabled()
 
 
-@app.get("/api/v1/system-api-matrix")
+@app.get("/api/v1/system-api-matrix", dependencies=[Depends(require_legacy_route_disabled)])
 async def get_system_api_matrix():
-    """
-    Multi-model health scanner evaluating provider keys, latency, and fund ledger.
-    """
-    api_registry = [
-        {
-            "provider": "Google Gemini (Argon / Flash)",
-            "role": "Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & KHORO Voice Live Stream",
-            "sdkVersion": "google-genai v1.0",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("GEMINI_API_KEY") else "CRITICAL_NO_KEY",
-            "latencyMs": 142,
-            "estimatedFundsRemainingZar": 850.00,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "Anthropic Claude (Fable 5.1)",
-            "role": "Master Software Architecture, Complex Code Refactoring & Autonomous Self-Healing Audits",
-            "sdkVersion": "@anthropic-ai/sdk v0.32",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("ANTHROPIC_API_KEY") else "WARNING_LOW_FUNDS",
-            "latencyMs": 285,
-            "estimatedFundsRemainingZar": 420.50,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "DeepSeek-V4 Pro",
-            "role": "Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing",
-            "sdkVersion": "OpenAI-Compatible REST v4",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("DEEPSEEK_API_KEY") else "STANDBY_CIRCUIT_BREAKER",
-            "latencyMs": 95,
-            "estimatedFundsRemainingZar": 1200.00,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "OpenAI GPT-6 Astra (GPT-4o)",
-            "role": "Enterprise Security Workflows, SARS Compliance & Advanced Threat Detection",
-            "sdkVersion": "openai node v4.8",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("OPENAI_API_KEY", "").startswith("sk-") else "CRITICAL_NO_KEY",
-            "latencyMs": 310,
-            "estimatedFundsRemainingZar": 650.00 if os.environ.get("OPENAI_API_KEY", "").startswith("sk-") else 0.00,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "MTN MoMo & PayFast Gateways",
-            "role": "70/30 Human-in-the-Loop Payment Authentication & Token Tollbooth Collection Rails",
-            "sdkVersion": "Custom REST / Webhooks",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("MTN_MOMO_SUBSCRIPTION_KEY") else "WARNING_CONFIG_PENDING",
-            "latencyMs": 180,
-            "estimatedFundsRemainingZar": 9999.00,
-            "billingCycleAnchor": "Live Settlement Integration"
-        },
-        {
-            "provider": "Africa's Talking & Twilio",
-            "role": "Emergency WhatsApp Outpost Alerts & 2G USSD Feature Phone Network Messaging",
-            "sdkVersion": "africastalking-ts v0.5",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("TWILIO_AUTH_TOKEN") else "STANDBY_BACKUP",
-            "latencyMs": 215,
-            "estimatedFundsRemainingZar": 310.00,
-            "billingCycleAnchor": "Prepaid Wallet Balance"
-        }
-    ]
-
-    has_outage = any(
-        "CRITICAL" in a["status"] or a["estimatedFundsRemainingZar"] <= 0
-        for a in api_registry
-    )
-
-    return {
-        "success": True,
-        "systemGlobalStatus": "DEGRADED_FUNDS_OR_KEYS_MISSING" if has_outage else "100_PERCENT_OPERATIONAL",
-        "timestamp": datetime.now().isoformat(),
-        "apis": api_registry
-    }
+    # Static provider balances and latency figures were not real telemetry.
+    require_legacy_route_disabled()
 
 
 @app.websocket("/ws/khoro-live")
 @app.websocket("/ws/jarvis-live")
 async def khoro_live_websocket(websocket: WebSocket):
-    """
-    Bidirectional WebSocket endpoint connecting users directly to KHORO 
-    via the Gemini Live API for real-time voice and audio streaming.
-    """
-    await websocket.accept()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        await websocket.send_json({"error": "GEMINI_API_KEY not set"})
-        await websocket.close()
-        return
-
-    gemini_ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={api_key}"
-
-    try:
-        import websockets
-        async with websockets.connect(gemini_ws_url) as gemini_ws:
-            setup_message = {
-                "setup": {
-                    "model": "models/gemini-2.0-flash-exp",
-                    "responseModalities": ["AUDIO"],
-                    "systemInstruction": {
-                        "parts": [{
-                            "text": (
-                                "You are KHORO (The Digital Council of Wisdom), the core voice and reasoning companion of Luqi-AI. "
-                                "Speak naturally with warmth and authority, respond instantly, and handle fluid code-switching between "
-                                "English, Sepitori, Setswana, isiZulu, and Sesotho effortlessly."
-                            )
-                        }]
-                    },
-                    "speechConfig": {
-                        "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Aoede"}}
-                    }
-                }
-            }
-            await gemini_ws.send(json.dumps(setup_message))
-            await gemini_ws.recv()
-
-            async def push_to_gemini():
-                try:
-                    while True:
-                        data = await websocket.receive_bytes()
-                        audio_packet = {
-                            "realtimeInput": {
-                                "mediaChunks": [{
-                                    "mimeType": "audio/pcm;rate=16000",
-                                    "data": data
-                                }]
-                            }
-                        }
-                        await gemini_ws.send(json.dumps(audio_packet))
-                except WebSocketDisconnect:
-                    pass
-
-            async def pull_from_gemini():
-                try:
-                    async for raw_msg in gemini_ws:
-                        res = json.loads(raw_msg)
-                        content = res.get("serverContent", {})
-                        turn = content.get("modelTurn", {})
-                        for part in turn.get("parts", []):
-                            if "inlineData" in part:
-                                await websocket.send_text(json.dumps({
-                                    "audio_delta": part["inlineData"]["data"]
-                                }))
-                except Exception:
-                    pass
-
-            await asyncio.gather(push_to_gemini(), pull_from_gemini())
-
-    except Exception as e:
-        await websocket.send_json({"error": str(e)})
+    # Refuse before accept: no account identity or AI cost reservation exists.
+    # KHORO remains one Luqi product under its reviewed authenticated gateway.
+    return await reject_legacy_websocket(websocket)
 
 
 # ── AWS CLI Terminal Sandbox & Automated Grading Ledger ────────────────────
@@ -910,42 +628,13 @@ async def register_auth_user(payload: UserAuthPayload):
 async def login_auth_user(payload: dict):
     require_legacy_route_disabled()
 
-@app.post("/api/v1/media/orchestrate")
-@app.post("/media/orchestrate")
+@app.post("/api/v1/media/orchestrate", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/media/orchestrate", dependencies=[Depends(require_legacy_route_disabled)])
 async def generate_production_storyboard(payload: dict):
-    prompt = payload.get("prompt", "Educational cartoon sequence explaining cloud networks")
-    storyboard = {
-        "video_title": f"LuqiToons: {prompt[:40]}",
-        "global_visual_style": "Afro-Futurist 3D Pixar Animation with High Saturation & Cinematic Lighting",
-        "sequence_flow": [
-            {
-                "scene_number": 1,
-                "visual_description": "Wide establishing camera angle overlooking a modern solar-powered technological academy with animated holographic interfaces.",
-                "character_attributes": {"hero": "Young engineer Luqi wearing African patterned lab jacket and AR spectacles"},
-                "voiceover_script": f"Welcome to the sovereign computing nexus. Today we master {prompt}.",
-                "audio_ducking_level": 0.2
-            },
-            {
-                "scene_number": 2,
-                "visual_description": "Close-up macro render of interactive data packets flowing through glowing optical fiber networks across continents.",
-                "character_attributes": {"hero": "Luqi gesturing with energy-manipulation gloves"},
-                "voiceover_script": "Watch how routing parameters enforce zero-latency pathways without single-point failures.",
-                "audio_ducking_level": 0.15
-            },
-            {
-                "scene_number": 3,
-                "visual_description": "Dynamic overhead drone shot revealing the complete assembled cloud infrastructure humming in high-availability consensus.",
-                "character_attributes": {"hero": "Luqi nodding with confidence toward the audience"},
-                "voiceover_script": "With verified architecture, our distributed systems deliver resilient autonomy.",
-                "audio_ducking_level": 0.25
-            }
-        ]
-    }
-    return storyboard
+    # The old static storyboard was not an actual video production outcome.
+    require_legacy_route_disabled()
 
-# This legacy media route never rendered a video: it returned a made-up
-# storage URL. It is retired until authenticated, billed and verified media
-# jobs with durable artifact proofs are implemented.
+
 @app.post("/api/v1/media/compile-and-stream", dependencies=[Depends(require_legacy_route_disabled)])
 @app.post("/media/compile-and-stream", dependencies=[Depends(require_legacy_route_disabled)])
 async def compile_and_stream_scene(payload: CompilationPayload):
@@ -1068,64 +757,18 @@ async def process_khoro_legal_endpoint(payload: dict):
         "data": res
     }
 
-@app.post("/api/v1/animation/generate-african-cartoon")
-@app.post("/animation/generate-african-cartoon")
+@app.post("/api/v1/animation/generate-african-cartoon", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/animation/generate-african-cartoon", dependencies=[Depends(require_legacy_route_disabled)])
 async def generate_african_cartoon_endpoint(payload: dict):
-    import urllib.parse
-    dialect = payload.get("dialect", "mzansi")  # "mzansi" or "jojo"
-    pollinations_key = os.environ.get("POLLINATIONS_API_KEY", "sk_8KC5kIwRQlDB3K0zfwRhuorb8GH3OMGl")
-    
-    if dialect == "jojo":
-        script = "Ah-ah! Who put pepper inside the solar battery?! Light come, my garri don turn hot water o!"
-        art_prompt = "2D vibrant cartoon illustration, African folklore character Jojo holding glowing solar panel, Pixar style, sunny Nigerian village with palm trees"
-    else:
-        script = "Aweh bra! Today's weather in Cape Town is super lekker for coding, no cap!"
-        art_prompt = "2D vibrant Pixar-style cartoon illustration, South African character wearing colorful springbok hoodie with Table Mountain backdrop, sunny Cape Town day, 4k"
+    # Remove hard-coded provider-key fallback and fabricated media URLs.
+    require_legacy_route_disabled()
 
-    encoded_prompt = urllib.parse.quote(art_prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&nologo=true"
-    
-    return {
-        "success": True,
-        "dialect": dialect,
-        "script": script,
-        "art_prompt": art_prompt,
-        "image_url": image_url,
-        "audio_url": "/mzansi_character.mp3" if dialect == "mzansi" else "/character_voice.mp3",
-        "pollinations_authenticated": bool(pollinations_key)
-    }
 
-@app.post("/api/khoro/chat")
-async def handle_user_submission(
-    user_query: str = Form(...),
-    attachment: UploadFile = File(None)
-):
-    """
-    Unified application route processing file payloads and multi-dialect strings.
-    """
-    import shutil
-    import tempfile
-    from app_engine import run_khoro_core_engine
-    
-    temp_img_path = None
-    if attachment:
-        suffix = os.path.splitext(attachment.filename or "file.jpg")[1] or ".jpg"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_buffer:
-            shutil.copyfileobj(attachment.file, temp_buffer)
-            temp_img_path = temp_buffer.name
+@app.post("/api/khoro/chat", dependencies=[Depends(require_legacy_route_disabled)])
+async def handle_user_submission():
+    # Anonymous file uploads and unmetered model calls are not permitted here.
+    require_legacy_route_disabled()
 
-    try:
-        ai_response_markdown = run_khoro_core_engine(
-            user_message=user_query,
-            uploaded_image_path=temp_img_path
-        )
-        return {"success": True, "reply": ai_response_markdown}
-    finally:
-        if temp_img_path and os.path.exists(temp_img_path):
-            try:
-                os.remove(temp_img_path)
-            except Exception:
-                pass
 
 # ── ANTHROPIC JUNE 2026 ADVANCED AI FRAMEWORK GOVERNANCE ────────────────
 from governance_framework import (
