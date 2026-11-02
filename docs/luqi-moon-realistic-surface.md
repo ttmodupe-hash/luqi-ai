@@ -1,6 +1,6 @@
 # Luqi Moon — realistic surface visual, kept inside Luqi
 
-Owner screenshot feedback (2 November 2026): the original Moon was a cream-coloured geometric phase silhouette. This change replaces that *visual*, not the existing SunCalc-derived Moon calculations, with a locally rendered lunar nearside (craters and maria) by default. A NASA LRO image is available on an explicit **Show NASA Moon image** selection, not a background download.
+Owner screenshot feedback (2 November 2026): the original Moon was a cream-coloured geometric phase silhouette. This change replaces that *visual*, not the existing SunCalc-derived Moon calculations, with a user-approved locally hosted artistic Moon texture over locally rendered craters and maria by default. A NASA LRO image is available on an explicit **Show NASA Moon image** selection, not a background download.
 
 ## Original source, representation and limitations
 
@@ -8,10 +8,11 @@ Owner screenshot feedback (2 November 2026): the original Moon was a cream-colou
 - **Displayed derivative**: 500 px Wikimedia Commons thumbnail of the NASA LRO image: https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO_color_mosaic.png . No logos or NASA endorsement is implied.
 - **On-device lighting**: the existing SunCalc-derived `moonSnapshot` supplies illuminated fraction, bright-limb rotation and optional location. The visible detailed texture is a *fixed* mosaic, not a live photograph or near-real-time telescope feed. The phase mask is computed locally and remains an educational model; the rendering does not model lunar libration, local weather, eclipse shadows or detailed relief.
 - **Full surface switch**: intentionally shows the full near side *regardless of today's lighting*. It is labelled as a surface-exploration view. Numeric phase facts remain current and continue to update.
-- **Local by default:** the homepage initially contains no external NASA image element and makes no third-party image request. It renders locally generated lunar maria/crater shapes and local phase masking. The user can press **Show NASA Moon image** to enable the Wikimedia image and later press **Use low-data Moon** to remove it. A previously downloaded image cannot be un-downloaded, but low-data mode stops referencing it.
+- **Local by default:** the homepage uses a ~5 KB same-origin artistic illustration (`public/moon-luqi-art.webp`) over locally generated crater/mare fallback and calculated phase clipping. This original illustrative art is **not an official NASA Moon map or live camera image**. No third-party image network request is made on initial paint. The user can press **Show NASA Moon image** to enable the Wikimedia image and later press **Use low-data Moon** to remove it. A previously downloaded image cannot be un-downloaded, but low-data mode stops referencing it.
 - **Privacy**: optional high-detail image loading, only on explicit tap, contacts Wikimedia's public image host, which can observe the normal browser image request/IP. There is no Luqi model call or user location in the image URL. All Moon mathematics and user-approved one-time coarse GPS coordinates stay in-page memory.
+- **Low data:** The locally hosted generated WebP image is approximately 5 KB. The fixed photographic NASA mosaic remains an explicit opt-in with a clear privacy notice.
 - **Accessibility**: labeled SVG (one image role), natural buttons with pressed state, visible source and captions, responsive 320 px layout. No autoplay, unsafe GPU shaders or WebGL requirement.
-- **Security / reliability**: image URL is a fixed literal and cannot be injected by the user. No API keys or background location. The default homepage must remain local-only; the optional external image never automatically loads, and if it fails, the local surface remains visible.
+- **Security / reliability**: image URL is a fixed literal and cannot be injected by the user. No API keys or background location. The default homepage must remain same-origin only; the optional external image never automatically loads, and if it fails, the local surface remains visible.
 
 ## Acceptance gates
 
