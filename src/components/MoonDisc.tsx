@@ -11,6 +11,8 @@ type View = 'phase' | 'surface';
 export const LRO_MOON_IMAGE =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Moon_nearside_LRO_color_mosaic.png/500px-Moon_nearside_LRO_color_mosaic.png';
 export const LRO_MOON_SOURCE = 'https://www.usgs.gov/media/images/moon-lroc-wac-nearside-mosaic';
+/** Locally hosted, user-approved illustrative Moon artwork, not an observation. */
+export const LUQI_MOON_ART = '/moon-luqi-art.webp';
 
 type Crater = { x: number; y: number; r: number; brightness: number };
 function buildLocalCraters(): Crater[] {
@@ -97,15 +99,15 @@ export default function MoonDisc({ id, fraction, rotation, view, detailed, label
     {/* Very faint Earthshine preserves surface detail on the unlit side. */}
     <g clipPath={`url(#${disc})`} opacity=".14">
       <use href={`#${sphere}`} />
-      {detailed && <image href={LRO_MOON_IMAGE} x="6" y="6" width="88" height="88"
+      <image href={detailed ? LRO_MOON_IMAGE : LUQI_MOON_ART} x="6" y="6" width="88" height="88"
         preserveAspectRatio="xMidYMid meet" aria-hidden="true" pointerEvents="none"
-        className="luqi-moon-nasa-image" />}
+        className={detailed ? 'luqi-moon-nasa-image' : 'luqi-moon-art-image'} />
     </g>
     <g clipPath={`url(#${mask})`}>
       <use href={`#${sphere}`} />
-      {detailed && <image href={LRO_MOON_IMAGE} x="6" y="6" width="88" height="88"
+      <image href={detailed ? LRO_MOON_IMAGE : LUQI_MOON_ART} x="6" y="6" width="88" height="88"
         preserveAspectRatio="xMidYMid meet" aria-hidden="true" pointerEvents="none"
-        className="luqi-moon-nasa-image" />}
+        className={detailed ? 'luqi-moon-nasa-image' : 'luqi-moon-art-image'} />
       <circle cx="50" cy="50" r="44" fill={`url(#${sphereShade})`} />
     </g>
     <circle cx="50" cy="50" r="44" fill="none" stroke="#bdc7c5" strokeOpacity=".56" strokeWidth=".25" />
