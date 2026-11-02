@@ -13,9 +13,11 @@ export default defineConfig({
   timeout: 30_000,
   // The expanded verified journey set includes visa, social support and
   // municipal and Near me journeys. Keep every test and its 30s limit;
-  // allow twelve minutes overall for slower shared CI runners.
-  // The workflow step independently limits the suite to thirteen minutes.
-  globalTimeout: 12 * 60_000,
+  // Allow fifteen minutes for the expanded unmodified 420+ browser journeys
+  // and teardown on a shared runner; keep every per-test 30s timeout,
+  // both browser projects, no retries and all existing assertions.
+  // The workflow step independently limits the suite to sixteen minutes.
+  globalTimeout: 15 * 60_000,
   workers: 2,
   maxFailures: 10,
   retries: 0,
