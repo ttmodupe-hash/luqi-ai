@@ -31,7 +31,7 @@ for (const width of [320,390,768,1280]) {
    await expect(page.getByRole('complementary',{name:'Guest trial and country guide'})).toBeVisible();
    await expect(page.locator('.luqi-hero-moon')).toBeVisible();
    await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
-   await expect(page.locator('.luqi-hero-chips').getByRole('link',{name:'Small tenders & RFQs'})).toHaveAttribute('href','/tenders');
+   await expect(page.locator('.luqi-hero-chips').getByRole('link',{name:'Small tenders & RFQs'})).toHaveAttribute('href','#/tenders');
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
    expect(errors).toEqual([]);
    await page.screenshot({path:test.info().outputPath('hybrid-'+width+'.png'),fullPage:true,scale:'css'});

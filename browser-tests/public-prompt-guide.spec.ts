@@ -18,6 +18,8 @@ test('anonymous visitors can prepare a clearer request on 320px phones without m
   });
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto('/#/');
+  // Open the homepage guidance disclosure, then exercise the real free-guide route.
+  await page.locator('details.luqi-hero-help > summary').click();
   await page.getByRole('link', { name: 'Tell Luqi what you need' }).click();
   await expect(page).toHaveURL(/#\/ask$/);
   const need = page.getByLabel('What would you like help with?');
