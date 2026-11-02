@@ -48,16 +48,19 @@ async function moonJourney(page, name) {
   await expect(lunarImage).toHaveAttribute('data-moon-view', 'phase');
   await expect(lunarImage).toHaveAttribute('data-moon-detail', 'local');
   // The first paint stays entirely local, even on a low-data handset.
-  await expect(lunarImage.locator('image')).toHaveCount(0);
+  await expect(lunarImage.locator('image')).toHaveCount(2);
+  await expect(lunarImage.locator('image').first()).toHaveAttribute('href', '/moon-luqi-art.webp');
   await panel.getByRole('button', {name:'Explore full surface',exact:true}).click();
   await expect(lunarImage).toHaveAttribute('data-moon-view', 'surface');
   await expect(panel.getByText(/not today’s lunar illumination/)).toBeVisible();
   await panel.getByRole('button', {name:'Show NASA Moon image',exact:true}).click();
   await expect(lunarImage).toHaveAttribute('data-moon-detail', 'lro');
   await expect(lunarImage.locator('image')).toHaveCount(2);
+  await expect(lunarImage.locator('image').first()).toHaveAttribute('href', /wikimedia\.org/);
   await panel.getByRole('button', {name:'Use low-data Moon',exact:true}).click();
   await expect(lunarImage).toHaveAttribute('data-moon-detail', 'local');
-  await expect(lunarImage.locator('image')).toHaveCount(0);
+  await expect(lunarImage.locator('image')).toHaveCount(2);
+  await expect(lunarImage.locator('image').first()).toHaveAttribute('href', '/moon-luqi-art.webp');
   await panel.getByRole('button', {name:'Current phase',exact:true}).click();
   await expect(lunarImage).toHaveAttribute('data-moon-view', 'phase');
   await panel.getByText('Enter an area manually', {exact:true}).click();
