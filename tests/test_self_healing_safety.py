@@ -98,14 +98,39 @@ class FailClosedHealingTests(unittest.TestCase):
                     self.manager.trigger_self_healing("Report", bad)
         self.assertEqual(self.manager.list_jobs(), [])
 
-    def test_redacts_credential_like_fields_before_storage(self):
-        job = self.manager.trigger_self_healing(
-            "Provider error token=secret123 password:pa55 api_key=privatekey"
+    def test_report_content_is_never_retained_in_job_or_listing(self):
+        # Old regex redaction leaked values after Authorization: Bearer and
+        # unrecognised query/cookie/identity fields. Use entirely fake fixtures.
+        fake_secrets = (
+            "synthetic-bearer-never-store",
+            "synthetic-cookie-never-store",
+            "synthetic-query-never-store",
+            "synthetic-email@example.invalid",
         )
-        self.assertNotIn("secret123", job.bug_report)
-        self.assertNotIn("pa55", job.bug_report)
-        self.assertNotIn("privatekey", job.bug_report)
-        self.assertIn("[REDACTED]", job.bug_report)
+        report = (
+            "Provider timeout Authorization: Bearer " + fake_secrets[0]
+            + " Cookie: sessionid=" + fake_secrets[1]
+            + " URL=https://example.invalid/?access_token=" + fake_secrets[2]
+            + " Customer=" + fake_secrets[3]
+        )
+        job = self.manager.trigger_self_healing(report, "api/handler.py")
+        self.assertEqual(job.bug_report, "[REPORT_WITHHELD]")
+        self.assertEqual(job.heuristic_category, "potential_reliability")
+        self.assertEqual(job.persistence, "in_memory_only")
+        self.assertEqual(len(job.evidence_sha256), 64)
+        for secret in fake_secrets:
+            with self.subTest(secret=secret):
+                self.assertNotIn(secret, repr(job))
+                self.assertNotIn(secret, repr(self.manager.list_jobs()))
+        self.assertIn("non-auditable", job.execution_trace[0]["detail"])
+        # Keyed fingerprints distinguish different reports but do not assert
+        # real CI, diagnosis, approvals or durable audit provenance.
+        same = self.manager.trigger_self_healing(report, "api/handler.py")
+        other = self.manager.trigger_self_healing(report + " another incident", "api/handler.py")
+        self.assertEqual(job.evidence_sha256, same.evidence_sha256)
+        self.assertNotEqual(job.evidence_sha256, other.evidence_sha256)
+        self.assertFalse(job.ci_verified)
+        self.assertFalse(job.deployed)
 
     def test_proposal_queue_is_bounded_and_fails_closed(self):
         for number in range(MAX_JOBS_IN_MEMORY):

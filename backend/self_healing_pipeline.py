@@ -1,7 +1,8 @@
 """Fail-closed LUQI agent remediation intake.
 
 The application server is NOT an isolated code-execution environment. This
-module records bounded, redacted review proposals only. It does not execute
+module records bounded, metadata-only review proposals. The original bug
+report is withheld rather than attempting incomplete credential redaction. It does not execute
 model-written code, create GitHub PRs, merge branches, grant deployment rights
 or pretend that tests have run. Real corrections must go through an isolated,
 least-privilege CI pipeline, independent review and separately authorized
@@ -15,17 +16,18 @@ before exposing this service to users or relying on it after a restart.
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
+import hmac
 import re
+import secrets
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 MAX_REPORT_LENGTH = 4000
 MAX_JOBS_IN_MEMORY = 100
 _SAFE_PATH = re.compile(r"^[a-zA-Z0-9_./-]{1,180}$")
-_SECRET = re.compile(
-    r"(?i)\b(api[_-]?key|token|secret|password|authorization)\b\s*[:=]\s*"
-    r"([^\s,;]+)"
-)
+_REPORT_WITHHELD = "[REPORT_WITHHELD]"
+# In-memory-only keyed fingerprint; never treat as durable incident evidence.
+_FINGERPRINT_KEY = secrets.token_bytes(32)
 
 
 def _utc_now() -> str:
@@ -38,7 +40,9 @@ def _sanitize_report(value: str) -> str:
     text = value.strip()
     if len(text) > MAX_REPORT_LENGTH:
         raise ValueError("Bug report is too long.")
-    return _SECRET.sub(lambda match: f"{match.group(1)}=[REDACTED]", text)
+    # No regex can reliably identify all tokens or personal data in free-form
+    # diagnostic text. Never retain or return the original report content.
+    return _REPORT_WITHHELD
 
 
 def _safe_target(value: Optional[str]) -> str:
@@ -144,28 +148,33 @@ class SelfHealingPipelineManager:
     def trigger_self_healing(
         self, bug_report: str, target_file: Optional[str] = None
     ) -> PipelineJob:
-        redacted = _sanitize_report(bug_report)
+        withheld = _sanitize_report(bug_report)
         advisory_path = _safe_target(target_file)
+        category = _heuristic_category(bug_report)
         if len(self.jobs) >= MAX_JOBS_IN_MEMORY:
             raise RuntimeError(
                 "In-memory proposal capacity reached; durable reviewed queue required."
             )
-        evidence_hash = hashlib.sha256(
-            f"{redacted}\n{advisory_path}".encode("utf-8")
+        # Correlation only: keyed digest resists offline guesses of short
+        # secret values. It cannot prove the report or any fix is authentic.
+        evidence_hash = hmac.new(
+            _FINGERPRINT_KEY,
+            f"{bug_report.strip()}\n{advisory_path}".encode("utf-8"),
+            hashlib.sha256,
         ).hexdigest()
         job = PipelineJob(
             job_id=f"sh_{uuid.uuid4().hex[:16]}",
-            bug_report=redacted,
+            bug_report=withheld,
             target_file=advisory_path,
             status="AWAITING_EXTERNAL_REVIEW",
             evidence_sha256=evidence_hash,
-            heuristic_category=_heuristic_category(redacted),
+            heuristic_category=category,
         )
         job.execution_trace = [
             {
                 "step": "Intake",
                 "status": "RECORDED",
-                "detail": "Redacted report retained in process memory only.",
+                "detail": "Report text withheld; category and non-auditable fingerprint kept in memory.",
                 "timestamp": job.created_at,
             },
             {
