@@ -4,7 +4,7 @@ import { compassDirection, moonSnapshot, nextMoonEvents, parseMoonLocation,
 import MoonDisc, { LRO_MOON_SOURCE } from './MoonDisc';
 import './moon-now.css';
 
-/** On-device ephemeris, not an image feed. No network, accounts, storage or paid AI. */
+/** On-device lunar calculations; optional public NASA-derived image may load from Wikimedia. No account, location upload or paid AI. */
 export default function MoonNowPanel() {
   const id = useId();
   const [now, setNow] = useState(() => new Date());
