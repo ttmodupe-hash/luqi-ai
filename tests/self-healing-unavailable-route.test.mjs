@@ -7,7 +7,7 @@ const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8"
 test("both Luqi application trees use the honest closed route, not the legacy live dashboard", () => {
   for (const root of ["src", "app/src"]) {
     const routes = read(root + "/App.tsx");
-    assert.match(routes, /SelfHealingPage\s*=\s*lazyQueryPage\(\(\)\s*=>\s*import\("\.\/pages\/SelfHealingUnavailablePage"\)\)/);
+    assert.match(routes, /SelfHealingPage\s*=\s*lazy\(\(\)\s*=>\s*import\("\.\/pages\/SelfHealingUnavailablePage"\)\)/);
     assert.match(routes, /path="\/self-healing"\s+element=\{<SelfHealingPage\s*\/>\}/);
     assert.doesNotMatch(routes, /SelfHealingPage\s*=\s*lazyQueryPage\(\(\)\s*=>\s*import\("\.\/pages\/SelfHealingPage"\)\)/);
   }
