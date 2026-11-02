@@ -3,7 +3,7 @@ import React from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import MoonNowContent from '../src/components/MoonNowContent';
-import MoonDisc, { LRO_MOON_IMAGE, LRO_MOON_SOURCE } from '../src/components/MoonDisc';
+import MoonDisc, { LRO_MOON_IMAGE, LRO_MOON_SOURCE, LUQI_MOON_ART } from '../src/components/MoonDisc';
 import { readFileSync } from 'node:fs';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -27,7 +27,8 @@ it('retains a completely local near-side illustration when detailed images are d
   const { container, rerender } = render(<MoonDisc id="fixture" fraction={0.66} rotation={-55}
     view="phase" detailed={false} label="Moon without downloads" />);
   expect(screen.getByRole('img', { name: 'Moon without downloads' }).getAttribute('data-moon-detail')).toBe('local');
-  expect(container.querySelector('image')).toBeNull();
+  expect([...container.querySelectorAll('image')].map(x => x.getAttribute('href')))
+    .toEqual([LUQI_MOON_ART, LUQI_MOON_ART]);
   const path = container.querySelector('clipPath[id$="-lit"] path')!.getAttribute('d');
   rerender(<MoonDisc id="fixture" fraction={0.12} rotation={-55}
     view="phase" detailed={false} label="Moon without downloads" />);
@@ -44,20 +45,31 @@ it('makes full near-side surface visible on request without claiming it is the c
   expect(image.getAttribute('data-moon-view')).toBe('phase');
   expect(image.getAttribute('data-moon-detail')).toBe('local');
   // The homepage must not load any image from a third-party host without a click.
-  expect(image.querySelector('image')).toBeNull();
+  expect([...image.querySelectorAll('image')].map(x => x.getAttribute('href')))
+    .toEqual([LUQI_MOON_ART, LUQI_MOON_ART]);
   fireEvent.click(screen.getByRole('button', { name: 'Explore full surface' }));
   expect(image.getAttribute('data-moon-view')).toBe('surface');
   expect(screen.getByText(/not today’s lunar illumination/)).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Show NASA Moon image' }));
   expect(image.getAttribute('data-moon-detail')).toBe('lro');
-  expect(image.querySelector('image')).not.toBeNull();
+  expect([...image.querySelectorAll('image')].map(x => x.getAttribute('href')))
+    .toEqual([LRO_MOON_IMAGE, LRO_MOON_IMAGE]);
   fireEvent.click(screen.getByRole('button', { name: 'Use low-data Moon' }));
   expect(image.getAttribute('data-moon-detail')).toBe('local');
-  expect(image.querySelector('image')).toBeNull();
+  expect([...image.querySelectorAll('image')].map(x => x.getAttribute('href')))
+    .toEqual([LUQI_MOON_ART, LUQI_MOON_ART]);
   fireEvent.click(screen.getByRole('button', { name: 'Current phase' }));
   expect(image.getAttribute('data-moon-view')).toBe('phase');
   expect(screen.getByRole('link', { name: 'NASA LRO surface source' }).getAttribute('href')).toBe(LRO_MOON_SOURCE);
   expect(globalThis.fetch).not.toHaveBeenCalled();
+});
+
+it('bundles the local Moon artwork as a small same-origin WebP file', () => {
+  const bytes = readFileSync('public/moon-luqi-art.webp');
+  expect(bytes.byteLength).toBeLessThan(10_000);
+  expect(bytes.subarray(0, 4).toString('ascii')).toBe('RIFF');
+  expect(bytes.subarray(8, 12).toString('ascii')).toBe('WEBP');
+  expect(LUQI_MOON_ART).toBe('/moon-luqi-art.webp');
 });
 
 it('keeps the Moon content, styling and photorealistic layer mirrored across both Luqi entrypoints', () => {
