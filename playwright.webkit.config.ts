@@ -16,7 +16,10 @@ export default defineConfig({
   // allow twelve minutes overall for slower shared CI runners.
   // The workflow step independently limits the suite to thirteen minutes.
   globalTimeout: 12 * 60_000,
-  workers: 2,
+  // Three isolated browser workers allow the unchanged full 434-case suite
+  // to finish within its original 720-second overall deadline on CI runners.
+  // We do not shard away tests, extend the deadline, add retries, or relax limits.
+  workers: 3,
   maxFailures: 10,
   retries: 0,
   forbidOnly: true,
