@@ -28,7 +28,7 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    expect(nyda.textContent).toContain('Not currently aligned');
    fireEvent.change(screen.getByLabelText('Founder age (optional, checked locally)'),{target:{value:'22'}});
    fireEvent.change(screen.getByLabelText('Project name'),{target:{value:'Community health project'}});
-   fireEvent.change(screen.getByLabelText('Project summary'),{target:{value:'Low-bandwidth community health support'}});
+   fireEvent.change(screen.getByRole('textbox',{name:'Project summary'}),{target:{value:'Low-bandwidth community health support'}});
    fireEvent.click(screen.getByLabelText('Business plan'));
    const tia=screen.getByRole('article',{name:'TIA Seed Fund'});
    expect(tia.textContent).toContain('67%');

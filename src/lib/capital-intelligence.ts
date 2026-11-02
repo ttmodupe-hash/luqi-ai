@@ -10,7 +10,7 @@ export type ProjectPurpose = 'R_AND_D_SEED' | 'BUSINESS_GROWTH' | 'INDUSTRIAL_EX
 export type Registration = 'REGISTERED' | 'NOT_REGISTERED' | 'UNKNOWN';
 export type Artifact = 'CONCEPT_NOTE' | 'PROTOTYPE_PROOF' | 'PITCH_DECK' | 'BUSINESS_PLAN' | 'FINANCIAL_PLAN' | 'REGISTRATION_PROOF';
 export const ARTIFACT_LABELS: Readonly<Record<Artifact,string>> = Object.freeze({
-  CONCEPT_NOTE:'Project summary',
+  CONCEPT_NOTE:'Concept note document',
   PROTOTYPE_PROOF:'Proof of concept or prototype evidence',
   PITCH_DECK:'Pitch presentation',
   BUSINESS_PLAN:'Business plan',
@@ -96,10 +96,23 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
       conditions.minimumAge > conditions.maximumAge) throw bad();
   if (conditions.excludesResearchSeed !== undefined && typeof conditions.excludesResearchSeed !== 'boolean') throw bad();
   if (conditions.requiresRegisteredBusiness !== undefined && typeof conditions.requiresRegisteredBusiness !== 'boolean') throw bad();
-  return Object.freeze({...input,conditions:Object.freeze(conditions),
+  // Project only known, validated contract keys. Never spread untrusted
+  // extras or nested values into the supposedly immutable funding matrix.
+  const safeConditions=Object.freeze({
+    ...(conditions.minimumAge!==undefined?{minimumAge:conditions.minimumAge}:{}),
+    ...(conditions.maximumAge!==undefined?{maximumAge:conditions.maximumAge}:{}),
+    ...(conditions.excludesResearchSeed!==undefined?{excludesResearchSeed:conditions.excludesResearchSeed}:{}),
+    ...(conditions.requiresRegisteredBusiness!==undefined?{requiresRegisteredBusiness:conditions.requiresRegisteredBusiness}:{}),
+  });
+  return Object.freeze({
+    id:input.id,name:input.name.trim(),organisation:input.organisation.trim(),
+    type:input.type,sourceUrl:input.sourceUrl,applicationGuideUrl:input.applicationGuideUrl,
+    reviewedOn:input.reviewedOn,sourceStatus:'PROGRAMME_REFERENCE_ONLY' as const,
     focusSectors:Object.freeze([...input.focusSectors]),
     suggestedArtifacts:Object.freeze([...input.suggestedArtifacts]),
-    selectionNotes:Object.freeze([...input.selectionNotes])});
+    selectionNotes:Object.freeze([...input.selectionNotes]),
+    conditions:safeConditions,
+  });
 }
 /** These are publisher PROGRAMME descriptions, never a claim of an OPEN round. */
 export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([

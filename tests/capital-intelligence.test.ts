@@ -35,6 +35,13 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(()=>normalizeFundingPlatform({...original,focusSectors:['UNVERIFIED' as any]})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:['TAX_ID' as any]})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,id:'__proto__'})).toThrow();
+    const withExtras=normalizeFundingPlatform({
+      ...original,unreviewedPayload:{mutableSecret:'do not expose'},
+      conditions:{...original.conditions,arbitraryRule:{credential:'no'}},
+    } as any);
+    expect(Object.prototype.hasOwnProperty.call(withExtras,'unreviewedPayload')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(withExtras.conditions,'arbitraryRule')).toBe(false);
+    expect(Object.isFrozen(withExtras.conditions)).toBe(true);
   });
   it('ranks documented programme fit first, never by the largest advertised grant amount',()=>{
     const matches=matchCapitalProgrammes(profile,new Date('2026-11-02T10:00:00Z'));
