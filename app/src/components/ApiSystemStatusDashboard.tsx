@@ -37,11 +37,21 @@ export function ApiSystemStatusDashboard({ humanReadable = false }: { humanReada
     pending.current = controller;
     setLoading(true); setResult(null); setCheckedAt(null); setError(false);
     try {
-      const response = await fetch('/v1/readiness', {
-        cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
-      });
-      if (response.status !== 200 && response.status !== 503) throw new Error('Unavailable');
-      const data = readiness.parse(await response.json());
+      const request = async () => {
+        const response = await fetch('/v1/readiness', {
+          cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
+        });
+        if (response.status !== 200 && response.status !== 503) throw new Error('Unavailable');
+        return readiness.parse(await response.json());
+      };
+      // Optional diagnostics must never block or repeat the actual readiness check.
+      let measure: typeof import('../lib/uiTelemetry').measureApi | undefined;
+      try {
+        if (window.localStorage.getItem('luqi_analytics_consent') === 'yes') {
+          measure = (await import('../lib/uiTelemetry')).measureApi;
+        }
+      } catch { /* Storage or diagnostics import unavailable: perform the normal check. */ }
+      const data = measure ? await measure('readiness_request', request) : await request();
       if (!controller.signal.aborted) { setResult(data); setCheckedAt(new Date()); }
     } catch {
       if (!controller.signal.aborted) setError(true);
