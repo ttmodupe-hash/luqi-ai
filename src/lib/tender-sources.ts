@@ -103,11 +103,18 @@ export const CURATED_TENDER_NOTICES:readonly TenderNotice[]=[
   specialCondition:'Original advert specifies a sealed physical tender at Golden Heights Building, Germiston. Check CIDB, briefing attendance, pricing schedules and the latest issuer addenda.',
   sourceReviewedOn:TENDER_REVIEWED_ON,statusNote:'Published tender; not proof that an applicant meets required qualifications.'},
 ];
+/** Parse issuer date/time strictly; published HH:MM means that exact SAST minute. */
+export function tenderSastTime(date:string,time='00:00'):number{
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))return NaN;
+ const midnight=Date.parse(date+'T00:00:00Z');
+ if(!Number.isFinite(midnight)||new Date(midnight).toISOString().slice(0,10)!==date)return NaN;
+ return Date.parse(date+'T'+time+':00+02:00');
+}
 export type TenderStatus='past-deadline'|'mandatory-briefing-review'|'source-review-needed';
 export function tenderStatus(notice:TenderNotice,at:Date):TenderStatus{
- const end=Date.parse(notice.deadlineDate+'T'+notice.deadlineTimeSast+':59+02:00');
+ const end=tenderSastTime(notice.deadlineDate,notice.deadlineTimeSast);
  if(!Number.isFinite(at.getTime())||!Number.isFinite(end))return 'source-review-needed';
- if(at.getTime()>end)return 'past-deadline';
+ if(at.getTime()>=end)return 'past-deadline';
  if(notice.briefingMandatory&&notice.briefingDate&&at.getTime()>Date.parse(notice.briefingDate+'T23:59:59+02:00'))
    return 'mandatory-briefing-review';
  return 'source-review-needed';
@@ -123,8 +130,14 @@ export function filterTenders(opts:{
  ).sort((a,b)=>a.deadlineDate.localeCompare(b.deadlineDate)||a.deadlineTimeSast.localeCompare(b.deadlineTimeSast));
 }
 export function tenderReviewFresh(notice:TenderNotice,at:Date):boolean{
- const reviewed=Date.parse(notice.sourceReviewedOn+'T23:59:59+02:00');
- return Number.isFinite(at.getTime())&&at.getTime()<=reviewed+48*60*60*1000;
+ // Date-only reviews have no precise hour. Use the start of that SAST day
+ // conservatively; never grant future-dated/invalid evidence a fresh badge.
+ const reviewed=tenderSastTime(notice.sourceReviewedOn);
+ const deadline=tenderSastTime(notice.deadlineDate,notice.deadlineTimeSast);
+ const recheck=tenderSastTime(TENDER_RECHECK_AFTER);
+ return Number.isFinite(at.getTime())&&Number.isFinite(reviewed)&&Number.isFinite(deadline)&&
+  Number.isFinite(recheck)&&at.getTime()>=reviewed&&
+  at.getTime()<Math.min(reviewed+48*60*60*1000,recheck);
 }
 export function detectTenderIntent(value:unknown):boolean{
  if(typeof value!=='string'||!value.trim()||value.length>500)return false;
