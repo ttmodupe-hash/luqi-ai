@@ -1,0 +1,23 @@
+.luqi-africa-study { border: 1px solid #c5c5b5; border-radius: 1.25rem; background: #f7f3e8; color: #183d30; padding: clamp(1rem, 3vw, 1.75rem); min-width: 0; overflow-wrap: anywhere; }
+.luqi-africa-study *, .luqi-africa-study *::before, .luqi-africa-study *::after { box-sizing: border-box; }
+.luqi-africa-study h2 { font: 650 clamp(1.5rem, 3vw, 2rem)/1.25 Georgia, serif; margin: .5rem 0; color: #183d30; }
+.luqi-africa-study h3 { font-size: 1.2rem; font-weight: 700; margin: .6rem 0; }
+.luqi-africa-study h4 { font-size: 1rem; font-weight: 650; margin: .5rem 0; }
+.luqi-africa-study p { font-size: .95rem; line-height: 1.7; margin: .75rem 0; }
+.luqi-africa-study .luqi-africa-kicker { font-size: .75rem; letter-spacing: .06em; font-weight: 700; }
+.luqi-africa-study .luqi-africa-meta { font-size: .83rem; }
+.luqi-africa-study button { min-height: 44px; max-width: 100%; border: 1px solid #546d60; border-radius: .6rem; padding: .65rem .85rem; background: #fffdf7; color: #183d30; font: inherit; font-size: .9rem; cursor: pointer; white-space: normal; text-align: left; }
+.luqi-africa-study header button, .luqi-africa-study button[aria-pressed="true"] { background: #183d30; color: #fffdf7; }
+.luqi-africa-study :focus-visible { outline: 3px solid #925b13; outline-offset: 3px; }
+.luqi-africa-topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)); gap: .5rem; margin: 1rem 0; }
+.luqi-africa-layers { display: flex; flex-wrap: wrap; gap: .5rem; }
+.luqi-africa-reading { margin: 1rem 0; border-left: 4px solid #967040; background: #fffdf7; border-radius: .5rem; padding: 1rem; }
+.luqi-africa-sources { display: grid; gap: .75rem; padding: 0; list-style: none; }
+.luqi-africa-sources a { color: #174c3b; text-decoration: underline; text-underline-offset: 3px; font-size: .86rem; }
+.luqi-africa-sources span { display: block; font-size: .78rem; line-height: 1.6; margin-top: .25rem; }
+.luqi-africa-study details { margin-top: 1rem; border-top: 1px solid #b8bdae; padding-top: .75rem; }
+.luqi-africa-study summary { cursor: pointer; min-height: 44px; font-weight: 650; line-height: 1.6; }
+.luqi-africa-question { margin: 1rem 0; padding: .8rem; border: 1px solid #a5b1a5; border-radius: .5rem; min-width: 0; }
+.luqi-africa-question legend { font-weight: 650; max-width: 100%; }
+.luqi-africa-question label { display: flex; align-items: center; gap: .65rem; min-height: 44px; padding: .4rem 0; cursor: pointer; }
+.luqi-africa-question input { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; accent-color: #183d30; }
