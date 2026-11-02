@@ -116,7 +116,7 @@ export default function MoonNowPanel() {
       <div className="luqi-moon-actions">
         <button type="button" aria-pressed={view === 'phase'} onClick={() => setView('phase')}>Current phase</button>
         <button type="button" aria-pressed={view === 'surface'} onClick={() => setView('surface')}>Explore full surface</button>
-        <button type="button" aria-pressed={!detailed} onClick={() => setDetailed(value => !value)}>
+        <button type="button" onClick={() => setDetailed(value => !value)}>
           {detailed ? 'Use low-data Moon' : 'Show NASA Moon image'}
         </button>
         <button type="button" onClick={() => setNow(new Date())}>Refresh now</button>
