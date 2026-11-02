@@ -51,7 +51,7 @@ export function startUiTelemetry(): void {
       const observer = new PerformanceObserver(list => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'layout-shift' && !(entry as PerformanceEntry & { hadRecentInput?: boolean }).hadRecentInput)
-            recordMetric('web-vital', 'layout_shift', entry.value * 1000);
+            recordMetric('web-vital', 'layout_shift', (entry as PerformanceEntry & { value: number }).value * 1000);
           if (entry.entryType === 'largest-contentful-paint')
             recordMetric('web-vital', 'lcp', entry.startTime);
         }
