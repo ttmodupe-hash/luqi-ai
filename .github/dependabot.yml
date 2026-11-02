@@ -21,6 +21,24 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
+  # Production root npm dependencies (Dockerfile installs package-lock.json from /)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "ttmodupe-hash"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps(root)"
+      include: "scope"
+
   # Frontend dependencies
   - package-ecosystem: "npm"
     directory: "/app"

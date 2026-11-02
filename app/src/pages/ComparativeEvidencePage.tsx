@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AfricanBiblicalStudy from '../components/AfricanBiblicalStudy';
 import { useOptionalCustomerSession } from '../providers/customer-session';
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { readGuide } from '../lib/interaction-handoff';
@@ -19,6 +20,7 @@ export default function ComparativeEvidencePage() {
       <h1 id="evidence-title" className="text-3xl font-bold sm:text-4xl">Faith, history and scientific evidence</h1>
       <p className="text-slate-200">Compare traditional accounts with measurable evidence, manuscripts and interpretations. A curated reading guide, not a live research engine or a verdict on the truth of a religion.</p>
     </header>
+    <AfricanBiblicalStudy />
     <section className="space-y-2 rounded-xl border border-amber-500/70 bg-slate-900 p-4" aria-label="Limits of evidence">
       <h2 className="text-lg font-semibold">Compare evidence, not people’s worth</h2>
       <p className="text-sm">Science tests measurable claims. Archaeology and textual criticism assess surviving objects and documents. Spiritual meanings, ethical interpretations and metaphysical beliefs are not all experimentally testable. Scholars and believers may disagree.</p>
