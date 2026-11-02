@@ -1,0 +1,16 @@
+diff --git a/.github/workflows/web-build.yml b/.github/workflows/web-build.yml
+--- a/.github/workflows/web-build.yml
++++ b/.github/workflows/web-build.yml
+@@ -10,6 +10,12 @@ permissions:
+ permissions:
+   contents: read
+ 
++# Supersede only an older run of this workflow for the same pull request.
++# Main/manual runs retain separate evidence and cannot cancel one another.
++concurrency:
++  group: luqi-web-build-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
++  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
++
+ jobs:
+   validate-web:
+     runs-on: ubuntu-latest
