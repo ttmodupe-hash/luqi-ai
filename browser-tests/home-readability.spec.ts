@@ -47,7 +47,7 @@ for (const width of [320, 390, 768, 1280]) {
     expect(label!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height + 10);
     if (width === 1280) {
       const copy = (await page.locator('.luqi-hero-copy').boundingBox())!;
-      const card = (await page.locator('.luqi-chat-card').boundingBox())!;
+      const card = (await page.locator('.luqi-hero-moon').boundingBox())!;
       expect(Math.abs(copy.y - card.y)).toBeLessThanOrEqual(2);
     }
 
