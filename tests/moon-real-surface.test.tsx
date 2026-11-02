@@ -42,15 +42,20 @@ it('makes full near-side surface visible on request without claiming it is the c
   render(<MoonNowContent />);
   const image = screen.getByRole('img');
   expect(image.getAttribute('data-moon-view')).toBe('phase');
+  expect(image.getAttribute('data-moon-detail')).toBe('local');
+  // The homepage must not load any image from a third-party host without a click.
+  expect(image.querySelector('image')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Explore full surface' }));
   expect(image.getAttribute('data-moon-view')).toBe('surface');
   expect(screen.getByText(/not today’s lunar illumination/)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Show NASA Moon image' }));
+  expect(image.getAttribute('data-moon-detail')).toBe('lro');
+  expect(image.querySelector('image')).not.toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Use low-data Moon' }));
   expect(image.getAttribute('data-moon-detail')).toBe('local');
+  expect(image.querySelector('image')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Current phase' }));
   expect(image.getAttribute('data-moon-view')).toBe('phase');
-  fireEvent.click(screen.getByRole('button', { name: 'Show detailed Moon' }));
-  expect(image.getAttribute('data-moon-detail')).toBe('lro');
   expect(screen.getByRole('link', { name: 'NASA LRO surface source' }).getAttribute('href')).toBe(LRO_MOON_SOURCE);
   expect(globalThis.fetch).not.toHaveBeenCalled();
 });
