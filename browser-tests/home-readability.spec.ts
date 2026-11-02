@@ -33,6 +33,8 @@ for (const width of [320, 390, 768, 1280]) {
     await expect(heading).toBeVisible();
     expect((await heading.boundingBox())!.y).toBeLessThan(400);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    // Mobile hides the explicit line break; sentences must still stay separated.
+    await expect(page.locator('#chat-availability-heading')).toContainText('need. Find');
 
     const compact = page.locator('.luqi-home .luqi-region-compact .luqi-region-head');
     const intro = await compact.locator(':scope > div').boundingBox();
