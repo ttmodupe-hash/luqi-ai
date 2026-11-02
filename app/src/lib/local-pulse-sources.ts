@@ -7,7 +7,7 @@ export const PULSE_REVIEWED_ON = "30 October 2026";
 export const PULSE_RECHECK_BY = "2026-12-15";
 
 export type PulseRegion = "all" | "GP" | "WC" | "other";
-export type PulseKind = "all" | "talk" | "news" | "languages";
+export type PulseKind = "all" | "talk" | "news" | "languages" | "research";
 export type PublisherRegion = "GP" | "WC" | "ZA";
 
 export type PulseSource = {
@@ -20,6 +20,7 @@ export type PulseSource = {
   description: string;
   url: string;
   action: string;
+  linkCheckedOn?: string; // Directory destination check, not verification of individual polls
 };
 
 export const PULSE_SOURCES: readonly PulseSource[] = [
@@ -73,6 +74,14 @@ export const PULSE_SOURCES: readonly PulseSource[] = [
     action: "Browse SABC News",
   },
   {
+    id: "ipsos-za", name: "Ipsos South Africa", publisher: "Ipsos", region: "ZA", kind: "research",
+    languages: "English-language research pages; survey interview languages vary by study",
+    description: "Market and public-opinion surveys. Inspect the original study's sponsor, fieldwork dates, target population, sample, methodology and uncertainty. Poll results are not official statistics, election results or predictions.",
+    url: "https://www.ipsos.com/en-za",
+    action: "Explore Ipsos South Africa research",
+    linkCheckedOn: "2026-11-02",
+  },
+  {
     id: "sabc-languages", name: "SABC African-language radio", publisher: "SABC", region: "ZA", kind: "languages",
     languages: "Multiple South African languages",
     description: "Discover SABC's African-language radio stations on the official broadcaster directory.",
@@ -92,6 +101,7 @@ export const PULSE_KINDS: readonly {value: PulseKind; label: string}[] = [
   {value:"all",label:"All trusted publishers"},
   {value:"talk",label:"Talk radio & podcasts"},
   {value:"news",label:"Newsrooms"},
+  {value:"research",label:"Surveys & opinion research"},
   {value:"languages",label:"African-language radio"},
 ];
 
@@ -99,6 +109,7 @@ export const PULSE_TOPICS = [
   "Municipal water, electricity and service changes",
   "Jobs, internships and skills opportunities",
   "Consumer rights and public accountability",
+  "Public opinion and survey methodology",
   "Local business, grants and funding",
   "Travel, roads and community information",
 ] as const;
@@ -127,10 +138,14 @@ export function pulseQuestion(
   const source = PULSE_SOURCES.find(item => item.id === sourceId) ?? PULSE_SOURCES[0]!;
   const location = PULSE_REGIONS.find(item => item.value === region)?.label ?? "South Africa";
   return [
-    "Luqi, help me understand recent reporting about " + topic.toLowerCase() + " in " + location + ".",
+    (source.kind === "research" ? "Luqi, help me understand published research about " : "Luqi, help me understand recent reporting about ") + topic.toLowerCase() + " in " + location + ".",
     "I want to check the original reporting from " + source.name + ": " + source.url,
-    "Please distinguish verified facts from presenters' or callers' opinions; check the current date,",
-    "refer me to primary government or municipal notices where appropriate, and say when something cannot be confirmed.",
+    source.kind === "research"
+      ? "This is survey research, not official statistics or election results. Check the report's sponsor, fieldwork dates, population, sample, question wording, weighting and uncertainty."
+      : "Please distinguish verified facts from presenters' or callers' opinions; check the current date,",
+    source.kind === "research"
+      ? "Cite the specific Ipsos study, not just this directory page. Do not invent findings, assume national representativeness or predict election outcomes."
+      : "refer me to primary government or municipal notices where appropriate, and say when something cannot be confirmed.",
     "Explain in " + language + " if you can. Do not assume an incident or opportunity exists just because I selected this topic.",
   ].join(" ");
 }

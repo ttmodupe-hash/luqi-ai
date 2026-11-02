@@ -40,7 +40,7 @@ export default function LocalPulsePage() {
       <header className="min-w-0 space-y-4 rounded-2xl border border-slate-600 bg-slate-900 p-5 sm:p-8">
         <p className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-cyan-300"><Radio size={18} aria-hidden="true"/> Luqi Local Pulse · Free</p>
         <h1 id="local-pulse-heading" className="max-w-3xl text-3xl font-bold tracking-tight sm:text-4xl">Hear the news. Understand the facts. Know what to do next.</h1>
-        <p className="max-w-3xl text-slate-200">Find trusted talk radio, original South African newsrooms and language-station directories. Choose your area, open the publisher's material and use Luqi to prepare thoughtful follow-up questions.</p>
+        <p className="max-w-3xl text-slate-200">Find talk radio, original South African newsrooms, research publications and language-station directories. Choose your area, inspect the publisher's original material and prepare thoughtful follow-up questions.</p>
         <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
           <span className="rounded-full border border-slate-500 bg-slate-950 px-3 py-2">No account needed to browse</span>
           <span className="rounded-full border border-slate-500 bg-slate-950 px-3 py-2">Source links, not copied broadcasts</span>
@@ -50,11 +50,11 @@ export default function LocalPulsePage() {
         <p className="text-xs text-slate-400">Publisher destinations reviewed: {PULSE_REVIEWED_ON}. {needsReview ? "These directory links are due for rechecking; do not treat them as newly verified." : "Links may change; open each original publisher to verify current content."}</p>
       </header>
 
-      <section className="min-w-0 space-y-4" aria-label="Browse official news and radio publishers">
+      <section className="min-w-0 space-y-4" aria-label="Browse news, radio and research publishers">
         <div className="space-y-1">
           <p className="text-sm font-medium text-cyan-300">01 · Discover</p>
           <h2 className="text-2xl font-bold">Trusted voices, where you are</h2>
-          <p className="text-sm text-slate-300">These are independent broadcasters and newsrooms, not Luqi-owned channels or paid endorsements.</p>
+          <p className="text-sm text-slate-300">These are independent broadcasters, news publishers and research organisations, not Luqi-owned channels or endorsements. A survey is not an official statistic or election result.</p>
         </div>
         <div className="grid min-w-0 gap-3 rounded-xl border border-slate-700 bg-slate-900 p-4 sm:grid-cols-3">
           <label className="block min-w-0 text-sm font-medium">Choose your region
@@ -74,17 +74,18 @@ export default function LocalPulsePage() {
             </span>
           </label>
         </div>
-        {region==="other"&&<p className="rounded-lg border border-amber-600/50 bg-slate-900 p-3 text-sm text-amber-100"><MapPin size={16} className="mr-1 inline" aria-hidden="true"/> Province-specific talk stations have not yet been individually reviewed for the other provinces. Showing national news and the SABC station directory rather than inventing local coverage.</p>}
+        {region==="other"&&<p className="rounded-lg border border-amber-600/50 bg-slate-900 p-3 text-sm text-amber-100"><MapPin size={16} className="mr-1 inline" aria-hidden="true"/> Province-specific talk stations have not yet been individually reviewed for the other provinces. Showing national news, research and the SABC station directory rather than inventing local coverage.</p>}
         <p role="status" aria-live="polite" className="text-sm text-slate-300">{results.length} original publisher {results.length===1?"destination":"destinations"} available for this view.</p>
         <div className="grid min-w-0 gap-3 md:grid-cols-2">
           {results.map(source=><article key={source.id} className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-700 bg-slate-900 p-5">
             <div className="flex flex-wrap items-center gap-2 text-xs text-cyan-200">
-              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-800 px-2 py-1">{source.kind==="news"?<BookOpen size={14} aria-hidden="true"/>:<Headphones size={14} aria-hidden="true"/>}{source.kind==="talk"?"Talk radio / podcasts":source.kind==="news"?"Newsroom":"Radio directory"}</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-800 px-2 py-1">{source.kind==="news"||source.kind==="research"?<BookOpen size={14} aria-hidden="true"/>:<Headphones size={14} aria-hidden="true"/>}{source.kind==="talk"?"Talk radio / podcasts":source.kind==="news"?"Newsroom":source.kind==="research"?"Survey research":"Radio directory"}</span>
               <span className="rounded-full border border-slate-600 px-2 py-1">{regionNames[source.region]}</span>
             </div>
             <h3 className="text-xl font-semibold">{source.name}</h3>
             <p className="text-sm text-slate-300">{source.description}</p>
             <p className="text-xs text-slate-400">Publisher: {source.publisher} · Language(s): {source.languages}</p>
+            {source.linkCheckedOn&&<p className="text-xs text-amber-100">Source destination checked: {source.linkCheckedOn}. Individual survey findings and methods must be verified separately.</p>}
             <a className="mt-auto inline-flex w-fit max-w-full items-center gap-2 break-words rounded-lg border border-cyan-500 px-3 py-3 font-semibold text-cyan-100 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-white" href={source.url} target="_blank" rel="noopener noreferrer" aria-label={source.action+" (official site, opens new tab)"}>{source.action}<ExternalLink size={17} className="shrink-0" aria-hidden="true"/></a>
           </article>)}
         </div>
@@ -95,7 +96,7 @@ export default function LocalPulsePage() {
         <div className="space-y-1">
           <p className="text-sm font-medium text-cyan-300">02 · Understand</p>
           <h2 className="text-2xl font-bold">Prepare a question for Luqi</h2>
-          <p className="text-sm text-slate-300">Pick a topic and publisher. The example question is prepared on your phone without sending a request to any AI provider. Read the original story before asking Luqi to explain it.</p>
+          <p className="text-sm text-slate-300">Pick a topic and publisher. The example question is prepared on your phone without sending a request to any AI provider. Read the original report or story before asking Luqi to explain it.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block min-w-0 text-sm font-medium">Original publisher
