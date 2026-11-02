@@ -30,4 +30,11 @@ test('the historical marketing page links to live Luqi, not the retired prototyp
   assert.doesNotMatch(html, /preparing for launch|join the waitlist|launching first in South Africa|generation activates at launch/i);
   assert.doesNotMatch(html, /prototypes\/chat-ui\.html|luqi-ai-production\.up\.railway\.app/i);
   assert.doesNotMatch(html, /fetch\(ENGINE|setInterval\(beat/);
+  assert.doesNotMatch(html, /Waitlist members get in first|before the public gates open|Engine deployment/i);
+  assert.doesNotMatch(html, /fraud families in the live|sourced entries in the African|22<\/div>|15 official-source guides/i);
+  assert.doesNotMatch(html, /omega-super-ai|id="pulse-(?:badge|now|total)"/i);
+  assert.match(html, /Customer application/);
+  assert.match(html, /Guest trial and registration/);
+  assert.match(html, /Mobile acceptance and subscriptions/);
+  assert.match(html, /github\.com\/ttmodupe-hash\/luqi-ai/);
 });
