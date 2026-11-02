@@ -74,6 +74,7 @@ export default function Home() {
             </nav>
             <div className="luqi-hero-actions">
               <Link className="luqi-primary" to="/try">Try Luqi free <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              <Link className="luqi-secondary" to="/start">Get started</Link>
               <Link className="luqi-secondary" to="/join">Create account <ArrowUpRight size={17} aria-hidden="true" /></Link>
               <Link className="luqi-secondary" to="/chat">Already registered? Chat <ArrowUpRight size={17} aria-hidden="true" /></Link>
               <a className="luqi-secondary" href="#tools" onClick={event => {
