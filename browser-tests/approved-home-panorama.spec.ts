@@ -105,3 +105,37 @@ test('desktop panorama aligns useful content without blank grid cells and keeps 
   for(const ratio of contrast)expect(ratio).toBeGreaterThanOrEqual(4.5);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
+
+
+test('More tools navigates within the HashRouter homepage, not a nonexistent #tools route',async({page})=>{
+  await page.goto('/#/');
+  const more=page.getByRole('link',{name:'More tools',exact:true});
+  await expect(more).toBeVisible();
+  await more.click();
+  await expect(page).toHaveURL(/#\/$/);
+  await expect(page.getByRole('heading',{name:'Choose where to start.'})).toBeFocused();
+  await expect(page.getByRole('button',{name:'Ready to use'})).toBeVisible();
+});
+
+test('contacts stay embedded at the bottom right in the wide workspace, never a fixed popup',async({page})=>{
+  for(const width of [1280,1680]){
+    await page.setViewportSize({width,height:900});
+    await page.goto('/#/');
+    const dock=page.getByRole('complementary',{name:'Luqi contacts'});
+    const hero=page.locator('.luqi-panorama-top .luqi-hero');
+    await expect(hero).toBeVisible();
+    await expect(dock).toBeVisible();
+    const layout=await page.evaluate(()=>{
+      const panel=document.querySelector<HTMLElement>('.luqi-shell-home .luqi-collaboration-dock')!;
+      const content=document.querySelector<HTMLElement>('.luqi-shell-home .luqi-tool-content')!;
+      const pane=panel.getBoundingClientRect(),main=content.getBoundingClientRect();
+      return {position:getComputedStyle(panel).position,left:pane.left,right:pane.right,mainRight:main.right,viewport:innerWidth,inside:panel.parentElement?.id==='workspace-content'};
+    });
+    expect(layout.inside).toBe(true);
+    expect(layout.position).toBe('sticky');
+    expect(layout.left).toBeGreaterThanOrEqual(layout.mainRight-2);
+    expect(layout.right).toBeLessThanOrEqual(layout.viewport+1);
+    await expect(page.getByRole('dialog',{name:'Your contacts'})).toHaveCount(0);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  }
+});

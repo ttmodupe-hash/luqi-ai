@@ -154,7 +154,13 @@ export default function Home() {
                 </Link>;
               })}
             </nav>
-            <a className="luqi-pano-more" href="#tools">More tools <ArrowRight size={16} aria-hidden="true"/></a>
+            <a className="luqi-pano-more" href="#tools" onClick={event => {
+              // HashRouter owns the URL fragment. Keep the route unchanged and
+              // move the visitor to the real tool directory within this page.
+              event.preventDefault();
+              document.getElementById("tools")?.scrollIntoView();
+              document.getElementById("tools-heading")?.focus();
+            }}>More tools <ArrowRight size={16} aria-hidden="true"/></a>
           </div>
         </section>
         <div className="luqi-pano-discover"><HomeExtras /></div>

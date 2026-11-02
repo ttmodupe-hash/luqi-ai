@@ -93,12 +93,37 @@
 .luqi-home-screenshot .luqi-home-note{color:#e0e9d7}
 .luqi-home-screenshot .luqi-home-note strong{color:#f6f8e8}
 .luqi-home-screenshot .luqi-home-note a{color:#d9f1c8}
+/* The Contacts dock is an actual in-page column, NOT a viewport-fixed
+   chatbot overlay. Its bottom-aligned panel stays inside Luqi's workspace,
+   using existing authenticated/consent-gated contact data only. */
 @media(min-width:1280px){
-  .luqi-shell-home .luqi-page-content{display:block;padding-right:0}
-  .luqi-shell-home .luqi-tool-content{width:100%;max-width:none}
-  .luqi-shell-home .luqi-collaboration-dock{position:fixed;z-index:30;right:18px;bottom:18px;top:auto;grid-column:auto;grid-row:auto;align-self:auto;width:280px;height:auto;max-height:min(405px,72dvh);margin:0;border-color:#567468;background:#0b2028ee;box-shadow:0 12px 28px #0008;backdrop-filter:blur(12px)}
-  .luqi-shell-home .luqi-collaboration-dock .luqi-collaboration-panel{overflow:auto;max-height:260px}
-  .luqi-shell-home .luqi-pano-toolstrip{padding-right:295px}
+  .luqi-shell-home .luqi-page-content{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 280px;
+    column-gap:12px;
+    align-items:start;
+    padding-right:0;
+  }
+  .luqi-shell-home .luqi-page-content>.luqi-playbar{grid-column:1/-1}
+  .luqi-shell-home .luqi-tool-content{grid-column:1;grid-row:2;width:100%;max-width:none}
+  .luqi-shell-home .luqi-collaboration-dock{
+    position:sticky;grid-column:2;grid-row:2;top:150px;
+    align-self:start;justify-content:flex-end;
+    width:calc(100% - 12px);
+    height:calc(100dvh - 166px);max-height:calc(100dvh - 166px);
+    margin:0 12px 16px 0;
+    border-color:#567468;background:#0b2028;
+    box-shadow:none;backdrop-filter:none;
+  }
+  .luqi-shell-home .luqi-collaboration-dock .luqi-collaboration-panel{
+    min-height:0;overflow:auto;max-height:260px;
+  }
+  .luqi-shell-home .luqi-pano-toolstrip{padding-right:0}
+}
+/* At intermediate desktop widths keep Moon and hero readable in their own
+   rows without squeezing both the AI card and the Contacts column. */
+@media(min-width:1280px) and (max-width:1550px){
+  .luqi-shell-home .luqi-panorama-top{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:1279px){
   .luqi-pano-toolstrip{grid-template-columns:180px minmax(0,1fr)}
