@@ -42,3 +42,61 @@ describe('desktop window boundary', () => {
     expect(event.preventDefault).toHaveBeenCalledOnce();
   });
 });
+
+/** Exercise the actual smoke expression, not a duplicate heading assertion. */
+async function runDesktopSmoke(heading: string | null, hasShell = true, failEvaluation = false) {
+  let ready = () => {};
+  const handlers = new Map<string, () => void | Promise<void>>();
+  const exit = vi.fn();
+  const clearTimeout = vi.fn();
+  const fake = {
+    app: {whenReady: () => ({then: (fn: () => void) => { ready = fn; }}), on: vi.fn(), exit},
+    BrowserWindow: class {
+      webContents = {
+        on: (event: string, fn: () => void | Promise<void>) => { handlers.set(event, fn); },
+        setWindowOpenHandler: vi.fn(),
+        executeJavaScript: async (script: string) => {
+          if (failEvaluation) throw new Error('Synthetic renderer failure');
+          return runInNewContext(script, {document: {querySelector: (selector: string) => {
+            if (selector === '#workspace-content main #workspace-title') return heading === null ? null : {textContent: heading};
+            if (selector === 'a[aria-label="Luqi workspace home"]') return hasShell ? {} : null;
+            return null;
+          }}});
+        },
+      };
+      loadFile() {}
+      once() {}
+      on() {}
+    },
+    ipcMain: {handle: vi.fn()}, shell: {openExternal: vi.fn()},
+  };
+  runInNewContext(readFileSync('app/electron/main.js', 'utf8'), {
+    require: (name: string) => name === 'electron' ? fake : name === 'path' ? {join: (...parts: string[]) => parts.join('/')} : {},
+    process: {env: {}, argv: ['--luqi-smoke-test'], platform: 'linux'}, __dirname: '/desktop', URL,
+    setTimeout: vi.fn(() => 1), clearTimeout, console: {log: vi.fn()},
+  });
+  ready();
+  expect(handlers.has('did-finish-load')).toBe(true);
+  await handlers.get('did-finish-load')!();
+  return {exit, clearTimeout};
+}
+
+describe('packaged desktop homepage acceptance', () => {
+  it.each(['Knowledge. People.A Stronger Africa.', 'Knowledge. People. A Stronger Africa.', 'Knowledge. People.\nA Stronger Africa.'])('accepts the complete approved heading: %s', async heading => {
+    const {exit, clearTimeout} = await runDesktopSmoke(heading);
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+    expect(clearTimeout).toHaveBeenCalledExactlyOnceWith(1);
+  });
+  it.each(['A little curiosity.A lot of possibility.', '', null, 'Knowledge. People.A Stronger Africa. extra'])('rejects a stale, missing or different heading: %s', async heading => {
+    const {exit} = await runDesktopSmoke(heading);
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+  });
+  it('rejects a missing workspace shell even with the current heading', async () => {
+    const {exit} = await runDesktopSmoke('Knowledge. People.A Stronger Africa.', false);
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+  });
+  it('fails closed when the renderer cannot be evaluated', async () => {
+    const {exit} = await runDesktopSmoke('Knowledge. People.A Stronger Africa.', true, true);
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+  });
+});
