@@ -70,9 +70,14 @@ A scheduled monitor is not continuous uptime monitoring. Backend readiness
 does not prove paid AI replies. A backup listing is not a production-derived
 isolated restore. Reserved USD cents are not invoiced provider charges.
 
-Continue with the existing limited pilot under USD 100/month AI ceilings:
-Gemini USD 60 and OpenAI USD 40. The operator must separately accept historical
-credential review, recovery, verified private support, actual provider costs,
+The current owner-approved AI application allocation is USD 300/month:
+Gemini USD 165 and OpenAI USD 135. The USD 30 guest reservation is included
+inside that allocation, not additional spending (launch tracker #202, 30 October
+2026). Earlier USD 100/month (Gemini USD 60 / OpenAI USD 40) figures are
+historical and superseded. These are application reservation ceilings, not
+verified provider invoices; this document neither changes live quotas/budgets
+nor certifies actual spend. The operator must separately review historical
+credential access, recovery, verified private support, actual provider costs,
 real-world customer journeys, seller legal identity and merchant settlement.
 No new worker, paid checkout or subscription is authorised.
 
