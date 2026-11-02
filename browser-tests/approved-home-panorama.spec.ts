@@ -60,3 +60,13 @@ test('home history buttons open the sourced lesson and practice; tool strip open
   await expect(page).toHaveURL(/#\/driver-rights$/);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
+
+test('narrow 320px phone remains usable without hidden links or horizontal scroll',async({page},testInfo)=>{
+  await page.setViewportSize({width:320,height:740});
+  await page.goto('/#/');
+  await expect(page.getByRole('textbox',{name:'Ask Luqi anything'})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Try Luqi free',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/African Peoples and Historical Evidence/})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('approved-home-320.png'),fullPage:true,scale:'css'});
+});

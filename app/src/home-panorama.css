@@ -148,3 +148,7 @@
  .luqi-shell-home .luqi-header-inner{padding-inline:14px;gap:8px}
  .luqi-shell-home .luqi-brand span{font-size:28px}
 }
+
+/* Artwork stays above the cream surface but below source-linked controls. */
+.luqi-history-showcase .luqi-history-art,.luqi-history-showcase:before{z-index:0;pointer-events:none}
+.luqi-history-showcase .luqi-history-intro{position:relative;z-index:1}
