@@ -48,6 +48,7 @@ it('requires local-processing consent, makes no network calls and keeps unsuppor
 it('requires all seven gates and revokes the whole prepared version after a price or supplier edit',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const review=screen.getByRole('region',{name:'Original form applicant review'});
+ expect(within(review).getByText(/PREPARATION-CHECKLIST.txt/)).toBeTruthy();
  const checks=within(review).getAllByRole('checkbox');
  expect(checks).toHaveLength(7);expect(checks[6].hasAttribute('disabled')).toBe(true);
  for(const checkbox of checks)fireEvent.click(checkbox);
