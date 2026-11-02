@@ -22,6 +22,20 @@ function draw() {
   </Routes></MemoryRouter>);
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+it('preserves the original PWA install, registration and local guidance entry points', () => {
+  draw();
+  for (const [name, path] of [
+    ['Create account', '/join'],
+    ['Already registered? Chat', '/chat'],
+    ['Install Luqi on your phone', '/install'],
+    ['Tell Luqi what you need', '/ask'],
+    ['Get started', '/start'],
+    ["Explore Luqi's Civic Evidence Desk", '/chat?civic=1'],
+  ]) {
+    expect(screen.getByRole('link', { name, exact: true }).getAttribute('href')).toBe(path);
+  }
+});
+
 
 it('retains the approved full headline, real moon position and three source-linked history sections', () => {
   const view = draw();
