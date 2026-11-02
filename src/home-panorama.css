@@ -152,3 +152,15 @@
 /* Artwork stays above the cream surface but below source-linked controls. */
 .luqi-history-showcase .luqi-history-art,.luqi-history-showcase:before{z-index:0;pointer-events:none}
 .luqi-history-showcase .luqi-history-intro{position:relative;z-index:1}
+
+/* Keep the original tested Chat affordance in desktop navigation and the header. */
+.luqi-shell-home .luqi-home-chat{display:inline-flex;align-items:center;gap:5px;min-height:40px;padding:8px;border-radius:9px;font-size:11px;color:#d8e9dc;white-space:nowrap}
+.luqi-shell-home .luqi-home-chat:hover{background:#28483c}
+@media(min-width:1280px) and (max-width:1399px){
+ .luqi-shell-home .luqi-desktop-nav a{padding-inline:5px;font-size:10px}
+ .luqi-shell-home .luqi-header-inner{padding-inline:12px;gap:6px}
+ .luqi-shell-home .luqi-home-chat{font-size:10px;padding-inline:4px}
+}
+@media(max-width:1279px){
+ .luqi-shell-home .luqi-home-chat{display:none}
+}

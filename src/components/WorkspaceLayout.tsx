@@ -42,7 +42,7 @@ const navigation = [
 // Keep the five most useful destinations visible on wide screens; the complete
 // directory remains in an accessible native disclosure and the narrow-screen menu.
 const homeNavigation = [
-  ["/", "Home"], ["/omega-tasks", "Tools"], ["/study-desk", "Learn"],
+  ["/", "Home"], ["/chat", "Chat"], ["/omega-tasks", "Tools"], ["/study-desk", "Learn"],
   ["/comparative-evidence", "Africa"], ["/driver-rights", "Safety"],
   ["/opportunities", "Opportunities"], ["/local-pulse", "News"], ["/start", "About"],
 ] as const;
@@ -186,6 +186,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <kbd>⌘ K</kbd>
             </button>
             {isHomeWorkspace ? <>
+              <Link className="luqi-home-chat" to="/chat">Ask Luqi <ArrowUpRight size={14} aria-hidden="true" /></Link>
               <Link className="luqi-home-signin" to={customer?.session ? "/chat" : "/login"}>{customer?.session ? "My chat" : "Sign in"}</Link>
               <Link className="luqi-home-start" to={customer?.session ? "/chat" : "/try"}>{customer?.session ? "Open Luqi" : "Get started free"}</Link>
             </> : <Link className="luqi-account-link" to="/chat">
