@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
 import SovereignRegionBar from "./SovereignRegionBar";
+import "../home-readability.css";
 
 /** Availability panel only. No provider SDK, credentials, inference or canned answers. */
 export function HeroAiChatConsole() {

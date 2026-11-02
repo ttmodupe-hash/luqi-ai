@@ -1,0 +1,47 @@
+/* Homepage-only readability. The public home has a fixed #f5f5ee surface;
+   do not inherit pale text intended for the dark workspace and Chat routes. */
+.luqi-home .luqi-hero {
+  align-items: start;
+}
+.luqi-home .luqi-hero-copy,
+.luqi-home .luqi-chat-card {
+  min-width: 0;
+}
+.luqi-home .luqi-hero-onboarding {
+  color: #435447;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.luqi-home .luqi-hero-onboarding a {
+  color: #204c34;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.luqi-home .luqi-hero-onboarding a:hover {
+  color: #102f20;
+}
+.luqi-home .luqi-hero-onboarding a:focus-visible,
+.luqi-home .luqi-chat-card .luqi-region-head select:focus-visible {
+  outline: 3px solid #245c3f;
+  outline-offset: 3px;
+}
+/* A compact card can be narrow on a wide desktop with the contacts dock open.
+   Its layout must not depend on a viewport-wide mobile breakpoint. */
+.luqi-home .luqi-chat-card .luqi-region-head {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+.luqi-home .luqi-chat-card .luqi-region-head > * {
+  min-width: 0;
+}
+.luqi-home .luqi-chat-card .luqi-region-head select {
+  max-width: 100%;
+  color: #1c3226;
+  background-color: #ffffff;
+  color-scheme: light;
+}
+.luqi-home .luqi-chat-card .luqi-region-head select option {
+  color: #1c3226;
+  background-color: #ffffff;
+}
