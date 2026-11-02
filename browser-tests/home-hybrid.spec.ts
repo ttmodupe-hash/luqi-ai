@@ -45,6 +45,10 @@ test('homepage question is passed to local guide without AI submission or query-
  await page.getByRole('button',{name:'Find my next step with Luqi'}).click();
  await expect(page).toHaveURL(/#\/ask$/);
  await expect(page.getByRole('textbox',{name:'What would you like help with?'})).toHaveValue('Help me find a small cleaning quotation');
+ // The homepage submit already expressed intent: do not force a second submit.
+ await expect(page.getByRole('heading',{name:'Put a practical idea to work'})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Go to suggested next step'})).toHaveAttribute('href','#luqi-guide-result-title');
+ await expect(page.getByRole('link',{name:'Open business desk'})).toHaveAttribute('href','#/business-desk');
  expect(writes).toEqual([]);
 });
 test('source-linked African study loads only when requested', async ({page}) => {
