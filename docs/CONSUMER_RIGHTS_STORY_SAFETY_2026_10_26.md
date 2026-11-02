@@ -52,5 +52,5 @@ English text only in this version. Sepitori must remain distinct from Sepedi/Set
 - Run isolated category + jSDOM + mobile browser tests, full GitHub CI and exact-frontend Railway-image checks.
 - Obtain consumer law subject-matter review; validate each source/route, exclusion and terminology.
 - No real customer stories should be used for testing. Use synthetic disputes only.
-- Preserve the USD100/month Gemini USD60/OpenAI USD40 budget and existing paid-provider denylist.
+- Do not change the currently approved AI budget, model allocations, quota enforcement or paid-provider denylist. The USD100/month Gemini USD60/OpenAI USD40 figures were a historical planning allocation, not authorization to reset later owner-approved budgets; verify the current approved limits before any paid-provider change.
 - The original implementation was already merged and deployed via [PR #273](https://github.com/ttmodupe-hash/luqi-ai/pull/273). Future code changes require independent review, exact-revision CI and controlled release approval; do not infer legal or broad-launch acceptance from the earlier merge. No payments, unapproved AI routing or personal legal case submissions. See [issue #202](https://github.com/ttmodupe-hash/luqi-ai/issues/202) and [rights-guide PR #272](https://github.com/ttmodupe-hash/luqi-ai/pull/272).
