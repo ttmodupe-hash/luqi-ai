@@ -51,11 +51,14 @@ test('business quotation and pricing calculations are discoverable without billi
   assert.deepEqual(findWorkspaceTools('business payment processing', 'preview'), []);
 });
 
-test('local study practice is discoverable without implying generated answers or paid plans', () => {
+test('local study practice and the certification academy are independently discoverable', () => {
   const matches = findWorkspaceTools('study flashcards exam', 'ready');
-  assert.equal(matches.length, 1);
-  assert.equal(matches[0].id, 'study');
-  assert.equal(matches[0].path, '/study-desk');
-  assert.match(matches[0].description, /No AI calls/);
+  const localStudy = matches.find(tool => tool.id === 'study');
+  assert.ok(localStudy);
+  assert.equal(localStudy.path, '/study-desk');
+  assert.match(localStudy.description, /No AI calls/);
+  const academy = findWorkspaceTools('CCNA network certification', 'ready').find(tool => tool.id === 'cert-academy');
+  assert.ok(academy);
+  assert.equal(academy.path, '/ccna');
   assert.equal(findWorkspaceTools('automated exam grading', 'ready').some(t => t.id === 'study'), false);
 });
