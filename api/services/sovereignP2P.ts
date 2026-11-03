@@ -107,11 +107,11 @@ async function owned(c: PoolConnection, actor: number, id: string, active = fals
   return row;
 }
 export class SovereignP2PEngine {
-  static async sharePresence(actor: number, input: { leaseId: string; sequence: number; active: boolean }) {
+  static async sharePresence(actor: number, input: { leaseId: string; sequence: number; active: boolean; availability?: 'online' | 'away' }) {
     await transaction(actor, async (_c, user) => {
       if (eligibility(user.role) === 'verification_needed') deny();
     });
-    try { contactPresence.update(actor, input.leaseId, input.sequence, input.active); }
+    try { contactPresence.update(actor, input.leaseId, input.sequence, input.active, input.availability); }
     catch { throw new P2PError('P2P_LIMIT'); }
     return { accepted: true as const, ttlSeconds: 75 as const };
   }

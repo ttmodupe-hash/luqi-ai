@@ -30,7 +30,7 @@ p2p.use('*',async(c,next)=> {
 const create = z.object({ id:p2pId,name:z.string().trim().min(1).max(100),category:p2pCategory,
   inviteToken:z.string().regex(/^[A-Za-z0-9_-]{43}$/),studentLock:z.boolean() }).strict();
 p2p.post('/presence',async c => {
- const input=z.object({leaseId:p2pId,sequence:z.number().int().min(1).max(1000000000),active:z.boolean()}).strict().safeParse(await c.req.json().catch(()=>null));
+ const input=z.object({leaseId:p2pId,sequence:z.number().int().min(1).max(1000000000),active:z.boolean(),availability:z.enum(['online','away']).optional()}).strict().safeParse(await c.req.json().catch(()=>null));
  if(!input.success)return c.json({code:'INVALID_INPUT'},400);
  return c.json(await engine.sharePresence(c.get('userId'),input.data));
 });

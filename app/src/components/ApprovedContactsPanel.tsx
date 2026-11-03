@@ -67,7 +67,7 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
           onChange={event => setQuery(event.target.value)} autoComplete="off" /></label>
         <ul aria-label="Your approved contacts">{found.map(person => {
           const status = fresh ? person.presence : 'unknown';
-          const label = status === 'online' ? 'Online' : status === 'offline' ? 'Offline or away' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
+          const label = status === 'online' ? 'Online' : status === 'away' ? 'Away' : status === 'offline' ? 'Offline' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
           return <li key={person.circleId} className="luqi-contact-person">
             <span className={'luqi-contact-avatar is-' + status} aria-hidden="true">{person.name.slice(0, 1).toLocaleUpperCase()}<i /></span>
             <div><Link to={'/p2p?circle=' + encodeURIComponent(person.circleId)} onClick={close}>{person.name}</Link><small>{label}</small></div>
@@ -76,10 +76,16 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
         {!found.length && <p>{contacts.length ? 'No approved contact matches this name.' : 'No mutually approved contacts yet. Add a private invitation in your circles.'}</p>}
         {presence && eligible && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
           onChange={event => presence.setSharing(event.target.checked)} /> Share my online status from this tab</label>}
+        {presence && eligible && presence.sharing && <label className="luqi-presence-availability">My shared availability
+          <select value={presence.availability} onChange={event => {
+            const value = event.target.value;
+            if (value === 'online' || value === 'away') presence.setAvailability(value);
+          }}><option value="online">Online</option><option value="away">Away</option></select>
+        </label>}
         {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       </>}
       <Link to="/p2p" onClick={close}>Manage contacts &amp; circles</Link>
     </>}
-    <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means recent foreground activity; closed or background tabs may take up to 75 seconds to become away. Other sharing tabs can keep you online. No last-seen history is shared.</p>
+    <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Choose Away to share that you are unavailable. Status changes respect a 10-second update limit. Offline means a previous sharing signal expired, not proof of someone’s whereabouts. Hidden or closed tabs stop renewing their 75-second lease; another sharing Online tab can keep you online. No last-seen history is shared.</p>
   </div>;
 }
