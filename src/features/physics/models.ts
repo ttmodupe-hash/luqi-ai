@@ -5,6 +5,7 @@
 export type PhysicsId = 'projectile' | 'incline' | 'circuit' | 'wave' | 'lens' | 'energy' | 'collision' | 'thermal';
 export type LabControl = {
   key: string; label: string; unit: string; min: number; max: number; step: number; initial: number;
+  options?: { value: number; label: string }[];
 };
 export type PhysicsTopic = {
   id: PhysicsId; title: string; subject: string; level: string; summary: string;
@@ -46,7 +47,8 @@ export const PHYSICS_TOPICS: PhysicsTopic[] = [
       { key: 'voltage', label: 'Battery voltage', unit: 'V', min: 1, max: 24, step: 1, initial: 12 },
       { key: 'r1', label: 'Resistance 1', unit: 'Ω', min: 1, max: 100, step: 1, initial: 10 },
       { key: 'r2', label: 'Resistance 2', unit: 'Ω', min: 1, max: 100, step: 1, initial: 20 },
-      { key: 'parallel', label: 'Connection (0 series, 1 parallel)', unit: '', min: 0, max: 1, step: 1, initial: 0 },
+      { key: 'parallel', label: 'Connection', unit: '', min: 0, max: 1, step: 1, initial: 0,
+        options: [{ value: 0, label: 'Series' }, { value: 1, label: 'Parallel' }] },
     ] },
   { id: 'wave', title: 'Waves and sound', subject: 'Waves', level: 'Grade 10–12',
     summary: 'Explore amplitude, wavelength, frequency, period and a travelling-wave snapshot.',
@@ -98,7 +100,8 @@ export const PHYSICS_TOPICS: PhysicsTopic[] = [
     assumptions: 'Constant approximate specific heat, no phase change, no heat loss and uniform temperature.',
     challenge: 'Try the same mass and temperature rise for water and aluminium. Which needs more heat?',
     controls: [
-      { key: 'material', label: 'Material (0 water, 1 aluminium, 2 steel)', unit: '', min: 0, max: 2, step: 1, initial: 0 },
+      { key: 'material', label: 'Material', unit: '', min: 0, max: 2, step: 1, initial: 0,
+        options: [{ value: 0, label: 'Water' }, { value: 1, label: 'Aluminium' }, { value: 2, label: 'Steel' }] },
       { key: 'mass', label: 'Material mass', unit: 'kg', min: 0.1, max: 5, step: 0.1, initial: 1 },
       { key: 'initial', label: 'Starting temperature', unit: '°C', min: 10, max: 70, step: 5, initial: 20 },
       { key: 'rise', label: 'Temperature increase', unit: '°C', min: 0, max: 20, step: 1, initial: 10 },
