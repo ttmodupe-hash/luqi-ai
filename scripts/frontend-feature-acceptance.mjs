@@ -148,7 +148,7 @@ try {
           await expect(page.getByRole('heading',{level:1})).toBeVisible();
           await page.getByRole('searchbox',{name:'Filter workspace tools'}).fill('physics');
           await expect(page.getByRole('heading',{name:'Physics Discovery Lab',exact:true})).toBeVisible();
-          await expect(page.getByRole('link',{name:/Physics Discovery Lab/})).toHaveAttribute('href','#/physics-lab');
+          await expect(page.getByRole('link',{name:/open physics discovery lab/i})).toHaveAttribute('href','#/physics-lab');
           await expect(recovery).toContainText('Copy important drafts first');
           await noOverflow(page);
           await recovery.screenshot({path:resolve(output,`moon-${browserName}-missing-chunk.png`)});
