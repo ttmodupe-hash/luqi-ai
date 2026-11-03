@@ -36,3 +36,11 @@ it('keeps the vendored courier simulation gated by checks and confirmed receipt'
  expect(d.rating([rated],'test-courier')).toMatchObject({count:1,average:4});expect(()=>d.rate(rated,[5,5,5])).toThrow('alreadyRated');
  rated.rating.status='held-demo';expect(d.rating([rated],'test-courier').count).toBe(0);
 });
+it('preserves dollar-sign replacement tokens in both assets and saved drafts',async()=>{
+ const raw=JSON.stringify({profiles:[{name:'Keep $& and $$ literally'}],saved:[],drafts:[]});
+ expect(JSON.parse(previewDocument('__LUQI_PREVIEW_BRIDGE_STATE__',nonce,raw,true)).value).toBe(raw);
+ const {JSDOM,VirtualConsole}=await import('jsdom');const errors:string[]=[];const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));
+ const html=previewDocument(await businessPreviewTemplate(),nonce,null,true);
+ const document=new JSDOM(html,{runScripts:'dangerously',url:'https://example.invalid',virtualConsole:console,beforeParse:w=>Object.defineProperty(w,'TextEncoder',{value:TextEncoder})});
+ try{expect(errors).toEqual([]);expect(document.window.document.querySelectorAll('.business-card').length).toBe(10);expect(html).toContain('const $=s=>document.querySelector(s), $$=s=>');}finally{document.window.close();}
+});

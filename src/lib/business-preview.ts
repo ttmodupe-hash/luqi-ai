@@ -16,7 +16,7 @@ export function validPreviewState(value:unknown):value is string{
 export function previewDocument(html:string,nonce:string,value:string|null,available:boolean){
  if(!/^[a-zA-Z0-9-]{20,80}$/.test(nonce))throw Error('Invalid frame nonce');
  const initial=JSON.stringify({nonce,value:value&&validPreviewState(value)?value:null,available}).replace(/</g,'\\u003c');
- return html.replaceAll('__LUQI_PREVIEW_NONCE__',nonce).replace('__LUQI_PREVIEW_BRIDGE_STATE__',initial);
+ return html.replaceAll('__LUQI_PREVIEW_NONCE__',nonce).replace('__LUQI_PREVIEW_BRIDGE_STATE__',()=>initial);
 }
 export function acceptPreviewStorage(data:unknown,nonce:string):{operation:'remove'}|{operation:'set';value:string}|null{
  if(!data||typeof data!=='object')return null;
