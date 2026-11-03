@@ -1,0 +1,566 @@
+.driveDesk {
+  --drive-night: #112f29;
+  --drive-ink: #19372d;
+  --drive-mint: #a7e2ca;
+  --drive-gold: #f8cf85;
+}
+.driveHeader {
+  margin: 3px 0 20px;
+}
+.driveOverline,
+.driveTarget > span,
+.driveStatus,
+.driveHUD small {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font:
+    700 0.65rem/1.45 ui-monospace,
+    monospace;
+  letter-spacing: 0.13em;
+}
+.driveOverline {
+  color: #506a58;
+}
+.driveHeader h1 {
+  font:
+    500 clamp(2.9rem, 5.4vw, 4.9rem)/1.06 Georgia,
+    serif;
+  letter-spacing: -0.065em;
+  margin: 7px 0;
+}
+.driveHeader h1 span {
+  color: #376f55;
+}
+.driveHeader p,
+.driveStops > p {
+  color: #4f6557;
+}
+.driveLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.9fr) minmax(210px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.driveSurface {
+  background: var(--drive-night);
+  color: #fbf8eb;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 1px solid #2d5547;
+  min-width: 0;
+  box-shadow: 0 8px 20px #183c3010;
+}
+.driveBanner {
+  padding: 14px clamp(13px, 2.4vw, 24px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0d2b25;
+  border-bottom: 1px solid #35594c;
+}
+.driveIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  background: #a4e4c5;
+  color: #15382d;
+  border-radius: 13px;
+  box-shadow: inset 0 0 0 1px #d8fcec50;
+}
+.driveTarget > span {
+  color: var(--drive-mint);
+  font-size: 0.6rem;
+}
+.driveTarget h2,
+.driveStops h2,
+.driveGuide h2 {
+  font:
+    500 clamp(1.48rem, 2.7vw, 2.25rem)/1.15 Georgia,
+    serif;
+  letter-spacing: -0.035em;
+  margin: 0.15em 0;
+}
+.driveTarget small {
+  color: #c6dbc9;
+}
+.driveStatus {
+  margin-left: auto;
+  font-size: 0.6rem;
+  letter-spacing: 0.07em;
+  border-radius: 15px;
+  border: 1px solid #537363;
+  padding: 5px 8px;
+  color: #e4ead7;
+  white-space: nowrap;
+}
+.driveStatus i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #bccbbc;
+}
+.driveStatus i.live {
+  background: #87f2ad;
+}
+.driveStatus i.demo {
+  background: #ffd283;
+}
+.driveMapFrame {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.driveAtlas {
+  display: block;
+  cursor: grab;
+  user-select: none;
+}
+.driveAtlas:active {
+  cursor: grabbing;
+}
+.atlasPlace,
+.atlasStop,
+.atlasRoad {
+  paint-order: stroke;
+  stroke: #17372f;
+  stroke-linejoin: round;
+  stroke-width: 3.4px;
+  font:
+    500 10px system-ui,
+    sans-serif;
+  fill: #c2d2c1;
+}
+.atlasStop {
+  font:
+    650 11px system-ui,
+    sans-serif;
+  fill: #fff1cf;
+  stroke-width: 4px;
+}
+.atlasRoad {
+  font:
+    600 9px ui-monospace,
+    monospace;
+  fill: #aec4af;
+}
+.mapNorth,
+.mapButtons button,
+.mapFoot button {
+  background: #122f28ed;
+  border: 1px solid #698576;
+  color: #f7f4d9;
+}
+.mapNorth {
+  position: absolute;
+  top: 12px;
+  right: 13px;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font:
+    700 0.72rem/1.3 ui-monospace,
+    monospace;
+}
+.mapButtons {
+  position: absolute;
+  right: 12px;
+  top: 49px;
+  display: grid;
+  gap: 4px;
+}
+.mapButtons button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+.mapButtons button:hover,
+.mapFoot button:hover {
+  background: #39604e;
+}
+.mapFoot {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.mapFoot > span {
+  font:
+    650 0.63rem ui-monospace,
+    monospace;
+  color: #edf3de;
+  background: #17352ee0;
+  padding: 4px 7px;
+  border-radius: 4px;
+  display: grid;
+  gap: 3px;
+}
+.mapFoot i {
+  display: block;
+  border: 1px solid #cee2c6;
+  border-top: 0;
+  height: 4px;
+}
+.mapFoot button {
+  pointer-events: auto;
+  border-radius: 12px;
+  font-size: 0.66rem;
+  padding: 4px 9px;
+}
+.driveHUD {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  border-block: 1px solid #3e6051;
+  padding: 12px 0;
+}
+.driveHUD > div {
+  padding: 0 clamp(11px, 2vw, 22px);
+  border-left: 1px solid #416152;
+}
+.driveHUD > div:first-child {
+  border: 0;
+}
+.driveHUD small {
+  font-size: 0.57rem;
+  color: #b7cdb9;
+}
+.driveHUD strong {
+  font:
+    650 clamp(1.1rem, 2vw, 1.5rem)/1.4 ui-monospace,
+    monospace;
+  color: #fff3d2;
+}
+.driveHUD em {
+  font-size: 0.73rem;
+  font-style: normal;
+  color: #cad8c7;
+}
+.driveControlRow {
+  padding: 13px 15px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.driveControlRow button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 9px 12px;
+}
+.drivePrimary {
+  background: #f4ce89;
+  color: #162e24;
+  border: 1px solid #f6d59b;
+}
+.driveSecondary,
+.driveSkip {
+  background: #224639;
+  border: 1px solid #617e67;
+  color: #f6f7e6;
+}
+.driveNote {
+  padding: 9px 15px 13px;
+  color: #ccdbce;
+  font-size: 0.77rem;
+}
+.driveStops {
+  border: 1px solid #c9d2c2;
+  border-radius: 13px;
+  background: #edf0e5;
+  padding: clamp(15px, 1.7vw, 24px);
+}
+.driveStops > p,
+.driveLegend small {
+  font-size: 0.83rem;
+}
+.driveStopList {
+  display: grid;
+  gap: 3px;
+  margin: 14px 0 17px;
+}
+.driveStopList button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #173d2e;
+  text-align: left;
+  border-radius: 7px;
+  padding: 9px 7px;
+}
+.driveStopList button[aria-pressed="true"] {
+  background: #d8e7ce;
+  border-color: #9cb59b;
+}
+.driveStopList button > span {
+  z-index: 1;
+  background: #e8efde;
+  border: 1px solid #99b19a;
+  border-radius: 50%;
+  min-width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  font:
+    650 0.67rem ui-monospace,
+    monospace;
+}
+.driveStopList button[aria-pressed="true"] > span {
+  background: #284e3d;
+  color: #fff1c5;
+}
+.driveStopList button:not(:last-child):after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  height: 100%;
+  border-left: 1px dashed #8ea58c;
+}
+.driveStopList b,
+.driveStopList small {
+  display: block;
+}
+.driveStopList b {
+  font-size: 0.93rem;
+}
+.driveStopList small {
+  color: #526653;
+  font-size: 0.76rem;
+}
+.driveLegend {
+  font-size: 0.77rem;
+  border-top: 1px solid #c8d5bf;
+  padding-top: 12px;
+}
+.driveLegend i {
+  display: inline-block;
+  vertical-align: middle;
+  width: 25px;
+  border-top: 2px dashed #418069;
+  margin-right: 5px;
+}
+.driveLegend small,
+.driveDirections {
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+.driveDirections {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 8px;
+}
+.driveCredits {
+  margin: 11px 0 20px;
+  font-size: 0.79rem;
+  color: #49604f;
+}
+.driveCredits summary {
+  font-weight: 650;
+  cursor: pointer;
+}
+.driveCredits p {
+  margin: 7px 0;
+  max-width: 85ch;
+}
+.driveGuide .field {
+  max-width: 360px;
+}
+.driveGuide p {
+  max-width: 80ch;
+}
+@media (max-width: 1090px) {
+  .driveLayout {
+    grid-template-columns: minmax(0, 2.4fr) minmax(180px, 1fr);
+    gap: 10px;
+  }
+}
+@media (max-width: 850px) {
+  .driveLayout {
+    grid-template-columns: 1fr;
+  }
+  .driveStopList {
+    grid-template-columns: 1fr 1fr;
+  }
+  .driveStopList button:after {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .driveHeader {
+    margin: 0 0 11px;
+  }
+  .driveHeader h1 {
+    font-size: 2.8rem;
+  }
+  .driveBanner {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+  .driveIcon {
+    width: 35px;
+    height: 35px;
+  }
+  .driveIcon svg {
+    width: 22px;
+  }
+  .driveStatus {
+    font-size: 0.51rem;
+    padding: 4px 5px;
+  }
+  .driveTarget h2 {
+    font-size: 1.3rem;
+  }
+  .driveTarget small {
+    font-size: 0.68rem;
+  }
+  .driveStopList button {
+    padding: 6px 4px;
+    gap: 5px;
+  }
+  .driveStopList button > span {
+    min-width: 24px;
+    height: 24px;
+  }
+  .driveHUD small {
+    font-size: 0.5rem;
+  }
+  .driveHUD > div {
+    padding: 0 9px;
+  }
+  .driveControlRow {
+    padding: 9px 9px 0;
+    gap: 5px;
+  }
+  .driveControlRow button {
+    font-size: 0.75rem;
+    padding: 8px;
+  }
+  .driveStops {
+    padding: 12px;
+  }
+}
+.mapType {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: 70%;
+  background: #193b31e6;
+  color: #c9ddc9;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font:
+    650 0.54rem/1.4 ui-monospace,
+    monospace;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.driveDesk {
+  box-sizing: border-box;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(15px, 3vw, 36px);
+  background: #f6f5ee;
+  color: #17372e;
+  color-scheme: light;
+  font:
+    normal 1rem/1.5 system-ui,
+    sans-serif;
+}
+.driveDesk * {
+  box-sizing: border-box;
+}
+.driveDesk button {
+  cursor: pointer;
+}
+.driveDesk button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.driveDesk .driveGuide,
+.driveFuel {
+  background: #eef1e6;
+  padding: 20px;
+  border: 1px solid #becfbd;
+  border-radius: 12px;
+  margin: 15px 0;
+}
+.driveGuide .actions,
+.driveGuide label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 9px 0;
+}
+.driveDesk select,
+.driveDesk input[type="number"] {
+  background: white;
+  color: #18382c;
+  border: 1px solid #7c937d;
+  border-radius: 5px;
+  padding: 5px;
+}
+.driveGuide .actions button {
+  background: #274d3b;
+  color: #fff6d7;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.driveGuide a,
+.driveCredits a,
+.driveDirections {
+  color: #1d5b45;
+  text-decoration: underline;
+}
+.driveDesk button:focus-visible,
+.driveDesk a:focus-visible {
+  outline: 3px solid #db932d;
+  outline-offset: 2px;
+}
+.driveDesk .driveHeader,
+.driveDesk .driveStops,
+.driveDesk .driveGuide {
+  color: #17372e;
+}
+.driveDesk .driveSurface h2 {
+  color: #fff4d9;
+}
+.driveDesk .driveHeader h1,
+.driveDesk .driveStops h2,
+.driveDesk .driveGuide h2 {
+  color: #17372e;
+}
+.driveFuel > summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+.driveFuel label {
+  display: inline-grid;
+  gap: 4px;
+  margin: 8px 12px 8px 0;
+  font-size: 0.84rem;
+}
+.driveFuel input {
+  width: 125px;
+}
+.driveFuel p {
+  margin: 8px 0;
+}
