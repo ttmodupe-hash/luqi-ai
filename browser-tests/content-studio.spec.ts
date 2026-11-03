@@ -136,6 +136,26 @@ test('320px keyboard-accessible creative preflight previews and exports the long
   expect(errors).toEqual([]);
 });
 
+test('320px history template shows source limitations before scene replacement and export', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/content-studio');
+  await page.getByRole('combobox', { name: 'Creative template' }).selectOption('history');
+  await expect(page.getByRole('textbox', { name: 'Subject and action' })).toHaveValue(/check original sources/i);
+  await page.getByRole('button', { name: 'Preview six-scene replacement' }).click();
+  await expect(page.getByRole('region', { name: 'Review scene replacement' }))
+    .toContainText('Luqi has not independently checked original sources');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download creative production brief' }).click();
+  const file = await download;
+  const stream = await file.createReadStream(); let brief = '';
+  for await (const chunk of stream!) brief += chunk.toString();
+  expect(brief).toContain('Editable creative draft');
+  expect(brief).toContain('Verify facts, dates, commercial claims');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(writes).toEqual([]);
+});
 test('legacy animation aliases use the same real creation tool without credit-purchase controls at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 820 });
   await page.goto('/#/video-studio');

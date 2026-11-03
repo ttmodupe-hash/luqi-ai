@@ -72,7 +72,7 @@ export default function StudioPreflightPanel({ disabled, onApply, onExport }: {
     {pending && <section className="luqi-studio-preflight-review" aria-label="Review scene replacement">
       <h3>Review before replacing your storyboard</h3>
       <ol>{pending.map((scene, i) => <li key={i}><strong>{scene.title}</strong> — {scene.caption}</li>)}</ol>
-      <p>Replacing your current storyboard does not produce footage, lock a character's face, spend credits or publish a video. Review facts, branding and permission to use reference material.</p>
+      <p>These six scenes are editable drafts: Luqi has not independently checked original sources for this script. Verify facts, dates and permissions before publishing. Replacing your storyboard does not produce footage, lock a face, spend credits or publish a video.</p>
       <div className="luqi-studio-actions">
         <button type="button" disabled={disabled} className="luqi-primary" onClick={() => {
           if (!pending || disabled) return;
