@@ -39,8 +39,8 @@ const navigation = [
   ["/start", "Start here"],
   ["/install", "Install"],
 ] as const;
-// Keep the five most useful destinations visible on wide screens; the complete
-// directory remains in an accessible native disclosure and the narrow-screen menu.
+// Five core destinations appear in the first row; all other services appear
+// in a permanently visible second row on desktop.
 const primaryPaths: ReadonlySet<string> = new Set(["/chat", "/", "/opportunities", "/local-pulse", "/content-studio"]);
 const primaryNavigation = navigation.filter(([path]) => primaryPaths.has(path));
 const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(path));
@@ -60,12 +60,10 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
-  const moreMenu = useRef<HTMLDetailsElement>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     setMenuOpen(false);
     setSearchOpen(false);
-    if (moreMenu.current) moreMenu.current.open = false;
   }, [location.pathname, location.search]);
   useEffect(() => {
     const open = () => setSearchOpen(true);
@@ -142,29 +140,6 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
                 {name}
               </NavLink>
             ))}
-            <details
-              ref={moreMenu}
-              className="luqi-more-services"
-              onKeyDown={(event) => {
-                if (event.key === "Escape" && event.currentTarget.open) {
-                  event.preventDefault();
-                  event.currentTarget.open = false;
-                  event.currentTarget.querySelector<HTMLElement>("summary")?.focus();
-                }
-              }}
-            >
-              <summary>More services</summary>
-              <div aria-label="More Luqi services">
-                {additionalNavigation.map(([path, name]) => (
-                  <NavLink key={path} to={path} end={path === "/"} onClick={() => {
-                    if (moreMenu.current) moreMenu.current.open = false;
-                  }}>{name}</NavLink>
-                ))}
-                <NavLink to="/chat?civic=1" onClick={() => {
-                  if (moreMenu.current) moreMenu.current.open = false;
-                }}>Civic evidence</NavLink>
-              </div>
-            </details>
           </nav>
           <div className="luqi-header-actions">
             <button
@@ -200,6 +175,14 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        <nav aria-label="More Luqi services" className="luqi-secondary-nav">
+          <div className="luqi-secondary-nav-inner">
+            {additionalNavigation.map(([path, name]) => (
+              <NavLink key={path} to={path} end={path === "/"}>{name}</NavLink>
+            ))}
+            <NavLink to="/chat?civic=1">Civic evidence</NavLink>
+          </div>
+        </nav>
         {menuOpen && (
           <nav
             id="luqi-mobile-navigation"
@@ -217,6 +200,10 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
                 <ArrowUpRight size={16} aria-hidden="true" />
               </NavLink>
             ))}
+            <NavLink to="/chat?civic=1" onClick={() => setMenuOpen(false)}>
+              Civic evidence
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </NavLink>
             {customer?.session && <button type="button" className="luqi-mobile-signout"
               aria-label="Log out of Luqi" onClick={() => { customer.signOut(); setMenuOpen(false); }}>
               Sign out of Luqi
