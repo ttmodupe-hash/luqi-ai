@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
+import { readFileSync } from "node:fs";
+import TripFuel from "../src/features/drive/TripFuel";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -106,4 +108,57 @@ it("recovers from denied permission with demo available and ignores expired call
   expect(screen.queryByText("DEVICE GPS")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Start drive demo" }));
   expect(screen.getByText("DEMO IN MOTION")).toBeTruthy();
+});
+
+it("leaves fuel input blank instead of inventing a national pump price", () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  render(<TripFuel />);
+  for (const label of ["Road distance (km)", "Fuel use (L/100 km)", "Pump price (R/L)"]) {
+    expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
+  }
+  expect(screen.getByRole("status", { name: "Trip fuel estimate" }).textContent).toContain(
+    "Enter three positive amounts",
+  );
+  expect(screen.getByText(/No live pump price is loaded/)).toBeTruthy();
+  const notice = screen.getByRole("link", { name: /official DMPR fuel-price notices/ });
+  expect(notice.getAttribute("href")).toBe(
+    "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices",
+  );
+  expect(notice.getAttribute("rel")).toContain("noopener");
+  expect(notice.getAttribute("rel")).toContain("noreferrer");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("only estimates after explicit positive values and clears stale costs on edits", () => {
+  render(<TripFuel />);
+  const distance = screen.getByLabelText("Road distance (km)");
+  const use = screen.getByLabelText("Fuel use (L/100 km)");
+  const price = screen.getByLabelText("Pump price (R/L)");
+  const estimate = screen.getByRole("status", { name: "Trip fuel estimate" });
+
+  fireEvent.change(distance, { target: { value: "145" } });
+  fireEvent.change(use, { target: { value: "7.4" } });
+  expect(estimate.textContent).not.toContain("R214.60");
+  fireEvent.change(price, { target: { value: "20" } });
+  expect(estimate.textContent).toContain("10.7 L · R214.60");
+  expect(estimate.textContent).toContain("estimated fuel cost");
+
+  fireEvent.change(price, { target: { value: "" } });
+  expect(estimate.textContent).toContain("Enter three positive amounts");
+  fireEvent.change(price, { target: { value: "0" } });
+  expect(estimate.textContent).toContain("Enter three positive amounts");
+  fireEvent.change(price, { target: { value: "-20" } });
+  expect(estimate.textContent).toContain("Enter three positive amounts");
+  fireEvent.change(price, { target: { value: "21" } });
+  expect(estimate.textContent).toContain("R225.33");
+  fireEvent.change(distance, { target: { value: "" } });
+  expect(estimate.textContent).toContain("Enter three positive amounts");
+});
+
+it("keeps both public Luqi-Drive fuel components identical without fixed pump prices", () => {
+  const main = readFileSync("src/features/drive/TripFuel.tsx", "utf8");
+  const app = readFileSync("app/src/features/drive/TripFuel.tsx", "utf8");
+  expect(main).toBe(app);
+  expect(main).not.toContain('"21.45"');
 });
