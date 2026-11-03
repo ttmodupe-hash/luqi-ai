@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Crosshair, Maximize2, Minus, Plus } from "lucide-react";
 
 import type { Point, Stop, Trail } from "./drive-navigation";
+import { PROVINCE_GEOMETRY } from "../../lib/sa-province-map";
+import { MAP_PROJECTION as shape } from "../../lib/sa-map-projection";
 import { regionalMap as map } from "./drive-map";
 
 const cos = Math.cos((26 * Math.PI) / 180);
@@ -12,6 +14,7 @@ const inCoverage = (p: Point) =>
 const limitScale = (n: number) => Math.min(7000, Math.max(12, n));
 
 export default function DriveMap({
+  onSelectProvince,
   trail,
   point,
   target,
@@ -21,6 +24,7 @@ export default function DriveMap({
   resetKey,
 }: {
   point: (Point & { heading: number | null; accuracy?: number }) | null;
+  onSelectProvince: (i: number) => void;
   target: Stop;
   trail: Trail;
   mode: string;
@@ -60,15 +64,20 @@ export default function DriveMap({
     right = Math.max(...lons),
     bottom = Math.min(...lats),
     top = Math.max(...lats);
-  const base = trail.end
-    ? Math.min(
-        (width - 110) / ((right - left) * cos),
-        (height - 90) / (top - bottom),
-      )
-    : Math.min((width - 110) / 1.18, (height - 78) / 0.93);
-  const overviewCenter = trail.end
-    ? { lon: (left + right) / 2, lat: (top + bottom) / 2 }
-    : region;
+  const national = trail.id === "za";
+  const base = national
+    ? Math.min((width - 45) / (17 * cos), (height - 70) / 13.3)
+    : trail.end
+      ? Math.min(
+          (width - 110) / ((right - left) * cos),
+          (height - 90) / (top - bottom),
+        )
+      : Math.min((width - 110) / 1.18, (height - 78) / 0.93);
+  const overviewCenter = national
+    ? { lon: 24.75, lat: -28.6 }
+    : trail.end
+      ? { lon: (left + right) / 2, lat: (top + bottom) / 2 }
+      : region;
   const scale = limitScale(base * zoom * (following ? 3.1 : 1));
   const center = offset || (following ? point || target : overviewCenter);
   const pr = (lon: number, lat: number) => [
@@ -83,6 +92,11 @@ export default function DriveMap({
           .join(","),
       )
       .join(" ");
+  const [shapeX, shapeY] = pr(
+    (shape.xmin - shape.xoff / shape.scale) / shape.cos,
+    -shape.ymin + shape.yoff / shape.scale,
+  );
+  const shapeScale = scale / shape.scale;
   const px = point ? pr(point.lon, point.lat) : null;
   const route = anchors.map((p) => [p.lon, p.lat]);
   const km = [1, 2, 5, 10, 20, 50, 100, 200].reduce(
@@ -107,8 +121,12 @@ export default function DriveMap({
         width="100%"
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label="North-up landmark map with roads, highlighted stops and a location marker"
+        role={national ? "group" : "img"}
+        aria-label={
+          national
+            ? "Interactive South Africa map, all nine provinces"
+            : "North-up landmark map with roads, highlighted stops and a location marker"
+        }
         style={{ touchAction: "none" }}
         onPointerDown={(e) => {
           if (e.button !== 0) return;
@@ -150,18 +168,68 @@ export default function DriveMap({
         </defs>
         <rect width={width} height={height} fill="#15352f" />
         <rect width={width} height={height} fill="url(#drivegrid)" />
-        {map.roads.map((road, i) => (
-          <polyline
-            key={i}
-            points={line(road.points)}
-            fill="none"
-            stroke="#698476"
-            strokeWidth={road.kind === "primary" ? 3.4 : 1.7}
-            strokeLinejoin="round"
-            opacity=".72"
-          />
-        ))}
-        {!isLive && (
+        {national && (
+          <g
+            transform={`translate(${shapeX},${shapeY}) scale(${(shapeScale * cos) / shape.cos},${shapeScale})`}
+          >
+            {PROVINCE_GEOMETRY.map((region) => {
+              const i = stops.findIndex((s) => s.province === region.id);
+              if (i < 0) return null;
+              return (
+                <g
+                  key={region.id}
+                  data-province={region.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={"Explore " + stops[i].name}
+                  aria-pressed={target.id === stops[i].id}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => onSelectProvince(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectProvince(i);
+                    }
+                  }}
+                >
+                  <path
+                    d={region.path}
+                    fillRule="evenodd"
+                    fill={target.id === stops[i].id ? "#66916d" : "#325c50"}
+                    stroke="#b2c6a7"
+                    strokeWidth={1.2}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  {symbols && (
+                    <text
+                      x={region.label[0]}
+                      y={region.label[1]}
+                      textAnchor="middle"
+                      fontWeight="700"
+                      fill="#fff3d3"
+                      fontSize={13 / shapeScale}
+                    >
+                      {region.id}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        )}
+        {!national &&
+          map.roads.map((road, i) => (
+            <polyline
+              key={i}
+              points={line(road.points)}
+              fill="none"
+              stroke="#698476"
+              strokeWidth={road.kind === "primary" ? 3.4 : 1.7}
+              strokeLinejoin="round"
+              opacity=".72"
+            />
+          ))}
+        {!national && !isLive && (
           <g fill="none" strokeLinejoin="round">
             <polyline
               points={line(route)}
@@ -178,7 +246,8 @@ export default function DriveMap({
             />
           </g>
         )}
-        {isLive &&
+        {!national &&
+          isLive &&
           point &&
           (trail.end
             ? point.lon >= left - 0.4 &&
@@ -197,7 +266,8 @@ export default function DriveMap({
               strokeWidth="1.5"
             />
           )}
-        {symbols &&
+        {!national &&
+          symbols &&
           map.roads
             .filter((r) => r.kind === "primary")
             .map((road) => {
@@ -240,7 +310,8 @@ export default function DriveMap({
                 </g>
               );
             })}
-        {symbols &&
+        {!national &&
+          symbols &&
           map.places.map((p) => {
             const [x, y] = pr(p.lon, p.lat);
             if (
@@ -287,40 +358,41 @@ export default function DriveMap({
               </g>
             );
           })}
-        {stops.map((s, i) => {
-          const [x, y] = pr(s.lon, s.lat),
-            active = s.id === target.id;
-          const left = x > width * 0.62;
-          return (
-            <g key={s.id} transform={`translate(${x} ${y})`}>
-              <circle
-                r={active ? 11 : 7}
-                fill={active ? "#f8ca7c" : "#426d5a"}
-                stroke="#142f29"
-                strokeWidth="2"
-              />
-              <text
-                y="3.5"
-                textAnchor="middle"
-                fill={active ? "#283e32" : "#f5f7df"}
-                fontSize="9"
-                fontWeight="700"
-              >
-                {i + 1}
-              </text>
-              {symbols && (active || width > 610 || i !== 2) && (
+        {!national &&
+          stops.map((s, i) => {
+            const [x, y] = pr(s.lon, s.lat),
+              active = s.id === target.id;
+            const left = x > width * 0.62;
+            return (
+              <g key={s.id} transform={`translate(${x} ${y})`}>
+                <circle
+                  r={active ? 11 : 7}
+                  fill={active ? "#f8ca7c" : "#426d5a"}
+                  stroke="#142f29"
+                  strokeWidth="2"
+                />
                 <text
-                  x={left ? -14 : 14}
-                  y={active ? -10 : 4}
-                  textAnchor={left ? "end" : "start"}
-                  className="atlasStop"
+                  y="3.5"
+                  textAnchor="middle"
+                  fill={active ? "#283e32" : "#f5f7df"}
+                  fontSize="9"
+                  fontWeight="700"
                 >
-                  {s.name}
+                  {i + 1}
                 </text>
-              )}
-            </g>
-          );
-        })}
+                {symbols && (active || width > 610 || i !== 2) && (
+                  <text
+                    x={left ? -14 : 14}
+                    y={active ? -10 : 4}
+                    textAnchor={left ? "end" : "start"}
+                    className="atlasStop"
+                  >
+                    {s.name}
+                  </text>
+                )}
+              </g>
+            );
+          })}
         {px && (
           <g transform={`translate(${px[0]} ${px[1]})`}>
             {isLive && point?.accuracy != null && point.accuracy > 0 && (
@@ -353,11 +425,13 @@ export default function DriveMap({
         )}
       </svg>
       <span className="mapType">
-        {!trail.end && isLive && point && !inCoverage(point)
-          ? "OUTSIDE REGIONAL MAP"
-          : trail.end
-            ? "CORRIDOR SKETCH · STORY AREAS"
-            : "REGIONAL SCHEMATIC · ROADS APPROX."}
+        {national
+          ? "SOUTH AFRICA · PROVINCE MAP"
+          : !trail.end && isLive && point && !inCoverage(point)
+            ? "OUTSIDE REGIONAL MAP"
+            : trail.end
+              ? "CORRIDOR SKETCH · STORY AREAS"
+              : "REGIONAL SCHEMATIC · ROADS APPROX."}
       </span>
       <span className="mapNorth" aria-label="North up">
         ↑ N

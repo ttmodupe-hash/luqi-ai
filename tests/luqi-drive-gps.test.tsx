@@ -64,7 +64,7 @@ afterEach(() => {
 
 it("runs the four-stop GPS demo without requesting location and can pause, skip and recenter", () => {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={["/drive?trail=heritage"]}>
       <LuqiDrivePage />
     </MemoryRouter>,
   );
@@ -91,7 +91,7 @@ it("runs the four-stop GPS demo without requesting location and can pause, skip 
 
 it("shows a fresh device fix, expires it, and releases the watcher on navigation", () => {
   const view = render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={["/drive?trail=heritage"]}>
       <LuqiDrivePage />
     </MemoryRouter>,
   );
@@ -110,7 +110,7 @@ it("shows a fresh device fix, expires it, and releases the watcher on navigation
 
 it("recovers from denied permission with demo available and ignores expired callbacks", () => {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={["/drive?trail=heritage"]}>
       <LuqiDrivePage />
     </MemoryRouter>,
   );
@@ -223,4 +223,114 @@ it("filters the selected highway, links six facts per area and releases GPS when
   );
   expect(screen.getByText("02 / 02")).toBeTruthy();
   expect(screen.getByText("STORY PREVIEW · Mokopane")).toBeTruthy();
+});
+
+it("offers all nine provinces, matches GPS within a province away from its featured stop and rejects an uncertain border fix", () => {
+  render(
+    <MemoryRouter initialEntries={["/drive"]}>
+      <LuqiDrivePage />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByRole("heading", { name: "All nine provinces" }),
+  ).toBeTruthy();
+  const map = screen.getByRole("group", {
+    name: "Interactive South Africa map, all nine provinces",
+  });
+  expect(map.querySelectorAll("[data-province]")).toHaveLength(9);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Explore Northern Cape" }),
+  );
+  expect(
+    screen.getByRole("heading", { name: "Augrabies Falls National Park" }),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Use phone GPS" }));
+  const report = fix();
+  act(() =>
+    update({
+      ...report,
+      coords: { ...report.coords, latitude: -32.25, longitude: 24.53 },
+    }),
+  );
+  expect(screen.getByText(/GPS places you in Eastern Cape/)).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Addo Elephant National Park" }),
+  ).toBeTruthy();
+  act(() =>
+    update({
+      ...report,
+      coords: { ...report.coords, latitude: -29.3, longitude: 27.5 },
+    }),
+  );
+  expect(screen.getByText(/province could not be confirmed/)).toBeTruthy();
+});
+
+it("offers two bundled South African narrators without device voices and plays the selected province's own clip", async () => {
+  const play = vi.fn().mockResolvedValue(undefined),
+    pause = vi.fn();
+  class AudioStub {
+    src = "";
+    play = play;
+    pause = pause;
+    static latest: AudioStub;
+    constructor() {
+      AudioStub.latest = this;
+    }
+  }
+  vi.stubGlobal("Audio", AudioStub);
+  render(
+    <MemoryRouter>
+      <LuqiDrivePage />
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Explore Western Cape" }));
+  fireEvent.change(screen.getByLabelText("Narrator"), {
+    target: { value: "joburg" },
+  });
+  await act(async () =>
+    fireEvent.click(
+      screen.getByRole("button", { name: "Listen to this guide" }),
+    ),
+  );
+  expect(AudioStub.latest.src).toBe("/drive-voices/v1/joburg/za-wc.mp3");
+  expect(play).toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Stop audio" }));
+  expect(pause).toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("Briefing language"), {
+    target: { value: "sepitori" },
+  });
+  expect(screen.getByText(/Sepitori is available in writing/)).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Listen to this guide" }),
+  ).toBeNull();
+});
+import { africanVoices } from "../src/features/drive/DriveVoice";
+import { trails } from "../src/features/drive/drive-navigation";
+it("never substitutes foreign English defaults and links every guide to two non-empty audio files", () => {
+  const voices = [
+    "en-US",
+    "en-GB",
+    "en",
+    "en_NG",
+    "en-ZA",
+    "tn-BW",
+    "zu-ZA",
+  ].map(
+    (lang) => ({ lang, name: lang, voiceURI: lang }) as SpeechSynthesisVoice,
+  );
+  expect(africanVoices(voices, "english").map((v) => v.lang)).toEqual([
+    "en-ZA",
+    "en_NG",
+  ]);
+  expect(africanVoices(voices, "isizulu").map((v) => v.lang)).toEqual([
+    "zu-ZA",
+  ]);
+  for (const trail of trails)
+    for (const stop of trail.stops)
+      for (const id of ["cape", "joburg"]) {
+        const bytes = readFileSync(
+          "public/drive-voices/v1/" + id + "/" + stop.id + ".mp3",
+        );
+        expect(bytes.length).toBeGreaterThan(5000);
+      }
 });

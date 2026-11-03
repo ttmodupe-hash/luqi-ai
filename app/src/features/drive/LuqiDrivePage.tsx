@@ -24,115 +24,12 @@ import { regionalMap as map } from "./drive-map";
 import type { PhoneFix, Trail } from "./drive-navigation";
 import "./drive.css";
 import TripFuel from "./TripFuel";
-const languages = {
-  english: { label: "English", lang: "en-ZA", voiceLang: "en-ZA" },
-  sepitori: { label: "Sepitori", lang: "und-ZA", voiceLang: null },
-  setswana: { label: "Setswana", lang: "tn", voiceLang: "tn-ZA" },
-  isizulu: { label: "isiZulu", lang: "zu", voiceLang: "zu-ZA" },
-};
-type LanguageKey = keyof typeof languages;
-function useVoice() {
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]),
-    [status, setStatus] = useState("");
-  useEffect(() => {
-    const s = window.speechSynthesis;
-    if (!s) return;
-    const update = () => setVoices(s.getVoices());
-    update();
-    s.addEventListener("voiceschanged", update);
-    return () => {
-      s.removeEventListener("voiceschanged", update);
-      s.cancel();
-    };
-  }, []);
-  function voiceFor(key: LanguageKey) {
-    const target = languages[key].voiceLang;
-    return (
-      target &&
-      voices.find(
-        (v) => v.lang.split("-")[0].toLowerCase() === target.split("-")[0],
-      )
-    );
-  }
-  function speak(text: string, key: LanguageKey) {
-    const voice = voiceFor(key);
-    if (!voice) {
-      setStatus("No matching device voice. The written briefing is available.");
-      return;
-    }
-    const s = window.speechSynthesis;
-    s.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.voice = voice;
-    u.lang = voice.lang;
-    u.onend = () => setStatus("");
-    u.onerror = () => setStatus("Playback stopped or unavailable.");
-    setStatus("Reading aloud");
-    s.speak(u);
-  }
-  function stop() {
-    window.speechSynthesis?.cancel();
-    setStatus("");
-  }
-  return {
-    speak,
-    stop,
-    status,
-    available: (key: LanguageKey) => Boolean(voiceFor(key)),
-  };
-}
-function Language({
-  lang,
-  setLang,
-}: {
-  lang: LanguageKey;
-  setLang: (lang: LanguageKey) => void;
-}) {
-  return (
-    <label className="field">
-      Briefing language
-      <select
-        value={lang}
-        onChange={(e) => setLang(e.target.value as LanguageKey)}
-      >
-        {Object.entries(languages).map(([k, v]) => (
-          <option value={k} key={k}>
-            {v.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-function VoiceButtons({
-  voice,
-  text,
-  lang,
-}: {
-  voice: ReturnType<typeof useVoice>;
-  text: string;
-  lang: LanguageKey;
-}) {
-  return (
-    <div className="actions">
-      <button
-        className="pill"
-        disabled={!voice.available(lang)}
-        onClick={() => voice.speak(text, lang)}
-      >
-        Read aloud
-      </button>
-      {voice.available(lang) ? (
-        <button className="linkbtn" onClick={voice.stop}>
-          Stop audio
-        </button>
-      ) : (
-        <small>Written briefing available. No matching device voice.</small>
-      )}
-      <small role="status">{voice.status}</small>
-    </div>
-  );
-}
+import {
+  DriveVoiceControls,
+  languages,
+  useDriveVoice,
+  type LanguageKey,
+} from "./DriveVoice";
 const fmtKm = (n: number) =>
   n < 1
     ? Math.round(n * 1000) + " m"
@@ -172,6 +69,7 @@ function DriveSession({
   switchTrail: (id: string) => void;
 }) {
   const { stops } = trail;
+  const national = trail.id === "za";
   const demoSeconds = stops.length * legSeconds;
   const [mode, setMode] = useState("preview"),
     [selected, setSelected] = useState(0);
@@ -182,7 +80,7 @@ function DriveSession({
   const [following, setFollowing] = useState(false),
     [resetKey, setResetKey] = useState(0);
   const [auto, setAuto] = useState(false);
-  const voice = useVoice(),
+  const voice = useDriveVoice(lang),
     watch = useRef<number | null>(null),
     generation = useRef(0);
   const { available, speak } = voice;
@@ -191,7 +89,7 @@ function DriveSession({
     isDemo = mode === "demo";
   const targetIndex = isDemo ? demo.leg : selected;
   const target = stops[targetIndex],
-    point = isGPS ? fix : isDemo ? demo : null;
+    point = isGPS ? fix : isDemo && !national ? demo : null;
   const match = isGPS ? matchLandmark(fix, trail) : null;
   const guide = stops[match ?? targetIndex];
   const range = point ? distanceKm(point, target) : null;
@@ -237,13 +135,13 @@ function DriveSession({
     return () => clearTimeout(timer);
   }, [isGPS, fix]);
   useEffect(() => {
-    if (match === null || !auto || document.hidden || !available(lang)) return;
+    if (match === null || !auto || document.hidden || !available) return;
     const key = guide.id + "/" + lang;
     if (Date.now() - (narration.seen.get(key) ?? 0) < 86400000) return;
     if (Date.now() - narration.last < 180000) return;
     narration.last = Date.now();
     narration.seen.set(key, Date.now());
-    speak(guide.descriptions[lang], lang);
+    speak(guide);
   }, [auto, match, guide, lang, available, speak, narration]);
 
   function resetMap(follow: boolean) {
@@ -258,10 +156,10 @@ function DriveSession({
     setMode("preview");
     setPlaying(false);
     setSelected(i);
-    resetMap(true);
+    resetMap(!national);
   }
   function choose(i: number) {
-    if (isGPS) {
+    if (isGPS && !national) {
       setSelected(i);
       return;
     }
@@ -275,7 +173,7 @@ function DriveSession({
     setMode("demo");
     setElapsed((isDemo && demo.arrived ? 0 : selected) * legSeconds);
     setPlaying(true);
-    resetMap(true);
+    resetMap(!national);
   }
   function startGps() {
     stopWatch();
@@ -291,7 +189,7 @@ function DriveSession({
       return;
     }
     setMode("gps");
-    resetMap(true);
+    resetMap(!national);
     setNotice(
       "Allow location in your browser to show your position on the map.",
     );
@@ -319,12 +217,21 @@ function DriveSession({
           }
           setFix(next);
           const near = matchLandmark(next, trail);
+          if (national && near !== null) setSelected(near);
           setNotice(
             next.accuracy > trail.maxAccuracy
               ? "Approximate fix. Landmark matching needs a more precise signal."
               : near !== null
-                ? "Near " + stops[near].name + ". The local briefing is ready."
-                : "Outside this trail’s story areas. Distance is measured in a straight line.",
+                ? national
+                  ? "Phone GPS places you in " +
+                    stops[near].name +
+                    ". The province guide is ready."
+                  : "Near " +
+                    stops[near].name +
+                    ". The local briefing is ready."
+                : national
+                  ? "Your province could not be confirmed at this position. Choose one on the map."
+                  : "Outside this trail’s story areas. Distance is measured in a straight line.",
           );
         },
         (error) => {
@@ -346,7 +253,9 @@ function DriveSession({
   const status =
     notice ||
     (isDemo
-      ? "Accelerated demo along a schematic line. Device location is off."
+      ? national
+        ? "Province tour. Browse featured places without sharing your location."
+        : "Accelerated demo along a schematic line. Device location is off."
       : "Preview the trail or use your phone’s position. Location stays in this tab.");
   return (
     <section className="driveDesk" aria-label="Luqi-Drive road companion">
@@ -370,6 +279,7 @@ function DriveSession({
           </button>
         ))}
       </nav>
+      <DriveVoiceControls {...{ lang, guide, voice }} changeLang={setLang} />
       <div className="driveLayout">
         <div className="driveSurface">
           <div className="driveBanner">
@@ -379,10 +289,14 @@ function DriveSession({
             <div className="driveTarget">
               <span>
                 {isDemo && demo.arrived
-                  ? "FINAL LANDMARK"
+                  ? national ? "FINAL PROVINCE" : "FINAL LANDMARK"
                   : isGPS
-                    ? "SELECTED LANDMARK"
-                    : "NEXT LANDMARK"}
+                    ? national
+                      ? "PROVINCE GUIDE"
+                      : "SELECTED LANDMARK"
+                    : national
+                      ? "EXPLORE A PROVINCE"
+                      : "NEXT LANDMARK"}
               </span>
               <h2>{target.name}</h2>
               <small>{target.area}</small>
@@ -394,6 +308,7 @@ function DriveSession({
           </div>
           <DriveMap
             trail={trail}
+            onSelectProvince={choose}
             point={point}
             target={target}
             mode={mode}
@@ -403,7 +318,9 @@ function DriveSession({
           />
           <div className="driveHUD">
             <div>
-              <small>DIRECT DISTANCE</small>
+              <small>
+                {national ? "DISTANCE TO FEATURED PLACE" : "DIRECT DISTANCE"}
+              </small>
               <strong>{range === null ? "—" : fmtKm(range)}</strong>
             </div>
             <div>
@@ -414,7 +331,9 @@ function DriveSession({
               </strong>
             </div>
             <div>
-              <small>{isGPS ? "DEVICE SPEED" : "GUIDE STOP"}</small>
+              <small>
+                {isGPS ? "DEVICE SPEED" : national ? "PROVINCE" : "GUIDE STOP"}
+              </small>
               <strong>
                 {isGPS
                   ? fix?.speed != null
@@ -449,7 +368,9 @@ function DriveSession({
                   : playing
                     ? "Pause demo"
                     : "Resume demo"
-                : "Start drive demo"}
+                : national
+                  ? "Start province tour"
+                  : "Start drive demo"}
             </button>
             {isDemo && !demo.arrived && (
               <button
@@ -457,7 +378,10 @@ function DriveSession({
                 aria-label="Skip to next demo stop"
                 onClick={() =>
                   setElapsed((t) =>
-                    Math.min((Math.floor(t / legSeconds) + 1) * legSeconds),
+                    Math.min(
+                      demoSeconds,
+                      (Math.floor(t / legSeconds) + 1) * legSeconds,
+                    ),
                   )
                 }
               >
@@ -465,11 +389,15 @@ function DriveSession({
               </button>
             )}
           </div>
-          {guide.story && (
+          {(guide.story || national) && (
             <div className="driveStoryStrip">
               <small>
-                {match !== null ? "NEARBY STORY" : "STORY PREVIEW"} ·{" "}
-                {guide.name}
+                {match !== null
+                  ? national
+                    ? "PROVINCE STORY"
+                    : "NEARBY STORY"
+                  : "STORY PREVIEW"}{" "}
+                · {guide.name}
               </small>
               <p lang={languages[lang].lang}>{guide.descriptions[lang]}</p>
             </div>
@@ -483,8 +411,12 @@ function DriveSession({
           <div className="driveOverline">
             <MapPin size={14} /> {trail.region.toUpperCase()}
           </div>
-          <h2>Landmark trail</h2>
-          <p>Choose a stop to explore its guide.</p>
+          <h2>{national ? "All nine provinces" : "Landmark trail"}</h2>
+          <p>
+            {national
+              ? "Choose a province to see its featured place and hear its guide."
+              : "Choose a stop to explore its guide."}
+          </p>
           <div className="driveStopList">
             {stops.map((s, i) => (
               <button
@@ -501,7 +433,13 @@ function DriveSession({
             ))}
           </div>
           <div className="driveLegend">
-            <i /> Landmark guide line
+            {national ? (
+              "Province boundaries · featured places"
+            ) : (
+              <>
+                <i /> Landmark guide line
+              </>
+            )}
             <br />
             <small>
               Distances are straight-line estimates. For driving directions,
@@ -532,7 +470,34 @@ function DriveSession({
       <details className="driveCredits">
         <summary>About this map</summary>
         <p>
-          The map highlights story areas on your selected trail. Lines between
+          The national view covers all nine provinces. GPS suggests a province
+          away from uncertain boundaries. Featured places are reference points.
+          Province boundaries: geoBoundaries, OCHA ROSEA and the South African
+          Municipal Demarcation Board.{" "}
+          <a
+            href="https://www.geoboundaries.org/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Map source
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CC BY 4.0
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://creativecommons.org/licenses/by/3.0/igo/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CC BY 3.0 IGO
+          </a>
+          . The map highlights story areas on your selected trail. Lines between
           numbered stops illustrate the heritage trail. Road lines are
           approximate and are for regional orientation. Device fixes outside
           this area appear on a coordinate grid.
@@ -551,7 +516,7 @@ function DriveSession({
           <Compass size={14} /> LOCAL BRIEFING
         </div>
         <h2 id="desk-heritage" tabIndex={-1}>
-          {guide.name}
+          {national ? guide.area : guide.name}
         </h2>
         <p lang={languages[lang].lang}>{guide.descriptions[lang]}</p>
         {guide.story && (
@@ -579,18 +544,6 @@ function DriveSession({
             </details>
           </div>
         )}
-        <Language
-          lang={lang}
-          setLang={(k) => {
-            voice.stop();
-            setLang(k);
-          }}
-        />
-        <VoiceButtons
-          voice={voice}
-          text={guide.descriptions[lang]}
-          lang={lang}
-        />
         <label className="check">
           <input
             type="checkbox"
@@ -600,13 +553,29 @@ function DriveSession({
               if (!e.target.checked) voice.stop();
             }}
           />{" "}
-          Read nearby landmarks aloud once per language per day in this session,
-          when a matching device voice is available.
+          Read the matched guide aloud once per language per day in this session, when a narrator is available.
         </label>
         <a href={guide.source.url} target="_blank" rel="noreferrer">
           {guide.source.label} ↗
         </a>
       </div>
+      <details className="driveCredits">
+        <summary>About the African voices</summary>
+        <p>
+          The Cape Town and Johannesburg English guides are synthetic audio,
+          produced with Piper using its two South African VCTK voice presets,
+          p314 and p347. The scripts are Luqi’s. Corpus credit: Junichi
+          Yamagishi, Christophe Veaux and Kirsten MacDonald, CSTR, University of
+          Edinburgh.{" "}
+          <a href="https://datashare.ed.ac.uk/handle/10283/3443">VCTK 0.92</a> ·{" "}
+          <a href="https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_GB/vctk/medium/MODEL_CARD">
+            Piper model card
+          </a>{" "}
+          · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+          . Other narrators are listed with the language and region reported by
+          your device. Device voice availability varies.
+        </p>
+      </details>
       <TripFuel />
     </section>
   );

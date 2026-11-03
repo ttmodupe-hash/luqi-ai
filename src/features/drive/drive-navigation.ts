@@ -1,4 +1,7 @@
 // Regional orientation and landmark proximity. Distances are straight-line kilometres.
+import { nationalStops } from "./national-guides";
+import { suggestProvince } from "../../lib/location-province";
+import type { ProvinceCode } from "../../lib/opportunity-sources";
 import { corridors } from "./drive-content";
 import {
   DRIVE_AREA_STORIES,
@@ -14,6 +17,7 @@ export type PhoneFix = Point & {
   heading: number | null;
 };
 export type Stop = Point & {
+  province?: ProvinceCode;
   id: string;
   name: string;
   area: string;
@@ -122,6 +126,14 @@ function highways(id: HighwayId): Stop[] {
 }
 export const trails: Trail[] = [
   {
+    id: "za",
+    name: "South Africa · all 9 provinces",
+    region: "South Africa",
+    origin: { name: "National overview", lat: -29, lon: 25 },
+    stops: nationalStops,
+    maxAccuracy: 5000,
+  },
+  {
     id: "heritage",
     name: "Gauteng heritage trail",
     region: "Gauteng / North West",
@@ -181,7 +193,7 @@ export function compass(degrees: number | null) {
         Math.round(degrees / 45) % 8
       ];
 }
-export function demoFrame(seconds: number, trail: Trail = trails[0]) {
+export function demoFrame(seconds: number, trail: Trail = trails[1]) {
   const { stops, origin } = trail;
   const demoSeconds = legSeconds * stops.length;
   const time = Math.max(0, Math.min(demoSeconds, seconds));
@@ -236,9 +248,14 @@ export function readFix(
 }
 export function matchLandmark(
   fix: PhoneFix | null,
-  trail: Trail = trails[0],
+  trail: Trail = trails[1],
 ): number | null {
   if (!fix || fix.accuracy > trail.maxAccuracy) return null;
+  if (trail.id === "za") {
+    const region = suggestProvince(fix.lat, fix.lon, fix.accuracy);
+    const i = trail.stops.findIndex((s) => s.province === region);
+    return i < 0 ? null : i;
+  }
   let match: number | null = null,
     best = Infinity;
   trail.stops.forEach((stop, i) => {
