@@ -53,7 +53,7 @@ jobs:
           Path('tender-publisher-watch.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
           PY
       - name: Retain source evidence without applicant details
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tender-publisher-watch
           path: tender-publisher-watch.json
