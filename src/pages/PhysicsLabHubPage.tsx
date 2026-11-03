@@ -190,12 +190,21 @@ function ExperimentStation({ id }: { id: PhysicsId }) {
         {topic.controls.map(control => <label className="block space-y-2" key={control.key}>
           <span className="flex justify-between gap-2 text-sm text-slate-200">
             <span>{control.label}</span><strong className="text-amber-300">
-              {fmt(inputs[control.key])} {control.unit}
+              {control.options?.find(option => option.value === inputs[control.key])?.label ??
+                (fmt(inputs[control.key]) + ' ' + control.unit)}
             </strong>
           </span>
-          <input aria-label={control.label} type="range" className="w-full accent-amber-400"
-            min={control.min} max={control.max} step={control.step} value={inputs[control.key]}
-            onChange={event => setInputs(previous => ({ ...previous, [control.key]: Number(event.target.value) }))} />
+          {control.options ? (
+            <select aria-label={control.label} value={inputs[control.key]}
+              onChange={event => setInputs(previous => ({ ...previous, [control.key]: Number(event.target.value) }))}
+              className="w-full rounded-lg border border-slate-600 bg-slate-800 p-3 text-white">
+              {control.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          ) : (
+            <input aria-label={control.label} type="range" className="w-full accent-amber-400"
+              min={control.min} max={control.max} step={control.step} value={inputs[control.key]}
+              onChange={event => setInputs(previous => ({ ...previous, [control.key]: Number(event.target.value) }))} />
+          )}
         </label>)}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="button" onClick={() => setInputs(initialPhysicsValues(id))}
