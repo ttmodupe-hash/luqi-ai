@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Crosshair, Maximize2, Minus, Plus } from "lucide-react";
-import { stops, demoOrigin } from "./drive-navigation";
-import type { Point } from "./drive-navigation";
+
+import type { Point, Stop, Trail } from "./drive-navigation";
 import { regionalMap as map } from "./drive-map";
 
 const cos = Math.cos((26 * Math.PI) / 180);
@@ -9,9 +9,10 @@ const region = { lon: 27.85, lat: -25.83 };
 const [west, south, east, north] = map.bbox;
 const inCoverage = (p: Point) =>
   p.lon >= west && p.lon <= east && p.lat >= south && p.lat <= north;
-const limitScale = (n: number) => Math.min(7000, Math.max(90, n));
+const limitScale = (n: number) => Math.min(7000, Math.max(12, n));
 
 export default function DriveMap({
+  trail,
   point,
   target,
   mode,
@@ -20,7 +21,8 @@ export default function DriveMap({
   resetKey,
 }: {
   point: (Point & { heading: number | null; accuracy?: number }) | null;
-  target: (typeof stops)[number];
+  target: Stop;
+  trail: Trail;
   mode: string;
   following: boolean;
   setFollowing: (follow: boolean) => void;
@@ -50,9 +52,25 @@ export default function DriveMap({
     setZoom(1);
   }, [resetKey]);
   const height = width < 540 ? 340 : 394;
-  const base = Math.min((width - 110) / 1.18, (height - 78) / 0.93);
+  const { stops } = trail;
+  const anchors = [trail.origin, ...stops, ...(trail.end ? [trail.end] : [])];
+  const lons = anchors.map((p) => p.lon),
+    lats = anchors.map((p) => p.lat);
+  const left = Math.min(...lons),
+    right = Math.max(...lons),
+    bottom = Math.min(...lats),
+    top = Math.max(...lats);
+  const base = trail.end
+    ? Math.min(
+        (width - 110) / ((right - left) * cos),
+        (height - 90) / (top - bottom),
+      )
+    : Math.min((width - 110) / 1.18, (height - 78) / 0.93);
+  const overviewCenter = trail.end
+    ? { lon: (left + right) / 2, lat: (top + bottom) / 2 }
+    : region;
   const scale = limitScale(base * zoom * (following ? 3.1 : 1));
-  const center = offset || (following ? point || target : region);
+  const center = offset || (following ? point || target : overviewCenter);
   const pr = (lon: number, lat: number) => [
     (lon - center.lon) * cos * scale + width / 2,
     (center.lat - lat) * scale + height / 2,
@@ -66,7 +84,7 @@ export default function DriveMap({
       )
       .join(" ");
   const px = point ? pr(point.lon, point.lat) : null;
-  const route = [demoOrigin, ...stops].map((p) => [p.lon, p.lat]);
+  const route = anchors.map((p) => [p.lon, p.lat]);
   const km = [1, 2, 5, 10, 20, 50, 100, 200].reduce(
     (best, n) => ((n * scale) / 111 < width * 0.22 ? n : best),
     1,
@@ -160,18 +178,25 @@ export default function DriveMap({
             />
           </g>
         )}
-        {isLive && point && inCoverage(point) && (
-          <polyline
-            points={line([
-              [point.lon, point.lat],
-              [target.lon, target.lat],
-            ])}
-            fill="none"
-            stroke="#9edac8"
-            strokeDasharray="5 8"
-            strokeWidth="1.5"
-          />
-        )}
+        {isLive &&
+          point &&
+          (trail.end
+            ? point.lon >= left - 0.4 &&
+              point.lon <= right + 0.4 &&
+              point.lat >= bottom - 0.4 &&
+              point.lat <= top + 0.4
+            : inCoverage(point)) && (
+            <polyline
+              points={line([
+                [point.lon, point.lat],
+                [target.lon, target.lat],
+              ])}
+              fill="none"
+              stroke="#9edac8"
+              strokeDasharray="5 8"
+              strokeWidth="1.5"
+            />
+          )}
         {symbols &&
           map.roads
             .filter((r) => r.kind === "primary")
@@ -243,6 +268,25 @@ export default function DriveMap({
               </g>
             );
           })}
+        {trail.end &&
+          [trail.origin, trail.end].map((city) => {
+            const [x, y] = pr(city.lon, city.lat);
+            return (
+              <g key={city.name} transform={`translate(${x} ${y})`}>
+                <circle r="4" fill="#fff2ca" />
+                {symbols && (
+                  <text
+                    className="atlasStop"
+                    textAnchor={x > width * 0.6 ? "end" : "start"}
+                    x={x > width * 0.6 ? -8 : 8}
+                    y="4"
+                  >
+                    {city.name}
+                  </text>
+                )}
+              </g>
+            );
+          })}
         {stops.map((s, i) => {
           const [x, y] = pr(s.lon, s.lat),
             active = s.id === target.id;
@@ -309,9 +353,11 @@ export default function DriveMap({
         )}
       </svg>
       <span className="mapType">
-        {isLive && point && !inCoverage(point)
+        {!trail.end && isLive && point && !inCoverage(point)
           ? "OUTSIDE REGIONAL MAP"
-          : "REGIONAL SCHEMATIC · ROADS APPROX."}
+          : trail.end
+            ? "CORRIDOR SKETCH · STORY AREAS"
+            : "REGIONAL SCHEMATIC · ROADS APPROX."}
       </span>
       <span className="mapNorth" aria-label="North up">
         ↑ N

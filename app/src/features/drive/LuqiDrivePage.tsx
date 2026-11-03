@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import DriveMap from "./DriveMap";
 import {
   LocateFixed,
@@ -11,17 +12,16 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import {
-  stops,
+  trails,
   distanceKm,
   compass,
   demoFrame,
-  demoSeconds,
   legSeconds,
   readFix,
   matchLandmark,
 } from "./drive-navigation";
 import { regionalMap as map } from "./drive-map";
-import type { PhoneFix } from "./drive-navigation";
+import type { PhoneFix, Trail } from "./drive-navigation";
 import "./drive.css";
 import TripFuel from "./TripFuel";
 const languages = {
@@ -138,7 +138,41 @@ const fmtKm = (n: number) =>
     ? Math.round(n * 1000) + " m"
     : (n < 10 ? n.toFixed(1) : Math.round(n)) + " km";
 export default function LuqiDrivePage() {
+  const [params, setParams] = useSearchParams();
+  const narration = useRef({
+    seen: new Map<string, number>(),
+    last: 0,
+  }).current;
+  const trail = trails.find((t) => t.id === params.get("trail")) ?? trails[0];
   const [lang, setLang] = useState<LanguageKey>("english");
+  function switchTrail(id: string) {
+    const next = new URLSearchParams(params);
+    if (id === trails[0].id) next.delete("trail");
+    else next.set("trail", id);
+    setParams(next);
+  }
+  return (
+    <DriveSession
+      key={trail.id}
+      {...{ trail, lang, setLang, switchTrail, narration }}
+    />
+  );
+}
+function DriveSession({
+  narration,
+  trail,
+  lang,
+  setLang,
+  switchTrail,
+}: {
+  narration: { seen: Map<string, number>; last: number };
+  trail: Trail;
+  lang: LanguageKey;
+  setLang: (lang: LanguageKey) => void;
+  switchTrail: (id: string) => void;
+}) {
+  const { stops } = trail;
+  const demoSeconds = stops.length * legSeconds;
   const [mode, setMode] = useState("preview"),
     [selected, setSelected] = useState(0);
   const [elapsed, setElapsed] = useState(0),
@@ -150,16 +184,15 @@ export default function LuqiDrivePage() {
   const [auto, setAuto] = useState(false);
   const voice = useVoice(),
     watch = useRef<number | null>(null),
-    generation = useRef(0),
-    seen = useRef(new Map<string, number>());
+    generation = useRef(0);
   const { available, speak } = voice;
-  const demo = demoFrame(elapsed),
+  const demo = demoFrame(elapsed, trail),
     isGPS = mode === "gps",
     isDemo = mode === "demo";
   const targetIndex = isDemo ? demo.leg : selected;
   const target = stops[targetIndex],
     point = isGPS ? fix : isDemo ? demo : null;
-  const match = isGPS ? matchLandmark(fix) : null;
+  const match = isGPS ? matchLandmark(fix, trail) : null;
   const guide = stops[match ?? targetIndex];
   const range = point ? distanceKm(point, target) : null;
   const course = point?.heading ?? null;
@@ -204,12 +237,14 @@ export default function LuqiDrivePage() {
     return () => clearTimeout(timer);
   }, [isGPS, fix]);
   useEffect(() => {
-    if (match === null || !auto || !available(lang)) return;
+    if (match === null || !auto || document.hidden || !available(lang)) return;
     const key = guide.id + "/" + lang;
-    if (Date.now() - (seen.current.get(key) ?? 0) < 86400000) return;
-    seen.current.set(key, Date.now());
+    if (Date.now() - (narration.seen.get(key) ?? 0) < 86400000) return;
+    if (Date.now() - narration.last < 180000) return;
+    narration.last = Date.now();
+    narration.seen.set(key, Date.now());
     speak(guide.descriptions[lang], lang);
-  }, [auto, match, guide, lang, available, speak]);
+  }, [auto, match, guide, lang, available, speak, narration]);
 
   function resetMap(follow: boolean) {
     setFollowing(follow);
@@ -283,13 +318,13 @@ export default function LuqiDrivePage() {
             return;
           }
           setFix(next);
-          const near = matchLandmark(next);
+          const near = matchLandmark(next, trail);
           setNotice(
-            next.accuracy > 5000
+            next.accuracy > trail.maxAccuracy
               ? "Approximate fix. Landmark matching needs a more precise signal."
               : near !== null
                 ? "Near " + stops[near].name + ". The local briefing is ready."
-                : "Outside the four landmark areas. Distance is measured in a straight line.",
+                : "Outside this trail’s story areas. Distance is measured in a straight line.",
           );
         },
         (error) => {
@@ -312,7 +347,7 @@ export default function LuqiDrivePage() {
     notice ||
     (isDemo
       ? "Accelerated demo along a schematic line. Device location is off."
-      : "Preview four landmarks or use your phone’s position. Location stays in this tab.");
+      : "Preview the trail or use your phone’s position. Location stays in this tab.");
   return (
     <section className="driveDesk" aria-label="Luqi-Drive road companion">
       <header className="driveHeader">
@@ -324,6 +359,17 @@ export default function LuqiDrivePage() {
         </h1>
         <p>Follow your position and discover the places around you.</p>
       </header>
+      <nav className="driveTrails" aria-label="Driving corridors">
+        {trails.map((t) => (
+          <button
+            key={t.id}
+            aria-pressed={trail.id === t.id}
+            onClick={() => switchTrail(t.id)}
+          >
+            {t.name}
+          </button>
+        ))}
+      </nav>
       <div className="driveLayout">
         <div className="driveSurface">
           <div className="driveBanner">
@@ -347,6 +393,7 @@ export default function LuqiDrivePage() {
             </div>
           </div>
           <DriveMap
+            trail={trail}
             point={point}
             target={target}
             mode={mode}
@@ -373,7 +420,9 @@ export default function LuqiDrivePage() {
                   ? fix?.speed != null
                     ? fix.speed + " km/h"
                     : "—"
-                  : String(targetIndex + 1).padStart(2, "0") + " / 04"}
+                  : String(targetIndex + 1).padStart(2, "0") +
+                    " / " +
+                    String(stops.length).padStart(2, "0")}
               </strong>
             </div>
           </div>
@@ -408,10 +457,7 @@ export default function LuqiDrivePage() {
                 aria-label="Skip to next demo stop"
                 onClick={() =>
                   setElapsed((t) =>
-                    Math.min(
-                      demoSeconds,
-                      (Math.floor(t / legSeconds) + 1) * legSeconds,
-                    ),
+                    Math.min((Math.floor(t / legSeconds) + 1) * legSeconds),
                   )
                 }
               >
@@ -419,6 +465,15 @@ export default function LuqiDrivePage() {
               </button>
             )}
           </div>
+          {guide.story && (
+            <div className="driveStoryStrip">
+              <small>
+                {match !== null ? "NEARBY STORY" : "STORY PREVIEW"} ·{" "}
+                {guide.name}
+              </small>
+              <p lang={languages[lang].lang}>{guide.descriptions[lang]}</p>
+            </div>
+          )}
           <p className="driveNote" role="status">
             {status}
             {isGPS && fix && " Accuracy ±" + fmtKm(fix.accuracy / 1000) + "."}
@@ -426,7 +481,7 @@ export default function LuqiDrivePage() {
         </div>
         <aside className="driveStops">
           <div className="driveOverline">
-            <MapPin size={14} /> GAUTENG / NORTH WEST
+            <MapPin size={14} /> {trail.region.toUpperCase()}
           </div>
           <h2>Landmark trail</h2>
           <p>Choose a stop to explore its guide.</p>
@@ -477,8 +532,8 @@ export default function LuqiDrivePage() {
       <details className="driveCredits">
         <summary>About this map</summary>
         <p>
-          The map shows regional landmarks in Gauteng and North West. Lines
-          between numbered stops illustrate the heritage trail. Road lines are
+          The map highlights story areas on your selected trail. Lines between
+          numbered stops illustrate the heritage trail. Road lines are
           approximate and are for regional orientation. Device fixes outside
           this area appear on a coordinate grid.
         </p>
@@ -499,6 +554,31 @@ export default function LuqiDrivePage() {
           {guide.name}
         </h2>
         <p lang={languages[lang].lang}>{guide.descriptions[lang]}</p>
+        {guide.story && (
+          <div className="driveFieldNotes" key={guide.id}>
+            <p className="driveStoryVicinity">{guide.story.vicinity}</p>
+            <details>
+              <summary>Explore six roadside stories in English</summary>
+              <dl>
+                {guide.story.topics.map((t) => (
+                  <div key={t.category}>
+                    <dt>{t.category}</dt>
+                    <dd>
+                      {t.fact}{" "}
+                      <a
+                        href={guide.story!.sources[t.source].url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {guide.story!.sources[t.source].label} ↗
+                      </a>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          </div>
+        )}
         <Language
           lang={lang}
           setLang={(k) => {
@@ -515,7 +595,10 @@ export default function LuqiDrivePage() {
           <input
             type="checkbox"
             checked={auto}
-            onChange={(e) => setAuto(e.target.checked)}
+            onChange={(e) => {
+              setAuto(e.target.checked);
+              if (!e.target.checked) voice.stop();
+            }}
           />{" "}
           Read nearby landmarks aloud once per language per day in this session,
           when a matching device voice is available.
