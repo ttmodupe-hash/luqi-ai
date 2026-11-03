@@ -92,7 +92,10 @@ export class MultiAgentConsensusEngine {
     if (anthropicKey) {
       auditorModel = "claude-3-7-sonnet-latest";
       try {
-        const response = await new Anthropic({ apiKey: anthropicKey }).messages.create({
+        // One quota reservation authorizes one model request, not SDK retries.
+        // Transient provider errors fail closed; the user must initiate a new
+        // reviewed, quota-reserved request instead of hidden extra spend.
+        const response = await new Anthropic({ apiKey: anthropicKey, maxRetries: 0 }).messages.create({
           model: auditorModel,
           max_tokens: 1024,
           system: [

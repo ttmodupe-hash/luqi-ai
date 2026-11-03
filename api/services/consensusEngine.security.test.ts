@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 const mocks = vi.hoisted(() => ({
   generateContent: vi.fn(),
   messagesCreate: vi.fn(),
+  anthropicOptions: vi.fn(),
   reserveAiRequest: vi.fn(),
   resolveGeminiApiKey: vi.fn(),
 }));
@@ -14,6 +15,7 @@ vi.mock("@google/genai", () => ({
 }));
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class {
+    constructor(options: unknown) { mocks.anthropicOptions(options); }
     messages = { create: mocks.messagesCreate };
   },
 }));
@@ -108,6 +110,12 @@ describe("paid model consensus is advisory, never certified", () => {
     await expect(MultiAgentConsensusEngine.executeConsensusTask("Review contract", 43))
       .rejects.toMatchObject({ code: "BAD_GATEWAY" });
     expect(mocks.generateContent).toHaveBeenCalledTimes(1);
+    // Anthropic's SDK otherwise retries transient failures twice by default.
+    // A retry must not generate unbudgeted paid requests under one reservation.
+    expect(mocks.anthropicOptions).toHaveBeenCalledTimes(1);
+    expect(mocks.anthropicOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ maxRetries: 0 }),
+    );
     expect(mocks.messagesCreate).toHaveBeenCalledTimes(1);
     expect(mocks.reserveAiRequest).toHaveBeenCalledTimes(2);
   });
