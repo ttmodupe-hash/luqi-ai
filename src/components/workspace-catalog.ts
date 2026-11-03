@@ -26,6 +26,11 @@ export const workspaceTools = [
     icon: "status",
   },
   {
+    id: "luqi-drive", title: "Luqi-Drive GPS", category: "Travel and local heritage",
+    description: "Explore four South African landmarks with a moving demo, optional phone GPS and multilingual briefings.",
+    status: "Free · no account", ready: true, path: "/drive", icon: "status",
+  },
+  {
     id: "driver-rights", title: "Driver rights & traffic stops", category: "South African traffic stop law and roadside safety",
     description: "Source-linked police ID, roadblocks, searches, fines and corruption reporting, with legal review dates. Free roadside guidance; no account or AI calls.",
     status: "Free · no account", ready: true, path: "/driver-rights", icon: "status",
