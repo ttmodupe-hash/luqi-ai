@@ -17,5 +17,5 @@ it('removes a private frame on logout and ignores a late former-account response
 });
 it('isolates scripts from the Luqi origin and never passes account tokens to the frame',async()=>{
  mock.token='synthetic-sensitive-token';mock.load.mockResolvedValue({html:'<script nonce="__LUQI_PREVIEW_NONCE__">const initial=__LUQI_PREVIEW_BRIDGE_STATE__;</script>',scope:'b'.repeat(64),version:'luqi-business-connect-private-v2-app1'});
- render(<MemoryRouter><Page/></MemoryRouter>);const frame=await screen.findByTitle('Private Luqi Business Connect interactive preview');expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin');expect(frame.getAttribute('srcdoc')).not.toContain(mock.token);expect(frame.getAttribute('allow')).toContain("geolocation 'none'");
+ render(<MemoryRouter><Page/></MemoryRouter>);const frame=await screen.findByTitle('Private Luqi Business Connect interactive preview');expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin');expect(frame.getAttribute('sandbox')).toContain('allow-forms');expect(frame.getAttribute('srcdoc')).not.toContain(mock.token);expect(frame.getAttribute('allow')).toContain("geolocation 'none'");
 });

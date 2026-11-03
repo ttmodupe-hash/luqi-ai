@@ -38,7 +38,7 @@ function PreviewInstance({token}:{token?:string}){
   {!token?<section className="rounded-xl border border-slate-600 bg-slate-900 p-6"><p>Sign in with your existing Luqi owner account to open the private preview.</p><Link className="mt-4 inline-block rounded-lg border border-cyan-500 px-4 py-3 text-cyan-200" to="/login">Use my Luqi login</Link></section>:<>
    {loading&&<p role="status">Opening your private Business Connect preview…</p>}
    {error&&<p role="alert" className="rounded-lg border border-amber-600 bg-slate-900 p-4">{error}</p>}
-   {html&&<iframe ref={frame} title="Private Luqi Business Connect interactive preview" srcDoc={html} sandbox="allow-scripts allow-downloads allow-popups allow-popups-to-escape-sandbox" allow="geolocation 'none'; camera 'none'; microphone 'none'; payment 'none'" style={{height:frameHeight}} className="w-full rounded-xl border border-slate-600 bg-[#faf9f5]"/>}
+   {html&&<iframe ref={frame} title="Private Luqi Business Connect interactive preview" srcDoc={html} sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox" allow="geolocation 'none'; camera 'none'; microphone 'none'; payment 'none'" style={{height:frameHeight}} className="w-full rounded-xl border border-slate-600 bg-[#faf9f5]"/>}
   </>}
  </main>;
 }
