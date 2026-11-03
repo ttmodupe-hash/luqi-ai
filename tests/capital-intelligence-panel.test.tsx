@@ -11,8 +11,8 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
    render(<CapitalIntelligencePanel/>);
    expect(screen.getByRole('heading',{name:'Luqi Capital Intelligence'})).toBeTruthy();
-   expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(3);
-   expect(screen.getByText(/current application windows or closing dates have been verified/i)).toBeTruthy();
+   expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(8);
+   expect(screen.getByText(/No current application windows or closing dates are certified/i)).toBeTruthy();
    expect(screen.getByRole('article',{name:'NYDA Grant Programme'}).textContent).toContain('Not currently aligned');
    expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toContain('Potential programme to explore');
    expect(fetcher).not.toHaveBeenCalled();
@@ -49,6 +49,27 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    fireEvent.change(age,{target:{value:'999'}});
    expect(age.value).toBe('');
    fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'OTHER'}});
-   expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toMatch(/cross-border eligibility is unconfirmed/);
+   expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toMatch(/verify any cross-border exceptions with the publisher/i);
+   expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toContain('Not currently aligned');
+ });
+
+ it('offers pan-African and global sources for Kenyan project locations without declaring eligibility',()=>{
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'KE'}});
+   fireEvent.change(screen.getByLabelText('Funding geography'),{target:{value:'PAN_AFRICA'}});
+   expect(screen.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'}).textContent)
+     .toContain('Check programme criteria');
+   expect(screen.getByRole('article',{name:'AECF Enterprise Challenge Finance'})).toBeTruthy();
+   expect(screen.queryByRole('article',{name:'TIA Seed Fund'})).toBeNull();
+   fireEvent.change(screen.getByLabelText('Funding geography'),{target:{value:'GLOBAL'}});
+   expect(screen.getByRole('article',{name:'Global Innovation Fund'})).toBeTruthy();
+   expect(screen.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeTruthy();
+   fireEvent.change(screen.getByLabelText('Search funding programmes'),{target:{value:'MIT'}});
+   expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(1);
+   fireEvent.click(screen.getByRole('button',{name:'Prepare review draft'}));
+   expect((screen.getByRole('textbox',{name:'Funding preparation draft text'}) as HTMLTextAreaElement).value)
+     .toMatch(/Project location: Kenya[\s\S]*CURRENT FUNDING WINDOW: NOT VERIFIED/);
+   expect(fetcher).not.toHaveBeenCalled();
  });
 });

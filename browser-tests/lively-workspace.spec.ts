@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('discovery, native modal focus and calm mode work across Luqi on a narrow phone', async ({ page }, testInfo) => {
+  // Verify unchanged native clicks/route transitions under an OS reduced-motion
+  // preference. Separate animation tests cover default-motion visuals. WebKit
+  // runner compositing must not turn focus/navigation acceptance into a race.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const paid: string[] = []; page.on('request', request => { if (request.method() === 'POST') paid.push(request.url()); });
   await page.setViewportSize({ width: 320, height: 840 });
   await page.goto('/#/');

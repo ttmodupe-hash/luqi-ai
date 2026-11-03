@@ -57,7 +57,7 @@ export default function AfricanOpportunityRadarPage() {
           African Opportunity Radar
         </h1>
         <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-200">
-          Explore African opportunities with a transparent trade scenario calculator and original information sources.
+          Explore publisher funding routes from South Africa, across Africa and internationally in one searchable place, alongside original trade information sources and a transparent scenario calculator.
           LUQI is not currently connected to a verified live grant feed, customs tariff API, satellite forecast,
           settlement rail, or autonomous funding-application agent.
         </p>

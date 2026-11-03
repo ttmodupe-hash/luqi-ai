@@ -3,7 +3,75 @@
  * No investor access, live call detection, approval prediction or submission.
  * All input remains local to this browser view and is never sent to an API.
  */
-export type FundingType = 'SOVEREIGN_FUND' | 'DEVELOPMENT_FINANCE' | 'VENTURE_CAPITAL' | 'DECENTRALIZED_GRANT' | 'CROWDFUNDING';
+export type FundingType = 'SOVEREIGN_FUND' | 'DEVELOPMENT_FINANCE' | 'VENTURE_CAPITAL' | 'DECENTRALIZED_GRANT' | 'CROWDFUNDING' | 'GRANT' | 'INNOVATION_CHALLENGE';
+export type FundingScope = 'SOUTH_AFRICA' | 'PAN_AFRICA' | 'GLOBAL';
+export const FUNDING_SCOPE_LABELS:Readonly<Record<FundingScope,string>>=Object.freeze({
+  SOUTH_AFRICA:'South Africa',PAN_AFRICA:'Across Africa',GLOBAL:'International',
+});
+export const FUNDING_TYPE_LABELS:Readonly<Record<FundingType,string>>=Object.freeze({
+  SOVEREIGN_FUND:'Public funding',DEVELOPMENT_FINANCE:'Development finance',
+  VENTURE_CAPITAL:'Venture capital',DECENTRALIZED_GRANT:'Decentralized grant',
+  CROWDFUNDING:'Crowdfunding',GRANT:'Grant / seed support',INNOVATION_CHALLENGE:'Innovation challenge',
+});
+/** Project location only. Does not establish citizenship, residency or programme eligibility. */
+export const AFRICAN_COUNTRIES = Object.freeze([
+  ['DZ','Algeria'],
+  ['AO','Angola'],
+  ['BJ','Benin'],
+  ['BW','Botswana'],
+  ['BF','Burkina Faso'],
+  ['BI','Burundi'],
+  ['CV','Cabo Verde'],
+  ['CM','Cameroon'],
+  ['CF','Central African Republic'],
+  ['TD','Chad'],
+  ['KM','Comoros'],
+  ['CG','Congo (Republic)'],
+  ['CD','DR Congo'],
+  ['CI','Côte d’Ivoire'],
+  ['DJ','Djibouti'],
+  ['EG','Egypt'],
+  ['GQ','Equatorial Guinea'],
+  ['ER','Eritrea'],
+  ['SZ','Eswatini'],
+  ['ET','Ethiopia'],
+  ['GA','Gabon'],
+  ['GM','Gambia'],
+  ['GH','Ghana'],
+  ['GN','Guinea'],
+  ['GW','Guinea-Bissau'],
+  ['KE','Kenya'],
+  ['LS','Lesotho'],
+  ['LR','Liberia'],
+  ['LY','Libya'],
+  ['MG','Madagascar'],
+  ['MW','Malawi'],
+  ['ML','Mali'],
+  ['MR','Mauritania'],
+  ['MU','Mauritius'],
+  ['MA','Morocco'],
+  ['MZ','Mozambique'],
+  ['NA','Namibia'],
+  ['NE','Niger'],
+  ['NG','Nigeria'],
+  ['RW','Rwanda'],
+  ['ST','São Tomé and Príncipe'],
+  ['SN','Senegal'],
+  ['SC','Seychelles'],
+  ['SL','Sierra Leone'],
+  ['SO','Somalia'],
+  ['ZA','South Africa'],
+  ['SS','South Sudan'],
+  ['SD','Sudan'],
+  ['TZ','Tanzania'],
+  ['TG','Togo'],
+  ['TN','Tunisia'],
+  ['UG','Uganda'],
+  ['ZM','Zambia'],
+  ['ZW','Zimbabwe'],
+] as const);
+export type AfricanCountryCode = typeof AFRICAN_COUNTRIES[number][0];
+export type FundingCountry = AfricanCountryCode | 'OTHER';
 export type ProjectMaturity = 'IDEA' | 'MVP' | 'PRODUCTION';
 export type ProjectSector = 'TECH' | 'INDUSTRY' | 'OTHER';
 export type ProjectPurpose = 'R_AND_D_SEED' | 'BUSINESS_GROWTH' | 'INDUSTRIAL_EXPANSION';
@@ -18,12 +86,16 @@ export const ARTIFACT_LABELS: Readonly<Record<Artifact,string>> = Object.freeze(
   REGISTRATION_PROOF:'Company registration records',
 });
 export const CAPITAL_SOURCE_REVIEWED_ON = '2026-11-02';
+export const CAPITAL_GLOBAL_SOURCES_REVIEWED_ON = '2026-11-03';
 export const CAPITAL_SOURCE_RECHECK_ON = '2026-12-02';
 export interface FundingPlatformSpec {
   readonly id:string;
   readonly name:string;
   readonly organisation:string;
   readonly type:FundingType;
+  readonly scope:FundingScope;
+  /** Original publisher's geographical scope; not a country-level eligibility certificate. */
+  readonly scopeNote:string;
   readonly sourceUrl:string;
   readonly applicationGuideUrl:string;
   readonly reviewedOn:string;
@@ -39,7 +111,7 @@ export interface FundingPlatformSpec {
   }>;
 }
 export interface CapitalProfile {
-  readonly country:'ZA'|'OTHER';
+  readonly country:FundingCountry;
   readonly maturity:ProjectMaturity;
   readonly sector:ProjectSector;
   readonly purpose:ProjectPurpose;
@@ -57,9 +129,15 @@ export interface FundingMatch {
   readonly checks:readonly string[];
   readonly reviewExpired:boolean;
 }
-const ALLOWED_PUBLISHERS = new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za']);
+const ALLOWED_PUBLISHERS = new Set([
+  'www.tia.org.za','www.idc.co.za','www.nyda.gov.za',
+  'www.tonyelumelufoundation.org','www.aecfafrica.org','afawa.afdb.org',
+  'www.globalinnovation.fund','solve.mit.edu',
+]);
+const AFRICAN_CODES = new Set<string>(AFRICAN_COUNTRIES.map(c=>c[0]));
+const SCOPES = new Set<FundingScope>(['SOUTH_AFRICA','PAN_AFRICA','GLOBAL']);
 const ARTIFACTS = new Set<Artifact>(Object.keys(ARTIFACT_LABELS) as Artifact[]);
-const TYPES = new Set<FundingType>(['SOVEREIGN_FUND','DEVELOPMENT_FINANCE','VENTURE_CAPITAL','DECENTRALIZED_GRANT','CROWDFUNDING']);
+const TYPES = new Set<FundingType>(['SOVEREIGN_FUND','DEVELOPMENT_FINANCE','VENTURE_CAPITAL','DECENTRALIZED_GRANT','CROWDFUNDING','GRANT','INNOVATION_CHALLENGE']);
 const SECTORS = new Set<ProjectSector>(['TECH','INDUSTRY','OTHER']);
 const STAGES = new Set<ProjectMaturity>(['IDEA','MVP','PRODUCTION']);
 const PURPOSES = new Set<ProjectPurpose>(['R_AND_D_SEED','BUSINESS_GROWTH','INDUSTRIAL_EXPANSION']);
@@ -73,7 +151,9 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
       typeof input.name !== 'string' || input.name.trim().length < 3 ||
       input.name.length > 120 || typeof input.organisation !== 'string' ||
       input.organisation.length < 3 || input.organisation.length > 100 ||
-      !TYPES.has(input.type) || input.sourceStatus !== 'PROGRAMME_REFERENCE_ONLY' ||
+      !TYPES.has(input.type) || !SCOPES.has(input.scope) ||
+      typeof input.scopeNote !== 'string' || !input.scopeNote.trim() ||
+      input.scopeNote.length > 350 || input.sourceStatus !== 'PROGRAMME_REFERENCE_ONLY' ||
       !/^\d{4}-\d{2}-\d{2}$/.test(input.reviewedOn) ||
       !Array.isArray(input.focusSectors) || !input.focusSectors.length ||
       !input.focusSectors.every(s=>SECTORS.has(s)) ||
@@ -106,7 +186,8 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
   });
   return Object.freeze({
     id:input.id,name:input.name.trim(),organisation:input.organisation.trim(),
-    type:input.type,sourceUrl:input.sourceUrl,applicationGuideUrl:input.applicationGuideUrl,
+    type:input.type,scope:input.scope,scopeNote:input.scopeNote.trim(),
+    sourceUrl:input.sourceUrl,applicationGuideUrl:input.applicationGuideUrl,
     reviewedOn:input.reviewedOn,sourceStatus:'PROGRAMME_REFERENCE_ONLY' as const,
     focusSectors:Object.freeze([...input.focusSectors]),
     suggestedArtifacts:Object.freeze([...input.suggestedArtifacts]),
@@ -118,7 +199,9 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
 export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
   normalizeFundingPlatform({
     id:'tia-seed-fund',name:'TIA Seed Fund',organisation:'Technology Innovation Agency',
-    type:'SOVEREIGN_FUND',sourceUrl:'https://www.tia.org.za/funding-instruments/',
+    type:'SOVEREIGN_FUND',scope:'SOUTH_AFRICA',
+    scopeNote:'South African innovation funding. Verify the specific instrument and any citizenship, residence or company rules.',
+    sourceUrl:'https://www.tia.org.za/funding-instruments/',
     applicationGuideUrl:'https://www.tia.org.za/how-to-apply/',
     reviewedOn:CAPITAL_SOURCE_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
     focusSectors:['TECH','INDUSTRY','OTHER'],
@@ -131,7 +214,9 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
   }),
   normalizeFundingPlatform({
     id:'idc-development-finance',name:'IDC Development Finance',organisation:'Industrial Development Corporation',
-    type:'DEVELOPMENT_FINANCE',sourceUrl:'https://www.idc.co.za/faq/',
+    type:'DEVELOPMENT_FINANCE',scope:'SOUTH_AFRICA',
+    scopeNote:'South African industrial-development finance; not a non-repayable grant.',
+    sourceUrl:'https://www.idc.co.za/faq/',
     applicationGuideUrl:'https://www.idc.co.za/funding-checklist/',
     reviewedOn:CAPITAL_SOURCE_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
     focusSectors:['INDUSTRY','TECH'],
@@ -144,7 +229,9 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
   }),
   normalizeFundingPlatform({
     id:'nyda-grant-programme',name:'NYDA Grant Programme',organisation:'National Youth Development Agency',
-    type:'SOVEREIGN_FUND',sourceUrl:'https://www.nyda.gov.za/Products-Services/NYDA-Grant-Programme.html',
+    type:'SOVEREIGN_FUND',scope:'SOUTH_AFRICA',
+    scopeNote:'South African youth enterprise support with citizenship, age and other exclusions.',
+    sourceUrl:'https://www.nyda.gov.za/Products-Services/NYDA-Grant-Programme.html',
     applicationGuideUrl:'https://www.nyda.gov.za/Products-Services/NYDA-Grant-Programme.html',
     reviewedOn:CAPITAL_SOURCE_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
     focusSectors:['TECH','INDUSTRY','OTHER'],
@@ -155,13 +242,89 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
       'Check citizenship/residency, turnover, credit, training and the actual application process with NYDA.',
     ],conditions:{minimumAge:18,maximumAge:35,excludesResearchSeed:true},
   }),
+
+  normalizeFundingPlatform({
+    id:'tef-entrepreneurship',name:'Tony Elumelu Foundation Entrepreneurship Programme',
+    organisation:'Tony Elumelu Foundation',type:'GRANT',scope:'PAN_AFRICA',
+    scopeNote:'The 2026 publisher programme welcomes entrepreneurs from all 54 African countries; residency, business age and cohort-specific rules apply.',
+    sourceUrl:'https://www.tonyelumelufoundation.org/tef-entrepreneurship-programme',
+    applicationGuideUrl:'https://www.tonyelumelufoundation.org/tef-entrepreneurship-programme',
+    reviewedOn:CAPITAL_GLOBAL_SOURCES_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],
+    suggestedArtifacts:['CONCEPT_NOTE','BUSINESS_PLAN','FINANCIAL_PLAN','PITCH_DECK'],
+    selectionNotes:[
+      'The 2026 official programme page describes business ideas or businesses up to five years old; an older FAQ contains conflicting business-age figures. Confirm the specific cohort.',
+      'Applicants must meet residence, age and training requirements and have not benefited from an earlier TEF award.',
+      'The 2026 published application round is past; do not assume applications are open today.',
+    ],conditions:{minimumAge:18},
+  }),
+  normalizeFundingPlatform({
+    id:'aecf-challenge-finance',name:'AECF Enterprise Challenge Finance',
+    organisation:'Africa Enterprise Challenge Fund',type:'DEVELOPMENT_FINANCE',scope:'PAN_AFRICA',
+    scopeNote:'Competition-based support for selected sub-Saharan African countries and sectors, not blanket eligibility in all African countries.',
+    sourceUrl:'https://www.aecfafrica.org/approach/competitions/',
+    applicationGuideUrl:'https://www.aecfafrica.org/im-looking-to/see-aecfs-funding-opportunities/',
+    reviewedOn:CAPITAL_GLOBAL_SOURCES_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],
+    suggestedArtifacts:['CONCEPT_NOTE','BUSINESS_PLAN','FINANCIAL_PLAN'],
+    selectionNotes:[
+      'AECF finances commercially viable enterprises in agriculture, renewable energy, climate resilience and rural services.',
+      'Individual competitions specify the exact country, eligible applicant, matching finance and deadline; some awards are repayable.',
+      'AECF states it does not charge applicants during the application process.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'afawa-partner-finance',name:'AFAWA Partner Finance',
+    organisation:'African Development Bank AFAWA',type:'DEVELOPMENT_FINANCE',scope:'PAN_AFRICA',
+    scopeNote:'Access is through participating financial institutions for women-owned African SMEs; this is not a direct AfDB cash-grant application.',
+    sourceUrl:'https://afawa.afdb.org/pillars/access-to-finance',
+    applicationGuideUrl:'https://afawa.afdb.org/pillars/access-to-finance',
+    reviewedOn:CAPITAL_GLOBAL_SOURCES_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],
+    suggestedArtifacts:['BUSINESS_PLAN','FINANCIAL_PLAN','REGISTRATION_PROOF'],
+    selectionNotes:[
+      'The African Development Bank describes partner-bank financing, risk sharing and guarantees for women-led enterprises.',
+      'Find an actual participating lender, current geographic coverage, interest rates and terms before treating this as an accessible loan.',
+      'No gender, financial or identity records are collected or inferred by Luqi.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'global-innovation-fund',name:'Global Innovation Fund',
+    organisation:'Global Innovation Fund',type:'DEVELOPMENT_FINANCE',scope:'GLOBAL',
+    scopeNote:'Organisations can be based anywhere, but their innovations must benefit people living in poverty in developing countries.',
+    sourceUrl:'https://www.globalinnovation.fund/what-we-fund',
+    applicationGuideUrl:'https://www.globalinnovation.fund/frequently-asked-questions',
+    reviewedOn:CAPITAL_GLOBAL_SOURCES_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],
+    suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','BUSINESS_PLAN','FINANCIAL_PLAN'],
+    selectionNotes:[
+      'GIF states that for-profit, nonprofit, government and research organisations may apply; individual innovators should use an affiliated organisation.',
+      'Impact on people in poverty in developing countries is central; applicant location alone does not confer eligibility.',
+      'Investment instruments, round availability, due diligence and impact evidence must be checked with GIF.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'mit-solve-challenges',name:'MIT Solve Global Challenges',
+    organisation:'MIT Solve',type:'INNOVATION_CHALLENGE',scope:'GLOBAL',
+    scopeNote:'Global open-innovation challenges invite technology-based solutions worldwide; each challenge has its own deadline and prize rules.',
+    sourceUrl:'https://solve.mit.edu/challenges',
+    applicationGuideUrl:'https://solve.mit.edu/challenges',
+    reviewedOn:CAPITAL_GLOBAL_SOURCES_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],
+    suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','PITCH_DECK'],
+    selectionNotes:[
+      'MIT Solve describes global challenge-based innovation competitions, not automatic venture investment or a guaranteed grant.',
+      'Some 2027 challenges list a November 6, 2026 submission deadline in US Eastern Time; confirm the specific challenge and deadline directly.',
+      'Geographic, applicant-type and prize restrictions differ across its challenges.',
+    ],conditions:{},
+  }),
 ]);
 export function capitalReviewIsCurrent(now:Date=new Date()):boolean {
   return Number.isFinite(now.getTime()) &&
     now.getTime() <= Date.parse(CAPITAL_SOURCE_RECHECK_ON+'T23:59:59+02:00');
 }
 function validateProfile(profile:CapitalProfile):void {
-  if (!profile || (profile.country !== 'ZA' && profile.country !== 'OTHER') ||
+  if (!profile || (profile.country !== 'OTHER' && !AFRICAN_CODES.has(profile.country)) ||
     !STAGES.has(profile.maturity) || !SECTORS.has(profile.sector) ||
     !PURPOSES.has(profile.purpose) || !REGISTRATIONS.has(profile.registration) ||
     (profile.age !== undefined && (!Number.isInteger(profile.age) || profile.age < 0 || profile.age > 120)) ||
@@ -175,16 +338,25 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
   return CAPITAL_PROGRAMMES.map(programme=>{
     const checks:string[]=[];
     let mismatch=false;
-    if(profile.country !== 'ZA') checks.push('This reviewed catalogue covers South African projects only; cross-border eligibility is unconfirmed.');
+    if(programme.scope==='SOUTH_AFRICA' && profile.country!=='ZA') {
+      mismatch=true;
+      checks.push('This South African programme is not presented as available to projects outside South Africa; verify any cross-border exceptions with the publisher.');
+    }
+    if(programme.scope==='PAN_AFRICA' && profile.country==='OTHER') {
+      mismatch=true;
+      checks.push('This African programme does not publish a general route for projects based outside Africa.');
+    }
+    if(programme.scope!=='SOUTH_AFRICA' && !mismatch)
+      checks.push('Check the exact country, applicant residence, registration, instrument and call-specific restrictions with the publisher.');
     if(!programme.focusSectors.includes(profile.sector))
       checks.push('Check whether the project sector fits this organisation’s published mandate.');
     if(programme.conditions.requiresRegisteredBusiness && profile.registration !== 'REGISTERED')
       checks.push('IDC expects a registered business; confirm registration before a real application.');
     if(programme.conditions.minimumAge !== undefined || programme.conditions.maximumAge !== undefined) {
-      if(profile.age === undefined) checks.push('Confirm the founder age and the programme’s age/timing requirements.');
+      if(profile.age === undefined) checks.push('Confirm founder age and the programme’s age and timing requirements.');
       else if((programme.conditions.minimumAge !== undefined && profile.age < programme.conditions.minimumAge) ||
               (programme.conditions.maximumAge !== undefined && profile.age > programme.conditions.maximumAge)) {
-        mismatch=true;checks.push('The stated founder age falls outside NYDA’s published 18–35 range.');
+        mismatch=true;checks.push('The stated founder age falls outside '+programme.name+' published age rules.');
       }
     }
     if(programme.conditions.excludesResearchSeed && profile.purpose === 'R_AND_D_SEED') {
@@ -219,10 +391,13 @@ export function buildCapitalPreparationDraft(match:FundingMatch,profile:CapitalP
     'No application has been submitted. No funding is promised.',
     'Project: '+(clean(projectName,80)||'Not specified'),
     'Project description: '+(clean(projectSummary,400)||'Not supplied'),
+    'Project location: '+(AFRICAN_COUNTRIES.find(c=>c[0]===profile.country)?.[1]||'Outside Africa'),
     'Project stage: '+profile.maturity+' | Sector: '+profile.sector+' | Intended use: '+profile.purpose,
     '',
     'Programme reference: '+match.programme.name,
     'Organisation: '+match.programme.organisation,
+    'Publisher geographic scope: '+FUNDING_SCOPE_LABELS[match.programme.scope],
+    'Geographic restrictions: '+match.programme.scopeNote,
     'Official programme page: '+match.programme.sourceUrl,
     'Application guidance: '+match.programme.applicationGuideUrl,
     'Publisher review date: '+match.programme.reviewedOn,
