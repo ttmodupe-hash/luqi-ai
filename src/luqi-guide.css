@@ -109,3 +109,34 @@
  .luqi-guide-travel-fields .luqi-guide-travel-wide { grid-column: auto; }
  .luqi-guide-travel { padding: 17px; }
 }
+
+/* One-action homepage handoff: lightweight GPU-only entrance, no data collection. */
+.luqi-guide-handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #9fc89c;
+  border-radius: 14px;
+  background: linear-gradient(115deg, #1b5142, #123729);
+  color: #f8fff1;
+}
+.luqi-guide-handoff p { flex: 1 1 165px; min-width: 0; margin: 0; font-size: 13px; line-height: 1.5; }
+.luqi-guide-handoff button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; max-width: 100%; padding: 10px 13px;
+  border: 1px solid #d2edb0; border-radius: 10px;
+  background: #e4f0cb; color: #173928; font: inherit; font-weight: 700; cursor: pointer;
+}
+.luqi-guide-handoff button:hover { background: #f1f9de; }
+#luqi-guide-result-title:focus-visible { outline: 3px solid #d6f0aa; outline-offset: 5px; }
+@media (prefers-reduced-motion: no-preference) {
+  .luqi-guide-handoff { animation: luqi-handoff-reveal 180ms ease-out both; }
+  @keyframes luqi-handoff-reveal {
+    from { opacity: .65; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+}

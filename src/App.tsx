@@ -39,6 +39,7 @@ const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
 const BusinessDeskPage = lazy(() => import("./pages/BusinessDeskPage"));
 const StudyDeskPage = lazy(() => import("./pages/StudyDeskPage"));
 const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
+const LuqiDrivePage = lazy(() => import("./features/drive/LuqiDrivePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
 const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
@@ -90,6 +91,7 @@ export default function App() {
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
+        <RouterRoute path="/chat/people" element={<SovereignP2PMessenger />} />
         <RouterRoute path="/visual-tutor" element={<VisualTutorPage />} />
         <RouterRoute path="/spatial-vision" element={<KhoroSpatialVisionLab />} />
         <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
@@ -102,6 +104,8 @@ export default function App() {
         <RouterRoute path="/business-desk" element={<BusinessDeskPage />} />
         <RouterRoute path="/study-desk" element={<StudyDeskPage />} />
         <RouterRoute path="/rights-guide" element={<RightsGuidePage />} />
+        <RouterRoute path="/drive" element={<LuqiDrivePage />} />
+        <RouterRoute path="/luqi-drive" element={<Navigate to="/drive" replace />} />
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
         <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />

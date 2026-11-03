@@ -1,5 +1,5 @@
 import { useEffect,useRef,useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { useCustomerSession } from '../providers/customer-session';
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
@@ -20,8 +20,13 @@ const empty:Vault={circles:[],messages:[],blocked:[],reports:[]};
 const languages=['Setswana','Sepitori','isiZulu','Kiswahili','Yoruba','English'] as const;
 export default function SovereignP2PMessenger() {
   const {session}=useCustomerSession();
-  return <main className="p2p-shell"><header className="p2p-heading"><p className="luqi-eyebrow">PEOPLE, WITH PERMISSION</p>
-    <h1>🔐 P2P Circles &amp; Chat</h1><p>Private, mutually approved peer conversations. Public circle labels never grant access.</p></header>
+  const inLuqiChat=useLocation().pathname==='/chat/people';
+  return <main className={'p2p-shell'+(inLuqiChat?' p2p-native':'')}><header className="p2p-heading">
+    <p className="luqi-eyebrow">YOUR PEOPLE · INSIDE LUQI</p>
+    {inLuqiChat?<><h1>Private conversations</h1><p>Chat with mutually approved people using your existing Luqi account. Private circles remain encrypted and require approval; no message is sent automatically.</p>
+      <Link className="p2p-native-back" to="/chat">Back to Luqi Chat</Link></>:
+      <><h1>🔐 P2P Circles &amp; Chat</h1><p>Private, mutually approved peer conversations. Public circle labels never grant access.</p></>}
+    </header>
     <ConnectionStatusBadge />
     {!session?<section className="p2p-card"><h2>Your own Luqi account</h2><p>Sign in to check messaging availability. No peers, invitations or messages are created automatically.</p>
       <Link className="luqi-primary" to="/login">Sign in to Luqi</Link><PresetList/></section>

@@ -59,6 +59,39 @@ it('accepts a natural-language need locally and shows only real available tools'
   expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
 });
 
+it('opens a homepage question as an immediate private guide result without a second submit', () => {
+  const need = 'Help me prepare for my exam';
+  render(<MemoryRouter initialEntries={[{ pathname: '/ask', state: { luqiHomeNeed: need } }]}>
+    <CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider>
+  </MemoryRouter>);
+  expect((screen.getByLabelText('What would you like help with?') as HTMLTextAreaElement).value).toBe(need);
+  expect(screen.getByRole('heading', { name: 'Make learning more practical' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: /Open study desk/ }).getAttribute('href')).toBe('/study-desk');
+  const jump = screen.getByRole('button', { name: 'Go to suggested next step' });
+  fireEvent.click(jump);
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Make learning more practical' }));
+  expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
+});
+
+it('rejects forged oversized homepage handoffs instead of silently shortening the request', () => {
+  render(<MemoryRouter initialEntries={[{ pathname: '/ask', state: { luqiHomeNeed: 'A'.repeat(501) } }]}>
+    <CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider>
+  </MemoryRouter>);
+  expect((screen.getByLabelText('What would you like help with?') as HTMLTextAreaElement).value).toBe('');
+  expect(screen.queryByRole('button', { name: 'Go to suggested next step' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Start with what matters to you' })).toBeNull();
+  expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
+});
+
+it('makes an urgent homepage handoff show safety guidance without starting AI', () => {
+  render(<MemoryRouter initialEntries={[{ pathname: '/ask', state: { luqiHomeNeed: 'Emergency, I need an ambulance' } }]}>
+    <CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider>
+  </MemoryRouter>);
+  expect(screen.getByRole('heading', { name: 'Your safety comes first' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /Use my question in AI Chat/ })).toBeNull();
+  expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
+});
+
 it('keeps urgent safety guidance out of the AI upsell and booking paths', () => {
   render(<MemoryRouter><CustomerSessionProvider><AskLuqiPage /></CustomerSessionProvider></MemoryRouter>);
   fireEvent.change(screen.getByLabelText('What would you like help with?'), {
