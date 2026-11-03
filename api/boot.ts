@@ -22,6 +22,7 @@ import { customerResumeRoutes } from "./services/customerResume";
 import { hostedCheckout } from "./hosted-checkout";
 import { omegaTasks } from "./omega-tasks";
 import { businessConnect } from "./business-connect";
+import { businessConnectPreview } from "./business-connect-preview";
 import { privateProjectVault } from "./private-project-vault";
 import { legacyAdminUnavailable } from "./lib/legacyAdmin";
 import { legacyOperationsUnavailable } from "./lib/legacyOperations";
@@ -132,6 +133,7 @@ app.route("/api/v1/commerce", hostedCheckout);
 app.route("/api/v1/omega/tasks", omegaTasks);
 // Authenticated encrypted project sync is disabled without an explicit rollout flag.
 app.route("/api/v1/projects", privateProjectVault);
+app.route("/api/v1/business-connect-preview", businessConnectPreview);
 app.route("/api/v1/business-connect", businessConnect);
 
 // ── tRPC ───────────────────────────────────────────────────────────
