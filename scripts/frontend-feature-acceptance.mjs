@@ -47,6 +47,8 @@ async function moonJourney(page, name) {
   const lunarImage = panel.locator('.luqi-moon-globe');
   await expect(lunarImage).toHaveAttribute('data-moon-view', 'phase');
   await expect(lunarImage).toHaveAttribute('data-moon-detail', 'local');
+  // The lunar image retains panel depth without a full SVG filter on WebKit.
+  assert.equal(await lunarImage.evaluate(node => getComputedStyle(node).filter), 'none');
   // Calm mode must stop the optional Moon halo on WebKit/mobile without hiding
   // the actual surface/phase or changing privacy and click behaviour.
   const calmButton = page.getByRole('button', {name:'Calm mode', exact:true});
