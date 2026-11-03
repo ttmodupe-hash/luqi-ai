@@ -22,7 +22,9 @@ function buildLocalCraters(): Crater[] {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  for (let i = 0; i < 155; i++) {
+  // The 160px same-origin lunar texture provides photographic detail; keep the
+  // vector fallback bounded to avoid excessive SVG paint work on older WebKit.
+  for (let i = 0; i < 64; i++) {
     const x = 8 + 84 * random();
     const y = 8 + 84 * random();
     const r = .25 + random() * (i % 13 === 0 ? 3.1 : 1.2);
