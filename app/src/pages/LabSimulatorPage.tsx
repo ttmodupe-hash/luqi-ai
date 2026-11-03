@@ -592,18 +592,22 @@ export default function LabSimulatorPage() {
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-bold text-white">
-              Simple Pendulum Motion & Real-Time Energy Conservation Lab
+              Explore nine Physics experiments in Luqi
             </h3>
             <p className="text-xs text-slate-300 max-w-2xl">
-              Zero-dependency digital lab simulation with interactive bob dragging, sliders for gravity, length, and mass, plus real-time kinetic vs. potential energy waveform plotting.
+              Discover motion, friction, electricity, waves, lenses, energy, momentum and heat with live sliders and observations. The full pendulum rig stays available.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              to="/pendulum-lab"
+              to="/physics-lab"
               className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs shadow-md shadow-sky-600/30 transition-all flex items-center gap-1.5"
             >
-              <Play className="w-3.5 h-3.5" /> Launch Lab
+              <Play className="w-3.5 h-3.5" /> Explore Physics
+            </Link>
+            <Link to="/pendulum-lab"
+              className="px-3 py-2 rounded-xl border border-sky-500/40 text-sky-200 text-xs hover:bg-slate-800">
+              Advanced pendulum
             </Link>
             <a
               href="/pendulum-lab.html"
