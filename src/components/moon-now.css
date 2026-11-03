@@ -84,7 +84,8 @@
   pointer-events:none;
   background:radial-gradient(circle,#b3d4ff25 15%,#d4eaff11 43%,transparent 72%);
 }
-.luqi-moon .luqi-moon-globe { max-width:310px; filter:drop-shadow(0 0 12px #d4e6f93a); }
+/* Outer panel shadows provide depth without a costly full-SVG filter pass. */
+.luqi-moon .luqi-moon-globe { max-width:310px; filter:none; }
 .luqi-moon .luqi-moon-overview { grid-template-columns:minmax(0,290px) minmax(0,1fr); align-items:center;gap:clamp(1rem,2.2vw,1.8rem); }
 .luqi-moon .luqi-moon-facts dt { letter-spacing:.02em; color:#abc9d3; }
 .luqi-moon .luqi-moon-facts dd { color:#fffdf5; font-variant-numeric:tabular-nums; }
@@ -101,7 +102,7 @@
 @media (prefers-reduced-motion:no-preference) {
   .luqi-moon-visual::after {animation:luqi-lunar-halo 8s ease-in-out infinite alternate}
 }
-@keyframes luqi-lunar-halo {from{opacity:.45;transform:scale(.98)}to{opacity:.8;transform:scale(1.015)}}
+@keyframes luqi-lunar-halo {from{opacity:.40}to{opacity:.75}}
 
 /* Respect Luqi's explicit Calm mode as well as OS reduced-motion.
    Stop the decorative halo and GPU-heavy SVG filter while keeping the
