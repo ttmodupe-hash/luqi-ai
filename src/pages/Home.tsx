@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   ArrowRight,
@@ -16,12 +16,12 @@ import {
   X,
 } from "lucide-react";
 import HomeExtras from "../components/HomeExtras";
+import HomeHistorySections from "../components/HomeHistorySections";
 
 import MoonNowPanel from "../components/MoonNowPanel";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
 import "../home-cinematic.css";
-const HomeHistorySections = lazy(() => import("../components/HomeHistorySections"));
 const icons = {
   notes: NotebookPen,
   physics: FlaskConical,
@@ -93,9 +93,7 @@ export default function Home() {
           </div>
           <div className="luqi-hero-moon"><MoonNowPanel /></div>
         </section>
-        <Suspense fallback={<section className="luqi-history-showcase" role="status">Loading African history and tools…</section>}>
-          <HomeHistorySections />
-        </Suspense>
+        <HomeHistorySections />
         <HomeExtras />
         <div className="luqi-home-lower">
         <section
