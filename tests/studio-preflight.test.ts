@@ -38,6 +38,19 @@ describe('Luqi Studio no-provider creative preflight', () => {
     expect(content).not.toContain('Not specified');
     expect(content).not.toMatch(/100% success|guaranteed identity|rendered film ready/i);
   });
+  it('does not claim history or skincare presets are independently source-verified', () => {
+    const history = STUDIO_BRIEF_PRESETS.find(item => item.id === 'history')!.brief;
+    const skincare = STUDIO_BRIEF_PRESETS.find(item => item.id === 'skincare')!.brief;
+    expect(history.subject).toMatch(/check original sources/i);
+    expect(history.subject).not.toMatch(/through verified source material/i);
+    expect(skincare.callToAction).toMatch(/ingredient label/i);
+    expect(skincare.callToAction).not.toMatch(/verified ingredients/i);
+    expect(studioPreflight(history).ready).toBe(true);
+    const exported = creativeBriefText(history);
+    expect(exported).toContain('Luqi has not independently checked original sources for this script');
+    expect(exported).toContain('Verify facts, dates, commercial claims');
+    expect(exported).not.toContain('through verified source material');
+  });
   it('keeps all maximum-length browser inputs valid and preserves meaningful scene text', () => {
     const brief = {
       subject: 'S'.repeat(96), camera: 'C'.repeat(80),
