@@ -35,6 +35,8 @@ const fresh = (enabled: boolean): LocalDiagnostics => ({
 });
 let current: LocalDiagnostics = fresh(false);
 let samples = 0;
+// Invalidates completed requests or observer callbacks from prior opt-in/clear sessions.
+let measurementEpoch = 0;
 const listeners = new Set<() => void>();
 const observers: PerformanceObserver[] = [];
 export const getLocalDiagnostics = (): LocalDiagnostics => current;
@@ -64,10 +66,16 @@ const publish = (next: LocalDiagnostics) => {
 };
 function observeVitals() {
   if (typeof PerformanceObserver === 'undefined') return;
+  // Browser buffered performance entries can predate consent; never use them.
+  const startedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now() : 0;
+  const epoch = measurementEpoch;
   for (const type of ['largest-contentful-paint','layout-shift','longtask']) {
     try {
       const observer = new PerformanceObserver(list => {
+        if (epoch !== measurementEpoch || !current.enabled) return;
         for (const item of list.getEntries()) {
+          if (item.startTime < startedAt) continue;
           if (type === 'largest-contentful-paint') recordLocalVital('lcp', item.startTime);
           if (type === 'layout-shift') {
             const shift = item as PerformanceEntry & { value?: number; hadRecentInput?: boolean };
@@ -112,6 +120,7 @@ function installCapture() {
 }
 export function setLocalDiagnosticsEnabled(enabled: boolean): void {
   if (current.enabled === enabled) return;
+  measurementEpoch++;
   for (const observer of observers.splice(0)) observer.disconnect();
   removeCapture?.(); removeCapture = null;
   samples = 0;
@@ -119,8 +128,12 @@ export function setLocalDiagnosticsEnabled(enabled: boolean): void {
   if (enabled) { installCapture(); observeVitals(); }
 }
 export function clearLocalDiagnostics(): void {
+  measurementEpoch++;
   samples = 0;
-  announce(fresh(current.enabled));
+  const enabled = current.enabled;
+  for (const observer of observers.splice(0)) observer.disconnect();
+  announce(fresh(enabled));
+  if (enabled) observeVitals();
 }
 /** Keys are static categories, never user-supplied paths, labels or query strings. */
 export function recordLocalRoute(path: string): void {
@@ -172,13 +185,14 @@ const clock = () => typeof performance !== 'undefined' && typeof performance.now
 export async function fetchWithLocalDiagnostics(kind:RequestKind, request:typeof fetch,
   path:string, init:RequestInit):Promise<Response> {
   if (!current.enabled) return request(path,init);
+  const epoch = measurementEpoch;
   const started = clock();
   try {
     const response = await request(path,init);
-    recordLocalRequest(kind,response.status,clock()-started);
+    if (epoch === measurementEpoch) recordLocalRequest(kind,response.status,clock()-started);
     return response;
   } catch(error) {
-    recordLocalRequest(kind,'network',clock()-started);
+    if (epoch === measurementEpoch) recordLocalRequest(kind,'network',clock()-started);
     throw error;
   }
 }

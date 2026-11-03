@@ -16,6 +16,14 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); setLocalDiagnosticsEnabled(false); vi.unstubAllGlobals(); });
 
+
+it('labels the open-ended final latency bin without claiming an impossible upper bound', () => {
+  render(<MemoryRouter><TelemetryDashboardPage /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('checkbox',{name:'Enable private in-tab diagnostics'}));
+  act(() => { recordLocalRequest('guest_reply',200,120000); });
+  expect(screen.getByLabelText('Local p95 latency bucket ceiling').textContent).toBe('> 10000 ms (60s cap)');
+});
+
 it('requires an explicit checkbox before any measurement and never uploads it', async () => {
   render(<MemoryRouter><TelemetryDashboardPage /></MemoryRouter>);
   const checkbox=screen.getByRole('checkbox',{name:'Enable private in-tab diagnostics'}) as HTMLInputElement;

@@ -122,6 +122,47 @@ describe('no-upload, opt-in local UX diagnostics', () => {
     setLocalDiagnosticsEnabled(true);
     expect(notify.mock.calls.length).toBe(callCount);
   });
+
+  it('never imports buffered pre-consent paint samples or previous observer sessions', () => {
+    const callbacks: PerformanceObserverCallback[]=[];
+    vi.stubGlobal('performance',{now:()=>1000});
+    vi.stubGlobal('PerformanceObserver', class {
+      constructor(callback: PerformanceObserverCallback){ callbacks.push(callback); }
+      observe() {}
+      disconnect() {}
+    });
+    const deliver=(cb:PerformanceObserverCallback,startTime:number) =>
+      cb({getEntries:()=>[{startTime}]} as unknown as PerformanceObserverEntryList,{} as PerformanceObserver);
+    setLocalDiagnosticsEnabled(true);
+    expect(callbacks).toHaveLength(3);
+    deliver(callbacks[0],900);
+    expect(getLocalDiagnostics().vitals.lcpMs).toBeNull();
+    deliver(callbacks[0],1100);
+    expect(getLocalDiagnostics().vitals.lcpMs).toBe(1100);
+    clearLocalDiagnostics();
+    expect(getLocalDiagnostics().vitals.lcpMs).toBeNull();
+    deliver(callbacks[0],1200);
+    expect(getLocalDiagnostics().vitals.lcpMs).toBeNull();
+    deliver(callbacks[3],1200);
+    expect(getLocalDiagnostics().vitals.lcpMs).toBe(1200);
+  });
+  it('discards delayed fetch results from old consent or clear sessions', async () => {
+    let finish!: (response:Response)=>void;
+    const request=vi.fn(()=>new Promise<Response>(resolve=>{ finish=resolve; })) as unknown as typeof fetch;
+    setLocalDiagnosticsEnabled(true);
+    const earlier=fetchWithLocalDiagnostics('guest_reply',request,'/api/v1/guest-chat',{method:'POST'});
+    setLocalDiagnosticsEnabled(false);
+    setLocalDiagnosticsEnabled(true);
+    finish(new Response(null,{status:200}));
+    await earlier;
+    expect(getLocalDiagnostics().api.guest_reply.calls).toBe(0);
+    const priorToClear=fetchWithLocalDiagnostics('guest_reply',request,'/api/v1/guest-chat',{method:'POST'});
+    clearLocalDiagnostics();
+    finish(new Response(null,{status:503}));
+    await priorToClear;
+    expect(getLocalDiagnostics().api.guest_reply.calls).toBe(0);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
   it('caps per-tab events and never turns into an unbounded click history', () => {
     setLocalDiagnosticsEnabled(true);
     for(let i=0;i<2550;i++) recordLocalActivation();
