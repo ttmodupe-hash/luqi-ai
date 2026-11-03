@@ -102,6 +102,19 @@
   .luqi-moon-visual::after {animation:luqi-lunar-halo 8s ease-in-out infinite alternate}
 }
 @keyframes luqi-lunar-halo {from{opacity:.45;transform:scale(.98)}to{opacity:.8;transform:scale(1.015)}}
+
+/* Respect Luqi's explicit Calm mode as well as OS reduced-motion.
+   Stop the decorative halo and GPU-heavy SVG filter while keeping the
+   correctly calculated surface and phase visible. */
+.luqi-shell[data-motion=calm] .luqi-moon-visual::after {
+  animation: none !important;
+  transform: none !important;
+  opacity: .45;
+}
+.luqi-shell[data-motion=calm] .luqi-moon .luqi-moon-globe {
+  filter: none;
+}
+
 @media(max-width:640px) {
   .luqi-moon .luqi-moon-overview {grid-template-columns:1fr}
   .luqi-moon .luqi-moon-visual {width:min(100%,280px)}
