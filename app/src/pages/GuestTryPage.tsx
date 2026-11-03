@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router';
 import { useCustomerSession } from '../providers/customer-session';
 import { ArrowRight, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import SafePilotText from '../components/SafePilotText';
+import { fetchWithLocalDiagnostics, recordLocalJourney } from '../lib/local-diagnostics';
 import '../guest-trial.css';
 
 type Turn = { sender: 'user' | 'ai'; text: string };
@@ -53,7 +54,7 @@ export default function GuestTryPage() {
     const control = new AbortController();
     const timeout = setTimeout(() => control.abort(), 10_000);
     try {
-      const response = await fetch('/api/v1/guest-chat', { method: 'GET',
+      const response = await fetchWithLocalDiagnostics('guest_availability', fetch, '/api/v1/guest-chat', { method: 'GET',
         credentials: 'same-origin', signal: control.signal, cache: 'no-store' });
       const value = await readBoundedJson(response);
       if (!control.signal.aborted) setTrial(response.ok && isTrial(value) ? value : unavailable);
@@ -72,12 +73,13 @@ export default function GuestTryPage() {
     const question = prompt.trim();
     if (sending.current || busy || !trial.enabled || !consent || !question ||
         question.length > MAX_PROMPT || uncertain) return;
+    recordLocalJourney('guest_send');
     sending.current = true; setBusy(true); setNotice('');
     const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 35_000);
     try {
       const history = turns.slice(-2).map(({ sender, text }) => ({ sender, text: text.slice(0, 250) }));
-      const response = await fetch('/api/v1/guest-chat', {
+      const response = await fetchWithLocalDiagnostics('guest_reply', fetch, '/api/v1/guest-chat', {
         method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: question, ...(history.length ? { history } : {}) }),
@@ -96,16 +98,19 @@ export default function GuestTryPage() {
           setTrial({ enabled: false, remaining: 0, limit: 3, reason: 'paused' });
           setNotice('The shared guest allowance is paused. No additional request was started.');
         } else {
+          recordLocalJourney('guest_unconfirmed');
           setUncertain(true);
           setNotice('Luqi could not confirm this reply. A guest attempt may have counted, and we will not retry it automatically.');
         }
         return;
       }
+      recordLocalJourney('guest_reply');
       setTurns(old => [...old, { sender: 'user' as const, text: question }, { sender: 'ai' as const, text: value.response as string }].slice(-6));
       setPrompt('');
       const remaining = value.remaining as number;
       setTrial({ enabled: remaining > 0, remaining, limit: 3, reason: remaining ? 'ready' : 'complete' });
     } catch {
+      recordLocalJourney('guest_unconfirmed');
       setUncertain(true);
       setNotice('The connection was interrupted. A guest reply may have counted; Luqi will not send another request automatically.');
     } finally {

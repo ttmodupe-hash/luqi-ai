@@ -48,6 +48,15 @@ const additionalNavigation = navigation.filter(([path]) => !primaryPaths.has(pat
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [calm, setCalm] = useState(readCalmPreference);
+  // Public shell stays light: the diagnostics chunk is loaded only on explicit opt-in.
+  const [slowDiagnostics, setSlowDiagnostics] = useState(false);
+  useEffect(() => {
+    const updateMotion = (event: Event) => {
+      setSlowDiagnostics((event as CustomEvent<boolean>).detail === true);
+    };
+    window.addEventListener('luqi:diagnostic-motion', updateMotion);
+    return () => window.removeEventListener('luqi:diagnostic-motion', updateMotion);
+  }, []);
   const changeCalm = (value: boolean) => {
     setCalm(value);
     try { localStorage.setItem("luqi:calm-mode", String(value)); } catch { /* Preference works without storage. */ }
@@ -92,7 +101,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   }, [searchOpen]);
   const results = findWorkspaceTools(query);
   return (
-    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm ? "calm" : "auto"}>
+    <div className={isChatWorkspace ? "luqi-shell luqi-shell-chat" : "luqi-shell"} data-motion={calm || slowDiagnostics ? "calm" : "auto"}>
       <Toaster />
       <a
         className="luqi-skip"

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fetchWithLocalDiagnostics, recordLocalJourney } from './local-diagnostics';
 import { buildPilotInput, PilotInputError } from './pilot-input';
 import type { PilotConversationTurn } from './pilot-conversation';
 import { requestPilotJson, pilotFailureCode } from './pilot-request';
@@ -11,8 +12,14 @@ export class PilotChatError extends Error {
   constructor(public code: string) { super('AI trial request failed'); }
 }
 
+/** Instrument only approved caller requests, keeping the native transport pure/Node-ESM-safe. */
+function measuredPilotRequest(kind: 'pilot_availability' | 'pilot_reply', request: typeof fetch): typeof fetch {
+  return (input: RequestInfo | URL, init?: RequestInit) =>
+    fetchWithLocalDiagnostics(kind, request, String(input), init ?? {});
+}
+
 export async function pilotAvailability(signal: AbortSignal, request: typeof fetch = fetch): Promise<boolean> {
-  const response = await requestPilotJson(request, '/v1/readiness', { method: 'GET', signal });
+  const response = await requestPilotJson(measuredPilotRequest('pilot_availability', request), '/v1/readiness', { method: 'GET', signal });
   const body = response.body as { checks?: { persistence?: string; ai_pilot?: string } };
   return response.status === 200 && body?.checks?.persistence === 'connected' && body?.checks?.ai_pilot === 'configured_not_verified';
 }
@@ -25,7 +32,8 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
   try {
     // Same normalization and complete input limit as the server and UI counter.
     buildPilotInput(question, language, history);
-    const response = await requestPilotJson(request, '/api/v1/luqi-core', {
+    recordLocalJourney('signed_send');
+    const response = await requestPilotJson(measuredPilotRequest('pilot_reply', request), '/api/v1/luqi-core', {
       method: 'POST', signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       // Only explicit, user-reviewed conversation turns may be included.
@@ -35,7 +43,9 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
     });
     if (response.status === 401) throw new PilotChatError('AUTH_REQUIRED');
     if (!response.ok) throw new PilotChatError(pilotFailureCode(response.status, response.body));
-    return reply.parse(response.body);
+    const parsed = reply.parse(response.body);
+    recordLocalJourney('signed_reply');
+    return parsed;
   } catch (error) {
     if (error instanceof PilotInputError) throw new PilotChatError(error.code);
     if (error instanceof PilotChatError) throw error;
