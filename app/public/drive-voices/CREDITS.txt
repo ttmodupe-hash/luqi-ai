@@ -1,0 +1,17 @@
+Luqi-Drive / South African English narration · pack v1
+These are synthetic introductions to Luqi's public province and corridor guides.
+For each guide, cape/ uses the VCTK p314 Cape Town preset and joburg/ uses the
+VCTK p347 Johannesburg preset. These names identify the corpus accent regions.
+The featured places and transcripts are in src/features/drive/.
+
+Produced offline in November 2026 with Piper (en_GB-vctk-medium, a multispeaker
+model; speaker IDs 35 and 32 respectively) and converted to mono MP3. No model
+weights, reference recordings or personal voice uploads are distributed here.
+Model: https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_GB/vctk/medium/MODEL_CARD
+Model SHA-256: 4e9fc85ab9009385319fc6bae7f55577f8a2d7ee77fd9159a5500eb6531f41e6
+Corpus: Junichi Yamagishi, Christophe Veaux & Kirsten MacDonald (2019).
+CSTR VCTK Corpus v0.92. Centre for Speech Technology Research, University of Edinburgh.
+https://doi.org/10.7488/ds/2645
+Dataset license: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+Voice presets were applied to original Luqi guide scripts. No endorsement is implied.

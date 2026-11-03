@@ -49,14 +49,14 @@ test('signed-in Luqi shows local consumer and evidence advice without charging a
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Refresh saved history' })).toBeVisible();
   await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
-  await page.getByLabel('Your question').fill('My online order delivery is delayed again');
+  await page.getByRole('textbox', { name: 'Your question', exact: true }).fill('My online order delivery is delayed again');
   await expect(page.getByRole('heading', { name: 'Luqi consumer help — three first steps' })).toBeVisible();
   await page.getByRole('button', { name: 'Open free consumer rights guide' }).click();
   await expect(page).toHaveURL(/#\/consumer-rights$/);
   // Preserve the authenticated single-tab Luqi session by navigating inside the SPA.
   await page.getByRole('link', { name: 'Ask Luqi', exact: true }).click();
   await expect(page).toHaveURL(/#\/chat$/);
-  await page.getByLabel('Your question').fill('Did the Council of Nicaea choose the Bible?');
+  await page.getByRole('textbox', { name: 'Your question', exact: true }).fill('Did the Council of Nicaea choose the Bible?');
   await expect(page.getByRole('heading', { name: 'Explore a scholarly comparison with Luqi' })).toBeVisible();
   await page.getByRole('button', { name: 'Open free comparative evidence guide' }).click();
   await expect(page).toHaveURL(/#\/comparative-evidence$/);

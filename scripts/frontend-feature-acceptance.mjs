@@ -44,6 +44,36 @@ async function moonJourney(page, name) {
   const panel = page.locator('.luqi-moon');
   await expect(panel).toBeVisible();
   await expect(panel.getByRole('img')).toHaveAttribute('aria-label', /illuminated/);
+  const lunarImage = panel.locator('.luqi-moon-globe');
+  await expect(lunarImage).toHaveAttribute('data-moon-view', 'phase');
+  await expect(lunarImage).toHaveAttribute('data-moon-detail', 'local');
+  // The lunar image retains panel depth without a full SVG filter on WebKit.
+  assert.equal(await lunarImage.evaluate(node => getComputedStyle(node).filter), 'none');
+  // Calm mode must stop the optional Moon halo on WebKit/mobile without hiding
+  // the actual surface/phase or changing privacy and click behaviour.
+  const calmButton = page.getByRole('button', {name:'Calm mode', exact:true});
+  await calmButton.click();
+  await expect(page.locator('.luqi-shell')).toHaveAttribute('data-motion', 'calm');
+  assert.equal(await page.locator('.luqi-moon-visual').evaluate(node =>
+    getComputedStyle(node, '::after').animationName), 'none');
+  await page.getByRole('button', {name:'Calm mode on', exact:true}).click();
+  await expect(page.locator('.luqi-shell')).toHaveAttribute('data-motion', 'auto');
+  // The first paint stays entirely local, even on a low-data handset.
+  await expect(lunarImage.locator('image')).toHaveCount(2);
+  await expect(lunarImage.locator('image').first()).toHaveAttribute('href', '/moon-luqi-art.webp');
+  await panel.getByRole('button', {name:'Explore full surface',exact:true}).click();
+  await expect(lunarImage).toHaveAttribute('data-moon-view', 'surface');
+  await expect(panel.getByText(/not today’s lunar illumination/)).toBeVisible();
+  await panel.getByRole('button', {name:'Show NASA Moon image',exact:true}).click();
+  await expect(lunarImage).toHaveAttribute('data-moon-detail', 'lro');
+  await expect(lunarImage.locator('image')).toHaveCount(2);
+  await expect(lunarImage.locator('image').first()).toHaveAttribute('href', /wikimedia\.org/);
+  await panel.getByRole('button', {name:'Use low-data Moon',exact:true}).click();
+  await expect(lunarImage).toHaveAttribute('data-moon-detail', 'local');
+  await expect(lunarImage.locator('image')).toHaveCount(2);
+  await expect(lunarImage.locator('image').first()).toHaveAttribute('href', '/moon-luqi-art.webp');
+  await panel.getByRole('button', {name:'Current phase',exact:true}).click();
+  await expect(lunarImage).toHaveAttribute('data-moon-view', 'phase');
   await panel.getByText('Enter an area manually', {exact:true}).click();
   await panel.getByRole('button',{name:'Apply area',exact:true}).click();
   await expect(panel.getByRole('status')).toContainText('Enter latitude');

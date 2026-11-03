@@ -76,7 +76,8 @@ export function creativeBriefText(input: StudioCreativeBrief): string {
   const b = cleanBrief(input);
   return ['LUQI STUDIO — LOCAL PRE-FLIGHT PRODUCTION BRIEF',
     'Planning checklist only. No model prediction, video credits, identity lock, or paid rendering.',
-    'Verify source facts, commercial claims, cast and music rights before publishing.', '',
+    'Editable creative draft — Luqi has not independently checked original sources for this script.',
+    'Verify facts, dates, commercial claims, cast and music rights before publishing.', '',
     ...Object.entries({ Subject: b.subject, Camera: b.camera, Lighting: b.lighting,
       Motion: b.movement, Setting: b.setting, Audience: b.audience || 'Not specified',
       'Call to action': b.callToAction || 'Not specified',
@@ -98,7 +99,7 @@ export const STUDIO_BRIEF_PRESETS: ReadonlyArray<{ id: string; label: string; br
     camera: '85mm product close-up with label readable', lighting: 'Soft studio reflections',
     movement: 'Subtle slow turntable motion', setting: 'Simple clean product table',
     audience: 'customers exploring locally made products',
-    callToAction: 'Read verified ingredients and contact the maker for current availability',
+    callToAction: 'Read the product ingredient label and contact the maker for current availability',
     appearance: 'Match the approved packaging colours and label across the six scenes',
   } },
   { id: 'solar', label: 'Solar contractor introduction', brief: {
@@ -110,11 +111,11 @@ export const STUDIO_BRIEF_PRESETS: ReadonlyArray<{ id: string; label: string; br
     appearance: 'Use the contractor’s approved logo and safety equipment',
   } },
   { id: 'history', label: 'African history explainer', brief: {
-    subject: 'Introduce one historical African place through verified source material',
+    subject: 'Introduce one historical African place; check original sources before publishing',
     camera: 'Wide landscape view and close-up of cited details', lighting: 'Natural documentary lighting',
     movement: 'Gentle pan across original illustrated scenes', setting: 'A clearly identified historical location',
     audience: 'curious learners and families',
-    callToAction: 'Open the original sources and check dates and interpretations',
+    callToAction: 'Find original sources and check their dates and interpretations',
     appearance: 'Distinguish historical sources from invented artwork or reconstructions',
   } },
 ];
