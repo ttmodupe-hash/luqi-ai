@@ -46,11 +46,14 @@ it("blocks driver deep dives when reported speed rises, even after parked confir
   } as GeolocationPosition);
   render(<MemoryRouter><LuqiDrivePage/></MemoryRouter>);
   fireEvent.click(screen.getByRole("button",{name:/Start location assist/i}));
-  act(()=>emitPosition(position(2)));
+  act(()=>emitPosition(position(0))); // Explicit stationary state for manual parked confirmation.
   const parked=()=>screen.getByRole("checkbox",{name:/I am safely parked/i}) as HTMLInputElement;
   fireEvent.click(parked());
   fireEvent.click(screen.getByRole("button",{name:/Open 3-minute-style deep dive/i}));
   expect(screen.getByRole("button",{name:/Close deep dive/i})).toBeTruthy();
+  act(()=>emitPosition(position(2))); // Even 7 km/h must clear parked status.
+  expect(parked().checked).toBe(false);
+  expect((screen.getByRole("button",{name:/Open 3-minute-style deep dive/i}) as HTMLButtonElement).disabled).toBe(true);
   act(()=>emitPosition(position(30)));
   expect(screen.getByText("108 km/h")).toBeTruthy();
   expect(parked().checked).toBe(false);
