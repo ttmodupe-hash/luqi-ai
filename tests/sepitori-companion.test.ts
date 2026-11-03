@@ -23,8 +23,7 @@ describe('Luqi Sepitori companionship is an explicit user-controlled preference'
   });
   it.each(['Heita, can you help with rent?', 'What does Sepitori mean?',
     'My friend said no Sepitori please and I wondered why',
-    'I am in Soshanguve', 'Heita, Luqi, explain this', '']
-' )('does not infer preference from greetings, geography or quoted content: %s', text => {
+    'I am in Soshanguve', 'Heita, Luqi, explain this', ''])('does not infer preference from greetings, geography or quoted content: %s', text => {
     expect(readLocalSepitoriSignal(text)).toBeNull();
   });
   it('rejects overly long and non-text instructions to prevent unintended local interception', () => {
