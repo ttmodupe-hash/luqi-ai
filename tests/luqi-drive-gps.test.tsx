@@ -334,3 +334,87 @@ it("never substitutes foreign English defaults and links every guide to two non-
         expect(bytes.length).toBeGreaterThan(5000);
       }
 });
+
+function enableMatchedNarration() {
+  render(
+    <MemoryRouter initialEntries={["/drive?trail=heritage"]}>
+      <LuqiDrivePage />
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Use phone GPS" }));
+  fireEvent.click(screen.getByLabelText(/Read the matched guide aloud/));
+}
+
+async function receiveFixAfter(ms = 0) {
+  act(() => vi.advanceTimersByTime(ms));
+  await act(async () => update(fix()));
+}
+
+it("retries a blocked or stopped guide and starts the daily cooldown on completion", async () => {
+  const play = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("autoplay blocked"))
+    .mockResolvedValue(undefined);
+  class Clip {
+    static latest: Clip;
+    onended: (() => void) | null = null;
+    play = play;
+    pause = vi.fn();
+    constructor() {
+      Clip.latest = this;
+    }
+  }
+  vi.stubGlobal("Audio", Clip);
+  enableMatchedNarration();
+  await receiveFixAfter();
+  expect(screen.getByText(/Tap Listen to start audio/)).toBeTruthy();
+  act(() => Clip.latest.onended?.());
+  await receiveFixAfter(179999);
+  expect(play).toHaveBeenCalledTimes(1);
+  await receiveFixAfter(1);
+  expect(play).toHaveBeenCalledTimes(2);
+
+  const interruptedEnd = Clip.latest.onended;
+  fireEvent.click(screen.getByRole("button", { name: "Stop audio" }));
+  act(() => interruptedEnd?.());
+  await receiveFixAfter(180000);
+  expect(play).toHaveBeenCalledTimes(3);
+  act(() => vi.advanceTimersByTime(5000));
+  act(() => Clip.latest.onended?.());
+  await receiveFixAfter(86400000 - 1);
+  expect(play).toHaveBeenCalledTimes(3);
+  await receiveFixAfter(1);
+  expect(play).toHaveBeenCalledTimes(4);
+});
+
+it("counts a completed manual retry in the chosen device language and ignores an interrupted utterance", async () => {
+  class Utterance {
+    onend: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+  }
+  const speak = vi.fn<(u: Utterance) => void>();
+  vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
+  vi.stubGlobal("speechSynthesis", {
+    getVoices: () => [
+      { name: "Device isiZulu", lang: "zu-ZA", voiceURI: "za-zu" },
+    ],
+    speak,
+    cancel: vi.fn(),
+  });
+  enableMatchedNarration();
+  fireEvent.change(screen.getByLabelText("Briefing language"), {
+    target: { value: "isizulu" },
+  });
+  await receiveFixAfter();
+  expect(speak).toHaveBeenCalledTimes(1);
+  const interrupted = speak.mock.calls[0][0];
+  act(() => interrupted.onerror?.());
+  act(() => interrupted.onend?.());
+  await receiveFixAfter(180000);
+  expect(speak).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button", { name: "Listen to this guide" }));
+  expect(speak).toHaveBeenCalledTimes(3);
+  act(() => speak.mock.calls[2][0].onend?.());
+  await receiveFixAfter(180000);
+  expect(speak).toHaveBeenCalledTimes(3);
+});

@@ -84,7 +84,8 @@ export function useDriveVoice(lang: LanguageKey) {
       player.current.onerror = null;
       player.current.pause();
     }
-    if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
+    const synth = window.speechSynthesis;
+    if (synth?.speaking || synth?.pending) synth.cancel();
   }
   function stop() {
     cancel();
@@ -111,22 +112,30 @@ export function useDriveVoice(lang: LanguageKey) {
       localStorage.setItem(prefKey(lang), id);
     } catch {}
   }
-  function speak(guide: Stop) {
+  function speak(guide: Stop, onComplete?: () => void) {
     cancel();
     const token = generation.current;
     const report = (s: string) => {
       if (token === generation.current) setStatus(s);
     };
+    // Settle each attempt once. Late events from a replaced player or voice are stale.
+    function finish(message: string, completed = false) {
+      if (token !== generation.current) return;
+      ++generation.current;
+      setStatus(message);
+      if (completed) onComplete?.();
+    }
     if (!chosen) {
       report("No matching voice is available for this language.");
       return;
     }
     if (chosen === "cape" || chosen === "joburg") {
-      const audio = player.current ?? (player.current = new Audio());
+      const audio = new Audio();
+      player.current = audio;
       audio.src = "/drive-voices/v1/" + chosen + "/" + guide.id + ".mp3";
-      audio.onended = () => report("");
+      audio.onended = () => finish("", true);
       audio.onerror = () =>
-        report("The voice clip could not load. Tap Listen to try again.");
+        finish("The voice clip could not load. Tap Listen to try again.");
       setStatus("Loading narration…");
       void audio
         .play()
@@ -134,7 +143,7 @@ export function useDriveVoice(lang: LanguageKey) {
           report("Playing · " + options.find((o) => o.id === chosen)?.label),
         )
         .catch(() =>
-          report("Tap Listen to start audio, or check your connection."),
+          finish("Tap Listen to start audio, or check your connection."),
         );
       return;
     }
@@ -150,25 +159,31 @@ export function useDriveVoice(lang: LanguageKey) {
     u.voice = device;
     u.lang = device.lang;
     u.rate = 0.95;
-    u.onend = () => report("");
+    u.onend = () => finish("", true);
     u.onerror = () =>
-      report(
+      finish(
         "Device voice unavailable. Select another voice or read the briefing.",
       );
-    window.speechSynthesis.speak(u);
-    setStatus("Reading · " + device.name);
+    try {
+      window.speechSynthesis.speak(u);
+      report("Reading · " + device.name);
+    } catch {
+      finish(
+        "Device voice unavailable. Select another voice or read the briefing.",
+      );
+    }
   }
   return { available: !!chosen, options, chosen, choose, speak, stop, status };
 }
 export function DriveVoiceControls({
   lang,
   changeLang,
-  guide,
+  listen,
   voice,
 }: {
   lang: LanguageKey;
   changeLang: (k: LanguageKey) => void;
-  guide: Stop;
+  listen: () => void;
   voice: ReturnType<typeof useDriveVoice>;
 }) {
   return (
@@ -207,11 +222,7 @@ export function DriveVoiceControls({
       )}
       {voice.available ? (
         <>
-          <button
-            type="button"
-            className="drivePrimary"
-            onClick={() => voice.speak(guide)}
-          >
+          <button type="button" className="drivePrimary" onClick={listen}>
             Listen to this guide
           </button>
           <button className="driveSecondary" type="button" onClick={voice.stop}>
