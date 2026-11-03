@@ -49,6 +49,15 @@ async function boundedCopy(response) {
     void reader.cancel().catch(() => {});
   }
 }
+// Keep downloaded executable routes and the offline shell ahead of decorative
+// images/fonts when the bounded cache fills during later releases. This cannot
+// recover a cold-cache hash and does not expand the 64-entry or 1 MiB limits.
+function evictionPriority(request) {
+  const path = new URL(request.url).pathname;
+  if (SHELL.includes(path)) return 2;
+  const kind = assetKind(path);
+  return kind === 'js' || kind === 'css' ? 1 : 0;
+}
 function store(request, response, kind) {
   const candidate = cacheable(response, kind) ? response.clone() : null;
   const operation = async () => {
@@ -57,7 +66,16 @@ function store(request, response, kind) {
     if (!copy) { await cache.delete(request); return; }
     await cache.put(request, copy);
     const keys = await cache.keys();
-    for (const key of keys.slice(0, Math.max(0, keys.length - MAX_ENTRIES))) await cache.delete(key);
+    const excess = Math.max(0, keys.length - MAX_ENTRIES);
+    if (excess) {
+      // FIFO within each class; never keep more than the existing 64 entries.
+      // Public shell survives online asset churn, while previously loaded JS/CSS
+      // remains available for exact-hash 404/410 fallback as long as possible.
+      const victims = keys.map((key, index) => ({ key, index, priority: evictionPriority(key) }))
+        .sort((a, b) => a.priority - b.priority || a.index - b.index)
+        .slice(0, excess);
+      for (const { key } of victims) await cache.delete(key);
+    }
   };
   // Serialize maintenance so concurrent downloads cannot defeat the entry cap.
   writes = writes.then(operation).catch(() => {});

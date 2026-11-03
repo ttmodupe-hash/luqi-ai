@@ -213,6 +213,39 @@ for (const [path, source] of sources) {
     await Promise.all(Array.from({ length: 70 }, (_, i) => h.dispatch(`/assets/item-${i}.js`)));
     assert.equal(h.buckets.get(name).size, 64);
   });
+  test(`${path}: functional old JS and offline shell outlive decorative churn within the 64-entry limit`, async () => {
+    let retired = false;
+    const priorChunk = '/assets/ChatSidebar-previousrelease123.js';
+    const h = harness(source, async request => {
+      const pathname = new URL(request.url).pathname;
+      if (pathname === priorChunk) return retired
+        ? new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } })
+        : text('export const earlierChat = true;', { 'Cache-Control': 'public, max-age=300' });
+      if (pathname.endsWith('.png')) return new Response('synthetic public image', {
+        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' },
+      });
+      return new Response('synthetic shell', {
+        headers: { 'Content-Type': pathname.endsWith('.json') ? 'application/json' : 'text/html',
+          'Cache-Control': 'public, max-age=300' },
+      });
+    });
+    await h.lifecycle('install');
+    assert.equal((await h.dispatch(priorChunk)).status, 200);
+    await Promise.all(Array.from({ length: 90 }, (_, i) => h.dispatch(`/assets/decorative-${i}.png`)));
+    const cache = await h.caches.open(name);
+    assert.equal((await cache.keys()).length, 64, 'Never expand storage for stale recovery');
+    for (const shell of ['/', '/index.html', '/manifest.json']) {
+      assert.ok(await cache.match(shell), `Keep public offline shell ${shell}`);
+    }
+    assert.ok(await cache.match(priorChunk), 'Retain already-verified executable route over decorative PNGs');
+    retired = true;
+    const recovered = await h.dispatch(priorChunk);
+    assert.equal(recovered.status, 200, 'Only the exact formerly cached JS may answer origin 404');
+    assert.match(await recovered.text(), /earlierChat/);
+    assert.equal((await cache.match('/assets/UnseenRoute-neverloaded999.js')), undefined);
+    assert.equal((await h.dispatch('/assets/UnseenRoute-neverloaded999.js')).status, 200);
+    assert.equal((await cache.keys()).length, 64);
+  });
   test(`${path}: activation removes only older LUQI caches and preserves unrelated data`, async () => {
     const h = harness(source);
     for (const key of ['luqi-ai-v1', 'luqi-ai-2026-09-06-fix1', name, 'other-application']) h.buckets.set(key, new Map());
