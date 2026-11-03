@@ -24,7 +24,9 @@ function buildLocalCraters(): Crater[] {
   };
   // The 160px same-origin lunar texture provides photographic detail; keep the
   // vector fallback bounded to avoid excessive SVG paint work on older WebKit.
-  for (let i = 0; i < 64; i++) {
+  // Preserve native crater outlines as a fallback, but favour the locally
+  // hosted detailed lunar image rather than painting large SVG geometry.
+  for (let i = 0; i < 24; i++) {
     const x = 8 + 84 * random();
     const y = 8 + 84 * random();
     const r = .25 + random() * (i % 13 === 0 ? 3.1 : 1.2);
