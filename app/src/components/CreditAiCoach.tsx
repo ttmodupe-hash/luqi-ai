@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
 import { useOptionalCustomerSession } from '../providers/customer-session';
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { stageGuide } from '../lib/interaction-handoff';
@@ -29,18 +28,17 @@ export default function CreditAiCoach() {
   const [topic, setTopic] = useState<CreditAiTopic>('understand-report');
   const session = useOptionalCustomerSession()?.session ?? null;
   const owner = customerSessionBoundary(session);
-  const navigate = useNavigate();
   const result = creditHabitExercise(example);
   const starter = creditAiStarter(topic);
 
   function openAi() {
     if (!owner) {
-      navigate('/try'); // Existing no-registration guest experience, no private handoff.
+      window.location.hash = '#/try'; // Fixed existing guest route; no reload or provider action.
       return;
     }
     // The existing same-account memory-only Chat handoff pre-fills a general question.
     // It does NOT invoke a provider. The customer must separately approve and press Send.
-    if (stageGuide(owner, '/consumer-rights', starter, null, true)) navigate('/chat');
+    if (stageGuide(owner, '/consumer-rights', starter, null, true)) window.location.hash = '#/chat';
   }
 
   return <section className="space-y-4 rounded-xl border border-cyan-700 bg-slate-900 p-4" aria-labelledby="credit-ai-title">
@@ -116,7 +114,7 @@ export default function CreditAiCoach() {
       </p>
     </div>
     <p className="text-xs text-slate-400">
-      <Link to="/consumer-rights" className="text-cyan-200 underline">Consumer rights guide</Link>
+      <a href="#/consumer-rights" className="text-cyan-200 underline">Consumer rights guide</a>
       {' · '}No automatic bureau access, financial uploads, AI submissions or paid inference from this page.
     </p>
   </section>;
