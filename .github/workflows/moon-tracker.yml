@@ -24,9 +24,9 @@ jobs:
       - name: Install locked UI test dependencies without lifecycle scripts
         run: npm ci --legacy-peer-deps --ignore-scripts
       - name: Exercise optional location, live updates, isolated lazy failures and retained discovery tools
-        run: npx --no-install vitest run tests/moon-now.test.tsx tests/moon-loading.test.tsx tests/home-extras.test.tsx
+        run: npx --no-install vitest run tests/moon-now.test.tsx tests/moon-real-surface.test.tsx tests/moon-loading.test.tsx tests/home-extras.test.tsx
       - name: Strictly type check the Moon and deferred homepage interfaces
-        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/MoonNowPanel.tsx src/components/MoonNowContent.tsx src/components/HomeExtras.tsx src/components/HomeDiscoveryContent.tsx
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/MoonNowPanel.tsx src/components/MoonDisc.tsx src/components/MoonNowContent.tsx src/components/HomeExtras.tsx src/components/HomeDiscoveryContent.tsx
       - name: Build the actual frontend without production credentials
         run: npx --no-install vite build
       - name: Install isolated Chromium and WebKit acceptance browsers
