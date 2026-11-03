@@ -57,8 +57,13 @@ export const workspaceTools = [
   },
   {
     id: "local-pulse", title: "Local Pulse · Radio & News", category: "South African talk stations and original newsrooms",
-    description: "Official 702, CapeTalk, SAfm, Kaya 959, EWN and SABC links with region filters and source-linked questions. No rebroadcast, live headlines or paid AI.",
+    description: "Official 702, POWER 98.7, CapeTalk, SAfm, Kaya 959, EWN and SABC links with region filters and source-linked questions. No rebroadcast, live headlines or paid AI.",
     status: "Free publisher links · no account", ready: true, path: "/local-pulse", icon: "status",
+  },
+  {
+    id: "luqi-drive", title: "Luqi-Drive · Road-Trip Guide", category: "Offline-first South African road travel",
+    description: "Source-linked N1/N3 route packs, on-device narration, passenger quizzes, speed-adaptive stories and reviewed Business Connect discovery. Location stays in the tab; no background tracking.",
+    status: "Free local guide · optional location", ready: true, path: "/drive", icon: "agents",
   },
   {
     id: "social-support", title: "SASSA & UIF Support", category: "South African social grants and unemployment benefits",
@@ -128,6 +133,17 @@ export const workspaceTools = [
     ready: false,
     path: null,
     icon: "languages",
+  },
+  {
+    id: "cert-academy",
+    title: "CCNA & Network Certification Academy",
+    category: "Hands-on networking and exam practice",
+    description:
+      "CCNA/CCNP study paths, IPv4 subnetting and VLSM, Cisco IOS practice, topology exercises, flashcards and consent-controlled Luqi coaching.",
+    status: "Interactive academy · local labs + optional AI",
+    ready: true,
+    path: "/ccna",
+    icon: "academy",
   },
   {
     id: "academy",
