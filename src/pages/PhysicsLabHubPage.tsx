@@ -203,7 +203,7 @@ function ExperimentStation({ id }: { id: PhysicsId }) {
             Reset variables
           </button>
           <button type="button" onClick={() => setObservations(previous =>
-            [...previous, { number: previous.length + 1, settings: { ...inputs },
+            [...previous, { number: (previous.at(-1)?.number ?? 0) + 1, settings: { ...inputs },
               readings: result.metrics.map(metric => ({ ...metric })) }].slice(-20))}
             className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300">
             Record observation
