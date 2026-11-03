@@ -47,6 +47,15 @@ async function moonJourney(page, name) {
   const lunarImage = panel.locator('.luqi-moon-globe');
   await expect(lunarImage).toHaveAttribute('data-moon-view', 'phase');
   await expect(lunarImage).toHaveAttribute('data-moon-detail', 'local');
+  // Calm mode must stop the optional Moon halo on WebKit/mobile without hiding
+  // the actual surface/phase or changing privacy and click behaviour.
+  const calmButton = page.getByRole('button', {name:'Calm mode', exact:true});
+  await calmButton.click();
+  await expect(page.locator('.luqi-shell')).toHaveAttribute('data-motion', 'calm');
+  assert.equal(await page.locator('.luqi-moon-visual').evaluate(node =>
+    getComputedStyle(node, '::after').animationName), 'none');
+  await page.getByRole('button', {name:'Calm mode on', exact:true}).click();
+  await expect(page.locator('.luqi-shell')).toHaveAttribute('data-motion', 'auto');
   // The first paint stays entirely local, even on a low-data handset.
   await expect(lunarImage.locator('image')).toHaveCount(2);
   await expect(lunarImage.locator('image').first()).toHaveAttribute('href', '/moon-luqi-art.webp');
