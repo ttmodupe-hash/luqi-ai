@@ -14,7 +14,7 @@ test('discovery and creator links load automatically, with usable category contr
   expect(within(discovery).getByRole('button', { name: 'Explore', exact: true }).getAttribute('aria-pressed')).toBe('true');
   fireEvent.click(within(discovery).getByRole('button', { name: 'Learn & play', exact: true }));
   expect(within(discovery).getByRole('button', { name: 'Learn & play', exact: true }).getAttribute('aria-pressed')).toBe('true');
-  expect(within(discovery).getByRole('link', { name: /Physics lab/ }).getAttribute('href')).toBe('/pendulum-lab');
+  expect(within(discovery).getByRole('link', { name: /Physics lab/ }).getAttribute('href')).toBe('/physics-lab');
   fireEvent.click(within(discovery).getByRole('button', { name: 'Mix it up' }));
   expect(within(discovery).getByRole('button', { name: 'Create', exact: true }).getAttribute('aria-pressed')).toBe('true');
   expect(screen.getByRole('link', { name: 'Try the free Content Studio' }).getAttribute('href')).toBe('/content-studio');
