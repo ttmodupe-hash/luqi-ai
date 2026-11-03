@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { lazy, Suspense, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   ArrowRight,
@@ -16,12 +16,12 @@ import {
   X,
 } from "lucide-react";
 import HomeExtras from "../components/HomeExtras";
-import HomeHistorySections from "../components/HomeHistorySections";
 
 import MoonNowPanel from "../components/MoonNowPanel";
 import { findWorkspaceTools } from "../components/workspace-catalog";
 import "../workspace.css";
 import "../home-cinematic.css";
+const HomeHistorySections = lazy(() => import("../components/HomeHistorySections"));
 const icons = {
   notes: NotebookPen,
   physics: FlaskConical,
@@ -93,7 +93,27 @@ export default function Home() {
           </div>
           <div className="luqi-hero-moon"><MoonNowPanel /></div>
         </section>
-        <HomeHistorySections />
+        <Suspense fallback={<>
+          <section className="luqi-history-showcase" role="status" aria-live="polite" aria-labelledby="luqi-history-title">
+            <div className="luqi-history-banner"><div className="luqi-history-intro">
+              <h2 id="luqi-history-title">African Peoples and Historical Evidence in Biblical Narratives</h2>
+              <p>Exploration is loading. Public tools remain available.</p>
+            </div></div>
+          </section>
+          <nav className="luqi-quick-tools" aria-label="Quick access to Luqi's working tools">
+            <Link to="/driver-rights">Driver rights</Link>
+            <Link to="/tenders">Small tenders</Link>
+            <Link to="/comparative-evidence">African history</Link>
+          </nav>
+          <aside className="luqi-guest-guide" aria-label="Guest trial and country guide">
+            <section className="luqi-chat-card">
+              <h2 id="chat-availability-heading">Tell Luqi what you need. Find your next step.</h2>
+              <Link to="/try">Try Luqi free</Link>
+            </section>
+          </aside>
+        </>}>
+          <HomeHistorySections />
+        </Suspense>
         <HomeExtras />
         <div className="luqi-home-lower">
         <section
