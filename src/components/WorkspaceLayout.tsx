@@ -51,7 +51,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
     setCalm(value);
     try { localStorage.setItem("luqi:calm-mode", String(value)); } catch { /* Preference works without storage. */ }
   };
-  const isChatWorkspace = location.pathname === "/chat";
+  const isChatWorkspace = location.pathname === "/chat" || location.pathname === "/chat/people" || location.pathname === "/p2p";
   const guideNotice = isGuidePath(location.pathname) ? <RouteLoadBoundary><GuideHandoffNotice key={location.pathname} /></RouteLoadBoundary> : null;
   const customer = useOptionalCustomerSession();
   const presence = useContactPresence(customer?.session?.token);

@@ -90,6 +90,7 @@ export default function App() {
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
+        <RouterRoute path="/chat/people" element={<SovereignP2PMessenger />} />
         <RouterRoute path="/visual-tutor" element={<VisualTutorPage />} />
         <RouterRoute path="/spatial-vision" element={<KhoroSpatialVisionLab />} />
         <RouterRoute path="/p2p" element={<SovereignP2PMessenger />} />
