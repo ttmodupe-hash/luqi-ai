@@ -37,6 +37,13 @@ export default function OpportunityCompassPage(){
      <p className="max-w-4xl text-slate-200">Discover official starting points for jobs, graduate programmes, internships, bursaries, business funding, creative sponsorship and public support. No account, private data or paid AI call is needed for this guide.</p>
      <p className="text-sm text-slate-300">Luqi does not employ candidates, guarantee eligibility, submit applications or charge recruitment fees. Verify the exact post, requirements and deadline with its publisher.</p>
    </header>
+   <section aria-label="Fund your project" className="space-y-3 rounded-xl border border-emerald-700 bg-slate-900 p-4 sm:p-5">
+     <h2 className="text-xl font-bold">Have a project that needs funding?</h2>
+     <p className="max-w-3xl text-sm text-slate-200">Tell Luqi what stage you are at, compare trusted South African programme information and prepare a funding worksheet. No payments, uploads or AI credits required.</p>
+     <Link to="/african-radar" className="inline-flex min-h-11 items-center rounded-lg bg-emerald-500 px-4 py-3 font-bold text-slate-950">
+       Prepare a funding shortlist
+     </Link>
+   </section>
    <section className="space-y-3 rounded-xl border border-cyan-800 bg-slate-900 p-4" aria-label="Country scope">
      <h2 className="text-lg font-semibold">Country-by-country rollout</h2>
      <label className="block max-w-lg text-sm">Select your country or research view

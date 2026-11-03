@@ -37,3 +37,17 @@ for (const path of ["/api/v25/support", "/api/v25/support/*"]) {
     }, 503);
   });
 }
+
+// Old sensing APIs returned fabricated grant openings, tariff estimates and telemetry.
+// Until publisher-level evidence exists, deny ALL methods, not just GET.
+for (const path of ['/api/v1/sensing/dispatch-to-pipeline', '/v1/sensing/dispatch-to-pipeline']) {
+  legacyControlUnavailable.all(path, c => {
+    c.header('Cache-Control', 'no-store');
+    return c.json({status:'unavailable',code:'SELF_HEALING_PIPELINE_NOT_CONFIGURED',
+      message:'No verified autonomous engineering or deployment is connected.'},503);
+  });
+}
+for (const prefix of ['/api/v1/sensing','/v1/sensing']) {
+  closed(prefix,'SENSING_SOURCE_UNVERIFIED');
+  closed(prefix+'/*','SENSING_SOURCE_UNVERIFIED');
+}

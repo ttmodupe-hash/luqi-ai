@@ -7,10 +7,16 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: webkit-acceptance-${{ github.ref }}
-  cancel-in-progress: true
+  group: webkit-acceptance-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify-webkit-journeys:
+    # Preserve all desktop and iPhone tests but bound per-runner contention.
+    # Both shards must succeed; failure of either keeps this release blocked.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     # The locked Playwright 1.58.2 does not support WebKit on Ubuntu 26.04.
     # Avoid ubuntu-latest migration changing the browser test platform silently.
     runs-on: ubuntu-24.04
@@ -41,15 +47,16 @@ jobs:
       - name: Verify resolved loading policy and emitted public entrypoint
         run: node scripts/verify-module-loading.mjs
       - name: Run existing account, trial and tool journeys on desktop and iPhone-sized WebKit
-        # Keep every desktop + iPhone journey: 421/434 passed before the prior 12m
-        # global cap. The 15m Playwright cap and 16m step remain bounded by 20m job.
+        # Each shard runs its own complete subset of the unmodified test list.
+        # No test exclusions, retries, disabled assertions or looser deadlines.
+        # The original 15m Playwright and 16m step caps still apply to each shard.
         timeout-minutes: 16
-        run: npx --no-install playwright test --config=playwright.webkit.config.ts
+        run: npx --no-install playwright test --config=playwright.webkit.config.ts --shard=${{ matrix.shard }}/2
       - name: Preserve synthetic test results and failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: webkit-launch-acceptance
+          name: webkit-launch-acceptance-shard-${{ matrix.shard }}
           path: test-results-webkit/
           retention-days: 7
           if-no-files-found: warn
