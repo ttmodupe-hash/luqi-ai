@@ -135,6 +135,10 @@ test('CLI non-success and malformed replies preserve input and state without fal
 });
 
 test('workspace search exposes Civic and balloon tools and both navigation breakpoints work',async({page},testInfo)=>{
+  // Verify unchanged native clicks/route transitions under an OS reduced-motion
+  // preference. Separate animation tests cover default-motion visuals. WebKit
+  // runner compositing must not turn focus/navigation acceptance into a race.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
  // The existing responsive breakpoint shows the desktop menu above 1440px.
  await page.setViewportSize({width:1920,height:1080});await page.goto('/#/');
  await page.getByLabel('Filter workspace tools',{exact:true}).fill('voting');
