@@ -67,7 +67,7 @@ export default function Home() {
             <p className="luqi-home-ask-note">Opens a free local guide. No AI request is sent automatically.</p>
             <nav className="luqi-hero-chips" aria-label="Popular Luqi starting points">
               <Link to="/driver-rights">Driver rights</Link>
-              <Link to="/pendulum-lab">Matric physics</Link>
+              <Link to="/physics-lab">Physics experiments</Link>
               <Link to="/tenders">Small tenders &amp; RFQs</Link>
               <Link to="/business-desk">Start a business</Link>
               <Link to="/comparative-evidence">African history</Link>
