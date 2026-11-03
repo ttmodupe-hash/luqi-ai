@@ -163,6 +163,24 @@ describe('no-upload, opt-in local UX diagnostics', () => {
     expect(getLocalDiagnostics().api.guest_reply.calls).toBe(0);
     expect(request).toHaveBeenCalledTimes(2);
   });
+
+  it('isolates subscriber exceptions from successful and failed paid-network outcomes', async () => {
+    setLocalDiagnosticsEnabled(true);
+    const unsub = subscribeLocalDiagnostics(() => { throw new Error('dashboard listener failed'); });
+    const success = new Response(null, { status:200 });
+    const request = vi.fn(async () => success) as unknown as typeof fetch;
+    await expect(fetchWithLocalDiagnostics('pilot_reply',request,'/api/v1/luqi-core',{method:'POST'}))
+      .resolves.toBe(success);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(getLocalDiagnostics().api.pilot_reply).toMatchObject({calls:1,failed:0});
+    const networkError = new Error('underlying network failure');
+    const reject = vi.fn(async () => { throw networkError; }) as unknown as typeof fetch;
+    await expect(fetchWithLocalDiagnostics('pilot_reply',reject,'/api/v1/luqi-core',{method:'POST'}))
+      .rejects.toBe(networkError);
+    expect(reject).toHaveBeenCalledTimes(1);
+    expect(getLocalDiagnostics().api.pilot_reply).toMatchObject({calls:2,failed:1});
+    unsub();
+  });
   it('caps per-tab events and never turns into an unbounded click history', () => {
     setLocalDiagnosticsEnabled(true);
     for(let i=0;i<2550;i++) recordLocalActivation();

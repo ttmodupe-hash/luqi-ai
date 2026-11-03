@@ -21,6 +21,6 @@ After opt-in, focusing the homepage goal field may preload only the fixed local 
 Release gates: unit tests local-diagnostics.test.ts and local-diagnostics-dashboard.test.tsx, existing telemetry-truth regression tests, browser-tests/local-diagnostics.spec.ts at 320px and full mirrored root/app frontend parity. Browser CI does not replace physical phone/PWA acceptance.
 
 ## Bounded in-tab latency tail
-- Named endpoint timings accumulate five fixed buckets (<=250ms, <=1s, <=3s, <=10s, <=60s). The displayed p95 is the ceiling of the 95th-percentile bucket, NOT an exact percentile, account-wide measure or global SLO.
-- No raw per-request data, form values, timestamps or identifiers are retained; existing 2,500-sample cap and disable/clear/reload reset continue to apply.
+- Named endpoint timings accumulate five fixed buckets (<=250ms, <=1s, <=3s, <=10s, >10s). Timed durations are capped at 60 seconds; the last bucket remains open-ended and must NOT be displayed as a verified <=60s upper bound. The p95 estimate is the 95th-percentile bucket label, NOT an exact percentile, account-wide measure or global SLO.
+- No raw per-request data, form values, timestamps or identifiers are retained; existing 2,500-sample cap and disable/clear/reload reset continue to apply. Diagnostic subscriber and measurement exceptions are isolated: they cannot turn an already-successful AI transport into an error or add an automatic retry.
 - Do not self-adjust backend quotas, billing, eviction policies, database schema or auto-index from per-tab opt-in telemetry. Such changes require validated aggregate server metrics, data minimisation, independent security review, rollout/rollback testing and owner authorisation.

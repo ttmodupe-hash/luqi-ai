@@ -50,7 +50,10 @@ const announce = (next: LocalDiagnostics) => {
   if (wasReduced !== next.conserveMotion && typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('luqi:diagnostic-motion', { detail:next.conserveMotion }));
   }
-  for (const listener of listeners) listener();
+  // A broken dashboard subscriber must never interrupt a paid request or navigation.
+  for (const listener of listeners) {
+    try { listener(); } catch { /* Diagnostics remain strictly best-effort. */ }
+  }
 };
 const publish = (next: LocalDiagnostics) => {
   if (!current.enabled) return;
@@ -186,13 +189,19 @@ export async function fetchWithLocalDiagnostics(kind:RequestKind, request:typeof
   path:string, init:RequestInit):Promise<Response> {
   if (!current.enabled) return request(path,init);
   const epoch = measurementEpoch;
-  const started = clock();
+  let started = 0;
+  try { started = clock(); } catch { /* Fallback instrumentation must not block the request. */ }
+  const note = (status:number | 'network') => {
+    if (epoch !== measurementEpoch) return;
+    try { recordLocalRequest(kind,status,clock()-started); }
+    catch { /* Measurement failures must not change the fetch result or trigger a retry. */ }
+  };
   try {
     const response = await request(path,init);
-    if (epoch === measurementEpoch) recordLocalRequest(kind,response.status,clock()-started);
+    note(response.status);
     return response;
   } catch(error) {
-    if (epoch === measurementEpoch) recordLocalRequest(kind,'network',clock()-started);
+    note('network');
     throw error;
   }
 }
