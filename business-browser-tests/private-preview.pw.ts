@@ -23,7 +23,7 @@ test('private owner preview uses the same login, isolates scripts and saves a de
   const values=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('luqi:private-business-preview:v2:')).map(k=>localStorage.getItem(k)));
   expect(values.length).toBe(1);expect(values[0]).toContain('Synthetic Bakery');expect(values[0]).not.toContain('Bearer');
   await frame.locator('#mainDialog .dialog-header [data-action="close"]').click();await frame.locator('#language').selectOption('nso');await expect(frame.locator('html')).toHaveAttribute('lang','nso');
-  expect(await frame.locator('html').evaluate(e=>e.scrollWidth<=e.clientWidth+1)).toBe(true);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(remote).toEqual([]);
+  const geometry=await frame.locator('html').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,overflowing:[...e.querySelectorAll('header,nav,section,article,button')].filter(n=>n.getBoundingClientRect().right>e.clientWidth+1).slice(0,12).map(n=>({tag:n.tagName,className:n.className,right:n.getBoundingClientRect().right}))}));expect(geometry.scroll,JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width+1);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(remote).toEqual([]);
  }finally{
   await strangerContext.close();
   // Fixed disposable database, exact synthetic identities; no production cleanup path.

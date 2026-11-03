@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Link} from 'react-router';
 import {useOptionalCustomerSession} from '../providers/customer-session';
 import {acceptPreviewStorage,loadBusinessPreview,previewDocument,PREVIEW_STORAGE_PREFIX} from '../lib/business-preview';
@@ -8,7 +8,13 @@ export default function BusinessConnectPreviewPage(){
 }
 function PreviewInstance({token}:{token?:string}){
  const [html,setHtml]=useState(''),[error,setError]=useState(''),[loading,setLoading]=useState(!!token);
- const frame=useRef<HTMLIFrameElement>(null);
+ const frame=useRef<HTMLIFrameElement>(null);const heading=useRef<HTMLElement>(null);const [frameHeight,setFrameHeight]=useState(520);
+ useLayoutEffect(()=>{
+  if(!html)return;
+  const fit=()=>{const top=frame.current?.getBoundingClientRect().top??0;const visual=window.visualViewport;setFrameHeight(Math.max(200,Math.min(1000,(visual?.height??window.innerHeight)-Math.max(0,top-(visual?.offsetTop??0))-16)));};
+  fit();const observer=typeof ResizeObserver==='undefined'?null:new ResizeObserver(fit);if(heading.current)observer?.observe(heading.current);window.addEventListener('resize',fit);window.visualViewport?.addEventListener('resize',fit);
+  return()=>{observer?.disconnect();window.removeEventListener('resize',fit);window.visualViewport?.removeEventListener('resize',fit);};
+ },[html]);
  useEffect(()=>{
   if(!token)return;let active=true;let storageKey='';let nonce='';
   const onMessage=(event:MessageEvent)=>{
@@ -28,11 +34,11 @@ function PreviewInstance({token}:{token?:string}){
   return()=>{active=false;window.removeEventListener('message',onMessage);};
  },[token]);
  return <main className="mx-auto w-full min-w-0 max-w-[1600px] px-2 py-5 text-slate-100 sm:px-5" aria-labelledby="business-preview-title">
-  <header className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h1 id="business-preview-title" className="text-xl font-semibold">Business Connect · private owner preview</h1><p className="mt-1 max-w-4xl text-xs text-slate-300">Uses your Luqi login. Sample listings, courier checks, delivery actions and ratings are demonstrations. Drafts stay on this device; nothing here publishes a real business or contacts a courier.</p></div><nav className="flex flex-wrap gap-4 text-sm text-cyan-200"><Link to="/business-connect">Manage real business profiles</Link><Link to="/businesses">Published directory</Link></nav></header>
+  <header ref={heading} className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h1 id="business-preview-title" className="text-xl font-semibold">Business Connect · private owner preview</h1><p className="mt-1 max-w-4xl text-xs text-slate-300">Uses your Luqi login. Sample listings, courier checks, delivery actions and ratings are demonstrations. Drafts stay on this device; nothing here publishes a real business or contacts a courier.</p></div><nav className="flex flex-wrap gap-4 text-sm text-cyan-200"><Link to="/business-connect">Manage real business profiles</Link><Link to="/businesses">Published directory</Link></nav></header>
   {!token?<section className="rounded-xl border border-slate-600 bg-slate-900 p-6"><p>Sign in with your existing Luqi owner account to open the private preview.</p><Link className="mt-4 inline-block rounded-lg border border-cyan-500 px-4 py-3 text-cyan-200" to="/login">Use my Luqi login</Link></section>:<>
    {loading&&<p role="status">Opening your private Business Connect preview…</p>}
    {error&&<p role="alert" className="rounded-lg border border-amber-600 bg-slate-900 p-4">{error}</p>}
-   {html&&<iframe ref={frame} title="Private Luqi Business Connect interactive preview" srcDoc={html} sandbox="allow-scripts allow-downloads allow-popups allow-popups-to-escape-sandbox" allow="geolocation 'none'; camera 'none'; microphone 'none'; payment 'none'" className="h-[max(760px,85dvh)] w-full rounded-xl border border-slate-600 bg-[#faf9f5]"/>}
+   {html&&<iframe ref={frame} title="Private Luqi Business Connect interactive preview" srcDoc={html} sandbox="allow-scripts allow-downloads allow-popups allow-popups-to-escape-sandbox" allow="geolocation 'none'; camera 'none'; microphone 'none'; payment 'none'" style={{height:frameHeight}} className="w-full rounded-xl border border-slate-600 bg-[#faf9f5]"/>}
   </>}
  </main>;
 }
