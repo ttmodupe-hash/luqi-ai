@@ -575,3 +575,14 @@
 .driveStoryStrip{margin:12px 15px 0;padding:10px 12px;background:#22473c;border-left:3px solid #e2c48b;border-radius:5px}.driveStoryStrip small{font:650 .63rem ui-monospace,monospace;color:#f6d08b;letter-spacing:.08em}.driveStoryStrip p{color:#edf3e6;font-size:.88rem;margin:.35em 0 0}
 
 .driveVoicePanel{display:flex;align-items:end;gap:8px 14px;flex-wrap:wrap;margin:0 0 16px;border:1px solid #bfceba;background:#eaf0e5;padding:12px;border-radius:10px}.driveVoicePanel label{font-size:.77rem;font-weight:650;display:grid;gap:4px}.driveVoicePanel select{min-height:38px;max-width:min(78vw,270px)}.driveVoicePanel button{padding:9px 12px;border-radius:7px;font-weight:650;font-size:.84rem}.driveVoicePanel .driveAudioAlt{text-decoration:underline}.driveVoicePanel small:empty{display:none}.driveAtlas [data-province]{cursor:pointer}.driveAtlas [data-province]:focus-visible path{stroke:#ffd881;stroke-width:3px}
+
+.fieldNotebook .notebookAction, .fieldNotebook li { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.65rem; }
+.fieldNotebook .notebookAction { border-block:1px solid #506459; padding-block:.8rem; }
+.fieldNotebook ol { counter-reset:place; margin:.5rem 0; padding:0; }
+.fieldNotebook li { justify-content:flex-start; margin-block:.4rem; counter-increment:place; }
+.fieldNotebook li::before { content:counter(place, decimal-leading-zero); font:600 .8rem monospace; }
+.fieldNotebook li span { flex:1; min-width:8rem; }
+.fieldNotebook button { min-height:44px; }
+.fieldNotebook button:disabled { opacity:.7; cursor:default; }
+.fieldNotebook small { display:block; margin-top:.4rem; }
+.fieldReceipt { overflow-wrap:anywhere; }

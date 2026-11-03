@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import DriveMap from "./DriveMap";
+import FieldNotebook from "./FieldNotebook";
 import {
   LocateFixed,
   Navigation,
@@ -274,6 +275,7 @@ function DriveSession({
           Luqi<span>-Drive</span>
         </h1>
         <p>Follow your position and discover the places around you.</p>
+        <button className="driveSecondary" type="button" onClick={() => document.getElementById("field-guide-title")?.focus()}>Open my field guide</button>
       </header>
       <nav className="driveTrails" aria-label="Driving corridors">
         {trails.map((t) => (
@@ -566,6 +568,7 @@ function DriveSession({
           {guide.source.label} ↗
         </a>
       </div>
+      <FieldNotebook guide={guide} />
       <details className="driveCredits">
         <summary>About the African voices</summary>
         <p>
