@@ -20,8 +20,7 @@ test('physics discovery offers eight working browser-local experiments without A
   await expect(page.getByRole('table', { name: 'Recorded physics observations' })).toBeVisible();
   await catalogue.getByRole('button', { name: /Electric circuits/ }).click();
   await expect(page.getByRole('heading', { name: 'Electric circuits', exact: true })).toBeVisible();
-  await page.getByRole('slider', { name: 'Connection (0 series, 1 parallel)' }).focus();
-  await page.keyboard.press('ArrowRight');
+  await page.getByRole('combobox', { name: 'Connection' }).selectOption('1');
   await expect(page.getByText('Calculated state · Parallel connection')).toBeVisible();
   expect(writes).toEqual([]);
 });
@@ -30,9 +29,8 @@ test('small-phone physics experiments remain usable and do not stretch the page'
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto('/#/physics-lab?experiment=thermal');
   await expect(page.getByRole('heading', { name: 'Heat and temperature', exact: true })).toBeVisible();
-  await expect(page.getByRole('slider', { name: 'Material (0 water, 1 aluminium, 2 steel)' })).toBeVisible();
-  await page.getByRole('slider', { name: 'Material (0 water, 1 aluminium, 2 steel)' }).focus();
-  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('combobox', { name: 'Material' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Material' }).selectOption('1');
   await expect(page.getByText('Calculated state · Aluminium')).toBeVisible();
   await page.getByRole('button', { name: 'Record observation' }).click();
   await expect(page.getByRole('table', { name: 'Recorded physics observations' })).toBeVisible();
