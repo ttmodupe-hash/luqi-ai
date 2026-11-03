@@ -39,7 +39,7 @@ export default function OpportunityCompassPage(){
    </header>
    <section aria-label="Fund your project" className="space-y-3 rounded-xl border border-emerald-700 bg-slate-900 p-4 sm:p-5">
      <h2 className="text-xl font-bold">Have a project that needs funding?</h2>
-     <p className="max-w-3xl text-sm text-slate-200">Tell Luqi what stage you are at, compare trusted South African programme information and prepare a funding worksheet. No payments, uploads or AI credits required.</p>
+     <p className="max-w-3xl text-sm text-slate-200">Tell Luqi what stage you are at, compare South African, pan-African and international programme references in one hub, and prepare a funding worksheet. No payments, uploads or AI credits required.</p>
      <Link to="/african-radar" className="inline-flex min-h-11 items-center rounded-lg bg-emerald-500 px-4 py-3 font-bold text-slate-950">
        Prepare a funding shortlist
      </Link>
