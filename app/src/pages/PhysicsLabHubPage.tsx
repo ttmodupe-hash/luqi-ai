@@ -150,7 +150,9 @@ function ExperimentStation({ id }: { id: PhysicsId }) {
     const headings = ['Observation', ...topic.controls.map(control => control.label + ' (' + control.unit + ')'),
       ...result.metrics.map(metric => metric.label + ' (' + metric.unit + ')')];
     const rows = observations.map(item => [
-      item.number, ...topic.controls.map(control => item.settings[control.key]),
+      item.number, ...topic.controls.map(control =>
+        control.options?.find(option => option.value === item.settings[control.key])?.label ??
+        item.settings[control.key]),
       ...item.readings.map(reading => reading.value === null ? 'Not finite' : reading.value),
     ]);
     const csv = [headings, ...rows].map(row => row.map(value => '"' + String(value).replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -251,7 +253,9 @@ function ExperimentStation({ id }: { id: PhysicsId }) {
           <tbody>{observations.map(obs => <tr key={obs.number} className="border-b border-slate-800">
             <td className="p-2">{obs.number}</td>
             <td className="p-2">{topic.controls.map(control =>
-              control.label + ': ' + fmt(obs.settings[control.key]) + ' ' + control.unit).join(' · ')}</td>
+              control.label + ': ' +
+              (control.options?.find(option => option.value === obs.settings[control.key])?.label ??
+                (fmt(obs.settings[control.key]) + ' ' + control.unit))).join(' · ')}</td>
             <td className="p-2">{obs.readings.map(reading =>
               reading.label + ': ' + fmt(reading.value) + ' ' + reading.unit).join(' · ')}</td>
           </tr>)}</tbody>
