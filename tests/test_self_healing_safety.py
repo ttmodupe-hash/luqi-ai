@@ -98,14 +98,39 @@ class FailClosedHealingTests(unittest.TestCase):
                     self.manager.trigger_self_healing("Report", bad)
         self.assertEqual(self.manager.list_jobs(), [])
 
-    def test_redacts_credential_like_fields_before_storage(self):
-        job = self.manager.trigger_self_healing(
-            "Provider error token=secret123 password:pa55 api_key=privatekey"
+    def test_report_content_is_never_retained_in_job_or_listing(self):
+        # Old regex redaction leaked values after Authorization: Bearer and
+        # unrecognised query/cookie/identity fields. Use entirely fake fixtures.
+        fake_secrets = (
+            "synthetic-bearer-never-store",
+            "synthetic-cookie-never-store",
+            "synthetic-query-never-store",
+            "synthetic-email@example.invalid",
         )
-        self.assertNotIn("secret123", job.bug_report)
-        self.assertNotIn("pa55", job.bug_report)
-        self.assertNotIn("privatekey", job.bug_report)
-        self.assertIn("[REDACTED]", job.bug_report)
+        report = (
+            "Provider timeout Authorization: Bearer " + fake_secrets[0]
+            + " Cookie: sessionid=" + fake_secrets[1]
+            + " URL=https://example.invalid/?access_token=" + fake_secrets[2]
+            + " Customer=" + fake_secrets[3]
+        )
+        job = self.manager.trigger_self_healing(report, "api/handler.py")
+        self.assertEqual(job.bug_report, "[REPORT_WITHHELD]")
+        self.assertEqual(job.heuristic_category, "potential_reliability")
+        self.assertEqual(job.persistence, "in_memory_only")
+        self.assertEqual(len(job.evidence_sha256), 64)
+        for secret in fake_secrets:
+            with self.subTest(secret=secret):
+                self.assertNotIn(secret, repr(job))
+                self.assertNotIn(secret, repr(self.manager.list_jobs()))
+        self.assertIn("non-auditable", job.execution_trace[0]["detail"])
+        # Keyed fingerprints distinguish different reports but do not assert
+        # real CI, diagnosis, approvals or durable audit provenance.
+        same = self.manager.trigger_self_healing(report, "api/handler.py")
+        other = self.manager.trigger_self_healing(report + " another incident", "api/handler.py")
+        self.assertEqual(job.evidence_sha256, same.evidence_sha256)
+        self.assertNotEqual(job.evidence_sha256, other.evidence_sha256)
+        self.assertFalse(job.ci_verified)
+        self.assertFalse(job.deployed)
 
     def test_proposal_queue_is_bounded_and_fails_closed(self):
         for number in range(MAX_JOBS_IN_MEMORY):
@@ -121,6 +146,20 @@ class FailClosedHealingTests(unittest.TestCase):
             self.manager.trigger_self_healing("x" * 4001)
         self.assertEqual(self.manager.list_jobs(), [])
 
+    def test_returned_intake_job_cannot_forge_registered_state(self):
+        returned = self.manager.trigger_self_healing("Synthetic outage")
+        returned.status = "DEPLOYED_TO_PROD"
+        returned.reviewer = "Self-appointed approver"
+        returned.deployed = True
+        returned.ci_verified = True
+        returned.execution_trace[0]["status"] = "PASSED"
+        registered = self.manager.list_jobs()[0]
+        self.assertEqual(registered["status"], "AWAITING_EXTERNAL_REVIEW")
+        self.assertIsNone(registered["reviewer"])
+        self.assertFalse(registered["deployed"])
+        self.assertFalse(registered["ci_verified"])
+        self.assertEqual(registered["execution_trace"][0]["status"], "RECORDED")
+
     def test_returned_job_listing_does_not_allow_trace_mutation(self):
         self.manager.trigger_self_healing("Unverified possible outage")
         result = self.manager.list_jobs()
@@ -129,6 +168,38 @@ class FailClosedHealingTests(unittest.TestCase):
             self.manager.list_jobs()[0]["execution_trace"][0]["status"], "RECORDED"
         )
 
+
+    def test_swapped_tool_cannot_reenable_code_execution(self):
+        class UnsafeReplacementTool:
+            def _run(self, code_to_test):
+                raise AssertionError("Injected sandbox must never run")
+
+        self.manager.sandbox_tool = UnsafeReplacementTool()
+        with patch("subprocess.run", side_effect=AssertionError("Host process attempted")):
+            result = self.manager.run_sandbox_code("print('never-run')")
+        self.assertFalse(result["executed"])
+        self.assertFalse(result["tests_passed"])
+        self.assertFalse(result["isolated"])
+        self.assertIn("BLOCKED", result["output"])
+
+    def test_public_job_registry_is_only_a_detached_snapshot(self):
+        job = self.manager.trigger_self_healing("Synthetic report with no secrets")
+        public_registry = self.manager.jobs
+        public_registry[job.job_id].status = "DEPLOYED_TO_PROD"
+        public_registry[job.job_id].reviewer = "forged-reviewer"
+        public_registry[job.job_id].execution_trace[0]["status"] = "CI_VERIFIED"
+        public_registry[job.job_id].deployed = True
+        public_registry[job.job_id].ci_verified = True
+        public_registry.clear()
+        with self.assertRaises(AttributeError):
+            self.manager.jobs = {}
+        canonical = self.manager.list_jobs()
+        self.assertEqual(len(canonical), 1)
+        self.assertEqual(canonical[0]["status"], "AWAITING_EXTERNAL_REVIEW")
+        self.assertIsNone(canonical[0]["reviewer"])
+        self.assertEqual(canonical[0]["execution_trace"][0]["status"], "RECORDED")
+        self.assertFalse(canonical[0]["ci_verified"])
+        self.assertFalse(canonical[0]["deployed"])
 
 if __name__ == "__main__":
     unittest.main()
