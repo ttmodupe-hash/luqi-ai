@@ -16,7 +16,7 @@ it('renders a cratered lunar surface with real LRO image and a calculated phase 
   expect(moon.getAttribute('data-moon-detail')).toBe('lro');
   expect(container.querySelectorAll('g[aria-hidden="true"] circle').length).toBeGreaterThan(25);
   // The local lunar WebP provides fine surface texture; bound SVG fallback paint for slow devices.
-  expect(container.querySelectorAll('g[aria-hidden="true"] circle').length).toBeLessThan(130);
+  expect(container.querySelectorAll('g[aria-hidden="true"] circle').length).toBeLessThan(60);
   const photo = container.querySelector('image');
   expect(photo?.getAttribute('href')).toBe(LRO_MOON_IMAGE);
   const phase = container.querySelector('clipPath[id$="-lit"] path');
