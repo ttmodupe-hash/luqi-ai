@@ -50,3 +50,33 @@ test('Capital Intelligence requires a recheck when publisher review expires',asy
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toContainText('Publisher source recheck overdue');
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toContainText('Check programme criteria');
 });
+
+test('funding hub brings South African, pan-African and global publishers together at 320px',async({page})=>{
+  await page.setViewportSize({width:320,height:740});
+  const writes:string[]=[];
+  page.on('request',request=>{if(request.method()!=='GET')writes.push(request.url());});
+  await page.goto('/#/african-radar');
+  await expect(page.getByText('8 of 8 reviewed programme references match your filters.')).toBeVisible();
+  await page.getByRole('combobox',{name:'Project location'}).selectOption('KE');
+  await page.getByRole('combobox',{name:'Funding geography'}).selectOption('PAN_AFRICA');
+  await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'AECF Enterprise Challenge Finance'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'AFAWA Partner Finance'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toHaveCount(0);
+  await page.getByRole('combobox',{name:'Funding geography'}).selectOption('GLOBAL');
+  await expect(page.getByRole('article',{name:'Global Innovation Fund'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeVisible();
+  await page.getByRole('textbox',{name:'Search funding programmes'}).fill('MIT');
+  await expect(page.getByText('1 of 8 reviewed programme references match your filters.')).toBeVisible();
+  const mit=page.getByRole('article',{name:'MIT Solve Global Challenges'});
+  await mit.getByRole('button',{name:'Prepare review draft'}).click();
+  await expect(page.getByRole('textbox',{name:'Funding preparation draft text'}))
+    .toHaveValue(/Project location: Kenya[\s\S]*CURRENT FUNDING WINDOW: NOT VERIFIED/);
+  await page.getByRole('combobox',{name:'Funding geography'}).selectOption('ALL');
+  await page.getByRole('textbox',{name:'Search funding programmes'}).fill('');
+  await page.getByRole('combobox',{name:'Funding type'}).selectOption('GRANT');
+  await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'Global Innovation Fund'})).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  expect(writes).toEqual([]);
+});
