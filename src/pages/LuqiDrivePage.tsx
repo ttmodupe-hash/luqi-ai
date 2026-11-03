@@ -31,6 +31,8 @@ export default function LuqiDrivePage(){
   const [parkedConfirmed,setParkedConfirmed]=useState(false);
   const [message,setMessage]=useState("Location is off. Route packs and source links work without it.");
   const watchRef=useRef<number|null>(null);
+  // Ignore geolocation callbacks already in flight after Stop, route change or unmount.
+  const locationGeneration=useRef(0);
   const wakeRef=useRef<WakeSentinel|null>(null);
   const quizTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const recentRef=useRef<Record<string,number>>({});
@@ -40,7 +42,8 @@ export default function LuqiDrivePage(){
   const previewArea=areas.find(item=>item.id===previewAreaId)??areas[0]??null;
   const mode=driveStoryMode(speedKmh);
   const story=driveStory(pack,speedKmh);
-  const knownMoving=typeof speedKmh==="number"&&speedKmh>=30;
+  // Slow traffic is still motion; never unlock driver reading based on a low speed estimate.
+  const knownMoving=typeof speedKmh==="number"&&speedKmh>=5;
   // A slow-moving car is still a moving car: never unlock driver reading based on low GPS speed alone.
   const deepAllowed=passengerMode||(!knownMoving&&parkedConfirmed);
 
@@ -54,7 +57,7 @@ export default function LuqiDrivePage(){
     return()=>{active=false;};
   },[pack.id]);
 
-  useEffect(()=>()=>{if(watchRef.current!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watchRef.current);if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}void wakeRef.current?.release();if("speechSynthesis"in window)window.speechSynthesis.cancel();},[]);
+  useEffect(()=>()=>{locationGeneration.current++;if(watchRef.current!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watchRef.current);if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}void wakeRef.current?.release();if("speechSynthesis"in window)window.speechSynthesis.cancel();},[]);
 
   useEffect(()=>{
     const onHidden=()=>{if(document.hidden){if(quizTimerRef.current!==null){clearTimeout(quizTimerRef.current);quizTimerRef.current=null;}setQuizVisible(false);setAnswer(null);autoAudioRef.current=false;setAutoAudio(false);if("speechSynthesis"in window)window.speechSynthesis.cancel();void wakeRef.current?.release();wakeRef.current=null;}};
@@ -68,6 +71,7 @@ export default function LuqiDrivePage(){
   },[knownMoving,deepAllowed]);
 
   function stopLocation(){
+    locationGeneration.current++;
     if(watchRef.current!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watchRef.current);
     watchRef.current=null;setTracking(false);setSpeedKmh(null);setCell("");
     setNearbyAreaId(null);setAutoAudio(false);autoAudioRef.current=false;
@@ -97,7 +101,9 @@ export default function LuqiDrivePage(){
     if(!navigator.geolocation){setMessage("This browser does not provide geolocation. Route packs still work without it.");return;}
     if(watchRef.current!==null)return;
     setMessage("Requesting browser location permission…");
+    const generation=++locationGeneration.current;
     watchRef.current=navigator.geolocation.watchPosition(position=>{
+      if(generation!==locationGeneration.current)return;
       const raw=position.coords.speed;
       setSpeedKmh(typeof raw==="number"&&Number.isFinite(raw)&&raw>=0?Math.round(raw*3.6):null);
       try{setCell(geohash6(position.coords.latitude,position.coords.longitude));}catch{setCell("");}
@@ -126,6 +132,7 @@ export default function LuqiDrivePage(){
         setMessage("Location is on. No verified story marker is nearby, or this GPS fix is too inaccurate. No coordinates were uploaded.");
       }
     },error=>{
+      if(generation!==locationGeneration.current)return;
       watchRef.current=null;setTracking(false);setSpeedKmh(null);setCell("");setNearbyAreaId(null);
       autoAudioRef.current=false;setAutoAudio(false);
       setMessage(error.code===1?"Location permission was not granted. Route packs still work without it.":"Location could not be confirmed. Route packs still work without it.");
@@ -221,7 +228,7 @@ export default function LuqiDrivePage(){
         <button type="button" onClick={()=>speak(story,true)} className="min-h-11 rounded-lg border border-slate-500 px-4 py-3 text-slate-100">Replay</button>
         <button type="button" disabled={!deepAllowed} onClick={()=>setDeepOpen(v=>!v)} className="min-h-11 rounded-lg border border-cyan-500 px-4 py-3 text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40">{deepOpen?"Close deep dive":"Open 3-minute-style deep dive"}</button>
       </div>
-      {!deepAllowed&&<p className="text-xs text-amber-100">Deep-dive controls stay disabled unless speed is confirmed below 30 km/h, a passenger is operating the device, or you explicitly confirm the vehicle is safely parked.</p>}
+      {!deepAllowed&&<p className="text-xs text-amber-100">Detailed reading stays disabled unless a passenger is operating the device or you explicitly confirm the vehicle is safely parked; low speed alone is never enough.</p>}
       {deepOpen&&deepAllowed&&<div className="rounded-xl border border-cyan-800 bg-slate-950 p-4"><p>{pack.deep}</p></div>}
     </section>
 
