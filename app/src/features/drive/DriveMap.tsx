@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Crosshair, Maximize2, Minus, Plus } from "lucide-react";
 import { stops, demoOrigin } from "./drive-navigation";
 import type { Point } from "./drive-navigation";
-import map from "./drive-map.json";
+import { regionalMap as map } from "./drive-map";
 
 const cos = Math.cos((26 * Math.PI) / 180);
 const region = { lon: 27.85, lat: -25.83 };

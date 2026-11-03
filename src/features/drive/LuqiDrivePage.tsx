@@ -20,7 +20,7 @@ import {
   readFix,
   matchLandmark,
 } from "./drive-navigation";
-import map from "./drive-map.json";
+import { regionalMap as map } from "./drive-map";
 import type { PhoneFix } from "./drive-navigation";
 import "./drive.css";
 import TripFuel from "./TripFuel";
