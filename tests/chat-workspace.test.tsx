@@ -268,3 +268,50 @@ it('does not share context from a prior account, even if the first account opted
   const second = JSON.parse(String(calls[1][1].body));
   expect(second.history).toBeUndefined();
 });
+
+
+it('offers Sepitori without inferring a person’s language or using paid inference', async () => {
+  localStorage.removeItem('luqi_language');
+  render(<Fixture />);
+  await login();
+  expect(screen.getByRole('group', { name: 'Choose Luqi conversational language' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Try Sepitori' }));
+  expect(screen.getByText(/Reply preference: Sepitori/)).toBeTruthy();
+  expect(localStorage.getItem('luqi_language')).toBe('sepitori');
+  expect(screen.getByText(/Colloquial greeting preview only/)).toBeTruthy();
+  const input = screen.getByLabelText('Your question');
+  fireEvent.change(input, { target: { value: 'Heita' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  expect(screen.getByRole('alert').textContent).toContain('Ola dah!');
+  expect(localStorage.getItem('luqi_language')).toBe('sepitori');
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  fireEvent.change(input, { target: { value: "I don't want to talk in Sepitori" } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  expect(localStorage.getItem('luqi_language')).toBe('en');
+  expect(screen.getByRole('alert').textContent).toContain('English selected');
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand AI text may go/i }));
+  fireEvent.change(input, { target: { value: 'Tell me a short encouraging sentence.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByText('Verified response to Tell me a short encouraging sentence.');
+  const calls = request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core');
+  expect(calls).toHaveLength(1);
+  expect(JSON.parse(String(calls[0][1]?.body)).language).toBe('English');
+  localStorage.removeItem('luqi_language');
+});
+
+it('selects Sepitori explicitly for the existing budgeted AI gateway without extra calls', async () => {
+  localStorage.removeItem('luqi_language');
+  render(<Fixture />);
+  await login();
+  fireEvent.click(screen.getByRole('button', { name: 'Try Sepitori' }));
+  expect(request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core')).toHaveLength(0);
+  fireEvent.click(screen.getByRole('checkbox', { name: /I understand AI text may go/i }));
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Give one motivating sentence.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  await screen.findByText('Verified response to Give one motivating sentence.');
+  const calls = request.mock.calls.filter(([path]) => path === '/api/v1/luqi-core');
+  expect(calls).toHaveLength(1);
+  expect(JSON.parse(String(calls[0][1]?.body)).language).toBe('Sepitori (experimental)');
+  localStorage.removeItem('luqi_language');
+});

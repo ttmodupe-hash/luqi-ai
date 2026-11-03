@@ -31,7 +31,8 @@ import { prepareCompanionQuestion } from '../lib/companion-context';
 import '../chat.css';
 import LanguageSelectorDropdown from '../components/LanguageSelectorDropdown';
 import LuqiPersonalWelcome from '../components/LuqiPersonalWelcome';
-import { getStoredLanguage, LANGUAGES } from '../lib/languages';
+import { getStoredLanguage, LANGUAGES, setStoredLanguage } from '../lib/languages';
+import { readLocalSepitoriSignal, localSepitoriAcknowledgement } from '../lib/sepitori-companion';
 
 export default function AiPilotPage({ embedded = false, initialQuestion = '', workspaceMode = false }: { embedded?: boolean; initialQuestion?: string; workspaceMode?: boolean } = {}) {
   const { session, acceptSession, signOut: signOutShared } = useCustomerSession();
@@ -73,12 +74,38 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [companionMode, setCompanionMode] = useState(false);
   const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
   const [shareNote, setShareNote] = useState(false);
-  const languageControl = <div><LanguageSelectorDropdown compact />
-    <p>Reply language: {language.nativeName}. AI language accuracy can vary.</p></div>;
+  function chooseReplyLanguage(code: 'en' | 'sepitori') {
+    const selected = LANGUAGES.find(item => item.code === code);
+    if (!selected) return;
+    setStoredLanguage(selected);
+    setLanguage(selected);
+  }
+  const languageControl = <section aria-label="Luqi reply language and local greetings" className="px-3 py-2 text-sm">
+    <div className="flex flex-wrap items-center gap-2"><LanguageSelectorDropdown compact />
+      <span>Reply preference: {language.nativeName}. AI accuracy may vary.</span>
+    </div>
+    <div role="group" aria-label="Choose Luqi conversational language" className="my-2 flex flex-wrap gap-2">
+      <button type="button" className="min-h-11 rounded border border-cyan-600 px-3 py-2"
+        aria-pressed={language.code === 'sepitori'} disabled={busy || uncertain}
+        onClick={() => chooseReplyLanguage('sepitori')}>Try Sepitori</button>
+      <button type="button" className="min-h-11 rounded border border-cyan-600 px-3 py-2"
+        aria-pressed={language.code === 'en'} disabled={busy || uncertain}
+        onClick={() => chooseReplyLanguage('en')}>English / no Sepitori</button>
+    </div>
+    <p>Heita! Ola dah! Informal South African greeting examples, not a language identity test.
+      Sepitori is a varied Tshwane speech form, not a standardised official language.
+      Luqi's Sepitori replies are experimental and may be inaccurate. No AI call is made
+      when you change this preference.</p>
+    <p><a href="https://literator.org.za/index.php/literator/article/view/1653/3163"
+      target="_blank" rel="noopener noreferrer">Read Sepitori language research</a>
+      {' · '}<Link to="/contact">Suggest a wording correction for human review</Link>.
+      Luqi does not train itself on private chats or save a community phrase corpus.</p>
+  </section>;
   const personalWelcome = session ? <LuqiPersonalWelcome key={session.user.email}
     name={session.user.name} language={language} disabled={busy || uncertain} /> : null;
   // Changing a country invalidates prior optional provider-processing approval.
   useEffect(() => { setShareRegion(false); }, [region]);
+  const localSepitoriSignal = readLocalSepitoriSignal(prompt);
   const questionLength = prompt.trim().length;
   const tooLong = questionLength > MAX_PILOT_QUESTION_CHARS;
   const contextPreview = shareContext ? previewPilotHistory(turns) : [];
@@ -181,6 +208,14 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
   async function submit(preferAi = false) {
+    // An explicit reply preference or brief greeting is handled locally for free,
+    // even before provider consent. Slang alone never chooses a language.
+    if (localSepitoriSignal) {
+      if (localSepitoriSignal.kind === 'language') chooseReplyLanguage(localSepitoriSignal.code);
+      setNotice(localSepitoriAcknowledgement(localSepitoriSignal, language.code));
+      setPrompt('');
+      return;
+    }
     if (!preferAi && localGuidePath) { openGuide(localGuidePath); return; }
     if (!session || !consentGranted || !available || availabilityPending.current || locked.current || uncertain || !prompt.trim() || tooLong || contextTooLong) return;
     const submittedQuestion = prompt;
@@ -258,7 +293,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     navigate('/content-studio');
   }
   if (workspace) {
-    const canSend = localGuidePath ? !busy && !uncertain && !tooLong :
+    const canSend = localSepitoriSignal ? !busy && !uncertain :
+      localGuidePath ? !busy && !uncertain && !tooLong :
       typedVideoApproval ? !!session && !busy && !uncertain :
       !!session && !checking && available && consentGranted && !!prompt.trim() &&
       !tooLong && !contextTooLong && !busy && !uncertain;
@@ -395,7 +431,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             setTurns([]); setShareContext(false); setCopyQuestionToGuide(false);
           }} />
         </details>
-      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
+      </section> : <form className="luqi-chat-compose-panel" onSubmit={event => { event.preventDefault(); if (localSepitoriSignal) void submit(); else if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit(); }}>
         <label className="luqi-chat-composer-label" htmlFor="ai-question">Your question</label>
         <div className="luqi-chat-compose-input">
           <textarea id="ai-question" rows={2} required value={prompt}
@@ -410,7 +446,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
               if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey &&
                   !event.altKey && !event.metaKey && !event.nativeEvent.isComposing &&
                   !event.repeat && canSend) {
-                event.preventDefault(); if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit();
+                event.preventDefault(); if (localSepitoriSignal) void submit(); else if (localGuidePath) openGuide(localGuidePath); else if (typedVideoApproval) approveVideoPlan(); else void submit();
               }
             }} />
           <button type="submit" className="luqi-chat-send" disabled={!canSend}
