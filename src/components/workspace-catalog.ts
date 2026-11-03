@@ -27,7 +27,7 @@ export const workspaceTools = [
   },
   {
     id: "luqi-drive", title: "Luqi-Drive GPS", category: "Travel and local heritage",
-    description: "Explore four South African landmarks with a moving demo, optional phone GPS and multilingual briefings.",
+    description: "Explore the Gauteng heritage trail and N1 and N3 roadside stories with an optional GPS guide or a moving demo.",
     status: "Free · no account", ready: true, path: "/drive", icon: "status",
   },
   {

@@ -564,3 +564,12 @@
 .driveFuel p {
   margin: 8px 0;
 }
+
+.driveTrails{display:flex;gap:.5rem;flex-wrap:wrap;margin:0 0 1rem}
+.driveTrails button{color:#224635;background:#edf1e7;border:1px solid #a7bca6;border-radius:1.4rem;padding:.6rem .95rem;min-height:42px;font:650 .84rem system-ui,sans-serif}
+.driveTrails button[aria-pressed=true]{background:#274f3d;color:#fff4d6;border-color:#274f3d}
+.driveFieldNotes{margin:12px 0}.driveFieldNotes summary{cursor:pointer;font-weight:650;color:#245640;padding:8px 0}
+.driveFieldNotes dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:12px;margin:10px 0}
+.driveFieldNotes dl>div{padding:12px 14px;background:#fafaf4;border-inline-start:3px solid #9bba91}.driveFieldNotes dt{font-weight:700;color:#254332}.driveFieldNotes dd{margin:4px 0 0}.driveFieldNotes dd a{display:block;margin-top:6px;font-size:.76rem}.driveStoryVicinity{color:#425b4a;font-style:italic}
+
+.driveStoryStrip{margin:12px 15px 0;padding:10px 12px;background:#22473c;border-left:3px solid #e2c48b;border-radius:5px}.driveStoryStrip small{font:650 .63rem ui-monospace,monospace;color:#f6d08b;letter-spacing:.08em}.driveStoryStrip p{color:#edf3e6;font-size:.88rem;margin:.35em 0 0}
