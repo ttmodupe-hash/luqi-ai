@@ -172,6 +172,24 @@ export default function DriveMap({
           <g
             transform={`translate(${shapeX},${shapeY}) scale(${(shapeScale * cos) / shape.cos},${shapeScale})`}
           >
+            {PROVINCE_GEOMETRY.map((region) => (
+              <path
+                key={region.id}
+                d={region.path}
+                fillRule="evenodd"
+                fill={target.province === region.id ? "#66916d" : "#325c50"}
+                stroke="#b2c6a7"
+                strokeWidth={1.2}
+                vectorEffect="non-scaling-stroke"
+                aria-hidden="true"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() =>
+                  onSelectProvince(
+                    stops.findIndex((s) => s.province === region.id),
+                  )
+                }
+              />
+            ))}
             {PROVINCE_GEOMETRY.map((region) => {
               const i = stops.findIndex((s) => s.province === region.id);
               if (i < 0) return null;
@@ -182,7 +200,8 @@ export default function DriveMap({
                   role="button"
                   tabIndex={0}
                   aria-label={"Explore " + stops[i].name}
-                  aria-pressed={target.id === stops[i].id}
+                  aria-pressed={target.province === region.id}
+                  transform={`translate(${region.label[0]},${region.label[1]}) scale(${1 / shapeScale})`}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => onSelectProvince(i)}
                   onKeyDown={(e) => {
@@ -192,26 +211,24 @@ export default function DriveMap({
                     }
                   }}
                 >
-                  <path
-                    d={region.path}
-                    fillRule="evenodd"
-                    fill={target.id === stops[i].id ? "#66916d" : "#325c50"}
-                    stroke="#b2c6a7"
-                    strokeWidth={1.2}
-                    vectorEffect="non-scaling-stroke"
+                  <rect
+                    x="-15"
+                    y="-12"
+                    width="30"
+                    height="24"
+                    rx="7"
+                    fill={target.province === region.id ? "#f4d69a" : "#22463b"}
+                    stroke="#acc7b1"
                   />
-                  {symbols && (
-                    <text
-                      x={region.label[0]}
-                      y={region.label[1]}
-                      textAnchor="middle"
-                      fontWeight="700"
-                      fill="#fff3d3"
-                      fontSize={13 / shapeScale}
-                    >
-                      {region.id}
-                    </text>
-                  )}
+                  <text
+                    y="4"
+                    fill={target.province === region.id ? "#17392d" : "#fff3d3"}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="700"
+                  >
+                    {symbols ? region.id : i + 1}
+                  </text>
                 </g>
               );
             })}

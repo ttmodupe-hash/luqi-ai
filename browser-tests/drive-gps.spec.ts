@@ -29,7 +29,7 @@ test('the country map and both South African English narrators are available to 
   await expect(page.getByRole('heading',{name:'All nine provinces'})).toBeVisible();
   await page.getByRole('button',{name:'Explore Western Cape',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Table Mountain National Park'})).toBeVisible();
-  await page.getByLabel('Narrator').selectOption('joburg');
+  await page.getByRole('combobox',{name:'Narrator',exact:true}).selectOption('joburg');
   const clip=page.waitForResponse(res=>res.url().includes('/drive-voices/v1/joburg/za-wc.mp3'));
   await page.getByRole('button',{name:'Listen to this guide'}).click();
   expect((await clip).ok()).toBe(true);

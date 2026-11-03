@@ -193,6 +193,7 @@ export function DriveVoiceControls({
         <label>
           Narrator
           <select
+            aria-label="Narrator"
             value={voice.chosen}
             onChange={(e) => voice.choose(e.target.value)}
           >
