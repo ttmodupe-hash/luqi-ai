@@ -38,6 +38,8 @@ jobs:
         run: node --test tests/domain-site-freshness.test.mjs
       - name: Verify opt-in local province location
         run: npx vitest run tests/location-province.test.tsx tests/nearby-discovery.test.tsx tests/business-connect-contract.test.ts tests/business-connect-page.test.tsx
+      - name: Verify owner-only Business Connect preview, sandbox and local storage isolation
+        run: npx vitest run tests/business-preview-access.test.ts tests/business-preview-bridge.test.ts tests/business-preview-page.test.tsx
       - name: Check the Luqi-Drive demo, GPS permissions and lifecycle
         run: npx vitest run tests/luqi-drive-gps.test.tsx tests/field-and-bench.test.tsx
       - name: Verify inline Circles controls and frontend parity
