@@ -58,6 +58,15 @@ it('requires all seven gates and revokes the whole prepared version after a pric
  expect(screen.getByText(/all previous approvals cleared/)).toBeTruthy();
  expect(network).not.toHaveBeenCalled();
 });
+it('shows whitespace-only optional contact values as blank in applicant review, matching the export checklist',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Postal address'),{target:{value:'   '}});
+ await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ const postal=within(review).getByText('Postal address',{exact:true});
+ expect(postal.parentElement?.textContent).toContain('Left blank for applicant completion');
+ expect(network).not.toHaveBeenCalled();
+});
 it('clears approvals on addendum selection and rejects failed imports without restoring the old approval',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  run.mockResolvedValueOnce({ok:false,code:'DOCUMENT_UNSAFE'});
