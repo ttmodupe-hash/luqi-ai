@@ -32,6 +32,7 @@ it('requires an explicit checkbox before any measurement and never uploads it', 
   expect(screen.getByLabelText('Local next steps recorded').textContent).toBe('1');
   expect(screen.getByLabelText('Measured API roundtrips').textContent).toBe('1');
   expect(screen.getByLabelText('Average API latency').textContent).toBe('2700 ms');
+  expect(screen.getByLabelText('Local p95 latency bucket ceiling').textContent).toBe('≤ 3000 ms');
   expect(getLocalDiagnostics().api.guest_reply.failed).toBe(1);
   expect(request.mock.calls.every(([path,init])=>path==='/v1/readiness' && init?.method !== 'POST')).toBe(true);
   fireEvent.click(screen.getByRole('button',{name:'Clear local measurements'}));

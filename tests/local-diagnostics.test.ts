@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { clearLocalDiagnostics, fetchWithLocalDiagnostics, getLocalDiagnostics,
+import { clearLocalDiagnostics, estimateLocalP95UpperBound, fetchWithLocalDiagnostics, getLocalDiagnostics,
   mayWarmOptionalRoute, recordLocalActivation, recordLocalJourney, recordLocalRequest,
   recordLocalRoute, recordLocalVital, setLocalDiagnosticsEnabled,
   subscribeLocalDiagnostics } from '../src/lib/local-diagnostics';
@@ -59,6 +59,28 @@ describe('no-upload, opt-in local UX diagnostics', () => {
     expect(getLocalDiagnostics().api.guest_reply).toMatchObject({calls:1,failed:1});
     expect(getLocalDiagnostics().api.pilot_reply).toMatchObject({calls:1,failed:1});
     expect(JSON.stringify(getLocalDiagnostics())).not.toMatch(/PRIVATE-|guest cookie|Authorization/i);
+  });
+  it('captures five bounded duration bins without retaining individual request data', () => {
+    setLocalDiagnosticsEnabled(true);
+    for(const ms of [0,250,251,1000,1001,3000,3001,10000,10001,60001]) {
+      recordLocalRequest('pilot_reply',200,ms);
+    }
+    const api=getLocalDiagnostics().api;
+    expect(api.pilot_reply.latencyBuckets).toEqual([2,2,2,2,2]);
+    expect(estimateLocalP95UpperBound(api)).toBe(60000);
+    expect(api.pilot_reply.calls).toBe(10);
+    expect(JSON.stringify(api)).not.toMatch(/token|prompt|url|history/i);
+    clearLocalDiagnostics();
+    expect(getLocalDiagnostics().api.pilot_reply.latencyBuckets).toEqual([0,0,0,0,0]);
+    expect(estimateLocalP95UpperBound(getLocalDiagnostics().api)).toBeNull();
+  });
+  it('approximates local tail latency across fixed endpoint groups', () => {
+    setLocalDiagnosticsEnabled(true);
+    for(let i=0;i<19;i++) recordLocalRequest('guest_availability',200,200);
+    recordLocalRequest('guest_reply',503,3200);
+    expect(estimateLocalP95UpperBound(getLocalDiagnostics().api)).toBe(250);
+    recordLocalRequest('guest_reply',200,9000);
+    expect(estimateLocalP95UpperBound(getLocalDiagnostics().api)).toBe(10000);
   });
   it('switches to reduced motion after measured rendering strain, without automatic cache or provider calls', () => {
     setLocalDiagnosticsEnabled(true);

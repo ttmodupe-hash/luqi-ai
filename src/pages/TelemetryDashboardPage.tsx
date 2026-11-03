@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { Link } from 'react-router';
 import ApiSystemStatusDashboard from '../components/ApiSystemStatusDashboard';
-import { clearLocalDiagnostics, getLocalDiagnostics, recordLocalRoute,
+import { clearLocalDiagnostics, estimateLocalP95UpperBound, getLocalDiagnostics, recordLocalRoute,
   setLocalDiagnosticsEnabled, subscribeLocalDiagnostics } from '../lib/local-diagnostics';
 
 /** Distinguishes genuine in-tab observations from unverified global platform statistics. */
@@ -12,6 +12,7 @@ export default function TelemetryDashboardPage() {
   const attempts = requests.reduce((sum,x) => sum+x.calls,0);
   const failed = requests.reduce((sum,x) => sum+x.failed,0);
   const averageMs = attempts ? Math.round(requests.reduce((sum,x) => sum+x.totalMs,0)/attempts) : null;
+  const p95CeilingMs = estimateLocalP95UpperBound(signals.api);
   return <main className="mx-auto w-full max-w-3xl min-w-0 px-4 py-10 text-slate-100" style={{ overflowWrap:'anywhere' }}>
     <p className="text-sm font-semibold uppercase tracking-wide text-teal-300">Pilot operations</p>
     <h1 className="mt-2 text-3xl font-bold">Telemetry and diagnostics</h1>
@@ -48,6 +49,8 @@ export default function TelemetryDashboardPage() {
             <dd><output aria-label="Measured API roundtrips">{attempts}</output> (failed: {failed})</dd></div>
           <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Average recorded API latency</dt>
             <dd><output aria-label="Average API latency">{averageMs === null ? 'Not measured' : averageMs+' ms'}</output></dd></div>
+          <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Local p95 latency bucket ceiling</dt>
+            <dd><output aria-label="Local p95 latency bucket ceiling">{p95CeilingMs === null ? 'Not measured' : '≤ '+p95CeilingMs+' ms'}</output></dd></div>
           <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Largest content paint</dt>
             <dd><output aria-label="Largest content paint">{signals.vitals.lcpMs === null ? 'Not measured' : signals.vitals.lcpMs+' ms'}</output></dd></div>
           <div className="rounded-lg border border-slate-700 p-3"><dt className="text-slate-300">Layout shifts / long tasks</dt>
@@ -62,7 +65,7 @@ export default function TelemetryDashboardPage() {
         <button type="button" className="min-h-11 rounded-lg border border-slate-500 px-4 py-2"
           onClick={clearLocalDiagnostics}>Clear local measurements</button>
       </> : <p role="status" className="text-sm text-slate-300">Diagnostics off. Nothing measured or transmitted. Consent and counters reset on reload, disable, or clearing this tab.</p>}
-      <p className="text-xs text-slate-400">Counts are per tab, not unique users or verified conversion rates. API timings cover only instrumented, named Chat endpoints. Railway separately measures service-wide HTTP status and latency. This page never creates a billing event, uploads analytics or changes an application cache.</p>
+      <p className="text-xs text-slate-400">Counts are per tab, not unique users or verified conversion rates. The p95 value is an approximate upper bucket boundary for requests in this tab, not a precise percentile or server-wide SLO. API timings cover only instrumented, named Chat endpoints. Railway separately measures service-wide HTTP status and latency. This page never creates a billing event, uploads analytics or changes an application cache.</p>
     </section>
 
     <section className="my-6 space-y-3 rounded-xl border border-slate-700 bg-slate-950 p-5" aria-labelledby="telemetry-limits">

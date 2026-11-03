@@ -19,3 +19,8 @@ After opt-in, focusing the homepage goal field may preload only the fixed local 
 - Immutable business event sourcing, schema changes and background index creation are not needed for local diagnostics. Any durable ledger or migration requires measured database workloads, a restoration test and a rollback.
 
 Release gates: unit tests local-diagnostics.test.ts and local-diagnostics-dashboard.test.tsx, existing telemetry-truth regression tests, browser-tests/local-diagnostics.spec.ts at 320px and full mirrored root/app frontend parity. Browser CI does not replace physical phone/PWA acceptance.
+
+## Bounded in-tab latency tail
+- Named endpoint timings accumulate five fixed buckets (<=250ms, <=1s, <=3s, <=10s, <=60s). The displayed p95 is the ceiling of the 95th-percentile bucket, NOT an exact percentile, account-wide measure or global SLO.
+- No raw per-request data, form values, timestamps or identifiers are retained; existing 2,500-sample cap and disable/clear/reload reset continue to apply.
+- Do not self-adjust backend quotas, billing, eviction policies, database schema or auto-index from per-tab opt-in telemetry. Such changes require validated aggregate server metrics, data minimisation, independent security review, rollout/rollback testing and owner authorisation.

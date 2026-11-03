@@ -3,7 +3,10 @@ export type DiagnosticRoute = 'home' | 'guide' | 'guest' | 'chat' | 'join' | 'te
 export type JourneyStep = 'home_goal' | 'guide_ready' | 'guest_send' | 'guest_reply' |
   'guest_unconfirmed' | 'signed_send' | 'signed_reply' | 'signed_unconfirmed';
 export type RequestKind = 'guest_availability' | 'guest_reply' | 'pilot_availability' | 'pilot_reply';
-type ApiAggregate = Readonly<{ calls: number; failed: number; slow: number; totalMs: number }>;
+type ApiAggregate = Readonly<{ calls: number; failed: number; slow: number; totalMs: number;
+  /** Fixed 5-bin histogram: <=250, <=1000, <=3000, <=10000, >10000ms. */
+  latencyBuckets: readonly [number,number,number,number,number];
+}>;
 export type LocalDiagnostics = Readonly<{
   enabled: boolean;
   controls: number;
@@ -21,7 +24,7 @@ const JOURNEY: readonly JourneyStep[] = [
 ];
 const REQUESTS: readonly RequestKind[] = ['guest_availability','guest_reply','pilot_availability','pilot_reply'];
 const MAX_EVENTS = 2500;
-const ZERO_API: ApiAggregate = { calls:0, failed:0, slow:0, totalMs:0 };
+const ZERO_API: ApiAggregate = { calls:0, failed:0, slow:0, totalMs:0, latencyBuckets:[0,0,0,0,0] };
 const fresh = (enabled: boolean): LocalDiagnostics => ({
   enabled, controls:0,
   routes: Object.fromEntries(ROUTES.map(key => [key,0])) as Record<DiagnosticRoute, number>,
@@ -144,11 +147,15 @@ export function recordLocalRequest(kind: RequestKind, status: number | 'network'
   const old = current.api[kind];
   const ms = finiteDuration(elapsedMs);
   const failed = status === 'network' || !Number.isInteger(status) || status < 200 || status >= 400;
+  const bin = ms <= 250 ? 0 : ms <= 1000 ? 1 : ms <= 3000 ? 2 : ms <= 10000 ? 3 : 4;
+  const latencyBuckets: [number,number,number,number,number] = [...old.latencyBuckets];
+  latencyBuckets[bin]++;
   publish({ ...current, api:{
     ...current.api, [kind]:{
       calls:old.calls+1, failed:old.failed+Number(failed),
       slow:old.slow+Number(ms >= (kind.includes('availability') ? 1500 : 5000)),
       totalMs:Math.min(60_000*MAX_EVENTS,old.totalMs+ms),
+      latencyBuckets,
     },
   } });
 }
@@ -183,4 +190,25 @@ export function mayWarmOptionalRoute(): boolean {
   return device.connection?.saveData !== true && device.connection?.effectiveType !== 'slow-2g' &&
     device.connection?.effectiveType !== '2g' &&
     (device.deviceMemory === undefined || device.deviceMemory >= 2);
+}
+
+/** A conservative in-tab 95th-percentile bucket ceiling, never an exact p95
+ * or a verified service SLO. No raw durations or per-request data are retained.
+ */
+export function estimateLocalP95UpperBound(api: LocalDiagnostics['api']): number | null {
+  const histogram=[0,0,0,0,0];
+  for(const kind of REQUESTS) {
+    const bins=api[kind].latencyBuckets;
+    for(let i=0;i<histogram.length;i++) histogram[i]+=bins[i];
+  }
+  const total=histogram.reduce((a,b)=>a+b,0);
+  if (!total) return null;
+  const rank=Math.ceil(0.95*total);
+  const edges=[250,1000,3000,10000,60000];
+  let cumulative=0;
+  for(let i=0;i<histogram.length;i++) {
+    cumulative+=histogram[i];
+    if(cumulative>=rank) return edges[i];
+  }
+  return 60000;
 }
