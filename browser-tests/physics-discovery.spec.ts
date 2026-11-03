@@ -36,3 +36,14 @@ test('small-phone physics experiments remain usable and do not stretch the page'
   await expect(page.getByRole('table', { name: 'Recorded physics observations' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test('STEM Physics filter shows the full collection rather than a single pendulum card', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/stem-suite');
+  await page.getByRole('button', { name: 'Physics', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Launch Lab' })).toHaveCount(9);
+  await expect(page.locator('a[href="#/physics-lab?experiment=wave"]')).toBeVisible();
+  await page.locator('a[href="#/physics-lab?experiment=wave"]').click();
+  await expect(page.getByRole('heading', { name: 'Waves and sound', exact: true })).toBeVisible();
+  await expect(page.getByRole('slider', { name: 'Frequency' })).toBeVisible();
+});
