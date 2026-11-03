@@ -134,8 +134,10 @@ test('CLI non-success and malformed replies preserve input and state without fal
  await expect(command).toHaveValue('');await expect(page.getByText('Router#',{exact:true})).toBeVisible();
 });
 
-test('workspace search exposes Civic and balloon tools and both navigation breakpoints work',async({page},testInfo)=>{
- // The existing responsive breakpoint shows the desktop menu above 1440px.
+// Keep responsive search and 1920px-to-1440px navigation resize separately
+// validated under the existing 30s per-test budget. No skipped browser case,
+// no forced interactions, no weaker assertions or additional provider writes.
+test('desktop workspace search exposes Civic and balloon tools with accessible extra menu',async({page},testInfo)=>{
  await page.setViewportSize({width:1920,height:1080});await page.goto('/#/');
  await page.getByLabel('Filter workspace tools',{exact:true}).fill('voting');
  await expect(page.getByRole('article').getByRole('heading',{name:'Civic Evidence Desk',exact:true})).toBeVisible();
@@ -147,7 +149,12 @@ test('workspace search exposes Civic and balloon tools and both navigation break
  await page.keyboard.press('Escape');
  await expect(page.locator('.luqi-more-services')).not.toHaveAttribute('open','');
  await page.screenshot({path:testInfo.outputPath('audit-repaired-navigation.png'),fullPage:false});
- // Below the breakpoint use the visible navigation control, not a hidden summary.
+});
+
+test('resizing desktop Luqi to compact navigation preserves routes and never overflows',async({page})=>{
+ await page.setViewportSize({width:1920,height:1080});
+ await page.goto('/#/');
+ // The existing responsive breakpoint shows the compact menu at 1440px.
  await page.setViewportSize({width:1440,height:900});
  await page.getByRole('button',{name:'Open navigation',exact:true}).click();
  const mobileNav=page.getByRole('navigation',{name:'Mobile navigation',exact:true});

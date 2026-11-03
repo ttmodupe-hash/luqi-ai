@@ -5,8 +5,8 @@ import { p2pClient } from '../lib/p2p-client';
 import type { P2PApprovedContact } from '../../contracts/p2p';
 import type { ContactPresenceControls } from './useContactPresence';
 
-export default function ApprovedContactsPanel({ session, close, presence }: {
-  session: AccountSession | null; close: () => void; presence?: ContactPresenceControls;
+export default function ApprovedContactsPanel({ session, presence }: {
+  session: AccountSession | null; presence?: ContactPresenceControls;
 }) {
   const [contacts, setContacts] = useState<P2PApprovedContact[]>([]);
   const [state, setState] = useState<'checking' | 'ready' | 'disabled' | 'unavailable'>('checking');
@@ -56,7 +56,7 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
     {!session ? <>
       <p className="luqi-contacts-intro">Your people, here in Luqi.</p>
       <p>Sign in to see your approved contacts and their shared online status.</p>
-      <Link to="/login" onClick={close}>Sign in to see contacts</Link>
+      <Link to="/login">Sign in to see contacts</Link>
     </> : <>
       <button type="button" className="luqi-contacts-refresh" disabled={state === 'checking'} onClick={() => setRefreshVersion(n => n + 1)}>Refresh contacts</button>
       <p className="luqi-contacts-count">{state === 'ready' && fresh ? `${online} contact${online === 1 ? '' : 's'} online` : state === 'checking' ? 'Checking contacts…' : 'Online status not confirmed'}</p>
@@ -70,15 +70,16 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
           const label = status === 'online' ? 'Online' : status === 'offline' ? 'Offline or away' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
           return <li key={person.circleId} className="luqi-contact-person">
             <span className={'luqi-contact-avatar is-' + status} aria-hidden="true">{person.name.slice(0, 1).toLocaleUpperCase()}<i /></span>
-            <div><Link to={'/p2p?circle=' + encodeURIComponent(person.circleId)} onClick={close}>{person.name}</Link><small>{label}</small></div>
+            <div><Link to={'/chat/people?circle=' + encodeURIComponent(person.circleId)}>{person.name}</Link><small>{label}</small></div>
           </li>;
         })}</ul>
+        {found.length > 0 && <p className="luqi-people-in-app-hint">Select a person to open their private conversation inside Luqi.</p>}
         {!found.length && <p>{contacts.length ? 'No approved contact matches this name.' : 'No mutually approved contacts yet. Add a private invitation in your circles.'}</p>}
         {presence && eligible && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
           onChange={event => presence.setSharing(event.target.checked)} /> Share my online status from this tab</label>}
         {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       </>}
-      <Link to="/p2p" onClick={close}>Manage contacts &amp; circles</Link>
+      <Link className="luqi-people-manage" to="/chat/people">Open private chat in Luqi</Link>
     </>}
     <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means recent foreground activity; closed or background tabs may take up to 75 seconds to become away. Other sharing tabs can keep you online. No last-seen history is shared.</p>
   </div>;
