@@ -1,7 +1,8 @@
 """Fail-closed LUQI agent remediation intake.
 
 The application server is NOT an isolated code-execution environment. This
-module records bounded, redacted review proposals only. It does not execute
+module records bounded, metadata-only review proposals. The original bug
+report is withheld rather than attempting incomplete credential redaction. It does not execute
 model-written code, create GitHub PRs, merge branches, grant deployment rights
 or pretend that tests have run. Real corrections must go through an isolated,
 least-privilege CI pipeline, independent review and separately authorized
@@ -12,20 +13,27 @@ audit evidence. Replace it with an authorized, owner-scoped database workflow
 before exposing this service to users or relying on it after a restart.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
+import hmac
 import re
+import secrets
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 MAX_REPORT_LENGTH = 4000
 MAX_JOBS_IN_MEMORY = 100
 _SAFE_PATH = re.compile(r"^[a-zA-Z0-9_./-]{1,180}$")
-_SECRET = re.compile(
-    r"(?i)\b(api[_-]?key|token|secret|password|authorization)\b\s*[:=]\s*"
-    r"([^\s,;]+)"
+_REPORT_WITHHELD = "[REPORT_WITHHELD]"
+# Shared refusal string; never delegate the manager boundary to an injectable tool.
+_SANDBOX_BLOCKED = (
+    "BLOCKED: application-host code execution is disabled. "
+    "No sandbox was started, no tests were run."
 )
+# In-memory-only keyed fingerprint; never treat as durable incident evidence.
+_FINGERPRINT_KEY = secrets.token_bytes(32)
 
 
 def _utc_now() -> str:
@@ -38,7 +46,9 @@ def _sanitize_report(value: str) -> str:
     text = value.strip()
     if len(text) > MAX_REPORT_LENGTH:
         raise ValueError("Bug report is too long.")
-    return _SECRET.sub(lambda match: f"{match.group(1)}=[REDACTED]", text)
+    # No regex can reliably identify all tokens or personal data in free-form
+    # diagnostic text. Never retain or return the original report content.
+    return _REPORT_WITHHELD
 
 
 def _safe_target(value: Optional[str]) -> str:
@@ -74,10 +84,7 @@ class SandboxedExecutionTool:
 
     def _run(self, code_to_test: str) -> str:
         # Deliberately do not inspect, write to disk, shell out or evaluate code.
-        return (
-            "BLOCKED: application-host code execution is disabled. "
-            "No sandbox was started, no tests were run."
-        )
+        return _SANDBOX_BLOCKED
 
 
 class GitHubPRTool:
@@ -127,13 +134,25 @@ class SelfHealingPipelineManager:
     """
 
     def __init__(self) -> None:
-        self.jobs: Dict[str, PipelineJob] = {}
+        # Never expose the canonical state as a caller-mutable public dict.
+        self._jobs: Dict[str, PipelineJob] = {}
         self.sandbox_tool = SandboxedExecutionTool()
         self.pr_tool = GitHubPRTool()
 
+    @property
+    def jobs(self) -> Dict[str, PipelineJob]:
+        """Detached compatibility snapshot; writes cannot forge review evidence.
+
+        This is not a security boundary against code already executing in the
+        Python process. External access still requires authenticated routes.
+        """
+        return deepcopy(self._jobs)
+
     def run_sandbox_code(self, code_to_test: str) -> Dict[str, Any]:
+        # Refuse directly. A replaced or monkeypatched sandbox_tool must not
+        # turn this compatibility endpoint into arbitrary code execution.
         return {
-            "output": self.sandbox_tool._run(code_to_test),
+            "output": _SANDBOX_BLOCKED,
             "duration_seconds": 0,
             "circuit_breaker_timeout": None,
             "isolated": False,
@@ -144,28 +163,33 @@ class SelfHealingPipelineManager:
     def trigger_self_healing(
         self, bug_report: str, target_file: Optional[str] = None
     ) -> PipelineJob:
-        redacted = _sanitize_report(bug_report)
+        withheld = _sanitize_report(bug_report)
         advisory_path = _safe_target(target_file)
-        if len(self.jobs) >= MAX_JOBS_IN_MEMORY:
+        category = _heuristic_category(bug_report)
+        if len(self._jobs) >= MAX_JOBS_IN_MEMORY:
             raise RuntimeError(
                 "In-memory proposal capacity reached; durable reviewed queue required."
             )
-        evidence_hash = hashlib.sha256(
-            f"{redacted}\n{advisory_path}".encode("utf-8")
+        # Correlation only: keyed digest resists offline guesses of short
+        # secret values. It cannot prove the report or any fix is authentic.
+        evidence_hash = hmac.new(
+            _FINGERPRINT_KEY,
+            f"{bug_report.strip()}\n{advisory_path}".encode("utf-8"),
+            hashlib.sha256,
         ).hexdigest()
         job = PipelineJob(
             job_id=f"sh_{uuid.uuid4().hex[:16]}",
-            bug_report=redacted,
+            bug_report=withheld,
             target_file=advisory_path,
             status="AWAITING_EXTERNAL_REVIEW",
             evidence_sha256=evidence_hash,
-            heuristic_category=_heuristic_category(redacted),
+            heuristic_category=category,
         )
         job.execution_trace = [
             {
                 "step": "Intake",
                 "status": "RECORDED",
-                "detail": "Redacted report retained in process memory only.",
+                "detail": "Report text withheld; category and non-auditable fingerprint kept in memory.",
                 "timestamp": job.created_at,
             },
             {
@@ -184,15 +208,17 @@ class SelfHealingPipelineManager:
                 "timestamp": job.created_at,
             },
         ]
-        self.jobs[job.job_id] = job
-        return job
+        self._jobs[job.job_id] = job
+        # A caller must never receive the registered mutable state; modifying
+        # a returned job must not forge deployment or test evidence in listings.
+        return deepcopy(job)
 
     def authorize_deployment(
         self, job_id: str, reviewer: str = "unverified"
     ) -> Tuple[bool, str]:
         # The caller's reviewer string is NOT proof of identity.
         # In-process approval cannot merge/deploy or change the job to deployed.
-        if job_id not in self.jobs:
+        if job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,
@@ -205,7 +231,7 @@ class SelfHealingPipelineManager:
         self, job_id: str, reason: str = "Requires manual code review",
         reviewer: str = "unverified"
     ) -> Tuple[bool, str]:
-        if job_id not in self.jobs:
+        if job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,
@@ -237,7 +263,7 @@ class SelfHealingPipelineManager:
                 "ci_verified": job.ci_verified,
                 "deployed": job.deployed,
             }
-            for job in reversed(list(self.jobs.values()))
+            for job in reversed(list(self._jobs.values()))
         ]
 
 
