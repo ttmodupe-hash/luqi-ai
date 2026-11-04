@@ -54,7 +54,7 @@ test("workspace filters distinguish usable tools from previews without making AI
   await page.getByLabel("Filter workspace tools").fill("  PHYSICS  ");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
-    page.getByRole("article").getByRole("heading", { name: "Physics lab" }),
+    page.getByRole("article").getByRole("heading", { name: "Physics Discovery Lab", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear tool search" }).click();
   await expect(page.getByRole("article")).toHaveCount(workspaceTools.length);
@@ -178,8 +178,17 @@ test("physics lab remains interactive while the AI tutor is unavailable", async 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/#/");
   await page
-    .getByRole("link", { name: "Open physics lab", exact: true })
+    .getByRole("link", { name: "Open physics discovery lab", exact: true })
     .click();
+  await expect(
+    page.getByRole("heading", { name: "Explore more than one physics experiment" }),
+  ).toBeVisible();
+  // The expanded hub must still provide a working link to the original
+  // advanced pendulum; do not silently replace a previously usable lab.
+  const pendulum = page.getByRole("navigation", { name: "Physics experiment catalogue" })
+    .getByRole("link", { name: /Pendulum, resonance and chaos/ });
+  await expect(pendulum).toHaveAttribute("href", "#/pendulum-lab");
+  await pendulum.click();
   await expect(
     page.getByRole("heading", { name: "Experiential STEM Physics Laboratory" }),
   ).toBeVisible();

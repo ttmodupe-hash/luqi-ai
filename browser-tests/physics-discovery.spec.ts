@@ -12,10 +12,14 @@ test('physics discovery offers eight working browser-local experiments without A
   await expect(catalogue.getByRole('button')).toHaveCount(8);
   await expect(catalogue.getByRole('link', { name: /Pendulum, resonance and chaos/ }))
     .toHaveAttribute('href', '#/pendulum-lab');
-  const original = await page.getByText('Horizontal range').locator('..').textContent();
+  const projectile = page.getByRole('region', { name: 'Projectile motion interactive experiment' });
+  // Scope the exact metric label: the page also includes "Horizontal range"
+  // in the experiment description and investigation help.
+  const range = projectile.getByText('Horizontal range', { exact: true }).locator('..');
+  const original = await range.textContent();
   await page.getByRole('slider', { name: 'Launch speed' }).focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByText('Horizontal range').locator('..')).not.toHaveText(original!);
+  await expect(range).not.toHaveText(original!);
   await page.getByRole('button', { name: 'Record observation' }).click();
   await expect(page.getByRole('table', { name: 'Recorded physics observations' })).toBeVisible();
   await catalogue.getByRole('button', { name: /Electric circuits/ }).click();

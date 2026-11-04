@@ -52,7 +52,7 @@ test('new visitors can choose a real tool or register from the welcome page at 3
   await page.getByRole('link', { name: 'Get started', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'A useful place to begin.' })).toBeVisible();
   await expect(page.getByText('Voice and paid plans are not enabled. AI text has a separate limited trial.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Try the physics lab', exact: true })).toHaveAttribute('href', '#/pendulum-lab');
+  await expect(page.getByRole('link', { name: 'Try the physics lab', exact: true })).toHaveAttribute('href', '#/physics-lab');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   // The expanding Luqi Start catalogue exceeds WebKit's 32767px full-page
   // screenshot limit on narrow devices. Preserve two viewport captures rather

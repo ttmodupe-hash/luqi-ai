@@ -12,7 +12,7 @@ it('opens only existing tools through deliberate links and mixes interests witho
   render(<MemoryRouter><DiscoveryDeck /></MemoryRouter>);
   expect(screen.getAllByRole('link')).toHaveLength(3);
   fireEvent.click(screen.getByRole('button', { name: 'Learn & play' }));
-  expect(screen.getByRole('link', { name: /Physics lab/ }).getAttribute('href')).toBe('/pendulum-lab');
+  expect(screen.getByRole('link', { name: /Physics Discovery Lab/ }).getAttribute('href')).toBe('/physics-lab');
   fireEvent.click(screen.getByRole('button', { name: 'Mix it up' }));
   expect(screen.getByRole('button', { name: 'Create' }).getAttribute('aria-pressed')).toBe('true');
   for (let n = 0; n < 6; n++) {
