@@ -19,8 +19,16 @@ test('complete contact fields do not imply completion of the official applicatio
  assert.equal(result.entered,7);assert.equal(result.total,7);assert.equal(result.blank,0);assert.equal(result.attention.length,0);
  assert.equal('applicationComplete' in result,false);assert.equal('eligible' in result,false);
 });
-for(const [id,value]of [['bidderName',''],['bidderName',' '],['email','x'],['email',' x@example.test'],['email',' '],['cellphone','a\nb'],['streetAddress','x\u202e'],['bidderName','x'.repeat(71)],['telephoneCode',null]])
+for(const [id,value]of [['bidderName',''],['bidderName',' '],['email','x'],['email',' x@example.test'],['cellphone','a\nb'],['streetAddress','x\u202e'],['bidderName','x'.repeat(71)],['telephoneCode',null]])
  test('bounded validation '+id+' '+JSON.stringify(value),()=>assert.ok(supplierFieldIssue(field(id),value)));
+test('whitespace-only optional email is blank, not invalid or counted as entered',()=>{
+ const values={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic',email:'   '};
+ const result=supplierFieldProgress(values,SBD1_FIELDS);
+ assert.equal(result.entered,1);assert.equal(result.blank,6);assert.equal(result.attention.length,0);
+ assert.equal(result.rows.find(row=>row.field.id==='email')?.state,'blank');
+ assert.equal(supplierFieldIssue(field('email'),'   '),null);
+ assert.ok(supplierFieldIssue(field('email'),'not-an-email'));
+});
 test('only actual supplied acceptable text counts as entered',()=>{
  const v={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic',email:'bad',postalAddress:' '};const r=supplierFieldProgress(v,SBD1_FIELDS);
  assert.equal(r.entered,1);assert.equal(r.blank,5);assert.equal(r.attention.length,1);assert.equal(r.attention[0].field.id,'email');
