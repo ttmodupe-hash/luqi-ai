@@ -61,6 +61,16 @@ it('format guidance agrees with the existing worker validator for bounded inputs
   if(accepted)expect(()=>validateSupplierValues(values)).not.toThrow();else expect(()=>validateSupplierValues(values)).toThrow();
  }
 });
+it('treats whitespace-only optional email as blank while rejecting malformed nonblank email',()=>{
+ const values={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',email:'   '};
+ const progress=supplierFieldProgress(values,SBD1_FIELDS);
+ expect(progress.rows.find(row=>row.field.id==='email')?.state).toBe('blank');
+ expect(progress.entered).toBe(1);expect(progress.attention).toHaveLength(0);
+ expect(()=>validateSupplierValues(values)).not.toThrow();
+ const bad={...values,email:'not-an-email'};
+ expect(supplierFieldProgress(bad,SBD1_FIELDS).attention.map(row=>row.field.id)).toContain('email');
+ expect(()=>validateSupplierValues(bad)).toThrow('SUPPLIER_VALUES');
+});
 it('unmounting and reopening does not restore an old answer',()=>{
  const app=render(<Fixture/>);fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Private synthetic bidder'}});app.unmount();render(<Fixture/>);
  expect(screen.queryByDisplayValue('Private synthetic bidder')).toBeNull();

@@ -238,7 +238,7 @@ export function validateSupplierValues(values:SupplierValues):void{
     if(typeof value!=='string'||value.length>field.max||/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]|\p{Cs}/u.test(value)||
       (field.required&&!value.trim()))fail('SUPPLIER_VALUES');
   }
-  if(values.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email))fail('SUPPLIER_VALUES');
+  if(values.email.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email))fail('SUPPLIER_VALUES');
 }
 export async function fillVerifiedSbd1(bytes:Uint8Array,values:SupplierValues):Promise<Uint8Array>{
   if(await tenderSha256(bytes)!==VERIFIED_SBD1.sha256)fail('MAPPING_UNVERIFIED');

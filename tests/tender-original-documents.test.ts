@@ -40,10 +40,11 @@ describe('actual Treasury original and limited field mapping',()=>{
     await expect(fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'A'.repeat(71)})).rejects.toThrow('SUPPLIER_VALUES');
     await expect(fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Example\nSignature'})).rejects.toThrow('SUPPLIER_VALUES');
     await expect(fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Example',taxPin:'invented'} as never)).rejects.toThrow('SUPPLIER_VALUES');
+    await expect(fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Example',email:'invalid-email'})).rejects.toThrow('SUPPLIER_VALUES');
   });
   it('does not insert whitespace-only optional entries into otherwise untouched original cells',async()=>{
     const baseline=unzipSync(await fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier'}));
-    const spaces=unzipSync(await fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',postalAddress:'   '}));
+    const spaces=unzipSync(await fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',postalAddress:'   ',email:'   '}));
     expect(spaces['word/document.xml']).toEqual(baseline['word/document.xml']);
     for(const name of Object.keys(baseline))if(name!=='word/document.xml')expect(spaces[name]).toEqual(baseline[name]);
   });

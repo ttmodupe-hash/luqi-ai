@@ -67,8 +67,12 @@ it('exports the filled ORIGINAL plus review and approval history, truthfully mar
  expect(record.history.identityVerified).toBe(false);
 });
 it('marks whitespace-only optional fields blank in packet metadata without inventing answers',async()=>{
- const {packet}=await prepare(1,{}, {...values,postalAddress:'   '});
+ const {packet,files}=await prepare(1,{}, {...values,postalAddress:'   ',email:'   '});
  expect(packet.enteredFieldIds).toEqual(['bidderName']);
+ const zip=unzipSync(await buildTenderOriginalArchive(packet,1,all(),files,[],now));
+ const checklist=strFromU8(zip['PREPARATION-CHECKLIST.txt']);
+ expect(checklist).toContain('Postal address: LEFT BLANK');
+ expect(checklist).toContain('Email address: LEFT BLANK');
 });
 it('chains amendment and revocation events without copying private facts into the audit log',async()=>{
  const history=appendTenderAudit(appendTenderAudit([],1,'edit-field','bidderName',now),2,'revoke','release',now);
