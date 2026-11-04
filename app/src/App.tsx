@@ -40,6 +40,7 @@ const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const LuqiDrivePage = lazy(() => import("./features/drive/LuqiDrivePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const BusinessConnectPreviewPage = lazy(() => import("./pages/BusinessConnectPreviewPage"));
 const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
 const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
 const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
@@ -96,6 +97,7 @@ export default function App() {
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
         <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/preview" element={<BusinessConnectPreviewPage />} />
         <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
         <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
         <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />

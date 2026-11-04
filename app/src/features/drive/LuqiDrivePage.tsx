@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import DriveMap from "./DriveMap";
+import FieldNotebook from "./FieldNotebook";
 import {
   LocateFixed,
   Navigation,
@@ -38,7 +39,7 @@ export default function LuqiDrivePage() {
   const [params, setParams] = useSearchParams();
   const narration = useRef({
     seen: new Map<string, number>(),
-    last: 0,
+    lastAttempt: -Infinity,
   }).current;
   const trail = trails.find((t) => t.id === params.get("trail")) ?? trails[0];
   const [lang, setLang] = useState<LanguageKey>("english");
@@ -62,7 +63,7 @@ function DriveSession({
   setLang,
   switchTrail,
 }: {
-  narration: { seen: Map<string, number>; last: number };
+  narration: { seen: Map<string, number>; lastAttempt: number };
   trail: Trail;
   lang: LanguageKey;
   setLang: (lang: LanguageKey) => void;
@@ -134,15 +135,22 @@ function DriveSession({
     );
     return () => clearTimeout(timer);
   }, [isGPS, fix]);
+  const guideKey = guide.id + "/" + lang;
+  function listen() {
+    if (match === null) {
+      speak(guide);
+      return;
+    }
+    narration.lastAttempt = Date.now();
+    speak(guide, () => narration.seen.set(guideKey, Date.now()));
+  }
   useEffect(() => {
     if (match === null || !auto || document.hidden || !available) return;
-    const key = guide.id + "/" + lang;
-    if (Date.now() - (narration.seen.get(key) ?? 0) < 86400000) return;
-    if (Date.now() - narration.last < 180000) return;
-    narration.last = Date.now();
-    narration.seen.set(key, Date.now());
-    speak(guide);
-  }, [auto, match, guide, lang, available, speak, narration]);
+    const now = Date.now();
+    if (now - (narration.seen.get(guideKey) ?? -Infinity) < 86400000) return;
+    if (now - narration.lastAttempt < 180000) return;
+    listen();
+  }, [auto, match, guideKey, available, listen, narration]);
 
   function resetMap(follow: boolean) {
     setFollowing(follow);
@@ -267,6 +275,7 @@ function DriveSession({
           Luqi<span>-Drive</span>
         </h1>
         <p>Follow your position and discover the places around you.</p>
+        <button className="driveSecondary" type="button" onClick={() => document.getElementById("field-guide-title")?.focus()}>Open my field guide</button>
       </header>
       <nav className="driveTrails" aria-label="Driving corridors">
         {trails.map((t) => (
@@ -279,7 +288,7 @@ function DriveSession({
           </button>
         ))}
       </nav>
-      <DriveVoiceControls {...{ lang, guide, voice }} changeLang={setLang} />
+      <DriveVoiceControls {...{ lang, listen, voice }} changeLang={setLang} />
       <div className="driveLayout">
         <div className="driveSurface">
           <div className="driveBanner">
@@ -559,6 +568,7 @@ function DriveSession({
           {guide.source.label} ↗
         </a>
       </div>
+      <FieldNotebook guide={guide} />
       <details className="driveCredits">
         <summary>About the African voices</summary>
         <p>
