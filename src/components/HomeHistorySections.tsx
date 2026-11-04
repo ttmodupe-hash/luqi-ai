@@ -12,7 +12,7 @@ export default function HomeHistorySections() {
             <div className="luqi-history-intro">
               <p className="luqi-history-eyebrow"><BookOpen size={17} aria-hidden="true" /> AFRICAN HISTORY · EVIDENCE · EXPLORATION</p>
               <h2 id="luqi-history-title">African Peoples and Historical Evidence in Biblical Narratives</h2>
-              <p>Explore named African peoples, individuals, ancient places and manuscript traditions. Compare texts and historical interpretations with actual evidence.</p>
+              <p>Explore African peoples, named and unnamed figures, ancient places and manuscript traditions. Compare texts and historical interpretations with actual evidence.</p>
               <div className="luqi-history-actions">
                 <button type="button" onClick={() => setHistoryOpen(value => !value)}
                   aria-expanded={historyOpen} aria-controls="luqi-home-study">
@@ -21,10 +21,10 @@ export default function HomeHistorySections() {
                 <Link to="/comparative-evidence">Research &amp; sources <ArrowUpRight size={17} aria-hidden="true" /></Link>
               </div>
             </div>
-            <div className="luqi-history-figures" aria-label="Named figures in ancient sources; symbols are decorative, not historical portraits">
+            <div className="luqi-history-figures" aria-label="People named or described in ancient texts; identities may be disputed; symbols are decorative, not historical portraits">
               {[
                 ["Ebed-Melech", "Jeremiah 38–39"],
-                ["Zipporah", "Numbers 12"],
+                ["Moses’ unnamed Cushite wife", "Numbers 12:1"],
                 ["Tirhakah", "2 Kings 19"],
                 ["Ethiopian official", "Acts 8"],
               ].map(([name, reference]) => <div className="luqi-history-figure" key={name}>
@@ -38,7 +38,9 @@ export default function HomeHistorySections() {
             <Link to="/comparative-evidence"><Globe2 size={23} aria-hidden="true" /><span><strong>Peoples &amp; places</strong><small>What the evidence can and cannot establish</small></span><ArrowUpRight size={18} aria-hidden="true" /></Link>
             <Link to="/space-science"><FlaskConical size={23} aria-hidden="true" /><span><strong>Explore knowledge</strong><small>Science, astronomy and learning</small></span><ArrowUpRight size={18} aria-hidden="true" /></Link>
           </div>
-          <p className="luqi-history-caution">Illustrations are symbolic, not authentic portraits or proof of historical claims. Interpretations may be disputed; check original sources.</p>
+          <p className="luqi-history-caution">Numbers 12:1 describes Moses’ Cushite wife without naming her; Exodus 2:21 names Zipporah as Moses’ wife. Whether these refer to the same person is disputed.{' '}
+            <a className="underline underline-offset-2" href="https://www.sefaria.org/Numbers.12.1-15" target="_blank" rel="noopener noreferrer">Read Numbers 12:1</a>{' '}
+            <a className="underline underline-offset-2" href="https://bible.usccb.org/bible/exodus/2" target="_blank" rel="noopener noreferrer">Read Exodus 2:21</a>. Illustrations are symbolic, not authentic portraits or proof of historical claims.</p>
           {historyOpen && <div id="luqi-home-study"><Suspense fallback={<p role="status">Opening the source-linked study…</p>}><AfricanBiblicalStudy /></Suspense></div>}
         </section>
         <nav className="luqi-quick-tools" aria-label="Quick access to Luqi's working tools">
