@@ -21,6 +21,7 @@ import hmac
 import re
 import secrets
 import uuid
+from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple
 
 MAX_REPORT_LENGTH = 4000
@@ -136,6 +137,7 @@ class SelfHealingPipelineManager:
     def __init__(self) -> None:
         # Never expose the canonical state as a caller-mutable public dict.
         self._jobs: Dict[str, PipelineJob] = {}
+        self._lock = Lock()
         self.sandbox_tool = SandboxedExecutionTool()
         self.pr_tool = GitHubPRTool()
 
@@ -146,7 +148,8 @@ class SelfHealingPipelineManager:
         This is not a security boundary against code already executing in the
         Python process. External access still requires authenticated routes.
         """
-        return deepcopy(self._jobs)
+        with self._lock:
+            return deepcopy(self._jobs)
 
     def run_sandbox_code(self, code_to_test: str) -> Dict[str, Any]:
         # Refuse directly. A replaced or monkeypatched sandbox_tool must not
@@ -166,10 +169,6 @@ class SelfHealingPipelineManager:
         withheld = _sanitize_report(bug_report)
         advisory_path = _safe_target(target_file)
         category = _heuristic_category(bug_report)
-        if len(self._jobs) >= MAX_JOBS_IN_MEMORY:
-            raise RuntimeError(
-                "In-memory proposal capacity reached; durable reviewed queue required."
-            )
         # Correlation only: keyed digest resists offline guesses of short
         # secret values. It cannot prove the report or any fix is authentic.
         evidence_hash = hmac.new(
@@ -208,7 +207,16 @@ class SelfHealingPipelineManager:
                 "timestamp": job.created_at,
             },
         ]
-        self._jobs[job.job_id] = job
+        # Enforce the cap and unique identifier together, even across parallel
+        # HTTP workers/threads. Never evict or overwrite incident evidence.
+        with self._lock:
+            if len(self._jobs) >= MAX_JOBS_IN_MEMORY:
+                raise RuntimeError(
+                    "In-memory proposal capacity reached; durable reviewed queue required."
+                )
+            if job.job_id in self._jobs:
+                raise RuntimeError("Proposal identifier collision; original record preserved.")
+            self._jobs[job.job_id] = job
         # A caller must never receive the registered mutable state; modifying
         # a returned job must not forge deployment or test evidence in listings.
         return deepcopy(job)
@@ -240,7 +248,9 @@ class SelfHealingPipelineManager:
         )
 
     def list_jobs(self) -> List[Dict[str, Any]]:
-        # Snapshot only: avoid returning internal mutable lists to callers.
+        # Snapshot under lock to prevent concurrent mutation while iterating.
+        with self._lock:
+            snapshots = deepcopy(list(self._jobs.values()))
         return [
             {
                 "job_id": job.job_id,
@@ -263,7 +273,7 @@ class SelfHealingPipelineManager:
                 "ci_verified": job.ci_verified,
                 "deployed": job.deployed,
             }
-            for job in reversed(list(self._jobs.values()))
+            for job in reversed(snapshots)
         ]
 
 
