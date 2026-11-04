@@ -6,6 +6,8 @@ services, Docker daemon, repository write access, or host code execution.
 import os
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from pathlib import Path
 from unittest.mock import patch
 
@@ -200,6 +202,52 @@ class FailClosedHealingTests(unittest.TestCase):
         self.assertEqual(canonical[0]["execution_trace"][0]["status"], "RECORDED")
         self.assertFalse(canonical[0]["ci_verified"])
         self.assertFalse(canonical[0]["deployed"])
+
+
+    def test_parallel_intake_cannot_bypass_capacity(self):
+        # Synchronize at HMAC creation: the former cap check ran before HMAC,
+        # so parallel calls could all pass it and overfill the bounded queue.
+        import hmac
+        barrier = Barrier(8)
+        original_hmac_new = hmac.new
+
+        def synchronize_hmac(*args, **kwargs):
+            barrier.wait(timeout=10)
+            return original_hmac_new(*args, **kwargs)
+
+        def submit(number):
+            try:
+                return self.manager.trigger_self_healing(
+                    f"Synthetic parallel incident {number}"
+                ).job_id
+            except RuntimeError as exc:
+                return "blocked:" + str(exc)
+
+        with patch("backend.self_healing_pipeline.MAX_JOBS_IN_MEMORY", 1), patch(
+            "backend.self_healing_pipeline.hmac.new", side_effect=synchronize_hmac
+        ):
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                results = list(executor.map(submit, range(8)))
+        accepted = [value for value in results if value.startswith("sh_")]
+        blocked = [value for value in results if value.startswith("blocked:")]
+        self.assertEqual(len(accepted), 1)
+        self.assertEqual(len(blocked), 7)
+        self.assertTrue(all("capacity reached" in value for value in blocked))
+        self.assertEqual(len(self.manager.list_jobs()), 1)
+        self.assertEqual(self.manager.list_jobs()[0]["status"], "AWAITING_EXTERNAL_REVIEW")
+
+    def test_duplicate_proposal_id_never_overwrites_existing_intake(self):
+        with patch("backend.self_healing_pipeline.uuid.uuid4") as synthetic_uuid:
+            synthetic_uuid.return_value.hex = "a" * 32
+            first = self.manager.trigger_self_healing("First synthetic report")
+            with self.assertRaisesRegex(RuntimeError, "identifier collision"):
+                self.manager.trigger_self_healing("Second synthetic report")
+        entries = self.manager.list_jobs()
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["job_id"], first.job_id)
+        self.assertEqual(entries[0]["evidence_sha256"], first.evidence_sha256)
+        self.assertFalse(entries[0]["ci_verified"])
+        self.assertFalse(entries[0]["deployed"])
 
 if __name__ == "__main__":
     unittest.main()
