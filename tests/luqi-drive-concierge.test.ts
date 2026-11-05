@@ -88,6 +88,12 @@ describe("Luqi-Drive source-linked four-lens concierge", () => {
   });
 
   it("keeps root and app public engine mirrors byte-identical", () => {
+    expect(readFileSync("src/features/drive/TourismConcierge.tsx", "utf8"))
+      .toBe(readFileSync("app/src/features/drive/TourismConcierge.tsx", "utf8"));
+    expect(readFileSync("src/features/drive/tourism-concierge.css", "utf8"))
+      .toBe(readFileSync("app/src/features/drive/tourism-concierge.css", "utf8"));
+    expect(readFileSync("src/features/drive/LuqiDrivePage.tsx", "utf8"))
+      .toBe(readFileSync("app/src/features/drive/LuqiDrivePage.tsx", "utf8"));
     expect(readFileSync("src/features/drive/tourism-swarm.ts", "utf8"))
       .toBe(readFileSync("app/src/features/drive/tourism-swarm.ts", "utf8"));
   });
