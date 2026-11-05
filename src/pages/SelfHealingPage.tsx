@@ -1,6 +1,6 @@
 // =====================================================================
 // SELF-HEALING MULTI-AGENT METACOGNITION DASHBOARD — ENHANCED
-// Real-time monitoring with AI patches, predictions, supervisor, A/B tests
+// Real-time monitoring of review proposals, errors, and safety-gated performance
 // =====================================================================
 
 import { useState, useEffect, useRef } from "react";
@@ -240,6 +240,42 @@ const Badge = ({ children, tone = "slate" }: { children: React.ReactNode; tone?:
 };
 
 // ── MAIN PAGE ───────────────────────────────────────────────────────
+
+/**
+ * Only independently submitted, UNATTESTED reports are displayed.
+ * The presence of measurements must never be interpreted as a real CI pass
+ * or a production authorization.
+ */
+function ProposalEvidenceSummary({ patchId }: { patchId: number }) {
+  const evidence = trpc.selfHealing.listProposalEvaluationEvidence.useQuery(
+    { patchId },
+    { retry: false, staleTime: 30_000 }
+  );
+  return (
+    <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3 text-xs space-y-2">
+      <div className="font-semibold text-slate-200">Evaluation evidence — not independently verified</div>
+      {evidence.isLoading && <div className="text-slate-400">Checking saved evaluations…</div>}
+      {evidence.isError && <div className="text-amber-300">Evaluation history unavailable. No release can be inferred.</div>}
+      {evidence.data && evidence.data.evidence.length === 0 && (
+        <div className="text-amber-300">No evaluation evidence recorded for this proposal.</div>
+      )}
+      {evidence.data?.evidence.map((entry) => (
+        <div key={entry.id} className="border-t border-slate-700/50 pt-2">
+          <div className="text-slate-200">
+            {entry.suiteVersion}: {entry.observationCount} reported cases
+          </div>
+          <div className="text-slate-400">
+            Provisional scorecard: {entry.heuristicReviewEligible ? "eligible for independent review" : "did not meet review thresholds"}
+          </div>
+          <div className="text-amber-300">Not CI-attested · Not externally verified · Not deployable</div>
+          <div className="text-slate-500 font-mono break-all">
+            Digest: {entry.measurementDigest.slice(0, 16)}…
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function SelfHealingPage() {
   const location = useLocation();
@@ -761,6 +797,7 @@ print("STATUS: Verification test passed with zero errors.")
                             <pre className="text-[10px] text-slate-500 bg-slate-900 rounded p-2 overflow-x-auto max-h-40 overflow-y-auto">{p.executionLog}</pre>
                           </div>
                         )}
+                        <ProposalEvidenceSummary patchId={p.id} />
                         <div className="text-xs text-slate-400">
                           Proposals are inert. Review approval does not start CI, deploy code or confirm a fix.
                           Legacy proposals without an event history cannot be approved.
