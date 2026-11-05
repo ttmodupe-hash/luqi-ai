@@ -1,0 +1,35 @@
+.driveConcierge .tourismControls { display:flex; flex-wrap:wrap; gap:12px; margin:14px 0; }
+.driveConcierge .tourismControls label { display:grid; flex:1 1 220px; gap:5px; font-weight:650; }
+.driveConcierge select, .driveConcierge input[type="number"] {
+  width:100%; min-height:44px; padding:9px;
+}
+.driveConcierge .tourismRole {
+  display:flex; flex-wrap:wrap; gap:12px; border:1px solid #b5c8b5;
+  border-radius:8px; padding:10px; margin:12px 0;
+}
+.driveConcierge .tourismRole legend { font-weight:650; padding:0 7px; }
+.driveConcierge .tourismRole label { display:inline-flex; align-items:center; gap:7px; }
+.driveConcierge > .drivePrimary { padding:10px 16px; border-radius:7px; min-height:44px; }
+.driveConcierge .tourismAgentGrid {
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%,245px),1fr));
+  gap:12px; margin:16px 0;
+}
+.driveConcierge .tourismAgent {
+  min-width:0; border:1px solid #bdd0bf; background:#fffef9;
+  border-radius:9px; padding:13px;
+}
+.driveConcierge .tourismAgent h3 { margin:7px 0; font-size:1rem; line-height:1.4; }
+.driveConcierge .tourismAgent ul { margin:8px 0; padding-left:18px; }
+.driveConcierge .tourismAgent li { margin-bottom:12px; overflow-wrap:anywhere; }
+.driveConcierge .tourismAgent li p { margin:4px 0; font-size:.88rem; }
+.driveConcierge .tourismAgent a { display:inline-block; font-size:.78rem; }
+.driveConcierge .tourismSummary { font-weight:600; }
+.driveConcierge .tourismLimitation, .driveConcierge .tourismLimit {
+  font-size:.84rem; color:#526557;
+}
+.driveConcierge .tourismChecksum { overflow-wrap:anywhere; font-size:.8rem; }
+.driveConcierge .tourismChecksum code { overflow-wrap:anywhere; }
+@media (max-width:360px) {
+ .driveConcierge { padding:12px !important; }
+ .driveConcierge .tourismRole { display:grid; }
+}
