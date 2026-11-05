@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 
 /** Finite quadratic model with a numerically stable real-root calculation. */
 export function quadraticModel(a: number, b: number, c: number) {
@@ -27,8 +26,8 @@ export default function AcademyMathLab() {
       <div className="academy-fields">{['a','b','c'].map((name,i)=><label key={name}>Coefficient {name}<input inputMode="decimal" maxLength={30} value={inputs[i]} onChange={e=>{setInputs(old=>old.map((v,j)=>i===j?e.target.value:v));setResult(null);setError('');}}/></label>)}</div>
       <button type="submit">Analyse quadratic</button>
     </form>{error&&<p role="alert">{error}</p>}{result&&<div aria-live="polite"><p>Discriminant: {result.discriminant}. {result.roots.length ? `Real roots: ${result.roots.join(', ')}.` : 'No real roots; the discriminant is negative.'}</p><p>Turning point: ({result.vertex.x}, {result.vertex.y}), a {result.direction}. {result.derivative}</p><p>Check each root by substituting it into the original expression; the residual should be approximately zero.</p></div>}
-    <h4>Hands-on investigation</h4><ol><li>Change c while holding a and b fixed. Predict which feature of the graph moves.</li><li>Use a = 1, b = 2, c = 1 to investigate a repeated root.</li><li>Use a = 1, b = 0, c = 1 and explain why there are no real roots.</li><li>Plot at least five points in the algebra lab, then explain how the derivative relates to the turning point.</li></ol>
-    <div className="academy-actions"><Link to="/algebra-lab">Open existing algebra lab</Link><Link to="/geometry-lab">Open existing geometry lab</Link></div>
-    <p className="academy-small">This activity adds Maths practice alongside Physical Sciences. It does not cover the full CAPS syllabus.</p>
+    <h4>Hands-on investigation</h4><ol><li>Change c while holding a and b fixed. Predict which feature of the graph moves.</li><li>Use a = 1, b = 2, c = 1 to investigate a repeated root.</li><li>Use a = 1, b = 0, c = 1 and explain why there are no real roots.</li><li>Plot at least five points on paper or in an approved algebra tool, then explain how the derivative relates to the turning point.</li></ol>
+    <div className="academy-actions"><a href="https://app.luqi-ai.com/#/algebra-lab" target="_blank" rel="noopener noreferrer">Open existing online algebra lab</a><a href="https://app.luqi-ai.com/#/geometry-lab" target="_blank" rel="noopener noreferrer">Open existing online geometry lab</a></div>
+    <p className="academy-small">The optional online lab links require connectivity. This activity adds Maths practice alongside Physical Sciences; it does not cover the full CAPS syllabus.</p>
   </section>;
 }

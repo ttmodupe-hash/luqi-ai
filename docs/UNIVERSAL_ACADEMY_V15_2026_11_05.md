@@ -1,55 +1,56 @@
 # Universal Academy V15 - implementation and acceptance
 
-Status: development PR, not deployed. This is an expandable learning workspace with starter content, NOT six completed accredited courses or proof that all 20 KHORO tools are active.
+Development PR, not a deployment. An expandable six-track workspace with starter lessons is NOT six completed accredited courses or proof that every KHORO tool is active.
 
-## Integration
-- Actual application entry: `src/App.tsx`, not a fabricated standalone `App.jsx`.
-- New canonical route `/academy`; `/cert-academy` and `/exam-prep` open the same workspace. Existing Cisco/ITIL implementation remains at `/cert-academy/legacy`, `/ccna`, `/ccnp`, `/itil-ai` and `/networking-lab`.
-- Searchable `universal-academy` directory entry. Existing `academy` directory ID still belongs to Content Studio and is not repurposed.
-- Lazy frontend-only implementation. No new backend route, secret, migration, model activation, billing or deployment setting.
-- The secondary packaged `app/src` tree is not a second Academy implementation. The canonical web build is the target of this change; do not claim a native-app release.
+## Integration and preservation
+The real entrypoints are `src/App.tsx` and `app/src/App.tsx`, not a standalone App.jsx. Both now declare `/academy`, `/cert-academy` and `/exam-prep` for the Universal Academy. Existing Cisco/ITIL practice is retained at `/cert-academy/legacy`, `/ccna`, `/ccnp`, `/itil-ai` and `/networking-lab`. All original route and local iframe preservation checks remain enforced. The exact two additional paths are explicitly allowlisted, not wildcard-exempted.
 
-## Delivered scope
-| Track | Implemented practical scope | Deliberate boundary |
+Academy page, content, engines, styling, Maths component and searchable workspace directory entry are byte-identical across both frontend trees, checked by `tests/universal-academy-parity.test.mjs`. This preserves the secondary source tree; it is not a claim that a native mobile build was released or physically tested. The existing Content Studio directory ID `academy` remains unchanged; this tool uses `universal-academy`.
+
+No backend endpoint, account permission, production setting, migration, provider budget or payment setting changes. The workspace is lazy-loaded.
+
+## Delivered capabilities and boundaries
+| Track | Practical learning delivered | Boundary |
 |---|---|---|
-| CCNA | Full-integer IPv4 calculator /0-/32, IOS-style mode/configuration subset, generated host-count practice | Not IOS XE, packet forwarding, a complete VLSM allocator or OSPF adjacency simulation |
-| Security+ | CIA/risk lessons, SLE/ALE, real browser SHA-256, bounded synthetic UFW/Nmap fixture | No host access, real scanning or claim of issuer authorization |
-| AWS | Shared-responsibility lessons, cost assumptions, synthetic CLI responses | No AWS account, provisioning, real bill or live price retrieval |
-| Python | Output prediction, strict arithmetic/print/sum teaching grammar, JSON/API design tasks | Not an actual Python interpreter; full FastAPI work requires a separate isolated environment |
-| Matric | Work-energy, signed momentum/average force, photoelectric threshold, quadratic roots/vertex/derivative; links to existing algebra and geometry labs | Not complete CAPS coverage or an official marking service |
-| Solar/K53/business | Essential energy/battery/PV estimates, separate supervised-driving and business-readiness activities | No mains installation design, driving licence, SANS redistribution or legal filing |
+| CCNA | Full-integer IPv4 /0-/32 calculations, IOS-style configuration modes, generated host-count exercises | Not IOS XE, a packet emulator, complete VLSM allocator or OSPF adjacency engine |
+| Security+ | CIA/risk lessons, SLE/ALE, real WebCrypto SHA-256, synthetic UFW/Nmap fixture | No external scanning, host changes or issuer accreditation |
+| AWS | Responsibility/service lessons, user-assumed costs and synthetic CLI examples | No AWS credentials, provisioning, live prices or real cloud bills |
+| Python/AI | Strict arithmetic/print/sum output-trace grammar, JSON validation and API project tasks | Not a full Python interpreter; FastAPI execution requires a separately isolated environment |
+| Matric | Work-energy, signed momentum/average force, photoelectric thresholds and quadratic roots/vertex/derivative | Not complete CAPS coverage or an official marking service |
+| Solar/K53/business | Energy/battery/PV estimates and distinct supervised-driving/business-readiness pathways | No live mains work, installation certification, driving licence, SANS redistribution or legal filings |
 
-The catalog contains 18 original guided activities. Each has an explanation, worked example, everyday analogy, misconception, practical steps and evidence to retain. The Maths component adds a quadratic investigation. Practice has one parameterized starter family per track, not full-length exams or leaked certification questions.
+The catalog has 18 original guided activities, each with explanation, example, analogy, misconception, practical steps and evidence requirements. An additional quadratic investigation links to existing online algebra/geometry labs. Practice uses one parameterized starter family per track, not a complete mock exam or exam dumps.
 
-## Learning method
-The optional learn -> reflect -> practise -> teach back -> correct/revisit cycle is a modern teaching design inspired by self-cultivation and Ubuntu peer learning. It is not a universal description of Chinese culture or an empirically certified intervention. Direct answers remain available. No religious adherence, shame, cultural ranking or pressure-based scoring.
+## Study and custom courses
+Optional cycle: learn -> reflect -> practise -> teach back -> correct/revisit. This modern design draws inspiration from self-cultivation and Ubuntu peer learning; it does not describe every Chinese tradition or claim independently proven learning gains. Direct answers, freedom of belief and learner dignity remain intact.
 
-Mode/language controls create a reviewed prompt for the existing Chat page. They do not silently send a notebook, make paid calls or claim that all English lessons are already translated. Reviewed native-language lessons, complete adaptive scheduling and subject-specialist moderation remain expansion work.
+Five teaching modes and seven language preferences prepare a request for the existing Chat. They do not silently send it or the notebook. English lessons are not falsely described as already translated. Native-speaker review and full multilingual content remain expansion work.
 
-## Privacy, execution and cost
-- All new calculations, question generation and draft planning run locally. The teaching parser never uses eval, Function, a shell or network execution.
-- Drafts and attempts are memory-only and keyed to the current account identity. Account changes synchronously recreate the workspace. Export JSON explicitly to retain work; the notebook is not yet a cloud-backed learner record.
-- YouTube has an exact HTTPS watch/share URL parser. A valid URL is NOT a licensing or accuracy verdict. No remote request occurs until the user loads a player or opens a source link. No transcript/video is scraped or redistributed.
-- Keep existing HTTP framing policies. The user can open the original video when embedding is unavailable. Browser tests must not be presented as proof that external playback works in every region.
-- Custom course generation is a learner-authored scaffold from a bounded topic list. It does not hallucinate an authoritative syllabus or claim to have watched a supplied video.
+The custom builder creates a learner-owned outline from subject, goal, weekly time and 1-20 unique topics. It does not claim to ingest, watch, license or verify a YouTube course. It provides bounded generic learn/explain/build/test/revisit steps, not invented authoritative subject content.
 
-## Source review - 5 November 2026
-- Cisco official exam topics: https://learningnetwork.cisco.com/s/ccna-exam-topics . Current v1.1 last test date 2 February 2027; v2.0 first test date 3 February 2027. Learners must prepare for their chosen exam date.
-- AWS guide/revisions: https://docs.aws.amazon.com/aws-certification/latest/cloud-practitioner-02/ and https://docs.aws.amazon.com/aws-certification/latest/cloud-practitioner-02/clf-02-revisions.html . Guide revision 1.3 published 29 October 2026. CLI/implementation projects are enrichment beyond foundational CLF-C02 scope.
-- CompTIA issuer link could not be independently verified in this review. The UI correctly marks it unverified rather than inventing a retirement date. SY0-701 creator course index: https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/ . Creator material does not determine issuer exam availability.
-- Supplied video `7HKot-brXFE` is retained for AWS, not reused as a Python course. The freeCodeCamp AWS course publisher page was reviewed: https://www.freecodecamp.org/news/aws-certified-cloud-practitioner-study-course-pass-the-exam-with-this-free-13-hour-course/ . External playback/embedding is not certified.
-- FastAPI: https://fastapi.tiangolo.com/tutorial/first-steps/ . Python tutorial and SABS links remain explicitly unverified for this review, not falsely date-stamped.
-- DBE: https://www.education.gov.za/2021Grade12ExamGuidelines.aspx and https://www.education.gov.za/SelfStudyGuidesGrade10-12.aspx . Existing guidance must be read with CAPS and subsequent official circulars.
-- Licensing: https://www.gov.za/services/driving-licence/apply-learners-licence . A learning exercise does not issue a licence or replace supervised practice.
+## Privacy, cost and execution
+Calculations, question generation and draft planning are local. The teaching grammar never uses eval, Function, a shell, AWS credentials or real scans. External video is opt-in; original source links remain usable if embedding is blocked. No videos or transcripts are scraped or redistributed. A valid video URL is not a quality or rights verdict.
 
-Freshness behavior: each resource has a review date or an unverified state. Over-30-day reviews are visibly flagged. This is NOT automatic continuous curriculum updating. Before revising a track, compare the original issuer blueprint, record changes, review content/rights, update matching activities and tests, and preserve a versioned migration note. No silent ingestion of a changed page into model instructions.
+Learner drafts, attempts and reflections are React-memory-only; navigation/reload or account changes clear them. Identity changes synchronously recreate the workspace. Explicit JSON downloads retain work on the user's device. No cloud learner record or automatic reminder is created. A correct practice answer is not a certificate; revealing an answer is not counted as a successful attempt.
 
-## Verification
-- `src/features/academy/academy.test.ts`: calculation references and edge cases, 1,200 seeded track/seed combinations, bounded command grammar, malicious URLs, source ageing and custom-outline constraints.
-- `src/features/academy/AcademyMathLab.test.tsx`: quadratic reference values, residuals, invalid coefficients and rendered interaction.
-- `src/pages/UniversalAcademyPage.test.tsx`: six-track switching, local calculations, answer/reveal distinction, custom-course generation, external-video consent, explicit language request and cross-account clearing.
-- `browser-tests/universal-academy.spec.ts`: real built UI discovery, six-track journey, 320-pixel overflow, command state, course/notebook downloads and screenshots. Synthetic/local tests are not physical-device acceptance or external YouTube acceptance.
-- Mobile loading guard adds only the exact two new canonical paths and retains all existing route/iframe/payload checks. No test is disabled to permit this feature.
+The SHA-256 example detects differences against a trusted reference; it does not encrypt or authenticate the author. Solar/cloud outputs label their assumptions and omissions. Local calculations do not generate new inference charges. Internet access is still needed to load the app and external resources; this is not a guaranteed offline-install package.
 
-## Before promotion
-Require passing exact-head CI, review the new browser evidence, check actual external video behavior without sharing private data, and review representative lessons with educators/native speakers. No merge or production change is authorized by this document. Follow-on work includes fuller domain coverage, reviewed multilingual content, real sandboxed programming, curriculum-change monitoring, notebook import/cloud persistence with consent, and independently validated mastery assessment.
+## Source review: 5 November 2026
+- Cisco issuer: https://learningnetwork.cisco.com/s/ccna-exam-topics . v1.1 last testing 2 February 2027; v2.0 starts 3 February 2027. Match content to the learner's exam date.
+- AWS issuer: https://docs.aws.amazon.com/aws-certification/latest/cloud-practitioner-02/ and https://docs.aws.amazon.com/aws-certification/latest/cloud-practitioner-02/clf-02-revisions.html . Revision 1.3 published 29 October 2026. Coding and implementation projects are enrichment beyond core CLF-C02 scope.
+- SY0-701 creator index: https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/ . Current issuer availability could not be independently confirmed in this review; the CompTIA source is explicitly unverified. Do not invent an exam retirement date.
+- Supplied video `7HKot-brXFE` is not reused as a Python course. AWS publisher page: https://www.freecodecamp.org/news/aws-certified-cloud-practitioner-study-course-pass-the-exam-with-this-free-13-hour-course/ . External playback is not independently certified.
+- FastAPI: https://fastapi.tiangolo.com/tutorial/first-steps/ . Official Python and SABS links remain unverified for this review, rather than falsely date-stamped.
+- DBE: https://www.education.gov.za/2021Grade12ExamGuidelines.aspx and https://www.education.gov.za/SelfStudyGuidesGrade10-12.aspx . Read with CAPS and later official circulars.
+- Licensing: https://www.gov.za/services/driving-licence/apply-learners-licence . An app exercise does not issue a driving qualification.
+
+Resources older than 30 days are flagged for review. This is NOT continuous automatic updating. Before a content change: inspect the issuer's current blueprint; record version differences; review creator rights and topic coverage; update lessons and reference tests; retain the earlier version and migration note. A changed web page must not silently become model instructions.
+
+## Verification and promotion
+- Engine tests cover reference values and edge cases, 1,200 seeded track/seed combinations, malformed URLs, source ageing, course bounds and bounded command grammar.
+- Maths tests cover roots, residuals, degenerate inputs and rendered interaction.
+- React tests cover six-track switching, local results, answer/reveal distinction, custom outlines, explicit external-player consent, language request controls and account-change clearing.
+- Browser spec covers built-UI discovery, six-track switching, 320px overflow, local terminal state and actual course/notebook downloads; screenshot evidence is synthetic/public only.
+- The existing mobile workflow retains all recovery, route and payload checks and additionally runs focused Academy tests, both-tree parity and the new browser spec. No existing gate is disabled.
+
+Require passing exact-head checks and review browser evidence before promotion. Physical-device testing, external video playback, current issuer verification where missing, educator/native-language review and complete syllabus coverage are separate acceptance work. No merge or production promotion is performed by these changes.
