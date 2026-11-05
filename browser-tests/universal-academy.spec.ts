@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-test('Academy is searchable from the workspace and preserves the advanced practice link', async ({page}) => {
+test('Academy is searchable from the workspace and preserves the advanced practice link', async ({page},testInfo) => {
   await page.goto('/#/');await page.getByLabel('Filter workspace tools').fill('Universal Academy');
   const card = page.locator('.luqi-tool-card').filter({has:page.getByRole('heading',{name:'Universal Academy',exact:true})});
   await expect(card).toBeVisible();await card.getByRole('link').click();
   await expect(page.getByRole('heading',{name:'Universal Academy',exact:true})).toBeVisible();
   await expect(page.getByRole('link',{name:'Existing Cisco / ITIL advanced practice'})).toHaveAttribute('href',/#\/cert-academy\/legacy$/);
+  await page.screenshot({path:testInfo.outputPath('academy-overview.png'),fullPage:true});
 });
 
 test('six tracks and hands-on maths work at 320 pixels without external requests', async ({page,baseURL},testInfo) => {
@@ -22,7 +23,9 @@ test('six tracks and hands-on maths work at 320 pixels without external requests
   await expect(page.getByText(/Real roots: 2, 3/)).toBeVisible();await page.getByRole('button',{name:'Calculate locally',exact:true}).click();
   await expect(page.locator('pre').filter({hasText:'"netWorkJ": 16'})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(errors).toEqual([]);expect(unexpected).toEqual([]);
-  await testInfo.attach('academy-matric-320px',{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+  const screenshot=testInfo.outputPath('academy-matric-320px.png');
+  await page.screenshot({path:screenshot,fullPage:true});
+  await testInfo.attach('academy-matric-320px',{path:screenshot,contentType:'image/png'});
 });
 
 test('local Cisco configuration and Python traces never execute external operations', async ({page}) => {
