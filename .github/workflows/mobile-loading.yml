@@ -22,12 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test graph accounting before dependency installation
-        run: node --test tests/mobile-bundle.test.mjs
+      - name: Test graph accounting and Academy source parity before dependency installation
+        run: node --test tests/mobile-bundle.test.mjs tests/universal-academy-parity.test.mjs
       - name: Install exact application dependencies without lifecycle scripts
         run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
-      - name: Verify safe loading and recovery with synthetic components
-        run: npx --no-install vitest run tests/route-load-boundary.test.tsx
+      - name: Verify safe loading and Academy interactions with synthetic components
+        run: npx --no-install vitest run tests/route-load-boundary.test.tsx src/features/academy/academy.test.ts src/features/academy/AcademyMathLab.test.tsx src/pages/UniversalAcademyPage.test.tsx
       - name: Strictly check both error-boundary implementations
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/RouteLoadBoundary.tsx app/src/components/RouteLoadBoundary.tsx
       - name: Verify every existing route and iframe target is preserved
@@ -41,30 +41,19 @@ jobs:
             const routePattern = /\bpath="([^"]+)"/g;
             const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
             const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
-            // Preserve every existing route. The packaged app additionally gains
-            // the already-public, provider-free consumer-rights page, reviewed
-            // comparative evidence source guide and
-            // reviewed municipal services, township enterprise guides, Chat, Ask, Login and payment-availability
-            // entries. The reviewed Luqi PWA install and download-alias routes
-            // are also allowed. Local Pulse adds reviewed /local-pulse and /news source-directory routes.
-            // /space-science adds provider-free calculations and reviewed publisher links.
-            // /near-me adds optional on-device province discovery and deliberate external map searches.
-            // /business-connect/preview is the owner-requested, server-gated private design preview.
-            // Guest /try has a separate server-enforced monthly allowance. Gated P2P routes (including same-shell /chat/people) and the packaged private admin
-            // entry, consented visual tutor and lazy Spatial Vision Lab are reviewed additions; every older
-            // route and iframe stays required.
+            // Every original route and exact local lab iframe remains required.
+            // Academy adds only /academy and /cert-academy/legacy in both trees.
+            // No wildcard, removal or duplicate route is accepted by this guard.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/drive', '/driver-rights', '/install', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
-              : ['/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/download', '/drive', '/driver-rights', '/install', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
+              ? ['/academy', '/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/drive', '/driver-rights', '/install', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
+              : ['/academy', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/download', '/drive', '/driver-rights', '/install', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
-            assert.deepEqual(routes.filter(route => !approved.includes(route)),
-              matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
-            assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
-              'Existing iframe targets changed: ' + path);
+            assert.deepEqual(routes.filter(route => !approved.includes(route)), matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
+            assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern), 'Existing iframe targets changed: ' + path);
           }
-          console.log('All legacy routes and iframe targets preserved; reviewed Chat, Luqi PWA install and payment availability routes added.');
+          console.log('All legacy routes and iframe targets preserved; exact reviewed additions only.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash
@@ -77,6 +66,35 @@ jobs:
           cp "$RUNNER_TEMP/luqi-candidate-App.tsx" src/App.tsx
           node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-after"
           node scripts/verify-mobile-bundle.mjs "$RUNNER_TEMP/luqi-mobile-before" "$RUNNER_TEMP/luqi-mobile-after" | tee mobile-bundle-report.json
+      - name: Exercise the built Academy in desktop and mobile browsers without providers
+        shell: bash
+        env:
+          LUQI_BROWSER_BASE_URL: http://127.0.0.1:4173
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$browser" ]; then
+            export LUQI_CHROMIUM_PATH="$browser"
+          else
+            npx --no-install playwright install --with-deps chromium --only-shell
+          fi
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --outDir "$RUNNER_TEMP/luqi-mobile-after" > "$RUNNER_TEMP/academy-preview.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then cat "$RUNNER_TEMP/academy-preview.log"; exit 1; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4173/ > /dev/null
+          npx --no-install playwright test browser-tests/universal-academy.spec.ts --workers=1
+      - name: Preserve synthetic Academy browser evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-academy-browser-evidence
+          path: test-results/
+          if-no-files-found: ignore
       - name: Preserve measured payload evidence only
         uses: actions/upload-artifact@v4
         with:
