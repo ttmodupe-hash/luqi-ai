@@ -57,6 +57,7 @@ const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePa
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
+const UniversalAcademyPage = lazy(() => import("./pages/UniversalAcademyPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
 const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
@@ -171,8 +172,10 @@ export default function App() {
         <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
-        <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
-        <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
+        <RouterRoute path="/academy" element={<UniversalAcademyPage />} />
+        <RouterRoute path="/cert-academy" element={<UniversalAcademyPage />} />
+        <RouterRoute path="/cert-academy/legacy" element={<CertMasterPage />} />
+        <RouterRoute path="/exam-prep" element={<UniversalAcademyPage />} />
         <RouterRoute path="/ccna" element={<CertMasterPage />} />
         <RouterRoute path="/ccnp" element={<CertMasterPage />} />
         <RouterRoute path="/itil-ai" element={<CertMasterPage />} />
