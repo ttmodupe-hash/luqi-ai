@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  TOURISM_PERSONAS, areaGeohash6, geohash6,
+  TOURISM_PERSONAS, areaGeohash6, geohash6, canRequestTourismBrief,
   selectStopsWithinBudget, synthesizeLocalConcierge,
   tourismContentSha256,
 } from "../src/features/drive/tourism-swarm";
@@ -75,6 +75,16 @@ describe("Luqi-Drive source-linked four-lens concierge", () => {
     const second = await tourismContentSha256(brief);
     expect(first).toBe(second);
     if (first !== null) expect(first).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("prevents moving drivers using stale parked selection", () => {
+    expect(canRequestTourismBrief("unselected", false, null)).toBe(false);
+    expect(canRequestTourismBrief("stopped", true, 108)).toBe(false);
+    expect(canRequestTourismBrief("stopped", true, 5)).toBe(false);
+    expect(canRequestTourismBrief("stopped", true, null)).toBe(false);
+    expect(canRequestTourismBrief("stopped", true, 0)).toBe(true);
+    expect(canRequestTourismBrief("stopped", false, null)).toBe(true);
+    expect(canRequestTourismBrief("passenger", true, 108)).toBe(true);
   });
 
   it("keeps root and app public engine mirrors byte-identical", () => {
