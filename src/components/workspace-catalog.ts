@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "universal-academy", title: "Universal Academy", category: "CCNA Security+ AWS Python Matric Solar K53 learning",
+    description: "Six expandable learning tracks, original worked examples, local practical labs, custom course plans and a reflection notebook. Not complete accredited courses or a full Python/cloud runtime.",
+    status: "Free local starter learning · optional external video", ready: true, path: "/academy", icon: "academy",
+  },
+  {
     id: "civic-evidence", title: "Civic Evidence Desk", category: "Politics, voting and public accountability",
     description: "Source-linked audits, budgets, Parliament and IEC voting information. Free explanations; optional signed-in AI clarification. No live party rankings or voting recommendations.",
     status: "Free evidence · optional signed-in AI", ready: true, path: "/chat?civic=1", icon: "status",
