@@ -128,11 +128,11 @@ export function synthesizeLocalConcierge(
   persona: TravelPersona,
   budgetCeilingZar: number | null,
 ): TourismBrief | null {
-  if (!(persona in order)) throw new RangeError("INVALID_TRAVEL_PERSONA");
+  if (!(Object.prototype.hasOwnProperty.call(order, persona))) throw new RangeError("INVALID_TRAVEL_PERSONA");
   if (budgetCeilingZar !== null &&
       (!Number.isFinite(budgetCeilingZar) || budgetCeilingZar <= 0 ||
         budgetCeilingZar > 10000000 ||
-        Math.round(budgetCeilingZar * 100) !== budgetCeilingZar * 100))
+        Math.abs(Math.round(budgetCeilingZar * 100) - budgetCeilingZar * 100) > 0.000001))
     throw new RangeError("INVALID_BUDGET");
   const story = areaById.get(areaId);
   if (!story) return null; // Never hallucinate an unreviewed corridor.
@@ -196,7 +196,7 @@ export function selectStopsWithinBudget(
     }
     const cents = Math.round(amount * 100);
     if (!Number.isFinite(amount) || amount < 0 || amount > 10000000 ||
-        !Number.isSafeInteger(cents)) throw new RangeError("INVALID_STOP_COST");
+        (!Number.isSafeInteger(cents) || Math.abs(cents - amount * 100) > 0.000001)) throw new RangeError("INVALID_STOP_COST");
     if (!safeHttps(stop.priceEvidenceUrl)) {
       unpricedIds.push(stop.id); // An unsafe price source cannot establish a price.
       continue;
@@ -220,4 +220,12 @@ export async function tourismContentSha256(brief: TourismBrief): Promise<string 
     return Array.from(new Uint8Array(digest), (byte) =>
       byte.toString(16).padStart(2, "0")).join("");
   } catch { return null; }
+}
+
+export type ConciergeRole = "unselected" | "passenger" | "stopped";
+export function canRequestTourismBrief(role: ConciergeRole, gpsActive: boolean, speedKmh: number | null): boolean {
+  if (role === "passenger") return true;
+  if (role !== "stopped") return false;
+  if (!gpsActive) return true; // Self-attested parking; never guaranteed by GPS.
+  return speedKmh !== null && Number.isFinite(speedKmh) && speedKmh >= 0 && speedKmh < 5;
 }
