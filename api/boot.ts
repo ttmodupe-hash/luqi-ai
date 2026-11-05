@@ -1196,17 +1196,42 @@ app.post('/api/v1/audit/seal', async (c) => {
   }
 });
 
-// 2. Multi-Agent Consensus Ring Execution
-app.post('/api/v1/consensus/execute', async (c) => {
+// 2. Multi-Agent Consensus Ring — administrator-only, honest model review.
+// Does NOT claim independent verification. Every attempted paid vendor call
+// reserves durable per-user/global quota before invoking its provider.
+app.post("/api/v1/consensus/execute", async (c) => {
+  // Defense in depth: request middleware checks admin role; re-derive identity
+  // here and never accept agentIdentity / reviewer strings from request JSON.
+  const user = await resolveSessionUser(c.req.raw);
+  if (!user) return c.json({ status: "error", error: "Authentication required." }, 401);
+  if (user.role !== "admin") return c.json({ status: "error", error: "Administrator required." }, 403);
+  let body: unknown;
+  try { body = await c.req.json(); } catch {
+    return c.json({ status: "error", error: "Invalid JSON request." }, 400);
+  }
+  const taskPrompt = body && typeof body === "object" && !Array.isArray(body)
+    ? (body as Record<string, unknown>).taskPrompt : undefined;
+  if (typeof taskPrompt !== "string" || !taskPrompt.trim() || taskPrompt.length > 2000) {
+    return c.json({ status: "error", error: "Task must contain 1–2000 characters." }, 400);
+  }
   try {
-    const { taskPrompt, agentIdentity } = await c.req.json();
-    const result = await MultiAgentConsensusEngine.executeConsensusTask(
-      taskPrompt || '',
-      agentIdentity || 'System Administrator'
-    );
-    return c.json({ status: 'success', ...result });
+    const result = await MultiAgentConsensusEngine.executeConsensusTask(taskPrompt, user.id);
+    return c.json({ ...result, status: "review_required" }, 200);
   } catch (err: any) {
-    return c.json({ status: 'error', error: err.message }, 500);
+    const code = err?.code;
+    if (code === "TOO_MANY_REQUESTS") {
+      return c.json({ status: "error", error: "Daily AI allowance exhausted." }, 429);
+    }
+    if (code === "UNAUTHORIZED") {
+      return c.json({ status: "error", error: "Verified account unavailable." }, 401);
+    }
+    if (code === "BAD_REQUEST") {
+      return c.json({ status: "error", error: "Invalid consensus request." }, 400);
+    }
+    if (code === "BAD_GATEWAY") {
+      return c.json({ status: "error", error: "AI review failed; no answer certified." }, 502);
+    }
+    return c.json({ status: "error", error: "AI review storage or provider unavailable." }, 503);
   }
 });
 

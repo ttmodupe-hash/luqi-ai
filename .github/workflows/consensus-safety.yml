@@ -1,0 +1,49 @@
+name: LUQI Consensus Safety (offline; no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**", "security/**", "feat/agent-*"]
+    paths:
+      - "api/services/consensusEngine*"
+      - "api/boot.ts"
+      - ".github/workflows/consensus-safety.yml"
+  push:
+    branches: ["security/honest-budgeted-consensus-*"]
+permissions:
+  contents: read
+jobs:
+  consensus-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install reproducible dependencies
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript project check
+        run: npm run check
+      - name: Full offline suite including provider mocks
+        run: npm test
+      - name: Build app without vendor credentials or deployment
+        run: npm run build
+      - name: Assert active consensus route is cost-accounted and never self-certified
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from "node:fs";
+          const source = fs.readFileSync("api/services/consensusEngine.ts", "utf8");
+          const route = fs.readFileSync("api/boot.ts", "utf8");
+          for (const text of ["reserveAiRequest(actorUserId, \"consensus:draft\")", "reserveAiRequest(actorUserId, \"consensus:audit\")", "consensusPassed: false", "independentlyVerified: false"]) {
+            if (!source.includes(text)) throw Error("Missing fail-closed invariant: " + text);
+          }
+          if (source.includes("SovereignCryptoLedger.sealAction") || source.includes("return 'APPROVED'")) {
+            throw Error("Local memory cannot certify a model audit");
+          }
+          if (!route.includes('MultiAgentConsensusEngine.executeConsensusTask(taskPrompt, user.id)')) {
+            throw Error("Consensus must use session-verified administrator identity");
+          }
+          console.log("Consensus reports only model review, requires accounting and external approval.");
+          NODE
