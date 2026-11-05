@@ -51,6 +51,17 @@ describe("paid model consensus is advisory, never certified", () => {
     expect(JSON.stringify(result)).not.toContain("Verified against South African");
   });
 
+  it("disables billable Gemini continuation on every quota-reserved draft and audit", async () => {
+    await MultiAgentConsensusEngine.executeConsensusTask("Review example", 42);
+    expect(mocks.reserveAiRequest).toHaveBeenCalledTimes(2);
+    expect(mocks.generateContent).toHaveBeenCalledTimes(2);
+    for (const [request] of mocks.generateContent.mock.calls) {
+      expect(request).toEqual(expect.objectContaining({
+        config: expect.objectContaining({ automaticContinuation: false }),
+      }));
+    }
+  });
+
   it("fails closed before any paid call when account/global reservation is denied", async () => {
     mocks.reserveAiRequest.mockRejectedValueOnce(new TRPCError({ code: "TOO_MANY_REQUESTS" }));
     await expect(MultiAgentConsensusEngine.executeConsensusTask("Review something", 9))
