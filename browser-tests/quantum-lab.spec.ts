@@ -38,6 +38,9 @@ test('quantum lab calculates locally, runs real worker primitives and exports an
   const chunks: Buffer[] = []; for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
   const notebook = JSON.parse(Buffer.concat(chunks).toString('utf8'));
   expect(notebook.productionProtectionChanged).toBe(false);
+  expect(notebook.pqcExperimentScope).toContain('not a signature over this notebook');
+  expect(notebook.optimization.exactAllocation.selected).toEqual(['Tools', 'Training']);
+  expect(notebook.optimization.exactTour.cost).toBe(18);
   expect(notebook.pqcExperiment.signatureVerified).toBe(true);
   expect(notebook.pqcExperiment.fipsValidated).toBe(false);
   expect(notebook).not.toHaveProperty('secretKey');

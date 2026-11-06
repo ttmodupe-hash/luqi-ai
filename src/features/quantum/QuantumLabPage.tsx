@@ -172,6 +172,13 @@ export default function QuantumLabPage() {
     <button className="luqi-secondary" onClick={() => save(JSON.stringify({ schema: 'KHORO-QUANTUM-V18-LAB-v1', implementation: 'classical-simulation',
       circuit: { preset, phaseDegrees: phase, marked, iterations, amplitudes: state, ...metrics, qasm },
       surface: { physical: Number(physical), threshold: Number(threshold), result: surface, model: 'illustrative-below-threshold-scaling' },
+      optimization: { loads, gamma, beta,
+        feederModel: 'two-identical-feeders-no-capacity-constraints',
+        feederResult: balance ? { expectedSquaredImbalance: (balance.expectedEnergy + balance.constant) * balance.total ** 2,
+          exactSquaredImbalance: (balance.baseline.minimum + balance.constant) * balance.total ** 2,
+          exactFeederTotals: [balance.feederA, balance.feederB] } : null,
+        suppliedTravelMatrix: tourInput, exactTour: tour, projectBudgetZar: budget, projects, exactAllocation: allocation },
+      pqcExperimentScope: 'Ephemeral self-test of public message abc only; not a signature over this notebook.',
       pqcExperiment: pqc, productionProtectionChanged: false }, null, 2), 'luqi-quantum-lab-v18.json', 'application/json')}>Download experiment notebook</button>
     {notice && <p role="status">{notice}</p>}
     <p>Inputs and results remain in this page unless you download a notebook. Downloaded files remain on your device. Leaving clears unsaved work.</p>
