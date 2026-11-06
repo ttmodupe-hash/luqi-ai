@@ -11,9 +11,9 @@ const context:TenderPacketContext={reference:'SYNTHETIC-001',issuer:'Synthetic a
 const original=new Uint8Array(readFileSync('tests/fixtures/tenders/treasury-revised-sbd1.docx'));
 const values={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier'};
 const all=()=>Object.fromEntries(ORIGINAL_FORM_GATES.map(g=>[g.id,true])) as ReturnType<typeof emptyOriginalApprovals>;
-async function prepare(revision=1,change:Partial<TenderPacketContext>={}){
- const inspection=await inspectTenderDocument('original.docx','',original),filled=await fillVerifiedSbd1(original,values);
- const packet=await prepareTenderPacket({inspection,originalName:'original.docx',filled,values,context:{...context,...change},amendments:[],revision},now);
+async function prepare(revision=1,change:Partial<TenderPacketContext>={},suppliedValues=values){
+ const inspection=await inspectTenderDocument('original.docx','',original),filled=await fillVerifiedSbd1(original,suppliedValues);
+ const packet=await prepareTenderPacket({inspection,originalName:'original.docx',filled,values:suppliedValues,context:{...context,...change},amendments:[],revision},now);
  return {packet,filled,files:[{name:'original.docx',bytes:original},{name:'filled-sbd1-partial.docx',bytes:filled}]};
 }
 it('requires each of seven approvals and binds review to the exact revision, deadline and 30 minute window',async()=>{
@@ -54,8 +54,21 @@ it('exports the filled ORIGINAL plus review and approval history, truthfully mar
  expect(record.approval.packetDigest).toBe(packet.digest);expect(record.approval.gates).toHaveLength(7);
  expect(record.legallySigned).toBe(false);expect(record.submissionConnected).toBe(false);
  expect(record.approval.finalSubmissionApproved).toBe(false);expect(record.history.events).toHaveLength(10);
+ const checklist=strFromU8(zip['PREPARATION-CHECKLIST.txt']);
+ expect(checklist).toContain('Seven mapped supplier contact fields ONLY');
+ expect(checklist).toContain('Name of bidder: ENTERED');
+ expect(checklist).toContain('Postal address: LEFT BLANK');
+ expect(checklist).toContain('Partial original for manual completion');
+ expect(checklist).toContain('NOT submitted, receipt-confirmed or awarded');
+ expect(checklist).not.toContain('Synthetic supplier');
+ expect(checklist).not.toContain('Synthetic applicant');
+ expect(strFromU8(zip['READ-ME.txt'])).toContain('PREPARATION-CHECKLIST.txt');
  expect(JSON.stringify(record.history)).not.toContain('Synthetic supplier');
  expect(record.history.identityVerified).toBe(false);
+});
+it('marks whitespace-only optional fields blank in packet metadata without inventing answers',async()=>{
+ const {packet}=await prepare(1,{}, {...values,postalAddress:'   '});
+ expect(packet.enteredFieldIds).toEqual(['bidderName']);
 });
 it('chains amendment and revocation events without copying private facts into the audit log',async()=>{
  const history=appendTenderAudit(appendTenderAudit([],1,'edit-field','bidderName',now),2,'revoke','release',now);

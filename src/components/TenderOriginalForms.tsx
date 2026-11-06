@@ -229,7 +229,8 @@ export function TenderOriginalForms(){
       <h3 className="font-semibold">Review version {prepared.packet.revision}</h3>
       <p className="break-all text-xs">Exact packet digest: {prepared.packet.digest}</p>
       <p className="text-xs text-amber-200">Unsigned, partial original for manual completion. Review expires in 30 minutes or at the closing time. Every edit clears every approval. Prices and declarations have not been filled.</p>
-      <dl className="space-y-1 text-sm">{SBD1_FIELDS.map(field=><div key={field.id} className="break-words"><dt className="font-semibold">{field.label}</dt><dd>{values[field.id]||'Left blank for applicant completion'}</dd></div>)}</dl>
+      <p className="text-xs text-slate-300">The export includes PREPARATION-CHECKLIST.txt: it lists which of the seven mapped contact fields were entered or left blank, plus tasks to check with the issuer. It cannot assess the whole bid.</p>
+      <dl className="space-y-1 text-sm">{SBD1_FIELDS.map(field=><div key={field.id} className="break-words"><dt className="font-semibold">{field.label}</dt><dd>{values[field.id].trim() ? values[field.id] : 'Left blank for applicant completion'}</dd></div>)}</dl>
       {prepared.packet.files.map(file=><p key={file.name} className="break-all text-xs">{file.role}: {file.name} · SHA-256 {file.sha256}</p>)}
       {ORIGINAL_FORM_GATES.map(g=><label key={g.id} className="flex items-start gap-2 rounded-lg border border-slate-700 p-3 text-sm">
         <input type="checkbox" disabled={busy||historyFull||(g.id==='release'&&!ORIGINAL_FORM_GATES.filter(x=>x.id!=='release').every(x=>gates[x.id]))}

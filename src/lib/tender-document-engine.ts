@@ -254,7 +254,7 @@ export async function fillVerifiedSbd1(bytes:Uint8Array,values:SupplierValues):P
       rowIndex++;let cellIndex=-1;
       return row.replace(/<w:tc\b[^>]*>[\s\S]*?<\/w:tc>/g,cell=>{
         cellIndex++;const field=SBD1_FIELDS.find(f=>f.row===rowIndex&&f.cell===cellIndex);
-        if(!field||!values[field.id])return cell;
+        if(!field||!values[field.id].trim())return cell;
         if(xmlTexts(cell).some(s=>s.trim()))fail('MAPPING_UNVERIFIED');
         const run='<w:r><w:rPr><w:rFonts w:ascii="Arial Narrow" w:hAnsi="Arial Narrow"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">'+escapeXml(values[field.id])+'</w:t></w:r>';
         if(!cell.includes('</w:p>'))fail('MAPPING_UNVERIFIED');
