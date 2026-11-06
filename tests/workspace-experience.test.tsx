@@ -37,3 +37,18 @@ it('reports device connection without representing it as current AI or service h
   expect(screen.getByText('Device offline')).toBeTruthy();
   expect(screen.queryByText('AI online')).toBeNull();
 });
+
+it('keeps both the new quantum lab and the expanded local physics lab discoverable after integration', () => {
+  const quantum = workspaceTools.filter(tool => tool.id === 'quantum-lab');
+  const physics = workspaceTools.filter(tool => tool.id === 'physics');
+  expect(quantum).toHaveLength(1);
+  expect(physics).toHaveLength(1);
+  expect(quantum[0]).toMatchObject({
+    title: 'Quantum & PQC Lab', path: '/quantum-lab', ready: true,
+  });
+  expect(physics[0]).toMatchObject({
+    title: 'Physics Discovery Lab', path: '/physics-lab', ready: true,
+  });
+  expect(quantum[0].description).toContain('No quantum-cloud or paid AI calls.');
+  expect(physics[0].description).toContain('advanced pendulum rig');
+});
