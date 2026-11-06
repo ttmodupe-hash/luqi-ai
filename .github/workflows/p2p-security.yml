@@ -88,7 +88,7 @@ jobs:
             -v /tmp/luqi-p2p-server.js:/tmp/luqi-p2p-server.js:ro -v /tmp/luqi-p2p.key:/tmp/luqi-p2p.key:ro -v /tmp/luqi-p2p.crt:/tmp/luqi-p2p.crt:ro \
             -e LUQI_MYSQL_CI_FIXTURE -e DATABASE_URL -e GITHUB_ACTIONS=true -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
             "$image" npx --no-install playwright test --config playwright.p2p.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: p2p-browser-evidence
