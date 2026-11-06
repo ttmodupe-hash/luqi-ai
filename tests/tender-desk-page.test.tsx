@@ -28,6 +28,26 @@ it('excludes the past compulsory briefing by default, and warns on historical re
  fireEvent.click(screen.getByLabelText(/Show expired tenders and those with a past compulsory briefing/));
  expect(screen.getByText(/Past compulsory briefing/)).toBeTruthy();
 });
+it('routes GCIS USB search to issuer documents and preserves synthetic draft on a 320px DOM viewport',()=>{
+ Object.defineProperty(window,'innerWidth',{configurable:true,value:320});
+ show();
+ fireEvent.change(screen.getByLabelText('Search tender notices'),{target:{value:'USB'}});
+ const card=screen.getByRole('heading',{name:/South African Sign Language interpreting/}).closest('article')!;
+ expect(card.className).toContain('min-w-0');
+ const pdf=within(card).getByRole('link',{name:'Original issuer specification (PDF)'});
+ const audio=within(card).getByRole('link',{name:'Issuer audio addendum (not reviewed by Luqi)'});
+ expect(pdf.getAttribute('href')).toMatch(/www\.gcis\.gov\.za\/.+\.pdf$/);
+ expect(audio.getAttribute('href')).toMatch(/www\.gcis\.gov\.za\/.+\.mp3$/);
+ expect(pdf.getAttribute('rel')).toBe('noopener noreferrer');
+ expect(card.textContent).toContain('No emailed bids');
+ expect(card.textContent).toContain('Audio addendum contents NOT inspected');
+ fireEvent.click(within(card).getByRole('button',{name:'Prepare bidder worksheet for this tender'}));
+ fireEvent.change(screen.getByRole('textbox',{name:'Bidder trading name'}),{target:{value:'Synthetic Example Supplier'}});
+ fireEvent.change(screen.getByLabelText('Search tender notices'),{target:{value:'fictional lunar printer'}});
+ expect(screen.getByText(/No reviewed notice matches/)).toBeTruthy();
+ expect(screen.getByRole('textbox',{name:'Bidder trading name'}).getAttribute('value')).toBe('Synthetic Example Supplier');
+ expect(req).not.toHaveBeenCalled();
+});
 it('tender wizard does not submit or sign, and only downloads a marked draft after user selection',()=>{
  show();
  const heading=screen.getByRole('heading',{name:/Contractor-development mentorship/});
