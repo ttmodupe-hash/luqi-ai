@@ -2,10 +2,10 @@ name: LUQI Drive Evidence and Planning
 on:
   pull_request:
     branches: [main]
-    paths: ['src/features/drive/**', 'app/src/features/drive/**', 'api/services/drive-source-radar.ts', 'scripts/drive-source-radar.mjs', 'tests/drive-intelligence*', 'tests/luqi-drive-gps.test.tsx', 'browser-tests/drive-intelligence.spec.ts', '.github/workflows/drive-intelligence.yml']
+    paths: ['src/features/drive/**', 'app/src/features/drive/**', 'api/services/drive-source-*', 'api/drive-source-status.ts', 'api/router.ts', 'api/middleware.ts', 'scripts/drive-source-radar.mjs', 'tests/drive-intelligence*', 'tests/drive-source-status*', 'tests/luqi-drive-gps.test.tsx', 'browser-tests/drive-intelligence.spec.ts', 'browser-tests/drive-source-status.spec.ts', '.github/workflows/drive-intelligence.yml']
   push:
     branches: [main]
-    paths: ['src/features/drive/**', 'app/src/features/drive/**', 'api/services/drive-source-radar.ts', 'scripts/drive-source-radar.mjs', 'tests/drive-intelligence*', 'browser-tests/drive-intelligence.spec.ts', '.github/workflows/drive-intelligence.yml']
+    paths: ['src/features/drive/**', 'app/src/features/drive/**', 'api/services/drive-source-*', 'api/drive-source-status.ts', 'api/router.ts', 'api/middleware.ts', 'scripts/drive-source-radar.mjs', 'tests/drive-intelligence*', 'tests/drive-source-status*', 'browser-tests/drive-intelligence.spec.ts', 'browser-tests/drive-source-status.spec.ts', '.github/workflows/drive-intelligence.yml']
 permissions:
   contents: read
 jobs:
@@ -21,10 +21,10 @@ jobs:
           node-version: '22'
       - run: node --test tests/drive-intelligence-parity.test.mjs
       - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
-      - name: Verify calculations, privacy, source bounds and existing GPS flows with fixtures
-        run: npx --no-install vitest run tests/drive-intelligence.test.ts tests/drive-intelligence-panel.test.tsx tests/luqi-drive-gps.test.tsx tests/field-and-bench.test.tsx
-      - name: Strictly type-check both frontend trees and the source radar
-        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/drive/DriveIntelligencePanel.tsx app/src/features/drive/DriveIntelligencePanel.tsx api/services/drive-source-radar.ts
+      - name: Verify status privacy, real tRPC transport, bounded files and existing GPS flows
+        run: npx --no-install vitest run tests/drive-intelligence.test.ts tests/drive-intelligence-panel.test.tsx tests/luqi-drive-gps.test.tsx tests/field-and-bench.test.tsx tests/drive-source-status.test.ts tests/drive-source-status-panel.test.tsx
+      - name: Strictly type-check both frontend trees and the read-only status API
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/drive/DriveIntelligencePanel.tsx app/src/features/drive/DriveIntelligencePanel.tsx src/features/drive/DriveSourceStatusPanel.tsx app/src/features/drive/DriveSourceStatusPanel.tsx api/drive-source-status.ts api/services/drive-source-radar.ts api/services/drive-source-status-store.ts
       - name: Compile real operator modules and verify no-fetch default
         run: |
           mkdir -p "$RUNNER_TEMP/luqi-drive-build"
@@ -41,7 +41,7 @@ jobs:
           else
             npx --no-install playwright install --with-deps chromium --only-shell
           fi
-          npx --no-install playwright test browser-tests/drive-intelligence.spec.ts --workers=1
+          npx --no-install playwright test browser-tests/drive-intelligence.spec.ts browser-tests/drive-source-status.spec.ts --workers=1
       - name: Preserve synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4
