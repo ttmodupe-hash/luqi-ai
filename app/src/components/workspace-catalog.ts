@@ -113,13 +113,13 @@ export const workspaceTools = [
   },
   {
     id: "physics",
-    title: "Physics lab",
-    category: "Learn by changing things",
+    title: "Physics Discovery Lab",
+    category: "Explore physics through experiments",
     description:
-      "Adjust simple, double and driven pendulum motion, watch graphs and collect browser-local lab observations.",
-    status: "In-browser tool",
+      "Explore projectile motion, forces, circuits, waves, lenses, energy, momentum and heat, plus the advanced pendulum rig. Adjust variables and record observations locally.",
+    status: "Free local models · nine physics labs",
     ready: true,
-    path: "/pendulum-lab",
+    path: "/physics-lab",
     icon: "physics",
   },
   {

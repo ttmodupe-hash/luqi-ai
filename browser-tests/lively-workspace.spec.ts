@@ -9,7 +9,7 @@ test('320px discovery opens a native keyboard-dismissible modal and restores foc
   await page.goto('/#/');
   const discovery = page.getByRole('region', { name: 'Discover Luqi' });
   await discovery.getByRole('button', { name: 'Learn & play' }).click();
-  await expect(discovery.getByRole('link', { name: /Physics lab/ })).toHaveAttribute('href', '#/pendulum-lab');
+  await expect(discovery.getByRole('link', { name: /Physics Discovery Lab/ })).toHaveAttribute('href', '#/physics-lab');
   await page.getByRole('button', { name: 'Explore something' }).click();
   const modal = page.getByRole('dialog', { name: 'Explore Luqi', exact: true });
   await expect(modal).toBeVisible();

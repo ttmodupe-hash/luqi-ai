@@ -17,9 +17,9 @@ export default function StartPage() {
         <span className="luqi-tool-icon luqi-icon-physics"><FlaskConical aria-hidden="true" /></span>
         <p className="luqi-card-kicker">NO ACCOUNT NEEDED</p>
         <h2 id="start-physics">Learn by experimenting.</h2>
-        <p>Change a pendulum’s length, compare its motion and explore the energy in the system.</p>
-        <ul><li><Check aria-hidden="true" /> Runs in your browser</li><li><Check aria-hidden="true" /> Adjustable simulation and graphs</li><li><Check aria-hidden="true" /> No AI generation required</li></ul>
-        <Link className="luqi-primary" to="/pendulum-lab">Try the physics lab <ArrowUpRight size={18} aria-hidden="true" /></Link>
+        <p>Explore nine interactive Physics experiences—from motion and electricity to waves, optics, heat and the advanced pendulum.</p>
+        <ul><li><Check aria-hidden="true" /> Runs in your browser</li><li><Check aria-hidden="true" /> Adjust variables, observe results and export CSV</li><li><Check aria-hidden="true" /> No AI generation required</li></ul>
+        <Link className="luqi-primary" to="/physics-lab">Try the physics lab <ArrowUpRight size={18} aria-hidden="true" /></Link>
       </section>
       <section className="luqi-start-card" aria-labelledby="start-notes">
         <span className="luqi-tool-icon luqi-icon-notes"><MessageCircle aria-hidden="true" /></span>

@@ -59,6 +59,7 @@ const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
 const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
+const PhysicsLabHubPage = lazy(() => import("./pages/PhysicsLabHubPage"));
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -132,6 +133,8 @@ export default function App() {
         <RouterRoute path="/experiential-edu" element={<ExperientialEducationPage />} />
         <RouterRoute path="/simulation-core" element={<ExperientialEducationPage />} />
         <RouterRoute path="/lab-simulator" element={<LabSimulatorPage />} />
+        <RouterRoute path="/physics-lab" element={<PhysicsLabHubPage />} />
+        <RouterRoute path="/stem-physics" element={<PhysicsLabHubPage />} />
         <RouterRoute path="/pendulum-lab" element={<PendulumLabPage />} />
         <RouterRoute path="/pendulum" element={<PendulumLabPage />} />
         <RouterRoute path="/simple-pendulum" element={<PendulumLabPage />} />
