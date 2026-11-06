@@ -195,3 +195,44 @@ Reviewed 6 November 2026:
 - Farhi, Goldstone & Gutmann, QAOA: https://arxiv.org/abs/1411.4028
 - Fowler et al., surface-code review: https://arxiv.org/abs/1208.0928
 - Noble implementation/security notes: https://github.com/paulmillr/noble-post-quantum
+
+
+## Chat intelligence workflow — 6 November 2026
+
+Add task-aware instructions to the existing budgeted Gemini/OpenAI text path.
+The approaches are Auto, Teach, Plan, Compare, Review and Draft. Signed-in Chat
+exposes the selection under More options; the embedded AI form also exposes it.
+The guest introduction uses the automatic policy with its shorter answer limit.
+These are answer preferences, not newly trained model weights, autonomous agents,
+a higher-priced model selection, a quality score or proof of expert correctness.
+
+A strict enum crosses the authenticated HTTP boundary; arbitrary policies, model
+IDs, tools, credentials and spending overrides are not accepted. The server adds
+only its own approach instructions. The browser requires confirmation of an
+explicit requested approach in a completed response. Invalid or ambiguous results
+are not replayed automatically. Default requests remain backward compatible.
+
+The guidance asks for the actual goal, supplied constraints, necessary workings,
+assumptions, uncertainty and a useful next step. It does not grant browsing,
+research, verification, attachment access or real-world execution. Any review
+is model-generated assistance, not certification. Human checking remains needed.
+
+Conversation sharing remains optional and previewable. Up to four messages,
+350 UTF-16 code units each, use literal beginning/end excerpts when necessary;
+[middle omitted] marks the gap. Nothing invents a summary of that gap. Surrogate
+pairs are preserved. Full input still fits the existing 6000-character ceiling.
+Notes and country context keep their separate approvals. Response approach resets
+on a different account, chat switch, New chat and sign-out; it is not hidden memory.
+
+Provider enablement, billing approval, models, reasoning settings, token ceilings,
+daily quotas and monthly provider caps are unchanged. No extra reasoning, judging
+or agent calls are added. The existing independently reserved fallback still
+applies. The added instructions use tokens within existing reservations; a
+reservation is not an external invoice cap. Token counting includes the complete
+guest system instruction in the expanded guest profile.
+
+Validation covers strict approach input, both actual SDK/HTTP request shapes with
+synthetic provider replies, reservation-before-call, fallback scope, response
+confirmation, literal context excerpts, Unicode boundaries, privacy and mobile
+controls. Transport/browser fixtures do not benchmark live model answer quality;
+no paid production inference is needed to validate these code boundaries.

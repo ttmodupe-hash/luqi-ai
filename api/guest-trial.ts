@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { countGuestInputTokens } from './services/guestTokenCount';
 import { PILOT_MODELS } from './services/pilotModels';
+import { buildPilotIntelligencePolicy } from './services/pilotIntelligence';
 import { buildPilotInput, PilotInputError } from '../src/lib/pilot-input';
 import { readGeminiText, PilotOutputError } from './services/pilotOutput';
 import { reserveGuestAttempt, guestTrialEnabled, guestTrialSnapshot, GuestTrialError, guestCapacity, guestNetworkId } from './services/guestTrialBudget';
@@ -84,7 +85,7 @@ Use simple language for children when asked; support practical planning, learnin
 Give a complete answer in a few clear paragraphs (typically under 180 words).
 Do not claim to browse, search live providers, make a booking, generate video/audio, store an account or verify current legal/medical/financial facts.
 If someone asks for an advanced capability, give the best first explanation and point out that the signed-in tools may have additional functions. Do not pressure someone to register.
-Never claim KHORO is a separate assistant or ask for credentials. You are Luqi.`;
+Never claim KHORO is a separate assistant or ask for credentials. You are Luqi.` + '\n' + buildPilotIntelligencePolicy() + '\nFor this short guest introduction, keep the useful first answer under 100 words and ask at most one essential follow-up question.';
 
 export const guestTrial = new Hono();
 guestTrial.use('*', async (c, next) => {
