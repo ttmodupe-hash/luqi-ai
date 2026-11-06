@@ -22,7 +22,9 @@ describe('opt-in in-memory AI conversation preview', () => {
     const preview = previewPilotHistory([{ sender: 'ai', text: original }]);
     expect(preview).toHaveLength(1);
     expect(preview[0].text.length).toBeLessThanOrEqual(MAX_PILOT_HISTORY_TEXT_CHARS);
-    expect(preview[0].text).toMatch(/…$/u);
+    expect(preview[0].text).toContain('[middle omitted]');
+    expect(preview[0].text.startsWith('a')).toBe(true);
+    expect(preview[0].text.endsWith('a')).toBe(true);
     expect(original).toHaveLength(420);
   });
   it('never adds notes, email, identity or hidden context', () => {
@@ -30,4 +32,24 @@ describe('opt-in in-memory AI conversation preview', () => {
     expect(previewPilotHistory([{ sender: 'user', text: 'Travel to Ghana' }]))
       .toEqual([{ sender: 'user', text: 'Travel to Ghana' }]);
   });
+});
+
+it('preserves literal opening facts and final constraints, without inventing a summary', () => {
+  const opening = 'Goal: prepare a CCNA study plan. ';
+  const ending = 'Final constraint: 30 minutes a day and budget R500.';
+  const original = opening + 'detail '.repeat(100) + ending;
+  const [preview] = previewPilotHistory([{ sender: 'user', text: original }]);
+  expect(preview.text.startsWith(opening)).toBe(true);
+  expect(preview.text.endsWith(ending)).toBe(true);
+  const [head, tail] = preview.text.split(' … [middle omitted] … ');
+  expect(original.startsWith(head)).toBe(true);
+  expect(original.endsWith(tail)).toBe(true);
+  expect(preview.text.length).toBeLessThanOrEqual(MAX_PILOT_HISTORY_TEXT_CHARS);
+});
+it('does not split surrogate pairs at either excerpt boundary', () => {
+  const [preview] = previewPilotHistory([{ sender: 'ai', text: '🌍'.repeat(300) }]);
+  const [head, tail] = preview.text.split(' … [middle omitted] … ');
+  expect(head).not.toMatch(/[\uD800-\uDBFF]$/u);
+  expect(tail).not.toMatch(/^[\uDC00-\uDFFF]/u);
+  expect(preview.text.length).toBeLessThanOrEqual(MAX_PILOT_HISTORY_TEXT_CHARS);
 });
