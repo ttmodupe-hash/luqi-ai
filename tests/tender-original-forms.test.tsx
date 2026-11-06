@@ -45,6 +45,14 @@ it('requires local-processing consent, makes no network calls and keeps unsuppor
  expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull();
  expect(screen.getByRole('checkbox',{name:/I authorise local processing/}).hasAttribute('checked')).toBe(false);
 });
+it('does not mistake enquiries contacts or generic website instructions for a bid-submission route',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ expect(screen.getByRole('note').textContent).toContain('An enquiries email is not proof of a bid-submission inbox.');
+ expect(screen.getByRole('note').textContent).toContain('Generic issuer website instructions may differ from this specific bid.');
+ expect((screen.getByRole('combobox',{name:'Original form submission method'}) as HTMLSelectElement).value).toBe('');
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('requires all seven gates and revokes the whole prepared version after a price or supplier edit',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const review=screen.getByRole('region',{name:'Original form applicant review'});
