@@ -29,7 +29,9 @@ test('response approaches stay local until Send and share only reviewed context'
   await approach.selectOption('plan');
   await page.getByLabel('Your question', { exact: true }).fill('Help me study subnetting for 30 minutes daily.');
   expect(calls).toHaveLength(0);
-  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).check();
+  await page.getByRole('checkbox', { name: /I understand AI text may go/ }).click();
+  await expect(page.getByText('AI text sharing approved for this signed-in tab. Each message still needs Send.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send question', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Send question', exact: true }).click();
   await expect(page.getByText(/Requested approach: Make a plan/)).toBeVisible();
   expect(calls).toHaveLength(1);
