@@ -204,6 +204,7 @@ export function TenderOriginalForms(){
           onChange={(field,value)=>{setValues(previous=>({...previous,[field]:value}));invalidate('edit-field',field)}}/>
         <fieldset disabled={busy||historyFull} className="space-y-3"><legend className="font-semibold">Bid context for your private review record</legend>
           <p className="text-xs text-slate-300">These values identify the review packet. They do not fill the authority’s bid invitation, pricing schedule or declarations. Confirm them against the issuer originals.</p>
+          <p role="note" className="text-xs text-amber-200">Confirm the exact permitted submission channel, recipient and closing time in this bid’s issuer invitation and latest addenda. An enquiries email is not proof of a bid-submission inbox. Generic issuer website instructions may differ from this specific bid. If official documents conflict, obtain written clarification from the issuer before preparing a packet or submitting.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {([
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
