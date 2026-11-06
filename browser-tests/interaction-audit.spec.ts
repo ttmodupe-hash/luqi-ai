@@ -137,17 +137,17 @@ test('CLI non-success and malformed replies preserve input and state without fal
 // Keep responsive search and 1920px-to-1440px navigation resize separately
 // validated under the existing 30s per-test budget. No skipped browser case,
 // no forced interactions, no weaker assertions or additional provider writes.
-test('desktop workspace search exposes Civic and balloon tools with accessible extra menu',async({page},testInfo)=>{
+test('desktop workspace search exposes Civic and balloon tools with visible second-row services',async({page},testInfo)=>{
  await page.setViewportSize({width:1920,height:1080});await page.goto('/#/');
  await page.getByLabel('Filter workspace tools',{exact:true}).fill('voting');
  await expect(page.getByRole('article').getByRole('heading',{name:'Civic Evidence Desk',exact:true})).toBeVisible();
  await page.getByLabel('Filter workspace tools',{exact:true}).fill('balloon');
  await expect(page.getByRole('article').getByRole('heading',{name:'Consumer rights & complaint help',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth+1)).toBe(true);
- await page.getByText('More services',{exact:true}).click();
- await expect(page.getByRole('navigation',{name:'Primary navigation'}).getByRole('link',{name:'Civic evidence',exact:true})).toBeVisible();
- await page.keyboard.press('Escape');
- await expect(page.locator('.luqi-more-services')).not.toHaveAttribute('open','');
+ const services=page.getByRole('navigation',{name:'More Luqi services'});
+ await expect(services.getByRole('link',{name:'Civic evidence',exact:true})).toBeVisible();
+ await expect(services.getByRole('link',{name:'Municipal services',exact:true})).toBeVisible();
+ await expect(page.locator('.luqi-more-services')).toHaveCount(0);
  await page.screenshot({path:testInfo.outputPath('audit-repaired-navigation.png'),fullPage:false});
 });
 
