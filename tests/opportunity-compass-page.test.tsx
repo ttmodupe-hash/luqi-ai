@@ -78,3 +78,13 @@ it('keeps nine separate geographic regions, the source attribution and equivalen
  expect(screen.getByRole('link',{name:'CC BY 3.0 IGO'})).toBeTruthy();
  expect(request).not.toHaveBeenCalled();
 });
+
+it('displays the new DPSA edition with the posting date, source-review dates and no personal checks',()=>{
+ vi.setSystemTime(new Date('2026-11-02T07:00:00+02:00'));
+ show();
+ expect(screen.getByText('Public Service Vacancy Circular 39 of 2026')).toBeTruthy();
+ expect(screen.getByText(/DPSA posted Circular 39 on 30 October 2026/)).toBeTruthy();
+ expect(screen.getByText(/Publisher posting: 2026-10-30/)).toBeTruthy();
+ expect(screen.getByText(/separately checked records show their own dates/)).toBeTruthy();
+ expect(request).not.toHaveBeenCalled();
+});

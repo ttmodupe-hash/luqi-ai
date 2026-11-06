@@ -23,6 +23,8 @@ export interface OpportunitySource {
  id:string;title:string;organisation:string;country:OpportunityCountry;category:OpportunityCategory;
  audiences:readonly OpportunityAudience[];url:string;summary:string;reviewedOn:string;
  type:'directory'|'dated-notice';deadline?:string;notice?:string;
+ /** Dates and exact evidence apply only to THIS record, not the full directory. */
+ publishedOn?:string;verifiedOn?:string;reviewDueOn?:string;evidenceSection?:string;
 }
 const source=(id:string,title:string,organisation:string,category:OpportunityCategory,
  audiences:OpportunityAudience[],url:string,summary:string,deadline?:string,notice?:string):OpportunitySource=>({
@@ -31,9 +33,14 @@ const source=(id:string,title:string,organisation:string,category:OpportunityCat
 });
 export const ZA_OPPORTUNITY_SOURCES:readonly OpportunitySource[]=[
  source('gov-jobs','Government jobs this week','South African Government','government',['everyone','graduate','accessibility'],
- 'https://www.gov.za/government-jobs-week','Official national and provincial vacancy circulars; read each individual post for the department, closing date, requirements and Z83 form.',undefined,'Circular 38 of 23 October 2026 was current at review; check the latest circular again.'),
+ 'https://www.gov.za/government-jobs-week','Official national and provincial vacancy circulars; read each individual post for the department, closing date, requirements and Z83 form.',undefined,'Use the DPSA circular index for the latest edition, then verify each employer vacancy notice and deadline.'),
+ {id:'circular-39',title:'Public Service Vacancy Circular 39 of 2026',organisation:'DPSA',country:'ZA',category:'government',
+  audiences:['everyone','graduate','accessibility'],url:'https://www.dpsa.gov.za/newsroom/psvc/circular-39-of-2026/',
+  summary:'DPSA posted Circular 39 on 30 October 2026. Open its department sections and confirm each individual post and closing date. Publication does not prove that a vacancy remains open.',
+  reviewedOn:'2026-11-02',type:'dated-notice',publishedOn:'2026-10-30',verifiedOn:'2026-11-02',reviewDueOn:'2026-11-06',
+  evidenceSection:'DPSA Circular 39 posting date and department links; individual vacancy status not verified.'},
  source('circular-38','Public Service Vacancy Circular 38 of 2026','DPSA','government',['everyone','graduate','accessibility'],
- 'https://www.dpsa.gov.za/newsroom/psvc/circular-38-of-2026/','Dated circular of government vacancy advertisements; some individual vacancies may already be closed.',undefined,'Published 23 October 2026; publication alone does not confirm that any listed vacancy is open.'),
+ 'https://www.dpsa.gov.za/newsroom/psvc/circular-38-of-2026/','Earlier edition retained for historical reference; individual posts may have closed. Check Circular 39 and the publisher index for newer editions.',undefined,'Published 23 October 2026, superseded as the newest listed edition by Circular 39. Not proof of active vacancies.'),
  source('dept-labour','Department of Employment and Labour jobs','Department of Employment and Labour','government',['everyone','graduate'],
  'https://www.labour.gov.za/Vacancies/Pages/Vacancies-List.aspx','Official departmental recruitment listings, career support and links to ESSA. Check each position deadline.'),
  source('nyda','NYDA Opportunities Corner','National Youth Development Agency','graduate',['youth','graduate','entrepreneur'],
@@ -86,4 +93,20 @@ export function detectOpportunityIntent(input:unknown):boolean{
   || /\b(government job|public service post|government post|public service vacancy)\b/u.test(q)
   || (/\b(dpsa|z83|nyda|nsfas|funza lushaka|nrf funding|government vacancy circular)\b/u.test(q)
       && /\b(apply|application|requirements|eligibility|eligible|qualify|deadline|closing|verify|job|bursary|funding|vacancy|steps|guidelines)\b/u.test(q));
+}
+
+/** Per-source review metadata is not an availability check or an automatic renewal. */
+export function opportunitySourceReviewState(source:OpportunitySource,now:Date):
+ 'not-scheduled'|'reviewed'|'review-overdue'|'invalid'{
+ if(!source.verifiedOn&&!source.reviewDueOn)return 'not-scheduled';
+ const isDate=(value:string|undefined):value is string=>{
+  if(!value||!/^\d{4}-\d{2}-\d{2}$/u.test(value))return false;
+  const t=Date.parse(value+'T00:00:00+02:00');
+  return Number.isFinite(t)&&new Date(t+7200000).toISOString().slice(0,10)===value;
+ };
+ if(!isDate(source.verifiedOn)||!isDate(source.reviewDueOn)||!Number.isFinite(now.getTime()))return 'invalid';
+ const verified=Date.parse(source.verifiedOn+'T00:00:00+02:00');
+ const due=Date.parse(source.reviewDueOn+'T23:59:59+02:00');
+ if(due<verified||now.getTime()<verified)return 'invalid';
+ return now.getTime()>due?'review-overdue':'reviewed';
 }
