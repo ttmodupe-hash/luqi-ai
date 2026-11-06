@@ -8,6 +8,9 @@
 .luqi-archive .archive-check { display:flex; gap:.7rem; align-items:flex-start; font-weight:400; }
 .luqi-archive .archive-check input { width:1.15rem; height:1.15rem; flex-shrink:0; accent-color:#8de9b5; }
 .luqi-archive button { margin:.65rem .65rem .65rem 0; max-width:100%; white-space:normal; }
+.luqi-archive .luqi-secondary { color:#f0f7fa; background:#183243; border-color:#a0babd; }
+.luqi-archive .luqi-primary { color:#0a231b; background:#bbefaa; border-color:#bbefaa; }
+.luqi-archive :is(.luqi-secondary,.luqi-primary):hover:not(:disabled) { filter:brightness(1.12); }
 .luqi-archive button:disabled { opacity:.5; cursor:not-allowed; }
 .luqi-archive .archive-note { color:#c4d2e2; font-size:.92rem; line-height:1.65; }
 .archive-downloads,.archive-restored { margin-top:1rem; padding:1rem; border:1px solid #698c96; border-radius:.6rem; background:#0d2b37; }
@@ -17,3 +20,4 @@
 .luqi-archive summary { cursor:pointer; font-weight:600; }
 .luqi-archive :is(button,input,textarea,summary,a):focus-visible { outline:3px solid #8de9b5; outline-offset:4px; }
 @media(max-width:720px){.archive-grid{grid-template-columns:1fr}.archive-grid>section,.archive-cloud{padding:1rem}}
+@media(forced-colors:active){.luqi-archive :is(.luqi-secondary,.luqi-primary){color:ButtonText;background:ButtonFace;border-color:ButtonText}}

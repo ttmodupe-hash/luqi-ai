@@ -1,4 +1,4 @@
-/** Optional local pilot: records and passphrases never leave the worker.
+/** Optional local pilot: browser input/output; no API transmission of records or passphrases.
  * No FIPS validation, independent audit, server migration or remote revocation.
  */
 import { ml_kem1024_p384 as kem } from '@noble/post-quantum/hybrid.js';

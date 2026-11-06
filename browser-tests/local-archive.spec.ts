@@ -42,6 +42,20 @@ test('local archive saves a recovery pair, survives reload and verifies before r
   const gettingPlaintext=page.waitForEvent('download');await page.getByRole('button',{name:'Download restored plain text'}).click();
   const plain=await gettingPlaintext;expect(plain.suggestedFilename()).toBe('luqi-restored-record.txt');
   expect((await bytes(plain)).toString()).toBe(title+'\n\n'+text);
+  for(const name of ['Download restored plain text','Clear this tab','Verify and unlock record']){
+    const contrast=await page.getByRole('button',{name,exact:true}).evaluate(button=>{
+      const style=getComputedStyle(button);
+      const luminance=(color:string)=>{
+        const channels=color.match(/[\d.]+/g)?.slice(0,3).map(Number);
+        if(!channels||channels.length!==3)throw Error('Unexpected rendered color: '+color);
+        const linear=channels.map(channel=>{const value=channel/255;return value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4;});
+        return linear[0]*0.2126+linear[1]*0.7152+linear[2]*0.0722;
+      };
+      const foreground=luminance(style.color),background=luminance(style.backgroundColor);
+      return (Math.max(foreground,background)+0.05)/(Math.min(foreground,background)+0.05);
+    });
+    expect(contrast,`${name} should remain readable in the actual browser theme`).toBeGreaterThanOrEqual(4.5);
+  }
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await page.screenshot({path:info.outputPath('local-archive.png'),fullPage:true});
   const altered=JSON.parse(archiveBytes.toString());const cipher=Buffer.from(altered.ciphertext,'base64');cipher[0]^=1;altered.ciphertext=cipher.toString('base64');

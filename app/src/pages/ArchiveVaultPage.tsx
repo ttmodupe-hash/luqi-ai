@@ -108,7 +108,7 @@ export default function ArchiveVaultPage() {
         </div>}
       </section>
       <section aria-labelledby="archive-open-title"><h2 id="archive-open-title">3. Verify and restore</h2>
-        <p>Select your saved archive and its matching recovery file. Opening a record does not replace the draft on the left.</p>
+        <p>Select your saved archive and its matching recovery file. Opening a record keeps your current draft.</p>
         <label>Encrypted archive file (.json)<input ref={archivePicker} type="file" accept=".json,application/json" disabled={busy} onChange={e=>selectFile(e,'archive')}/></label>
         <label>Matching recovery file (.json)<input ref={recoveryPicker} type="file" accept=".json,application/json" disabled={busy} onChange={e=>selectFile(e,'recovery')}/></label>
         <label>Recovery unlock passphrase<input ref={unlock} type="password" minLength={14} maxLength={128} autoComplete="off" disabled={busy}/></label>
