@@ -61,3 +61,31 @@ test('source-linked African study loads only when requested', async ({page}) => 
  await expect(page.getByRole('button',{name:'Close the study'})).toHaveAttribute('aria-expanded','true');
  await expect(page.getByRole('button',{name:'Explore African biblical history'})).toBeVisible();
 });
+
+test('home history distinguishes the unnamed Cushite wife from named Zipporah at 320px', async ({page}) => {
+ const writes:string[]=[];
+ page.on('request', request => {if(!['GET','HEAD'].includes(request.method())) writes.push(request.url());});
+ await page.setViewportSize({width:320,height:760});
+ await page.goto('/#/');
+ const figures=page.locator('.luqi-history-figures');
+ await expect(figures.getByText('Moses’ unnamed Cushite wife',{exact:true})).toBeVisible();
+ await expect(figures.getByText('Numbers 12:1',{exact:true})).toBeVisible();
+ await expect(figures.getByText('Zipporah',{exact:true})).toHaveCount(0);
+ await expect(figures).toHaveAttribute('aria-label',/identities may be disputed/);
+ const note=page.locator('.luqi-history-caution');
+ await expect(note).toContainText('Numbers 12:1 describes Moses’ Cushite wife without naming her');
+ await expect(note).toContainText('Whether these refer to the same person is disputed');
+ const numbers=note.getByRole('link',{name:'Read Numbers 12:1'});
+ const exodus=note.getByRole('link',{name:'Read Exodus 2:21'});
+ await expect(numbers).toHaveAttribute('href','https://www.sefaria.org/Numbers.12.1-15');
+ await expect(exodus).toHaveAttribute('href','https://bible.usccb.org/bible/exodus/2');
+ for(const link of [numbers,exodus]){
+   await expect(link).toHaveAttribute('target','_blank');
+   await expect(link).toHaveAttribute('rel','noopener noreferrer');
+ }
+ await numbers.focus();
+ await page.keyboard.press('Tab');
+ await expect(exodus).toBeFocused();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+});
