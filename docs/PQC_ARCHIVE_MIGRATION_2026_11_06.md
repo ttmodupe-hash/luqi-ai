@@ -1,15 +1,65 @@
 # PQC archive migration — implementation and release boundary
 
-6 November 2026. **Offline foundation implemented; production archive protection
-is not activated.** This is separate from the released Quantum & PQC learning lab
-and Chat intelligence features. No customer records, database tables, historical
-files, runtime keys, provider flags or spending limits are changed here.
+6 November 2026. **Local encrypted-record pilot implemented for release;
+production cloud archive migration is not activated.** The owner requested
+activation after the foundation checkpoint. The deployable scope is a browser-local
+tool at `/archive` and `/vault`, separate from the Quantum & PQC learning lab.
+No customer database records, tables, historical files, runtime keys, provider
+flags or spending limits are changed here.
+
+## Local pilot activation scope
+
+The Archive vault now provides a local text-record form, separate encrypted
+archive and encrypted recovery downloads, explicit saved-recovery acknowledgement,
+and verified restoration from the selected saved pair. It is discoverable in the
+workspace catalog and requires no new account or login. It is labelled a pilot
+without independent audit or FIPS validation. This is **not** activation of the
+legacy shared archive API, account synchronization or a financial ledger.
+
+`src/features/archive/` implements the same envelope suite using Web Crypto and
+the existing pinned PQC library inside a dedicated one-shot module worker. Each
+new record receives fresh keys; only the decapsulation seed and trusted public
+keys/digest are retained, inside the passphrase-encrypted recovery file. The
+ML-DSA and ECDSA private signing keys are not exported. The passphrase never goes
+to an HTTP API, browser storage or application log. PBKDF2-SHA256 with 310,000
+iterations and fresh salt derives the AES-256-GCM recovery-file key. Passphrases
+are exact (including whitespace), 14–128 characters; their real entropy limits
+protection of the recovery file. Both downloads plus that passphrase are required.
+
+The local envelope uses `ownerId=1` **only as a reserved file-domain marker**,
+never an authenticated account ID or authorization grant. A random record UUID
+and fresh per-record keys separate copies. The protected recovery file anchors the
+exact current envelope digest, rejecting replacement, tampering and same-revision
+forks. It must come from the user's independently retained copy; there is no
+central remote revocation, audit trail or recovery service for downloaded files.
+
+The plaintext title/text are bounded to 24,000 UTF-8 JSON bytes (title up to 120,
+text up to 20,000 characters). Existing binary archives or PDFs are not imported.
+Opening displays escaped plain text and never silently replaces the current draft.
+Downloading restored plain text is a separate explicit action and is clearly
+labelled unencrypted. Download requests do not establish that a file was actually
+retained, so the UI asks users to verify both saved files before deleting originals.
+Changing a draft invalidates stale downloads; cancellation, route unmount, account
+change, sign-out and timeout terminate pending workers and clear relevant state.
+The explicit Clear action clears tab state, not user downloads. Secret bytes are
+cleared where possible; JavaScript strings/native runtime copies have no guaranteed
+secure erasure. A compromised device or origin is outside this local boundary.
+
+New tests verify real browser-API encryption, encrypted recovery custody, native
+Node interoperability, exact Unicode, wrong passphrases, altered files, limits,
+independent record keys, UI confirmation, cancellation/late replies and account
+boundaries. Browser acceptance runs the actual worker and download/restore after
+reload on desktop/mobile, including an escaped-script fixture, wrong-passphrase
+and tamper rejection with all external/API requests blocked. This is synthetic
+acceptance, not a physical-device, independent cryptographic audit or live
+production-data restore certificate.
 
 ## Inventory established from the current repository
 
 | Record path | Actual state | Migration consequence |
 |---|---|---|
-| `api/archive.ts`, `/archive`, `/vault` | Access deliberately unavailable; no reviewed account-owned archive persistence | Keep closed until ownership, retention, durable storage and recovery are implemented |
+| `api/archive.ts` legacy shared access | Deliberately unavailable; no reviewed account-owned archive persistence | Keep closed until ownership, retention, durable storage and recovery are implemented |
+| `/archive`, `/vault` local pilot | New standalone text-record encryption and restoration, local downloads only | No server upload, cloud-record migration, account key or ledger activation |
 | `api/services/artifactVault.ts` | Legacy in-memory registry; its import writes manufactured sample files | Do not import or reinterpret these files as verified customer records |
 | `api/security/cryptoLedger.ts` | Process-local SHA-256 chain; no external anchor, durable trusted key or PQ signature | Does not establish production immutability or quantum-resistant authentication |
 | Optional private project vault | Owner-scoped quote/sales storage foundation, independently gated; v1 browser encryption uses passphrase-derived AES-256-GCM | Preserve exact v1 readability and existing flags; do not silently relabel or rewrite it |
@@ -24,7 +74,9 @@ the runtime, introduce an OpenSSL fork or install a paid cryptography service.
 `api/security/pqcArchive.ts` supplies bounded, side-effect-free record sealing and
 opening. It is intentionally **unreachable from `api/boot.ts`**. Its test verifies
 that boundary using the actual bundled server import graph. There is no new
-HTTP route, upload form, environment-controlled activation shortcut or file writer.
+HTTP route, server upload form, environment-controlled activation shortcut or
+server file writer. The local pilot uses its separate browser implementation;
+the native helper remains offline and serves interoperability checks.
 
 - KEM: the existing pinned `@noble/post-quantum` **0.7.1**
   `ml_kem1024_p384` preset, ML-KEM-1024 plus P-384 using the library's specified
@@ -119,7 +171,8 @@ reviewed production protection.
    existing tested/pinned deployment path. Production acceptance is required before
    claiming that archival or financial records are protected.
 
-No additional service or budget increase is required for this foundation. The cost
+No additional service or budget increase is required for the foundation or local
+pilot. The cost
 of an external review or custody service is **not yet quoted or approved**. Present
 any necessary KMS/HSM, review, storage or compute increase to the owner before
 incurring it; do not silently defer work because of an assumed cost.
