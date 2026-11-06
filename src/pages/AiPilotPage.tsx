@@ -200,9 +200,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-      const result = approach === 'auto'
-        ? await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name)
-        : await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name, approach);
+      const approachArgument: [] | [ResponseApproach] = approach === 'auto' ? [] : [approach];
+      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name, ...approachArgument);
       if (epoch.current === version) {
         setAnswer(result);
         setTurns(previous => {
