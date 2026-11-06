@@ -1,6 +1,8 @@
 import {test,expect} from '@playwright/test';
 test('mobile Visa & Entry uses only original government sources and never sends personal data',async({page})=>{
  await page.setViewportSize({width:320,height:740});
+ // Exercise the dated example inside its recorded review window.
+ await page.clock.setFixedTime(new Date('2026-10-29T08:00:00Z'));
  const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
  await page.goto('/#/visa-entry');
  await expect(page.getByRole('heading',{name:/Plan your journey. Verify entry requirements/})).toBeVisible();
@@ -11,6 +13,19 @@ test('mobile Visa & Entry uses only original government sources and never sends 
  await expect(page.getByText(/This is a dated source example, not a real-time personal exemption ruling/)).toBeVisible();
  await expect(page.getByRole('link',{name:'View government website'}).first()).toHaveAttribute('href','https://etakenya.go.ke/how-to-apply');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(posts).toEqual([]);
+});
+test('expired visa review withholds nationality examples and retains official sources',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-06T08:00:00Z'));
+ const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await page.goto('/#/visa-entry');
+ await page.getByLabel('Destination country').selectOption('KE');
+ await page.getByLabel('Passport nationality').selectOption('South Africa');
+ await page.getByLabel('Intended stay days').fill('14');
+ await expect(page.getByRole('alert')).toContainText('source review expired after 2026-11-05');
+ await expect(page.getByText(/Kenya’s official How to Apply page lists South Africa/)).toHaveCount(0);
+ await expect(page.getByText(/Specific nationality examples are withheld/)).toBeVisible();
+ await expect(page.getByRole('link',{name:'View government website'}).first()).toHaveAttribute('href','https://etakenya.go.ke/how-to-apply');
  expect(posts).toEqual([]);
 });
 test('travel entry guide does not misstate South Africa work eligibility',async({page})=>{

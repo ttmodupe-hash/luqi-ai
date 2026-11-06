@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "quantum-lab", title: "Quantum & PQC Lab", category: "Track 7: quantum computing and cryptography",
+    description: "Local Bell/Grover statevectors, bounded QAOA and exact planning references, illustrative surface-code estimates and isolated public-message PQC checks. No quantum-cloud or paid AI calls.",
+    status: "Local educational lab", ready: true, path: "/quantum-lab", icon: "academy",
+  },
+  {
     id: "civic-evidence", title: "Civic Evidence Desk", category: "Politics, voting and public accountability",
     description: "Source-linked audits, budgets, Parliament and IEC voting information. Free explanations; optional signed-in AI clarification. No live party rankings or voting recommendations.",
     status: "Free evidence · optional signed-in AI", ready: true, path: "/chat?civic=1", icon: "status",
