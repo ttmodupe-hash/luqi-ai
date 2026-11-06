@@ -5,6 +5,8 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { PILOT_MODELS } from "./pilotModels";
 import { buildPilotInput } from "../../src/lib/pilot-input";
+import { buildPilotIntelligencePolicy } from './pilotIntelligence';
+import type { ResponseApproach } from '../../src/lib/response-approach';
 import { buildKhoroContinentalSystemPrompt, isAfricanRegionCode, type AfricanRegionCode } from "../../src/services/panAfricanSovereignEngine";
 import { readGeminiText, readOpenAiText, readProviderJson, PilotOutputError } from "./pilotOutput";
 import {
@@ -36,6 +38,8 @@ Voice conversations, image and file analysis, and live web research are still in
 No tools, searches, browsing, audio, image or file processing are enabled for this pilot.
 For video-creation requests, discuss a realistic video concept before handing off. Explain the age or audience, a practical length, the teaching approach and what a viewer should understand. Then propose six concise numbered scenes, one per line, in this plain-text form: Scene 1: Short title | One short scene caption | One simple question. Repeat through Scene 6, and invite the user to approve or revise the plan. For toddlers prefer a 30-second sequence of gentle visuals and easy language. Be clear: Chat generates only text guidance; on separate user approval the local Content Studio can use the reviewed plan to render original silent illustrative graphics, not AI cinematography, narration or licensed music. Never claim a finished video, a paid provider video generation, or an autonomous external action.
 For photo questions, the separate Visual tutor at /visual-tutor lets signed-in users select and explicitly share an image crop. The Spatial Vision & 3D Lab at /spatial-vision offers local image preparation, illustrative brightness relief and explicitly approved, budgeted visual suggestions. This text Chat never receives images, and neither tool guarantees OCR, masks or true depth.
+The Quantum & PQC Lab at /quantum-lab offers local Bell/Grover calculations, bounded QAOA and small planning baselines, conditional surface-code estimates and public-message PQC checks. It does not run quantum hardware or protect production archives. The Study Desk at /study-desk offers local study plans and flashcards. When relevant, suggest these actual separate tools without claiming this Chat has opened, run or read them.
+The Archive vault at /archive is a local encrypted text-record pilot: users create two downloaded files, retain a separate recovery passphrase and explicitly verify/restore their saved pair. It does not upload or migrate cloud records, perform Stokvel transactions, or provide FIPS validation or an independent security audit. This Chat cannot open their archive, access recovery keys or recover a lost passphrase; direct users to the separate tool when appropriate.
 When asked about a capability listed above as in development, clearly say so and offer a useful text alternative, such as a draft, explanation or checklist.
 For other unavailable capabilities, say they are unavailable without implying that every feature is planned.
 Never claim to have read an attachment, searched the web, used an external tool, contacted someone or completed a booking, payment or other external action.
@@ -43,7 +47,7 @@ Do not invent release dates or promise that an unfinished capability is availabl
 
 // Export the request contract for offline tests. No provider is invoked by this.
 export const GEMINI_PILOT_CONFIG = Object.freeze({
-  systemInstruction: PLAIN_TEXT_POLICY,
+  systemInstruction: PLAIN_TEXT_POLICY + '\n' + buildPilotIntelligencePolicy(),
   maxOutputTokens: MAX_TEXT_OUTPUT_TOKENS,
   thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
   // One committed reservation covers exactly one transport attempt. Do not
@@ -54,18 +58,21 @@ export const GEMINI_PILOT_CONFIG = Object.freeze({
 export async function runBudgetedPilotChat(
   prompt: string, userId: number, language: string = "auto",
   history: Array<{ sender: string; text: string }> = [], regionContext?: AfricanRegionCode,
-  provider?: "openai"
+  provider?: "openai", approach: ResponseApproach = 'auto'
 ): Promise<PilotReply> {
   assertPilotEnabled();
   // Validate before keys, reservation or paid provider traffic.
   if (provider !== undefined && provider !== "openai") throw new PilotUnavailable("INVALID_INPUT");
   if (regionContext !== undefined && !isAfricanRegionCode(regionContext)) throw new PilotUnavailable("AI_REGION_CONTEXT_INVALID");
   const input = buildPilotInput(prompt, language, history);
+  // Only a bounded server-owned preference can extend system instructions.
+  // Invalid preferences fail before key access, reservation or transport.
+  const baseInstructions = PLAIN_TEXT_POLICY + '\n' + buildPilotIntelligencePolicy(approach);
   // Country text is server-owned; the browser can only select a bounded code.
   // This never asserts verified geolocation, government integration or current law.
   const instructions = regionContext && regionContext !== "PAN_AFRICAN_AU"
-    ? PLAIN_TEXT_POLICY + "\n" + buildKhoroContinentalSystemPrompt(regionContext, language)
-    : PLAIN_TEXT_POLICY;
+    ? baseInstructions + "\n" + buildKhoroContinentalSystemPrompt(regionContext, language)
+    : baseInstructions;
 
   const geminiKey = process.env.LUQI_PILOT_GEMINI_API_KEY;
   const openaiKey = process.env.LUQI_PILOT_OPENAI_API_KEY;
@@ -81,7 +88,7 @@ export async function runBudgetedPilotChat(
         model: PILOT_MODELS.gemini,
         contents: input,
         // No grounding/search/tools; those can incur additional charges.
-        config: instructions === PLAIN_TEXT_POLICY ? GEMINI_PILOT_CONFIG
+        config: instructions === GEMINI_PILOT_CONFIG.systemInstruction ? GEMINI_PILOT_CONFIG
           : { ...GEMINI_PILOT_CONFIG, systemInstruction: instructions },
       });
       return { response: readGeminiText(result), provider: "gemini", model: PILOT_MODELS.gemini };

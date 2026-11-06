@@ -57,3 +57,12 @@
 .luqi-video-proposal-actions button:first-child { background:#2875da; border-color:#76aaff; }
 .luqi-video-proposal-actions button:disabled { opacity:.48; cursor:not-allowed; }
 @media(max-width:580px){.luqi-video-proposal{padding:14px;}.luqi-video-proposal-actions button{width:100%;}}
+
+/* Explicit response preferences share the existing consented Chat request. */
+.luqi-response-approach { margin:12px 0; min-width:0; }
+.luqi-response-approach label { display:block; color:#e3f0ff; font-size:13px; font-weight:650; margin-bottom:6px; }
+.luqi-response-approach select { display:block; width:100%; max-width:32rem; box-sizing:border-box; min-height:44px; padding:10px 36px 10px 12px; border:1px solid #6e91b8; border-radius:9px; color:#edf5ff; background-color:#102843; color-scheme:dark; -webkit-appearance:none; appearance:none; background-image:linear-gradient(45deg,transparent 50%,#d2e6ff 50%),linear-gradient(135deg,#d2e6ff 50%,transparent 50%); background-position:calc(100% - 18px) center,calc(100% - 12px) center; background-size:6px 6px; background-repeat:no-repeat; font:inherit; }
+.luqi-response-approach p { color:#c6daef; font-size:12px; line-height:1.5; margin:7px 0; overflow-wrap:anywhere; }
+.luqi-response-approach select:focus-visible { outline:3px solid #a4c8ff; outline-offset:3px; }
+.luqi-response-approach select:disabled { opacity:.6; }
+@media(forced-colors:active) { .luqi-response-approach select { appearance:auto; background-image:none; } }

@@ -126,6 +126,38 @@ are different statements.
 
 ## Production archive and Stokvel migration: required follow-on gates
 
+### 6 November 2026 implementation checkpoint
+
+The owner subsequently requested activation. A separate **local encrypted text
+archive pilot** is now implemented for release at `/archive` and `/vault`, with
+fresh hybrid keys and both signatures, separately passphrase-encrypted recovery
+custody, downloads and verified reopen. The browser worker implements the same
+envelope suite; native interoperability tests verify the saved trust/digest
+boundary. This accepts new standalone text copies only, requires no login or
+paid service, and does not upload data or migrate stored/cloud/Stokvel records.
+The interface states the unaudited/FIPS-unvalidated pilot scope. See the dated
+runbook below for key-loss, file-retention, privacy and verification limits.
+
+An isolated migration foundation now exists in `api/security/pqcArchive.ts`:
+the pinned ML-KEM-1024/P-384 draft hybrid preset, HKDF-SHA384/AES-256-GCM,
+mandatory ML-DSA-87 **and** ECDSA-P384 signatures, external trusted keys,
+owner/record/revision/chain-head binding, canonical envelopes, retired/revoked
+key policy and verified restoration of bounded record copies. Regression checks
+exercise actual encryption, tamper rejection, stale replay, rotation, exact
+legacy-byte preservation and absence from the live server import graph.
+
+**This helper is not connected to production routes or storage.** The legacy
+shared cloud archive is still unavailable; no active Stokvel ledger was found in the current
+inventory. The existing JavaScript PQC library explicitly lacks an independent
+audit and constant-time guarantee. No runtime key, private record, provider flag,
+spending limit or database schema is changed. Independent review, actual key
+custody/recovery, account-owned persistence and copy-first migration/restore
+acceptance remain outstanding. See
+[`docs/PQC_ARCHIVE_MIGRATION_2026_11_06.md`](docs/PQC_ARCHIVE_MIGRATION_2026_11_06.md)
+for the concrete threat model, format, tests and remaining release criteria.
+
+### Production release criteria
+
 This feature changes no stored chain, account key, database schema, signing root,
 TLS setting or financial record. Protecting every archival/financial record
 requires a separate threat model, migration and recovery design:
@@ -195,3 +227,44 @@ Reviewed 6 November 2026:
 - Farhi, Goldstone & Gutmann, QAOA: https://arxiv.org/abs/1411.4028
 - Fowler et al., surface-code review: https://arxiv.org/abs/1208.0928
 - Noble implementation/security notes: https://github.com/paulmillr/noble-post-quantum
+
+
+## Chat intelligence workflow — 6 November 2026
+
+Add task-aware instructions to the existing budgeted Gemini/OpenAI text path.
+The approaches are Auto, Teach, Plan, Compare, Review and Draft. Signed-in Chat
+exposes the selection under More options; the embedded AI form also exposes it.
+The guest introduction uses the automatic policy with its shorter answer limit.
+These are answer preferences, not newly trained model weights, autonomous agents,
+a higher-priced model selection, a quality score or proof of expert correctness.
+
+A strict enum crosses the authenticated HTTP boundary; arbitrary policies, model
+IDs, tools, credentials and spending overrides are not accepted. The server adds
+only its own approach instructions. The browser requires confirmation of an
+explicit requested approach in a completed response. Invalid or ambiguous results
+are not replayed automatically. Default requests remain backward compatible.
+
+The guidance asks for the actual goal, supplied constraints, necessary workings,
+assumptions, uncertainty and a useful next step. It does not grant browsing,
+research, verification, attachment access or real-world execution. Any review
+is model-generated assistance, not certification. Human checking remains needed.
+
+Conversation sharing remains optional and previewable. Up to four messages,
+350 UTF-16 code units each, use literal beginning/end excerpts when necessary;
+[middle omitted] marks the gap. Nothing invents a summary of that gap. Surrogate
+pairs are preserved. Full input still fits the existing 6000-character ceiling.
+Notes and country context keep their separate approvals. Response approach resets
+on a different account, chat switch, New chat and sign-out; it is not hidden memory.
+
+Provider enablement, billing approval, models, reasoning settings, token ceilings,
+daily quotas and monthly provider caps are unchanged. No extra reasoning, judging
+or agent calls are added. The existing independently reserved fallback still
+applies. The added instructions use tokens within existing reservations; a
+reservation is not an external invoice cap. Token counting includes the complete
+guest system instruction in the expanded guest profile.
+
+Validation covers strict approach input, both actual SDK/HTTP request shapes with
+synthetic provider replies, reservation-before-call, fallback scope, response
+confirmation, literal context excerpts, Unicode boundaries, privacy and mobile
+controls. Transport/browser fixtures do not benchmark live model answer quality;
+no paid production inference is needed to validate these code boundaries.

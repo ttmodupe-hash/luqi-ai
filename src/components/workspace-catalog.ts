@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "archive", title: "Archive vault", category: "Local encrypted text records",
+    description: "Create and verify a protected text record with an encrypted recovery file you control. No upload, account or paid AI. Pilot; cloud archives remain unavailable.",
+    status: "Local encryption pilot", ready: true, path: "/archive", icon: "notes",
+  },
+  {
     id: "quantum-lab", title: "Quantum & PQC Lab", category: "Track 7: quantum computing and cryptography",
     description: "Local Bell/Grover statevectors, bounded QAOA and exact planning references, illustrative surface-code estimates and isolated public-message PQC checks. No quantum-cloud or paid AI calls.",
     status: "Local educational lab", ready: true, path: "/quantum-lab", icon: "academy",
