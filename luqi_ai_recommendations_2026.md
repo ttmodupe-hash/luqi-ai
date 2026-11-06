@@ -126,6 +126,28 @@ are different statements.
 
 ## Production archive and Stokvel migration: required follow-on gates
 
+### 6 November 2026 implementation checkpoint
+
+An isolated migration foundation now exists in `api/security/pqcArchive.ts`:
+the pinned ML-KEM-1024/P-384 draft hybrid preset, HKDF-SHA384/AES-256-GCM,
+mandatory ML-DSA-87 **and** ECDSA-P384 signatures, external trusted keys,
+owner/record/revision/chain-head binding, canonical envelopes, retired/revoked
+key policy and verified restoration of bounded record copies. Regression checks
+exercise actual encryption, tamper rejection, stale replay, rotation, exact
+legacy-byte preservation and absence from the live server import graph.
+
+**This helper is not connected to production routes or storage.** The legacy
+archive is still unavailable; no active Stokvel ledger was found in the current
+inventory. The existing JavaScript PQC library explicitly lacks an independent
+audit and constant-time guarantee. No runtime key, private record, provider flag,
+spending limit or database schema is changed. Independent review, actual key
+custody/recovery, account-owned persistence and copy-first migration/restore
+acceptance remain outstanding. See
+[`docs/PQC_ARCHIVE_MIGRATION_2026_11_06.md`](docs/PQC_ARCHIVE_MIGRATION_2026_11_06.md)
+for the concrete threat model, format, tests and remaining release criteria.
+
+### Production release criteria
+
 This feature changes no stored chain, account key, database schema, signing root,
 TLS setting or financial record. Protecting every archival/financial record
 requires a separate threat model, migration and recovery design:

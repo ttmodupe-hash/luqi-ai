@@ -152,6 +152,10 @@ jobs:
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/spatialVision.ts api/spatial-vision.ts src/lib/spatial-vision.ts src/components/KhoroSpatialVisionLab.tsx
       - name: Verify quantum statevectors, analytical optimization references and isolated PQC
         run: npx vitest run tests/quantum-engine.test.ts tests/quantum-pqc.test.ts tests/quantum-page.test.tsx
+      - name: Verify isolated PQC archive envelopes, trusted keys, recovery and no live activation
+        run: |
+          npx --no-install vitest run tests/pqc-archive.test.ts
+          npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/security/pqcArchive.ts tests/pqc-archive.test.ts
       - name: Type-check the local quantum lab and isolated worker
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/quantum/QuantumLabPage.tsx src/features/quantum/pqc-lab.worker.ts
       - name: Verify task-aware Chat instructions, input validation and request confirmation
