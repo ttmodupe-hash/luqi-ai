@@ -1,5 +1,6 @@
 import React, { useState, useLayoutEffect, useRef, type FormEvent } from 'react';
 import KhoroVehicleFinanceScenario from './KhoroVehicleFinanceScenario';
+import CreditAiCoach from './CreditAiCoach';
 import { useOptionalCustomerSession } from '../providers/customer-session';
 import { customerSessionBoundary } from '../lib/customer-session-boundary';
 import { readGuide } from '../lib/interaction-handoff';
@@ -209,6 +210,8 @@ export const ConsumerRightsAssistant: React.FC = () => {
         </section>
       )}
 
+      <CreditAiCoach />
+
       <KhoroVehicleFinanceScenario />
 
       <section className="space-y-2 rounded-xl border border-slate-700 bg-slate-900 p-4" aria-labelledby="consumer-official-links">
@@ -225,7 +228,7 @@ export const ConsumerRightsAssistant: React.FC = () => {
       </section>
       <p className="text-xs text-slate-400">
         This first version is in English. Sepitori and other African-language legal explanations require native-speaker and qualified terminology review.
-        Voice, email sending, government submissions, uploads and live AI analysis are not connected to this workflow.
+        Email sending, government submissions, credit-bureau access and uploads are not connected to this workflow. The optional Luqi AI Credit Coach prepares a general question in the existing Chat, with no provider request until you explicitly consent and press Send.
       </p>
     </main>
   );
