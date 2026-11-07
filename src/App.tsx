@@ -11,6 +11,7 @@ import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-route
 
 // Pages
 import Home from "./pages/Home";
+const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
@@ -42,6 +43,7 @@ const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const LuqiDrivePage = lazy(() => import("./features/drive/LuqiDrivePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const BusinessConnectPreviewPage = lazy(() => import("./pages/BusinessConnectPreviewPage"));
 const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
 const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
 const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
@@ -87,6 +89,7 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
+        <RouterRoute path="/quantum-lab" element={<QuantumLabPage />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
@@ -109,6 +112,7 @@ export default function App() {
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
         <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/preview" element={<BusinessConnectPreviewPage />} />
         <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
         <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
         <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />

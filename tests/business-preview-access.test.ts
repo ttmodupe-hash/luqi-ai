@@ -1,0 +1,17 @@
+import {beforeEach,afterEach,it,expect,vi} from 'vitest';
+import {Hono} from 'hono';
+const mock=vi.hoisted(()=>({auth:vi.fn(),execute:vi.fn(),template:vi.fn()}));
+vi.mock('../api/services/pilotAuth',()=>({authenticatePilotUser:mock.auth,PilotAuthError:class extends Error{constructor(public code:string){super(code)}}}));
+vi.mock('../api/queries/connection',()=>({getPersistentMySqlPool:()=>({execute:mock.execute})}));
+vi.mock('../api/services/businessConnectPreview',()=>({businessPreviewTemplate:mock.template,BUSINESS_PREVIEW_VERSION:'luqi-business-connect-private-v2-app1'}));
+import {businessConnectPreview} from '../api/business-connect-preview';
+import {PilotAuthError} from '../api/services/pilotAuth';
+const app=new Hono().route('/api/v1/business-connect-preview',businessConnectPreview);
+const get=(query='')=>app.request('/api/v1/business-connect-preview'+query,{headers:{Authorization:'Bearer synthetic-token'}});
+beforeEach(()=>{vi.clearAllMocks();vi.stubEnv('LUQI_BUSINESS_PREVIEW_OWNER_EMAIL','owner@example.invalid');mock.auth.mockResolvedValue(17);mock.execute.mockResolvedValue([[{id:17}],[]]);mock.template.mockResolvedValue('<!doctype html>private test content');});
+afterEach(()=>vi.unstubAllEnvs());
+it('never returns private content to an unauthenticated visitor',async()=>{mock.auth.mockRejectedValue(new PilotAuthError('AUTH_REQUIRED'));const r=await get();expect(r.status).toBe(401);expect(mock.execute).not.toHaveBeenCalled();expect(mock.template).not.toHaveBeenCalled();expect(r.headers.get('Cache-Control')).toBe('no-store');});
+it('rejects another valid account and does not load private assets',async()=>{mock.execute.mockResolvedValue([[],[]]);const r=await get();expect(r.status).toBe(403);expect(mock.template).not.toHaveBeenCalled();expect(await r.text()).not.toContain('private test content');});
+it('uses the authenticated account ID and the exact configured owner, not a client-supplied role',async()=>{const r=await get();expect(r.status).toBe(200);expect(mock.execute.mock.calls[0][1]).toEqual([17,'owner@example.invalid']);expect(await r.json()).toMatchObject({version:'luqi-business-connect-private-v2-app1',html:'<!doctype html>private test content',scope:expect.stringMatching(/^[a-f0-9]{64}$/)});expect(r.headers.get('Vary')).toBe('Authorization');});
+it('fails closed without owner setup or on database failure, without diagnostics',async()=>{vi.stubEnv('LUQI_BUSINESS_PREVIEW_OWNER_EMAIL','');expect((await get()).status).toBe(503);expect(mock.execute).not.toHaveBeenCalled();vi.stubEnv('LUQI_BUSINESS_PREVIEW_OWNER_EMAIL','owner@example.invalid');mock.execute.mockRejectedValue(Error('secret DSN'));const r=await get();expect(r.status).toBe(503);expect(await r.text()).not.toContain('secret');});
+it('rejects query-based access, alternate account claims and mutation methods',async()=>{expect((await get('?owner=17')).status).toBe(400);expect(mock.auth).not.toHaveBeenCalled();expect((await app.request('/api/v1/business-connect-preview',{method:'POST'})).status).toBe(404);});

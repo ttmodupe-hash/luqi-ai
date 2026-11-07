@@ -40,10 +40,12 @@ async function login() {
   await screen.findByLabelText('Your question');
 }
 async function ask(question: string) {
-  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: question } });
-  const firstUseConsent = screen.queryByRole('checkbox', { name: /I understand AI text may go/i });
+  const input = screen.getByLabelText('Your question');
+  fireEvent.change(input, { target: { value: question } });
+  const composer = within(input.closest('form')!);
+  const firstUseConsent = composer.queryByRole('checkbox', { name: /I understand AI text may go/i });
   if (firstUseConsent) fireEvent.click(firstUseConsent);
-  fireEvent.click(screen.getByRole('button', { name: 'Send question' }));
+  fireEvent.click(composer.getByRole('button', { name: 'Send question' }));
   await within(screen.getByRole('region', { name: 'Confirmed conversation in this tab' }))
     .findByText('Verified response to ' + question);
 }
@@ -103,7 +105,7 @@ it('clears the prior identity’s recent thread before painting the next identit
 
 it('keeps the dock reachable and lets signed-in users manage many in-tab chats without silent storage', async () => {
   render(<Fixture />);
-  const dock = screen.getByRole('navigation', { name: 'Mobile chat navigation' });
+  const dock = await screen.findByRole('navigation', { name: 'Mobile chat navigation' });
   expect(within(dock).getByRole('button', { name: 'Show recent chats' })).toBeTruthy();
   await login();
   const sidebar = await screen.findByRole('complementary', { name: 'Luqi Chat sidebar' });
@@ -141,7 +143,7 @@ it('never sends a saved note by merely loading/selecting it and shares it for on
   });
   render(<Fixture />);
   await login();
-  fireEvent.click(screen.getByText('More options: companion, context and writing help'));
+  fireEvent.click(screen.getByText('More options: response approach, companion and writing help'));
   fireEvent.click(screen.getByText('Conversation context, country guide and limits (optional)'));
   fireEvent.click(screen.getByText('Personalise this reply with one saved private note'));
   expect(request.mock.calls.some(([path]) => String(path).includes('/companion/conversations'))).toBe(false);
