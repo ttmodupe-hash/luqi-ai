@@ -320,7 +320,7 @@ export const CONSUMER_QUICK: Readonly<Record<DisputeType, ConsumerQuickGuide>> =
       'Contact the organisation’s privacy or information officer when safe and request an explanation.',
       'Check the Information Regulator’s official POPIA complaints process; do not upload another person’s records.'] },
   TELCO_BILLING_DISPUTE: { title:'Mobile or internet billing — three first steps',
-    steps:['Record the disputed bill, contract terms and provider complaint reference.',
+    steps:['Report the dispute to the licensed service provider, request a reference and retain the disputed bill and terms.',
       'For telecom or postal complaints, give the provider 14 working days to resolve the concern before referring it to ICASA.',
       'Read ICASA’s separate CRM instructions to verify your email before lodging online; handset retail disputes may have another regulator.'] },
   MASHONISA_ILLEGAL_LOAN: { title:'Lender or withheld bank card — three first steps',
