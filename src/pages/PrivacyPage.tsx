@@ -1,9 +1,29 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
+import { getAnalyticsConsent, setAnalyticsConsent } from '../lib/uiTelemetry';
 export default function PrivacyPage() {
+  const [diagnosticsEnabled, setDiagnosticsEnabled] = useState(getAnalyticsConsent);
+  const [consentError, setConsentError] = useState(false);
   return <main className="luqi-info"><p className="luqi-eyebrow">YOUR Luqi ACCOUNT AND CONTENT</p>
     <h1>Pilot privacy information</h1>
     <p>This describes Luqi Chat, your account and optional saved notes. It does not certify legal compliance or end-to-end encryption.</p>
     <section><h2>Account and saved content</h2><p>Registration stores your email address and a password hash. Conversation titles, saved messages and linked memories are stored on Luqi’s server. Storage administrators can access saved records. Avoid confidential, financial, health or identity documents while testing.</p></section>
+    <section aria-labelledby="optional-diagnostics">
+      <h2 id="optional-diagnostics">Optional on-device performance diagnostics</h2>
+      <p>Disabled unless you choose to enable it. When enabled, Luqi measures selected action counts, API outcomes and supported page performance metrics. These are kept only in this tab's memory. No messages, filenames, tender prices, location, identity details, raw URLs or form entries are collected, and nothing is uploaded to an analytics service. Your choice is stored in this browser; turning it off clears the local measurements.</p>
+      <label className="flex items-start gap-3 rounded-lg border border-slate-600 p-3">
+        <input type="checkbox" className="mt-1" checked={diagnosticsEnabled} onChange={event => {
+          const selected = event.currentTarget.checked;
+          const enabled = setAnalyticsConsent(selected);
+          setDiagnosticsEnabled(enabled);
+          setConsentError(selected && !enabled);
+        }}/>
+        <span>Enable optional local diagnostics on this device</span>
+      </label>
+      <p role="status">{diagnosticsEnabled ? 'Local diagnostics are enabled. Revoke at any time.' : 'Local diagnostics are off.'}</p>
+      {consentError && <p role="alert">This browser did not allow the choice to be stored; diagnostics remain off.</p>}
+      <p><Link to="/telemetry">View available diagnostics</Link>. Metrics from other devices and server-wide historical results are not available here.</p>
+    </section>
     <section><h2>On your device</h2><p>The Luqi customer sign-in token stays in this browser tab’s React memory and works across Notes, Luqi tools and the text trial without a second login. Reloading or closing the tab ends the session; leaving a tool can clear its unsaved drafts. Tokens are not written to browser storage. The site may cache application assets for loading; account and note responses are excluded from its service-worker cache.</p></section>
     <section><h2>Discovery and motion preferences</h2><p>Discovery interests, mixed suggestions and province selections stay in page memory and are not recorded as browsing history. Calm mode saves only a true/false motion preference in this browser. Clear site storage to remove it. The optional publisher refresh is off on a new visit; when enabled it requests shared public source checks while the page is visible and your device is online. It sends no account token, location or AI question.</p></section>
     <section><h2>Optional device location</h2><p>The province map requests a single location only when you choose Use my location and your browser permits it. Luqi processes coordinates locally to suggest a South African province for you to confirm. Coordinates are not sent to Luqi servers, contacts or AI providers, stored in browser storage, or used for background tracking. The browser, operating system or location provider may process location under their own settings and policies. Only the selected province remains in page memory; leaving or reloading clears it. Manual selection always works without location permission. You can revoke site permission in your browser.</p></section>
