@@ -85,6 +85,7 @@ function expectEmptyBidContext(){
 }
 it('replacing an imported original does not carry over another applicant or bid context',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ expect(screen.getByText(/Choosing another original also clears the contact and bid-context entries/)).toBeTruthy();
  fireEvent.change(screen.getByLabelText('Import original tender document'),
    {target:{files:[file('replacement-original.docx')]}});
  await screen.findByText('Exact Treasury original verified. Enter only your own accurate supplier facts.');
