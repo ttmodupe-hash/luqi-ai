@@ -38,6 +38,7 @@
     "@hono/node-server": "2.1.5",
     "@hono/vite-dev-server": "^0.19.0",
     "@hookform/resolvers": "^5.2.2",
+    "@noble/post-quantum": "0.7.1",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

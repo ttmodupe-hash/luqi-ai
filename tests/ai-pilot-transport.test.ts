@@ -212,3 +212,42 @@ describe('provider output must be complete before it is presented as an answer',
     expect(fetcher).toHaveBeenCalledTimes(1); expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]);
   });
 });
+
+describe('task-aware instructions use the same bounded paid transport', () => {
+  it.each(['gemini', 'openai'] as const)('applies the selected review approach on %s without extra attempts or tools', async provider => {
+    if (provider === 'openai') vi.stubEnv('LUQI_PILOT_GEMINI_API_KEY', '');
+    const prompt = 'PRIVATE-USER-TEXT: review my working, 4 items at R10 each.';
+    const fetcher = vi.fn(async (_url: string, options: RequestInit) => {
+      expect(reserve.mock.calls).toEqual([[provider, 42, undefined, 20]]);
+      const body = JSON.parse(options.body as string);
+      const policy = provider === 'gemini' ? body.systemInstruction.parts.map((p: { text: string }) => p.text).join('') : body.instructions;
+      expect(policy).toContain('Requested approach: REVIEW');
+      expect(policy).toContain('work or argument actually supplied');
+      expect(policy).not.toContain('PRIVATE-USER-TEXT');
+      expect(body).not.toHaveProperty('tools');
+      expect(provider === 'gemini' ? body.generationConfig.maxOutputTokens : body.max_output_tokens).toBe(1024);
+      return Response.json(provider === 'gemini' ? geminiReply('Synthetic reviewed working') : openaiReply('Synthetic reviewed working'));
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const result = await runBudgetedPilotChat(prompt, 42, 'isiZulu', [], undefined, undefined, 'review');
+    expect(result.response).toBe('Synthetic reviewed working');
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it('carries the selected plan through an independently reserved fallback', async () => {
+    const fetcher = vi.fn(async (url: string, options: RequestInit) => {
+      const body = JSON.parse(options.body as string);
+      const policy = url.includes('googleapis') ? body.systemInstruction.parts.map((p: { text: string }) => p.text).join('') : body.instructions;
+      expect(policy).toContain('Requested approach: PLAN');
+      return url.includes('googleapis') ? Response.json({ error: { code: 503 } }, { status: 503 }) : Response.json(openaiReply('Synthetic plan'));
+    });
+    vi.stubGlobal('fetch', fetcher);
+    expect((await runBudgetedPilotChat('Plan my studying', 42, 'English', [], undefined, undefined, 'plan')).provider).toBe('openai');
+    expect(reserve.mock.calls).toEqual([['gemini', 42, undefined, 20], ['openai', 42, undefined, 20]]);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+  it('rejects an arbitrary approach before reservation or transport', async () => {
+    const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
+    await expect(runBudgetedPilotChat('Hello', 42, 'auto', [], undefined, undefined, 'unlimited' as never)).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    expect(reserve).not.toHaveBeenCalled(); expect(fetcher).not.toHaveBeenCalled();
+  });
+});

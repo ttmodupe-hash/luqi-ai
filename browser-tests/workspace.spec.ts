@@ -222,7 +222,7 @@ test("physics lab remains interactive while the AI tutor is unavailable", async 
   expect(errors).toEqual([]);
 });
 
-test('archive aliases show unavailable access with a keyboard path to private notes', async ({ page }) => {
+test('archive aliases offer local encryption and show unavailable cloud access with a keyboard path to private notes', async ({ page }) => {
   const apiCalls: string[] = [];
   page.on('request', request => {
     if (/\/api\/trpc\//.test(request.url())) apiCalls.push(request.url());
@@ -231,7 +231,8 @@ test('archive aliases show unavailable access with a keyboard path to private no
   for (const path of ['/archive', '/vault']) {
     await page.goto('/#' + path);
     await expect(page.getByRole('heading', { name: 'Archive vault' })).toBeVisible();
-    await expect(page.getByText('Unavailable', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Cloud archive unavailable'})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Encrypt record'})).toBeDisabled();
     await expect(page.getByText(/Existing files are preserved/)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }

@@ -130,6 +130,7 @@ export default function StudyDeskPage() {
   }
 
   return <main className="luqi-study">
+    <p><Link to="/quantum-lab">Track 7: Quantum computing &amp; PQC lab</Link></p>
     <header className="luqi-study-heading">
       <p className="luqi-eyebrow">LEARN A LITTLE, OFTEN</p>
       <h1>Study desk</h1>
