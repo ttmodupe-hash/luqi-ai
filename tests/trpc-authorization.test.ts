@@ -20,7 +20,9 @@ describe('tRPC authorization boundary', () => {
     const reviewed = new Set(['ping', 'knowledge.getArticles', 'knowledge.searchLearning',
       'content.getHealthTips', 'content.getAgricultureNews', 'content.getSportsNews', 'content.getBusinessTips',
       'content.getGovernmentInfo', 'content.getTourismInfo', 'offline.queueAction', 'offline.getPending',
-      'offline.markSynced', 'offline.resolveConflict']);
+      'offline.markSynced', 'offline.resolveConflict',
+      // Exact no-input public metadata query; its restrictions are independently tested below.
+      'driveSources.status']);
     for (const [path, procedure] of Object.entries(appRouter._def.procedures)) {
       if (reviewed.has(path)) continue;
       const response = await request(path, { userId: 999, threadId: '../../foreign', content: 'untrusted' }, procedure._def.type === 'mutation');
@@ -31,12 +33,39 @@ describe('tRPC authorization boundary', () => {
     expect(mocks.auth).not.toHaveBeenCalled();
     expect(mocks.db).not.toHaveBeenCalled();
   });
+  it('exposes only the reviewed no-input Drive metadata query, not refresh, paths or mutations', async () => {
+    vi.stubEnv('LUQI_DRIVE_STATUS_PUBLIC_ENABLED', 'false');
+    vi.stubEnv('LUQI_DRIVE_RADAR_STATE_DIR', '/PRIVATE-OPERATOR-STATE');
+    vi.stubGlobal('fetch', mocks.fetch);
+    try {
+      // Use the actual application router without an Authorization header.
+      const response = await app.request('/api/trpc/driveSources.status');
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      const data = (await response.json()).result.data.json;
+      expect(Object.keys(data).sort()).toEqual(['checks','generatedAt','safeToTravel','scope','state','version']);
+      expect(data).toMatchObject({version:1,scope:'source-checks-not-road-conditions',state:'disabled',safeToTravel:null});
+      expect(data.checks).toHaveLength(6);
+      expect(JSON.stringify(data)).not.toContain('PRIVATE-OPERATOR-STATE');
+      for (const input of [{}, {refresh:true}, {userId:7,stateDir:'/private',url:'https://attacker.invalid'}, null]) {
+        expect((await request('driveSources.status', input)).status).toBe(400);
+      }
+      expect((await request('driveSources.status', {}, true)).status).toBe(405);
+      expect((await request('driveSources.refresh', {}, true)).status).toBe(404);
+      expect(mocks.auth).not.toHaveBeenCalled();
+      expect(mocks.db).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
+    } finally { vi.unstubAllEnvs(); vi.unstubAllGlobals(); }
+  });
   it('denies new procedures by default, including mutations disguised as public reads', async () => {
     const handler = vi.fn();
-    const router = createRouter({ future: publicQuery.mutation(handler), ping: publicQuery.mutation(handler) });
+    const router = createRouter({ future: publicQuery.mutation(handler), ping: publicQuery.mutation(handler),
+      driveSources: createRouter({status:publicQuery.mutation(handler),refresh:publicQuery.query(handler)}) });
     const caller = router.createCaller({ req: new Request('https://example.invalid') });
     await expect(caller.future()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
     await expect(caller.ping()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
+    await expect(caller.driveSources.status()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
+    await expect(caller.driveSources.refresh()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
     expect(handler).not.toHaveBeenCalled();
   });
   it('checks encoded and mixed batches per procedure without leaking private data', async () => {

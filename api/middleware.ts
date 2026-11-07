@@ -10,6 +10,8 @@ const publicReads = new Set([
   "ping", "knowledge.getArticles", "knowledge.searchLearning",
   "content.getHealthTips", "content.getAgricultureNews", "content.getSportsNews",
   "content.getBusinessTips", "content.getGovernmentInfo", "content.getTourismInfo",
+  // Fixed public source-check metadata only; no crawling, inputs or private records.
+  "driveSources.status",
 ]);
 const accountProcedures: Record<string, "query" | "mutation"> = {
   "offline.queueAction": "mutation", "offline.getPending": "query",
