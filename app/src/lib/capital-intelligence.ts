@@ -3,7 +3,7 @@
  * No investor access, live call detection, approval prediction or submission.
  * All input remains local to this browser view and is never sent to an API.
  */
-export type FundingType = 'SOVEREIGN_FUND' | 'DEVELOPMENT_FINANCE' | 'VENTURE_CAPITAL' | 'DECENTRALIZED_GRANT' | 'CROWDFUNDING';
+export type FundingType = 'SOVEREIGN_FUND' | 'DEVELOPMENT_FINANCE' | 'VENTURE_CAPITAL' | 'DECENTRALIZED_GRANT' | 'CROWDFUNDING' | 'SUPPORT_PROGRAMME';
 export type ProjectMaturity = 'IDEA' | 'MVP' | 'PRODUCTION';
 export type ProjectSector = 'TECH' | 'INDUSTRY' | 'OTHER';
 export type ProjectPurpose = 'R_AND_D_SEED' | 'BUSINESS_GROWTH' | 'INDUSTRIAL_EXPANSION';
@@ -19,10 +19,12 @@ export const ARTIFACT_LABELS: Readonly<Record<Artifact,string>> = Object.freeze(
 });
 export const CAPITAL_SOURCE_REVIEWED_ON = '2026-11-02';
 export const CAPITAL_SOURCE_RECHECK_ON = '2026-12-02';
+export type FundingScope = 'SOUTH_AFRICA' | 'PAN_AFRICA' | 'INTERNATIONAL';
 export interface FundingPlatformSpec {
   readonly id:string;
   readonly name:string;
   readonly organisation:string;
+  readonly scope:FundingScope;
   readonly type:FundingType;
   readonly sourceUrl:string;
   readonly applicationGuideUrl:string;
@@ -39,7 +41,7 @@ export interface FundingPlatformSpec {
   }>;
 }
 export interface CapitalProfile {
-  readonly country:'ZA'|'OTHER';
+  readonly country:'ZA'|'AFRICA_OTHER'|'OTHER';
   readonly maturity:ProjectMaturity;
   readonly sector:ProjectSector;
   readonly purpose:ProjectPurpose;
@@ -57,9 +59,9 @@ export interface FundingMatch {
   readonly checks:readonly string[];
   readonly reviewExpired:boolean;
 }
-const ALLOWED_PUBLISHERS = new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za']);
+const ALLOWED_PUBLISHERS = new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za','www.undp.org','www.thegef.org']);
 const ARTIFACTS = new Set<Artifact>(Object.keys(ARTIFACT_LABELS) as Artifact[]);
-const TYPES = new Set<FundingType>(['SOVEREIGN_FUND','DEVELOPMENT_FINANCE','VENTURE_CAPITAL','DECENTRALIZED_GRANT','CROWDFUNDING']);
+const TYPES = new Set<FundingType>(['SOVEREIGN_FUND','DEVELOPMENT_FINANCE','VENTURE_CAPITAL','DECENTRALIZED_GRANT','CROWDFUNDING','SUPPORT_PROGRAMME']);
 const SECTORS = new Set<ProjectSector>(['TECH','INDUSTRY','OTHER']);
 const STAGES = new Set<ProjectMaturity>(['IDEA','MVP','PRODUCTION']);
 const PURPOSES = new Set<ProjectPurpose>(['R_AND_D_SEED','BUSINESS_GROWTH','INDUSTRIAL_EXPANSION']);
@@ -73,6 +75,7 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
       typeof input.name !== 'string' || input.name.trim().length < 3 ||
       input.name.length > 120 || typeof input.organisation !== 'string' ||
       input.organisation.length < 3 || input.organisation.length > 100 ||
+      !['SOUTH_AFRICA','PAN_AFRICA','INTERNATIONAL'].includes(input.scope) ||
       !TYPES.has(input.type) || input.sourceStatus !== 'PROGRAMME_REFERENCE_ONLY' ||
       !/^\d{4}-\d{2}-\d{2}$/.test(input.reviewedOn) ||
       !Array.isArray(input.focusSectors) || !input.focusSectors.length ||
@@ -106,7 +109,7 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
   });
   return Object.freeze({
     id:input.id,name:input.name.trim(),organisation:input.organisation.trim(),
-    type:input.type,sourceUrl:input.sourceUrl,applicationGuideUrl:input.applicationGuideUrl,
+    scope:input.scope,type:input.type,sourceUrl:input.sourceUrl,applicationGuideUrl:input.applicationGuideUrl,
     reviewedOn:input.reviewedOn,sourceStatus:'PROGRAMME_REFERENCE_ONLY' as const,
     focusSectors:Object.freeze([...input.focusSectors]),
     suggestedArtifacts:Object.freeze([...input.suggestedArtifacts]),
@@ -117,7 +120,7 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
 /** These are publisher PROGRAMME descriptions, never a claim of an OPEN round. */
 export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
   normalizeFundingPlatform({
-    id:'tia-seed-fund',name:'TIA Seed Fund',organisation:'Technology Innovation Agency',
+    id:'tia-seed-fund',scope:'SOUTH_AFRICA',name:'TIA Seed Fund',organisation:'Technology Innovation Agency',
     type:'SOVEREIGN_FUND',sourceUrl:'https://www.tia.org.za/funding-instruments/',
     applicationGuideUrl:'https://www.tia.org.za/how-to-apply/',
     reviewedOn:CAPITAL_SOURCE_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
@@ -130,7 +133,7 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
     ],conditions:{},
   }),
   normalizeFundingPlatform({
-    id:'idc-development-finance',name:'IDC Development Finance',organisation:'Industrial Development Corporation',
+    id:'idc-development-finance',scope:'SOUTH_AFRICA',name:'IDC Development Finance',organisation:'Industrial Development Corporation',
     type:'DEVELOPMENT_FINANCE',sourceUrl:'https://www.idc.co.za/faq/',
     applicationGuideUrl:'https://www.idc.co.za/funding-checklist/',
     reviewedOn:CAPITAL_SOURCE_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
@@ -143,7 +146,7 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
     ],conditions:{requiresRegisteredBusiness:true},
   }),
   normalizeFundingPlatform({
-    id:'nyda-grant-programme',name:'NYDA Grant Programme',organisation:'National Youth Development Agency',
+    id:'nyda-grant-programme',scope:'SOUTH_AFRICA',name:'NYDA Grant Programme',organisation:'National Youth Development Agency',
     type:'SOVEREIGN_FUND',sourceUrl:'https://www.nyda.gov.za/Products-Services/NYDA-Grant-Programme.html',
     applicationGuideUrl:'https://www.nyda.gov.za/Products-Services/NYDA-Grant-Programme.html',
     reviewedOn:CAPITAL_SOURCE_REVIEWED_ON,sourceStatus:'PROGRAMME_REFERENCE_ONLY',
@@ -155,13 +158,52 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
       'Check citizenship/residency, turnover, credit, training and the actual application process with NYDA.',
     ],conditions:{minimumAge:18,maximumAge:35,excludesResearchSeed:true},
   }),
+  normalizeFundingPlatform({
+    id:'timbuktoo-creative-tech',name:'UNDP timbuktoo CreativeTech Launchpad',organisation:'United Nations Development Programme',
+    scope:'PAN_AFRICA',type:'SUPPORT_PROGRAMME',
+    sourceUrl:'https://www.undp.org/south-africa/press-releases/undp-launches-call-applications-creativetech-startups-join-timbuktoo-launchpad',
+    applicationGuideUrl:'https://www.undp.org/south-africa/press-releases/undp-launches-call-applications-creativetech-startups-join-timbuktoo-launchpad',
+    reviewedOn:'2026-11-03',sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','OTHER'],suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','PITCH_DECK'],
+    selectionNotes:[
+      'UNDP describes pan-African CreativeTech incubation, mentorship and investment-readiness support; it is NOT a guaranteed cash grant.',
+      'Publisher describes Africa-based or Africa-market startups with a prototype/MVP and team; check the exact cohort and destination.',
+      'The June 2026 notice describes rolling quarterly cohorts; availability has not been independently reverified today.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'timbuktoo-greentech',name:'UNDP timbuktoo GreenTech Launchpad',organisation:'United Nations Development Programme',
+    scope:'PAN_AFRICA',type:'SUPPORT_PROGRAMME',
+    sourceUrl:'https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups',
+    applicationGuideUrl:'https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups',
+    reviewedOn:'2026-11-03',sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','PITCH_DECK'],
+    selectionNotes:[
+      'UNDP describes pan-African climate and sustainability incubation and investor-readiness connections, not an awarded grant.',
+      'The programme targets startups based in Africa or serving African markets with an MVP/prototype and committed team.',
+      'Check current cohort intake, language, country-specific conditions and the official application channel.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'gef-small-grants',name:'GEF Small Grants Programme',organisation:'Global Environment Facility',
+    scope:'INTERNATIONAL',type:'SOVEREIGN_FUND',
+    sourceUrl:'https://www.thegef.org/what-we-do/topics/gef-small-grants-program',
+    applicationGuideUrl:'https://www.thegef.org/what-we-do/topics/gef-small-grants-program',
+    reviewedOn:'2026-11-03',sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['OTHER','TECH','INDUSTRY'],suggestedArtifacts:['CONCEPT_NOTE','BUSINESS_PLAN'],
+    selectionNotes:[
+      'The global programme primarily supports eligible local civil-society and community-based organisations for environmental work; a normal startup is not automatically eligible.',
+      'Country participation and national implementing arrangements vary; find the relevant country team and original programme instructions.',
+      'The GEF CSO Challenge call shown on the source closed 15 September 2026. Do not treat that old call as open.',
+    ],conditions:{},
+  }),
 ]);
 export function capitalReviewIsCurrent(now:Date=new Date()):boolean {
   return Number.isFinite(now.getTime()) &&
     now.getTime() <= Date.parse(CAPITAL_SOURCE_RECHECK_ON+'T23:59:59+02:00');
 }
 function validateProfile(profile:CapitalProfile):void {
-  if (!profile || (profile.country !== 'ZA' && profile.country !== 'OTHER') ||
+  if (!profile || !['ZA','AFRICA_OTHER','OTHER'].includes(profile.country) ||
     !STAGES.has(profile.maturity) || !SECTORS.has(profile.sector) ||
     !PURPOSES.has(profile.purpose) || !REGISTRATIONS.has(profile.registration) ||
     (profile.age !== undefined && (!Number.isInteger(profile.age) || profile.age < 0 || profile.age > 120)) ||
@@ -175,7 +217,16 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
   return CAPITAL_PROGRAMMES.map(programme=>{
     const checks:string[]=[];
     let mismatch=false;
-    if(profile.country !== 'ZA') checks.push('This reviewed catalogue covers South African projects only; cross-border eligibility is unconfirmed.');
+    if(programme.scope === 'SOUTH_AFRICA' && profile.country !== 'ZA') {
+      mismatch=true;
+      checks.push('This programme targets South African applicants; non-South-African eligibility has not been established.');
+    }
+    if(programme.scope === 'PAN_AFRICA' && profile.country === 'OTHER')
+      checks.push('This initiative targets Africa-based or Africa-market teams; confirm whether your project qualifies.');
+    if(programme.scope === 'INTERNATIONAL')
+      checks.push('Country and applicant-organisation eligibility vary; consult the original publisher before applying.');
+    if(programme.type === 'SUPPORT_PROGRAMME')
+      checks.push('Incubation and investment readiness are not an award of cash funding.');
     if(!programme.focusSectors.includes(profile.sector))
       checks.push('Check whether the project sector fits this organisation’s published mandate.');
     if(programme.conditions.requiresRegisteredBusiness && profile.registration !== 'REGISTERED')
@@ -223,6 +274,8 @@ export function buildCapitalPreparationDraft(match:FundingMatch,profile:CapitalP
     '',
     'Programme reference: '+match.programme.name,
     'Organisation: '+match.programme.organisation,
+    'Geographic scope: '+match.programme.scope,
+    'Programme support type: '+match.programme.type,
     'Official programme page: '+match.programme.sourceUrl,
     'Application guidance: '+match.programme.applicationGuideUrl,
     'Publisher review date: '+match.programme.reviewedOn,
