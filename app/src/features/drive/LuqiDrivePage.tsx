@@ -25,6 +25,7 @@ import { regionalMap as map } from "./drive-map";
 import type { PhoneFix, Trail } from "./drive-navigation";
 import "./drive.css";
 import TripFuel from "./TripFuel";
+const TourismConcierge = React.lazy(() => import("./TourismConcierge"));
 import {
   DriveVoiceControls,
   languages,
@@ -81,6 +82,7 @@ function DriveSession({
   const [following, setFollowing] = useState(false),
     [resetKey, setResetKey] = useState(0);
   const [auto, setAuto] = useState(false);
+  const [showConcierge, setShowConcierge] = useState(false);
   const voice = useDriveVoice(lang),
     watch = useRef<number | null>(null),
     generation = useRef(0);
@@ -569,6 +571,19 @@ function DriveSession({
         </a>
       </div>
       <FieldNotebook guide={guide} />
+      <div className="card driveGuide">
+        <h2>Tourism concierge</h2>
+        <p>Four source-backed lenses for heritage, wildlife, local livelihoods and road safety. Passengers or safely stopped travellers only.</p>
+        <button type="button" className="drivePrimary" aria-expanded={showConcierge}
+          onClick={() => setShowConcierge((open) => !open)}>
+          {showConcierge ? "Close tourism concierge" : "Open tourism concierge"}
+        </button>
+      </div>
+      {showConcierge && (
+        <React.Suspense fallback={<p role="status">Opening the offline concierge…</p>}>
+          <TourismConcierge guide={guide} gpsActive={isGPS} speedKmh={fix?.speed ?? null} />
+        </React.Suspense>
+      )}
       <details className="driveCredits">
         <summary>About the African voices</summary>
         <p>
