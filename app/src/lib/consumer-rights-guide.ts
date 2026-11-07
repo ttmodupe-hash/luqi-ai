@@ -20,7 +20,7 @@ export type DisputeType =
 
 export type ConsumerSourceId =
   | 'consumer-act' | 'cgso' | 'ncc' | 'ncc-scope'
-  | 'bank-ombud' | 'icasa' | 'credit-regulator' | 'information-regulator';
+  | 'bank-ombud' | 'icasa' | 'icasa-crm' | 'credit-regulator' | 'information-regulator';
 
 export interface ConsumerSource {
   id: ConsumerSourceId;
@@ -72,6 +72,14 @@ export const CONSUMER_SOURCES: readonly ConsumerSource[] = [
     publisher: 'ICASA',
     url: 'https://www.icasa.org.za/pages/consumer-complaints-procedure',
     reviewedOn: CONSUMER_GUIDE_REVIEWED_ON,
+  },
+  {
+    id: 'icasa-crm',
+    name: 'CRM Portal profile registration and email verification',
+    publisher: 'ICASA',
+    url: 'https://www.icasa.org.za/pages/consumer-complaints',
+    // This is a passage-specific review; other source and guide review dates are not renewed.
+    reviewedOn: '2026-11-07',
   },
   {
     id: 'credit-regulator',
@@ -189,18 +197,18 @@ export const CONSUMER_ISSUES: Readonly<Record<DisputeType, IssueGuidance>> = {
   },
   TELCO_BILLING_DISPUTE: {
     title: 'Cellular or internet-service billing',
-    explanation: 'ICASA provides a consumer complaints route for regulated electronic communications services. A billing disagreement needs provider records and the relevant contract; a handset purchase may involve a different complaint channel.',
+    explanation: 'ICASA handles complaints about regulated communications services. For a telecommunications or postal complaint, contact the provider first, obtain a reference number and allow 14 working days to resolve the issue before escalating an unresolved or unsatisfactory response. Filing online also requires a separate ICASA CRM Portal profile with a valid email and email-code verification. This is the regulator’s registration, not another Luqi login. Retail handset purchases may belong with another consumer body.',
     questions: [
-      'Is the problem a telecom service, network contract, subscription or device purchased separately?',
-      'Have you complained directly to the provider and obtained a reference?',
-      'What written bill, cancellation terms or communications support your concern?',
+      'Is the concern a telecom service bill or a device purchased separately?',
+      'When did you complain to the provider, what reference was issued and what written reply did you receive?',
+      'Have 14 working days passed and do you have non-sensitive supporting records?',
     ],
     options: [
-      'First log a written complaint with your service provider and retain the reference.',
-      'Check ICASA’s current consumer-complaint portal if the provider cannot resolve it.',
-      'For separate retail-goods disputes, consider whether CGSO is the more appropriate forum.',
+      'Complain to the provider first, retain its reference and allow the 14-working-day telecom/postal complaints process.',
+      'If unresolved or the response is unsatisfactory, read ICASA’s procedure and separate CRM instructions: register with a valid email, verify the emailed code, then lodge a written complaint yourself.',
+      'Keep ICASA’s reference for follow-up. For device retail-goods issues, check CGSO/NCC jurisdiction before relying on an ICASA referral.',
     ],
-    sourceIds: ['icasa', 'cgso'],
+    sourceIds: ['icasa', 'icasa-crm', 'cgso'],
   },
   MASHONISA_ILLEGAL_LOAN: {
     title: 'Concern about a lender or retained bank card',
@@ -312,9 +320,9 @@ export const CONSUMER_QUICK: Readonly<Record<DisputeType, ConsumerQuickGuide>> =
       'Contact the organisation’s privacy or information officer when safe and request an explanation.',
       'Check the Information Regulator’s official POPIA complaints process; do not upload another person’s records.'] },
   TELCO_BILLING_DISPUTE: { title:'Mobile or internet billing — three first steps',
-    steps:['Record the disputed provider bill, service and applicable contract terms.',
-      'Report the dispute to the licensed service provider and request a reference number.',
-      'Check ICASA’s consumer complaint procedure and referral conditions; device retail disputes may differ.'] },
+    steps:['Record the disputed bill, contract terms and provider complaint reference.',
+      'For telecom or postal complaints, give the provider 14 working days to resolve the concern before referring it to ICASA.',
+      'Read ICASA’s separate CRM instructions to verify your email before lodging online; handset retail disputes may have another regulator.'] },
   MASHONISA_ILLEGAL_LOAN: { title:'Lender or withheld bank card — three first steps',
     steps:['Prioritise safety if threatened. Contact the bank immediately if a card or PIN is compromised.',
       'Keep the agreement and verify the lender’s status without confronting an unsafe person.',
