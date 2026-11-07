@@ -85,12 +85,13 @@ function expectEmptyBidContext(){
 }
 it('replacing an imported original does not carry over another applicant or bid context',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
- expect(screen.getByText(/Choosing another original also clears the contact and bid-context entries/)).toBeTruthy();
+ expect(screen.getByText(/Choosing another original also clears contact entries, bid context and the previous local review history/)).toBeTruthy();
  fireEvent.change(screen.getByLabelText('Import original tender document'),
    {target:{files:[file('replacement-original.docx')]}});
  await screen.findByText('Exact Treasury original verified. Enter only your own accurate supplier facts.');
  expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('');
  expectEmptyBidContext();
+ expect(screen.getByText('Local approval and amendment history (1)')).toBeTruthy();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  expect(network).not.toHaveBeenCalled();
 });
@@ -113,6 +114,7 @@ it('replacing an original with the pinned Treasury template clears previous bid 
  await screen.findByText('Treasury original verified. This blank template is usable only where the issuer permits it.');
  expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('');
  expectEmptyBidContext();
+ expect(screen.getByText('Local approval and amendment history (1)')).toBeTruthy();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  expect(network).toHaveBeenCalledTimes(1);
  expect(network.mock.calls[0][0]).toBe(VERIFIED_SBD1.localPath);
