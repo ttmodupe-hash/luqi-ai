@@ -63,3 +63,26 @@ test('consumer first steps do not require a personal story or provider request',
   await expect(page.getByText(/Save the advertised delivery promise/)).toBeVisible();
   expect(posts).toEqual([]);
 });
+
+test('ICASA provider-first and separate CRM instructions work on keyboard and 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  const posts: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.goto('/#/consumer-rights');
+  await page.getByRole('button', { name: 'Mobile / internet billing' }).click();
+  await expect(page.getByText(/provider 14 working days/i)).toBeVisible();
+  await page.getByLabel('What happened? (redact personal details)').fill('My mobile provider charged me twice and gave a complaint reference.');
+  await page.getByRole('button', { name: 'Prepare my options locally' }).click();
+  await expect(page.getByRole('heading', { name: 'Cellular or internet-service billing' })).toBeVisible();
+  const section = page.getByRole('region', { name: 'Official legislation and complaint information' });
+  const procedure = section.getByRole('link', { name: /ICASA: Communications service complaints portal/ });
+  const crm = section.getByRole('link', { name: /ICASA: CRM Portal profile registration/ });
+  await expect(procedure).toHaveAttribute('href', 'https://www.icasa.org.za/pages/consumer-complaints-procedure');
+  await expect(crm).toHaveAttribute('href', 'https://www.icasa.org.za/pages/consumer-complaints');
+  await expect(crm).toHaveAttribute('rel', /noopener noreferrer/);
+  await procedure.focus();
+  await page.keyboard.press('Tab');
+  await expect(crm).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+  expect(posts).toEqual([]);
+});
