@@ -16,6 +16,7 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
   const focusedRequest=useRef(0);
   const id=useId();
   const progress=supplierFieldProgress(values,SBD1_FIELDS);
+  const optionalBlanks=progress.rows.filter(({field,state})=>!field.required&&state==='blank');
   useEffect(()=>{
     if(focusRequest>focusedRequest.current && !disabled) {
       const target=inputs.current[SBD1_FIELDS[step].id];
@@ -46,6 +47,14 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
         <p className="break-words text-xs text-amber-200">{issue}</p>
       </div>)}
     </div>}
+    {optionalBlanks.length>0 && <details aria-label="Optional blank contact fields" className="min-w-0 rounded-lg border border-slate-700 p-3">
+      <summary className="cursor-pointer text-sm font-semibold">{optionalBlanks.length} optional contact fields left blank — review if relevant</summary>
+      <p className="my-2 text-xs text-slate-300">These blanks do not block this partial export. Your issuer may still require an answer. Add only facts you know; never copy example details.</p>
+      <div className="flex flex-wrap gap-2">
+        {optionalBlanks.map(({field})=><button key={field.id} type="button" className={buttonStyle}
+          onClick={()=>move(SBD1_FIELDS.findIndex(item=>item.id===field.id))}>Review blank {field.label}</button>)}
+      </div>
+    </details>}
     {guided && <p className="text-sm font-semibold">Contact field {step+1} of {SBD1_FIELDS.length}</p>}
     <div className={guided?'space-y-3':'grid gap-3 sm:grid-cols-2'}>
       {progress.rows.filter((_,index)=>!guided||index===step).map(({field,issue})=>{
