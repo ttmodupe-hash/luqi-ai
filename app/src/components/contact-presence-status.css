@@ -1,0 +1,3 @@
+/* A separate user-selected Away state; unknown/not-shared remain neutral. */
+.luqi-approved-contacts .luqi-contact-avatar.is-away i { background: #f59e0b; }
+.luqi-approved-contacts .luqi-presence-mode { min-height: 44px; margin-top: .5rem; }
