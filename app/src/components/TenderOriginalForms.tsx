@@ -68,7 +68,11 @@ export function TenderOriginalForms(){
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
     // Clear approvals as soon as a replacement is selected, even when parsing fails.
     const next=revision+1;setRevision(next);setPrepared(null);setGates(emptyOriginalApprovals());setBusy(true);
-    if(!amendment){setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});}
+    if(!amendment){
+      // A newly selected original starts a different application. Never carry over
+      // another application's tender reference, principal, price or channel.
+      setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
+    }
     setMessage('Checking file type, archive limits and unsupported active content locally…');
     try{
       const bytes=new Uint8Array(await file.arrayBuffer());
@@ -109,7 +113,9 @@ export function TenderOriginalForms(){
       if(version!==epoch.current||controller.signal.aborted)return;
       if(!result.ok||result.inspection.templateId!==VERIFIED_SBD1.id)throw Error();
       const next=revision+1;setRevision(next);setPrimary({name:file.name,mime:file.type,bytes,inspection:result.inspection});
-      setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});audit('import-original',result.inspection.sha256,next);
+      // A verified replacement must not inherit the previous application's bid context.
+      setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
+      audit('import-original',result.inspection.sha256,next);
       setMessage('Treasury original verified. This blank template is usable only where the issuer permits it.');
     }catch{if(version===epoch.current)setMessage('The pinned Treasury original could not be verified. No supplier data was sent.');}
     finally{clearTimeout(timer);if(version===epoch.current){setBusy(false);pending.current=null;}}
