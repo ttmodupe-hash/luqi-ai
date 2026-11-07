@@ -76,6 +76,47 @@ it('discarding work aborts an in-flight parse and prevents a late result from re
  expect(signal.aborted).toBe(true);resolve(inspected);
  await waitFor(()=>expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull());
 });
+
+function expectEmptyBidContext(){
+ for(const label of ['Tender reference','Procuring authority','Applicant or authorised representative',
+   'Closing time with timezone','Exact official submission address','Applicant-entered offer ZAR'])
+   expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe('');
+ expect((screen.getByLabelText('Original form submission method') as HTMLSelectElement).value).toBe('');
+}
+it('replacing an imported original does not carry over another applicant or bid context',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ fireEvent.change(screen.getByLabelText('Import original tender document'),
+   {target:{files:[file('replacement-original.docx')]}});
+ await screen.findByText('Exact Treasury original verified. Enter only your own accurate supplier facts.');
+ expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('');
+ expectEmptyBidContext();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(network).not.toHaveBeenCalled();
+});
+it('replacing an original with the pinned Treasury template clears previous bid context',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ // Synthetic in-browser response: the actual worker separately enforces the pinned hash.
+ vi.stubGlobal('File',class {
+   readonly name:string;readonly type:string;
+   constructor(_chunks:unknown[],name:string,options:{type:string}){this.name=name;this.type=options.type;}
+   async arrayBuffer(){return new Uint8Array(VERIFIED_SBD1.bytes).buffer;}
+ });
+ network.mockResolvedValueOnce({ok:true,body:{getReader:()=>{
+   let delivered=false;
+   return {read:async()=>{
+     if(delivered)return {done:true,value:undefined};
+     delivered=true;return {done:false,value:new Uint8Array(VERIFIED_SBD1.bytes)};
+   },cancel:async()=>{}};
+ }}});
+ fireEvent.click(screen.getByRole('button',{name:'Use verified Treasury SBD 1'}));
+ await screen.findByText('Treasury original verified. This blank template is usable only where the issuer permits it.');
+ expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('');
+ expectEmptyBidContext();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(network).toHaveBeenCalledTimes(1);
+ expect(network.mock.calls[0][0]).toBe(VERIFIED_SBD1.localPath);
+});
+
 it('clears private inputs when the shared customer account changes',async()=>{
  function Switch(){const customer=useCustomerSession();return <button onClick={()=>customer.acceptSession({token:'synthetic',user:{email:'other@example.test',name:'Other'}} as never)}>Switch test account</button>}
  render(<CustomerSessionProvider><Switch/><TenderOriginalForms/></CustomerSessionProvider>);
