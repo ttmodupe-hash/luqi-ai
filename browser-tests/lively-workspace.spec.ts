@@ -73,9 +73,33 @@ test('source signals are deliberate, dated and never turn a failed check into li
   await signals.getByRole('button', { name: 'Refresh source signals' }).click();
   await expect(signals.getByText(/could not be confirmed/)).toBeVisible();
   await expect(signals.getByText('Page responded', { exact: true })).toHaveCount(0);
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  const ring = page.locator('.luqi-province-beacon-ring').first();
-  expect(await ring.evaluate(element => getComputedStyle(element).animationName)).toBe('none');
+  // Expired government notices deliberately produce zero province beacons.
+  // Source reachability must never revive an expired vacancy just to satisfy this test.
+  await expect(page.getByRole('region', { name: 'Choose a South African province' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   expect(checks).toBe(2);
+});
+
+test('expired vacancy collection has no live beacons but retains the official source', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-08T10:00:00+02:00') });
+  await page.goto('/#/opportunities');
+  const summary = page.getByRole('complementary', { name: 'Province opportunity summary' });
+  await expect(summary.locator('.luqi-province-stat strong')).toHaveText('0');
+  await expect(page.locator('.luqi-province-beacon-ring')).toHaveCount(0);
+  await expect(summary.getByRole('link', { name: 'Explore official vacancy circulars' }))
+    .toHaveAttribute('href', 'https://www.dpsa.gov.za/newsroom/psvc/');
+});
+
+test('province beacons respect reduced motion in a dated, explicitly historical snapshot', async ({ page }) => {
+  // This pinned historical fixture exercises map animation without presenting
+  // closed November notices as current opportunities on the real clock.
+  await page.clock.install({ time: new Date('2026-11-05T10:00:00+02:00') });
+  await page.goto('/#/opportunities');
+  const summary = page.getByRole('complementary', { name: 'Province opportunity summary' });
+  const reviewedCount = Number(await summary.locator('.luqi-province-stat strong').innerText());
+  expect(reviewedCount).toBeGreaterThan(0);
+  const ring = page.locator('.luqi-province-beacon-ring').first();
+  await expect(ring).toBeAttached();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(ring).toHaveCSS('animation-name', 'none');
 });
