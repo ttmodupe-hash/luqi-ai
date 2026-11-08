@@ -152,3 +152,5 @@
     transform: none !important;
   }
 }
+
+.luqi-devsecnet summary { min-height: 48px; padding: 8px 0; cursor: pointer; }
