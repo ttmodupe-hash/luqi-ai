@@ -268,3 +268,31 @@ synthetic provider replies, reservation-before-call, fallback scope, response
 confirmation, literal context excerpts, Unicode boundaries, privacy and mobile
 controls. Transport/browser fixtures do not benchmark live model answer quality;
 no paid production inference is needed to validate these code boundaries.
+
+
+## Tool 022 — six-workstream implementation (2026-11-08)
+
+The six roles are implemented as user-controlled local workstreams, not six autonomous professionals or a claim of 5–15 years of experience. The user's latest six-role specification is part of this release scope and must remain in future upgrades.
+
+| Workstream | Implemented | Boundary / next step |
+| --- | --- | --- |
+| S1 Product & PM | Editable PRD, bounded Fibonacci backlog, capacity-based proposed sprints, Given/When/Then, unresolved RAID, JSON export; exact-cent ZAR contribution, break-even, revenue/profit scenario | No invented velocity, delivery date, completed work or guaranteed demand; user supplies assumptions |
+| S2 Design | Calculated sRGB contrast for four token pairs with >=7:1 export gate; Georgia/system fonts, 8px spacing, >=48px studio controls, reduced-motion CSS and escaped product preview | Color checks are not whole-site AAA certification; no promised 60 FPS |
+| S3 Engineering | Typed parameterized owner-scoped TS/SQLite references and membership semantics; explicit chat handoff | Examples are not executed, deployed or automatic fixes; production authentication, validation, idempotency, atomicity and rollback require application-specific review |
+| S4 Security | Real Babel JS/TS syntax-tree pattern inspection in a bounded cancellable worker; separately labelled Python/SQL/network text patterns; source-free findings export | No complete OWASP/SSRF/data-flow audit, POPIA certification, zero-PII guarantee or fabricated CVSS. ML-KEM encapsulates; ML-DSA signs. No automatic PQ signing |
+| S5 Network | Strict IPv4/subnet calculations including /31 and /32; existing bounded VLSM and CSV; read-only Cisco references; Telnet/MD5/type7/broad ACL prompts | No device queries, config pushes, WireGuard tunnel, firewall or eBPF filter activation; no claimed line rate |
+| S6 Compute | Actual nested/Set generated integer membership implementations, verified equal results, operation counts and browser timing; decimal token-cost/FX/budget scenarios | No GPU/SIMD/HPC/quantum execution or fixed speedup; Set workload is expected O(n+m), not O(1) total |
+
+### Three resource tiers and budget decisions
+
+1. **Local studio**: current browser, bounded workers and opt-in exports. This change introduces no additional paid service. Source stays in page memory; no upload/storage/provider call. Account changes clear private drafts and terminate workers before paint.
+2. **Managed AI delivery proposal**: existing authenticated Chat and budget controls remain in force. Obtain dated model/hosting/storage/monitoring quotes, measure actual usage, then supply token rates and FX assumptions. Local-share defaults to zero and is never assumed to be 80%. The cost worksheet is not metering or a runtime cap.
+3. **HPC/GPU research proposal**: identify a measured bottleneck and bounded benchmark; assess GPU/region/storage/queue/backup resources and obtain a workload-specific ZAR quote. Do not provision or increase budgets without notifying the user and receiving authorization for that spend.
+
+No fabricated monthly ZAR prices or live-plan labels are used. User wants notice before cost causes any delay, and fast deployment of tested improvements. These local workstreams do not require a budget increase. Provider flags, caps, secrets, authentication and existing services are unchanged.
+
+### Input provenance and rejected claims
+
+Integrated ideas from `Pasted text(4).txt` (SHA256 `ab8303be9e31f1f29628d5e3c76b53dbf4a55325bb249099ff65083db83dd8ea`) and `Pasted text(5).txt` (SHA256 `a2f15a5be6794987387e37ba9e48f07824ceb86a414e753f1a380a365348de74`). These prototypes are requirements evidence, not trusted production code. Their placeholder hash, browser provider call, canned auto-fix, invented security/completion scores, debt-prescription conclusion, fake DDoS/packet metrics, static contrast and fixed FX/savings claims were not adopted. Existing Quantum/PQC and Archive pilots retain their stated limits.
+
+Tool 022 is lazy-loaded at `/devsecnet` (alias `/tool-022`), listed in the workspace, and reachable through specific local intent phrases after urgent/rights routing. Tests cover real parser findings, safe/comment cases, malformed syntax, source-free boundaries, forged worker responses, cancellation/timeout/account changes, exact decimal costs, planning limits, contrast and browser worker execution. Release approval is limited to the tested website feature; it is not legal/security certification or approval for new paid infrastructure.
