@@ -128,3 +128,28 @@ it('clears private inputs when the shared customer account changes',async()=>{
  await waitFor(()=>expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull());
  expect(screen.queryByDisplayValue('Private supplier')).toBeNull();
 });
+
+
+it('clears the previous applicant audit even when a replacement original fails inspection',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ expect(screen.getByText(/Local approval and amendment history/)).toBeTruthy();
+ run.mockResolvedValueOnce({ok:false,code:'DOCUMENT_UNSAFE'});
+ fireEvent.change(screen.getByLabelText('Import original tender document'),
+   {target:{files:[file('unsafe-replacement.docx')]}});
+ await screen.findByText(/unsupported active feature/);
+ expect(screen.queryByLabelText('Tender reference')).toBeNull();
+ expect(screen.queryByDisplayValue('Synthetic supplier')).toBeNull();
+ expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+});
+it('clears earlier applicant data when the pinned Treasury replacement cannot be retrieved',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ expect(screen.getByText(/Local approval and amendment history/)).toBeTruthy();
+ network.mockRejectedValueOnce(new Error('offline'));
+ fireEvent.click(screen.getByRole('button',{name:'Use verified Treasury SBD 1'}));
+ await screen.findByText('The pinned Treasury original could not be verified. No supplier data was sent.');
+ expect(screen.queryByLabelText('Tender reference')).toBeNull();
+ expect(screen.queryByDisplayValue('Synthetic supplier')).toBeNull();
+ expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+});

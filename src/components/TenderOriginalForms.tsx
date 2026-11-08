@@ -72,6 +72,8 @@ export function TenderOriginalForms(){
       // A newly selected original starts a different application. Never carry over
       // another application's tender reference, principal, price or channel.
       setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
+      // Also clear the prior application's audit even if inspection rejects the replacement.
+      setHistory([]);
     }
     setMessage('Checking file type, archive limits and unsupported active content locally…');
     try{
@@ -98,7 +100,12 @@ export function TenderOriginalForms(){
   }
   async function useTreasuryOriginal(){
     if(!consent||busy||historyFull)return;
-    const version=++epoch.current;setBusy(true);setPrepared(null);setGates(emptyOriginalApprovals());
+    const version=++epoch.current;pending.current?.abort();
+    setBusy(true);setPrepared(null);setGates(emptyOriginalApprovals());
+    // Treat choosing the pinned original as a replacement immediately. On network or
+    // integrity failure, a stale applicant's packet must not remain in this session.
+    setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});
+    setContext({...EMPTY_PACKET_CONTEXT});setHistory([]);
     const controller=new AbortController();pending.current=controller;
     const timer=setTimeout(()=>controller.abort(),8000);
     try{
