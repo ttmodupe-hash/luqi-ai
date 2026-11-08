@@ -726,7 +726,7 @@ export default function DevSecNetStudioPage() {
         ) : (
           <p>Enter a valid IPv4 address and prefix.</p>
         )}
-        <NetworkVlsmPlanner />
+        <NetworkVlsmPlanner key={identity ?? "guest"} />
         <Link to="/devsecnet?panel=security">
           Review network configuration text patterns
         </Link>
