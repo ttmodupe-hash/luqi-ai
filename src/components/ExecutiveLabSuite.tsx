@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "react-router";
+import { PHYSICS_TOPICS } from "../features/physics/models";
 import {
   Sparkles,
   ExternalLink,
@@ -26,7 +28,8 @@ interface StandaloneLab {
   badge: string;
   description: string;
   topics: string[];
-  offlinePath: string;
+  offlinePath?: string;
+  appPath?: string;
   icon: typeof Dna;
   colorScheme: {
     border: string;
@@ -48,6 +51,7 @@ const EXECUTIVE_LABS: StandaloneLab[] = [
       "Interactive harmonic oscillation with real-time sliders for gravity, length, and mass. Displays live dual-curve waveform graph of kinetic vs. potential energy proving mechanical energy conservation.",
     topics: ["Conservation of Energy", "E_mech = E_k + E_p", "Gravitational Field (g)", "Period T = 2π√(L/g)"],
     offlinePath: "/labs/physics_lab.html",
+    appPath: "/pendulum-lab",
     icon: Activity,
     colorScheme: {
       border: "border-sky-500/40",
@@ -57,6 +61,24 @@ const EXECUTIVE_LABS: StandaloneLab[] = [
       badgeText: "text-sky-300",
     },
   },
+  ...PHYSICS_TOPICS.map((topic): StandaloneLab => ({
+    id: "physics-" + topic.id,
+    title: topic.title,
+    subject: "Physics",
+    gradeTier: topic.level,
+    badge: "LOCAL INTERACTIVE",
+    description: topic.summary,
+    topics: [topic.subject, topic.formula],
+    appPath: "/physics-lab?experiment=" + topic.id,
+    icon: Activity,
+    colorScheme: {
+      border: "border-sky-500/40",
+      glow: "hover:shadow-sky-500/20",
+      accent: "text-sky-400",
+      badgeBg: "bg-sky-500/20",
+      badgeText: "text-sky-300",
+    },
+  })),
   {
     id: "biology-enzyme",
     title: "Cellular Dynamics & Enzyme Kinetics",
@@ -164,7 +186,7 @@ export default function ExecutiveLabSuite() {
             <Sparkles className="w-5 h-5 text-amber-400" />
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Engineered with an obsidian, sapphire, and gold aesthetic. Fully self-contained digital labs spanning Biology, Chemistry, Algebra, Geometry, and Physics.
+            Explore real interactive Physics investigations alongside Biology, Chemistry, Algebra and Geometry. School-friendly explanations, local calculations, and no required AI credits.
           </p>
         </div>
 
@@ -235,15 +257,20 @@ export default function ExecutiveLabSuite() {
 
               {/* Action Buttons */}
               <div className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-between gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => setSelectedLab(lab)}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex-1 flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Launch Lab</span>
-                </Button>
+                {lab.appPath ? (
+                  <Link to={lab.appPath} className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex-1 min-h-9 px-3 inline-flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Launch Lab</span>
+                  </Link>
+                ) : (
+                  <Button size="sm" onClick={() => setSelectedLab(lab)}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex-1 flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Launch Lab</span>
+                  </Button>
+                )}
 
+                {lab.offlinePath && <>
                 <a
                   href={lab.offlinePath}
                   target="_blank"
@@ -262,6 +289,7 @@ export default function ExecutiveLabSuite() {
                 >
                   <Download className="w-4 h-4" />
                 </a>
+                </>}
               </div>
             </div>
           );
@@ -269,7 +297,7 @@ export default function ExecutiveLabSuite() {
       </div>
 
       {/* Interactive In-App Simulation Modal */}
-      {selectedLab && (
+      {selectedLab && selectedLab.offlinePath && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
           <div
             className={`relative bg-slate-950 border border-amber-500/40 rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${

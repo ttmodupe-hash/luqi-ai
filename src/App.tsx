@@ -61,6 +61,7 @@ const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
 const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
+const PhysicsLabHubPage = lazy(() => import("./pages/PhysicsLabHubPage"));
 const MultimodalHubPage = lazy(() => import("./pages/MultimodalHubPage").then(module => ({ default: module.MultimodalHubPage })));
 const ExecutiveLabSuite = lazy(() => import("@/components/ExecutiveLabSuite"));
 const AdminSovereignPortal = lazy(() => import("@/components/AdminSovereignPortal"));
@@ -155,6 +156,8 @@ export default function App() {
         <RouterRoute path="/chemistry-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/chemistry_lab.html" title="Chemistry Lab" className="w-full h-full border-0" /></div>} />
         <RouterRoute path="/algebra-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/algebra_lab.html" title="Algebra Lab" className="w-full h-full border-0" /></div>} />
         <RouterRoute path="/geometry-lab" element={<div className="w-full h-[90vh]"><iframe src="/labs/geometry_lab.html" title="Geometry Lab" className="w-full h-full border-0" /></div>} />
+        <RouterRoute path="/physics-lab" element={<PhysicsLabHubPage />} />
+        <RouterRoute path="/stem-physics" element={<PhysicsLabHubPage />} />
         <RouterRoute path="/pendulum-lab" element={<PendulumLabPage />} />
         <RouterRoute path="/pendulum" element={<PendulumLabPage />} />
         <RouterRoute path="/simple-pendulum" element={<PendulumLabPage />} />

@@ -54,7 +54,7 @@ test("workspace filters distinguish usable tools from previews without making AI
   await page.getByLabel("Filter workspace tools").fill("  PHYSICS  ");
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(
-    page.getByRole("article").getByRole("heading", { name: "Physics lab" }),
+    page.getByRole("article").getByRole("heading", { name: "Physics Discovery Lab", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear tool search" }).click();
   await expect(page.getByRole("article")).toHaveCount(workspaceTools.length);
@@ -145,10 +145,21 @@ test("navigation and skip link work at small widths without changing hash routes
     page.getByRole("button", { name: "Open navigation" }),
   ).toBeFocused();
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await page
-    .getByRole("navigation", { name: "Mobile navigation" })
-    .getByRole("link", { name: "Private notes" })
-    .click();
+  const mobileNavigation = page.getByRole("navigation", { name: "Mobile navigation" });
+  await expect(mobileNavigation).toBeVisible();
+  // A real 320px iPhone must be able to scroll to late menu destinations.
+  // Keep the pointer click and subsequent route/heading assertions unchanged.
+  expect(
+    await mobileNavigation.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return (
+        element.scrollHeight > element.clientHeight &&
+        box.top >= 0 &&
+        box.bottom <= window.innerHeight + 1
+      );
+    }),
+  ).toBe(true);
+  await mobileNavigation.getByRole("link", { name: "Private notes" }).click();
   await expect(
     page.getByRole("heading", { name: "Companion conversations" }),
   ).toBeVisible();
@@ -178,8 +189,17 @@ test("physics lab remains interactive while the AI tutor is unavailable", async 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/#/");
   await page
-    .getByRole("link", { name: "Open physics lab", exact: true })
+    .getByRole("link", { name: "Open physics discovery lab", exact: true })
     .click();
+  await expect(
+    page.getByRole("heading", { name: "Explore more than one physics experiment" }),
+  ).toBeVisible();
+  // The expanded hub must still provide a working link to the original
+  // advanced pendulum; do not silently replace a previously usable lab.
+  const pendulum = page.getByRole("navigation", { name: "Physics experiment catalogue" })
+    .getByRole("link", { name: /Pendulum, resonance and chaos/ });
+  await expect(pendulum).toHaveAttribute("href", "#/pendulum-lab");
+  await pendulum.click();
   await expect(
     page.getByRole("heading", { name: "Experiential STEM Physics Laboratory" }),
   ).toBeVisible();

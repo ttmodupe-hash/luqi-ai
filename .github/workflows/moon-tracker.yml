@@ -11,6 +11,11 @@ concurrency:
 jobs:
   moon-calculation-and-privacy:
     runs-on: ubuntu-24.04
+    # Use the same digest-pinned browser+OS image already validated by the
+    # WebKit launch gate. Public APT mirrors stalled for 15 minutes before
+    # any Moon browser assertions ran; do not skip Chromium or WebKit tests.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -29,9 +34,12 @@ jobs:
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/MoonNowPanel.tsx src/components/MoonDisc.tsx src/components/MoonNowContent.tsx src/components/HomeExtras.tsx src/components/HomeDiscoveryContent.tsx
       - name: Build the actual frontend without production credentials
         run: npx --no-install vite build
-      - name: Install isolated Chromium and WebKit acceptance browsers
-        timeout-minutes: 15
-        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Verify locked Chromium and WebKit acceptance browsers
+        run: |
+          test "$(node -p "require('@playwright/test/package.json').version")" = "1.58.2"
+          test "$PLAYWRIGHT_BROWSERS_PATH" = "/ms-playwright"
+          test -d /ms-playwright
+          npx --no-install playwright --version
       - name: Verify desktop and narrow-phone Moon journeys and real import-failure recovery
         run: node scripts/frontend-feature-acceptance.mjs moon
       - name: Preserve browser screenshots and exact test revision
