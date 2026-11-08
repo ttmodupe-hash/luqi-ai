@@ -60,10 +60,40 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "electronDownload": {
+      "checksums": {
+        "electron-v45.0.0-darwin-arm64-dsym-snapshot.zip": "7412dc691406a6354bb41afc9deb3eea8995331f9aba3fe9d8fed7a80a036e2d",
+        "electron-v45.0.0-darwin-arm64-symbols.zip": "261de2c5d8d0e4f1b16cc110d26fbf394985a08b1c3ab3db866e7cf1ee353be9",
+        "electron-v45.0.0-darwin-arm64.zip": "896c3a50b148e89a158dca08a6996a022ddf39b23aac871e107f5b4087f8caa9",
+        "electron-v45.0.0-darwin-x64-dsym-snapshot.zip": "7412dc691406a6354bb41afc9deb3eea8995331f9aba3fe9d8fed7a80a036e2d",
+        "electron-v45.0.0-darwin-x64-symbols.zip": "e17262c2e124fa033e0e58bf1bf506d17bdcdbe154a1e810762854fdadf3a187",
+        "electron-v45.0.0-darwin-x64.zip": "7877c282e74a52f8d87949536a25735cf9982de1265b544c9cd258dd14eff4de",
+        "electron-v45.0.0-linux-arm64-debug.zip": "05a8b84a7492c6ed675983587fbebde931fd779a8f1d6318562a57329689c907",
+        "electron-v45.0.0-linux-arm64-symbols.zip": "cde8f1133b9c27b7628c8d025175a415c5479a2ee372952ae731294181e0bde5",
+        "electron-v45.0.0-linux-arm64.zip": "a80d92b1ad6c111545a12632b8a75cedce614a41866e500810d4050d947f90e9",
+        "electron-v45.0.0-linux-x64-debug.zip": "1f3cbb169a113f286df47fe7ed99421256a6b7c2be8d8b6cf3fb8ba5d0e130b6",
+        "electron-v45.0.0-linux-x64-symbols.zip": "e5038af07a20f8342dbc0e1df7f9a0e844604f6a245f444ea9f45ab7ff6f2f55",
+        "electron-v45.0.0-linux-x64.zip": "22f6a10bd3f7fef987ddbb379d3375ce664ad0c98a9a50f80c89f1718a0c3e3a",
+        "electron-v45.0.0-mas-arm64-dsym-snapshot.zip": "7412dc691406a6354bb41afc9deb3eea8995331f9aba3fe9d8fed7a80a036e2d",
+        "electron-v45.0.0-mas-arm64-symbols.zip": "8ece684cb1878a569d300221799205cf01cbb186e806537dbf69438b3fe78726",
+        "electron-v45.0.0-mas-arm64.zip": "45f98e81f75ff0ac19694465db97feb2810080c0c87c0c3bb9008a15676b0385",
+        "electron-v45.0.0-mas-x64-dsym-snapshot.zip": "7412dc691406a6354bb41afc9deb3eea8995331f9aba3fe9d8fed7a80a036e2d",
+        "electron-v45.0.0-mas-x64-symbols.zip": "4d4926bea48282ca5c256f2ab9978f671564b6ff71bd42432491c2ceba03eda3",
+        "electron-v45.0.0-mas-x64.zip": "0b860db3abc2b3020c170b3e18e4fded242f1f3a6ff24f54f76253bb526b1c85",
+        "electron-v45.0.0-win32-arm64-pdb.zip": "9298d526025d9a8c37e3e84aaf0ba24d1f5f211d72b7a0150e7049c323cfe7ba",
+        "electron-v45.0.0-win32-arm64-symbols.zip": "403c88caf28d1055f683c51e6a9e165b840f49e40de6bc3b119ec1c6eab354b8",
+        "electron-v45.0.0-win32-arm64-toolchain-profile.zip": "c74afb2f66851265ce1b0bbe06018bb54fbc928e15ba08f24e194acd6a80f2a1",
+        "electron-v45.0.0-win32-arm64.zip": "fbae273960b24b81ab7a5cdcf34dd83a8781ee6799ccc621c1d85d5ce197252d",
+        "electron-v45.0.0-win32-x64-pdb.zip": "3e6cf63e40d5b13e731a1bdda5cbcfc8c3e6677cf923c8d28d5875cd009bf169",
+        "electron-v45.0.0-win32-x64-symbols.zip": "2137451f45b1c514b038b4c1ff377047e09506d316308a66d3860285b202f06d",
+        "electron-v45.0.0-win32-x64-toolchain-profile.zip": "c74afb2f66851265ce1b0bbe06018bb54fbc928e15ba08f24e194acd6a80f2a1",
+        "electron-v45.0.0-win32-x64.zip": "ae53887a23bb640369c93dbd38c408a2af5c0deb86f2fa76c6c244cb444b7f47"
+      }
     }
   },
   "devDependencies": {
-    "electron": "^45.0.0",
+    "electron": "45.0.0",
     "electron-builder": "^26.15.3"
   },
   "overrides": {
