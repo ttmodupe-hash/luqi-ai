@@ -1256,62 +1256,45 @@
   .luqi-hero-app { align-items: flex-start; }
 }
 
-/* Compact desktop navigation: preserve all services without forcing the shell
-   wider than the device. Native details works with pointer and keyboard. */
-.luqi-more-services {
-  position: relative;
-  flex: 0 0 auto;
+/* Permanent, visible second desktop row: no overlay, hidden links, or scrolling dropdown. */
+.luqi-secondary-nav {
+  display: none;
+  width: 100%;
+  border-top: 1px solid #293c30;
 }
-.luqi-more-services > summary {
+.luqi-secondary-nav-inner {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 7px 20px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  min-height: 44px;
-  padding: 12px 13px;
+  justify-content: center;
+  gap: 3px 5px;
+}
+.luqi-secondary-nav a {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 8px;
+  color: #d2dfd2;
+  font-size: 12px;
+  line-height: 1.2;
   border-radius: 8px;
-  color: #bcc9bf;
-  font-size: 14px;
   white-space: nowrap;
-  list-style: none;
-  cursor: pointer;
 }
-.luqi-more-services > summary::-webkit-details-marker { display: none; }
-.luqi-more-services > summary::after {
-  content: "⌄";
-  margin-left: 8px;
-  font-size: 18px;
-  line-height: 1;
-}
-.luqi-more-services[open] > summary,
-.luqi-more-services > summary:hover {
+.luqi-secondary-nav a:hover,
+.luqi-secondary-nav a.active {
   background: #293a2e;
   color: #e5f7cb;
 }
-.luqi-more-services > div {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 60;
-  display: grid;
-  gap: 2px;
-  width: min(340px, calc(100vw - 24px));
-  max-height: min(70vh, 620px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 8px;
-  background: #17251e;
-  border: 1px solid #58745d;
-  border-radius: 12px;
-  box-shadow: 0 18px 42px #0008;
-}
-.luqi-desktop-nav .luqi-more-services > div > a {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 10px 13px;
-  white-space: normal;
-  line-height: 1.4;
+.luqi-secondary-nav a:focus-visible {
+  outline: 2px solid #bde393;
+  outline-offset: -2px;
 }
 @media (min-width: 1441px) {
+  .luqi-secondary-nav { display: block; }
   .luqi-header-inner { gap: 16px; padding: 0 25px; }
   .luqi-desktop-nav > a { padding: 13px 11px; }
 }
