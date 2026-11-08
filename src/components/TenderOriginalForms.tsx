@@ -68,7 +68,13 @@ export function TenderOriginalForms(){
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
     // Clear approvals as soon as a replacement is selected, even when parsing fails.
     const next=revision+1;setRevision(next);setPrepared(null);setGates(emptyOriginalApprovals());setBusy(true);
-    if(!amendment){setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});}
+    if(!amendment){
+      // A newly selected original starts a different application. Never carry over
+      // another application's tender reference, principal, price or channel.
+      setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
+      // Also clear the prior application's audit even if inspection rejects the replacement.
+      setHistory([]);
+    }
     setMessage('Checking file type, archive limits and unsupported active content locally…');
     try{
       const bytes=new Uint8Array(await file.arrayBuffer());
@@ -82,7 +88,11 @@ export function TenderOriginalForms(){
           setMessage('This exact document is already in the review packet. Approvals remain cleared.');return;
         }
         setAmendments(previous=>[...previous,item]);audit('add-amendment',result.inspection.sha256,next);
-      }else{setPrimary(item);audit('import-original',result.inspection.sha256,next);}
+      }else{
+        // The new original starts a separate local review chain: do not include
+        // the prior applicant's packet digests or activity in its export.
+        setHistory([]);setPrimary(item);audit('import-original',result.inspection.sha256,next);
+      }
       setMessage(result.inspection.templateId?'Exact Treasury original verified. Enter only your own accurate supplier facts.'
         :'Structural checks passed for local inspection. No verified fill mapping exists for this exact file.');
     }catch{if(version===epoch.current)setMessage(TENDER_DOCUMENT_ERRORS.DOCUMENT_INVALID)}
@@ -90,7 +100,12 @@ export function TenderOriginalForms(){
   }
   async function useTreasuryOriginal(){
     if(!consent||busy||historyFull)return;
-    const version=++epoch.current;setBusy(true);setPrepared(null);setGates(emptyOriginalApprovals());
+    const version=++epoch.current;pending.current?.abort();
+    setBusy(true);setPrepared(null);setGates(emptyOriginalApprovals());
+    // Treat choosing the pinned original as a replacement immediately. On network or
+    // integrity failure, a stale applicant's packet must not remain in this session.
+    setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});
+    setContext({...EMPTY_PACKET_CONTEXT});setHistory([]);
     const controller=new AbortController();pending.current=controller;
     const timer=setTimeout(()=>controller.abort(),8000);
     try{
@@ -109,7 +124,9 @@ export function TenderOriginalForms(){
       if(version!==epoch.current||controller.signal.aborted)return;
       if(!result.ok||result.inspection.templateId!==VERIFIED_SBD1.id)throw Error();
       const next=revision+1;setRevision(next);setPrimary({name:file.name,mime:file.type,bytes,inspection:result.inspection});
-      setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});audit('import-original',result.inspection.sha256,next);
+      // A verified replacement must not inherit the previous application's bid context.
+      setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
+      setHistory([]);audit('import-original',result.inspection.sha256,next);
       setMessage('Treasury original verified. This blank template is usable only where the issuer permits it.');
     }catch{if(version===epoch.current)setMessage('The pinned Treasury original could not be verified. No supplier data was sent.');}
     finally{clearTimeout(timer);if(version===epoch.current){setBusy(false);pending.current=null;}}
@@ -158,7 +175,7 @@ export function TenderOriginalForms(){
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
     <p className="text-sm text-slate-200">Start with Treasury’s verified revised SBD 1 DOCX. Luqi fills seven supplier contact fields on the actual original. Required wording, tables, declarations, pricing and signature areas remain intact for your completion.</p>
     <p className="text-sm text-amber-200">PDF: interactive field names only. Excel XLSX: cell text only. Other DOCX: text only. Filling these files is blocked until their exact originals have reviewed mappings. Scans, OCR, DOC/XLS, macros and signed files are unsupported.</p>
-    <p className="text-xs text-slate-300">Files and supplier details stay in this tab’s memory. No document upload, AI call or automatic storage occurs. Clearing, reloading, leaving this page or changing accounts removes this local work. Downloads remain on your device. Structural checks are not an antivirus certificate.</p>
+    <p className="text-xs text-slate-300">Files and supplier details stay in this tab’s memory. No document upload, AI call or automatic storage occurs. Clearing, reloading, leaving this page or changing accounts removes this local work. Choosing another original also clears contact entries, bid context and the previous local review history; adding an amendment does not. Downloads remain on your device. Structural checks are not an antivirus certificate.</p>
     <a href={VERIFIED_SBD1.source} target="_blank" rel="noopener noreferrer" className="break-words text-sm text-cyan-200 underline">Check Treasury’s original SBD 1</a>
     <p className="text-xs text-slate-300">Original checked {VERIFIED_SBD1.checkedOn}. A matching hash identifies that version; it does not confirm that your issuer accepts it or that later addenda do not exist.</p>
     <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={consent} className="mt-1"
