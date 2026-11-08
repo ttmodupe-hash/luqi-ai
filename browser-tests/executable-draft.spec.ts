@@ -76,7 +76,7 @@ test("executes a local draft in WASM and requires review before export", async (
     ),
   ).toBe(true);
   await page
-    .getByLabel("JavaScript draft", { exact: true })
+    .getByRole("textbox", { name: "JavaScript draft", exact: true })
     .fill("function solve() { return 0; }");
   await expect(
     page.getByRole("table", { name: "Executed contract tests" }),
