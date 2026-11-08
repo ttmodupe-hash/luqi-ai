@@ -28,6 +28,8 @@ import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import CompanionNotePicker, { type SharedCompanionNote } from '../components/CompanionNotePicker';
 import LuqiPromptCoach from '../components/LuqiPromptCoach';
 import { prepareCompanionQuestion } from '../lib/companion-context';
+import LuqiResponseApproach from '../components/LuqiResponseApproach';
+import { responseApproachLabel, type ResponseApproach } from '../lib/response-approach';
 import '../chat.css';
 import LanguageSelectorDropdown from '../components/LanguageSelectorDropdown';
 import LuqiPersonalWelcome from '../components/LuqiPersonalWelcome';
@@ -73,6 +75,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   const [companionMode, setCompanionMode] = useState(false);
   const [selectedNote, setSelectedNote] = useState<SharedCompanionNote | null>(null);
   const [shareNote, setShareNote] = useState(false);
+  const [approach, setApproach] = useState<ResponseApproach>('auto');
   const languageControl = <div><LanguageSelectorDropdown compact />
     <p>Reply language: {language.nativeName}. AI language accuracy can vary.</p></div>;
   const personalWelcome = session ? <LuqiPersonalWelcome key={session.user.email}
@@ -119,7 +122,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     if (previousToken.current && previousToken.current !== boundary) {
       epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
       setPrompt(''); setAnswer(null); setConsent(false); setBusy(false); setUncertain(false);
-      setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setNotice('');
+      setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setApproach('auto'); setNotice('');
     }
     previousToken.current = boundary;
   }, [customerSessionBoundary(session)]);
@@ -134,7 +137,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     setPrompt(''); setAnswer(workspace.activeThread?.lastReply ?? null);
     setTurns(workspace.activeThread?.turns ?? []);
-    setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setApproach('auto');
     setBusy(false); setUncertain(false);
     setNotice(wasPending ? 'The pending reply was cancelled locally. An attempt may still count toward your allowance.' : '');
   }, [workspace?.selectionVersion]);
@@ -171,14 +174,14 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
   function signOut() {
     epoch.current++; pending.current?.abort(); pending.current = null; locked.current = false;
     previousToken.current = null; signOutShared(); setPrompt(''); setAnswer(null); setNotice(''); setConsent(false); setBusy(false); setUncertain(false);
-    setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false);
+    setTurns([]); setShareContext(false); setCopyQuestionToGuide(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setApproach('auto');
   }
   function newChat() {
     if (locked.current) return;
     if (workspace) { workspace.startNewChat(); return; }
     epoch.current++;
     setPrompt(''); setAnswer(null); setTurns([]); setShareContext(false); setCopyQuestionToGuide(false);
-    setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
+    setConsent(false); setShareRegion(false); setCompanionMode(false); setSelectedNote(null); setShareNote(false); setApproach('auto'); setUncertain(false); setNotice('Chat cleared. You are still signed in.');
   }
   async function submit(preferAi = false) {
     if (!preferAi && localGuidePath) { openGuide(localGuidePath); return; }
@@ -197,7 +200,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
     const version = epoch.current; const controller = new AbortController(); pending.current = controller;
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name);
+      const approachArgument: [] | [ResponseApproach] = approach === 'auto' ? [] : [approach];
+      const result = await askPilot(session.token, actualProviderQuestion, controller.signal, fetch, approvedHistory, approvedRegion, language.name, ...approachArgument);
       if (epoch.current === version) {
         setAnswer(result);
         setTurns(previous => {
@@ -335,7 +339,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
         {!turns.length ? <div className="luqi-chat-welcome">
           <span className="luqi-chat-welcome-symbol"><Sparkles size={25} aria-hidden="true" /></span>
           <h2>What can Luqi help you with?</h2>
-          <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning.</p>
+          <p>Chat about ideas, learning and everyday problems with a practical African perspective. Get help with writing, studying and planning. In More options, choose how Luqi should help: teach, plan, compare, review or draft.</p>
           <p><Link to="/visual-tutor">Try the Visual tutor for a selected photo region.</Link> Voice, other file analysis and live web research are still in development. Luqi can explain what is available and help you continue in text.</p>
           {session && <div className="luqi-chat-quick-prompts" role="group" aria-label="Starting questions">
             {[
@@ -354,7 +358,8 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             {turn.sender === 'user' ? <p>{turn.text}</p> :
               <div className="luqi-chat-richtext"><SafePilotText text={turn.text} /></div>}
           </article>)}
-          {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}</p>}
+          {answer && <p className="luqi-chat-provider">Last confirmed answer: {answer.provider} · {answer.provider_model}
+            {answer.response_approach && <> · Requested approach: {responseApproachLabel(answer.response_approach)}</>}</p>}
           {videoPlan && <section className="luqi-video-proposal" aria-label="Video production proposal">
             <h2>Here's how Luqi will make your video</h2>
             <p><strong>{videoPlan.audience}</strong> · {videoPlan.sceneSeconds * 6} seconds · {videoPlan.theme === 'gravity' ? 'Animated gravity demonstration' : 'Illustrative story graphics'}</p>
@@ -446,14 +451,15 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             onChange={event => setShareContext(event.target.checked)} />
             Keep recent conversation context with my follow-up messages (this chat only)
           </label>
-          <p>Optional: enable once to help Luqi understand corrections such as “for an AI?”. Only up to four bounded messages from this chat go to the chosen provider; you can turn this off at any time.</p>
+          <p>Optional: enable once to help Luqi understand corrections such as “for an AI?”. Only up to four bounded messages from this chat go to the chosen provider; you can turn this off at any time. Long messages use beginning and ending excerpts with the omitted middle labelled.</p>
           {shareContext && <details><summary>Review the context included with your next question</summary>
             <ol>{contextPreview.map((turn, index) => <li key={index}>
               <strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}
             </li>)}</ol></details>}
         </div>}
         <details className="luqi-chat-compose-more">
-          <summary>More options: companion, context and writing help</summary>
+          <summary>More options: response approach, companion and writing help</summary>
+          <LuqiResponseApproach value={approach} onChange={setApproach} disabled={busy || uncertain} />
           <LuqiPromptCoach key={customerSessionBoundary(session)} draft={prompt} disabled={busy || uncertain}
             onApply={value => setPrompt(value)} />
           <label className="luqi-chat-companion-mode">
@@ -545,6 +551,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
             disabled={busy || uncertain} required value={prompt}
             spellCheck autoCorrect="on" autoCapitalize="sentences" autoComplete="off"
             onChange={event => setPrompt(event.target.value)} />
+          <LuqiResponseApproach value={approach} onChange={setApproach} disabled={busy || uncertain} />
           <LuqiPromptCoach key={customerSessionBoundary(session)} draft={prompt} disabled={busy || uncertain}
             onApply={value => { setPrompt(value); setConsent(false); }} />
           <p id="ai-question-limit">{questionLength}/{MAX_PILOT_QUESTION_CHARS} characters.
@@ -553,7 +560,7 @@ export default function AiPilotPage({ embedded = false, initialQuestion = '', wo
           {turns.length > 0 && <div className="luqi-chat-context">
             <label className="block"><input type="checkbox" checked={shareContext} disabled={busy}
               onChange={event => setShareContext(event.target.checked)} /> Include recent conversation context in this request (optional)</label>
-            <p>Off by default. Review the exact preview before including recent messages.</p>
+            <p>Off by default. Review the exact preview before including recent messages. Long messages use beginning and ending excerpts with the omitted middle labelled.</p>
             {shareContext && <details open><summary>Review the conversation context to be sent</summary>
               <ol>{contextPreview.map((turn, index) => <li key={index}><strong>{turn.sender === 'user' ? 'You' : 'Luqi'}:</strong> {turn.text}</li>)}</ol>
             </details>}

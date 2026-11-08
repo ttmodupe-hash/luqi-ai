@@ -1,5 +1,15 @@
 export const workspaceTools = [
   {
+    id: "archive", title: "Archive vault", category: "Local encrypted text records",
+    description: "Create and verify a protected text record with an encrypted recovery file you control. No upload, account or paid AI. Pilot; cloud archives remain unavailable.",
+    status: "Local encryption pilot", ready: true, path: "/archive", icon: "notes",
+  },
+  {
+    id: "quantum-lab", title: "Quantum & PQC Lab", category: "Track 7: quantum computing and cryptography",
+    description: "Local Bell/Grover statevectors, bounded QAOA and exact planning references, illustrative surface-code estimates and isolated public-message PQC checks. No quantum-cloud or paid AI calls.",
+    status: "Local educational lab", ready: true, path: "/quantum-lab", icon: "academy",
+  },
+  {
     id: "civic-evidence", title: "Civic Evidence Desk", category: "Politics, voting and public accountability",
     description: "Source-linked audits, budgets, Parliament and IEC voting information. Free explanations; optional signed-in AI clarification. No live party rankings or voting recommendations.",
     status: "Free evidence · optional signed-in AI", ready: true, path: "/chat?civic=1", icon: "status",
