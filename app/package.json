@@ -23,6 +23,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
     "@aws-sdk/client-s3": "^3.1121.0",
+    "@babel/parser": "7.29.9",
     "@capacitor/android": "^8.4.2",
     "@capacitor/cli": "^7.6.8",
     "@capacitor/core": "^8.4.2",
