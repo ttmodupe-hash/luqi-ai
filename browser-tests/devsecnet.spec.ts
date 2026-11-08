@@ -21,7 +21,7 @@ test('Tool 022 performs real local work and retains honest limits',async({page})
  await page.getByLabel('Project name',{exact:true}).fill('Synthetic launch plan');
  await page.getByRole('button',{name:'Add story',exact:true}).click();
  await page.getByLabel('Capability / story').fill('Review a public example');
- await page.getByLabel('Points',{exact:true}).selectOption('3');
+ await page.getByLabel('Story 1 points',{exact:true}).selectOption('3');
  await page.getByLabel('Given',{exact:true}).fill('A synthetic example');
  await page.getByLabel('When',{exact:true}).fill('I request review');
  await page.getByLabel('Then',{exact:true}).fill('I see limited findings');

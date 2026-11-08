@@ -340,6 +340,7 @@ export default function DevSecNetStudioPage() {
             <label>
               Points
               <select
+                aria-label={`Story ${i + 1} points`}
                 value={story.points}
                 onChange={(e) =>
                   patch(
