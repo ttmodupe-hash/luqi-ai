@@ -136,6 +136,9 @@ jobs:
         run: |
           npm ci --legacy-peer-deps --include=dev
           npm audit --include=dev --audit-level=low
+      - name: Verify pinned Electron download integrity with a local fixture
+        run: node --test tests/electron-checksums.test.mjs
+        working-directory: .
       - name: Build Linux directory (no publishing or code signing)
         working-directory: app/electron
         run: npm run build -- --linux --dir --publish=never
