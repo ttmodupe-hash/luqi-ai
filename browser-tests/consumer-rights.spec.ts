@@ -86,3 +86,33 @@ test('ICASA provider-first and separate CRM instructions work on keyboard and 32
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
   expect(posts).toEqual([]);
 });
+
+
+test('NCC filing guidance preserves regulator registration, keyboard links and sector boundaries at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  const posts: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.goto('/#/consumer-rights');
+  await page.getByRole('button', { name: 'Faulty goods / warranty' }).click();
+  await page.getByLabel('What happened? (redact personal details)')
+    .fill('The shop refused to explain my appliance repair or provide a complaint reference.');
+  await page.getByRole('button', { name: 'Prepare my options locally' }).click();
+  await expect(page.getByRole('heading', { name: 'Defective or unsafe goods' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Options to explore' })
+    .getByText(/registered and approved profile/)).toBeVisible();
+  const nccLink = page.getByRole('region', { name: 'Official legislation and complaint information' })
+    .getByRole('link', { name: /National Consumer Commission.*e-Services profile approval/ });
+  await expect(nccLink).toHaveAttribute('href', 'https://thencc.org.za/complaints/');
+  await expect(nccLink).toHaveAttribute('rel', /noopener noreferrer/);
+  await nccLink.focus();
+  await expect(nccLink).toBeFocused();
+  await page.getByRole('button', { name: 'Disputed bank debit' }).click();
+  await page.getByLabel('What happened? (redact personal details)')
+    .fill('My bank deducted an amount I do not recognise and gave me a dispute reference.');
+  await page.getByRole('button', { name: 'Prepare my options locally' }).click();
+  await expect(page.getByRole('heading', { name: 'Disputed debit order or bank transaction' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Official legislation and complaint information' })
+    .getByRole('link', { name: /National Consumer Commission.*e-Services profile approval/ })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  expect(posts).toEqual([]);
+});
