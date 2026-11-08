@@ -13,6 +13,9 @@ async function openCustomerTool(page: Page, label: string) {
   const desktop = page.getByRole('navigation', { name: 'Primary navigation' })
     .getByRole('link', { name: label, exact: true });
   if (await desktop.isVisible()) { await desktop.click(); return; }
+  const moreServices = page.getByRole('navigation', { name: 'More Luqi services' })
+    .getByRole('link', { name: label, exact: true });
+  if (await moreServices.isVisible()) { await moreServices.click(); return; }
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page.getByRole('navigation', { name: 'Mobile navigation' })
     .getByRole('link', { name: label, exact: true }).click();

@@ -38,22 +38,31 @@ test('Luqi shell and navigation remain inside the viewport at phone, tablet and 
   }
 });
 
-test('wide desktop keeps Chat visible and all other services in accessible More menu', async ({ page }) => {
+test('wide desktop keeps all additional services visible in the second navigation row', async ({ page }) => {
   await page.setViewportSize({ width: 1828, height: 900 });
   await page.goto('/#/');
-  const nav = page.getByRole('navigation', { name: 'Primary navigation' });
-  await expect(nav.getByRole('link', { name: 'Chat', exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Workspace', exact: true })).toBeVisible();
-  const more = nav.locator('.luqi-more-services');
-  await more.locator('summary').click();
-  await expect(more.getByRole('link', { name: 'Municipal services', exact: true })).toBeVisible();
-  await expect(more.getByRole('link', { name: 'Civic evidence', exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(more).not.toHaveAttribute('open', '');
-  await more.locator('summary').click();
-  await more.getByRole('link', { name: 'Municipal services', exact: true }).click();
+  const primary = page.getByRole('navigation', { name: 'Primary navigation' });
+  const services = page.getByRole('navigation', { name: 'More Luqi services' });
+  await expect(primary.getByRole('link', { name: 'Chat', exact: true })).toBeVisible();
+  await expect(primary.getByRole('link', { name: 'Workspace', exact: true })).toBeVisible();
+  for (const label of ['Luqi-Drive GPS', 'Municipal services', 'Civic evidence', 'Install']) {
+    await expect(services.getByRole('link', { name: label, exact: true })).toBeVisible();
+  }
+  await expect(page.locator('.luqi-more-services')).toHaveCount(0);
+  expect(await services.evaluate(el => getComputedStyle(el).position)).not.toBe('absolute');
+  await services.getByRole('link', { name: 'Municipal services', exact: true }).click();
   await expect(page).toHaveURL(/#\/municipalities$/);
-  await expect(more).not.toHaveAttribute('open', '');
+  await expect(services.getByRole('link', { name: 'Municipal services', exact: true })).toHaveAttribute('aria-current', 'page');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test('secondary desktop row is visible at the minimum wide-screen breakpoint without page overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 1441, height: 820 });
+  await page.goto('/#/');
+  const services = page.getByRole('navigation', { name: 'More Luqi services' });
+  await expect(services.getByRole('link', { name: 'Spatial Vision & 3D Lab' })).toBeVisible();
+  await expect(services.getByRole('link', { name: 'Civic evidence' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
@@ -65,6 +74,8 @@ test('tablet and small mobile still expose all destinations through the navigati
     const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
     await expect(nav.getByRole('link', { name: 'Install', exact: true })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Local Pulse', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Civic evidence', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Luqi-Drive GPS', exact: true })).toBeVisible();
     await nav.getByRole('link', { name: 'Local Pulse', exact: true }).click();
     await expect(page).toHaveURL(/#\/local-pulse$/);
     await expect(nav).toHaveCount(0);
