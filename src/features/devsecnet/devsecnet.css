@@ -177,4 +177,5 @@
 }
 .luqi-devsecnet .draft-workflow {
   margin-bottom: 32px;
+  overflow-wrap: anywhere;
 }

@@ -213,7 +213,10 @@ function DraftWorkflow({ token }: { token: string | null }) {
       a = document.createElement("a");
     a.href = url;
     a.download = "luqi-reviewed-draft.zip";
-    a.click();
+    // Keep a download's provisional navigation out of the live editing frame.
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.hidden = true;
     downloads.current.set(
       url,
       setTimeout(() => {
@@ -221,9 +224,23 @@ function DraftWorkflow({ token }: { token: string | null }) {
         downloads.current.delete(url);
       }, 10000),
     );
-    setNotice(
-      "Reviewed draft bundle prepared for download. No repository, service or device was changed.",
-    );
+    try {
+      document.body.appendChild(a);
+      a.click();
+      setNotice(
+        "Reviewed draft bundle prepared for download. No repository, service or device was changed.",
+      );
+    } catch {
+      const id = downloads.current.get(url);
+      if (id) clearTimeout(id);
+      downloads.current.delete(url);
+      URL.revokeObjectURL(url);
+      setNotice(
+        "The download could not start. Your reviewed draft remains here for another explicit attempt.",
+      );
+    } finally {
+      a.remove();
+    }
   }
   return (
     <section aria-labelledby="draft-workflow-title" className="draft-workflow">

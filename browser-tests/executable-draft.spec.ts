@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { unzipSync, strFromU8 } from "fflate";
 test("executes a local draft in WASM and requires review before export", async ({
   page,
 }) => {
@@ -17,6 +20,11 @@ test("executes a local draft in WASM and requires review before export", async (
   await page
     .getByRole("button", { name: "Confirm plan and contract", exact: true })
     .click();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
   await page
     .getByRole("button", { name: "Load local reference (no AI)", exact: true })
     .click();
@@ -51,6 +59,22 @@ test("executes a local draft in WASM and requires review before export", async (
     .click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("luqi-reviewed-draft.zip");
+  expect(await download.failure()).toBeNull();
+  const file = await download.path();
+  expect(file).not.toBeNull();
+  const files = unzipSync(await readFile(file!));
+  const review = JSON.parse(strFromU8(files["review.json"]));
+  expect(review.report.digest).toBe(
+    createHash("sha256").update(files["draft.js"]).digest("hex"),
+  );
+  expect(review.humanAcknowledgement).toBe(true);
+  expect(review.productionApproval).toBe(false);
+  await expect(page).toHaveURL(/#\/devsecnet\?panel=engineering$/);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
   await page
     .getByLabel("JavaScript draft", { exact: true })
     .fill("function solve() { return 0; }");

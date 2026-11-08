@@ -154,9 +154,17 @@ it("exports the exact reviewed source and result digest, then revokes the downlo
     static revokeObjectURL = revoke;
   }
   vi.stubGlobal("URL", DownloadURL);
+  let activated:
+    { target: string; rel: string; connected: boolean } | undefined;
   const click = vi
     .spyOn(HTMLAnchorElement.prototype, "click")
-    .mockImplementation(() => {});
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      activated = {
+        target: this.target,
+        rel: this.rel,
+        connected: this.isConnected,
+      };
+    });
   const page = mount();
   plan();
   reference();
@@ -174,6 +182,11 @@ it("exports the exact reviewed source and result digest, then revokes the downlo
   fireEvent.click(
     screen.getByRole("button", { name: "Download reviewed draft bundle" }),
   );
+  expect(activated).toEqual({
+    target: "_blank",
+    rel: "noopener noreferrer",
+    connected: true,
+  });
   expect(saved).toBeDefined();
   const bytes = await new Promise<ArrayBuffer>((resolve, reject) => {
     const reader = new FileReader();
