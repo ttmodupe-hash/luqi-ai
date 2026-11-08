@@ -34,6 +34,11 @@ jobs:
         run: node --test tests/release-control-posture.test.mjs tests/p0-operator-handoff.test.mjs
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify local Tool 022 planning, review and account boundaries
+        run: |
+          npx --no-install vitest run tests/devsecnet-engine.test.ts tests/devsecnet-page.test.tsx
+          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/devsecnet/DevSecNetStudioPage.tsx src/features/devsecnet/devsecnet.worker.ts
+          for file in src/features/devsecnet/*; do cmp "$file" "app/$file"; done
       - name: Prevent stale website links and PWA descriptions
         run: node --test tests/domain-site-freshness.test.mjs
       - name: Verify opt-in local province location
@@ -200,6 +205,7 @@ jobs:
             test-results/**/quantum-lab.png
             test-results/**/response-approach.png
             test-results/**/local-archive.png
+            test-results/devsecnet-*.png
             test-results/**/lively-workspace-320.png
             test-results/**/lively-workspace-desktop.png
             test-results/**/province-map-320.png

@@ -8,7 +8,7 @@ import { detectMunicipalIntent,detectTownshipEconomyIntent } from './municipal-e
 import { detectVisaEntryIntent } from './visa-entry-sources';import { detectTenderIntent } from './tender-sources';
 import { detectSocialSupportIntent,socialSupportPathForInput } from './social-support-sources';
 export const MAX_GUIDE_NEED_CHARS = 500;
-export type GuideKind = 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'municipal' | 'township' | 'visa' | 'social' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
+export type GuideKind = 'devsecnet' | 'driver' | 'consumer' | 'comparative' | 'opportunity' | 'tender' | 'municipal' | 'township' | 'visa' | 'social' | 'urgent' | 'booking' | 'travel' | 'language' | 'study' | 'create' | 'business' | 'rights' | 'general';
 export type GuideStatus = 'local' | 'limited' | 'unavailable';
 export interface GuideRecommendation {
   kind: GuideKind;
@@ -25,6 +25,7 @@ export interface GuideRecommendation {
 
 /** Honest, deterministic next steps. Not search results, a booking service or an AI plan. */
 export const GUIDE_NEXT_STEPS: Record<GuideKind, readonly string[]> = {
+  devsecnet: ['Choose a product, design, engineering, security, network or compute workstream.', 'Use synthetic inputs where possible; review assumptions and download only what you want to keep.'],
   driver: [
     'Stop safely before reading or touching a phone; never ignore lawful traffic directions.',
     'Open the free South African driver-rights guide for source-linked steps and official reporting contacts.',
@@ -115,6 +116,7 @@ export const GUIDE_EXAMPLES = [
 ] as const;
 
 const recommendations: Record<GuideKind, Omit<GuideRecommendation, 'kind'>> = {
+  devsecnet: {title:'Open the DevSecNet Studio',detail:'Local PRD/backlog/RAID planning, design contrast, limited code-pattern review, IPv4/VLSM and measured reference workloads with editable cost assumptions.',status:'local',statusLabel:'Local tools · no paid AI call',nextQuestion:'Which workstream and concrete outcome do you want to work on?',primaryPath:'/devsecnet',primaryLabel:'Open Tool 022',caution:'No automatic deployment, complete security audit, professional certification or GPU service is implied.',bookingPreview:false},
   driver: {
     title: 'South African driver safety and traffic stop rights',
     detail: 'Read three immediate safety steps and source-linked explanations for officer identification, vehicle searches, fines, sobriety tests and reporting corruption. No account, AI request or incident upload occurs.',
@@ -305,6 +307,7 @@ export function guideLuqiNeed(input: unknown): GuideRecommendation | null {
     (/\b(book|booking|reserve|reservation|hotel|accommodation|guesthouse|lodge|resort|airbnb|flight|tour ticket|safari ticket|stay overnight|place to stay|where to stay|where can i stay|where should i stay|stay in|stay near)\b/u.test(q)) ? 'booking' :
     /\b(asylum|refugee|refugees|refugee status|immigration|home affairs|asylum seeker|residence permit)\b/u.test(q) ? 'rights' :
     /\b(consumer rights|refund|warranty|defective|faulty goods|debit order|unfair cancellation|popia|debt review|retailer complaint|consumer complaint)\b/u.test(q) ? 'consumer' :
+    /\b(devsecnet|tool 022|product requirements document|fibonacci backlog|raid register|design tokens|contrast ratio|code review|review my code|static analysis|sql injection|typescript|javascript|python code|ipv4|vlsm|subnet calculator|cidr|ospf|bgp routing|ai token cost|gpu benchmark)\b/u.test(q) ? 'devsecnet' :
     /\b(translate|translation|language|languages|custom|customs|culture|cultural|sawubona|dumela|isizulu|setswana|sesotho|swahili|kiswahili|yoruba)\b/u.test(q) ? 'language' :
     /\b(study|learn|exam|university|student|homework|school|flashcard|revision|course|certification)\b/u.test(q) ? 'study' :
     /\b(create|story|video|animation|cartoon|film|script|content|design|creator)\b/u.test(q) ? 'create' :
