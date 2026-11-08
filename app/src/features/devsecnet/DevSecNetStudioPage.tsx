@@ -38,6 +38,7 @@ import {
   DEVSECNET_SOURCES,
 } from "./reference-examples";
 import "./devsecnet.css";
+import ExecutableDraftWorkflow from "./ExecutableDraftWorkflow";
 const PANELS = [
   ["product", "S1 · Product & PM"],
   ["design", "S2 · Design"],
@@ -586,6 +587,7 @@ export default function DevSecNetStudioPage() {
   else if (panel === "engineering")
     content = (
       <>
+        <ExecutableDraftWorkflow />
         <h2>S3 · Engineering reference desk</h2>
         <p>
           Typed examples for human review. They are never executed, deployed or
@@ -850,8 +852,9 @@ export default function DevSecNetStudioPage() {
         <h1>Plan. Design. Review. Measure.</h1>
         <p>
           Six practical workstreams, with your decisions at the center. Local
-          tools do not make paid AI calls. Drafts stay in page memory until you
-          download; changing accounts or leaving clears them.
+          calculations and tests run in your browser. Optional AI drafting needs
+          your consent and uses the existing allowance. Changing accounts or
+          leaving clears drafts from this page.
         </p>
       </header>
       <nav aria-label="Studio workstreams">
@@ -880,7 +883,7 @@ export default function DevSecNetStudioPage() {
             <tbody>
               <tr>
                 <td>1 · Local studio</td>
-                <td>Current browser, bounded workers, local JSON exports</td>
+                <td>Current browser, bounded workers, local JSON / ZIP exports</td>
                 <td>No additional paid service introduced by these tools.</td>
               </tr>
               <tr>

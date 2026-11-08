@@ -153,4 +153,29 @@
   }
 }
 
-.luqi-devsecnet summary { min-height: 48px; padding: 8px 0; cursor: pointer; }
+.luqi-devsecnet summary {
+  min-height: 48px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.luqi-devsecnet .draft-check {
+  flex-direction: row;
+  align-items: center;
+}
+.luqi-devsecnet .draft-check input {
+  width: 24px;
+  min-width: 24px;
+  min-height: 48px;
+}
+.luqi-devsecnet .draft-source {
+  min-height: 320px;
+  font-family: ui-monospace, monospace;
+}
+.luqi-devsecnet .draft-digest {
+  overflow-wrap: anywhere;
+}
+.luqi-devsecnet .draft-workflow {
+  margin-bottom: 32px;
+  overflow-wrap: anywhere;
+}
