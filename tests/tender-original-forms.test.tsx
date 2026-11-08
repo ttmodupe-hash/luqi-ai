@@ -5,7 +5,7 @@ import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/react';
 import {TenderOriginalForms} from '../src/components/TenderOriginalForms';
 import {runTenderDocument} from '../src/lib/tender-document-client';
-import {VERIFIED_SBD1, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
+import {TENDER_DOCUMENT_ERRORS, TENDER_FILE_MAX, VERIFIED_SBD1, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
 import {CustomerSessionProvider,useCustomerSession} from '../src/providers/customer-session';
 vi.mock('../src/lib/tender-document-client',()=>({runTenderDocument:vi.fn()}));
 const run=vi.mocked(runTenderDocument),network=vi.fn();
@@ -153,3 +153,23 @@ it('clears earlier applicant data when the pinned Treasury replacement cannot be
  expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
 });
+
+it.each(['empty','oversized'] as const)(
+  'clears earlier applicant details when a %s replacement is rejected before inspection',
+  async kind=>{
+    render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+    const callsBefore=run.mock.calls.length;
+    const bytes=kind==='empty'?[]:[new Uint8Array(TENDER_FILE_MAX+1)];
+    const rejected=new File(bytes,'invalid-replacement.docx',
+      {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    fireEvent.change(screen.getByLabelText('Import original tender document'),
+      {target:{files:[rejected]}});
+    await screen.findByText(TENDER_DOCUMENT_ERRORS.FILE_SIZE);
+    expect(screen.queryByLabelText('Tender reference')).toBeNull();
+    expect(screen.queryByDisplayValue('Synthetic supplier')).toBeNull();
+    expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
+    expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+    expect(run).toHaveBeenCalledTimes(callsBefore);
+    expect(network).not.toHaveBeenCalled();
+  }
+);
