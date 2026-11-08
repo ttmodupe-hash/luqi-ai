@@ -36,8 +36,8 @@ jobs:
         run: npm ci --legacy-peer-deps --include=dev
       - name: Verify local Tool 022 planning, review and account boundaries
         run: |
-          npx --no-install vitest run tests/devsecnet-engine.test.ts tests/devsecnet-page.test.tsx
-          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/devsecnet/DevSecNetStudioPage.tsx src/features/devsecnet/devsecnet.worker.ts
+          npx --no-install vitest run tests/devsecnet-engine.test.ts tests/devsecnet-page.test.tsx tests/executable-draft.test.ts tests/executable-draft-page.test.tsx
+          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/devsecnet/DevSecNetStudioPage.tsx src/features/devsecnet/devsecnet.worker.ts src/features/devsecnet/draft.worker.ts
           for file in src/features/devsecnet/*; do cmp "$file" "app/$file"; done
       - name: Prevent stale website links and PWA descriptions
         run: node --test tests/domain-site-freshness.test.mjs
