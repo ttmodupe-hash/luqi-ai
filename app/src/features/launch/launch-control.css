@@ -84,7 +84,7 @@
 .launch-target p {font-size:10px;color:var(--lc-muted);line-height:1.7;margin-top:9px;}
 .launch-text-button {min-height:48px;text-align:left;color:#cbeed6;font-size:11px!important;background:transparent;border:0;padding:5px 0;text-decoration:underline;text-underline-offset:4px;}
 .launch-owner-review {padding:15px;border:1px solid #62754a;background:#253725;border-radius:8px;margin-top:18px;}
-.launch-owner-review label {display:flex;align-items:flex-start;gap:9px;line-height:1.6;color:#e8f2d9;}
+.launch-owner-review label {display:flex;align-items:center;min-height:48px;gap:9px;line-height:1.6;color:#e8f2d9;}
 .launch-owner-review input[type=checkbox] {width:18px;height:18px;flex:none;margin-top:1px;accent-color:#d4f6b0;}
 .launch-owner-review .launch-button {width:100%;margin-top:12px;}
 .luqi-launch-page .launch-fine {font-size:10px;color:var(--lc-muted);line-height:1.8;margin-top:14px;}

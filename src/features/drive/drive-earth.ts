@@ -90,7 +90,11 @@ export function parseEarthEvents(payload: unknown, now = Date.now()): EarthEvent
 /** No credentials, referrer, auto retries or location parameters. Bounded response. */
 export async function loadEarthEvents(signal: AbortSignal, request: typeof fetch = fetch): Promise<EarthEvent[]> {
   const response = await request(EONET_URL, { signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", headers: { Accept: "application/json" } });
-  if (!response.ok || !response.headers.get("content-type")?.toLowerCase().includes("application/json")) throw new Error("NASA event feed unavailable");
+  const mediaType = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  // Public acceptance 42635354912 captured valid EONET JSON labelled RSS in WebKit.
+  // Only this fixed NASA endpoint gets the compatibility exception. JSON parsing,
+  // schema validation and the size limit below remain mandatory; XML is never parsed.
+  if (!response.ok || (mediaType !== "application/json" && mediaType !== "application/rss+xml")) throw new Error("NASA event feed unavailable");
   const reader = response.body?.getReader();
   if (!reader) throw new Error("NASA event response unavailable");
   const chunks: Uint8Array[] = [];
