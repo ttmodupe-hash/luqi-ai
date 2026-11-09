@@ -1,3 +1,4 @@
+import CivicWardGuide from '../components/CivicWardGuide';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import CivicEvidencePanel from '../components/CivicEvidencePanel';
@@ -18,6 +19,7 @@ export default function CivicEvidenceDesk() {
       </div>
       <p className="text-xs text-slate-300">Check current voting requirements and dates with the IEC. No personal registration check takes place in Luqi.</p>
     </header>
+    <CivicWardGuide />
     <label className="block max-w-sm text-sm">Evidence topic
       <select value={topic} onChange={event => setTopic(event.target.value)} className="mt-2 block min-h-11 w-full rounded-lg border border-slate-500 bg-slate-900 p-3">
         {['All topics', 'Audits', 'Public money', 'Accountability', 'Voting'].map(value => <option key={value}>{value}</option>)}

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import DriveMap from "./DriveMap";
+import CivicWardGuide from "../../components/CivicWardGuide";
 import FieldNotebook from "./FieldNotebook";
 import {
   LocateFixed,
@@ -568,6 +569,7 @@ function DriveSession({
           {guide.source.label} ↗
         </a>
       </div>
+      <CivicWardGuide />
       <FieldNotebook guide={guide} />
       <details className="driveCredits">
         <summary>About the African voices</summary>
