@@ -1,0 +1,49 @@
+name: Township Business Workspace Acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/pages/TownshipEconomyPage.tsx'
+      - 'app/src/pages/TownshipEconomyPage.tsx'
+      - '**/TownshipBusinessWorkspace.tsx'
+      - '**/township-workspace.ts'
+      - '**/business-desk.ts'
+      - 'tests/township*.test.ts'
+      - 'browser-tests/township-business-workspace.spec.ts'
+      - 'playwright.township.config.ts'
+      - '.github/workflows/township-workspace.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: township-workspace-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.2'
+      - run: bun install --frozen-lockfile
+      - name: Source preservation, project validation and business arithmetic
+        run: bunx vitest run tests/township-workspace.test.ts tests/township-economy.test.ts tests/business-desk.test.ts
+      - name: Typecheck both frontend implementations
+        run: bunx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target ES2022 --module ESNext --moduleResolution bundler src/pages/TownshipEconomyPage.tsx app/src/pages/TownshipEconomyPage.tsx
+      - run: bun run build:web
+      - run: bunx playwright install --with-deps chromium webkit
+      - name: Real local browser journeys, no production accounts or inference
+        run: bunx playwright test --config=playwright.township.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: township-workspace-acceptance
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

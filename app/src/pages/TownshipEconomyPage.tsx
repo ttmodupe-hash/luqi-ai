@@ -1,10 +1,21 @@
 import {useState} from 'react';
+import TownshipBusinessWorkspace from '../components/TownshipBusinessWorkspace';
+import type {TownshipContext} from '../lib/township-workspace';
 import {Link} from 'react-router';
 import {filterMunicipalities,MUNICIPAL_DIRECTORY_URL,PROVINCE_NAMES} from '../lib/municipal-economy';
 import {TOWNSHIP_GOALS,TOWNSHIP_OFFICIAL_SOURCES,TOWNSHIP_REVIEWED_ON,TOWNSHIP_SECTORS,
  buildTownshipActionPlan,isTownshipReviewFresh,townshipActionPlanText,
  type TownshipGoal,type TownshipSector} from '../lib/township-economy';
 import type{ProvinceCode}from '../lib/opportunity-sources';
+
+/** Validate restored selections against the same public registries as the form. */
+export function reviewTownshipContext(context: TownshipContext): readonly string[] | null {
+ if(!TOWNSHIP_SECTORS.some(x=>x.id===context.sector)||!TOWNSHIP_GOALS.some(x=>x.id===context.goal)||
+    (context.province!=='all'&&!Object.prototype.hasOwnProperty.call(PROVINCE_NAMES,context.province)))return null;
+ const options=filterMunicipalities(context.province==='all'?null:context.province as ProvinceCode,'',270);
+ if(context.municipality&&!options.some(x=>x.name===context.municipality&&(context.province!=='all'||x.type==='metropolitan')))return null;
+ return buildTownshipActionPlan(context.sector as TownshipSector,context.goal as TownshipGoal,context.municipality);
+}
 
 const inputClass='mt-2 w-full min-w-0 rounded-lg border border-slate-500 bg-slate-950 p-3 text-white';
 export default function TownshipEconomyPage(){
@@ -29,6 +40,10 @@ export default function TownshipEconomyPage(){
    <h1 id="township-economy-heading" className="text-3xl font-bold sm:text-4xl">Build your business. Find the right official support.</h1>
    <p className="max-w-4xl text-slate-200">Practical steps for spaza shops, market traders, township manufacturers, salons, artisans and rural businesses. Choose what you do and what you need: Luqi creates an on-device checklist and points you to the original municipality and enterprise-support sources.</p>
    <p className="rounded-lg border border-amber-600 bg-slate-900 p-3 text-sm text-amber-100">No promise of funding, approved trading licence or government partnership. This is not a registered lender or financial advisor. Never enter company passwords, tax PINs, ID numbers, bank details or proprietary business accounts into Luqi. Check official programme windows and repayable loan terms before applying.</p>
+   <button type="button" className="min-h-11 rounded-lg border border-cyan-400 bg-cyan-950 px-4 py-3 font-semibold text-cyan-100"
+    onClick={()=>{const workbench=document.getElementById('township-workbench');workbench?.focus({preventScroll:true});workbench?.scrollIntoView({block:'start'});}}>
+    Start my business workbench
+   </button>
   </header>
   <section className="space-y-4 rounded-xl border border-slate-700 bg-slate-900 p-4" aria-label="Township business planner">
    <h2 className="text-xl font-semibold">Prepare your next business step</h2>
@@ -69,6 +84,11 @@ export default function TownshipEconomyPage(){
     <p className="text-xs text-slate-400">Exported as plain text, generated locally. Luqi does not transmit the plan or automatically apply.</p>
    </div>
   </section>
+  <TownshipBusinessWorkspace context={{sector,goal,province,municipality}} steps={plan}
+   reviewContext={reviewTownshipContext} onRestoreContext={restored=>{
+    setSector(restored.sector as TownshipSector);setGoal(restored.goal as TownshipGoal);
+    setProvince(restored.province as ProvinceCode|'all');setMunicipality(restored.municipality);setNotice('');
+   }}/>
   <section className="space-y-4 rounded-xl border border-slate-700 bg-slate-900 p-4" aria-label="Township official programmes">
    <h2 className="text-xl font-semibold">Official programmes and tools</h2>
    <p className="text-sm text-slate-200">An issuer describing a funding scheme is not evidence that a new intake is open. Do not treat an announced maximum as a grant, a personal offer or an award. Verify each programme’s current application form, legal conditions and closing dates.</p>
