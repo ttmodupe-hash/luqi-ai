@@ -15,7 +15,8 @@ concurrency:
 jobs:
   validate:
     if: ${{ !startsWith(github.ref, 'refs/heads/verify/drive-earth-') }}
-    runs-on: ubuntu-latest
+    # The locked Playwright 1.58.2 browsers support Ubuntu 24.04, not 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +47,7 @@ jobs:
     # A verification branch is created at the exact already-deployed commit.
     # This job reads public pages and NASA only; it cannot deploy or alter accounts.
     if: ${{ startsWith(github.ref, 'refs/heads/verify/drive-earth-') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
