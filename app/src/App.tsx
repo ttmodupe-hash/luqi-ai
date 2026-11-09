@@ -10,6 +10,7 @@ import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-route
 
 import Home from "./pages/Home";
 const DevSecNetStudioPage = lazy(() => import("./features/devsecnet/DevSecNetStudioPage"));
+const LaunchControlPage = lazy(() => import("./features/launch/LaunchControlPage"));
 const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
@@ -78,6 +79,8 @@ export default function App() {
         <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
         <RouterRoute path="/devsecnet" element={<DevSecNetStudioPage />} />
         <RouterRoute path="/tool-022" element={<DevSecNetStudioPage />} />
+        <RouterRoute path="/launch-control" element={<LaunchControlPage />} />
+        <RouterRoute path="/tool-024" element={<LaunchControlPage />} />
         <RouterRoute path="/quantum-lab" element={<QuantumLabPage />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/install" element={<InstallAppPage />} />
