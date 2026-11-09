@@ -1,0 +1,72 @@
+name: Luqi Drive Earth Context
+on:
+  pull_request:
+    branches: [main]
+    paths: ['src/features/drive/**', 'app/src/features/drive/**', 'tests/drive-earth.test.tsx', 'browser-tests/drive-earth*.spec.ts', 'playwright.drive-earth.config.ts', '.github/workflows/drive-earth.yml']
+  push:
+    branches: [main, 'verify/drive-earth-*']
+    paths: ['src/features/drive/**', 'app/src/features/drive/**', 'tests/drive-earth.test.tsx', 'browser-tests/drive-earth*.spec.ts', 'playwright.drive-earth.config.ts', '.github/workflows/drive-earth.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: luqi-drive-earth-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  validate:
+    if: ${{ !startsWith(github.ref, 'refs/heads/verify/drive-earth-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify filters, privacy, failures and existing GPS journeys
+        run: npx --no-install vitest run tests/drive-earth.test.tsx tests/luqi-drive-gps.test.tsx tests/field-and-bench.test.tsx
+      - name: Strictly type-check the additive feature and preserve source parity
+        run: |
+          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/drive/DriveEarthPanel.tsx src/features/drive/drive-earth.ts
+          for file in DriveEarthPanel.tsx drive-earth.ts drive-earth.css LuqiDrivePage.tsx; do cmp "src/features/drive/$file" "app/src/features/drive/$file"; done
+      - run: npx --no-install vite build
+      - run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Synthetic Chromium and WebKit mobile acceptance (not physical handsets)
+        run: npx --no-install playwright test --config playwright.drive-earth.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drive-earth-synthetic-${{ github.run_id }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+  public-acceptance:
+    # A verification branch is created at the exact already-deployed commit.
+    # This job reads public pages and NASA only; it cannot deploy or alter accounts.
+    if: ${{ startsWith(github.ref, 'refs/heads/verify/drive-earth-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Read exact public revision, visible integration and actual NASA responses
+        env:
+          LUQI_BROWSER_BASE_URL: https://app.luqi-ai.com
+          LUQI_EXPECTED_SHA: ${{ github.sha }}
+          LUQI_DRIVE_LIVE: '1'
+        run: npx --no-install playwright test --config playwright.drive-earth.config.ts browser-tests/drive-earth-live.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drive-earth-public-${{ github.run_id }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
