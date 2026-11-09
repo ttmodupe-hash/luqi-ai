@@ -28,8 +28,10 @@ test("trip control checks consumption, calculates a return split and keeps the b
   await expect(
     budget.getByRole("status", { name: "Trip fuel estimate" }),
   ).toContainText("144.0 L · R4320.00");
+  // WebKit can use comma grouping for en-ZA. Require the exact same share
+  // with either browser's supported decimal and thousands separators.
   await expect(budget.locator(".fuelSplit strong")).toHaveText(
-    /R1\s?080[.,]00/,
+    /^R(?:1[,\s]080\.00|1[\s.]080,00|1080[.,]00)$/,
   );
   await page
     .getByRole("button", { name: "N3 · Johannesburg to Durban", exact: true })
