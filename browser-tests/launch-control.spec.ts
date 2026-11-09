@@ -1,0 +1,34 @@
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+test('launch control checks real response contracts, requires review and restores checkpoints as historical at 320px',async({page})=>{
+ const revision='a'.repeat(40), reads:string[]=[], posts:string[]=[];
+ await page.route('**/api/**',route=>route.fulfill({status:503,json:{code:'SYNTHETIC_UNAVAILABLE'}}));
+ await page.route('**/v1/**',route=>route.fulfill({json:{status:'configured_not_verified',checks:{runtime:'up',persistence:'connected',ai_pilot:'configured_not_verified'}}}));
+ await page.route('**/v1/release',route=>{reads.push('release');return route.fulfill({headers:{'Cache-Control':'no-store'},json:{format:'luqi.release.v1',commit:revision}});});
+ await page.route('**/v1/health',route=>{reads.push('health');return route.fulfill({headers:{'Cache-Control':'no-store'},json:{status:'healthy'}});});
+ page.on('request',request=>{if(request.method()==='POST')posts.push(request.url());});
+ await page.setViewportSize({width:320,height:800});await page.emulateMedia({reducedMotion:'reduce'});
+ await page.goto('/#/launch-control');await expect(page.getByRole('heading',{name:'Launch Control.',exact:true})).toBeVisible();
+ expect(reads).toEqual([]);await page.getByRole('button',{name:'Run live checks',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Use observed revision as review target',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'Use observed revision as review target',exact:true}).click();
+ await page.getByRole('button',{name:'Inspect Record owner review',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Record owner review',exact:true})).toBeDisabled();
+ await page.getByRole('checkbox',{name:'I reviewed this step and its supporting evidence.',exact:true}).check();
+ await page.getByRole('button',{name:'Record owner review',exact:true}).click();expect(reads.sort()).toEqual(['health','release']);
+ await page.getByRole('button',{name:'Verify reviewed revision',exact:true}).click();
+ await expect(page.getByText('Observed live',{exact:true})).toBeVisible();expect(reads).toHaveLength(3);
+ await page.getByRole('button',{name:'Evidence & resume',exact:true}).click();
+ const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'Download checkpoint',exact:true}).click();const download=await downloading;
+ const path=await download.path();expect(path).not.toBeNull();const bytes=await readFile(path!);const checkpoint=JSON.parse(bytes.toString('utf8'));
+ expect(checkpoint.format).toBe('luqi.launch-checkpoint.v1');expect(checkpoint.sha256).toMatch(/^[a-f0-9]{64}$/);expect(checkpoint.plan.expectedCommit).toBe(revision);
+ await page.getByLabel('Restore launch checkpoint file',{exact:true}).setInputFiles({name:'checkpoint.json',mimeType:'application/json',buffer:bytes});
+ await expect(page.getByRole('status').filter({hasText:'Plan restored.'})).toBeVisible();await expect(page.getByText('Not confirmed',{exact:true})).toBeVisible();expect(reads).toHaveLength(3);
+ await page.getByRole('button',{name:'Workflow',exact:true}).click();await expect(page.getByText('Historical evidence',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Email preflight',exact:true}).click();
+ await page.getByLabel('Domain',{exact:true}).fill('example.org');await page.getByLabel('Existing SPF TXT values for this domain',{exact:true}).fill('v=spf1 -all\nv=spf1 ~all');
+ await page.getByLabel('Provider include domain',{exact:true}).fill('_spf.provider.example');await page.getByRole('button',{name:'Run email preflight',exact:true}).click();
+ await expect(page.getByText(/Multiple SPF records exist/)).toBeVisible();expect(reads).toHaveLength(3);expect(posts).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+});

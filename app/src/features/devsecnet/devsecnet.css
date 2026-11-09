@@ -1,0 +1,181 @@
+.luqi-devsecnet {
+  background: #0e2218;
+  color: #f7f5ee;
+  min-height: 100vh;
+  padding: 24px;
+  font:
+    16px/1.6 system-ui,
+    sans-serif;
+}
+.luqi-devsecnet > header,
+.luqi-devsecnet > nav,
+.luqi-devsecnet > section,
+.luqi-devsecnet > footer {
+  max-width: 1100px;
+  margin: 0 auto 24px;
+}
+.luqi-devsecnet h1,
+.luqi-devsecnet h2 {
+  font-family: Georgia, serif;
+  line-height: 1.2;
+}
+.luqi-devsecnet h1 {
+  font-size: clamp(32px, 5vw, 52px);
+}
+.luqi-devsecnet nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.luqi-devsecnet a {
+  color: #fbbf24;
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  padding: 8px;
+}
+.luqi-devsecnet nav a[aria-current="page"] {
+  background: #fbbf24;
+  color: #0e2218;
+  border-radius: 8px;
+}
+.luqi-devsecnet section {
+  background: #163526;
+  border: 1px solid #8baa98;
+  border-radius: 16px;
+  padding: 24px;
+}
+.luqi-devsecnet label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+.luqi-devsecnet input,
+.luqi-devsecnet select,
+.luqi-devsecnet textarea {
+  background: #0e2218;
+  color: #f7f5ee;
+  border: 1px solid #8baa98;
+  border-radius: 8px;
+  min-height: 48px;
+  padding: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+}
+.luqi-devsecnet textarea {
+  min-height: 112px;
+}
+.luqi-devsecnet button {
+  background: #fbbf24;
+  color: #0e2218;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  min-height: 48px;
+  padding: 12px 16px;
+  font: inherit;
+  font-weight: 700;
+  margin: 8px 8px 8px 0;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.luqi-devsecnet button:hover {
+  transform: translateY(-1px);
+}
+.luqi-devsecnet button:disabled {
+  background: #bec9c1;
+  color: #183424;
+  cursor: default;
+  transform: none;
+}
+.luqi-devsecnet :focus-visible {
+  outline: 3px solid #f7f5ee;
+  outline-offset: 4px;
+}
+.luqi-devsecnet pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #0e2218;
+  padding: 16px;
+  max-height: 480px;
+  overflow: auto;
+}
+.luqi-devsecnet .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+}
+.luqi-devsecnet fieldset {
+  border: 1px solid #8baa98;
+  padding: 16px;
+  margin: 16px 0;
+  min-width: 0;
+}
+.luqi-devsecnet .notice {
+  border-left: 4px solid #fbbf24;
+  padding: 8px 16px;
+}
+.luqi-devsecnet table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.luqi-devsecnet th,
+.luqi-devsecnet td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #8baa98;
+}
+.luqi-devsecnet .table-scroll {
+  overflow: auto;
+}
+.luqi-devsecnet .design-preview {
+  padding: 24px;
+  border-radius: 8px;
+}
+.luqi-devsecnet .design-preview button {
+  background: var(--preview-accent);
+  color: var(--preview-bg);
+}
+@media (max-width: 600px) {
+  .luqi-devsecnet {
+    padding: 16px;
+  }
+  .luqi-devsecnet section {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .luqi-devsecnet * {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.luqi-devsecnet summary {
+  min-height: 48px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.luqi-devsecnet .draft-check {
+  flex-direction: row;
+  align-items: center;
+}
+.luqi-devsecnet .draft-check input {
+  width: 24px;
+  min-width: 24px;
+  min-height: 48px;
+}
+.luqi-devsecnet .draft-source {
+  min-height: 320px;
+  font-family: ui-monospace, monospace;
+}
+.luqi-devsecnet .draft-digest {
+  overflow-wrap: anywhere;
+}
+.luqi-devsecnet .draft-workflow {
+  margin-bottom: 32px;
+  overflow-wrap: anywhere;
+}

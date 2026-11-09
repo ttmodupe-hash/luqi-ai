@@ -36,6 +36,7 @@ describe("public static-file security boundary", () => {
     "/service-account.json", "/credentials.json", "/gcp-key.json",
     "/firebase-adminsdk.json", "/application_default_credentials.json",
     "/aws-credentials.json", "/sa.json", "/private.json", "/private-key.pem",
+    "/assets/sa-province-map-C0FdmDx8.js",
     "/key.json", "/appsettings.json", "/web.config", "/composer.json",
     "/config.json", "/config/app/settings.yaml", "/backup.zip",
     "/index.html.bak", "/phpinfo.php", "/server-status", "/.npmrc",
@@ -87,6 +88,12 @@ describe("public static-file security boundary", () => {
     const response = await server().request(path);
     expect(response.status).toBe(200);
     expect(await response.text()).not.toContain("SYNTHETIC_SECRET_DO_NOT_SERVE");
+  });
+
+  it('keeps the emitted geography filename outside the reserved credential namespace', () => {
+    expect(isSensitivePublicPath('/assets/za-province-geometry-a1B2c3D4.js')).toBe(false);
+    expect(isSensitivePublicPath('/assets/js/za-province-geometry-a1B2c3D4.js')).toBe(false);
+    expect(isSensitivePublicPath('/assets/sa.json')).toBe(true);
   });
 
   it("keeps earlier API handlers working and never returns SPA HTML for a HEAD secret request", async () => {

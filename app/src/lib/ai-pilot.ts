@@ -3,9 +3,11 @@ import { buildPilotInput, PilotInputError } from './pilot-input';
 import type { PilotConversationTurn } from './pilot-conversation';
 import { requestPilotJson, pilotFailureCode } from './pilot-request';
 import { isAfricanRegionCode, type AfricanRegionCode } from '../services/panAfricanSovereignEngine';
+import { RESPONSE_APPROACH_IDS, isResponseApproach, type ResponseApproach } from './response-approach';
 
 const reply = z.object({ status: z.literal('success'), response: z.string().trim().min(1).max(20_000),
-  provider: z.enum(['gemini', 'openai']), provider_model: z.string().min(1).max(100) });
+  provider: z.enum(['gemini', 'openai']), provider_model: z.string().min(1).max(100),
+  response_approach: z.enum(RESPONSE_APPROACH_IDS).optional() });
 export type PilotReply = z.infer<typeof reply>;
 export class PilotChatError extends Error {
   constructor(public code: string) { super('AI trial request failed'); }
@@ -18,10 +20,11 @@ export async function pilotAvailability(signal: AbortSignal, request: typeof fet
 }
 
 /** Caller cancellation plus an independent deadline; never retry a paid POST. */
-export async function askPilot(token: string, prompt: string, signal: AbortSignal, request: typeof fetch = fetch, history: PilotConversationTurn[] = [], regionContext?: AfricanRegionCode, language = 'auto'): Promise<PilotReply> {
+export async function askPilot(token: string, prompt: string, signal: AbortSignal, request: typeof fetch = fetch, history: PilotConversationTurn[] = [], regionContext?: AfricanRegionCode, language = 'auto', approach: ResponseApproach = 'auto'): Promise<PilotReply> {
   const question = prompt.trim();
   if (!token || token.length > 4096 || !question || question.length > 6000) throw new PilotChatError('INVALID_INPUT');
   if (regionContext !== undefined && !isAfricanRegionCode(regionContext)) throw new PilotChatError('INVALID_INPUT');
+  if (!isResponseApproach(approach)) throw new PilotChatError('INVALID_INPUT');
   try {
     // Same normalization and complete input limit as the server and UI counter.
     buildPilotInput(question, language, history);
@@ -31,11 +34,14 @@ export async function askPilot(token: string, prompt: string, signal: AbortSigna
       // Only explicit, user-reviewed conversation turns may be included.
       // Never attach private notes, account email or saved history automatically.
       body: JSON.stringify({ user_input: question, ...(language !== 'auto' ? { language } : {}), ...(history.length ? { history } : {}),
-        ...(regionContext && regionContext !== 'PAN_AFRICAN_AU' ? { regionContext } : {}) }),
+        ...(regionContext && regionContext !== 'PAN_AFRICAN_AU' ? { regionContext } : {}),
+        ...(approach !== 'auto' ? { approach } : {}) }),
     });
     if (response.status === 401) throw new PilotChatError('AUTH_REQUIRED');
     if (!response.ok) throw new PilotChatError(pilotFailureCode(response.status, response.body));
-    return reply.parse(response.body);
+    const confirmed = reply.parse(response.body);
+    if (approach !== 'auto' && confirmed.response_approach !== approach) throw new PilotChatError('AI_RESPONSE_INVALID');
+    return confirmed;
   } catch (error) {
     if (error instanceof PilotInputError) throw new PilotChatError(error.code);
     if (error instanceof PilotChatError) throw error;

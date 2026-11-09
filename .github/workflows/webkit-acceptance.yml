@@ -46,6 +46,9 @@ jobs:
         run: npm run build
       - name: Verify resolved loading policy and emitted public entrypoint
         run: node scripts/verify-module-loading.mjs
+      - name: Preflight draft execution, completed ZIP download and continued editing
+        if: matrix.shard == 1
+        run: npx --no-install playwright test browser-tests/executable-draft.spec.ts --config=playwright.webkit.config.ts --workers=1
       - name: Run existing account, trial and tool journeys on desktop and iPhone-sized WebKit
         # All desktop/iPhone tests remain included, now across four independent
         # shards with one WebKit worker per runner to eliminate the concurrent

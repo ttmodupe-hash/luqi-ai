@@ -13,6 +13,9 @@ export default function AccountPasswordForm({ token, email, disabled, onBusyChan
   const active = useRef<AbortController | null>(null), epoch = useRef(0);
   useEffect(() => () => { epoch.current++; active.current?.abort(); }, []);
   const cooling = cooldown > 0;
+  const nextPasswordValid = validAccountPassword(next);
+  const nextPasswordsMatch = confirmation.length > 0 && next === confirmation;
+  const changeReady = Boolean(current) && nextPasswordValid && nextPasswordsMatch;
   useEffect(() => {
     if (!cooling) return;
     const timer = setInterval(() => setCooldown(value => Math.max(0, value - 1)), 1000);
@@ -62,10 +65,18 @@ export default function AccountPasswordForm({ token, email, disabled, onBusyChan
           value={current} onChange={setCurrent} disabled={disabled || busy} />
         <PasswordField label="New password" autoComplete="new-password" maxLength={72} describedBy="new-password-help"
           value={next} onChange={setNext} disabled={disabled || busy} />
-        <p id="new-password-help" className="text-sm text-slate-300">At least 12 characters and at most 72 UTF-8 bytes. Choose a unique password. You will need to sign in again.</p>
+        <div id="new-password-help" className="text-sm text-slate-300 space-y-1" aria-live="polite">
+          <p>Use at least 12 characters and at most 72 UTF-8 bytes. Choose a unique password. You will need to sign in again.</p>
+          <p>{next.length === 0 ? '○ Enter a new password.' : nextPasswordValid
+            ? '✓ New password meets the length requirement.'
+            : '✕ New password must be at least 12 characters and no more than 72 UTF-8 bytes.'}</p>
+          <p>{confirmation.length === 0 ? '○ Re-enter the new password to confirm it.' : nextPasswordsMatch
+            ? '✓ New passwords match.'
+            : '✕ New passwords do not match.'}</p>
+        </div>
         <PasswordField label="Confirm new password" autoComplete="new-password" maxLength={72} describedBy="new-password-help"
           value={confirmation} onChange={setConfirmation} disabled={disabled || busy} />
-        <button className="luqi-primary" disabled={cooling}>{busy ? 'Changing password…' : 'Change password and sign out'}</button>
+        <button className="luqi-primary" disabled={cooling || !changeReady}>{busy ? 'Changing password…' : 'Change password and sign out'}</button>
       </fieldset>
       {(notice || cooling) && <p role="status">{notice}{cooling && <> Wait {cooldown} seconds before trying again.</>}</p>}
     </form>}

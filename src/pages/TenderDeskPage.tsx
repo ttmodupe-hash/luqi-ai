@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
-import {Link} from 'react-router';
 import {TenderOriginalForms} from '../components/TenderOriginalForms';
+import {TenderWatchNotices} from '../components/TenderWatchNotices';
+import {TenderOpportunityWorkspace,type TenderDeskView} from '../components/TenderOpportunityWorkspace';
 import {PROVINCES,type ProvinceCode} from '../lib/opportunity-sources';
 import {CURATED_TENDER_NOTICES,TENDER_OFFICIAL_SOURCES,TENDER_REVIEWED_ON,
  filterTenders,tenderReviewFresh,tenderStatus,type TenderNotice,type TenderMethod} from '../lib/tender-sources';
@@ -27,6 +28,7 @@ function ReviewItem({label,checked,onChange}:{label:string;checked:boolean;onCha
  </label>;
 }
 export default function TenderDeskPage(){
+ const [deskView,setDeskView]=useState<TenderDeskView>('discover');
  const [province,setProvince]=useState<ProvinceCode|null>(null);
  const [query,setQuery]=useState('');
  const [showHistory,setShowHistory]=useState(false);
@@ -77,6 +79,7 @@ export default function TenderDeskPage(){
   }finally{clearTimeout(timer);setCheckingSources(false);}
  }
  function pick(notice:TenderNotice){
+  setDeskView('prepare');
   setSelectedId(notice.id);
   setDraft({...EMPTY_TENDER_DRAFT,tenderReference:notice.reference||''});
   setApprovals({...EMPTY_TENDER_APPROVALS});
@@ -103,19 +106,10 @@ export default function TenderDeskPage(){
   setDownloaded(approved?'Reviewed preparation pack exported. Nothing was sent to any tender portal.':
     'Draft worksheet saved on this device. It is not approved or submitted.');
  }
- return <main className="mx-auto max-w-6xl space-y-6 px-3 py-7 text-slate-100 sm:px-6 sm:py-10" aria-labelledby="tender-desk-heading">
-  <header className="space-y-3">
-   <p className="text-sm font-semibold uppercase tracking-wide text-cyan-300">Luqi tender desk · South Africa first · Free local preparation</p>
-   <h1 id="tender-desk-heading" className="text-3xl font-bold sm:text-4xl">Find tenders. Prepare with Luqi. You stay in control.</h1>
-   <p className="max-w-4xl text-slate-200">Discover official public procurement notices and prepare a bidder-controlled draft worksheet for the real tender documents. Luqi automates preparation steps on your device; your review, declarations, pricing, authorisation and final submission cannot be bypassed.</p>
-   <p className="text-sm text-amber-200">No government affiliation or automatic tender submission. Original-form assistance below fills supported supplier contact fields on one verified Treasury DOCX; other PDF, DOCX and Excel originals support limited local inspection. All remaining official fields and signatures need your completion. Never enter passwords, OTPs, bank details, identity numbers or tax PINs into Luqi.</p>
-   <div className="flex flex-wrap gap-4 text-sm">
-    <Link to="/opportunities" className="text-cyan-200 underline">Jobs and bursaries</Link>
-    <Link to="/business-desk" className="text-cyan-200 underline">Business quotation tools</Link>
-    <Link to="/chat" className="text-cyan-200 underline">Ask Luqi for general business advice</Link>
-   </div>
-  </header>
-  <TenderOriginalForms/>
+ return <main className="tender-desk-page mx-auto max-w-6xl space-y-6 px-3 py-7 text-slate-100 sm:px-6 sm:py-10" aria-labelledby="tender-desk-heading">
+  <TenderOpportunityWorkspace now={now} view={deskView} onViewChange={setDeskView}/>
+  <div className="tw-legacy-panels space-y-6" hidden={deskView!=='sources'}>
+  <TenderWatchNotices now={now}/>
   <section aria-label="Official tender discovery sources" className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Find tenders through official publishers</h2>
    <p className="text-sm text-slate-300">National Treasury eTenders supports current tender search by province, buyer, category and eSubmission availability. Its dynamic listing changes: the curated notices below are dated examples, not a live inventory or guarantee of availability.</p>
@@ -188,6 +182,9 @@ export default function TenderDeskPage(){
    {sourceMessage&&<p role="status" className="text-sm">{sourceMessage}</p>}
    {sourceMonitor&&<p className="text-xs text-slate-300">Checked: {new Date(sourceMonitor.checkedAt).toLocaleString('en-ZA')}. A page matching a tender number is not proof of an open bid or a tender award.</p>}
   </section>
+  </div>
+  <div className="tw-prepare-panel space-y-6" hidden={deskView!=='prepare'}>
+  <TenderOriginalForms/>
   <section aria-label="Luqi assisted tender preparation" className="space-y-4 rounded-xl border border-cyan-700 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Luqi bid-preparation assistant</h2>
    <p className="text-sm text-slate-300">Preparation automation: source reference, field-by-field draft, requirements hints, checklist, missing-item checks and locally downloadable worksheet. The applicant must perform meaningful approvals—not a token “10%” click. No remote submission connection exists in this release.</p>
@@ -273,6 +270,7 @@ export default function TenderDeskPage(){
       Open original authority's tender instructions for final manual submission</a></div>
    </>}
   </section>
-  <footer className="text-sm text-slate-300">Source listings reviewed {TENDER_REVIEWED_ON}. Luqi does not store or send the data entered in this page. No tender application has been sent.</footer>
+  </div>
+  <footer hidden={deskView!=='sources'} className="text-sm text-slate-300">Legacy source listings reviewed {TENDER_REVIEWED_ON}. Luqi does not store or send the data entered in this page. No tender application has been sent.</footer>
  </main>;
 }

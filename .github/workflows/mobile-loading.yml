@@ -41,19 +41,33 @@ jobs:
             const routePattern = /\bpath="([^"]+)"/g;
             const iframePattern = /\bsrc="(\/labs\/[^"]+)"/g;
             const matches = (value, pattern) => [...value.matchAll(pattern)].map(match => match[1]).sort();
-            // Every original route and exact local lab iframe remains required.
-            // Academy adds only /academy and /cert-academy/legacy in both trees.
-            // No wildcard, removal or duplicate route is accepted by this guard.
+            // Preserve every existing route. The packaged app additionally gains
+            // the already-public, provider-free consumer-rights page, reviewed
+            // comparative evidence source guide and
+            // reviewed municipal services, township enterprise guides, Chat, Ask, Login and payment-availability
+            // entries. The reviewed Luqi PWA install and download-alias routes
+            // are also allowed. Local Pulse adds reviewed /local-pulse and /news source-directory routes.
+            // /space-science adds provider-free calculations and reviewed publisher links.
+            // /near-me adds optional on-device province discovery and deliberate external map searches.
+            // /business-connect/preview is the owner-requested, server-gated private design preview.
+            // Guest /try has a separate server-enforced monthly allowance. Gated P2P routes (including same-shell /chat/people) and the packaged private admin
+            // entry, consented visual tutor and lazy Spatial Vision Lab are reviewed additions; every older
+            // route and iframe stays required. Tool 022 adds /devsecnet and /tool-022;
+            // reviewed Tool 024 adds only /launch-control and /tool-024.
+            // Academy adds /academy and /cert-academy/legacy, keeping original
+            // /cert-academy and /exam-prep interactive routes intact.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/academy', '/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/consumer-rights', '/download', '/drive', '/driver-rights', '/install', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
-              : ['/academy', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/download', '/drive', '/driver-rights', '/install', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
+              ? ['/academy', '/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/consumer-rights', '/devsecnet', '/download', '/drive', '/driver-rights', '/install', '/launch-control', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/quantum-lab', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/tool-022', '/tool-024', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
+              : ['/academy', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/devsecnet', '/download', '/drive', '/driver-rights', '/install', '/launch-control', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/quantum-lab', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/tool-022', '/tool-024', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
-            assert.deepEqual(routes.filter(route => !approved.includes(route)), matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
-            assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern), 'Existing iframe targets changed: ' + path);
+            assert.deepEqual(routes.filter(route => !approved.includes(route)),
+              matches(before, routePattern), 'Existing routes changed or an unapproved route was added: ' + path);
+            assert.deepEqual(matches(after, iframePattern), matches(before, iframePattern),
+              'Existing iframe targets changed: ' + path);
           }
-          console.log('All legacy routes and iframe targets preserved; exact reviewed additions only.');
+          console.log('All legacy routes and iframe targets preserved; reviewed Chat, Luqi PWA install and payment availability routes added.');
           JS
       - name: Compare eager and deferred routers using the same current dependencies and source
         shell: bash
