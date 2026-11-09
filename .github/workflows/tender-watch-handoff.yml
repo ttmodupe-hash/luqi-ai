@@ -18,6 +18,7 @@ on:
       - tests/tender-watch-notices.test.mjs
       - browser-tests/tender-watch-notices.spec.ts
       - .github/workflows/tender-watch-handoff.yml
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -25,7 +26,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   pending-document-boundaries:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
+    # The locked Playwright 1.58.2 browser installer does not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -53,6 +56,39 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tender-watch-handoff-evidence
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+  live-public-tender-desk:
+    # Explicit release-owner dispatch only; no scheduled probes or publication.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify the exact publicly deployed SHA, HTTPS and safe account entry
+        env:
+          LUQI_VERIFY_PUBLIC: 'true'
+          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+        run: node scripts/verify-custom-domain.mjs
+      - name: Install existing locked browser dependencies
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Install supported browser
+        run: npx --no-install playwright install --with-deps chromium --only-shell
+      - name: Verify the real customer route with no accounts, API calls or submissions
+        env:
+          LUQI_BROWSER_BASE_URL: https://app.luqi-ai.com
+        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts
+      - name: Preserve public-route browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tender-watch-live-evidence
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
