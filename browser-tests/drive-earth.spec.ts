@@ -6,11 +6,20 @@ test('satellite context is opt-in, clearable, bounded and mobile-friendly', asyn
   let requests = 0;
   await page.route('https://eonet.gsfc.nasa.gov/**', async route => {
     requests += 1;
+    expect(route.request().method()).toBe('GET');
+    const headers = await route.request().allHeaders();
+    expect(headers.referer).toBeUndefined();
+    expect(headers.cookie).toBeUndefined();
     expect(route.request().url()).not.toContain('31.123456');
     await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ events: [] }) });
   });
   await page.route('https://gibs.earthdata.nasa.gov/**', async route => {
     requests += 1;
+    expect(route.request().method()).toBe('GET');
+    const headers = await route.request().allHeaders();
+    expect(headers.referer).toBeUndefined();
+    expect(headers.cookie).toBeUndefined();
+    expect(headers.origin).toBe('http://127.0.0.1:4173');
     const url = new URL(route.request().url());
     expect(url.searchParams.get('WIDTH')).toBe('640');
     expect(url.searchParams.get('LAYERS')).toBe('MODIS_Terra_CorrectedReflectance_TrueColor');
