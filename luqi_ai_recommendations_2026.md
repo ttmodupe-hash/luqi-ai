@@ -326,3 +326,15 @@ Official guide sources were retrieved on 9 November 2026: gov.za political-party
 Input provenance: Pasted text(6).txt — SHA-256 c908504cf9d167e0e3a1923cf11d9061c3faa37aad22969c061339e2cee6bc0f.
 
 Input provenance: Pasted text (2)(1).txt — SHA-256 ef7a8eac956d1e99fd799378ad6343667cbfaa403654f2736e36ab77172b8050.
+
+## Civic Atlas — visual dashboard implementation, 9 November 2026
+
+The user's IEC dashboard image is the design reference for a substantial visual upgrade at `/#/chat?civic=1`. The new emerald/ink interface puts a real South Africa province map beside a compact, searchable evidence table, linked record inspector and source-page view. Collection indicators and topic counts derive from the five existing educational records; they are not election statistics. Selecting a province highlights actual licensed geometry and opens its verification context. It does not turn national explanations into local findings. Zoom, reset, keyboard map selection, native province selection, topic controls and empty-result recovery are functional.
+
+The full evidence cards and contextual Luqi Chat remain available. The long official verification guide moves into an accessible disclosure. The dashboard uses the full content width; contacts remain on the page below it and remain available from navigation. Styles are scoped to this screen, preserve visible focus, respect reduced motion and adapt down to 320px. Root and app source mirrors remain identical.
+
+The map reuses the existing geoBoundaries/OCHA/Municipal Demarcation Board 2020 province geometry and its CC BY attribution. No new package, paid map provider, geolocation request, tracking, database or AI call is introduced. No provider flag, budget, model, credential, quota or billing approval changes. This design upgrade requires no new paid service.
+
+Review windows remain authoritative: expired records show recheck status, and the existing AI expiry gate remains in force. This edition contains no live election feed, party support percentages, ward outcomes or current coalition/councillor claims. Do not copy the reference image's election numbers. Future live coverage requires separately sourced, dated records and refresh rules.
+
+Acceptance adds tests for linked map/menu selection, national/local scope, zoom/reset, publisher search, combined filters, empty recovery, inspector updates, source links, expiry on focus, source-tree parity and browser navigation to the full record. Existing consent, authentication, privacy, source-provenance and 320px journeys remain release gates. The website release still requires passing exact-head checks and a matching deployed commit; no whole-site accessibility certification or live-data coverage is implied by the redesign.
