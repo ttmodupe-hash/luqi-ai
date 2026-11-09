@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e5cae8a8d28d08526b044d75f5e7a3023d1cb3a5
+          ref: 1d553027e5612cc9d716787934840ecf20f777cc
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -62,7 +62,7 @@ jobs:
       - name: Read exact public revision, visible integration and actual NASA responses
         env:
           LUQI_BROWSER_BASE_URL: https://app.luqi-ai.com
-          LUQI_EXPECTED_SHA: e5cae8a8d28d08526b044d75f5e7a3023d1cb3a5
+          LUQI_EXPECTED_SHA: 1d553027e5612cc9d716787934840ecf20f777cc
           LUQI_DRIVE_LIVE: '1'
         run: npx --no-install playwright test --config playwright.drive-earth.config.ts browser-tests/drive-earth-live.spec.ts
       - uses: actions/upload-artifact@v4
