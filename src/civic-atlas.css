@@ -52,7 +52,7 @@
 .civic-panel-heading .civic-eyebrow { font-size:8px; }
 .civic-chip { display:inline-flex; align-items:center; gap:6px; font-size:9px; border:1px solid #46634c; background:#1a3226; color:#c8eacb; padding:6px 8px; border-radius:5px; white-space:nowrap; }
 .civic-map-toolbar { min-height:45px; display:flex; align-items:center; justify-content:space-between; padding:0 15px; border-top:1px solid var(--ca-line); border-bottom:1px solid var(--ca-line); background:#172b22; }
-.civic-map-toolbar label { display:flex; align-items:center; gap:4px; min-width:0; color:var(--ca-mint); }
+.civic-map-toolbar .civic-province-field { display:flex; align-items:center; gap:4px; min-width:0; color:var(--ca-mint); }
 .civic-atlas select { font:inherit; color:var(--ca-text); background:#172b22; cursor:pointer; }
 .civic-map-toolbar select { min-height:48px; max-width:210px; padding:5px; font-size:11px; border:0; }
 .civic-map-coordinates { font:8px ui-monospace,SFMono-Regular,Consolas,monospace; color:#b3c7ba; white-space:nowrap; }

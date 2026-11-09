@@ -26,12 +26,12 @@ export default function CivicAtlasMap({ province, onProvince }: Props) {
       <span className="civic-chip"><span className="civic-dot" /> Reference map</span>
     </header>
     <div className="civic-map-toolbar">
-      <label><MapPin size={14} aria-hidden="true" /><span className="civic-sr-only">Explore a province</span>
-        <select value={province ?? ''} onChange={event => onProvince((event.target.value || null) as ProvinceCode | null)}>
+      <div className="civic-province-field"><MapPin size={14} aria-hidden="true" /><label htmlFor={`${id}-province`} className="civic-sr-only">Explore a province</label>
+        <select id={`${id}-province`} value={province ?? ''} onChange={event => onProvince((event.target.value || null) as ProvinceCode | null)}>
           <option value="">All South Africa</option>
           {PROVINCES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
-      </label>
+      </div>
       <span className="civic-map-coordinates" aria-hidden="true">ZA · 30° S / 25° E</span>
     </div>
     <div className="civic-map-canvas">
