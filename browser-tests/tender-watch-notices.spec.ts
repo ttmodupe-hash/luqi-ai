@@ -19,7 +19,7 @@ test('watch handoff shows pending-document advertisements with working 320px fil
  page.on('request',req=>{
   if(req.method()!=='GET'||/\/api\/v1\/luqi-core|dikgatlong\.gov\.za/.test(req.url()))unsafeRequests.push(req.url());
  });
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  const watch=page.getByRole('region',{name:'Upcoming procurement · documents pending'});
  await expect(watch.getByRole('status',{name:'Matched watch notice count'})).toContainText('2 advertisements');
  await expect(watch.getByText('Documents pending · not bid-ready',{exact:true})).toHaveCount(2);
@@ -56,7 +56,7 @@ test('watch handoff shows pending-document advertisements with working 320px fil
 
 test('calendar passage requires source review and never manufactures full-document verification',async({page})=>{
  await page.clock.setFixedTime(new Date('2026-11-13T10:00:00+02:00'));
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  const watch=page.getByRole('region',{name:'Upcoming procurement · documents pending'});
  await expect(watch.getByText('Source recheck required · not bid-ready',{exact:true})).toHaveCount(2);
  await expect(watch.locator('button, form, input[type="submit"]')).toHaveCount(0);
@@ -64,7 +64,7 @@ test('calendar passage requires source review and never manufactures full-docume
 
 test('exact compulsory briefing cutoff hides the notice unless history is deliberately requested',async({page})=>{
  await page.clock.setFixedTime(new Date('2026-11-20T10:00:00+02:00'));
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  const watch=page.getByRole('region',{name:'Upcoming procurement · documents pending'});
  await expect(watch.getByRole('article')).toHaveCount(1);
  await expect(watch.getByRole('heading',{name:/T01\/2026\/27/})).toHaveCount(0);
@@ -75,7 +75,7 @@ test('exact compulsory briefing cutoff hides the notice unless history is delibe
 
 test('closed notices stay out of default results and display explicit history labels',async({page})=>{
  await page.clock.setFixedTime(new Date('2026-12-19T09:00:00+02:00'));
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  const watch=page.getByRole('region',{name:'Upcoming procurement · documents pending'});
  await expect(watch.getByRole('article')).toHaveCount(0);
  await watch.getByLabel('Include closed watch notices and past compulsory briefings').check();

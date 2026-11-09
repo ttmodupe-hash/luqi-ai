@@ -13,14 +13,17 @@ test('local install diagnostics work at 320px with no writes or private URLs',as
 });
 test('a tender left open across its deadline becomes historical without losing selected draft',async({page})=>{
  await page.clock.install({time:new Date('2026-11-02T08:58:00Z')});
- await page.goto('/#/tenders');await page.getByLabel('Search tender notices').fill('regional and continental');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();await page.getByLabel('Search tender notices').fill('regional and continental');
  const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Study on enhancing MSME access to regional and continental markets'})});
  await expect(card).toBeVisible();await card.getByRole('button',{name:'Prepare bidder worksheet for this tender'}).click();
  await page.getByLabel('Bidder trading name').fill('Synthetic example');
  await page.clock.fastForward(121000);
+ await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  await expect(card).toHaveCount(0);
+ await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
  await expect(page.getByLabel('Bidder trading name')).toHaveValue('Synthetic example');
  await expect(page.getByRole('button',{name:'Export human-approved preparation pack'})).toBeDisabled();
+ await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  await page.getByLabel(/Show expired tenders and those with a past compulsory briefing/).check();
  await expect(card).toContainText('Published closing time passed. Historical only.');
 });

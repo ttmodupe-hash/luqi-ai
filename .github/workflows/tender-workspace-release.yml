@@ -1,21 +1,57 @@
 name: Luqi Tender Workspace Release
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/TenderOpportunityWorkspace.tsx'
+      - '**/tender-opportunity-workspace.*'
+      - '**/TenderDeskPage.tsx'
+      - 'tests/tender*'
+      - 'browser-tests/tender*'
+      - '.github/workflows/tender-workspace-release.yml'
   push:
-    branches: [release/tender-watch-pending-documents-20261109]
+    branches: [main]
+    paths:
+      - '**/TenderOpportunityWorkspace.tsx'
+      - '**/tender-opportunity-workspace.*'
+      - '**/TenderDeskPage.tsx'
+      - 'tests/tender*'
+      - 'browser-tests/tender*'
+      - '.github/workflows/tender-workspace-release.yml'
 permissions:
   contents: read
+concurrency:
+  group: tender-workspace-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  exact-source-workspace:
+  customer-value-and-safety:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Preserve exact tracked source for release engineering
-        run: git archive --format=tar --output=/tmp/luqi-tender-source.tar HEAD
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          name: luqi-tender-source
-          path: /tmp/luqi-tender-source.tar
-          retention-days: 1
+          node-version: '22'
+      - name: Check evidence, exact cutoffs, truthful value filtering and public-ID storage
+        run: node --experimental-strip-types --test tests/tender-opportunity-workspace.test.mjs tests/tender-watch-notices.test.mjs
+      - name: Install locked dependencies, without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Type-check the actual integrated page
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/pages/TenderDeskPage.tsx app/src/pages/TenderDeskPage.tsx
+      - name: Preserve original forms, deadline checks and applicant approvals
+        run: npx --no-install vitest run tests/tender-sources.test.ts tests/tender-workflow.test.ts tests/tender-desk-page.test.tsx tests/tender-deadline-ui.test.tsx tests/tender-original-forms.test.tsx tests/tender-original-review.test.ts
+      - name: Build the production frontend
+        run: npx --no-install vite build
+      - name: Install test browser
+        run: npx --no-install playwright install --with-deps chromium --only-shell
+      - name: Test customer discovery, source guidance, shortlist, downloads and original-form workflows
+        run: npx --no-install playwright test browser-tests/tender-opportunity-workspace.spec.ts browser-tests/tender-desk.spec.ts browser-tests/tender-watch-notices.spec.ts browser-tests/tender-original-forms.spec.ts browser-tests/tender-guidance.spec.ts browser-tests/tender-install-boundaries.spec.ts
+      - name: Preserve screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tender-workspace-acceptance
+          path: test-results/
+          retention-days: 7

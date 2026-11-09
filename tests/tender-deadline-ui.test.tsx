@@ -11,6 +11,7 @@ it('rechecks the clock at export before a timer can repaint an expired approval'
  const create=vi.fn(()=> 'blob:test');vi.stubGlobal('URL',class extends URL {static createObjectURL=create;static revokeObjectURL=vi.fn();});
  const network=vi.fn();vi.stubGlobal('fetch',network);
  render(<MemoryRouter><TenderDeskPage/></MemoryRouter>);
+ fireEvent.click(screen.getByRole('button',{name:'Sources & history',exact:true}));
  const card=screen.getByRole('heading',{name:/Contractor-development mentorship/}).closest('article')!;
  fireEvent.click(within(card).getByRole('button',{name:'Prepare bidder worksheet for this tender'}));
  for(const [label,value] of [

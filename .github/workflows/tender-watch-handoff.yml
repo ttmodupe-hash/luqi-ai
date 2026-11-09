@@ -52,7 +52,7 @@ jobs:
       - name: Install browser for synthetic acceptance
         run: npx --no-install playwright install --with-deps chromium --only-shell
       - name: Check mobile filters, original links, keyboard disclosure and expiry
-        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts
+        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts browser-tests/tender-opportunity-workspace.spec.ts
       - name: Preserve browser evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -97,7 +97,7 @@ jobs:
       - name: Verify the real customer route with no accounts, API calls or submissions
         env:
           LUQI_BROWSER_BASE_URL: https://app.luqi-ai.com
-        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts
+        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts browser-tests/tender-opportunity-workspace.spec.ts
       - name: Preserve public-route browser evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

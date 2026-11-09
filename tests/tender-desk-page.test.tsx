@@ -7,10 +7,10 @@ import TenderDeskPage from '../src/pages/TenderDeskPage';
 const req=vi.fn();
 beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-29T08:00:00+02:00'));req.mockReset();vi.stubGlobal('fetch',req)});
 afterEach(()=>{cleanup();vi.useRealTimers();vi.unstubAllGlobals()});
-const show=()=>render(<MemoryRouter><TenderDeskPage/></MemoryRouter>);
+const show=()=>{const result=render(<MemoryRouter><TenderDeskPage/></MemoryRouter>);fireEvent.click(screen.getByRole('button',{name:'Sources & history',exact:true}));return result;};
 it('lists official current tender sources with no login or paid API calls',()=>{
  show();
- expect(screen.getByRole('heading',{name:'Find tenders. Prepare with Luqi. You stay in control.'})).toBeTruthy();
+ expect(screen.getByRole('heading',{name:'Find work your business can deliver.'})).toBeTruthy();
  expect(screen.getAllByRole('link',{name:'Open official source'}).length).toBeGreaterThanOrEqual(6);
  expect(screen.getByText('PS-F 02-2027')).toBeTruthy();
  expect(req).not.toHaveBeenCalled();
