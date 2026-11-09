@@ -2,6 +2,16 @@ import {test,expect} from '@playwright/test';
 
 test.beforeEach(async({page})=>{
  await page.clock.setFixedTime(new Date('2026-11-09T09:00:00+02:00'));
+ if(process.env.LUQI_BROWSER_BASE_URL){
+  // Explicit live-release acceptance may read only the canonical public UI.
+  // Block APIs, external sites and every mutation before a request is sent.
+  expect(process.env.LUQI_BROWSER_BASE_URL).toBe('https://app.luqi-ai.com');
+  await page.route('**/*',route=>{
+   const req=route.request(),url=new URL(req.url());
+   if(!['GET','HEAD'].includes(req.method())||url.origin!=='https://app.luqi-ai.com'||url.pathname.startsWith('/api/'))return route.abort('blockedbyclient');
+   return route.continue();
+  });
+ }
 });
 
 test('watch handoff shows pending-document advertisements with working 320px filters and no applicant requests',async({page},testInfo)=>{
