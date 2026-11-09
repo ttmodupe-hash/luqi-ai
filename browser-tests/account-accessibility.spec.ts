@@ -34,6 +34,23 @@ test('signup confirmation and mode changes preserve masking and password-manager
   await expect(confirm).toHaveCount(0);
 });
 
+test('signup mismatch is announced before submission and clears on a match at 320px', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/join');
+  await page.getByLabel('Password', { exact: true }).fill(fixture);
+  await page.getByLabel('Confirm password', { exact: true }).fill('different-synthetic-fixture');
+  const create = page.getByRole('button', { name: 'Create account', exact: true });
+  await expect(create).toBeDisabled();
+  await expect(page.getByRole('status').filter({ hasText: 'The passwords do not match.' })).toBeVisible();
+  await page.getByLabel('Confirm password', { exact: true }).fill(fixture);
+  await expect(page.getByText('✓ Passwords match.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'The passwords do not match.' })).toHaveCount(0);
+  await expect(create).toBeEnabled();
+  expect(posts).toEqual([]);
+});
+
 test('recovery guidance opens by keyboard and never claims to send a reset', async ({ page }) => {
   const requests: string[] = [];
   await page.route('**/api/**', async route => { requests.push(route.request().url()); await route.abort(); });
@@ -79,6 +96,9 @@ test('password change uses the same controls without making an automatic change 
     await page.getByRole('button', { name: `Show ${label.toLowerCase()}`, exact: true }).click();
     await expect(field).toHaveAttribute('type', 'text');
   }
+  await page.getByLabel('Confirm new password', { exact: true }).fill('different-synthetic-fixture');
+  await expect(page.getByRole('button', { name: 'Change password and sign out', exact: true })).toBeDisabled();
+  await expect(page.getByRole('status').filter({ hasText: 'The new passwords do not match.' })).toBeVisible();
   await page.getByRole('button', { name: 'Close password settings', exact: true }).click();
   await page.getByRole('button', { name: 'Change password', exact: true }).click();
   for (const label of ['Current password', 'New password', 'Confirm new password']) {

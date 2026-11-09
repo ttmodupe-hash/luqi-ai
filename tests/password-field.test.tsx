@@ -128,10 +128,11 @@ describe('account-form integration', () => {
     fireEvent.change(input('New password'), { target: { value: 'New-Unique-Password-2026!' } });
     expect(screen.getByText('✓ New password meets the length requirement.')).toBeTruthy();
     fireEvent.change(input('Confirm new password'), { target: { value: 'Different-password' } });
-    expect(screen.getByText('✕ New passwords do not match.')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe('The new passwords do not match.');
     expect(submit.disabled).toBe(true);
     fireEvent.change(input('Confirm new password'), { target: { value: 'New-Unique-Password-2026!' } });
     expect(screen.getByText('✓ New passwords match.')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(submit.disabled).toBe(false);
   });
   it('applies the same controls to all password-change fields and clears them on close', () => {

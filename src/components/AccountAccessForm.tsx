@@ -88,14 +88,14 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={busy}
         describedBy={mode === 'signup' ? 'account-password-help' : undefined} />
       {mode === 'signup' && <>
-        <div id="account-password-help" className="luqi-access-help" aria-live="polite">
+        <div id="account-password-help" className="luqi-access-help">
           <p>Use at least 12 characters and at most 72 UTF-8 bytes. A unique password from a password manager is best.</p>
-          <p>{password.length === 0 ? '○ Enter a password.' : signupPasswordValid
+          <p aria-live="polite">{password.length === 0 ? '○ Enter a password.' : signupPasswordValid
             ? '✓ Password meets the length requirement.'
             : '✕ Password must be at least 12 characters and no more than 72 UTF-8 bytes.'}</p>
-          <p>{confirmation.length === 0 ? '○ Re-enter your password to confirm it.' : signupPasswordsMatch
+          <p aria-live="polite" role={confirmation.length > 0 && !signupPasswordsMatch && !notice && !cooling ? 'status' : undefined}>{confirmation.length === 0 ? '○ Re-enter your password to confirm it.' : signupPasswordsMatch
             ? '✓ Passwords match.'
-            : '✕ Passwords do not match.'}</p>
+            : 'The passwords do not match.'}</p>
         </div>
         <PasswordField label="Confirm password" value={confirmation} onChange={setConfirmation}
           autoComplete="new-password" disabled={busy} describedBy="account-password-help" />
