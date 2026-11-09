@@ -60,3 +60,14 @@ test('study choices stay local and notebook download contains real attempts', as
   const stream=await download.createReadStream();const chunks:Buffer[]=[];for await(const chunk of stream!)chunks.push(Buffer.from(chunk));const data=JSON.parse(Buffer.concat(chunks).toString('utf8'));
   expect(data.attempts).toHaveLength(1);expect(data.attempts[0].correct).toBe(false);expect(data.reflection).toContain('broadcast');expect(data.warning).toContain('not a certificate');
 });
+
+test('legacy certification routes retain interactive practice while Academy is additive', async ({page}) => {
+  for (const route of ['/cert-academy', '/exam-prep']) {
+    await page.goto('/#' + route);
+    await expect(page.getByText('What is the broadcast address and number of usable hosts for the subnet containing the host IP address 172.16.85.45/22?', {exact:true})).toBeVisible();
+    await page.getByRole('button', {name:'Spaced Flashcards', exact:true}).click();
+    await expect(page.getByRole('button', {name:'Flip current flashcard',exact:true})).toBeVisible();
+  }
+  await page.goto('/#/academy');
+  await expect(page.getByRole('heading', {name:'Universal Academy',exact:true})).toBeVisible();
+});

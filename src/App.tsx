@@ -173,9 +173,9 @@ export default function App() {
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/academy" element={<UniversalAcademyPage />} />
-        <RouterRoute path="/cert-academy" element={<UniversalAcademyPage />} />
+        <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
         <RouterRoute path="/cert-academy/legacy" element={<CertMasterPage />} />
-        <RouterRoute path="/exam-prep" element={<UniversalAcademyPage />} />
+        <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
         <RouterRoute path="/ccna" element={<CertMasterPage />} />
         <RouterRoute path="/ccnp" element={<CertMasterPage />} />
         <RouterRoute path="/itil-ai" element={<CertMasterPage />} />
