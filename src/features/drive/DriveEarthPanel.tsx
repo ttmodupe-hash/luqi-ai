@@ -22,8 +22,8 @@ export default function DriveEarthPanel({ target, fix }: { target: PublicPlace; 
     </div>
     <div className="driveEarthSignal" aria-label="On-device motion estimates">
       <div><small>DEVICE POSITION ACCURACY</small><strong>{fix ? `±${Math.ceil(fix.accuracy)} m` : "No current fix"}</strong></div>
-      <div><small>SMOOTHED SPEED · ESTIMATE</small><strong>{motion?.speed != null ? `${motion.speed} km/h` : "—"}</strong></div>
-      <div><small>SMOOTHED COURSE · ESTIMATE</small><strong>{motion?.heading != null ? `${Math.round(motion.heading) % 360}°` : "—"}</strong></div>
+      <div><small>SMOOTHED SPEED · ESTIMATE</small><strong>{motion?.speed != null ? `≈${motion.speed} km/h` : "—"}</strong></div>
+      <div><small>SMOOTHED COURSE · ESTIMATE</small><strong>{motion?.heading != null ? `≈${Math.round(motion.heading) % 360}°` : "—"}</strong></div>
     </div>
     <p className="driveEarthHint">High-accuracy location is requested by “Use phone GPS”. Motion smoothing runs only in this tab. It can lag changes and does not improve the phone’s reported position accuracy or provide lane guidance.</p>
     <EarthContext key={target.id} target={target} />
