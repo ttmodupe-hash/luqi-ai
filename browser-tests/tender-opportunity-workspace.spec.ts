@@ -19,7 +19,11 @@ test('discovery first, useful filters and no invented open-bid badge at 320px',a
  await page.getByRole('button',{name:'Supplies',exact:true}).click();
  await expect(page.locator('.tw-cards article')).toHaveCount(1);
  await page.getByLabel('Published ceiling up to R200,000').check();
- await expect(page.getByText('Ceiling R30 000',{exact:true})).toBeVisible();
+ // The en-ZA grouping separator differs between the pinned browser ICU builds.
+ // Assert the exact R30,000 ceiling and its visibility, not a particular separator.
+ const ceiling=page.locator('.tw-cards .tw-ceiling');
+ await expect(ceiling).toBeVisible();
+ await expect(ceiling).toHaveText(/^Ceiling R30[,\s\u202f]?000$/);
  await page.getByLabel('Delivery province').selectOption('GP');
  await expect(page.getByRole('heading',{name:'No reviewed notice matches yet'})).toBeVisible();
  await expect(page.getByText(/No result here does not mean no opportunities exist/)).toBeVisible();
