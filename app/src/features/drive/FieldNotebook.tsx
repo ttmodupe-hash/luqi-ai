@@ -1,4 +1,19 @@
 import { useEffect, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpRight,
+  BookOpen,
+  Bookmark,
+  Check,
+  Compass,
+  Download,
+  Globe2,
+  MapPin,
+  Plus,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { trails, type Stop } from "./drive-navigation";
 
 const key = "luqi.drive.field-notebook.v1";
@@ -46,7 +61,7 @@ export function formatFieldGuide(stops: Stop[]): string {
   return (
     [
       "LUQI · SOUTH AFRICA FIELD GUIDE",
-      "Written briefings for your saved places, in the order you added them. Source links need internet access.",
+      "Written briefings for your saved places, in your chosen order. Source links need internet access.",
       ...blocks,
     ].join("\n\n━━━━━━━━━━━━━━━━━━━━\n\n") + "\n"
   );
@@ -58,6 +73,9 @@ export default function FieldNotebook({ guide }: { guide: Stop }) {
     () => savedIds() !== null,
   );
   const [receipt, setReceipt] = useState("");
+  const [reading, setReading] = useState<string | null>(null);
+  const [language, setLanguage] =
+    useState<(typeof sections)[number][0]>("english");
   useEffect(() => {
     const sync = (event: StorageEvent) => {
       if (event.key === key || event.key === null) setIds(savedIds() ?? []);
@@ -67,11 +85,8 @@ export default function FieldNotebook({ guide }: { guide: Stop }) {
   }, []);
   const saved = ids.map((id) => catalogue.get(id)!);
   const added = ids.includes(guide.id);
-  function change(id: string, add: boolean) {
-    const current = storageAvailable ? (savedIds() ?? ids) : ids;
-    const next = add
-      ? [...new Set([...current, id])]
-      : current.filter((old) => old !== id);
+  const readingStop = saved.find((s) => s.id === reading);
+  function persist(next: string[]) {
     setIds(next);
     try {
       localStorage.setItem(key, JSON.stringify(next));
@@ -80,6 +95,21 @@ export default function FieldNotebook({ guide }: { guide: Stop }) {
       setStorageAvailable(false);
     }
     setReceipt("");
+  }
+  function move(id: string, direction: -1 | 1) {
+    const next = [...(storageAvailable ? (savedIds() ?? ids) : ids)];
+    const index = next.indexOf(id);
+    const to = index + direction;
+    if (index < 0 || to < 0 || to >= next.length) return;
+    [next[index], next[to]] = [next[to], next[index]];
+    persist(next);
+  }
+  function change(id: string, add: boolean) {
+    const current = storageAvailable ? (savedIds() ?? ids) : ids;
+    const next = add
+      ? [...new Set([...current, id])]
+      : current.filter((old) => old !== id);
+    persist(next);
   }
   async function download() {
     const bytes = new TextEncoder().encode(formatFieldGuide(saved));
@@ -110,48 +140,171 @@ export default function FieldNotebook({ guide }: { guide: Stop }) {
       className="card driveGuide fieldNotebook"
       aria-labelledby="field-guide-title"
     >
-      <div className="driveOverline">TRIP PLANNER</div>
+      <div className="planningCardTop">
+        <span className="driveOverline">
+          <Bookmark size={14} /> YOUR JOURNEY, COLLECTED
+        </span>
+        <span className="drivePill">{saved.length} saved</span>
+      </div>
       <h2 id="field-guide-title" tabIndex={-1}>
         My field guide
       </h2>
-      <p>
-        Choose a place on the map and save its story. Download your collection
-        to read in four languages when coverage drops.
+      <p className="planningIntro">
+        Places worth keeping. Stories that travel with you.
       </p>
-      <div className="notebookAction">
-        <strong>{place(guide)}</strong>
-        <button
-          type="button"
-          className="drivePrimary"
-          disabled={added}
-          onClick={() => change(guide.id, true)}
-        >
-          {added ? "Saved to field guide" : "Save this place"}
-        </button>
+      <div className="notebookSpotlight">
+        <div className="notebookTerrain" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <Compass size={54} strokeWidth={1} />
+          <i>EXPLORE · SAVE · DISCOVER</i>
+        </div>
+        <div className="notebookSpotlightBody">
+          <span className="driveOverline">
+            <MapPin size={12} /> SELECTED ON YOUR MAP
+          </span>
+          <strong className="notebookSpotlightName">{place(guide)}</strong>
+          <p>{guide.province ? guide.name : guide.area}</p>
+          <button
+            type="button"
+            className="drivePrimary"
+            disabled={added}
+            onClick={() => change(guide.id, true)}
+          >
+            {added ? <Check size={16} /> : <Plus size={16} />}
+            {added ? "Saved to field guide" : "Save this place"}
+          </button>
+        </div>
       </div>
-      {saved.length > 0 && (
-        <>
-          <ol>
-            {saved.map((s) => (
-              <li key={s.id}>
-                <span>{place(s)}</span>
+      <div className="notebookCollectionTitle">
+        <h3>Your collection</h3>
+        <span>
+          {saved.length
+            ? "Arrange your reading order"
+            : "Your next discovery starts here"}
+        </span>
+      </div>
+      {saved.length > 0 ? (
+        <ol className="notebookPlaces">
+          {saved.map((s, index) => (
+            <li key={s.id}>
+              <span className="notebookPlaceName">{place(s)}</span>
+              <span className="notebookPlaceIndex" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <small className="notebookPlaceRegion">
+                {s.province ? s.name : s.area}
+              </small>
+              <div className="notebookPlaceActions">
                 <button
                   type="button"
-                  className="driveSecondary"
+                  className="notebookRead"
+                  aria-label={"Read " + place(s)}
+                  aria-expanded={readingStop?.id === s.id}
+                  onClick={() => setReading(reading === s.id ? null : s.id)}
+                >
+                  <BookOpen size={14} /> Read
+                </button>
+                <button
+                  type="button"
+                  className="notebookIconButton"
+                  disabled={index === 0}
+                  aria-label={"Move " + place(s) + " up"}
+                  onClick={() => move(s.id, -1)}
+                >
+                  <ArrowUp size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="notebookIconButton"
+                  disabled={index === saved.length - 1}
+                  aria-label={"Move " + place(s) + " down"}
+                  onClick={() => move(s.id, 1)}
+                >
+                  <ArrowDown size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="notebookIconButton"
                   aria-label={"Remove " + place(s)}
                   onClick={() => change(s.id, false)}
                 >
-                  Remove
+                  <Trash2 size={14} />
                 </button>
-              </li>
-            ))}
-          </ol>
-          <button type="button" className="driveSecondary" onClick={download}>
-            Download field guide (.txt)
-          </button>
-        </>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div className="notebookEmpty">
+          <BookOpen size={25} />
+          <div>
+            <strong>A whole country to discover.</strong>
+            <p>Save a place above to build a guide you can take offline.</p>
+          </div>
+        </div>
       )}
-      <small role="status">
+      {readingStop && (
+        <div
+          className="notebookReader"
+          role="region"
+          aria-label={"Saved guide: " + place(readingStop)}
+        >
+          <label>
+            <Globe2 size={14} /> Reading language
+            <select
+              aria-label="Reading language"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as typeof language)}
+            >
+              {sections.map(([code, title]) => (
+                <option key={code} value={code}>
+                  {title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <h3>{place(readingStop)}</h3>
+          <p
+            lang={
+              {
+                english: "en-ZA",
+                sepitori: "nso",
+                setswana: "tn",
+                isizulu: "zu",
+              }[language]
+            }
+          >
+            {readingStop.descriptions[language]}
+          </p>
+          <a
+            href={readingStop.source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {readingStop.source.label} <ArrowUpRight size={13} />
+          </a>
+        </div>
+      )}
+      <div className="notebookDownload">
+        <div>
+          <Download size={20} />
+          <span>
+            <strong>Your guide, beyond the signal</strong>
+            <small>Four languages · text file · sources included</small>
+          </span>
+        </div>
+        <button
+          type="button"
+          className="driveSecondary"
+          disabled={!saved.length}
+          onClick={download}
+        >
+          <Download size={15} /> Download field guide (.txt)
+        </button>
+      </div>
+      <small className="notebookStorage" role="status">
         {saved.length} {saved.length === 1 ? "place" : "places"} saved ·{" "}
         {storageAvailable
           ? "On this browser"
@@ -162,6 +315,10 @@ export default function FieldNotebook({ guide }: { guide: Stop }) {
           {receipt}
         </small>
       )}
+      <div className="planningFooter">
+        <ShieldCheck size={13} /> Saved on this browser · no account or location
+        needed
+      </div>
     </section>
   );
 }

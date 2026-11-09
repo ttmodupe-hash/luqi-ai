@@ -80,3 +80,32 @@ it("lets a learner distinguish mismatch, damage, replacement and a successful fi
   fireEvent.click(screen.getByRole("button", { name: "Try the fit" }));
   expect(screen.getByRole("status").textContent).toContain("Threads engaged");
 });
+
+it("reorders an existing collection, reads the chosen language and exports the same order after remount", () => {
+  const [a, b] = trails[0].stops;
+  localStorage.setItem(
+    "luqi.drive.field-notebook.v1",
+    JSON.stringify([a.id, b.id]),
+  );
+  const { unmount } = render(<FieldNotebook guide={b} />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Move " + b.area + " up" }),
+  );
+  expect(
+    JSON.parse(localStorage.getItem("luqi.drive.field-notebook.v1")!),
+  ).toEqual([b.id, a.id]);
+  fireEvent.click(screen.getByRole("button", { name: "Read " + b.area }));
+  fireEvent.change(screen.getByLabelText("Reading language"), {
+    target: { value: "setswana" },
+  });
+  const reader = screen.getByRole("region", { name: "Saved guide: " + b.area });
+  expect(reader.textContent).toContain(b.descriptions.setswana);
+  expect(reader.querySelector("a")?.href).toBe(b.source.url);
+  unmount();
+  render(<FieldNotebook guide={a} />);
+  expect(
+    screen.getAllByRole("listitem").map((el) => el.firstChild?.textContent),
+  ).toEqual([b.area, a.area]);
+  const exported = formatFieldGuide([b, a]);
+  expect(exported.indexOf(b.area)).toBeLessThan(exported.indexOf(a.area));
+});

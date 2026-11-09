@@ -418,3 +418,77 @@ it("counts a completed manual retry in the chosen device language and ignores an
   await receiveFixAfter(180000);
   expect(speak).toHaveBeenCalledTimes(3);
 });
+
+import { emptyFuelDraft, estimateFuel } from "../src/features/drive/trip-fuel";
+it("calculates return journeys and equal shares without retaining a stale total for invalid inputs", () => {
+  const draft = {
+    ...emptyFuelDraft(),
+    distance: "600",
+    consumption: "12",
+    price: "30",
+    returning: true,
+    travellers: "4",
+  };
+  expect(estimateFuel(draft)).toEqual({
+    distance: 1200,
+    litres: 144,
+    cost: 4320,
+    perKm: 3.6,
+    perPerson: 1080,
+  });
+  for (const bad of ["", " ", "0", "-1", "Infinity", "NaN", "1e309"]) {
+    expect(estimateFuel({ ...draft, price: bad })).toBeNull();
+  }
+  expect(
+    estimateFuel({ ...draft, distance: "1e308", consumption: "1e308" }),
+  ).toBeNull();
+  expect(estimateFuel({ ...draft, travellers: "0" })?.perPerson).toBeNull();
+});
+it("checks a likely consumption decimal error only after the traveller chooses to correct it", () => {
+  render(<TripFuel />);
+  fireEvent.change(screen.getByLabelText("Road distance (km)"), {
+    target: { value: "600" },
+  });
+  fireEvent.change(screen.getByLabelText("Fuel use (L/100 km)"), {
+    target: { value: "120" },
+  });
+  fireEvent.change(screen.getByLabelText("Pump price (R/L)"), {
+    target: { value: "30" },
+  });
+  expect(
+    screen.getByRole("status", { name: "Trip fuel estimate" }).textContent,
+  ).toContain("720.0 L · R21600.00");
+  expect(screen.getByText("Check your fuel use")).toBeTruthy();
+  expect(
+    screen.getByLabelText("Fuel use (L/100 km)").getAttribute("value"),
+  ).toBe("120");
+  fireEvent.click(screen.getByRole("button", { name: "Use 12.0 L/100 km" }));
+  expect(
+    screen.getByRole("status", { name: "Trip fuel estimate" }).textContent,
+  ).toContain("72.0 L · R2160.00");
+  fireEvent.click(screen.getByRole("button", { name: /Return trip/ }));
+  fireEvent.change(screen.getByLabelText("Travellers"), {
+    target: { value: "4" },
+  });
+  expect(
+    screen.getByRole("status", { name: "Trip fuel estimate" }).textContent,
+  ).toContain("144.0 L · R4320.00");
+  expect(screen.queryByText("Check your fuel use")).toBeNull();
+});
+it("keeps the trip budget when changing corridors without starting GPS", () => {
+  render(
+    <MemoryRouter>
+      <LuqiDrivePage />
+    </MemoryRouter>,
+  );
+  fireEvent.change(screen.getByLabelText("Road distance (km)"), {
+    target: { value: "145" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "N3 · Johannesburg to Durban" }),
+  );
+  expect(
+    (screen.getByLabelText("Road distance (km)") as HTMLInputElement).value,
+  ).toBe("145");
+  expect(navigator.geolocation.watchPosition).not.toHaveBeenCalled();
+});
