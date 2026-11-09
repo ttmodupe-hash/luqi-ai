@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router';
 import {TenderOriginalForms} from '../components/TenderOriginalForms';
+import {TenderWatchNotices} from '../components/TenderWatchNotices';
 import {PROVINCES,type ProvinceCode} from '../lib/opportunity-sources';
 import {CURATED_TENDER_NOTICES,TENDER_OFFICIAL_SOURCES,TENDER_REVIEWED_ON,
  filterTenders,tenderReviewFresh,tenderStatus,type TenderNotice,type TenderMethod} from '../lib/tender-sources';
@@ -115,6 +116,7 @@ export default function TenderDeskPage(){
     <Link to="/chat" className="text-cyan-200 underline">Ask Luqi for general business advice</Link>
    </div>
   </header>
+  <TenderWatchNotices now={now}/>
   <TenderOriginalForms/>
   <section aria-label="Official tender discovery sources" className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Find tenders through official publishers</h2>
