@@ -1,0 +1,21 @@
+name: Luqi Tender Workspace Release
+on:
+  push:
+    branches: [release/tender-watch-pending-documents-20261109]
+permissions:
+  contents: read
+jobs:
+  exact-source-workspace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Preserve exact tracked source for release engineering
+        run: git archive --format=tar --output=/tmp/luqi-tender-source.tar HEAD
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: luqi-tender-source
+          path: /tmp/luqi-tender-source.tar
+          retention-days: 1
