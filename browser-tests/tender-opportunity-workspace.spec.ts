@@ -38,6 +38,9 @@ test('notice-specific requirements, exact source links, clarification and a usef
  await page.getByRole('button',{name:'Understand '+supply,exact:true}).click();
  const detail=page.getByRole('region',{name:'Selected opportunity guide'});
  await expect(detail.getByRole('heading',{name:'Supply uniforms and protective clothing'})).toBeFocused();
+ const titleBox=await detail.getByRole('heading',{name:'Supply uniforms and protective clothing'}).boundingBox();
+ const headerBox=await page.locator('.luqi-header').boundingBox();
+ expect(titleBox?.y).toBeGreaterThanOrEqual(headerBox?headerBox.y+headerBox.height:0);
  await expect(detail.getByText('not stated',{exact:true})).toHaveCount(2);
  await expect(detail.getByRole('link',{name:'Read original · 24 pages'})).toHaveAttribute('href','https://stellenbosch.gov.za/wp-content/uploads/library/2026/RFQ-Uniform-and-Protective-Clothing.pdf');
  await detail.getByRole('button',{name:'Check requirements',exact:true}).click();
@@ -59,6 +62,7 @@ test('notice-specific requirements, exact source links, clarification and a usef
  await expect(detail.getByText(/BOTH tiler and carpenter/)).toBeVisible();
  expect(writes).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ await page.evaluate(()=>window.scrollTo(0,0));
  await page.locator('.tw-workspace').screenshot({path:info.outputPath('tender-requirement-guide.png')});
 });
 test('shortlist persists only public IDs and can be cleared without an account',async({page})=>{
