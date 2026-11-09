@@ -156,7 +156,7 @@ jobs:
             -e LUQI_AI_PROVIDER_ENABLED=false -e LUQI_AI_BILLING_APPROVED=false \
             -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
             "$image" npx --no-install playwright test --config playwright.sessions.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: device-session-browser-failures

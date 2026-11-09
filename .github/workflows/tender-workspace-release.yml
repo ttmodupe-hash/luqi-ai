@@ -50,7 +50,7 @@ jobs:
         run: npx --no-install playwright test browser-tests/tender-opportunity-workspace.spec.ts browser-tests/tender-desk.spec.ts browser-tests/tender-watch-notices.spec.ts browser-tests/tender-original-forms.spec.ts browser-tests/tender-guidance.spec.ts browser-tests/tender-install-boundaries.spec.ts
       - name: Preserve screenshots and failure traces
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: tender-workspace-acceptance
           path: test-results/
