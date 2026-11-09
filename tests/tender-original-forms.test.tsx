@@ -38,7 +38,7 @@ it('names the missing SBD 1 bidder fact before any document fill is requested',a
  render(<TenderOriginalForms/>);await importOriginal();
  const inspectedCalls=run.mock.calls.length;
  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
- const feedback=screen.getByRole('status').textContent||'';
+ const feedback=screen.getByText(/Check supported contact fields before preparing:/).textContent||'';
  expect(feedback).toContain('Name of bidder');
  expect(feedback).toContain('Enter the bidder name');
  expect(feedback).toContain('No original was filled.');
@@ -52,7 +52,7 @@ it('names malformed entered email without a second worker fill or leaked value',
  fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'not-an-address'}});
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
- const feedback=screen.getByRole('status').textContent||'';
+ const feedback=screen.getByText(/Check supported contact fields before preparing:/).textContent||'';
  expect(feedback).toContain('Email address');
  expect(feedback).toContain('Check the email format');
  expect(feedback).toContain('No original was filled.');
