@@ -117,6 +117,23 @@ describe('account-form integration', () => {
     expect(screen.getByRole('link', { name: 'Read account recovery guidance' }).getAttribute('href')).toBe('#/contact');
     expect(request).not.toHaveBeenCalled();
   });
+  it('keeps password change disabled until current, new and confirmation values are ready', () => {
+    render(<AccountPasswordForm token="synthetic-token" email="fixture@example.invalid" disabled={false} onBusyChange={vi.fn()} onSessionEnd={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Change password', exact: true }));
+    const submit = screen.getByRole('button', { name: 'Change password and sign out', exact: true }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+    fireEvent.change(input('Current password'), { target: { value: fixture } });
+    fireEvent.change(input('New password'), { target: { value: 'short' } });
+    expect(screen.getByText(/New password must be at least 12 characters/)).toBeTruthy();
+    fireEvent.change(input('New password'), { target: { value: 'New-Unique-Password-2026!' } });
+    expect(screen.getByText('✓ New password meets the length requirement.')).toBeTruthy();
+    fireEvent.change(input('Confirm new password'), { target: { value: 'Different-password' } });
+    expect(screen.getByText('✕ New passwords do not match.')).toBeTruthy();
+    expect(submit.disabled).toBe(true);
+    fireEvent.change(input('Confirm new password'), { target: { value: 'New-Unique-Password-2026!' } });
+    expect(screen.getByText('✓ New passwords match.')).toBeTruthy();
+    expect(submit.disabled).toBe(false);
+  });
   it('applies the same controls to all password-change fields and clears them on close', () => {
     render(<AccountPasswordForm token="synthetic-token" email="fixture@example.invalid" disabled={false} onBusyChange={vi.fn()} onSessionEnd={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Change password', exact: true }));
