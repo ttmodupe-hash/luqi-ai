@@ -1,11 +1,24 @@
 import { test, expect, type Page } from '@playwright/test';
 async function openDrive(page:Page){await page.goto('/#/drive?trail=heritage');await expect(page.getByRole('heading',{name:'Your civic compass.'})).toBeVisible();}
+/** Keep the tested width. A taller capture viewport prevents fixed app chrome from covering the component screenshot; no content/styles are hidden. */
+async function captureManager(page:Page,path:string){
+ const size=page.viewportSize()!;
+ const component=page.locator('.civicManager');
+ const height=await component.evaluate(el=>el.getBoundingClientRect().height);
+ await page.setViewportSize({width:size.width,height:Math.ceil(height+260)});
+ await component.evaluate(el=>{
+  if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+  window.scrollTo({top:Math.max(0,el.getBoundingClientRect().top+window.scrollY-110),behavior:'instant'});
+ });
+ await component.screenshot({path});
+ await page.setViewportSize(size);
+}
 
 test('digital manager presents working tasks and preserves the complete source library',async({page},info)=>{
  await openDrive(page);const civic=page.locator('.civicManager');
  await expect(civic.getByRole('heading',{name:'The right place. The right records.'})).toBeVisible();
  await expect(civic.locator('.cm-library')).not.toHaveAttribute('open');
- await civic.screenshot({path:info.outputPath('civic-manager.png')});
+ await captureManager(page,info.outputPath('civic-manager.png'));
  await civic.getByRole('button',{name:/Know your representatives/}).click();
  await expect(civic.getByRole('heading',{name:'An election result is a starting point.'})).toBeVisible();
  await civic.getByRole('button',{name:/Explore party positions/}).click();
@@ -18,14 +31,17 @@ test('digital manager presents working tasks and preserves the complete source l
  for(const link of await sources.all()){expect(await link.getAttribute('href')).toMatch(/^https:\/\//);expect(await link.getAttribute('rel')).toBe('noopener noreferrer');}
 });
 
-test('320px workspace keeps task targets usable without horizontal scrolling',async({page},info)=>{
+test('320px workspace keeps whole task labels and usable controls without horizontal scrolling',async({page},info)=>{
  await page.setViewportSize({width:320,height:900});await openDrive(page);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  const civic=page.locator('.civicManager');
- for(const button of await civic.locator('.cm-task').all()){const box=await button.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(48);expect(box!.width).toBeGreaterThanOrEqual(48);}
+ for(const button of await civic.locator('.cm-task').all()){
+  const box=await button.boundingBox();expect(box!.height).toBeGreaterThanOrEqual(48);expect(box!.width).toBeGreaterThanOrEqual(200);
+ }
+ expect(await civic.locator('.cm-taskCopy strong').first().evaluate(el=>getComputedStyle(el).overflowWrap)).toBe('normal');
  await civic.getByRole('button',{name:/Follow public money/}).click();await expect(civic.getByRole('heading',{name:'Look beyond the headline.'})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
- await civic.screenshot({path:info.outputPath('civic-manager-320.png')});
+ await captureManager(page,info.outputPath('civic-manager-320.png'));
 });
 
 test('keyboard task changes and reduced motion remain usable',async({page})=>{
