@@ -10,6 +10,7 @@ on:
       - '**/business-desk.ts'
       - 'tests/township*.test.ts'
       - 'browser-tests/township-business-workspace.spec.ts'
+      - 'browser-tests/municipal-township.spec.ts'
       - 'playwright.township.config.ts'
       - '.github/workflows/township-workspace.yml'
   workflow_dispatch:
