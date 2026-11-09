@@ -65,7 +65,7 @@
 .civicManager .cm-libraryBody>h3{color:var(--cm-text);font-size:17px;margin-bottom:10px}
 .civicManager .cm-libraryBody>p{color:var(--cm-muted);font-size:13px;margin:12px 0;max-width:88ch}
 .civicManager .cm-sourceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}
-.civicManager .cm-sourceGrid article{padding:18px;border:1px solid var(--cm-line);border-radius:12px;background:#132b40;min-width:0}
+.civicManager .cm-sourceCard{padding:18px;border:1px solid var(--cm-line);border-radius:12px;background:#132b40;min-width:0}
 .civicManager .cm-publisher{font:650 10px/1.5 ui-monospace,monospace;color:var(--cm-accent);letter-spacing:.08em}
 .civicManager .cm-sourceGrid h4 a{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;font-size:14px;color:var(--cm-text);text-underline-offset:4px}
 .civicManager .cm-sourceGrid p{font-size:12px;line-height:1.8;color:#c3d8e8;margin-top:8px}

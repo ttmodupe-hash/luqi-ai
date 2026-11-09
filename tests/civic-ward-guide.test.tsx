@@ -24,10 +24,11 @@ it('changes the focused task without fetching data, storing profiles or requesti
  expect(screen.getByRole('button',{name:/Find your ward/}).getAttribute('aria-pressed')).toBe('false');
  expect(request).not.toHaveBeenCalled();expect(storage).not.toHaveBeenCalled();
 });
-it('preserves all seven exact original URLs and the original guidance',()=>{
+it('preserves all seven exact original URLs and distinguishes directory channels from evidence articles',()=>{
  render(<CivicWardGuide/>);const library=screen.getByText('Open the evidence library').closest('details')!;
  fireEvent.click(within(library).getByText('Open the evidence library'));
- const cards=library.querySelectorAll('.cm-sourceGrid article');expect(cards).toHaveLength(7);
+ const cards=library.querySelectorAll('.cm-sourceCard');expect(cards).toHaveLength(7);
+ expect(library.querySelectorAll('article')).toHaveLength(0);
  const expected=['https://www.gov.za/links/political-parties-organisations-0','https://results.elections.org.za/','https://www.demarcation.org.za/','https://www.tshwane.gov.za/?page_id=17228','https://www.gov.za/documents/constitution/chapter-2-bill-rights','https://www.gov.za/documents/local-government-municipal-structures-act','https://www.agsa.co.za/'];
  expect(CIVIC_CHANNELS.map(s=>s.url)).toEqual(expected);
  for(const [i,card] of Array.from(cards).entries()){
