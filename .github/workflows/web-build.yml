@@ -254,6 +254,8 @@ jobs:
               '
               node scripts/verify-trpc-boundary.mjs
               node scripts/verify-legacy-controls.mjs
+              node --test tests/public-asset-contract.test.mjs
+              node scripts/verify-production-assets.mjs
               exit 0
             fi
             if ! kill -0 "$server_pid" 2>/dev/null; then
