@@ -1,0 +1,110 @@
+import {test,expect} from '@playwright/test';
+const supply='Uniform and Protective Clothing (no number published)';
+test.beforeEach(async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-09T12:00:00+02:00'));
+ if(process.env.LUQI_BROWSER_BASE_URL==='https://app.luqi-ai.com')await page.route('**/*',route=>{
+  const request=route.request(),url=new URL(request.url());
+  if(!['GET','HEAD'].includes(request.method())||url.origin!=='https://app.luqi-ai.com'||url.pathname.startsWith('/api/'))return route.abort('blockedbyclient');
+  return route.continue();
+ });
+});
+test('discovery first, useful filters and no invented open-bid badge at 320px',async({page},info)=>{
+ await page.setViewportSize({width:320,height:860});
+ const writes:string[]=[];page.on('request',r=>{if(!['GET','HEAD'].includes(r.method())||/api\/v1\/luqi-core|api.openai|generativelanguage/.test(r.url()))writes.push(r.url())});
+ await page.goto('/#/tenders');
+ await expect(page.getByRole('heading',{name:'Find work your business can deliver.'})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Original government form assistance'})).toBeHidden();
+ await expect(page.getByRole('status',{name:'Opportunity result count'})).toHaveText('5 source-linked notices');
+ await expect(page.locator('.tw-cards').getByText('Recheck original',{exact:true})).toHaveCount(5);
+ await page.getByRole('button',{name:'Supplies',exact:true}).click();
+ await expect(page.locator('.tw-cards article')).toHaveCount(1);
+ await page.getByLabel('Published ceiling up to R200,000').check();
+ // The en-ZA grouping separator differs between the pinned browser ICU builds.
+ // Assert the exact R30,000 ceiling and its visibility, not a particular separator.
+ const ceiling=page.locator('.tw-cards .tw-ceiling');
+ await expect(ceiling).toBeVisible();
+ await expect(ceiling).toHaveText(/^Ceiling R30[,\s\u202f]?000$/);
+ await page.getByLabel('Delivery province').selectOption('GP');
+ await expect(page.getByRole('heading',{name:'No reviewed notice matches yet'})).toBeVisible();
+ await expect(page.getByText(/No result here does not mean no opportunities exist/)).toBeVisible();
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ await page.getByLabel('Find work by service, area or reference').fill('Motherwell');
+ await expect(page.locator('.tw-cards article')).toHaveCount(1);
+ await expect(page.getByRole('heading',{name:'Renovate the Ward 23 councillor office'})).toBeVisible();
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+ await page.locator('.tw-workspace').screenshot({path:info.outputPath('tender-discovery-320.png')});
+});
+test('notice-specific requirements, exact source links, clarification and a useful local checklist',async({page},info)=>{
+ const writes:string[]=[];page.on('request',r=>{if(!['GET','HEAD'].includes(r.method()))writes.push(r.url())});
+ await page.goto('/#/tenders');
+ await page.getByRole('button',{name:'Understand '+supply,exact:true}).click();
+ const detail=page.getByRole('region',{name:'Selected opportunity guide'});
+ await expect(detail.getByRole('heading',{name:'Supply uniforms and protective clothing'})).toBeFocused();
+ const titleBox=await detail.getByRole('heading',{name:'Supply uniforms and protective clothing'}).boundingBox();
+ const headerBox=await page.locator('.luqi-header').boundingBox();
+ expect(titleBox?.y).toBeGreaterThanOrEqual(headerBox?headerBox.y+headerBox.height:0);
+ await expect(detail.getByText('not stated',{exact:true})).toHaveCount(2);
+ await expect(detail.getByRole('link',{name:'Read original · 24 pages'})).toHaveAttribute('href','https://stellenbosch.gov.za/wp-content/uploads/library/2026/RFQ-Uniform-and-Protective-Clothing.pdf');
+ await detail.getByRole('button',{name:'Check requirements',exact:true}).click();
+ await detail.getByLabel('Requirement 1 status').selectOption('checked');
+ await detail.getByLabel('Requirement 2 status').selectOption('missing');
+ await expect(detail.getByRole('status')).toContainText('1 of 4 self-marked checked · 1 missing');
+ await detail.getByRole('button',{name:'See my next step'}).click();
+ await detail.getByRole('button',{name:'Help me ask the issuer'}).click();
+ await expect(detail.getByRole('textbox',{name:'Question to send yourself'})).toHaveValue(/socks quantity/);
+ const promise=page.waitForEvent('download');await detail.getByRole('button',{name:'Download my checklist'}).click();
+ const download=await promise;expect(download.suggestedFilename()).toBe('luqi-opportunity-checklist-stellenbosch-workwear-20261108.txt');
+ const stream=await download.createReadStream();let text='';if(stream)for await(const chunk of stream)text+=chunk.toString();
+ expect(text).toContain('Not a bid, legal declaration, eligibility approval');expect(text).toContain('[Self-marked checked]');expect(text).toContain('[Missing]');
+ expect(text).toContain('scm.quotes@stellenbosch.gov.za');expect(text).toContain('within 48 hours');expect(text).toContain('Estimated contract value: not stated');
+ expect(text).toContain('Status at export: review-needed');
+ await page.getByRole('button',{name:'Understand CSQ10266160',exact:true}).click();
+ await detail.getByRole('button',{name:'Check requirements',exact:true}).click();
+ await expect(detail.getByLabel('Requirement 1 status')).toHaveValue('unknown');
+ await expect(detail.getByText(/BOTH tiler and carpenter/)).toBeVisible();
+ expect(writes).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await page.locator('.tw-workspace').screenshot({path:info.outputPath('tender-requirement-guide.png')});
+});
+test('shortlist persists only public IDs and can be cleared without an account',async({page})=>{
+ await page.goto('/#/tenders');
+ await page.getByRole('button',{name:'Save Q315/2027',exact:true}).click();
+ await page.getByRole('button',{name:'My shortlist (1)',exact:true}).click();
+ await expect(page.locator('.tw-cards article')).toHaveCount(1);
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('luqi:tender-shortlist:v1')||'[]'))).toEqual(['saldanha-q315-2027']);
+ await page.reload();await page.getByRole('button',{name:'My shortlist (1)',exact:true}).click();
+ await expect(page.locator('.tw-cards article')).toHaveCount(1);
+ await page.getByRole('button',{name:'Clear shortlist',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'No saved notices match these filters'})).toBeVisible();
+ expect(await page.evaluate(()=>localStorage.getItem('luqi:tender-shortlist:v1'))).toBeNull();
+});
+test('unavailable device storage falls back to this visit without breaking discovery',async({page})=>{
+ await page.addInitScript(()=>{Storage.prototype.setItem=()=>{throw new Error('Storage unavailable')}});
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Save Q315/2027',exact:true}).click();
+ await page.getByRole('button',{name:'My shortlist (1)',exact:true}).click();
+ await expect(page.getByText('Device storage is unavailable. Your shortlist works for this visit only.')).toBeVisible();
+ await expect(page.locator('.tw-cards article')).toHaveCount(1);
+});
+test('exact briefing and closing cutoffs remove records from normal discovery, including saved records',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-10T10:00:00+02:00'));
+ await page.goto('/#/tenders');await expect(page.locator('.tw-cards article').filter({hasText:'Q315/2027'})).toHaveCount(0);
+ await page.getByLabel('Include closed / past briefings').check();
+ await expect(page.locator('.tw-cards article').filter({hasText:'Q315/2027'})).toContainText('Compulsory briefing passed');
+ await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+02:00'));await page.reload();
+ await expect(page.locator('.tw-cards article')).toHaveCount(0);
+ await page.getByLabel('Include closed / past briefings').check();await expect(page.locator('.tw-cards article')).toHaveCount(5);
+ await expect(page.locator('.tw-cards').getByText('Deadline passed',{exact:true})).toHaveCount(5);
+});
+test('original form workflow is available deliberately and incomplete ads stay in Sources',async({page})=>{
+ await page.goto('/#/tenders');
+ await expect(page.getByRole('region',{name:'Upcoming procurement · documents pending'})).toBeHidden();
+ await page.getByRole('button',{name:'I already have a tender'}).click();
+ const forms=page.getByRole('region',{name:'Original government form assistance'});
+ await expect(forms).toBeVisible();await expect(forms.getByLabel('Import original tender document')).toBeDisabled();
+ await page.getByRole('button',{name:'Sources & history',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Upcoming procurement · documents pending'})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Open official source'}).first()).toHaveAttribute('href',/etenders.gov.za/);
+});

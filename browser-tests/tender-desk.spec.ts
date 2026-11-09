@@ -11,7 +11,8 @@ test('Luqi public tenders are discoverable at 320px without account or paid call
  await page.goto('/#/start');
  await page.getByRole('link',{name:'Open Tender Desk'}).click();
  await expect(page).toHaveURL(/#\/tenders$/);
- await expect(page.getByRole('heading',{name:'Find tenders. Prepare with Luqi. You stay in control.'})).toBeVisible();
+ await page.getByRole('button',{name:'Sources & history',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Find work your business can deliver.'})).toBeVisible();
  await expect(page.getByRole('link',{name:'Open official source'}).first()).toHaveAttribute('href',/etenders\.gov\.za/);
  await expect(page.getByRole('heading',{name:/Lead bond arranger/})).toBeVisible();
  await page.getByLabel('Search tender notices').fill('sign language');
@@ -23,7 +24,7 @@ test('Luqi public tenders are discoverable at 320px without account or paid call
 test('no official tender is filed, and applicant approvals are required for reviewed pack handoff',async({page})=>{
  const calls:string[]=[];
  page.on('request',req=>{if(req.method()!=='GET')calls.push(req.method()+' '+new URL(req.url()).pathname)});
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  const tender=page.getByRole('article').filter({has:page.getByRole('heading',{name:/Contractor-development mentorship/})});
  await tender.getByRole('button',{name:'Prepare bidder worksheet for this tender'}).click();
  const assistant=page.getByRole('region',{name:'Luqi assisted tender preparation'});
@@ -56,7 +57,7 @@ test('no official tender is filed, and applicant approvals are required for revi
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
 test('missed compulsory briefing and past tender deadlines are never promoted as open',async({page})=>{
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  await expect(page.getByRole('heading',{name:/Electrical maintenance, repairs/})).toHaveCount(0);
  await page.getByRole('checkbox',{name:/Show expired tenders/}).check();
  const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:/Electrical maintenance, repairs/})});
@@ -76,7 +77,7 @@ test('on-demand tender monitor checks only fixed first-party GET and never claim
    notices:ids.map(id=>({id,checkedAt:date,note:'not_live_bid_availability',
     state:id==='ekurhuleni-ps-f-02'?'reference-visible':'listing-only'}))}});
  });
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  expect(methods).toEqual([]);
  await page.getByRole('button',{name:'Check tender notice sources'}).click();
  const region=page.getByRole('region',{name:'Official tender source monitor'});
@@ -91,7 +92,7 @@ test('expired source review still blocks a preparation pack even with applicant 
  await page.clock.setFixedTime(new Date('2026-11-01T10:00:00Z'));
  const calls:string[]=[];
  page.on('request', req => { if(req.method() !== 'GET') calls.push(req.method()); });
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Sources & history',exact:true}).click();
  const tender=page.getByRole('article').filter({has:page.getByRole('heading',{name:/Contractor-development mentorship/})});
  await tender.getByRole('button',{name:'Prepare bidder worksheet for this tender'}).click();
  const assistant=page.getByRole('region',{name:'Luqi assisted tender preparation'});

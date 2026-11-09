@@ -1,0 +1,13 @@
+@import './tender-opportunity-workspace.theme.css';
+
+/* Clear the existing 86px sticky site header when focusing the guide. */
+.tw-detail{top:100px}
+.tw-detail h3{scroll-margin-top:140px}
+
+/* Put the search controls in reach on narrow phones, without hiding conditions. */
+@media(max-width:600px){
+ .tw-hero .tw-kicker,.tw-hero .tw-intro{display:none}
+ .tw-hero-grid{padding:20px 0}
+ .tw-hero .tw-hero-action{margin-top:20px}
+ .tw-trust-row>span:not(:first-child){display:none}
+}
