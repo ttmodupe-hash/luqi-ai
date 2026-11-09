@@ -18,3 +18,29 @@ it('clears private drafts and stops work before showing another identity',()=>{c
 it('blocks token export when selected colors fail and leaves rates unset until entered',()=>{const page=mount('design');expect(screen.getByRole('button',{name:'Download checked design tokens'}).hasAttribute('disabled')).toBe(false);fireEvent.change(screen.getByLabelText('text'),{target:{value:'#0e2218'}});expect(screen.getByRole('button',{name:'Download checked design tokens'}).hasAttribute('disabled')).toBe(true);page.unmount();mount('compute');expect((screen.getByLabelText('USD per million input tokens') as HTMLInputElement).value).toBe('');fireEvent.click(screen.getByRole('button',{name:/Load illustrative assumptions/}));expect(screen.getByText(/Estimated USD 6.40/)).toBeTruthy();});
 
 it('resets the embedded VLSM draft on an account change',()=>{const page=mount('network');fireEvent.change(screen.getByLabelText('Parent network (CIDR)'),{target:{value:'10.20.0.0/16'}});identity='another-owner';page.rerender(<MemoryRouter initialEntries={['/devsecnet?panel=network']}><DevSecNetStudioPage/></MemoryRouter>);expect((screen.getByLabelText('Parent network (CIDR)') as HTMLInputElement).value).toBe('192.168.10.0/24');});
+
+
+it("starts with a practical customer website and clears the local draft on account switch", () => {
+  const page = render(
+    <MemoryRouter initialEntries={["/devsecnet"]}>
+      <DevSecNetStudioPage />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole("heading", { name: "Build a simple website for your service" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Download my website (.html)" }).hasAttribute("disabled")).toBe(true);
+  fireEvent.change(screen.getByLabelText("Business or project name"), { target: { value: "Local repairs" } });
+  fireEvent.change(screen.getByLabelText("What service do you offer?"), { target: { value: "Phone repairs" } });
+  fireEvent.change(screen.getByLabelText("Public service area (not your home address)"), { target: { value: "Soweto" } });
+  expect(screen.getByRole("button", { name: "Download my website (.html)" }).hasAttribute("disabled")).toBe(false);
+  expect(screen.getByTitle("Preview of your website")).toBeTruthy();
+  identity = "another-owner";
+  page.rerender(
+    <MemoryRouter initialEntries={["/devsecnet"]}>
+      <DevSecNetStudioPage />
+    </MemoryRouter>,
+  );
+  expect((screen.getByLabelText("Business or project name") as HTMLInputElement).value).toBe("");
+  expect(screen.getByRole("button", { name: "Download my website (.html)" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByTitle("Preview of your website")).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
+});
