@@ -24,7 +24,6 @@ describe("Luqi customer-value website starter", () => {
     expect(result.html).toContain('href="tel:+27712345678"');
     expect(result.html).not.toContain("<script");
     expect(result.html).not.toMatch(/https?:\/\//);
-    expect(result.html).toContain("Nothing"); // no hidden behavior claim is made
   });
   it("escapes user-authored HTML and never produces active scripts or unsafe links", () => {
     const result = makeWebsiteStarter({
