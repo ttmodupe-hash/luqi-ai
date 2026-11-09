@@ -1,0 +1,147 @@
+/* Drive digital-manager theme. Scoped to Drive: no global reset, new fonts, maps, tracking or requests.
+ * Doubled root specificity preserves load-order independence from the older drive.css.
+ */
+.driveDesk.driveDesk {
+  --dm-bg:#0b1913;--dm-surface:#152a20;--dm-raised:#1b3427;--dm-line:#516e59;
+  --dm-text:#f3f7ee;--dm-muted:#c0d2c3;--dm-lime:#d6f7ad;--dm-ink:#153725;
+  --drive-night:#10251d;--drive-ink:#f3f7ee;--drive-mint:#d6f7ad;--drive-gold:#f2d99f;
+  background:radial-gradient(ellipse at 100% 0,#1a352240,transparent 36%),var(--dm-bg);
+  color:var(--dm-text);color-scheme:dark;max-width:1320px;padding:clamp(16px,3vw,40px);
+  border:1px solid #34533f;border-radius:26px;font:400 15px/1.65 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+.driveDesk.driveDesk :is(button,a,summary,input,select,textarea){touch-action:manipulation}
+.driveDesk.driveDesk button{min-height:48px}
+.driveDesk.driveDesk :is(button,a,summary,input,select,textarea):focus-visible{outline:3px solid #ffe6a5;outline-offset:4px}
+.driveDesk.driveDesk button{transition:background 150ms ease,border-color 150ms ease,box-shadow 150ms ease}
+.driveDesk.driveDesk button:disabled{opacity:.65}
+.driveDesk.driveDesk .driveHeader{position:relative;isolation:isolate;overflow:hidden;padding:24px 28px 28px;margin:0 0 24px;border:1px solid #4b6a51;border-radius:22px;background:linear-gradient(118deg,#203e2a,#11251c 76%);color:var(--dm-text)}
+.driveDesk.driveDesk .driveHeader:before{content:'';position:absolute;z-index:-1;right:-50px;top:-75px;width:330px;height:330px;border:1px solid #8eaa7030;border-radius:50%;box-shadow:0 0 0 38px #8eaa7012,0 0 0 76px #8eaa7009;pointer-events:none}
+.driveDesk.driveDesk .driveHeader h1{font:600 clamp(45px,5.5vw,74px)/1.06 system-ui,sans-serif;letter-spacing:-.065em;color:var(--dm-text);margin:18px 0 12px}
+.driveDesk.driveDesk .driveHeader h1 span{color:var(--dm-lime)}
+.driveDesk.driveDesk .driveHeader>p{color:var(--dm-muted);font-size:16px;max-width:45ch;margin-bottom:20px}
+.driveDesk.driveDesk .driveOverline{font:650 10px/1.5 ui-monospace,monospace;color:#d6e5c9;letter-spacing:.13em}
+.driveDesk.driveDesk .driveHeader .driveSecondary{background:#d6f7ad;color:#123121;border:1px solid #e7ffca;border-radius:10px;font:650 13px system-ui,sans-serif;padding:12px 20px;min-height:48px}
+.driveDesk.driveDesk .driveTrails{gap:8px;padding:0 0 8px;margin-bottom:16px}
+.driveDesk.driveDesk .driveTrails button{background:#14281e;color:var(--dm-text);border:1px solid #617d66;border-radius:10px;font-size:12px;min-height:48px;padding:12px 16px}
+.driveDesk.driveDesk .driveTrails button:hover{background:#254630;border-color:#a7c28b}
+.driveDesk.driveDesk .driveTrails button[aria-pressed=true]{background:var(--dm-lime);color:#153725;border-color:var(--dm-lime);box-shadow:0 0 0 2px #d6f7ad20}
+.driveDesk.driveDesk .driveVoicePanel{background:#13281d;border:1px solid #506c54;border-radius:16px;padding:16px 20px;margin-bottom:24px;gap:12px 16px;color:var(--dm-text)}
+.driveDesk.driveDesk .driveVoicePanel label{font-size:11px;color:var(--dm-muted);letter-spacing:.02em}
+.driveDesk.driveDesk .driveVoicePanel select{min-height:48px;font-size:13px;max-width:min(78vw,270px)}
+.driveDesk.driveDesk :is(select,input[type=number],textarea){background:#0e2118;color:var(--dm-text);border:1px solid #718d74;border-radius:9px;padding:10px 12px;min-height:48px;max-width:100%}
+.driveDesk.driveDesk .driveVoicePanel button{min-height:48px;border-radius:10px;padding:12px 16px;font-size:12px}
+.driveDesk.driveDesk .driveVoicePanel small{color:var(--dm-muted);line-height:1.6}
+.driveDesk.driveDesk .driveLayout{gap:20px;grid-template-columns:minmax(0,2.25fr) minmax(250px,1fr)}
+.driveDesk.driveDesk .driveSurface{border-color:#56745b;border-radius:20px;box-shadow:0 12px 32px #00000025;background:#10251d}
+.driveDesk.driveDesk .driveBanner{background:#142b20;border-bottom-color:#4f7057;padding:18px 20px;gap:12px}
+.driveDesk.driveDesk .driveIcon{background:var(--dm-lime);border-radius:13px;color:#173c28;width:48px;height:48px;box-shadow:none}
+.driveDesk.driveDesk .driveTarget>span{font-size:9px;color:var(--dm-lime)}
+.driveDesk.driveDesk .driveTarget h2{font:600 clamp(20px,2.1vw,29px)/1.18 system-ui,sans-serif;letter-spacing:-.035em;color:#f3f7ee;margin:4px 0}
+.driveDesk.driveDesk .driveTarget small{font-size:12px;color:var(--dm-muted)}
+.driveDesk.driveDesk .driveStatus{font-size:9px;letter-spacing:.04em;background:#172d21;border-color:#739076;color:#e7f3d9;padding:8px 10px}
+.driveDesk.driveDesk .driveHUD{background:#10291d;border-color:#506f57;padding:16px 0;gap:0}
+.driveDesk.driveDesk .driveHUD>div{border-left-color:#4e6b53;padding:0 16px}
+.driveDesk.driveDesk .driveHUD small{font-size:9px;color:var(--dm-muted);letter-spacing:.08em}
+.driveDesk.driveDesk .driveHUD strong{font:600 clamp(20px,2.2vw,27px)/1.6 ui-monospace,monospace;color:var(--dm-lime)}
+.driveDesk.driveDesk .driveHUD em{color:var(--dm-muted);font-size:12px}
+.driveDesk.driveDesk .driveControlRow{padding:16px 16px 0;gap:10px}
+.driveDesk.driveDesk .driveControlRow button{min-height:48px;padding:12px 16px;border-radius:10px;font-size:12px}
+.driveDesk.driveDesk .drivePrimary{background:var(--dm-lime);color:#143525;border:1px solid #e4ffc4;display:inline-flex;justify-content:center;align-items:center;gap:8px}
+.driveDesk.driveDesk .driveSecondary,.driveDesk.driveDesk .driveSkip{background:#25432f;color:#f0f6e7;border:1px solid #78936b;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.driveDesk.driveDesk .drivePrimary:hover{background:#e7ffc9}
+.driveDesk.driveDesk .driveSecondary:hover{background:#33563b}
+.driveDesk.driveDesk .driveStoryStrip{background:#1c3a28;border-left:3px solid #d6f7ad;border-radius:0 10px 10px 0;margin:16px 16px 0;padding:14px}
+.driveDesk.driveDesk .driveStoryStrip small{font-size:10px;color:#e2edc0}
+.driveDesk.driveDesk .driveStoryStrip p{color:#e2eddc;font-size:13px;line-height:1.8}
+.driveDesk.driveDesk .driveNote{color:#c4d8c6;padding:14px 16px 18px;font-size:12px;margin:0}
+.driveDesk.driveDesk .driveStops{background:var(--dm-surface);border:1px solid var(--dm-line);border-radius:20px;color:var(--dm-text);padding:22px}
+.driveDesk.driveDesk .driveStops h2{font:600 clamp(22px,2.6vw,31px)/1.12 system-ui,sans-serif;color:var(--dm-text);letter-spacing:-.04em;margin:12px 0}
+.driveDesk.driveDesk .driveStops>p{color:var(--dm-muted);font-size:13px;line-height:1.7}
+.driveDesk.driveDesk .driveStopList{gap:8px;margin:20px 0}
+.driveDesk.driveDesk .driveStopList button{color:var(--dm-text);border:1px solid #506c54;border-radius:11px;padding:12px 10px;gap:10px;background:#13281d}
+.driveDesk.driveDesk .driveStopList button:hover{background:#28432b;border-color:#95b77c}
+.driveDesk.driveDesk .driveStopList button[aria-pressed=true]{background:#2c472d;border-color:#c8eb9c;box-shadow:inset 3px 0 #d6f7ad}
+.driveDesk.driveDesk .driveStopList button>span{color:#ecf6df;background:#25452d;border-color:#7d9a70;border-radius:9px;height:30px;min-width:30px;font-size:11px}
+.driveDesk.driveDesk .driveStopList button[aria-pressed=true]>span{background:var(--dm-lime);color:#173925}
+.driveDesk.driveDesk .driveStopList button:after{display:none}
+.driveDesk.driveDesk .driveStopList b{font-size:13px;line-height:1.5}
+.driveDesk.driveDesk .driveStopList small{font-size:11px;color:var(--dm-muted)}
+.driveDesk.driveDesk .driveLegend{border-top-color:#577159;color:var(--dm-muted);font-size:12px}
+.driveDesk.driveDesk .driveLegend small{font-size:11px;line-height:1.7}
+.driveDesk.driveDesk a.driveDirections{color:var(--dm-lime);min-height:48px;text-underline-offset:5px;font-size:12px}
+.driveDesk.driveDesk small.driveDirections{color:var(--dm-muted)}
+.driveDesk.driveDesk .driveCredits{color:var(--dm-muted);font-size:12px;padding:0 4px;margin:10px 0 16px}
+.driveDesk.driveDesk .driveCredits summary{min-height:48px;padding:12px 0;color:#dfecd4}
+.driveDesk.driveDesk .driveCredits a,.driveDesk.driveDesk .driveGuide a{color:var(--dm-lime);text-underline-offset:4px}
+.driveDesk.driveDesk .driveGuide{background:var(--dm-surface);border:1px solid var(--dm-line);border-radius:20px;padding:24px;color:var(--dm-text);margin:24px 0}
+.driveDesk.driveDesk .driveGuide h2{color:var(--dm-text);font:600 clamp(25px,3vw,36px)/1.1 system-ui,sans-serif;letter-spacing:-.04em;margin:12px 0}
+.driveDesk.driveDesk .driveGuide p{color:var(--dm-muted);font-size:14px;line-height:1.8}
+.driveDesk.driveDesk .driveGuide .check{min-height:48px;color:var(--dm-muted);font-size:12px}
+.driveDesk.driveDesk input[type=checkbox]{accent-color:var(--dm-lime);width:20px;height:20px;flex:none}
+.driveDesk.driveDesk .driveFieldNotes summary{color:var(--dm-lime);min-height:48px;padding:14px 0}
+.driveDesk.driveDesk .driveFieldNotes dl>div{background:#10291d;border:1px solid #536f54;border-left:3px solid var(--dm-lime);border-radius:10px;padding:16px}
+.driveDesk.driveDesk .driveFieldNotes dt{color:#f0f7e6;font-size:13px}
+.driveDesk.driveDesk .driveFieldNotes dd{color:#c6d9c8;font-size:13px;line-height:1.7}
+.driveDesk.driveDesk .driveStoryVicinity{color:var(--dm-muted)}
+.driveDesk.driveDesk .driveFuel{background:#14291f;color:var(--dm-text);border-color:#58715a;border-radius:16px;padding:20px 24px}
+.driveDesk.driveDesk .driveFuel>summary{font-size:15px;min-height:48px;line-height:48px}
+.driveDesk.driveDesk .driveFuel p{font-size:12px;color:var(--dm-muted);line-height:1.8}
+.driveDesk.driveDesk .driveFuel a{color:var(--dm-lime)}
+.driveDesk.driveDesk .driveFuel label{font-size:12px;color:var(--dm-text);gap:8px}
+.driveDesk.driveDesk .driveFuel input{width:165px}
+.driveDesk.driveDesk .mapButtons{top:49px;gap:6px}
+.driveDesk.driveDesk .mapButtons button{width:48px;height:48px;border-radius:10px;border-color:#7c9876;background:#112d20;color:#eff7e5}
+.driveDesk.driveDesk .mapFoot button{min-height:48px;padding:10px 12px;font-size:11px;background:#112d20;border-color:#7c9876}
+/* Collection workspace: the storage and download contracts remain unchanged. */
+.driveDesk.driveDesk .fieldNotebook{background:radial-gradient(ellipse at 100% 0,#30482a66,transparent 50%),#142a1e;padding:clamp(20px,3vw,32px)}
+.driveDesk.driveDesk .fieldManagerHeader{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.driveDesk.driveDesk .fieldManagerHeader h2{font:400 clamp(30px,3.6vw,42px)/1.12 Georgia,serif;letter-spacing:-.05em;margin:10px 0 12px}
+.driveDesk.driveDesk .fieldCount{display:grid;justify-items:end;gap:3px;font:600 9px/1.5 ui-monospace,monospace;color:var(--dm-muted);letter-spacing:.06em}
+.driveDesk.driveDesk .fieldCount strong{font:400 32px/1 ui-monospace,monospace;color:var(--dm-lime);letter-spacing:-.08em}
+.driveDesk.driveDesk .fieldLanguageRow{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0 22px}
+.driveDesk.driveDesk .fieldLanguageRow>span{border:1px solid #6b8768;background:#213e2a;color:#dcefd1;border-radius:7px;font-size:11px;padding:6px 11px}
+.driveDesk.driveDesk .fieldNotebook .notebookAction{display:flex;gap:14px;flex-wrap:wrap;border:1px solid #7b986b;background:#223c26;border-radius:14px;padding:18px}
+.driveDesk.driveDesk .fieldPlaceIcon{display:grid;place-items:center;flex:none;width:48px;height:48px;background:var(--dm-lime);color:#173c25;border-radius:12px}
+.driveDesk.driveDesk .fieldSelected{display:grid;gap:4px;flex:1;min-width:120px}
+.driveDesk.driveDesk .fieldSelected small{font:600 9px/1.4 ui-monospace,monospace;letter-spacing:.06em;color:#d0e1c2;margin:0}
+.driveDesk.driveDesk .fieldSelected strong{font-size:15px;line-height:1.5;color:#f1f8e8}
+.driveDesk.driveDesk .fieldNotebook button{padding:12px 16px;border-radius:10px;font-size:12px;min-height:48px}
+.driveDesk.driveDesk .fieldEmpty{display:flex;align-items:center;gap:18px;padding:28px 12px;border-bottom:1px solid #526d52}
+.driveDesk.driveDesk .fieldEmptyMark{display:grid;place-items:center;flex:none;width:60px;height:68px;border:1px dashed #7c9b6c;border-radius:12px;color:#cfe7b5;transform:rotate(-5deg);background:#1b3522}
+.driveDesk.driveDesk .fieldEmpty h3{color:#eaf4df;font-size:16px;font-weight:550;margin:0 0 6px}
+.driveDesk.driveDesk .fieldEmpty p{font-size:12px;line-height:1.7;margin:0;max-width:46ch}
+.driveDesk.driveDesk .fieldNotebook ol{display:grid;gap:8px;margin:18px 0}
+.driveDesk.driveDesk .fieldNotebook li{background:#10281b;border:1px solid #557151;border-radius:10px;margin:0;padding:8px 12px;font-size:13px}
+.driveDesk.driveDesk .fieldNotebook li:before{color:var(--dm-lime);padding-right:10px;font-size:12px}
+.driveDesk.driveDesk .fieldNotebook .fieldDownload{background:var(--dm-lime);color:#143526;border-color:var(--dm-lime);margin-bottom:6px}
+.driveDesk.driveDesk .fieldStorage{font-size:11px;color:var(--dm-muted);margin-top:16px}
+.driveDesk.driveDesk .fieldReceipt{font:400 10px/1.7 ui-monospace,monospace;color:var(--dm-muted);margin-top:10px}
+@media(max-width:900px){.driveDesk.driveDesk .driveLayout{grid-template-columns:1fr}.driveDesk.driveDesk .driveStopList{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){
+ .driveDesk.driveDesk{border-radius:16px;padding:14px}
+ .driveDesk.driveDesk .driveHeader{padding:22px 18px;border-radius:16px}
+ .driveDesk.driveDesk .driveHeader>p{font-size:14px}
+ .driveDesk.driveDesk .driveVoicePanel{padding:14px;gap:12px;width:100%}
+ .driveDesk.driveDesk .driveVoicePanel select{max-width:100%;width:100%}
+ .driveDesk.driveDesk .driveVoicePanel label{min-width:0;flex:1 1 120px}
+ .driveDesk.driveDesk .driveBanner{padding:14px 12px;flex-wrap:wrap}
+ .driveDesk.driveDesk .driveStatus{font-size:8px;padding:7px 9px}
+ .driveDesk.driveDesk .driveHUD>div{padding:0 10px}
+ .driveDesk.driveDesk .driveHUD small{font-size:8px;letter-spacing:.02em}
+ .driveDesk.driveDesk .driveHUD strong{font-size:19px}
+ .driveDesk.driveDesk .driveControlRow{padding:12px 10px 0}
+ .driveDesk.driveDesk .driveControlRow button{font-size:11px;padding:10px 12px}
+ .driveDesk.driveDesk .driveStops{padding:18px}
+ .driveDesk.driveDesk .driveGuide{padding:18px}
+ .driveDesk.driveDesk .driveStopList{grid-template-columns:1fr}
+ .driveDesk.driveDesk .driveFuel{padding:14px 18px}
+ .driveDesk.driveDesk .fieldNotebook{padding:18px}
+ .driveDesk.driveDesk .fieldNotebook .notebookAction{padding:14px;gap:10px}
+ .driveDesk.driveDesk .fieldNotebook .notebookAction button{width:100%}
+ .driveDesk.driveDesk .fieldEmpty{padding:24px 0;gap:14px}
+ .driveDesk.driveDesk .fieldCount{font-size:8px}
+ .driveDesk.driveDesk .fieldManagerHeader h2{font-size:30px}
+ .driveDesk.driveDesk .fieldEmptyMark{width:42px;height:54px}
+}
+@media(prefers-reduced-motion:reduce){.driveDesk.driveDesk *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(forced-colors:active){.driveDesk.driveDesk button[aria-pressed=true]{outline:3px solid Highlight}.driveDesk.driveDesk .driveHeader:before{display:none}}
