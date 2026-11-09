@@ -11,7 +11,9 @@ test('satellite context is opt-in, clearable, bounded and mobile-friendly', asyn
     expect(headers.referer).toBeUndefined();
     expect(headers.cookie).toBeUndefined();
     expect(route.request().url()).not.toContain('31.123456');
-    await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ events: [] }) });
+    // Real public run 42635354912 observed valid JSON mislabelled RSS in WebKit.
+    const contentType = testInfo.project.name.startsWith('webkit') ? 'application/rss+xml; charset=utf-8' : 'application/json';
+    await route.fulfill({ status: 200, contentType, headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ events: [] }) });
   });
   await page.route('https://gibs.earthdata.nasa.gov/**', async route => {
     requests += 1;
