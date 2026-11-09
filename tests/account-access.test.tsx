@@ -38,10 +38,11 @@ describe('new account access', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
     expect(screen.getByText('✓ Password meets the length requirement.')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Different-password' } });
-    expect(screen.getByText('✕ Passwords do not match.')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe('The passwords do not match.');
     expect(create.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: password } });
     expect(screen.getByText('✓ Passwords match.')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(create.disabled).toBe(false);
     expect(request).not.toHaveBeenCalled();
   });

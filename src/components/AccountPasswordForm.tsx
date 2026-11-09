@@ -65,14 +65,14 @@ export default function AccountPasswordForm({ token, email, disabled, onBusyChan
           value={current} onChange={setCurrent} disabled={disabled || busy} />
         <PasswordField label="New password" autoComplete="new-password" maxLength={72} describedBy="new-password-help"
           value={next} onChange={setNext} disabled={disabled || busy} />
-        <div id="new-password-help" className="text-sm text-slate-300 space-y-1" aria-live="polite">
+        <div id="new-password-help" className="text-sm text-slate-300 space-y-1">
           <p>Use at least 12 characters and at most 72 UTF-8 bytes. Choose a unique password. You will need to sign in again.</p>
-          <p>{next.length === 0 ? '○ Enter a new password.' : nextPasswordValid
+          <p aria-live="polite">{next.length === 0 ? '○ Enter a new password.' : nextPasswordValid
             ? '✓ New password meets the length requirement.'
             : '✕ New password must be at least 12 characters and no more than 72 UTF-8 bytes.'}</p>
-          <p>{confirmation.length === 0 ? '○ Re-enter the new password to confirm it.' : nextPasswordsMatch
+          <p aria-live="polite" role={confirmation.length > 0 && !nextPasswordsMatch && !notice && !cooling ? 'status' : undefined}>{confirmation.length === 0 ? '○ Re-enter the new password to confirm it.' : nextPasswordsMatch
             ? '✓ New passwords match.'
-            : '✕ New passwords do not match.'}</p>
+            : 'The new passwords do not match.'}</p>
         </div>
         <PasswordField label="Confirm new password" autoComplete="new-password" maxLength={72} describedBy="new-password-help"
           value={confirmation} onChange={setConfirmation} disabled={disabled || busy} />
