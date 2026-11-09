@@ -24,7 +24,10 @@ test('township economy: mobile local-business guidance and original DSBD funding
  await page.getByLabel('Township support goal').selectOption('licence');
  await page.getByLabel('Business province').selectOption('GP');
  await page.getByLabel('Business municipality').selectOption('City of Tshwane Metropolitan Municipality');
- await expect(page.getByText(/Certificate of Acceptability requirements/)).toBeVisible();
+ // The original information and the new editable preparation checklist both
+ // intentionally retain this guidance. Assert each named region explicitly.
+ await expect(page.getByRole('region',{name:'Township business planner'}).getByText(/Certificate of Acceptability requirements/)).toBeVisible();
+ await expect(page.getByRole('region',{name:'Business preparation workspace'}).getByText(/Certificate of Acceptability requirements/)).toBeVisible();
  await expect(page.getByText(/business support guide|This is not a registered lender/i).first()).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  expect(posts).toEqual([]);
