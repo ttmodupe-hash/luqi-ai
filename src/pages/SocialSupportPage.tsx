@@ -74,7 +74,7 @@ export default function SocialSupportPage({defaultAgency='sassa'}:{defaultAgency
     <p className="text-sm text-slate-200"><strong>UIF:</strong> 0800 030 007. For claims and online-service problems, contact UIF directly or visit a Labour Centre.</p>
    </div>
    <p className="text-sm text-slate-300">Do not pay anyone who promises a grant or UIF approval. Do not share passwords, identity numbers, bank details or OTP codes with Luqi. Government support channels may use identity verification on their own official sites.</p>
-   <p className="text-xs text-slate-300">Luqi’s owner receives a separate daily official-source review; this page does not automatically synchronize policy or private claim information.</p>
+   <p className="text-xs text-slate-300">Use these steps to prepare your enquiry, and verify current rates, payment dates, eligibility, claim channels and appeal deadlines on the original SASSA or UIF websites. Luqi does not access your agency account or continuously update these instructions.</p>
   </section>
   <nav aria-label="More Luqi services" className="flex flex-wrap gap-4 text-sm">
    <Link className="text-cyan-200 underline" to="/opportunities">Jobs and funding opportunities</Link>
