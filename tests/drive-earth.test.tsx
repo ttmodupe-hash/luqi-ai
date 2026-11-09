@@ -76,6 +76,25 @@ describe("bounded official public-data requests", () => {
     await expect(loadEarthEvents(signal, (async () => new Response("<html>wrong</html>", { headers: { "Content-Type": "text/html" } })) as typeof fetch)).rejects.toThrow();
     await expect(loadEarthEvents(signal, (async () => new Response(" ".repeat(512001), { headers: { "Content-Type": "application/json" } })) as typeof fetch)).rejects.toThrow();
   });
+  it("accepts NASA JSON with the observed WebKit RSS label without accepting XML", async () => {
+    const signal = new AbortController().signal;
+    const options = { headers: { "Content-Type": "application/rss+xml; charset=utf-8" } };
+    const item = { id: "EONET_1", title: "Observed event", categories: [{ id: "wildfires" }], geometry: [{ date: new Date().toISOString() }], closed: null };
+    const request = vi.fn(async () => new Response(JSON.stringify({ events: [item] }), options));
+    const events = await loadEarthEvents(signal, request as typeof fetch);
+    expect(events).toHaveLength(1); expect(events[0].id).toBe("EONET_1");
+    expect(request).toHaveBeenCalledWith(EONET_URL, expect.objectContaining({ redirect: "error", credentials: "omit", referrerPolicy: "no-referrer" }));
+    for (const body of ['<rss><channel/></rss>', '<!DOCTYPE rss [<!ENTITY x SYSTEM "file:///etc/passwd">]><rss>&x;</rss>', '{"events":{}}', '{"error":"upstream"}', 'not JSON']) {
+      await expect(loadEarthEvents(signal, (async () => new Response(body, options)) as typeof fetch)).rejects.toThrow();
+    }
+    await expect(loadEarthEvents(signal, (async () => new Response(" ".repeat(512001), options)) as typeof fetch)).rejects.toThrow("too large");
+  });
+  it("requires an exact allowlisted media type, not a JSON substring", async () => {
+    const signal = new AbortController().signal;
+    for (const contentType of ["text/html", "application/json-malicious", "text/plain", "application/xml"]) {
+      await expect(loadEarthEvents(signal, (async () => new Response('{"events":[]}', { headers: { "Content-Type": contentType } })) as typeof fetch)).rejects.toThrow();
+    }
+  });
 });
 
 describe("optional in-Luqi satellite context", () => {

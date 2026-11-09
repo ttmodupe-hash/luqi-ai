@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
 
 test('public release identity and real key-free NASA providers', async ({ page, request }, testInfo) => {
   test.skip(process.env.LUQI_DRIVE_LIVE !== '1', 'Read-only production verification is separately triggered after deployment.');
@@ -28,5 +29,7 @@ test('public release identity and real key-free NASA providers', async ({ page, 
   await expect.poll(() => panel.getByRole('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
   const after = await release();
   await panel.screenshot({ path: testInfo.outputPath('drive-earth-public.png') });
-  await testInfo.attach('public-release-and-providers', { body: JSON.stringify({ checkedAt: new Date().toISOString(), before, after, providers, physicalDevice: false, captureTimePerPixelVerified: false }), contentType: 'application/json' });
+  const evidence = JSON.stringify({ checkedAt: new Date().toISOString(), browser: testInfo.project.name, before, after, providers, physicalDevice: false, captureTimePerPixelVerified: false }, null, 2);
+  await writeFile(testInfo.outputPath('public-release-and-providers.json'), evidence, 'utf8');
+  await testInfo.attach('public-release-and-providers', { body: evidence, contentType: 'application/json' });
 });
