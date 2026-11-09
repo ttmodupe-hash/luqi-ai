@@ -27,7 +27,7 @@ export default function CivicEvidencePanel({ claim, chatLink = true }: { claim: 
   return <article aria-labelledby={'civic-title-' + claim.id} className="min-w-0 space-y-4 rounded-2xl border border-slate-600 bg-slate-900 p-4 text-slate-100 sm:p-5">
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">{claim.topic} · {claim.jurisdiction}</p>
-      <h2 id={'civic-title-' + claim.id} className="mt-2 text-xl font-bold">{claim.title}</h2>
+      <h2 id={'civic-title-' + claim.id} tabIndex={-1} className="mt-2 text-xl font-bold">{claim.title}</h2>
     </div>
     <div className="space-y-2 rounded-lg border border-slate-600 bg-slate-950 p-3">
       <h3 className="text-sm font-semibold">Claim being examined</h3>
