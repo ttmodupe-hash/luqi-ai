@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 async function openDrive(page:Page){await page.goto('/#/drive?trail=heritage');await expect(page.getByRole('heading',{name:'Your civic compass.'})).toBeVisible();}
 
-test('digital manager presents distinct working tasks and the original source library',async({page},info)=>{
+test('digital manager presents working tasks and preserves the complete source library',async({page},info)=>{
  await openDrive(page);const civic=page.locator('.civicManager');
  await expect(civic.getByRole('heading',{name:'The right place. The right records.'})).toBeVisible();
  await expect(civic.locator('.cm-library')).not.toHaveAttribute('open');
@@ -37,27 +37,30 @@ test('keyboard task changes and reduced motion remain usable',async({page})=>{
  expect(outline.style).not.toBe('none');expect(parseFloat(outline.width)).toBeGreaterThanOrEqual(3);
 });
 
-test('redesigned collection still saves, removes and exports real multilingual guide text',async({page},info)=>{
+test('preserves the newer saved-place reader, collection and multilingual export',async({page},info)=>{
  await page.addInitScript(()=>localStorage.removeItem('luqi.drive.field-notebook.v1'));
  await openDrive(page);const notebook=page.getByRole('region',{name:'My field guide'});
- await expect(notebook.getByText('Your next discovery belongs here.')).toBeVisible();
+ await expect(notebook.getByText('A whole country to discover.')).toBeVisible();
  await notebook.getByRole('button',{name:'Save this place',exact:true}).click();
  await expect(notebook.getByRole('button',{name:'Saved to field guide'})).toBeDisabled();
  await expect(notebook.locator('ol li')).toHaveCount(1);
- await notebook.screenshot({path:info.outputPath('field-guide-manager.png')});
+ await notebook.getByRole('button',{name:'Read Tswaing crater',exact:true}).click();
+ await notebook.getByLabel('Reading language',{exact:true}).selectOption('setswana');
+ await expect(notebook.getByRole('region',{name:'Saved guide: Tswaing crater'}).locator('p')).toHaveAttribute('lang','tn');
+ await notebook.screenshot({path:info.outputPath('field-guide-preserved.png')});
  const event=page.waitForEvent('download');await notebook.getByRole('button',{name:'Download field guide (.txt)',exact:true}).click();
  const download=await event;expect(download.suggestedFilename()).toBe('luqi-south-africa-field-guide.txt');
  const stream=await download.createReadStream();const chunks:Buffer[]=[];for await(const chunk of stream!)chunks.push(Buffer.from(chunk));
  const content=Buffer.concat(chunks).toString('utf8');for(const language of ['English','Sepitori','Setswana','isiZulu'])expect(content).toContain(language);
- await notebook.getByRole('button',{name:/Remove /}).click();await expect(notebook.getByText('Your next discovery belongs here.')).toBeVisible();
+ await notebook.getByRole('button',{name:/Remove /}).click();await expect(notebook.getByText('A whole country to discover.')).toBeVisible();
 });
 
-test('visual layer does not request location or fetch fonts or third-party pages',async({page,baseURL},info)=>{
+test('visual layer adds no location requests or external fonts and pages',async({page,baseURL},info)=>{
  const external:string[]=[];page.on('request',r=>{const u=new URL(r.url());if(/^https?:$/.test(u.protocol)&&u.origin!==new URL(baseURL!).origin)external.push(u.origin);});
  await page.addInitScript(()=>{(window as any).__designGps=0;Object.defineProperty(navigator,'geolocation',{configurable:true,value:{watchPosition(){(window as any).__designGps++;return 1;},getCurrentPosition(){(window as any).__designGps++;},clearWatch(){}}});});
  await page.goto('/#/drive?trail=heritage');await expect(page.getByRole('button',{name:'Use phone GPS'})).toBeVisible();
  await expect(page.getByRole('heading',{name:'Your civic compass.'})).toBeVisible();
  await page.getByRole('button',{name:/Explore party positions/}).click();
  expect(await page.evaluate(()=>(window as any).__designGps)).toBe(0);expect(external).toEqual([]);
- await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:info.outputPath('drive-manager-overview.png'),fullPage:false});
+ await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:info.outputPath('drive-integration-overview.png'),fullPage:false});
 });

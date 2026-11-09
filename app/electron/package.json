@@ -62,6 +62,7 @@
       "createStartMenuShortcut": true
     },
     "electronDownload": {
+      "unsafelyDisableChecksums": false,
       "checksums": {
         "electron-v45.0.0-darwin-arm64-dsym-snapshot.zip": "7412dc691406a6354bb41afc9deb3eea8995331f9aba3fe9d8fed7a80a036e2d",
         "electron-v45.0.0-darwin-arm64-symbols.zip": "261de2c5d8d0e4f1b16cc110d26fbf394985a08b1c3ab3db866e7cf1ee353be9",

@@ -23,3 +23,9 @@ reviewed archive hashes together. An unexpected or changed archive must fail
 validation. The downloader regression test uses harmless fixture bytes and
 checks both a valid digest and a deliberately incorrect one; the real package
 build and packaged workspace smoke test remain mandatory CI steps.
+
+## Adapter option forwarding — 9 November 2026
+
+Keep `electronDownload.unsafelyDisableChecksums` explicitly **false**. The installed electron-builder 26.15.3 adapter distinguishes legacy options from ElectronGetOptions by a small set of property names. A checksums map alone selects the legacy branch, which drops that map before calling @electron/get. The build then requests SHASUMS256.txt after downloading the archive. Explicit false selects the modern branch and forwards both the pinned map and enabled verification. No mirror, custom distribution or certificate bypass is introduced.
+
+The additional regression calls the actual installed downloadElectronArtifactZip adapter with the package option shape and harmless local fixture bytes. It accepts the valid digest, rejects tampering and requires that every request target the archive rather than a checksum file. Both original tests and the real Linux build/smoke test remain. The forwarding behavior was checked against createDownloadOpts and buildElectronArtifactConfig in the lockfile-selected source.

@@ -26,6 +26,7 @@ import { regionalMap as map } from "./drive-map";
 import type { PhoneFix, Trail } from "./drive-navigation";
 import "./drive.css";
 import TripFuel from "./TripFuel";
+import { emptyFuelDraft, type FuelDraft } from "./trip-fuel";
 import {
   DriveVoiceControls,
   languages,
@@ -44,6 +45,7 @@ export default function LuqiDrivePage() {
   }).current;
   const trail = trails.find((t) => t.id === params.get("trail")) ?? trails[0];
   const [lang, setLang] = useState<LanguageKey>("english");
+  const [fuelDraft, setFuelDraft] = useState(emptyFuelDraft);
   function switchTrail(id: string) {
     const next = new URLSearchParams(params);
     if (id === trails[0].id) next.delete("trail");
@@ -53,17 +55,29 @@ export default function LuqiDrivePage() {
   return (
     <DriveSession
       key={trail.id}
-      {...{ trail, lang, setLang, switchTrail, narration }}
+      {...{
+        trail,
+        lang,
+        setLang,
+        switchTrail,
+        narration,
+        fuelDraft,
+        setFuelDraft,
+      }}
     />
   );
 }
 function DriveSession({
+  fuelDraft,
+  setFuelDraft,
   narration,
   trail,
   lang,
   setLang,
   switchTrail,
 }: {
+  fuelDraft: FuelDraft;
+  setFuelDraft: (draft: FuelDraft) => void;
   narration: { seen: Map<string, number>; lastAttempt: number };
   trail: Trail;
   lang: LanguageKey;
@@ -270,13 +284,24 @@ function DriveSession({
     <section className="driveDesk" aria-label="Luqi-Drive road companion">
       <header className="driveHeader">
         <div className="driveOverline">
-          <Navigation size={15} /> KHORO OS / ROAD COMPANION
+          <Navigation size={15} /> KHORO OS / JOURNEY CONTROL
         </div>
         <h1>
           Luqi<span>-Drive</span>
         </h1>
-        <p>Follow your position and discover the places around you.</p>
-        <button className="driveSecondary" type="button" onClick={() => document.getElementById("field-guide-title")?.focus()}>Open my field guide</button>
+        <p>Explore with curiosity. Travel with a plan.</p>
+        <div className="driveHeaderMeta">
+          <span>09 provinces</span>
+          <span>04 briefing languages</span>
+          <span>On-device trip planning</span>
+        </div>
+        <button
+          className="driveSecondary"
+          type="button"
+          onClick={() => document.getElementById("field-guide-title")?.focus()}
+        >
+          Open my field guide
+        </button>
       </header>
       <nav className="driveTrails" aria-label="Driving corridors">
         {trails.map((t) => (
@@ -299,7 +324,9 @@ function DriveSession({
             <div className="driveTarget">
               <span>
                 {isDemo && demo.arrived
-                  ? national ? "FINAL PROVINCE" : "FINAL LANDMARK"
+                  ? national
+                    ? "FINAL PROVINCE"
+                    : "FINAL LANDMARK"
                   : isGPS
                     ? national
                       ? "PROVINCE GUIDE"
@@ -563,14 +590,25 @@ function DriveSession({
               if (!e.target.checked) voice.stop();
             }}
           />{" "}
-          Read the matched guide aloud once per language per day in this session, when a narrator is available.
+          Read the matched guide aloud once per language per day in this
+          session, when a narrator is available.
         </label>
         <a href={guide.source.url} target="_blank" rel="noreferrer">
           {guide.source.label} ↗
         </a>
       </div>
+      <div className="drivePlanningHeading">
+        <div>
+          <span className="driveOverline">PLAN YOUR NEXT MOVE</span>
+          <h2>A smarter journey starts here.</h2>
+        </div>
+        <p>Collect the places. Work out the fuel. Make it yours.</p>
+      </div>
+      <div className="drivePlanningGrid">
+        <FieldNotebook guide={guide} />
+        <TripFuel value={fuelDraft} onChange={setFuelDraft} />
+      </div>
       <CivicWardGuide />
-      <FieldNotebook guide={guide} />
       <details className="driveCredits">
         <summary>About the African voices</summary>
         <p>
@@ -588,7 +626,6 @@ function DriveSession({
           your device. Device voice availability varies.
         </p>
       </details>
-      <TripFuel />
     </section>
   );
 }

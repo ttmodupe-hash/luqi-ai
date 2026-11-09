@@ -2,25 +2,23 @@
 
 Owner direction, 9 November 2026: the product must feel futuristic, polished, useful and visually appealing without the owner repeatedly having to obtain design guidance elsewhere. A working function is not a completed user experience.
 
-## Required design approach
-- Design the user's task before the explanatory text. Make the next action obvious; use focused workspaces, meaningful selections and useful empty states rather than stacking document-like panels.
-- Establish one visual language: deep forest/graphite surfaces, high-contrast warm text, restrained lime emphasis, clear geometry, generous spacing and a selective editorial heading. Colour must support hierarchy, not substitute for it. Do not assume a colour change alone is a redesign.
-- Different tasks need appropriate layouts. Use a map for exploration, a timeline for progress, a workbench for practice, and an evidence inspector for sources. Do not turn every module into identical cards.
-- Make actions real. Buttons must change a view, perform a permitted operation or open an identified original source. Do not use fake agent activity, simulated live metrics, animated percentages, invented success indicators or decorative controls.
-- Put the essential limitation next to the decision. Keep detailed provenance and explanations accessible in disclosures instead of displaying a wall of cautionary text on first view. Do not remove original evidence to improve appearance.
-- Meaningful hover/focus/selection transitions only; no infinite decoration. Honour reduced-motion and forced-colour preferences. Use native keyboard interactions, named controls, visible focus and 48px main touch targets.
-- Inspect the real built screen at desktop, 390px and 320px. Readability, spacing, content density and navigation count alongside functional tests. Passing tests is not a claim of a visually reviewed screen or accessibility certification.
-- Prefer local fonts and light CSS/SVG. Do not add paid AI calls, new subscriptions, tracking, unnecessary network images or repeated login prompts to deliver a visual improvement.
-- Preserve working feature, privacy, data, source, storage and authorization contracts. Review and merge before deployment; never deploy merely to present an improved mock-up.
+## Design requirements
+- Design the user's task before the explanatory text. Make the next action obvious. Prefer focused workspaces, meaningful selections and useful empty states to document-like panels.
+- Use a coherent visual language: deep navy/graphite surfaces, high-contrast text, restrained cyan and lime accents, clear geometry and generous spacing. Follow the current Drive and Civic Atlas visual system. A colour change alone is not a redesign.
+- Use the right layout for each task: map for exploration, timeline for progress, workbench for practice and evidence inspector for sources. Do not turn every module into identical cards.
+- Make actions real. Buttons change a view, perform a permitted operation or open an identified original source. No fake agent activity, simulated live metrics, invented success indicators or decorative controls.
+- Put essential limitations next to decisions. Keep detailed provenance and explanations accessible through disclosures instead of a first-view wall of cautions. Preserve source content and meaningful nuance.
+- Use restrained hover/focus/selection transitions, not perpetual animation. Honour reduced-motion and forced-colour preferences. Native keyboard interactions, unique accessible IDs, visible focus and 48px principal touch targets are required.
+- Inspect the actual built screen at desktop, 390px and 320px. Check readability, hierarchy, spacing, density, empty/error states and navigation. Passing tests alone is neither visual review nor accessibility certification.
+- Prefer local fonts and lightweight CSS/SVG. Do not add paid AI calls, subscriptions, tracking, external stock assets or repeat login prompts merely to deliver a visual improvement.
+- Preserve working feature, privacy, source, storage, permission and download contracts. Review before production release; a preview is not a deployment.
 
-## First applied implementation
-Base: main 853af20b6389b1f721347b4ce613b28107d04f8c, which contains the screenshot's civic guide. Separate from earlier open feature drafts.
+## First application and concurrent work reconciliation
+The screenshot's shared CivicWardGuide becomes a task-led Civic Manager: four local task selectors, focused next steps, explicit source actions and a complete collapsible seven-channel evidence library. Existing source URLs, original civic cautions, equal-evidence standard, non-profiling boundary and review date are retained. No ward, representative or party preference is inferred.
 
-The shared CivicWardGuide becomes an interactive Civic Manager with four local task selectors, a focused next-step panel, explicit original-source actions and an expandable complete seven-channel evidence library. Existing civic statements, source URLs, equal-evidence rule, non-profiling boundary and review date are preserved. No ward or representative is inferred. It also appears in the existing Civic Evidence Desk through the same shared component.
+During implementation main advanced from 853af20b to a9141c5, bringing separate Drive and Civic Atlas improvements. Those updates are preserved, including the new fuel planning workflow, collection reorder controls, multilingual saved-guide reader, Civic Atlas map and evidence inspector, and desktop checksum work. The earlier draft's replacement notebook and blanket Drive theme are not retained over that newer implementation. The focused Civic Manager uses the updated navy/cyan/lime style in both existing host screens. Both frontend trees remain identical for these shared files.
 
-Luqi-Drive receives a cohesive scoped theme across its header, trail selection, narration controls, map controls, guide and field notebook. Map/GPS and voice logic are unchanged. FieldNotebook keeps its existing browser storage schema, text export and checksum behavior, with an intentional empty state and clearer selected-place and saved-collection presentation. Both frontend trees receive identical components and styles.
+No new live-data feed, paid service, deployment, collection or operational status is introduced. The static civic orbit is decorative, not a location or live signal. The source-channel count derives from actual local data.
 
-No new data feed, paid service, deployment, automatic collection or operational status is introduced. The decorative civic orbit is a static illustration, not a location or live signal. Source channel count and saved-place count derive from actual local data.
-
-## Acceptance evidence
-New tests preserve all seven official channels and original caveats, task selection, unique accessible IDs, local-only interaction and mirrored code. Existing GPS, narration, fuel and notebook tests remain required. Built-browser tests cover real navigation, task changes, native keyboard controls, reduced motion, 320px layout, functioning downloads and absence of new location/external requests. The workflow retains screenshots for actual visual inspection. Record results only after the exact candidate has run; this document does not predeclare a pass.
+## Acceptance
+Tests preserve seven exact URLs, original cautions, task selection, unique IDs, local-only interactions and mirrored production files. Existing GPS, narration, fuel, notebook and Civic Atlas tests remain required. Browser journeys cover task changes, keyboard, reduced motion, 320px layout, retained multilingual file downloads and absence of added GPS/external requests. Existing Civic Atlas and Drive planning browser journeys also run. Actual application screenshots are retained for visual inspection. Record exact-commit results separately; this document does not predeclare a pass.
