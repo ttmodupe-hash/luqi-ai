@@ -52,7 +52,9 @@ export default function TownshipBusinessWorkspace({ context, steps, reviewContex
   }, [dirty]);
   function change(update: Partial<TownshipProject>) {
     epoch.current++;
-    setPending(null); setNotice(''); setFileError(''); setQuote(null); setPricing(null); setQuoteError(''); setPricingError('');
+    setPending(null); setNotice(''); setFileError('');
+    if ('businessName' in update || 'customerName' in update || 'reference' in update || 'items' in update) { setQuote(null); setQuoteError(''); }
+    if ('pricing' in update) { setPricing(null); setPricingError(''); }
     setProjects(previous => ({ ...previous, [key]: { ...(previous[key] || newTownshipProject(context)), ...update } }));
   }
   function updateItem(index: number, name: 'description' | 'quantity' | 'price', value: string) {
@@ -111,11 +113,11 @@ export default function TownshipBusinessWorkspace({ context, steps, reviewContex
     try { setPricing(checkPricing({ sellingPriceZar: project.pricing.selling.trim(), directCostZar: project.pricing.direct.trim(), monthlyFixedZar: project.pricing.fixed.trim() })); }
     catch { setPricingError('Enter nonnegative ZAR amounts with at most two decimals. Use fixed costs for the same period as your sales target.'); }
   }
-  return <section id="township-workbench" tabIndex={-1} aria-labelledby="township-workspace-heading" className="min-w-0 space-y-5 rounded-2xl border border-cyan-700 bg-slate-900 p-4 sm:p-6">
+  return <section id="township-workbench" tabIndex={-1} aria-labelledby="township-workspace-heading" className="scroll-mt-24 min-w-0 space-y-5 rounded-2xl border border-cyan-700 bg-slate-900 p-4 sm:p-6">
     <header className="space-y-3">
       <p className="text-xs font-semibold uppercase tracking-widest text-cyan-300">Turn the information into work you can use</p>
       <h2 id="township-workspace-heading" className="text-2xl font-bold">Your business workbench</h2>
-      <p className="max-w-3xl text-sm text-slate-200">Prepare your business summary, track your next steps, test a selling price and create a quotation here. The guides and original sources remain below.</p>
+      <p className="max-w-3xl text-sm text-slate-200">Prepare your business summary, track your next steps, test a selling price and create a quotation here. The guidance and original sources stay on this page.</p>
       <p className="text-xs text-slate-300">No sign-in or AI credits. Entries stay in this page’s memory; download an editable project before leaving. The file is not encrypted: keep it private and do not include ID numbers, bank details or passwords.</p>
       <nav aria-label="Business workbench sections" className="flex flex-wrap gap-3 text-sm text-cyan-200">
         <button type="button" className="min-h-11 underline underline-offset-4" onClick={()=>jumpTo('township-work-plan')}>Prepare</button>
@@ -161,7 +163,7 @@ export default function TownshipBusinessWorkspace({ context, steps, reviewContex
           <p className="text-sm text-slate-300">Uses the business name above. A draft quotation is not a tax invoice, receipt or guarantee of payment.</p>
           <label className="block text-sm">Workbench customer name<input className={field} maxLength={90} value={project.customerName} onChange={e=>change({customerName:e.target.value})}/></label>
           <label className="block text-sm">Workbench quote reference<input className={field} maxLength={45} value={project.reference} onChange={e=>change({reference:e.target.value})}/></label>
-          {project.items.map((item,index)=><fieldset key={index} className="min-w-0 space-y-3 rounded-lg border border-slate-600 p-3">
+          {project.items.map((item,index)=><fieldset key={index} className="min-w-0 space-y-3 rounded-lg border border-slate-600 bg-slate-950 p-3">
             <legend className="px-2 text-sm">Quote item {index+1}</legend>
             <label className="block text-sm">Workbench item {index+1} description<input className={field} maxLength={120} value={item.description} onChange={e=>updateItem(index,'description',e.target.value)}/></label>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
