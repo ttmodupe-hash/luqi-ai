@@ -1,4 +1,6 @@
 import { useState } from "react";
+import DriveIntelligenceEntry from "./DriveIntelligencePanel";
+import DriveSourceStatusEntry from "./DriveSourceStatusPanel";
 
 const fuelFields = [
   { label: "Road distance (km)", placeholder: "e.g. 145" },
@@ -6,7 +8,11 @@ const fuelFields = [
   { label: "Pump price (R/L)", placeholder: "Enter your local price" },
 ];
 
+// Preserve standalone fuel calculations. Optional status is a separate, manual read.
 export default function TripFuel() {
+  return <><ExistingTripFuel /><DriveIntelligenceEntry /><DriveSourceStatusEntry /></>;
+}
+function ExistingTripFuel() {
   // No assumed national price: both distance and consumption are user inputs too.
   const [values, setValues] = useState(["", "", ""]);
   const [km, consumption, price] = values.map(Number);
