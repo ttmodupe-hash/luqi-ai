@@ -1,0 +1,71 @@
+.luqi-devsecnet .websiteStarter {
+  background: #173c2e;
+  border: 1px solid #88b29a;
+  border-radius: 16px;
+  padding: clamp(16px, 3vw, 26px);
+  margin-bottom: 24px;
+  min-width: 0;
+}
+.luqi-devsecnet .starterEyebrow {
+  color: #f5cf7f;
+  font-weight: 800;
+  font-size: .77rem;
+  letter-spacing: .08em;
+}
+.luqi-devsecnet .websiteStarter h2 { margin: 8px 0; }
+.luqi-devsecnet .starterStep { font-weight: 700; color: #fbd88d; }
+.luqi-devsecnet .websiteStarterLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(14px, 2vw, 22px);
+  align-items: start;
+}
+.luqi-devsecnet .websiteStarterForm,
+.luqi-devsecnet .websiteStarterPreview { min-width: 0; }
+.luqi-devsecnet .websiteStarterForm label { margin: 12px 0; font-weight: 650; }
+.luqi-devsecnet .websiteStarterForm input,
+.luqi-devsecnet .websiteStarterForm textarea { font-weight: 400; }
+.luqi-devsecnet .starterHint { font-size: .85rem; color: #d6e9da; }
+.luqi-devsecnet .websiteStarterPreview {
+  border: 1px solid #83a58e;
+  padding: 12px;
+  border-radius: 12px;
+  background: #0f2a20;
+}
+.luqi-devsecnet .websiteStarterPreview h3 { margin: 0 0 10px; }
+.luqi-devsecnet .websiteStarterPreview iframe {
+  display: block;
+  border: 1px solid #7f9e8a;
+  border-radius: 9px;
+  background: #fff;
+  width: 100%;
+  min-width: 0;
+  height: 420px;
+}
+.luqi-devsecnet .starterButtons { display: flex; flex-wrap: wrap; gap: 7px; }
+.luqi-devsecnet .starterButtons button { margin: 0; flex: 1 1 155px; }
+.luqi-devsecnet .starterButtons button:last-child { background: #f9c75d; }
+.luqi-devsecnet .starterNotice { border-left: 4px solid #f9c75d; padding: 8px 12px; }
+.luqi-devsecnet .starterLearning { margin-top: 12px; }
+.luqi-devsecnet .advancedDevTools > summary { font-weight: 700; }
+.luqi-devsecnet .advancedDevTools { margin: 16px 0; padding: 8px 0; }
+.luqi-devsecnet .userGoals { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.luqi-devsecnet .userGoals a {
+  background: #244534;
+  border: 1px solid #91b59a;
+  border-radius: 10px;
+  min-width: min(100%, 180px);
+  flex: 1 1 180px;
+  text-decoration: none;
+  color: #ffe6a1;
+  font-weight: 700;
+}
+.luqi-devsecnet .userGoals a:hover { background: #305b42; }
+@media (max-width: 810px) {
+  .luqi-devsecnet .websiteStarterLayout { grid-template-columns: minmax(0, 1fr); }
+  .luqi-devsecnet .websiteStarterPreview iframe { height: 350px; }
+}
+@media (max-width: 360px) {
+  .luqi-devsecnet .websiteStarter { padding: 12px; }
+  .luqi-devsecnet .starterButtons button { flex: 1 1 100%; }
+}
