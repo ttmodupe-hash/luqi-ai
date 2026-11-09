@@ -24,7 +24,9 @@ test('watch handoff shows pending-document advertisements with working 320px fil
  await expect(watch.getByRole('status',{name:'Matched watch notice count'})).toContainText('2 advertisements');
  await expect(watch.getByText('Documents pending · not bid-ready',{exact:true})).toHaveCount(2);
  await expect(watch.getByText(/latest release recheck could not retrieve/)).toBeVisible();
- await expect(watch.getByRole('button')).toHaveCount(0);
+ // Native summary elements may expose an accessible button role. Those are
+ // valid disclosure controls, unlike an actual application/export/submit form.
+ await expect(watch.locator('button, form, input[type="submit"]')).toHaveCount(0);
  await expect(watch.getByText('Estimated contract value: not stated.',{exact:true})).toHaveCount(2);
  await watch.getByLabel('Province for watch notices').selectOption('GP');
  await expect(watch.getByRole('article')).toHaveCount(0);
@@ -57,7 +59,7 @@ test('calendar passage requires source review and never manufactures full-docume
  await page.goto('/#/tenders');
  const watch=page.getByRole('region',{name:'Upcoming procurement · documents pending'});
  await expect(watch.getByText('Source recheck required · not bid-ready',{exact:true})).toHaveCount(2);
- await expect(watch.getByRole('button')).toHaveCount(0);
+ await expect(watch.locator('button, form, input[type="submit"]')).toHaveCount(0);
 });
 
 test('exact compulsory briefing cutoff hides the notice unless history is deliberately requested',async({page})=>{
