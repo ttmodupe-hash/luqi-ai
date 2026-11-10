@@ -15,6 +15,7 @@ const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
 const PossibilityEnginePage = lazy(() => import("./pages/PossibilityEnginePage"));
+const CapabilityJourneyPage = lazy(() => import("./pages/CapabilityJourneyPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
 const TermsPage = lazy(() => import("./pages/TermsPage"));
@@ -85,6 +86,7 @@ export default function App() {
         <RouterRoute path="/quantum-lab" element={<QuantumLabPage />} />
         <RouterRoute path="/start" element={<StartPage />} />
         <RouterRoute path="/possibility" element={<PossibilityEnginePage />} />
+        <RouterRoute path="/journey" element={<CapabilityJourneyPage />} />
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
