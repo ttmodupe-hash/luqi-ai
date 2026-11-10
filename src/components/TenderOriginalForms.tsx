@@ -62,12 +62,11 @@ export function TenderOriginalForms(){
   }
   async function inspectFile(file:File,amendment=false){
     if(!consent||busy||historyFull)return;
-    if(file.size<=0||file.size>TENDER_FILE_MAX){setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;}
     if(amendment&&(!primary||amendments.length>=6)){setMessage('Choose an original first. Up to six addenda are supported.');return;}
     const version=++epoch.current;
-    pending.current?.abort();const controller=new AbortController();pending.current=controller;
+    pending.current?.abort();pending.current=null;
     // Clear approvals as soon as a replacement is selected, even when parsing fails.
-    const next=revision+1;setRevision(next);setPrepared(null);setGates(emptyOriginalApprovals());setBusy(true);
+    const next=revision+1;setRevision(next);setPrepared(null);setGates(emptyOriginalApprovals());
     if(!amendment){
       // A newly selected original starts a different application. Never carry over
       // another application's tender reference, principal, price or channel.
@@ -75,6 +74,11 @@ export function TenderOriginalForms(){
       // Also clear the prior application's audit even if inspection rejects the replacement.
       setHistory([]);
     }
+    // Reject invalid sizes after clearing any previous applicant's local review.
+    // Even an empty or oversized replacement is a new selection, not permission
+    // to retain another application's facts, price, approvals or audit history.
+    if(file.size<=0||file.size>TENDER_FILE_MAX){setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;}
+    const controller=new AbortController();pending.current=controller;setBusy(true);
     setMessage('Checking file type, archive limits and unsupported active content locally…');
     try{
       const bytes=new Uint8Array(await file.arrayBuffer());
