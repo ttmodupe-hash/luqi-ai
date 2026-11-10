@@ -52,6 +52,27 @@ describe('LUQI Capability Journey', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
+  it('confirms completion only after storage succeeds', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(readCapabilityJourney()?.completed).toEqual([0]);
+    expect(screen.getByText('25%')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/Stage marked complete on this device/);
+  });
+
+  it('preserves the previous progress and reports a failed local-storage write', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage blocked', 'QuotaExceededError');
+    });
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(screen.getByText('0%')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/could not be confirmed as saved/i);
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+  });
+
   it('lets the user clear the device-local journey', () => {
     saveCapabilityJourney('I want to build an app for my community');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
