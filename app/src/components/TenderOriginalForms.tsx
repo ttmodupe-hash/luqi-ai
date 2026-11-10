@@ -170,6 +170,12 @@ export function TenderOriginalForms(){
     }catch{if(version===epoch.current)setMessage('Export stopped: the packet changed, approval expired or review is incomplete. Prepare and approve it again.');}
     finally{if(version===epoch.current)setBusy(false)}
   }
+  const expiryAt=prepared?Math.min(
+    Date.parse(prepared.packet.preparedAt)+30*60*1000,
+    Date.parse(prepared.packet.context.deadline)
+  ):0;
+  const reviewExpired=!!prepared&&clock>=expiryAt;
+  const expiredByDeadline=!!prepared&&Date.parse(prepared.packet.context.deadline)<=Date.parse(prepared.packet.preparedAt)+30*60*1000;
   const ready=canExportTenderPacket(prepared?.packet??null,revision,gates,new Date(clock));
   return <section aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
@@ -246,10 +252,15 @@ export function TenderOriginalForms(){
       <h3 className="font-semibold">Review version {prepared.packet.revision}</h3>
       <p className="break-all text-xs">Exact packet digest: {prepared.packet.digest}</p>
       <p className="text-xs text-amber-200">Unsigned, partial original for manual completion. Review expires in 30 minutes or at the closing time. Every edit clears every approval. Prices and declarations have not been filled.</p>
+      {reviewExpired&&<p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm text-amber-100">
+        Review expired: {expiredByDeadline?'the recorded bid closing time has passed':'the 30-minute applicant review window has ended'}.
+        Earlier checkmarks no longer authorise this export. Confirm the issuer deadline, select Prepare exact original for review,
+        and approve the newly prepared packet before downloading. Nothing was submitted.
+      </p>}
       <dl className="space-y-1 text-sm">{SBD1_FIELDS.map(field=><div key={field.id} className="break-words"><dt className="font-semibold">{field.label}</dt><dd>{values[field.id]||'Left blank for applicant completion'}</dd></div>)}</dl>
       {prepared.packet.files.map(file=><p key={file.name} className="break-all text-xs">{file.role}: {file.name} · SHA-256 {file.sha256}</p>)}
       {ORIGINAL_FORM_GATES.map(g=><label key={g.id} className="flex items-start gap-2 rounded-lg border border-slate-700 p-3 text-sm">
-        <input type="checkbox" disabled={busy||historyFull||(g.id==='release'&&!ORIGINAL_FORM_GATES.filter(x=>x.id!=='release').every(x=>gates[x.id]))}
+        <input type="checkbox" disabled={busy||historyFull||reviewExpired||(g.id==='release'&&!ORIGINAL_FORM_GATES.filter(x=>x.id!=='release').every(x=>gates[x.id]))}
           checked={gates[g.id]} onChange={e=>gate(g.id,e.target.checked)} className="mt-1"/><span>{g.label}</span>
       </label>)}
       <button type="button" className={buttonStyle} disabled={!ready||busy||historyFull} onClick={()=>{void download()}}>Export filled original and review record</button>
