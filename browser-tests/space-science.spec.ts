@@ -64,3 +64,28 @@ test('frequency and source selection also work with the keyboard',async({page})=
  await expect(topic).toHaveValue('Radio astronomy');await expect(page.getByRole('article')).toHaveCount(3);
  expect(errors).toEqual([]);
 });
+
+
+test('SKAO deep dive is keyboard-accessible, grounded and remains within 320px',async({page,baseURL})=>{
+ await page.setViewportSize({width:320,height:840});
+ const requests:string[]=[];
+ page.on('request',request=>{
+  const url=new URL(request.url());
+  if((url.protocol==='http:'||url.protocol==='https:')&&url.origin!==new URL(baseURL!).origin)requests.push(url.origin);
+  if(request.method()==='POST')requests.push(url.pathname);
+ });
+ await page.goto('/#/space-science');
+ const details=page.locator('details.luqi-space-deep-dive');
+ await expect(details).toHaveCount(1);
+ const toggle=details.locator('summary');
+ await toggle.focus();await toggle.press('Enter');
+ await expect(details).toHaveAttribute('open','');
+ await expect(details.getByText(/maximum baseline of 150 km/)).toBeVisible();
+ await expect(details.getByText(/not a verified count of dishes installed or operating today/)).toBeVisible();
+ await details.getByRole('button',{name:'Explore wavelength in the calculator above'}).click();
+ await expect(page.getByRole('heading',{name:'Experiment with radio and distance'})).toBeFocused();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ await page.getByLabel('Topic',{exact:true}).selectOption('Space weather');
+ await expect(details).toHaveCount(0);
+ expect(requests).toEqual([]);
+});
