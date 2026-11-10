@@ -33,6 +33,14 @@ test('AI credit coaching stays local until a separate user-controlled Chat Send'
   await expect(page.getByRole('link', { name: /National Credit Regulator: 2007 NCA consumer guide/ })).toHaveAttribute(
     'href', 'https://ncr.org.za/documents/pages/Brochures/ENGLISH.pdf',
   );
+  await expect(page.getByRole('link', { name: /National Credit Regulator: dispute complaints guideline 005\/2024/ })).toHaveAttribute(
+    'href', 'https://www.ncr.org.za/phocadownload/GUIDELINES%20FOR%20THE%20SUBMISSION%20OF%20COMPLAINTS%20RELATING%20TO%20DISPUTED%20CONSUMER%20CREDIT%20INFORMATION.pdf',
+  );
+  await expect(page.getByRole('link', { name: 'National Credit Regulator: complaints and Form 29' })).toHaveAttribute(
+    'href', 'https://www.ncr.org.za/index.php/departments/complaints',
+  );
+  await expect(page.getByText('NCR guideline 005/2024 says', { exact: false })).toContainText('five business days');
+  await expect(page.getByText('If the bureau provides supporting evidence', { exact: false })).toContainText('Form 29');
   await expect(page.getByText('The NCR guide above is from 2007', { exact: false })).toBeVisible();
   expect(writes).toEqual([]);
 

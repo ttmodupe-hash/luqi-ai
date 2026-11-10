@@ -86,6 +86,8 @@ export default function CreditAiCoach() {
         <li><a className="text-cyan-200 underline" href="https://www.transunion.co.za/product/annual-free-credit-report" target="_blank" rel="noopener noreferrer">TransUnion: free annual report</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.experian.co.za/consumer/my-free-credit-check-and-your-free-credit-report" target="_blank" rel="noopener noreferrer">Experian: consumer report and free disputes</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.cba.co.za/enquiries" target="_blank" rel="noopener noreferrer">Credit Bureau Association: other bureaus including XDS</a></li>
+        <li><a className="text-cyan-200 underline" href="https://www.ncr.org.za/phocadownload/GUIDELINES%20FOR%20THE%20SUBMISSION%20OF%20COMPLAINTS%20RELATING%20TO%20DISPUTED%20CONSUMER%20CREDIT%20INFORMATION.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: dispute complaints guideline 005/2024 (December 2024)</a></li>
+        <li><a className="text-cyan-200 underline" href="https://www.ncr.org.za/index.php/departments/complaints" target="_blank" rel="noopener noreferrer">National Credit Regulator: complaints and Form 29</a></li>
         <li><a className="text-cyan-200 underline" href="https://ncr.org.za/documents/pages/Brochures/ENGLISH.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: 2007 NCA consumer guide (historical)</a></li>
       </ul>
       <p className="text-xs text-amber-200">
@@ -93,10 +95,18 @@ export default function CreditAiCoach() {
         It may predate amendments; check the current Act, regulations and NCR guidance before acting.
       </p>
       <p className="text-xs text-slate-300">
-        NCA section 72 and Regulation 20 provide a dispute process, generally with a 20-business-day
-        investigation requirement. Section 126B does not make every debt prescribed after three years.
-        Actual legal timelines depend on the agreement and events. Sources reviewed 3 November 2026;
-        verify current requirements with the regulator or a qualified adviser.
+        Challenge incorrect information with the credit bureau first and keep its reference number.
+        NCR guideline 005/2024 says a complete dispute should be masked within five business days and
+        the bureau should finish its resolution process within 20 business days after receiving the
+        complete notification and supporting documents. Send any identity or evidence documents
+        directly through the bureau's official channels, never through this Luqi exercise.
+      </p>
+      <p className="text-xs text-slate-300">
+        If the bureau provides supporting evidence and you still disagree, NCA section 72(4)
+        generally allows 20 business days after receiving that evidence to request NCR investigation
+        using Form 29. These are separate timelines; check the current NCR complaint requirements.
+        Section 126B does not make every debt prescribed after three years. Actual legal outcomes
+        depend on the debt and events. Sources reviewed 10 November 2026; seek qualified advice.
       </p>
     </div>
 
