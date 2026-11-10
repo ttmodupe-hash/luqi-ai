@@ -137,7 +137,9 @@ export function isingEnergies(model: IsingModel): number[] {
 }
 export function exactIsingBaseline(model: IsingModel) {
   const energies = isingEnergies(model), minimum = Math.min(...energies);
-  return { minimum, states: energies.flatMap((energy, index) => Math.abs(energy - minimum) < 1e-10 ? [index] : []), statesEvaluated: energies.length };
+  // Compare the enumerated finite spectrum itself. A fixed absolute tolerance
+  // falsely labels distinct low-energy states as exact minima (e.g. 1e-12).
+  return { minimum, states: energies.flatMap((energy, index) => energy === minimum ? [index] : []), statesEvaluated: energies.length };
 }
 /** Rotate an internally owned state in place, retaining per-gate norm validation.
  * The caller clones its shared gamma-phase state once; no public input is mutated.

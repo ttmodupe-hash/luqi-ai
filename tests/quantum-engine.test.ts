@@ -69,6 +69,19 @@ describe('QAOA costs compared with independent analytical references', () => {
     expect(result.parameterPairs).toBe(81);
     expect(result.expectedEnergy).toBeCloseTo(qaoaLayer(pair, result.gamma, result.beta).expectedEnergy, 12);
   });
+  it('does not invent degenerate exact minima for very small valid Ising fields', () => {
+    // Independent one-spin reference: E(0)=+h and E(1)=-h.
+    const small = { fields: [1e-12], edges: [] };
+    expect(isingEnergies(small)).toEqual([1e-12, -1e-12]);
+    expect(exactIsingBaseline(small)).toEqual({
+      minimum: -1e-12, states: [1], statesEvaluated: 2,
+    });
+    // Genuine degeneracy must still be reported at the same small scale.
+    const tied = { fields: [0, 0], edges: [{ i: 0, j: 1, weight: 1e-12 }] };
+    expect(exactIsingBaseline(tied)).toEqual({
+      minimum: -1e-12, states: [1, 2], statesEvaluated: 4,
+    });
+  });
   it('maps feeder loads to squared imbalance with the required constant term', () => {
     const loads = [2, 3, 5, 7], model = loadBalanceModel(loads), energies = isingEnergies(model.model);
     energies.forEach((energy, state) => {
