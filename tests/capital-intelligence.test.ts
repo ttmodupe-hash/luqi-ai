@@ -111,6 +111,20 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(draft).toContain('Across Africa');
     expect(draft).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
   });
+  it('explains MIT Solve concept-stage fellowship exception and its expired 2026 deadline',()=>{
+    const now=new Date('2026-11-11T10:00:00Z');
+    const idea=matchCapitalProgrammes({...profile,country:'KE',maturity:'IDEA'},now)
+      .find(m=>m.programme.id==='mit-solve-challenges')!;
+    expect(idea.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(idea.checks.join(' ')).toMatch(/functioning prototype.*Concept-stage ideas.*Indigenous Communities Fellowship/);
+    expect(idea.checks.join(' ')).toContain('6 November 2026 at 12:00 EST (19:00 SAST)');
+    expect(idea.checks.join(' ')).toMatch(/past deadline does not establish any currently open challenge/);
+    const prototype=matchCapitalProgrammes({...profile,country:'KE',maturity:'MVP'},now)
+      .find(m=>m.programme.id==='mit-solve-challenges')!;
+    expect(prototype.checks.join(' ')).not.toMatch(/Concept-stage ideas are reviewed only/);
+    expect(prototype.checks.join(' ')).toContain('19:00 SAST');
+    expect(prototype.state).toBe('CHECK_PUBLISHER_CRITERIA');
+  });
   it('rejects malformed inputs and does not infer uploaded or externally verified documents',()=>{
     expect(()=>matchCapitalProgrammes({...profile,age:999})).toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
     expect(()=>matchCapitalProgrammes({...profile,maturity:'IMPOSSIBLE' as any})).toThrow();
