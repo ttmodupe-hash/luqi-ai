@@ -36,7 +36,8 @@ describe('consumer rights guide, zero-provider fallback', () => {
       expect(u.username).toBe('');
       expect(u.password).toBe('');
       expect(u.search).toBe('');
-      expect(source.reviewedOn).toBe(source.id === 'icasa-crm' ? '2026-11-07' : CONSUMER_GUIDE_REVIEWED_ON);
+      expect(source.reviewedOn).toBe(source.id === 'icasa-crm' ? '2026-11-07' :
+        source.id === 'ncc' ? '2026-11-08' : CONSUMER_GUIDE_REVIEWED_ON);
       expect(ids.has(source.id)).toBe(true);
     }
     for (const type of categories) {
@@ -49,6 +50,26 @@ describe('consumer rights guide, zero-provider fallback', () => {
       for (const id of plan.sourceIds) expect(ids.has(id)).toBe(true);
     }
   });
+  it('points NCC-eligible users to a separately approved e-Services profile, not Luqi filing', () => {
+    const ncc = CONSUMER_SOURCES.find(source => source.id === 'ncc');
+    expect(ncc?.url).toBe('https://thencc.org.za/complaints/');
+    expect(ncc?.name).toContain('e-Services profile approval');
+    expect(ncc?.reviewedOn).toBe('2026-11-08');
+    for (const category of ['UNSURE', 'DEFECTIVE_GOODS'] as DisputeType[]) {
+      const text = CONSUMER_ISSUES[category].options.join(' ');
+      expect(text).toMatch(/NCC.*registered and approved/);
+      expect(text).toMatch(/NCC portal|NCC directly/);
+      expect(consumerSourcesFor(category).map(source => source.id)).toContain('ncc');
+    }
+    for (const category of ['UNAUTHORIZED_DEBIT_ORDER', 'POPIA_DATA_BREACH', 'TELCO_BILLING_DISPUTE'] as DisputeType[]) {
+      expect(CONSUMER_ISSUES[category].options.join(' ')).not.toContain('NCC e-Services');
+      expect(consumerSourcesFor(category).map(source => source.id)).not.toContain('ncc');
+    }
+    expect(CONSUMER_GUIDE_REVIEWED_ON).toBe('2026-11-01');
+    expect(CONSUMER_GUIDE_RECHECK_AFTER).toBe('2026-11-08');
+    expect(consumerGuideIsCurrent(new Date('2026-11-09T00:00:00+02:00'))).toBe(false);
+  });
+
   it('separates telecom escalation procedure from ICASA CRM registration', () => {
     const sources = consumerSourcesFor('TELCO_BILLING_DISPUTE');
     expect(sources.map(s => s.id)).toEqual(['icasa', 'icasa-crm', 'cgso']);

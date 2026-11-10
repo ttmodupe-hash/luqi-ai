@@ -47,10 +47,12 @@ export const CONSUMER_SOURCES: readonly ConsumerSource[] = [
   },
   {
     id: 'ncc',
-    name: 'Lodging a Consumer Protection Act complaint',
+    name: 'Lodging a Consumer Protection Act complaint (NCC e-Services profile approval)',
     publisher: 'National Consumer Commission (NCC)',
     url: 'https://thencc.org.za/complaints/',
-    reviewedOn: CONSUMER_GUIDE_REVIEWED_ON,
+    // Passage-specific check of NCC's profile, approval and contact-centre instructions on 8 Nov.
+    // Do not extend the expiry of this guide or the other regulator sources.
+    reviewedOn: '2026-11-08',
   },
   {
     id: 'ncc-scope',
@@ -115,7 +117,7 @@ export const CONSUMER_ISSUES: Readonly<Record<DisputeType, IssueGuidance>> = {
     ],
     options: [
       'Identify the correct sector and ask the supplier for a recorded response where safe.',
-      'Check the NCC scope and referral guidance; a specialist regulator may be more appropriate.',
+      'Check NCC scope and specialist referrals. If NCC is appropriate, its e-Services portal requires a separately registered and approved NCC profile before filing. Register with NCC directly or ask its contact centre for help; Luqi cannot create the profile.',
       'Seek qualified consumer or legal assistance for uncertainty about jurisdiction, deadlines or court proceedings.',
     ],
     sourceIds: ['ncc-scope', 'ncc'],
@@ -130,7 +132,7 @@ export const CONSUMER_ISSUES: Readonly<Record<DisputeType, IssueGuidance>> = {
     ],
     options: [
       'Put the issue and preferred remedy to the supplier in writing and retain their reply.',
-      'If unresolved, check whether CGSO or NCC can consider the complaint.',
+      'If unresolved, check CGSO or NCC jurisdiction. NCC e-Services complaint filing requires its own registered and approved profile; use the NCC portal or its contact centre, not a Luqi login.',
       'For injuries, safety risks, refusal or a disputed statutory deadline, seek qualified advice promptly.',
     ],
     sourceIds: ['consumer-act', 'cgso', 'ncc'],
