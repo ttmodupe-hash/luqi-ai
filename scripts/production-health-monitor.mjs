@@ -45,15 +45,21 @@ function revision(result) {
   return b.commit;
 }
 
-export async function observeProduction({ expectedCommit, request = fetch, now = () => Date.now() } = {}) {
-  if (typeof expectedCommit !== 'string' || !SHA.test(expectedCommit)) fail();
+export async function observeProduction({ expectedCommit, baselineOnly = false, request = fetch, now = () => Date.now() } = {}) {
+  // The PR baseline mode compares live hosts to each other, not to unshipped main.
+  // Every scheduled/status/manual post-release check still requires an exact SHA.
+  if (typeof baselineOnly !== 'boolean' ||
+      (baselineOnly && expectedCommit !== undefined) ||
+      (!baselineOnly && (typeof expectedCommit !== 'string' || !SHA.test(expectedCommit)))) fail();
   const observations = [];
+  let pinnedCommit = baselineOnly ? null : expectedCommit;
   for (const origin of MONITOR_ORIGINS) {
     let step = 'revision_before';
     try {
       // Observations must refer to one unchanged revision, including across hosts.
       const before = revision(await read(request, origin + '/v1/release'));
-      if (before !== expectedCommit) fail();
+      if (pinnedCommit === null) pinnedCommit = before;
+      if (before !== pinnedCommit) fail();
       step = 'http_health';
       const health = await read(request, origin + '/v1/health');
       if (health.status !== 200 || health.body.status !== 'healthy' ||
@@ -94,7 +100,10 @@ export async function observeProduction({ expectedCommit, request = fetch, now =
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     if (process.argv.length !== 2 || process.env.LUQI_VERIFY_PUBLIC !== 'true') fail();
-    console.log(JSON.stringify(await observeProduction({ expectedCommit: process.env.LUQI_EXPECTED_COMMIT })));
+    const baselineOnly = process.env.LUQI_OBSERVE_LIVE_BASELINE === 'true';
+    // A baseline job cannot also request a candidate or deployed-revision match.
+    const expectedCommit = process.env.LUQI_EXPECTED_COMMIT || undefined;
+    console.log(JSON.stringify(await observeProduction({ expectedCommit, baselineOnly })));
   } catch (error) {
     // Provider errors, responses, addresses and credentials never reach logs.
     console.error(error instanceof ObservationError ? error.message :

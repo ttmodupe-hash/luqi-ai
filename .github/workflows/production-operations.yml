@@ -109,8 +109,10 @@ jobs:
       - name: Observe fixed public hosts, exact revision, MySQL and SPA entry
         env:
           LUQI_VERIFY_PUBLIC: 'true'
-          # PRs observe the already-deployed base, never claim their candidate is live.
-          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          # A PR checks live host consistency, not the undeployed base commit.
+          # Other event types still enforce the exact deployed release SHA.
+          LUQI_OBSERVE_LIVE_BASELINE: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+          LUQI_EXPECTED_COMMIT: ${{ github.event_name != 'pull_request' && github.sha || '' }}
         run: node scripts/production-health-monitor.mjs
       - name: Record failed observation for the existing GitHub Actions notification channel
         if: failure()

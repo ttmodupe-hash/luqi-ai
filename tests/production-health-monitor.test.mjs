@@ -97,3 +97,32 @@ test('requires an exact commit before network and never prints a supplied secret
   assert.equal(child.status, 1);
   assert.ok(!(child.stdout + child.stderr).includes('private-marker'));
 });
+
+test('pre-deployment live baseline accepts an older stable revision without silently bypassing post-deploy SHA checks', async () => {
+  const f = fixture();
+  const report = await run({ expectedCommit: undefined, baselineOnly: true, request: f.request });
+  assert.equal(report.result, 'core_checks_passed');
+  assert.deepEqual(report.observations.map(o => o.commit), [commit, commit]);
+  assert.equal(f.calls.length, 10);
+
+  // A stale or differently routed second host must not pass as a coherent baseline.
+  const differentHost = fixture({ mutate: (url, result) =>
+    url.startsWith(MONITOR_ORIGINS[1]) && url.endsWith('/v1/release')
+      ? json({ format: 'luqi.release.v1', commit: 'b'.repeat(40) }) : result });
+  await assert.rejects(run({ expectedCommit: undefined, baselineOnly: true, request: differentHost.request }));
+
+  // A revision that changes within one host's observation is never accepted.
+  const changing = fixture({ mutate: (url, result, calls) =>
+    url.endsWith('/v1/release') && calls.length > 1
+      ? json({ format: 'luqi.release.v1', commit: 'b'.repeat(40) }) : result });
+  await assert.rejects(run({ expectedCommit: undefined, baselineOnly: true, request: changing.request }));
+
+  // Refuse mixed baseline + explicit expected SHA BEFORE any network access.
+  let calls = 0;
+  await assert.rejects(run({
+    expectedCommit: commit, baselineOnly: true, request: async () => { calls++; },
+  }));
+  assert.equal(calls, 0);
+  // The traditional post-deployment mode continues rejecting a wrong live SHA.
+  await assert.rejects(run({ expectedCommit: 'b'.repeat(40), request: f.request }));
+});
