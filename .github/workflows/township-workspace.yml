@@ -6,10 +6,13 @@ on:
       - 'src/pages/TownshipEconomyPage.tsx'
       - 'app/src/pages/TownshipEconomyPage.tsx'
       - '**/TownshipBusinessWorkspace.tsx'
+      - '**/TownshipSourceStatus.tsx'
       - '**/township-workspace.ts'
       - '**/business-desk.ts'
       - 'tests/township*.test.ts'
+      - 'tests/township*.test.tsx'
       - 'browser-tests/township-business-workspace.spec.ts'
+      - 'browser-tests/township-source-status.spec.ts'
       - 'browser-tests/municipal-township.spec.ts'
       - 'playwright.township.config.ts'
       - '.github/workflows/township-workspace.yml'
@@ -29,8 +32,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
-      - name: Source preservation, project validation and business arithmetic
-        run: npx --no-install vitest run tests/township-workspace.test.ts tests/township-economy.test.ts tests/business-desk.test.ts
+      - name: Source preservation, project validation, expiry and business arithmetic
+        run: npx --no-install vitest run tests/township-workspace.test.ts tests/township-economy.test.ts tests/township-economy-page.test.tsx tests/township-source-status.test.tsx tests/business-desk.test.ts
       - name: Typecheck both frontend implementations
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target ES2022 --module ESNext --moduleResolution bundler --esModuleInterop src/pages/TownshipEconomyPage.tsx app/src/pages/TownshipEconomyPage.tsx
       - run: npm run build

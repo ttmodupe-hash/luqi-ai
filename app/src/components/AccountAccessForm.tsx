@@ -20,6 +20,9 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
   const locked = useRef(false);
   const pending = useRef<AbortController | null>(null);
   const cooling = cooldown > 0;
+  const signupPasswordValid = validAccountPassword(password);
+  const signupPasswordsMatch = confirmation.length > 0 && password === confirmation;
+  const signupReady = mode !== 'signup' || (signupPasswordValid && signupPasswordsMatch);
   useEffect(() => () => { epoch.current++; pending.current?.abort(); pending.current = null; }, []);
   useEffect(() => {
     if (!cooling) return;
@@ -85,7 +88,15 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={busy}
         describedBy={mode === 'signup' ? 'account-password-help' : undefined} />
       {mode === 'signup' && <>
-        <p id="account-password-help" className="luqi-access-help">At least 12 characters; at most 72 UTF-8 bytes. Use a unique password from a password manager.</p>
+        <div id="account-password-help" className="luqi-access-help">
+          <p>Use at least 12 characters and at most 72 UTF-8 bytes. A unique password from a password manager is best.</p>
+          <p aria-live="polite">{password.length === 0 ? '○ Enter a password.' : signupPasswordValid
+            ? '✓ Password meets the length requirement.'
+            : '✕ Password must be at least 12 characters and no more than 72 UTF-8 bytes.'}</p>
+          <p aria-live="polite" role={confirmation.length > 0 && !signupPasswordsMatch && !notice && !cooling ? 'status' : undefined}>{confirmation.length === 0 ? '○ Re-enter your password to confirm it.' : signupPasswordsMatch
+            ? '✓ Passwords match.'
+            : 'The passwords do not match.'}</p>
+        </div>
         <PasswordField label="Confirm password" value={confirmation} onChange={setConfirmation}
           autoComplete="new-password" disabled={busy} describedBy="account-password-help" />
       </>}
@@ -95,7 +106,7 @@ export default function AccountAccessForm({ initialMode = 'signin', purpose = 'n
         <p className="luqi-access-help">Opt in only on your private device. Secure session restoration lasts up to 24 hours, or up to 12 hours without a refresh; the server can revoke access sooner.</p>
       </> : <p className="luqi-access-help">Secure remember-device sign-in is still being tested. Normal sign-in works now, but reopening or refreshing may require signing in again.</p>}
       <div className="luqi-access-actions">
-        <button className="luqi-primary" disabled={busy || ambiguous || cooling}>
+        <button className="luqi-primary" disabled={busy || ambiguous || cooling || !signupReady}>
           {busy ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}
         </button>
         {busy && <button type="button" className="luqi-secondary" onClick={() => {

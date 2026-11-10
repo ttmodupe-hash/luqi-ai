@@ -112,7 +112,8 @@ jobs:
         run: bun audit
 
   audit-app-and-desktop:
-    runs-on: ubuntu-latest
+    # Stable OS for the pinned desktop toolchain; retain every audit and smoke gate.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     defaults:
       run:
@@ -141,6 +142,8 @@ jobs:
         working-directory: .
       - name: Build Linux directory (no publishing or code signing)
         working-directory: app/electron
+        env:
+          DEBUG: electron-builder,@electron/get*
         run: npm run build -- --linux --dir --publish=never
       - name: Verify desktop archive and matching APIs
         working-directory: app/electron

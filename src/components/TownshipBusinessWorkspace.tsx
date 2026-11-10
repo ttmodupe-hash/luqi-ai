@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import TownshipSourceStatus from './TownshipSourceStatus';
 import { createQuote, checkPricing, type QuoteResult, type PricingResult } from '../lib/business-desk';
 import { newTownshipProject, readTownshipProject, writeTownshipProject, townshipContextKey,
   TOWNSHIP_PROJECT_MAX_BYTES, type TownshipContext, type TownshipProject, type ContextReview } from '../lib/township-workspace';
@@ -119,6 +120,7 @@ export default function TownshipBusinessWorkspace({ context, steps, reviewContex
       <h2 id="township-workspace-heading" className="text-2xl font-bold">Your business workbench</h2>
       <p className="max-w-3xl text-sm text-slate-200">Prepare your business summary, track your next steps, test a selling price and create a quotation here. The guidance and original sources stay on this page.</p>
       <p className="text-xs text-slate-300">No sign-in or AI credits. Entries stay in this page’s memory; download an editable project before leaving. The file is not encrypted: keep it private and do not include ID numbers, bank details or passwords.</p>
+      <TownshipSourceStatus />
       <nav aria-label="Business workbench sections" className="flex flex-wrap gap-3 text-sm text-cyan-200">
         <button type="button" className="min-h-11 underline underline-offset-4" onClick={()=>jumpTo('township-work-plan')}>Prepare</button>
         <button type="button" className="min-h-11 underline underline-offset-4" onClick={()=>jumpTo('township-work-price')}>Check pricing</button>

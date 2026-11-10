@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import DriveMap from "./DriveMap";
 import CivicWardGuide from "../../components/CivicWardGuide";
 import FieldNotebook from "./FieldNotebook";
+import DriveEarthPanel from "./DriveEarthPanel";
 import {
   LocateFixed,
   Navigation,
@@ -504,6 +505,7 @@ function DriveSession({
           )}
         </aside>
       </div>
+      <DriveEarthPanel target={target} fix={isGPS ? fix : null} />
       <details className="driveCredits">
         <summary>About this map</summary>
         <p>
