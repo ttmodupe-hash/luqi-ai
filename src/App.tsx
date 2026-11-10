@@ -10,7 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
-import Home from "./pages/Home";
+const Home = lazy(() => import("./pages/Home"));
 const DevSecNetStudioPage = lazy(() => import("./features/devsecnet/DevSecNetStudioPage"));
 const LaunchControlPage = lazy(() => import("./features/launch/LaunchControlPage"));
 const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
