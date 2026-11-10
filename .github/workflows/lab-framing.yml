@@ -29,7 +29,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: node --test tests/lab-framing-release-gates.test.mjs
+      - name: Verify predeploy gate and canonical Railway status provenance with offline fixtures
+        run: node --test tests/lab-framing-release-gates.test.mjs tests/canonical-railway-status.test.mjs
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Test HTTP framing, missing assets, exact release identity and privacy boundaries
         run: npx --no-install vitest run tests/frame-policy.test.ts tests/lab-static-fallback.test.ts tests/http-safety.test.ts tests/release-observation.test.ts
