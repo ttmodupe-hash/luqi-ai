@@ -31,8 +31,8 @@ jobs:
           node-version: '22'
       - run: node --test tests/lab-framing-release-gates.test.mjs
       - run: npm ci --legacy-peer-deps --include=dev
-      - name: Test HTTP framing, missing assets and privacy boundaries
-        run: npx --no-install vitest run tests/frame-policy.test.ts tests/lab-static-fallback.test.ts tests/http-safety.test.ts
+      - name: Test HTTP framing, missing assets, exact release identity and privacy boundaries
+        run: npx --no-install vitest run tests/frame-policy.test.ts tests/lab-static-fallback.test.ts tests/http-safety.test.ts tests/release-observation.test.ts
       - name: Strictly type-check response policy
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/lib/framePolicy.ts api/lib/httpSafety.ts api/lib/vite.ts
       - name: Build the actual production server and UI without credentials
