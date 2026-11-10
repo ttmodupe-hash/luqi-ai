@@ -26,18 +26,7 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
   const n = validateState(state);
   const validQubit = (q: number) => Number.isInteger(q) && q >= 0 && q < n;
   if (!validQubit(gate.target)) throw new Error('Invalid target qubit.');
-  const result = state.map(z => ({ ...z })), target = 1 << gate.target;
-  if (gate.kind === 'cx' || gate.kind === 'cz') {
-    if (!validQubit(gate.control) || gate.control === gate.target) throw new Error('Control and target must differ.');
-    const control = 1 << gate.control;
-    for (let i = 0; i < state.length; i++) {
-      if (gate.kind === 'cz' && (i & control) && (i & target)) result[i] = scale(state[i], -1);
-      if (gate.kind === 'cx' && (i & control) && !(i & target)) {
-        result[i] = { ...state[i | target] }; result[i | target] = { ...state[i] };
-      }
-    }
-    return result;
-  }
+  const target = 1 << gate.target;
   if (gate.kind === 'rz') {
     const angle = finite(gate.angle ?? NaN);
     // One diagonal rotation per gate, not one trigonometric calculation per
@@ -48,6 +37,19 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
       return { re: z.re * cosine - z.im * signedSine,
         im: z.re * signedSine + z.im * cosine };
     });
+  }
+  // Clone only for gates that use the mutable result buffer; RZ maps once.
+  const result = state.map(z => ({ ...z }));
+  if (gate.kind === 'cx' || gate.kind === 'cz') {
+    if (!validQubit(gate.control) || gate.control === gate.target) throw new Error('Control and target must differ.');
+    const control = 1 << gate.control;
+    for (let i = 0; i < state.length; i++) {
+      if (gate.kind === 'cz' && (i & control) && (i & target)) result[i] = scale(state[i], -1);
+      if (gate.kind === 'cx' && (i & control) && !(i & target)) {
+        result[i] = { ...state[i | target] }; result[i | target] = { ...state[i] };
+      }
+    }
+    return result;
   }
   if (gate.kind !== 'h' && gate.kind !== 'x' && gate.kind !== 'rx') throw new Error('Unsupported gate.');
   const angle = gate.kind === 'rx' ? finite(gate.angle ?? NaN) : 0;

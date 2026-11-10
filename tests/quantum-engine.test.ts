@@ -178,6 +178,8 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     const original = structuredClone(state);
     for (const target of [0, 7]) for (const angle of [-2.4, 0, 0.93, Math.PI]) {
       const actual = applyGate(state, { kind: 'rz', target, angle });
+      expect(actual).not.toBe(state);
+      expect(actual[0]).not.toBe(state[0]);
       for (let i = 0; i < state.length; i++) {
         // Independent direct reference: exp(i phase) multiplication on each basis amplitude.
         const phase = (i & (1 << target) ? 1 : -1) * angle / 2;
@@ -188,6 +190,9 @@ describe('QAOA grid optimisation preserves numerical results', () => {
       expect(stateMetrics(actual).norm).toBeCloseTo(1, 12);
     }
     expect(state).toEqual(original);
+    // Fail closed on invalid input before the optimized one-pass RZ map.
+    expect(() => applyGate([{ re: 1, im: 0 }, { re: 1, im: 0 }],
+      { kind: 'rz', target: 0, angle: 0 })).toThrow('Statevector must have unit norm.');
   });
   it('matches independent eight-qubit RX-gate sequence with one prepared mixer per beta', () => {
     const model = { fields: [0.25, -0.5, 0.75, -0.25, 0.5, -0.125, 0.375, -0.875],
