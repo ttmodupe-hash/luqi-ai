@@ -314,8 +314,8 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
     suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','PITCH_DECK'],
     selectionNotes:[
       'MIT Solve describes global challenge-based innovation competitions, not automatic venture investment or a guaranteed grant.',
-      'Some 2027 challenges list a November 6, 2026 submission deadline in US Eastern Time; confirm the specific challenge and deadline directly.',
-      'Geographic, applicant-type and prize restrictions differ across its challenges.',
+      'The 2027 Global Economic Prosperity Challenge closed on 6 November 2026 at 12:00 EST (19:00 SAST); this is historical, not a live application window.',
+      'MIT Solve Global Challenges generally require a functioning prototype or later; concept-stage ideas are reviewed only under the Indigenous Communities Fellowship. Geographic, applicant-type and prize rules vary.',
     ],conditions:{},
   }),
 ]);
@@ -366,6 +366,11 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
       checks.push('TIA may require proven proof of concept; confirm the instrument’s technology readiness rules.');
     if(programme.id === 'idc-development-finance' && profile.maturity === 'IDEA')
       checks.push('IDC examines bankability, viability and owner contribution, which an idea alone may not demonstrate.');
+    if(programme.id === 'mit-solve-challenges') {
+      checks.push('The 2027 Global Economic Prosperity Challenge closed on 6 November 2026 at 12:00 EST (19:00 SAST); this past deadline does not establish any currently open challenge.');
+      if(profile.maturity === 'IDEA')
+        checks.push('MIT Solve Global Challenges generally require a functioning prototype. Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship; confirm that separate fellowship and the selected challenge before applying.');
+    }
     if(reviewExpired) checks.push('Source review is overdue: recheck the publisher before relying on any criteria.');
     const missingArtifacts=programme.suggestedArtifacts.filter(a=>!present.has(a));
     const preparationPercent=programme.suggestedArtifacts.length===0 ? 0 :
