@@ -155,6 +155,24 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     }
     expect(state).toEqual(original);
   });
+  it('applies exact RZ phases to an eight-qubit complex state without input mutation', () => {
+    const raw = Array.from({ length: 256 }, (_, i) => ({ re: Math.cos(i / 11), im: Math.sin(i / 17) }));
+    const length = Math.sqrt(raw.reduce((sum, z) => sum + z.re ** 2 + z.im ** 2, 0));
+    const state = raw.map(z => ({ re: z.re / length, im: z.im / length }));
+    const original = structuredClone(state);
+    for (const target of [0, 7]) for (const angle of [-2.4, 0, 0.93, Math.PI]) {
+      const actual = applyGate(state, { kind: 'rz', target, angle });
+      for (let i = 0; i < state.length; i++) {
+        // Independent direct reference: exp(i phase) multiplication on each basis amplitude.
+        const phase = (i & (1 << target) ? 1 : -1) * angle / 2;
+        const c = Math.cos(phase), s = Math.sin(phase), z = state[i];
+        expect(actual[i].re).toBeCloseTo(z.re * c - z.im * s, 12);
+        expect(actual[i].im).toBeCloseTo(z.re * s + z.im * c, 12);
+      }
+      expect(stateMetrics(actual).norm).toBeCloseTo(1, 12);
+    }
+    expect(state).toEqual(original);
+  });
   it('measures reproducible bounded CPU baselines without gating on noisy timing', () => {
     // Paired measurements compare the original public API search with spectrum caching;
     // both use the same RX implementation. These are CI CPU samples, not phone timings.

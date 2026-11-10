@@ -40,7 +40,14 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
   }
   if (gate.kind === 'rz') {
     const angle = finite(gate.angle ?? NaN);
-    return state.map((z, i) => phase(z, (i & target ? 1 : -1) * angle / 2));
+    // One diagonal rotation per gate, not one trigonometric calculation per
+    // amplitude. The lower and upper basis halves use opposite phase signs.
+    const cosine = Math.cos(angle / 2), sine = Math.sin(angle / 2);
+    return state.map((z, i) => {
+      const signedSine = i & target ? sine : -sine;
+      return { re: z.re * cosine - z.im * signedSine,
+        im: z.re * signedSine + z.im * cosine };
+    });
   }
   if (gate.kind !== 'h' && gate.kind !== 'x' && gate.kind !== 'rx') throw new Error('Unsupported gate.');
   const angle = gate.kind === 'rx' ? finite(gate.angle ?? NaN) : 0;
