@@ -17,13 +17,13 @@ const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
-import NotFoundPage from "./pages/NotFoundPage";
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
 import CustomerEntryPage from "./pages/CustomerEntryPage";
-const OmegaTasksPage = lazy(() => import("./pages/OmegaTasksPage"));
+import OmegaTasksPage from './pages/OmegaTasksPage';
 
 // Load optional tools only when their route is rendered. Keep account, notes,
 // the release-observed core pages available in the initial bundle. Informational

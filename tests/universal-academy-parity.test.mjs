@@ -12,9 +12,11 @@ for(const root of ['src','app/src']) test(`Academy and specialist routes remain 
     assert.equal(source.split(`path="${path}"`).length-1,1,`Missing or duplicate ${path}`);
   }
   assert.match(source,/const UniversalAcademyPage = lazy\(/);
-  // Keep optional Omega tools out of the first-paint graph, while retaining the real route.
-  assert.match(source, /const OmegaTasksPage = lazy\(\(\) => import\("\.\/pages\/OmegaTasksPage"\)\);/);
-  assert.doesNotMatch(source, /import OmegaTasksPage from/);
+  // Core Omega release markers remain eager; only the public 404 page may be deferred.
+  assert.match(source, /import OmegaTasksPage from/);
+  assert.doesNotMatch(source, /const OmegaTasksPage = lazy/);
   assert.equal(source.split('path="/omega-tasks"').length - 1, 1);
+  assert.match(source, /const NotFoundPage = lazy\(\(\) => import\("\.\/pages\/NotFoundPage"\)\);/);
+  assert.match(source, /path="\*" element=\{<NotFoundPage \/>\}/);
   assert.match(source,/path="\/ccna" element=\{<CertMasterPage \/>\}/);
 });

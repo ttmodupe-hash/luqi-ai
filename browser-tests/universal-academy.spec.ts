@@ -61,11 +61,14 @@ test('study choices stay local and notebook download contains real attempts', as
   expect(data.attempts).toHaveLength(1);expect(data.attempts[0].correct).toBe(false);expect(data.reflection).toContain('broadcast');expect(data.warning).toContain('not a certificate');
 });
 
-test('deferred Omega tool still loads and returns to Academy without errors', async ({page}) => {
+test('core Omega task markers and deferred 404 both keep navigation working', async ({page}) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/#/omega-tasks');
   await expect(page.getByRole('heading', {name:'Tasks, with a clear record.', exact:true})).toBeVisible();
+  await page.goto('/#/no-such-luqi-workspace');
+  await expect(page.getByRole('heading', {name:'Page Not Found', exact:true})).toBeVisible();
+  await expect(page.getByRole('link', {name:'Back to Home'})).toHaveAttribute('href', '#/');
   await page.goto('/#/academy');
   await expect(page.getByRole('heading', {name:'Universal Academy', exact:true})).toBeVisible();
   expect(errors).toEqual([]);
