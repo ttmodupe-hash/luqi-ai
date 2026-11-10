@@ -36,6 +36,9 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: current
     services:
       mysql:
         image: mysql:8.4
@@ -55,6 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          path: current
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -71,9 +75,9 @@ jobs:
           persist-credentials: false
       - name: Compile the reviewed previous API bundle using the unchanged dependency lock
         run: |
-          cmp package-lock.json .ci-rollback/package-lock.json
-          ln -s "$PWD/node_modules" .ci-rollback/node_modules
-          npx --no-install esbuild .ci-rollback/api/boot.ts --platform=node --bundle --format=esm --outfile=dist/rollback/boot.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+          cmp package-lock.json ../.ci-rollback/package-lock.json
+          ln -s "$PWD/node_modules" ../.ci-rollback/node_modules
+          npx --no-install esbuild ../.ci-rollback/api/boot.ts --platform=node --bundle --format=esm --outfile=dist/rollback/boot.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
       - name: Measure HTTP and private MySQL concurrency, fail-closed recovery, restart and API rollback
         run: node --test tests/production-operations.integration.test.mjs
       - name: Seed recovery counters in the disposable fixture
