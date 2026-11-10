@@ -161,12 +161,18 @@ it('announces expired 30-minute review and locks old approvals without submittin
  const exportButton=within(review).getByRole('button',{name:'Export filled original and review record'});
  expect(exportButton.hasAttribute('disabled')).toBe(false);
  const observed=Date.now();
- vi.spyOn(Date,'now').mockReturnValue(observed+31*60*1000);
+ const deviceClock=vi.spyOn(Date,'now').mockReturnValue(observed+31*60*1000);
  await waitFor(()=>expect(within(review).getByRole('alert').textContent)
    .toMatch(/30-minute applicant review window has ended/),{timeout:3000});
  expect(within(review).getByRole('alert').textContent).toMatch(/Nothing was submitted/);
  expect(exportButton.hasAttribute('disabled')).toBe(true);
  expect(within(review).getAllByRole('checkbox').every(box=>box.hasAttribute('disabled'))).toBe(true);
+ await waitFor(()=>expect(within(review).getAllByRole('checkbox').every(box=>(box as HTMLInputElement).checked===false)).toBe(true));
+ expect(screen.getByText(/Local approval and amendment history/)).toBeTruthy();
+ // A subsequent device-clock correction must not reactivate old approvals.
+ deviceClock.mockReturnValue(observed+3000);
+ await waitFor(()=>expect(within(review).queryByRole('alert')).toBeNull(),{timeout:3000});
+ expect(exportButton.hasAttribute('disabled')).toBe(true);
  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(1);
  expect(network).not.toHaveBeenCalled();
 });
