@@ -23,6 +23,10 @@ export default function CapabilityJourneyPage() {
     if (!journey) return;
     const complete = !journey.completed.includes(index);
     const updated = setCapabilityJourneyStep(index, complete);
+    if (!updated || updated.completed.includes(index) !== complete) {
+      setNotice('Stage change could not be confirmed as saved on this device. Check browser storage before relying on progress.');
+      return;
+    }
     setJourney(updated);
     setNotice(complete ? 'Stage marked complete on this device.' : 'Stage reopened on this device.');
   }
