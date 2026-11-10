@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   RIGHTS_INFORMATION, RIGHTS_LANGUAGES, RIGHTS_RECHECK_AFTER, RIGHTS_REVIEWED_ON,
-  RIGHTS_SOURCES, RIGHTS_TOPICS, legalInformationIsCurrent,
+  RIGHTS_SOURCES, RIGHTS_TOPICS, DIGITAL_ASYLUM_REVIEWED_ON, DIGITAL_ASYLUM_RECHECK_AFTER,
+  digitalAsylumNoticeIsCurrent, legalInformationIsCurrent,
   rightsLanguageHasSourceLinkedText, rightsSourcesFor,
 } from '../src/lib/rights-source-guide';
 
@@ -17,7 +18,8 @@ describe('source-linked South African rights guide (offline)', () => {
       expect(parsed.username).toBe('');
       expect(parsed.password).toBe('');
       expect(parsed.search).toBe('');
-      expect(source.reviewedOn).toBe(RIGHTS_REVIEWED_ON);
+      expect(source.reviewedOn).toBe(source.id === 'government-digital-asylum-2026'
+        ? DIGITAL_ASYLUM_REVIEWED_ON : RIGHTS_REVIEWED_ON);
       expect(source.publisher.length).toBeGreaterThan(4);
     }
     for (const item of RIGHTS_INFORMATION) {
@@ -39,6 +41,24 @@ describe('source-linked South African rights guide (offline)', () => {
     expect(legalInformationIsCurrent(new Date('invalid'))).toBe(false);
   });
 
+  it('separates the 10 Nov limited digital launch from the older expired full legal guide', () => {
+    const update = RIGHTS_SOURCES.find(source => source.id === 'government-digital-asylum-2026');
+    expect(update?.url).toBe('https://www.gov.za/news/media-statements/home-affairs-launches-first-phase-digital-asylum-system-cut-delays-clear');
+    expect(update?.reviewedOn).toBe('2026-11-10');
+    expect(DIGITAL_ASYLUM_RECHECK_AFTER).toBe('2026-11-12');
+    const beginning = RIGHTS_INFORMATION.find(item => item.id === 'begin');
+    expect(beginning?.sources).toContain(update?.id);
+    expect(beginning?.explanation).toMatch(/initial|limited group/);
+    expect(beginning?.explanation).toMatch(/not a formal asylum application/);
+    expect(beginning?.explanation).toMatch(/public registration was not confirmed open/);
+    expect(digitalAsylumNoticeIsCurrent(new Date('2026-11-09T23:59:59+02:00'))).toBe(false);
+    expect(digitalAsylumNoticeIsCurrent(new Date('2026-11-10T00:00:00+02:00'))).toBe(true);
+    expect(digitalAsylumNoticeIsCurrent(new Date('2026-11-12T23:59:59+02:00'))).toBe(true);
+    expect(digitalAsylumNoticeIsCurrent(new Date('2026-11-13T00:00:00+02:00'))).toBe(false);
+    expect(digitalAsylumNoticeIsCurrent(new Date('invalid'))).toBe(false);
+    expect(legalInformationIsCurrent(new Date('2026-11-10T13:00:00+02:00'))).toBe(false);
+  });
+
   it('tracks Sepitori separately and never implies it or another language is professionally reviewed', () => {
     const sepitori = RIGHTS_LANGUAGES.find(item => item.code === 'sepitori');
     expect(sepitori?.name).toMatch(/Sepitori/);
@@ -54,10 +74,10 @@ describe('source-linked South African rights guide (offline)', () => {
 
   it('does not describe planned immigration changes as live, or offer AI filing and fabricated outcomes', () => {
     const start = RIGHTS_INFORMATION.find(item => item.id === 'begin');
-    expect(start?.explanation).toMatch(/proposed phased intention-registration/);
+    expect(start?.explanation).toMatch(/proposed phased intention registration/);
     expect(start?.sources).toContain('government-withdrawal');
     expect(start?.sources).toContain('government-transition');
-    expect(start?.explanation).toMatch(/has not verified|neither announcement establishes/i);
+    expect(start?.explanation).toMatch(/not confirmed open|not presume/i);
     const withdrawal = RIGHTS_SOURCES.find(item => item.id === 'government-withdrawal');
     expect(withdrawal?.url).toMatch(/gov\.za\/news\/media-statements\/home-affairs-director-general-withdraws/);
     const transition = RIGHTS_SOURCES.find(item => item.id === 'government-transition');
