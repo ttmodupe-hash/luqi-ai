@@ -57,3 +57,18 @@ it('records Circular 39 as an issuer page, not a live position or review of ever
  expect(opportunitySourceReviewState({...newEdition,reviewDueOn:'2026-02-30'},new Date())).toBe('invalid');
  expect(opportunitySourceReviewState(newEdition,new Date('invalid'))).toBe('invalid');
 });
+
+
+it('routes withdrawn DPSA references to the dated correction with expired-evidence caution',()=>{
+ const current=ZA_OPPORTUNITY_SOURCES.find(s=>s.id==='circular-40');
+ expect(current?.url).toBe('https://www.dpsa.gov.za/newsroom/psvc/circular-40-of-2026/');
+ expect(current?.deadline).toBeUndefined();
+ for(const reference of ['HO 2026/11/33','HO 2026/11/109','GPW26/012']){
+  const hits=matchOpportunitySources('government','all',reference);
+  expect(hits.map(s=>s.id)).toContain('circular-40');
+  expect(hits.every(s=>s.category==='government')).toBe(true);
+ }
+ expect(matchOpportunitySources('bursary','all','HO 2026/11/33')).toEqual([]);
+ expect(opportunitySourceReviewState(current!,new Date('2026-11-10T10:00:00+02:00'))).toBe('review-overdue');
+ expect(ZA_OPPORTUNITY_SOURCES.find(s=>s.id==='circular-39')?.verifiedOn).toBe('2026-11-02');
+});
