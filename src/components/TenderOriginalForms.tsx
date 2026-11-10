@@ -37,7 +37,10 @@ export function TenderOriginalForms(){
   const historyFull=history.length>=950;
   const accountRef=useRef(account);
   const fileInput=useRef<HTMLInputElement|null>(null),amendmentInput=useRef<HTMLInputElement|null>(null);
-  useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer)},[]);
+  // Preserve the latest observed local time while this review is mounted: a backwards
+  // device-clock change must not reopen approvals after a recorded expiry.
+  // This is not trusted issuer time and cannot prevent tampering before observation.
+  useEffect(()=>{const timer=setInterval(()=>setClock(previous=>Math.max(previous,Date.now())),1000);return()=>clearInterval(timer)},[]);
   useEffect(()=>()=>{epoch.current++;pending.current?.abort()},[]);
   function clearPrivateWork(){
     epoch.current++;pending.current?.abort();pending.current=null;

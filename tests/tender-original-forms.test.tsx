@@ -171,7 +171,12 @@ it('announces expired 30-minute review and locks old approvals without submittin
  expect(screen.getByText(/Local approval and amendment history/)).toBeTruthy();
  // A subsequent device-clock correction must not reactivate old approvals.
  deviceClock.mockReturnValue(observed+3000);
- await waitFor(()=>expect(within(review).queryByRole('alert')).toBeNull(),{timeout:3000});
+ await new Promise(resolve=>setTimeout(resolve,1200)); // Allow another live 1-second clock tick.
+ expect(within(review).getByRole('alert').textContent).toMatch(/Review expired/);
+ const oldGates=within(review).getAllByRole('checkbox');
+ expect(oldGates.every(box=>box.hasAttribute('disabled'))).toBe(true);
+ for(const box of oldGates)fireEvent.click(box);
+ expect(oldGates.every(box=>(box as HTMLInputElement).checked===false)).toBe(true);
  expect(exportButton.hasAttribute('disabled')).toBe(true);
  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(1);
  expect(network).not.toHaveBeenCalled();
@@ -195,7 +200,9 @@ it('announces recorded closing-time expiry before 30 minutes, revokes approvals 
    (box as HTMLInputElement).checked===false&&box.hasAttribute('disabled'))).toBe(true));
  expect(within(review).getByRole('alert').textContent).toMatch(/Nothing was submitted/);
  deviceClock.mockReturnValue(observed+1000);
- await waitFor(()=>expect(within(review).queryByRole('alert')).toBeNull(),{timeout:3000});
+ await new Promise(resolve=>setTimeout(resolve,1200)); // One more timer tick after rollback.
+ expect(within(review).getByRole('alert').textContent).toMatch(/recorded bid closing time has passed/);
+ expect(within(review).getAllByRole('checkbox').every(box=>box.hasAttribute('disabled'))).toBe(true);
  expect(exportButton.hasAttribute('disabled')).toBe(true);
  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(2);
  expect(network).not.toHaveBeenCalled();
