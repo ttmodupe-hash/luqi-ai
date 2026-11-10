@@ -313,6 +313,29 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     expect(model).toEqual(unchanged);
   });
 
+  it('keeps eight-qubit mixer amplitudes separately owned after in-place RX updates', () => {
+    const model = {
+      fields: [0.125, -0.375, 0.625, -0.875, 0.3, -0.2, 0.1, -0.45],
+      edges: [{ i: 0, j: 7, weight: -0.42 }, { i: 3, j: 5, weight: 0.68 }],
+    };
+    const original = structuredClone(model);
+    for (const [gamma, beta] of [[0, 0], [0.47, -0.31], [1.75, 0.91]]) {
+      const result = qaoaLayer(model, gamma, beta);
+      const snapshot = structuredClone(result.state);
+      expect(validateState(result.state)).toBe(8);
+      expect(new Set(result.state).size).toBe(256);
+      result.state[0].re += 0.125;
+      expect(result.state[1]).toEqual(snapshot[1]);
+      expect(model).toEqual(original);
+    }
+    // A 25×25 search must still return a non-aliased, normalized winner.
+    const best = searchQaoaGrid(model, 25);
+    expect(best.parameterPairs).toBe(625);
+    expect(validateState(best.state)).toBe(8);
+    expect(new Set(best.state).size).toBe(256);
+    expect(model).toEqual(original);
+  });
+
   it('preserves bounded input validation and rejects invalid Hamiltonians', () => {
     const model = { fields: [0], edges: [] };
     for (const steps of [2, 26, 4.5, NaN, Infinity]) {

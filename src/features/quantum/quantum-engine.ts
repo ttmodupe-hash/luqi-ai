@@ -150,8 +150,14 @@ function applyPreparedRxInPlace(state: Statevector, target: number, cosine: numb
     if (i & bit) continue;
     // Each RX pair is disjoint, so capture both original amplitudes before writing.
     const a = state[i], b = state[i | bit];
-    state[i] = add(scale(a, cosine), multiply(b, { re: 0, im: -sine }));
-    state[i | bit] = add(scale(b, cosine), multiply(a, { re: 0, im: -sine }));
+    // Capture scalar components before either output is changed. Avoid eight
+    // temporary Complex objects per basis pair on the inner QAOA mixer path.
+    const ar = a.re, ai = a.im, br = b.re, bi = b.im, imaginary = -sine;
+    // Preserve the public RX gate's arithmetic order, including signed zero.
+    a.re = ar * cosine + (br * 0 - bi * imaginary);
+    a.im = ai * cosine + (br * imaginary + bi * 0);
+    b.re = br * cosine + (ar * 0 - ai * imaginary);
+    b.im = bi * cosine + (ar * imaginary + ai * 0);
   }
 }
 /** Apply the bounded mixer to a prepared gamma phase; neither input is mutated. */
