@@ -17,6 +17,7 @@ let root, live, owner, foreign, conversation;
 const children = new Set();
 const contents = ['Synthetic operations seed'];
 const childEnv = { PATH: process.env.PATH, NODE_ENV: 'production', PORT: '8779', DATABASE_URL: RUNTIME,
+  LUQI_MYSQL_CI_FIXTURE: 'true',
   JWT_SECRET: 'ci-operations-jwt-secret-only-over-32-characters',
   LUQI_AI_PROVIDER_ENABLED: 'false', LUQI_AI_BILLING_APPROVED: 'false',
   LUQI_AI_CREDENTIAL_CHECK_ENABLED: 'false', LUQI_OMEGA_WEB_ENABLED: 'false',

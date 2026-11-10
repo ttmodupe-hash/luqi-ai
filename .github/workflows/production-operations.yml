@@ -62,6 +62,8 @@ jobs:
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Build actual current production server, SPA and operator commands
         run: npm run build
+        env:
+          NODE_ENV: production
       - uses: actions/checkout@v4
         with:
           ref: 8f581283b63243d4d52031419c5a85a874adec6e

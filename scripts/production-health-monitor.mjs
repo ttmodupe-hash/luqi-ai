@@ -51,39 +51,39 @@ export async function observeProduction({ expectedCommit, request = fetch, now =
   for (const origin of MONITOR_ORIGINS) {
     let step = 'revision_before';
     try {
-    // Observations must refer to one unchanged revision, including across hosts.
-    const before = revision(await read(request, origin + '/v1/release'));
-    if (before !== expectedCommit) fail();
-    step = 'http_health';
-    const health = await read(request, origin + '/v1/health');
-    if (health.status !== 200 || health.body.status !== 'healthy' ||
-        health.body.service !== 'luqi-ai-engine' || !Number.isSafeInteger(health.body.timestamp) ||
-        Math.abs(now() - health.body.timestamp) > 300_000) fail();
-    step = 'database_readiness';
-    const readiness = await read(request, origin + '/v1/readiness');
-    const state = readiness.body.checks?.ai_pilot;
-    const expectedStatus = state === 'configured_not_verified' ? 200 : 503;
-    if (!['configured_not_verified', 'disabled', 'billing_unapproved'].includes(state) ||
-        readiness.status !== expectedStatus || readiness.body.checks?.runtime !== 'up' ||
-        readiness.body.checks?.persistence !== 'connected' ||
-        readiness.body.checks?.expected_database_driver !== 'mysql') fail();
-    if (origin === MONITOR_ORIGINS[0]) {
-      // Liveness alone misses a broken SPA entry chunk. Fetch only the exact
-      // same-origin Vite entry declared by the public document, never an input URL.
-      step = 'frontend_document';
-      const home = await read(request, origin + '/', { json: false, limit: 131072 });
-      if (home.status !== 200 || home.type !== 'text/html') fail();
-      const entry = home.body.match(/<script\b[^>]*\bsrc=["'](\/assets\/index-[A-Za-z0-9_-]+\.js)["'][^>]*>/);
-      if (!entry) fail();
-      step = 'frontend_entry';
-      const script = await read(request, origin + entry[1], { json: false, limit: 8 * 1024 * 1024 });
-      if (script.status !== 200 || !['text/javascript', 'application/javascript'].includes(script.type) ||
-          !script.body.trim() || /^\s*</.test(script.body)) fail();
-    }
-    step = 'revision_after';
-    if (revision(await read(request, origin + '/v1/release')) !== before) fail();
-    observations.push({ host: new URL(origin).hostname, commit: before,
-      http: 'observed', persistence: 'connected', ai_configuration: state });
+      // Observations must refer to one unchanged revision, including across hosts.
+      const before = revision(await read(request, origin + '/v1/release'));
+      if (before !== expectedCommit) fail();
+      step = 'http_health';
+      const health = await read(request, origin + '/v1/health');
+      if (health.status !== 200 || health.body.status !== 'healthy' ||
+          health.body.service !== 'luqi-ai-engine' || !Number.isSafeInteger(health.body.timestamp) ||
+          Math.abs(now() - health.body.timestamp) > 300_000) fail();
+      step = 'database_readiness';
+      const readiness = await read(request, origin + '/v1/readiness');
+      const state = readiness.body.checks?.ai_pilot;
+      const expectedStatus = state === 'configured_not_verified' ? 200 : 503;
+      if (!['configured_not_verified', 'disabled', 'billing_unapproved'].includes(state) ||
+          readiness.status !== expectedStatus || readiness.body.checks?.runtime !== 'up' ||
+          readiness.body.checks?.persistence !== 'connected' ||
+          readiness.body.checks?.expected_database_driver !== 'mysql') fail();
+      if (origin === MONITOR_ORIGINS[0]) {
+        // Liveness alone misses a broken SPA entry chunk. Fetch only the exact
+        // same-origin Vite entry declared by the public document, never an input URL.
+        step = 'frontend_document';
+        const home = await read(request, origin + '/', { json: false, limit: 131072 });
+        if (home.status !== 200 || home.type !== 'text/html') fail();
+        const entry = home.body.match(/<script\b[^>]*\bsrc=["'](\/assets\/index-[A-Za-z0-9_-]+\.js)["'][^>]*>/);
+        if (!entry) fail();
+        step = 'frontend_entry';
+        const script = await read(request, origin + entry[1], { json: false, limit: 8 * 1024 * 1024 });
+        if (script.status !== 200 || !['text/javascript', 'application/javascript'].includes(script.type) ||
+            !script.body.trim() || /^\s*</.test(script.body)) fail();
+      }
+      step = 'revision_after';
+      if (revision(await read(request, origin + '/v1/release')) !== before) fail();
+      observations.push({ host: new URL(origin).hostname, commit: before,
+        http: 'observed', persistence: 'connected', ai_configuration: state });
     } catch { throw new ObservationError(origin === MONITOR_ORIGINS[0] ? 'custom_host' : 'railway_host', step); }
   }
   return { format: 'luqi.production-observation.v1', observed_at: new Date(now()).toISOString(),
