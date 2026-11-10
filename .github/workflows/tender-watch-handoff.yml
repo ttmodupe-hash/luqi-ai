@@ -1,0 +1,108 @@
+name: Luqi Tender Watch Handoff
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/lib/tender-watch-notices.ts'
+      - '**/components/TenderWatchNotices.tsx'
+      - '**/pages/TenderDeskPage.tsx'
+      - tests/tender-watch-notices.test.mjs
+      - browser-tests/tender-watch-notices.spec.ts
+      - .github/workflows/tender-watch-handoff.yml
+  push:
+    branches: [main]
+    paths:
+      - '**/lib/tender-watch-notices.ts'
+      - '**/components/TenderWatchNotices.tsx'
+      - '**/pages/TenderDeskPage.tsx'
+      - tests/tender-watch-notices.test.mjs
+      - browser-tests/tender-watch-notices.spec.ts
+      - .github/workflows/tender-watch-handoff.yml
+  status:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  # Separate each status event so a skipped preview cannot cancel a live check.
+  group: tender-watch-handoff-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  pending-document-boundaries:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    # The locked Playwright 1.58.2 browser installer does not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify exact cutoffs, evidence states, filters and mirrored integration
+        run: node --experimental-strip-types --test tests/tender-watch-notices.test.mjs
+      - name: Install existing locked dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Strictly check both watch components
+        run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/TenderWatchNotices.tsx app/src/components/TenderWatchNotices.tsx
+      - name: Preserve existing Tender Desk boundaries
+        run: npx --no-install vitest run tests/tender-sources.test.ts tests/tender-workflow.test.ts tests/tender-desk-page.test.tsx
+      - name: Build the real frontend
+        run: npx --no-install vite build
+      - name: Install browser for synthetic acceptance
+        run: npx --no-install playwright install --with-deps chromium --only-shell
+      - name: Check mobile filters, original links, keyboard disclosure and expiry
+        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts browser-tests/tender-opportunity-workspace.spec.ts
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tender-watch-handoff-evidence
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+  live-public-tender-desk:
+    # Read-only acceptance of an owner-deployed revision; never a publisher.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'status' &&
+       github.event.state == 'success' &&
+       github.event.context == 'kind-spontaneity - web' &&
+       github.event.sha == github.sha &&
+       startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7') &&
+       contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Reject stale or noncanonical deployment events
+        if: github.event_name == 'status'
+        env:
+          LUQI_MAIN_SHA: ${{ github.sha }}
+        run: node scripts/check-canonical-railway-status.mjs
+      - name: Verify the exact publicly deployed SHA, HTTPS and safe account entry
+        env:
+          LUQI_VERIFY_PUBLIC: 'true'
+          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || github.sha }}
+        run: node scripts/verify-custom-domain.mjs
+      - name: Install existing locked browser dependencies
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Install supported browser
+        run: npx --no-install playwright install --with-deps chromium --only-shell
+      - name: Verify the real customer route with no accounts, API calls or submissions
+        env:
+          LUQI_BROWSER_BASE_URL: https://app.luqi-ai.com
+        run: npx --no-install playwright test browser-tests/tender-watch-notices.spec.ts browser-tests/tender-opportunity-workspace.spec.ts
+      - name: Preserve public-route browser evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tender-watch-live-evidence
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

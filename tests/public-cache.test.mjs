@@ -213,6 +213,56 @@ for (const [path, source] of sources) {
     await Promise.all(Array.from({ length: 70 }, (_, i) => h.dispatch(`/assets/item-${i}.js`)));
     assert.equal(h.buckets.get(name).size, 64);
   });
+  test(`${path}: public shell and verified old route code survive decorative asset churn`, async () => {
+    let retired = false;
+    const savedJs = '/assets/ChatSidebar-priorverified123.js';
+    const savedCss = '/assets/ChatSidebar-priorverified456.css';
+    const uncachedJs = '/assets/ChatSidebar-unseen789.js';
+    const h = harness(source, async request => {
+      const pathname = new URL(request.url).pathname;
+      if (pathname === uncachedJs) {
+        return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+      }
+      if (pathname === savedJs || pathname === savedCss) {
+        if (retired) return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+        return new Response(pathname === savedJs ? 'export const previous = true;' : '.previous{display:block}', {
+          headers: { 'Content-Type': pathname === savedJs ? 'text/javascript' : 'text/css',
+            'Cache-Control': 'public, max-age=300' },
+        });
+      }
+      if (pathname.endsWith('.png')) {
+        return new Response('synthetic public image', {
+          headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' },
+        });
+      }
+      return new Response('synthetic shell', {
+        headers: { 'Content-Type': pathname.endsWith('.json') ? 'application/json' : 'text/html',
+          'Cache-Control': 'public, max-age=300' },
+      });
+    });
+    await h.lifecycle('install');
+    assert.equal((await h.dispatch(savedJs)).status, 200);
+    assert.equal((await h.dispatch(savedCss)).status, 200);
+    await Promise.all(Array.from({ length: 90 }, (_, i) => h.dispatch(`/assets/decorative-${i}.png`)));
+    const cache = await h.caches.open(name);
+    assert.equal((await cache.keys()).length, 64, 'Cache stays capped at 64 entries');
+    for (const shell of ['/', '/index.html', '/manifest.json']) {
+      assert.ok(await cache.match(shell), `Retain offline shell ${shell}`);
+    }
+    assert.ok(await cache.match(savedJs), 'Verified JS was not evicted by images');
+    assert.ok(await cache.match(savedCss), 'Verified CSS was not evicted by images');
+    assert.equal(await cache.match('/assets/decorative-0.png'), undefined, 'Decorative entries are evicted first');
+    retired = true;
+    const recoveredJs = await h.dispatch(savedJs);
+    assert.equal(recoveredJs.status, 200);
+    assert.equal(await recoveredJs.text(), 'export const previous = true;');
+    const recoveredCss = await h.dispatch(savedCss);
+    assert.equal(recoveredCss.status, 200);
+    assert.equal(await recoveredCss.text(), '.previous{display:block}');
+    assert.equal((await h.dispatch(uncachedJs)).status, 404, 'Never disguise an uncached 404');
+    assert.equal(await cache.match(uncachedJs), undefined, 'Never store a missing script');
+    assert.equal((await cache.keys()).length, 64);
+  });
   test(`${path}: activation removes only older LUQI caches and preserves unrelated data`, async () => {
     const h = harness(source);
     for (const key of ['luqi-ai-v1', 'luqi-ai-2026-09-06-fix1', name, 'other-application']) h.buckets.set(key, new Map());

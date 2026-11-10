@@ -1,0 +1,34 @@
+import { test, expect } from '@playwright/test';
+
+test('civic atlas links map, filters and sources without fabricating local results', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-09T12:00:00Z'));
+  await page.route('**/api/**', route => route.fulfill({ status:503, json:{ code:'SYNTHETIC_UNAVAILABLE' } }));
+  await page.route('**/v1/**', route => route.fulfill({ json:{ status:'configured_not_verified', checks:{ persistence:'connected', ai_pilot:'configured_not_verified' } } }));
+  const posts: string[] = []; page.on('request', request => { if (request.method() === 'POST') posts.push(request.url()); });
+  await page.emulateMedia({ reducedMotion:'reduce' });
+  await page.goto('/#/chat?civic=1');
+  await expect(page.getByRole('heading', { name:'Civic Evidence Desk', exact:true })).toBeVisible();
+  await page.getByLabel('Explore a province', { exact:true }).selectOption('GP');
+  await expect(page.getByRole('button', { name:'Explore Gauteng on the civic map', exact:true })).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByText('No verified province or ward records in this edition. The library remains national.')).toBeVisible();
+  await expect(page.getByRole('article')).toHaveCount(5);
+  await page.getByRole('button', { name:'Zoom in on civic map', exact:true }).click();
+  await expect(page.getByLabel('Civic map zoom', { exact:true })).toHaveText('125%');
+  await page.getByRole('button', { name:'Reset civic map view', exact:true }).click();
+  await expect(page.getByLabel('Explore a province', { exact:true })).toHaveValue('');
+  await page.getByLabel('Search civic records', { exact:true }).fill('National Treasury');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(page.getByRole('complementary', { name:'Selected evidence record' }).getByRole('heading')).toHaveText('Budget versus actual spending');
+  await page.getByRole('button', { name:'Read full record', exact:true }).click();
+  await expect(page.getByRole('article').getByRole('heading', { name:'Budget versus actual spending', exact:true })).toBeFocused();
+  await page.getByRole('tab', { name:/Source pages/ }).click();
+  await expect(page.getByRole('tabpanel').getByRole('link')).toHaveAttribute('href','https://municipaldata.treasury.gov.za/docs');
+  await page.getByLabel('Evidence topic', { exact:true }).selectOption('Voting');
+  await expect(page.getByRole('heading', { name:'No matching evidence records', exact:true })).toBeVisible();
+  await page.getByRole('button', { name:'Clear filters', exact:true }).click();
+  await expect(page.getByRole('article')).toHaveCount(5);
+  await page.getByRole('tab', { name:/Evidence records/ }).click();
+  await expect(page.getByRole('table').getByText('Recheck', { exact:true })).toHaveCount(5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  expect(posts).toEqual([]);
+});

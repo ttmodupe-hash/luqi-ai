@@ -8,6 +8,8 @@ test('Luqi has a shareable Android and iPhone install page from the homepage', a
     if (request.method() !== 'GET') paid.push(request.url());
   });
   await page.goto('/#/');
+  // Mobile install is available inside the explicit More ways to start disclosure.
+  await page.locator('details.luqi-hero-help > summary').click();
   await page.getByRole('link', { name: 'Install Luqi on your phone' }).click();
   await expect(page).toHaveURL(/#\/install$/);
   await expect(page.getByRole('heading', { name: 'Take Luqi with you.' })).toBeVisible();

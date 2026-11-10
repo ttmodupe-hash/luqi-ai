@@ -7,6 +7,7 @@ import { useOptionalChatWorkspace } from '../providers/chat-workspace';
 import '../content-studio.css';
 import { browserRecordingType } from '../lib/recording-support';
 import StudioDraftImport from '../components/StudioDraftImport';
+import StudioPreflightPanel from '../components/StudioPreflightPanel';
 import { serializeStudioDraft } from '../lib/studio-draft';
 import StudioAudioPanel, { type StudioAudioAssets } from '../components/StudioAudioPanel';
 import { browserMixedRecordingType, prepareStudioAudioMix, type StudioAudioMix } from '../lib/studio-audio';
@@ -178,6 +179,15 @@ export default function ContentStudioPage() {
     <div className="luqi-studio-heading"><p className="luqi-eyebrow">Luqi Content Studio · Local creation</p><h1>Create. Explain. Make it clear.</h1>
       <p>Six editable scenes and original local motion graphics. Approved Chat videos use a topic-matched illustration when available; other topics use abstract visual cards, not fabricated AI footage. Download the storyboard before leaving so you can continue later.</p></div>
     {approvedGoal && <section className="luqi-studio-approved" aria-label="Approved Chat project"><h2>Your approved Chat project</h2><p>{approvedGoal}</p><p>All six scene captions are editable. Add your own recorded voiceover or rights-cleared music below, then export a new version with sound. AI cinematic footage is not yet available.</p><Link to="/chat">Return to Luqi Chat</Link></section>}
+    <StudioPreflightPanel disabled={editingLocked}
+      onApply={next => {
+        if (editingLocked) return;
+        setPlaying(false); setScenes(next.map(scene => ({ ...scene })));
+        setSceneSeconds(5); setMotion('story'); setApprovedGoal('');
+        seek(0); setClip(null);
+        setMessage('Your six local creative scenes are ready to edit. The animation remains illustrative; no AI footage or paid provider was requested.');
+      }}
+      onExport={text => saveText('luqi-creative-production-brief.txt', text, 'text/plain;charset=utf-8')} />
     <StudioDraftImport disabled={recording || voiceBusy || audioPreparing} onBusyChange={busy => { setDraftBusy(busy); if (busy) setPlaying(false); }}
       onRestore={draft => {
         if (active.current) return;

@@ -77,6 +77,85 @@ test('missing recorder is disclosed before a click and does not prevent script d
   expect(writes).toEqual([]);
   await expect(page.getByRole('link', { name: /Download 90-second video/ })).toHaveCount(0);
 });
+test('320px keyboard-accessible creative preflight previews and exports the longest accepted brief', async ({ page }) => {
+  // A real Chromium/WebKit browser check on local static preview, never a paid API.
+  const writes: string[] = [], errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/content-studio');
+  await expect(page.getByRole('heading', { name: 'Zero-credit creative preflight' })).toBeVisible();
+  const originalTitle = await page.getByLabel('Scene title', { exact: true }).inputValue();
+  for (const [name, value] of [
+    ['Subject and action', 'S'.repeat(96)],
+    ['Camera and framing', 'C'.repeat(80)],
+    ['Lighting', 'L'.repeat(80)],
+    ['Motion', 'M'.repeat(80)],
+    ['Setting', 'P'.repeat(80)],
+  ]) {
+    await page.getByRole('textbox', { name }).fill(value);
+  }
+  await page.getByText('Audience, call to action and continuity (optional)').click();
+  for (const [name, value] of [
+    ['Audience', 'A'.repeat(64)],
+    ['Call to action', 'T'.repeat(96)],
+    ['Visual continuity note', 'V'.repeat(96)],
+  ]) {
+    await page.getByRole('textbox', { name }).fill(value);
+  }
+  await expect(page.locator('.luqi-studio-preflight-progress')).toContainText('Ready to draft six scenes');
+  const preview = page.getByRole('button', { name: 'Preview six-scene replacement' });
+  await expect(preview).toBeEnabled();
+  await preview.focus();
+  await expect(preview).toBeFocused();
+  await preview.press('Enter');
+  const review = page.getByRole('region', { name: 'Review scene replacement' });
+  await expect(review).toBeVisible();
+  await expect(review).toContainText('A'.repeat(64));
+  await expect(review).toContainText('T'.repeat(96));
+  await expect(page.getByLabel('Scene title', { exact: true })).toHaveValue(originalTitle);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  const exportButton = page.getByRole('button', { name: 'Download creative production brief' });
+  await expect(exportButton).toBeEnabled();
+  const download = page.waitForEvent('download');
+  await exportButton.focus();
+  await expect(exportButton).toBeFocused();
+  await exportButton.press('Enter');
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('luqi-creative-production-brief.txt');
+  const reader = await file.createReadStream(); let content = '';
+  for await (const chunk of reader!) content += chunk.toString();
+  expect(content).toContain('Audience: ' + 'A'.repeat(64));
+  expect(content).toContain('Call to action: ' + 'T'.repeat(96));
+  expect(content).toContain('Scene 6:');
+  await page.getByRole('button', { name: 'Keep existing storyboard' }).focus();
+  await page.getByRole('button', { name: 'Keep existing storyboard' }).press('Enter');
+  await expect(review).toHaveCount(0);
+  await expect(page.getByLabel('Scene title', { exact: true })).toHaveValue(originalTitle);
+  expect(writes).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('320px history template shows source limitations before scene replacement and export', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', request => { if (request.method() !== 'GET') writes.push(request.url()); });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/#/content-studio');
+  await page.getByRole('combobox', { name: 'Creative template' }).selectOption('history');
+  await expect(page.getByRole('textbox', { name: 'Subject and action' })).toHaveValue(/check original sources/i);
+  await page.getByRole('button', { name: 'Preview six-scene replacement' }).click();
+  await expect(page.getByRole('region', { name: 'Review scene replacement' }))
+    .toContainText('Luqi has not independently checked original sources');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download creative production brief' }).click();
+  const file = await download;
+  const stream = await file.createReadStream(); let brief = '';
+  for await (const chunk of stream!) brief += chunk.toString();
+  expect(brief).toContain('Editable creative draft');
+  expect(brief).toContain('Verify facts, dates, commercial claims');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(writes).toEqual([]);
+});
 test('legacy animation aliases use the same real creation tool without credit-purchase controls at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 820 });
   await page.goto('/#/video-studio');

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { ArrowRight, Compass, Globe2, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import AiPilotPage from './AiPilotPage';
 import LuqiPromptCoach from '../components/LuqiPromptCoach';
@@ -15,9 +15,21 @@ const emptyTrip = () => ({ destination: '', dates: '', travellers: '2', budget: 
 /** One entry into real local tools and an optional, consent-gated AI trial. No automatic actions. */
 export default function AskLuqiPage() {
   const { session } = useCustomerSession();
+  const location = useLocation();
   const previousToken = useRef<string | null>(null);
-  const [need, setNeed] = useState('');
-  const [submitted, setSubmitted] = useState('');
+  const [need, setNeed] = useState(() => {
+    const state: unknown = location.state;
+    if (!state || typeof state !== 'object' || !('luqiHomeNeed' in state)) return '';
+    const proposed = (state as { luqiHomeNeed?: unknown }).luqiHomeNeed;
+    // History state is only an explicit homepage-to-guide handoff, not a URL or API payload.
+    // Reject malformed/oversized state rather than silently presenting a partial request.
+    if (typeof proposed !== 'string') return '';
+    const value = proposed.trim();
+    return value.length > 0 && value.length <= MAX_GUIDE_NEED_CHARS ? value : '';
+  });
+  // Home's submit is already the user's explicit "find my next step" action.
+  // Show the deterministic local result immediately. Never auto-send an AI request.
+  const [submitted, setSubmitted] = useState(() => guideLuqiNeed(need) ? need : '');
   const [aiDraft, setAiDraft] = useState('');
   const [coachDraftReady, setCoachDraftReady] = useState(false);
   const [error, setError] = useState('');
@@ -81,6 +93,14 @@ export default function AskLuqiPage() {
       <p className="luqi-guide-overline"><Globe2 size={17} aria-hidden="true" /> AFRICA IN MIND · MADE FOR REAL LIFE</p>
       <h1 id="luqi-guide-chat-heading">Chat with Luqi</h1>
       <p>Tell Luqi what you're trying to do. Start with free, private-to-this-tab guidance and follow a working tool — or choose the signed-in AI text trial. You decide before any AI question is sent.</p>
+      {submitted && need.trim() === submitted && <div className="luqi-guide-handoff" role="status">
+        <p>Local next step prepared. Nothing was sent to an AI provider.</p>
+        <button type="button" onClick={() => {
+          const heading = document.getElementById('luqi-guide-result-title');
+          heading?.focus({ preventScroll: true });
+          heading?.scrollIntoView?.({ behavior: 'auto', block: 'start' });
+        }}>Go to suggested next step <ArrowRight size={16} aria-hidden="true" /></button>
+      </div>}
       <div className="luqi-guide-intro-actions" role="group" aria-label="Choose how to start">
         <button type="button" className="luqi-guide-submit" onClick={() => document.getElementById('luqi-guide-need')?.focus()}>
           Tell Luqi my goal <ArrowRight size={18} aria-hidden="true" />
@@ -130,7 +150,7 @@ export default function AskLuqiPage() {
     {result && <section className="luqi-guide-result" aria-labelledby="luqi-guide-result-title" aria-live="polite">
       <div className="luqi-guide-result-heading">
         <div><p className="luqi-guide-overline">YOUR NEXT STEP · LOCAL GUIDANCE</p>
-          <h2 id="luqi-guide-result-title">{result.title}</h2></div>
+          <h2 id="luqi-guide-result-title" tabIndex={-1}>{result.title}</h2></div>
         <span className={'luqi-guide-state luqi-guide-state-' + result.status}>{result.statusLabel}</span>
       </div>
       <p>{result.detail}</p>

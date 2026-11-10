@@ -36,7 +36,7 @@ describe('consumer rights guide, zero-provider fallback', () => {
       expect(u.username).toBe('');
       expect(u.password).toBe('');
       expect(u.search).toBe('');
-      expect(source.reviewedOn).toBe(CONSUMER_GUIDE_REVIEWED_ON);
+      expect(source.reviewedOn).toBe(source.id === 'icasa-crm' ? '2026-11-07' : CONSUMER_GUIDE_REVIEWED_ON);
       expect(ids.has(source.id)).toBe(true);
     }
     for (const type of categories) {
@@ -49,6 +49,22 @@ describe('consumer rights guide, zero-provider fallback', () => {
       for (const id of plan.sourceIds) expect(ids.has(id)).toBe(true);
     }
   });
+  it('separates telecom escalation procedure from ICASA CRM registration', () => {
+    const sources = consumerSourcesFor('TELCO_BILLING_DISPUTE');
+    expect(sources.map(s => s.id)).toEqual(['icasa', 'icasa-crm', 'cgso']);
+    expect(sources[0].url).toBe('https://www.icasa.org.za/pages/consumer-complaints-procedure');
+    expect(sources[1].url).toBe('https://www.icasa.org.za/pages/consumer-complaints');
+    expect(sources[1].reviewedOn).toBe('2026-11-07');
+    expect(CONSUMER_ISSUES.TELCO_BILLING_DISPUTE.explanation).toMatch(/14 working days/);
+    expect(CONSUMER_ISSUES.TELCO_BILLING_DISPUTE.explanation).toMatch(/not another Luqi login/);
+    expect(CONSUMER_ISSUES.TELCO_BILLING_DISPUTE.options.join(' ')).toMatch(/verify the emailed code/);
+    expect(consumerSourcesFor('ONLINE_SCAM').some(s => s.id === 'icasa-crm')).toBe(false);
+    expect(consumerSourcesFor('UNAUTHORIZED_DEBIT_ORDER').some(s => s.id === 'icasa-crm')).toBe(false);
+    expect(CONSUMER_GUIDE_REVIEWED_ON).toBe('2026-11-01');
+    expect(CONSUMER_GUIDE_RECHECK_AFTER).toBe('2026-11-08');
+    expect(consumerGuideIsCurrent(new Date('2026-11-09T00:00:00+02:00'))).toBe(false);
+  });
+
   it('never uses a defective-goods assertion for bank, privacy, telecom or credit concerns', () => {
     for (const type of ['UNAUTHORIZED_DEBIT_ORDER', 'POPIA_DATA_BREACH', 'TELCO_BILLING_DISPUTE',
       'MASHONISA_ILLEGAL_LOAN', 'DEBT_REVIEW_TRAP'] as DisputeType[]) {

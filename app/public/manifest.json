@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Luqi — Your everyday workspace",
   "short_name": "Luqi",
-  "description": "Private notes, an interactive physics lab and a limited signed-in AI text trial. Check current availability before use.",
+  "description": "Explore Luqi Chat, practical learning, South African service guidance, opportunities and everyday tools. Check sources and availability; some features require sign-in.",
   "start_url": "/#/chat",
   "scope": "/",
   "display": "standalone",

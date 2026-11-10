@@ -7,10 +7,16 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: webkit-acceptance-${{ github.ref }}
-  cancel-in-progress: true
+  group: webkit-acceptance-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   verify-webkit-journeys:
+    # Preserve all desktop and iPhone tests but bound per-runner contention.
+    # All four shards must succeed; any failure keeps this release blocked.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     # The locked Playwright 1.58.2 does not support WebKit on Ubuntu 26.04.
     # Avoid ubuntu-latest migration changing the browser test platform silently.
     runs-on: ubuntu-24.04
@@ -40,14 +46,22 @@ jobs:
         run: npm run build
       - name: Verify resolved loading policy and emitted public entrypoint
         run: node scripts/verify-module-loading.mjs
+      - name: Preflight draft execution, completed ZIP download and continued editing
+        if: matrix.shard == 1
+        run: npx --no-install playwright test browser-tests/executable-draft.spec.ts --config=playwright.webkit.config.ts --workers=1
       - name: Run existing account, trial and tool journeys on desktop and iPhone-sized WebKit
-        timeout-minutes: 13
-        run: npx --no-install playwright test --config=playwright.webkit.config.ts
+        # All desktop/iPhone tests remain included, now across four independent
+        # shards with one WebKit worker per runner to eliminate the concurrent
+        # iPhone high-DPR compositor contention observed in full acceptance.
+        # No test exclusions, force clicks, retries, changed assertions, or
+        # looser per-case/global/step deadlines.
+        timeout-minutes: 16
+        run: npx --no-install playwright test --config=playwright.webkit.config.ts --shard=${{ matrix.shard }}/4 --workers=1
       - name: Preserve synthetic test results and failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: webkit-launch-acceptance
+          name: webkit-launch-acceptance-shard-${{ matrix.shard }}
           path: test-results-webkit/
           retention-days: 7
           if-no-files-found: warn
