@@ -212,6 +212,27 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     // The public layer must still reject finite betas whose doubled RX angle overflows.
     expect(() => qaoaLayer(model, gamma, 1e308)).toThrow('Use finite numbers.');
   });
+  it('reuses an eight-qubit phase row without leaking in-place mixer mutations across beta candidates', () => {
+    const model = {
+      fields: [0.125, -0.25, 0.375, -0.5, 0.625, -0.75, 0.875, -1],
+      edges: [{ i: 0, j: 7, weight: 0.325 }, { i: 2, j: 5, weight: -0.175 }],
+    };
+    const original = structuredClone(model), steps = 5;
+    let expected = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
+    for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
+      const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
+      const candidate = qaoaLayer(model, gamma, beta);
+      if (candidate.expectedEnergy < expected.expectedEnergy) expected = { gamma, beta, ...candidate };
+    }
+    const snapshot = structuredClone(expected);
+    const actual = searchQaoaGrid(model, steps);
+    expect(actual).toEqual({ ...snapshot, parameterPairs: steps ** 2 });
+    expect(searchQaoaGrid(model, steps)).toEqual(actual);
+    expect(expected).toEqual(snapshot);
+    expect(model).toEqual(original);
+    expect(stateMetrics(actual.state).norm).toBeCloseTo(1, 12);
+  });
+
   it('measures reproducible bounded CPU baselines without gating on noisy timing', () => {
     // Paired measurements compare the original public API search with spectrum caching;
     // both use the same RX implementation. These are CI CPU samples, not phone timings.
