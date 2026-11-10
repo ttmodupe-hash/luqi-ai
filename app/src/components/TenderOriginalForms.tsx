@@ -54,6 +54,9 @@ export function TenderOriginalForms(){
   useEffect(()=>{
     if(accountRef.current!==account){accountRef.current=account;clearPrivateWork();}
   },[account]); // Account switch/logout/expiry clears private inputs and in-flight results.
+  // Never allow a clock correction to move this mounted review's observed time backwards.
+  // This is a session-local guard, not trusted issuer or network time.
+  const observedNow=()=>new Date(Math.max(clock,Date.now()));
   function audit(action:TenderAuditEvent['action'],subject:string,nextRevision=revision){
     setHistory(previous=>appendTenderAudit(previous,nextRevision,action,subject));
   }
@@ -136,7 +139,7 @@ export function TenderOriginalForms(){
   }
   async function prepare(){
     if(!primary?.inspection.templateId||busy||historyFull)return;
-    const missing=validatePacketContext(context);
+    const missing=validatePacketContext(context,observedNow());
     if(missing.length){setMessage('Complete: '+missing.join('; '));return;}
     const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);
     const controller=new AbortController();pending.current=controller;
@@ -146,28 +149,29 @@ export function TenderOriginalForms(){
       if(!result.ok||!result.filled){setMessage(TENDER_DOCUMENT_ERRORS[result.ok?'DOCUMENT_INVALID':result.code]);return;}
       const packet=await prepareTenderPacket({inspection:primary.inspection,originalName:primary.name,filled:result.filled,values,
         amendments:amendments.map((a,i)=>({name:`amendment-${i+1}.${a.inspection.kind}`,sha256:a.inspection.sha256,size:a.bytes.length,role:'amendment'})),
-        context,revision});
+        context,revision},observedNow());
       if(version!==epoch.current||controller.signal.aborted)return;
-      setPrepared({packet,filled:result.filled});setClock(Date.now());audit('prepare',packet.digest);
+      setPrepared({packet,filled:result.filled});setClock(previous=>Math.max(previous,Date.now()));audit('prepare',packet.digest);
       setMessage('Review the exact entered fields, packet digest and addenda, then complete each applicant approval. Export remains unsigned and partial.');
     }catch{if(version===epoch.current)setMessage('The review packet could not be prepared. Check the fields and context.');}
     finally{if(version===epoch.current){setBusy(false);pending.current=null;}}
   }
   function gate(id:OriginalFormGate,checked:boolean){
-    if(!prepared||busy||historyFull)return;
+    if(!prepared||busy||historyFull||observedNow().getTime()>=Math.min(
+      Date.parse(prepared.packet.preparedAt)+30*60*1000,Date.parse(prepared.packet.context.deadline)))return;
     setGates(previous=>({...previous,[id]:checked,...(id==='release'?{}:{release:false})}));
     audit(checked?'approve':'revoke',id);setMessage('Approval history updated for this exact prepared version.');
   }
   async function download(){
-    if(!primary||!prepared||!canExportTenderPacket(prepared.packet,revision,gates)||busy||historyFull)return;
+    if(!primary||!prepared||!canExportTenderPacket(prepared.packet,revision,gates,observedNow())||busy||historyFull)return;
     const version=++epoch.current;setBusy(true);
     try{
       const finalHistory=appendTenderAudit(history,revision,'export',prepared.packet.digest);
       const bytes=await buildTenderOriginalArchive(prepared.packet,revision,gates,[
         {name:'original.docx',bytes:primary.bytes},{name:'filled-sbd1-partial.docx',bytes:prepared.filled},
         ...amendments.map((a,i)=>({name:`amendment-${i+1}.${a.inspection.kind}`,bytes:a.bytes})),
-      ],finalHistory);
-      if(version!==epoch.current||!canExportTenderPacket(prepared.packet,revision,gates))return;
+      ],finalHistory,observedNow());
+      if(version!==epoch.current||!canExportTenderPacket(prepared.packet,revision,gates,observedNow()))return;
       saveArchive(bytes);setHistory(finalHistory);
       setMessage('Partial original and review record exported privately. Complete the remaining official fields and signatures before your own submission. Nothing was submitted.');
     }catch{if(version===epoch.current)setMessage('Export stopped: the packet changed, approval expired or review is incomplete. Prepare and approve it again.');}
