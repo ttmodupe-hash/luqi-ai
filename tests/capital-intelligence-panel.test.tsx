@@ -53,6 +53,21 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toContain('Not currently aligned');
  });
 
+ it('shows the MIT Solve idea-stage exception and expired deadline without any network call',()=>{
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'KE'}});
+   fireEvent.change(screen.getByLabelText('Funding geography'),{target:{value:'GLOBAL'}});
+   fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'IDEA'}});
+   const mit=screen.getByRole('article',{name:'MIT Solve Global Challenges'});
+   expect(mit.textContent).toContain('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');
+   expect(mit.textContent).toContain('6 November 2026 at 12:00 EST (19:00 SAST)');
+   expect(mit.textContent).toContain('Check programme criteria');
+   fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'MVP'}});
+   expect(mit.textContent).not.toContain('Concept-stage ideas are reviewed only under');
+   expect(mit.textContent).toContain('19:00 SAST');
+   expect(fetcher).not.toHaveBeenCalled();
+ });
  it('offers pan-African and global sources for Kenyan project locations without declaring eligibility',()=>{
    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
    render(<CapitalIntelligencePanel/>);
