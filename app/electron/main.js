@@ -64,11 +64,19 @@ function createWindow() {
       try {
         // Require the approved complete heading and the workspace shell.
         // A line break may produce whitespace or no separator in textContent.
-        const rendered = await mainWindow.webContents.executeJavaScript(`Boolean(
+        const rendered = await mainWindow.webContents.executeJavaScript(`new Promise(resolve => {
+          const ready = () => Boolean(
           /^Knowledge[.] People[.]\\s*A Stronger Africa[.]$/.test(
             document.querySelector('#workspace-content main #workspace-title')?.textContent ?? ''
           ) && document.querySelector('a[aria-label="Luqi workspace home"]')
-        )`);
+          );
+          if (ready()) return resolve(true);
+          let timer;
+          const finish = value => { observer.disconnect(); clearTimeout(timer); resolve(value); };
+          const observer = new MutationObserver(() => { if (ready()) finish(true); });
+          observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+          timer = setTimeout(() => finish(false), 15000);
+        })`);
         if (!rendered) throw new Error('Workspace did not render');
         console.log('Desktop workspace rendered successfully');
         clearTimeout(timeout);
