@@ -1,5 +1,12 @@
 # Observe the deployment before reporting a release
 
+For a cancelled approval/commit interaction, first follow
+[`DEPLOYMENT_APPROVAL_INCIDENT_2026_11_10.md`](DEPLOYMENT_APPROVAL_INCIDENT_2026_11_10.md).
+Preserve the owner's existing authorization, inspect the actual cancellation
+provenance when available, and distinguish this from a failed build, a stale
+source patch or a status event for another environment. Repeating a chat
+approval or an unchanged deployment call is not an established repair.
+
 A green public probe from a pull request can describe the already-running
 version rather than the proposed release. The public release workflow now
 performs offline syntax checks on pull requests, then runs live observation
