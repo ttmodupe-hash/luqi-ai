@@ -166,7 +166,7 @@ export function TenderOriginalForms(){
       ],finalHistory);
       if(version!==epoch.current||!canExportTenderPacket(prepared.packet,revision,gates))return;
       saveArchive(bytes);setHistory(finalHistory);
-      setMessage('Partial original and review record exported privately. Complete the remaining official fields and signatures before your own submission. Nothing was submitted.');
+      setMessage('Download requested. Check your browser’s Downloads list for luqi-sbd1-partial-review-pack.zip; browser settings may block or cancel saving. Keep the archive private, complete the remaining official fields and signatures, and submit manually. Nothing was submitted.');
     }catch{if(version===epoch.current)setMessage('Export stopped: the packet changed, approval expired or review is incomplete. Prepare and approve it again.');}
     finally{if(version===epoch.current)setBusy(false)}
   }
