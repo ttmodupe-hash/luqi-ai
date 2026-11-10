@@ -34,6 +34,37 @@ async function fillContext(){
  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
  await screen.findByRole('region',{name:'Original form applicant review'});
 }
+it('names the missing SBD 1 bidder fact before any document fill is requested',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const inspectedCalls=run.mock.calls.length;
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ const feedback=screen.getByText(/Check supported contact fields before preparing:/).textContent||'';
+ expect(feedback).toContain('Name of bidder');
+ expect(feedback).toContain('Enter the bidder name');
+ expect(feedback).toContain('No original was filled.');
+ expect(run).toHaveBeenCalledTimes(inspectedCalls);
+ expect(screen.getByRole('button',{name:'Go to Name of bidder'})).toBeTruthy();
+ expect(network).not.toHaveBeenCalled();
+});
+it('names malformed entered email without a second worker fill or leaked value',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const earlierFill=run.mock.calls.filter(([req])=>req.action==='fill').length;
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'not-an-address'}});
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ const feedback=screen.getByText(/Check supported contact fields before preparing:/).textContent||'';
+ expect(feedback).toContain('Email address');
+ expect(feedback).toContain('Check the email format');
+ expect(feedback).toContain('No original was filled.');
+ expect(feedback).not.toContain('not-an-address');
+ expect(run.mock.calls.filter(([req])=>req.action==='fill')).toHaveLength(earlierFill);
+ expect(network).not.toHaveBeenCalled();
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'test@example.test'}});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ await screen.findByRole('region',{name:'Original form applicant review'});
+ expect(run.mock.calls.filter(([req])=>req.action==='fill')).toHaveLength(earlierFill+1);
+});
+
 it('requires local-processing consent, makes no network calls and keeps unsupported exports blocked',async()=>{
  render(<TenderOriginalForms/>);
  expect(screen.getByRole('button',{name:'Use verified Treasury SBD 1'}).hasAttribute('disabled')).toBe(true);

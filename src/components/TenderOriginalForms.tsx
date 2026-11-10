@@ -3,6 +3,7 @@ import {useOptionalCustomerSession} from '../providers/customer-session';
 import {EMPTY_SUPPLIER_VALUES,SBD1_FIELDS,VERIFIED_SBD1,TENDER_FILE_MAX,TENDER_DOCUMENT_ERRORS,
   type SupplierValues,type TenderDocumentInspection} from '../lib/tender-document-contract';
 import {TenderSupplierGuide} from './TenderSupplierGuide';
+import {supplierFieldProgress} from '../lib/tender-field-guide';
 import {runTenderDocument} from '../lib/tender-document-client';
 import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTenderAudit,prepareTenderPacket,
   validatePacketContext,canExportTenderPacket,buildTenderOriginalArchive,
@@ -133,6 +134,15 @@ export function TenderOriginalForms(){
   }
   async function prepare(){
     if(!primary?.inspection.templateId||busy||historyFull)return;
+    // Explain exactly which entered/missing mapped contact facts block a
+    // partial export before invoking the worker. Never fill example answers.
+    const invalid=supplierFieldProgress(values,SBD1_FIELDS).attention;
+    if(invalid.length){
+      setMessage('Check supported contact fields before preparing: '+
+        invalid.map(({field,issue})=>field.label+' — '+issue).join('; ')+
+        '. Use the field guidance above to correct them. No original was filled.');
+      return;
+    }
     const missing=validatePacketContext(context);
     if(missing.length){setMessage('Complete: '+missing.join('; '));return;}
     const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);
