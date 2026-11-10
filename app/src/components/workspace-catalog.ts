@@ -1,5 +1,25 @@
 export const workspaceTools = [
   {
+    id: "launch-control", title: "Launch Control", category: "Tool 024: evidence and release operations",
+    description: "Run current Luqi release and health checks, review dependency workflows, restore portable checkpoints and prepare SPF, DKIM and DMARC records locally. External DNS, deployments and payment integrations require separate connections.",
+    status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",
+  },
+  {
+    id: "devsecnet", title: "DevSecNet Studio", category: "Tool 022: product, design and engineering",
+    description: "Draft a PRD, Fibonacci backlog and RAID register; check design-token contrast, review source locally, plan IPv4 networks and measure reference workloads. Editable ZAR/AI cost scenarios. No paid calls or network pushes.",
+    status: "Local planning and review tools", ready: true, path: "/devsecnet", icon: "academy",
+  },
+  {
+    id: "archive", title: "Archive vault", category: "Local encrypted text records",
+    description: "Create and verify a protected text record with an encrypted recovery file you control. No upload, account or paid AI. Pilot; cloud archives remain unavailable.",
+    status: "Local encryption pilot", ready: true, path: "/archive", icon: "notes",
+  },
+  {
+    id: "quantum-lab", title: "Quantum & PQC Lab", category: "Track 7: quantum computing and cryptography",
+    description: "Local Bell/Grover statevectors, bounded QAOA and exact planning references, illustrative surface-code estimates and isolated public-message PQC checks. No quantum-cloud or paid AI calls.",
+    status: "Local educational lab", ready: true, path: "/quantum-lab", icon: "academy",
+  },
+  {
     id: "civic-evidence", title: "Civic Evidence Desk", category: "Politics, voting and public accountability",
     description: "Source-linked audits, budgets, Parliament and IEC voting information. Free explanations; optional signed-in AI clarification. No live party rankings or voting recommendations.",
     status: "Free evidence · optional signed-in AI", ready: true, path: "/chat?civic=1", icon: "status",

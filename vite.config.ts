@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
+  worker: { format: "es" },
   plugins: [
     devServer({ entry: "api/boot.ts", exclude: [/^\/(?!(api|auth|v1|health)\/).*$/] }),
     inspectAttr(),
@@ -37,6 +38,16 @@ export default defineConfig({
     emptyOutDir: true,
     // The repository also contains app/index.html. Force the canonical root
     // entry to produce dist/public/index.html for the Hono static server.
-    rollupOptions: { input: path.resolve(__dirname, "index.html") },
+    rollupOptions: {
+      input: path.resolve(__dirname, "index.html"),
+      output: {
+        // Keep the public geography chunk outside the reserved sa-* credential
+        // namespace enforced by the production server. Do not weaken that guard.
+        manualChunks(id: string) {
+          if (id.replace(/\\/g, '/').endsWith('/src/lib/sa-province-map.ts')) return 'za-province-geometry';
+          return undefined;
+        },
+      },
+    },
   },
 });

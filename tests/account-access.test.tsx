@@ -29,6 +29,23 @@ describe('new account access', () => {
     expect(request).not.toHaveBeenCalled();
     expect(accepted).not.toHaveBeenCalled();
   });
+  it('shows live confirmation state and enables signup only when the password is valid and confirmed', () => {
+    render(<AccountAccessForm initialMode="signup" onAuthenticated={accepted} />);
+    const create = screen.getByRole('button', { name: 'Create account', exact: true }) as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
+    expect(screen.getByText(/Password must be at least 12 characters/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
+    expect(screen.getByText('✓ Password meets the length requirement.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'Different-password' } });
+    expect(screen.getByRole('status').textContent).toBe('The passwords do not match.');
+    expect(create.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: password } });
+    expect(screen.getByText('✓ Passwords match.')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(create.disabled).toBe(false);
+    expect(request).not.toHaveBeenCalled();
+  });
   it('matches the server password boundary including multibyte passwords', () => {
     expect(validAccountPassword('short')).toBe(false);
     expect(validAccountPassword('a'.repeat(72))).toBe(true);

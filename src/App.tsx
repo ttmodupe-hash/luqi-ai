@@ -10,9 +10,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
-import Home from "./pages/Home";
+const Home = lazy(() => import("./pages/Home"));
+const DevSecNetStudioPage = lazy(() => import("./features/devsecnet/DevSecNetStudioPage"));
+const LaunchControlPage = lazy(() => import("./features/launch/LaunchControlPage"));
+const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
 const SpaceSciencePage = lazy(() => import("./pages/SpaceSciencePage"));
 const StartPage = lazy(() => import("./pages/StartPage"));
+const PossibilityEnginePage = lazy(() => import("./pages/PossibilityEnginePage"));
+const CapabilityJourneyPage = lazy(() => import("./pages/CapabilityJourneyPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 import NotFoundPage from "./pages/NotFoundPage";
 const TermsPage = lazy(() => import("./pages/TermsPage"));
@@ -42,6 +47,7 @@ const RightsGuidePage = lazy(() => import("./pages/RightsGuidePage"));
 const LuqiDrivePage = lazy(() => import("./features/drive/LuqiDrivePage"));
 const DriverRightsPage = lazy(() => import("./pages/DriverRightsPage"));
 const OpportunityCompassPage = lazy(() => import("./pages/OpportunityCompassPage"));
+const BusinessConnectPreviewPage = lazy(() => import("./pages/BusinessConnectPreviewPage"));
 const BusinessConnectPage = lazy(() => import("./pages/BusinessConnectPage"));
 const BusinessDirectoryPage = lazy(() => import("./pages/BusinessDirectoryPage"));
 const BusinessReviewPage = lazy(() => import("./pages/BusinessReviewPage"));
@@ -87,7 +93,14 @@ export default function App() {
         <RouterRoute path="/service-status" element={<ServiceStatusPage />} />
         <RouterRoute path="/" element={<Home />} />
         <RouterRoute path="/space-science" element={<SpaceSciencePage />} />
+        <RouterRoute path="/devsecnet" element={<DevSecNetStudioPage />} />
+        <RouterRoute path="/tool-022" element={<DevSecNetStudioPage />} />
+        <RouterRoute path="/launch-control" element={<LaunchControlPage />} />
+        <RouterRoute path="/tool-024" element={<LaunchControlPage />} />
+        <RouterRoute path="/quantum-lab" element={<QuantumLabPage />} />
         <RouterRoute path="/start" element={<StartPage />} />
+        <RouterRoute path="/possibility" element={<PossibilityEnginePage />} />
+        <RouterRoute path="/journey" element={<CapabilityJourneyPage />} />
         <RouterRoute path="/install" element={<InstallAppPage />} />
         <RouterRoute path="/download" element={<Navigate to="/install" replace />} />
         <RouterRoute path="/chat" element={<LuqiChatWorkspacePage />} />
@@ -109,6 +122,7 @@ export default function App() {
         <RouterRoute path="/driver-rights" element={<DriverRightsPage />} />
         <RouterRoute path="/opportunities" element={<OpportunityCompassPage />} />
         <RouterRoute path="/business-connect" element={<BusinessConnectPage />} />
+        <RouterRoute path="/business-connect/preview" element={<BusinessConnectPreviewPage />} />
         <RouterRoute path="/business-connect/review" element={<BusinessReviewPage />} />
         <RouterRoute path="/businesses" element={<BusinessDirectoryPage />} />
         <RouterRoute path="/businesses/:id" element={<BusinessDirectoryPage />} />

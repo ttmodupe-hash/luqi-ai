@@ -22,6 +22,6 @@ jobs:
           node-version: '22'
       - run: npm ci --legacy-peer-deps --include=dev
       - name: Check source provenance, expiry, no invented citations and authenticated request controls
-        run: npx vitest run tests/civic-evidence.test.ts tests/civic-evidence-client.test.ts tests/civic-evidence-http.test.ts
+        run: npx vitest run tests/civic-atlas.test.tsx tests/civic-ward-guide.test.tsx tests/civic-evidence.test.ts tests/civic-evidence-client.test.ts tests/civic-evidence-http.test.ts
       - name: Strictly type-check civic UI and budgeted source selection
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/CivicEvidenceChat.tsx src/pages/CivicEvidenceDesk.tsx api/civic-evidence.ts

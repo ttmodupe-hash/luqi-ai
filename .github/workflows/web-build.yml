@@ -34,10 +34,17 @@ jobs:
         run: node --test tests/release-control-posture.test.mjs tests/p0-operator-handoff.test.mjs
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify local Tool 022 planning, review and account boundaries
+        run: |
+          npx --no-install vitest run tests/devsecnet-engine.test.ts tests/devsecnet-page.test.tsx tests/executable-draft.test.ts tests/executable-draft-page.test.tsx
+          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/devsecnet/DevSecNetStudioPage.tsx src/features/devsecnet/devsecnet.worker.ts src/features/devsecnet/draft.worker.ts
+          for file in src/features/devsecnet/*; do cmp "$file" "app/$file"; done
       - name: Prevent stale website links and PWA descriptions
         run: node --test tests/domain-site-freshness.test.mjs
       - name: Verify opt-in local province location
         run: npx vitest run tests/location-province.test.tsx tests/nearby-discovery.test.tsx tests/business-connect-contract.test.ts tests/business-connect-page.test.tsx
+      - name: Verify owner-only Business Connect preview, sandbox and local storage isolation
+        run: npx vitest run tests/business-preview-access.test.ts tests/business-preview-bridge.test.ts tests/business-preview-page.test.tsx
       - name: Check the Luqi-Drive demo, GPS permissions and lifecycle
         run: npx vitest run tests/luqi-drive-gps.test.tsx tests/field-and-bench.test.tsx
       - name: Verify inline Circles controls and frontend parity
@@ -148,6 +155,18 @@ jobs:
         run: npx vitest run tests/spatial-vision-contract.test.ts tests/spatial-vision-route.test.ts tests/spatial-vision-provider.test.ts tests/spatial-vision-client.test.ts
       - name: Type-check Spatial Vision backend and mobile-safe component
         run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/spatialVision.ts api/spatial-vision.ts src/lib/spatial-vision.ts src/components/KhoroSpatialVisionLab.tsx
+      - name: Verify quantum statevectors, analytical optimization references and isolated PQC
+        run: npx vitest run tests/quantum-engine.test.ts tests/quantum-pqc.test.ts tests/quantum-page.test.tsx
+      - name: Verify isolated PQC archive envelopes, trusted keys, recovery and no live activation
+        run: |
+          npx --no-install vitest run tests/pqc-archive.test.ts tests/local-archive-crypto.test.ts tests/local-archive-page.test.tsx
+          npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/security/pqcArchive.ts tests/pqc-archive.test.ts src/pages/ArchiveVaultPage.tsx src/features/archive/archive.worker.ts tests/local-archive-crypto.test.ts browser-tests/local-archive.spec.ts
+      - name: Type-check the local quantum lab and isolated worker
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/features/quantum/QuantumLabPage.tsx src/features/quantum/pqc-lab.worker.ts
+      - name: Verify task-aware Chat instructions, input validation and request confirmation
+        run: npx vitest run tests/pilot-intelligence.test.ts tests/pilot-intelligence-route.test.ts
+      - name: Strictly check the response approach contract and server policies
+        run: npx tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/services/pilotIntelligence.ts api/ai-pilot.ts api/guest-trial.ts src/components/LuqiResponseApproach.tsx
       - name: Run integrity gate
         run: node scripts/verify-build.mjs
       - name: Build public UI and API bundle
@@ -183,6 +202,10 @@ jobs:
             test-results/**/luqichat-mobile-signedin.png
             test-results/**/circles-bottom-right.png
             test-results/**/visual-tutor.png
+            test-results/**/quantum-lab.png
+            test-results/**/response-approach.png
+            test-results/**/local-archive.png
+            test-results/devsecnet-*.png
             test-results/**/lively-workspace-320.png
             test-results/**/lively-workspace-desktop.png
             test-results/**/province-map-320.png
@@ -231,6 +254,8 @@ jobs:
               '
               node scripts/verify-trpc-boundary.mjs
               node scripts/verify-legacy-controls.mjs
+              node --test tests/public-asset-contract.test.mjs
+              node scripts/verify-production-assets.mjs
               exit 0
             fi
             if ! kill -0 "$server_pid" 2>/dev/null; then
@@ -254,6 +279,15 @@ jobs:
             }
             for (const name of ["components/DiscoveryDeck.tsx", "components/WorkspacePlaybar.tsx", "components/PublisherSignals.tsx", "experience.css", "pages/OpportunityCompassPage.tsx", "components/SouthAfricaProvinceMap.tsx", "lib/sa-province-map.ts", "province-map.css", "components/WorkspaceLayout.tsx", "components/HeroAiChatConsole.tsx", "components/workspace-catalog.ts", "pages/Home.tsx", "pages/ServiceStatusPage.tsx", "pages/PendulumLabPage.tsx", "workspace.css", "omega-tasks.css", "pages/OmegaTasksPage.tsx", "lib/omega-tasks.ts", "components/OmegaSubmissionForm.tsx", "pages/ArchiveVaultPage.tsx", "components/AccountAccessForm.tsx", "components/AccountPasswordForm.tsx", "components/ConsumerRightsAssistant.tsx", "lib/consumer-rights-guide.ts", "components/OpportunityVerificationPanel.tsx", "lib/opportunity-verification.ts", "components/VerifiedGovernmentJobsPanel.tsx", "lib/government-job-notices.ts", "pages/TenderDeskPage.tsx", "components/TenderOriginalForms.tsx", "lib/tender-document-contract.ts", "lib/tender-document-client.ts", "lib/tender-document-engine.ts", "lib/tender-document-review.ts", "workers/tender-document.worker.ts", "lib/tender-sources.ts", "lib/tender-workflow.ts", "lib/account-security.ts", "pages/StartPage.tsx", "pages/RightsGuidePage.tsx", "lib/rights-source-guide.ts", "pages/DriverRightsPage.tsx", "lib/driver-rights.ts", "lib/luqi-intent-guide.ts", "components/DriverQuickCard.tsx", "pages/AiPilotPage.tsx", "pages/ContentStudioPage.tsx", "components/StudioPreflightPanel.tsx", "lib/studio-preflight.ts", "pages/MultimodalHubPage.tsx", "pages/VideoStudioPage.tsx", "lib/content-studio.ts", "content-studio.css", "lib/ai-pilot.ts", "pages/CompanionPage.tsx", "lib/private-conversations.ts", "pages/PricingPage.tsx", "pages/PrivacyPage.tsx", "pages/TermsPage.tsx", "pages/ContactPage.tsx", "components/KhoroSpatialVisionLab.tsx", "lib/spatial-vision.ts", "lib/spatial-vision-contract.ts", "spatial-vision.css"]) {
               if (fs.readFileSync("src/" + name, "utf8") !== fs.readFileSync("app/src/" + name, "utf8")) throw new Error("Workspace frontend diverged: " + name);
+            }
+            for (const name of fs.readdirSync("src/features/quantum")) {
+              if (fs.readFileSync("src/features/quantum/" + name, "utf8") !== fs.readFileSync("app/src/features/quantum/" + name, "utf8")) throw new Error("Quantum frontend diverged: " + name);
+            }
+            for (const name of fs.readdirSync("src/features/archive")) {
+              if (fs.readFileSync("src/features/archive/" + name, "utf8") !== fs.readFileSync("app/src/features/archive/" + name, "utf8")) throw new Error("Archive frontend diverged: " + name);
+            }
+            for (const name of ["components/LuqiResponseApproach.tsx", "lib/response-approach.ts", "lib/ai-pilot.ts", "lib/pilot-conversation.ts", "chat.css"]) {
+              if (fs.readFileSync("src/" + name, "utf8") !== fs.readFileSync("app/src/" + name, "utf8")) throw new Error("Response approach frontend diverged: " + name);
             }
             console.log("Both frontend source trees have the same shared helpers and workspace UI.");
           '
