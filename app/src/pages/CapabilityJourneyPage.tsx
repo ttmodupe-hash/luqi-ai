@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Check, Circle, Flag, RotateCcw, ShieldCheck, Target, Trophy } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
@@ -53,7 +53,7 @@ export default function CapabilityJourneyPage() {
           <p className="luqi-journey-device"><ShieldCheck size={15} aria-hidden="true" /> Saved only in this browser on this device. LUQI has not uploaded this goal or sent it to an AI provider.</p>
         </div>
         <div className="luqi-journey-progress-orbit" aria-label={progress + '% complete'}>
-          <div className="luqi-journey-progress-ring" style={{ '--journey-progress': progress } as React.CSSProperties}>
+          <div className="luqi-journey-progress-ring" style={{ '--journey-progress': progress } as CSSProperties}>
             <div><strong>{progress}%</strong><span>complete</span></div>
           </div>
         </div>
