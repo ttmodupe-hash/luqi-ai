@@ -153,11 +153,9 @@ function applyPreparedRxInPlace(state: Statevector, target: number, cosine: numb
   }
 }
 /** Apply the bounded mixer to a prepared gamma phase; neither input is mutated. */
-function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, beta: number) {
-  // All mixer qubits share angle 2*beta; evaluate trig once per candidate,
-  // not once per qubit. Keep the old finite-angle overflow guard.
-  const angle = finite(2 * beta);
-  const cosine = Math.cos(angle / 2), sine = Math.sin(angle / 2);
+function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, cosine: number, sine: number) {
+  // Coefficients are prepared by the caller from finite angles. The public
+  // single-layer path still rejects overflow in its doubled RX angle.
   // One clone per candidate, rather than a full statevector clone for each
   // mixer qubit. The cached phase row remains immutable across all beta values.
   const state = phased.map(z => ({ ...z }));
@@ -167,8 +165,10 @@ function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: num
 }
 /** Compute from a validated, fixed Ising spectrum; only a classical simulation. */
 function qaoaLayerFromEnergies(energies: number[], initial: Statevector, qubits: number, gamma: number, beta: number) {
+  const angle = finite(2 * beta);
+  const cosine = Math.cos(angle / 2), sine = Math.sin(angle / 2);
   const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
-  return qaoaLayerFromPhase(energies, phased, qubits, beta);
+  return qaoaLayerFromPhase(energies, phased, qubits, cosine, sine);
 }
 export function qaoaLayer(model: IsingModel, gamma: number, beta: number) {
   finite(gamma); finite(beta);
@@ -181,14 +181,19 @@ export function searchQaoaGrid(model: IsingModel, steps = 15) {
   // grid; compute both once instead of allocating them for every angle pair.
   const energies = isingEnergies(model), qubits = model.fields.length, initial = uniformState(qubits);
   let best = { gamma: 0, beta: 0, ...qaoaLayerFromEnergies(energies, initial, qubits, 0, 0) };
+  // Beta coefficients are fixed by column: evaluate trig once per beta,
+  // rather than again for every gamma row (at most 25 cached pairs).
+  const mixers = Array.from({ length: steps }, (_, b) => {
+    const beta = Math.PI * b / (steps - 1), angle = finite(2 * beta);
+    return { beta, cosine: Math.cos(angle / 2), sine: Math.sin(angle / 2) };
+  });
   // Gamma changes only by row: prepare its phase once, then reuse immutably
   // for all beta mixers. Peak state memory remains bounded to 1–8 qubits.
   for (let g = 0; g < steps; g++) {
     const gamma = 2 * Math.PI * g / (steps - 1);
     const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
-    for (let b = 0; b < steps; b++) {
-      const beta = Math.PI * b / (steps - 1);
-      const candidate = qaoaLayerFromPhase(energies, phased, qubits, beta);
+    for (const { beta, cosine, sine } of mixers) {
+      const candidate = qaoaLayerFromPhase(energies, phased, qubits, cosine, sine);
       if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
     }
   }

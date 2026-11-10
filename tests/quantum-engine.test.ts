@@ -233,6 +233,26 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     expect(stateMetrics(actual.state).norm).toBeCloseTo(1, 12);
   });
 
+
+  it('matches a public-layer reference at the maximum 25x25 grid after beta-column coefficient reuse', () => {
+    const model = {
+      fields: [0.125, -0.375, 0.625],
+      edges: [{ i: 0, j: 1, weight: -0.4 }, { i: 1, j: 2, weight: 0.275 }],
+    };
+    const unchanged = structuredClone(model), steps = 25;
+    let reference = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
+    for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
+      const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
+      const candidate = qaoaLayer(model, gamma, beta);
+      if (candidate.expectedEnergy < reference.expectedEnergy) reference = { gamma, beta, ...candidate };
+    }
+    const actual = searchQaoaGrid(model, steps);
+    expect(actual).toEqual({ ...reference, parameterPairs: 625 });
+    expect(searchQaoaGrid(model, steps)).toEqual(actual);
+    expect(model).toEqual(unchanged);
+    expect(stateMetrics(actual.state).norm).toBeCloseTo(1, 12);
+  });
+
   it('measures reproducible bounded CPU baselines without gating on noisy timing', () => {
     // Paired measurements compare the original public API search with spectrum caching;
     // both use the same RX implementation. These are CI CPU samples, not phone timings.
