@@ -110,3 +110,36 @@ describe('surface-code assumptions', () => {
     expect(() => surfaceCodeEstimate(3, 0)).toThrow(); expect(() => surfaceCodeEstimate(3, 0.001, 1)).toThrow();
   });
 });
+
+describe('QAOA grid optimisation preserves numerical results', () => {
+  it('matches a separately enumerated public-layer reference across nontrivial fields and edges', () => {
+    const model = {
+      fields: [0.25, -0.5, 0.75],
+      edges: [{ i: 0, j: 1, weight: 1.5 }, { i: 1, j: 2, weight: -0.375 }],
+    };
+    const steps = 7;
+    let expectedEnergy = Infinity, expectedGamma = 0, expectedBeta = 0;
+    for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
+      const gamma = 2 * Math.PI * g / (steps - 1);
+      const beta = Math.PI * b / (steps - 1);
+      const energy = qaoaLayer(model, gamma, beta).expectedEnergy;
+      if (energy < expectedEnergy) { expectedEnergy = energy; expectedGamma = gamma; expectedBeta = beta; }
+    }
+    const result = searchQaoaGrid(model, steps);
+    expect(result.parameterPairs).toBe(steps ** 2);
+    expect(result.expectedEnergy).toBeCloseTo(expectedEnergy, 12);
+    expect(result.gamma).toBe(expectedGamma);
+    expect(result.beta).toBe(expectedBeta);
+    expect(result.state).toEqual(qaoaLayer(model, expectedGamma, expectedBeta).state);
+    expect(stateMetrics(result.state).norm).toBeCloseTo(1, 12);
+    expect(searchQaoaGrid(model, steps)).toEqual(result);
+  });
+  it('preserves bounded input validation and rejects invalid Hamiltonians', () => {
+    const model = { fields: [0], edges: [] };
+    for (const steps of [2, 26, 4.5, NaN, Infinity]) {
+      expect(() => searchQaoaGrid(model, steps)).toThrow();
+    }
+    expect(() => searchQaoaGrid({ fields: [NaN], edges: [] }, 3)).toThrow();
+    expect(() => searchQaoaGrid({ fields: [0, 0], edges: [{ i: 0, j: 0, weight: 1 }] }, 3)).toThrow();
+  });
+});
