@@ -75,3 +75,30 @@ it('unlocking the form after processing does not repeat an old navigation focus'
  app.rerender(frame(true));app.rerender(frame(false));
  expect(document.activeElement).toBe(screen.getByRole('button',{name:'Review controls'}));
 });
+
+
+it('offers non-blocking optional blank prompts with exact-field focus and no data transfer',async()=>{
+ const network=vi.fn(),edit=vi.fn();vi.stubGlobal('fetch',network);
+ render(<TenderSupplierGuide values={{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'}} onChange={edit}/>);
+ expect(screen.getByText('1 of 7 supported contact fields have valid-format entries.')).toBeTruthy();
+ expect(screen.getByText('6 optional contact fields left blank — review if relevant')).toBeTruthy();
+ const disclosure=document.querySelector('details[aria-label="Optional blank contact fields"]') as HTMLDetailsElement;
+ expect(disclosure).toBeTruthy();expect(disclosure.open).toBe(false);
+ disclosure.open=true;
+ expect(within(disclosure).queryByRole('button',{name:'Review blank Name of bidder'})).toBeNull();
+ expect(within(disclosure).getAllByRole('button',{name:/Review blank /})).toHaveLength(6);
+ fireEvent.click(within(disclosure).getByRole('button',{name:'Review blank Email address'}));
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Email address')));
+ expect(screen.getByLabelText('SBD 1 Email address').getAttribute('aria-required')).toBe('false');
+ expect(edit).not.toHaveBeenCalled();expect(network).not.toHaveBeenCalled();
+});
+
+it('removes an answered optional contact from the blank prompts without claiming a full bid',()=>{
+ render(<Fixture/>);
+ const disclosure=document.querySelector('details[aria-label="Optional blank contact fields"]') as HTMLDetailsElement;
+ disclosure.open=true;
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'synthetic@example.test'}});
+ expect(within(disclosure).queryByRole('button',{name:'Review blank Email address'})).toBeNull();
+ expect(screen.getByText('1 of 7 supported contact fields have valid-format entries.')).toBeTruthy();
+ expect(screen.getByText(/not overall application completion/)).toBeTruthy();
+});
