@@ -1,10 +1,5 @@
 export const workspaceTools = [
   {
-    id: "possibility-engine", title: "Possibility Engine", category: "Goal-to-action orchestration",
-    description: "Start with what you want to become, build or change. Luqi assembles a practical path across learning, labs, business tools, opportunities and execution without making a paid AI request.",
-    status: "Local goal paths · no account or paid AI", ready: true, path: "/possibility", icon: "academy",
-  },
-  {
     id: "launch-control", title: "Launch Control", category: "Tool 024: evidence and release operations",
     description: "Run current Luqi release and health checks, review dependency workflows, restore portable checkpoints and prepare SPF, DKIM and DMARC records locally. External DNS, deployments and payment integrations require separate connections.",
     status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",
