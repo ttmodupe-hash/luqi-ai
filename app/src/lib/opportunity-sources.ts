@@ -34,13 +34,19 @@ const source=(id:string,title:string,organisation:string,category:OpportunityCat
 export const ZA_OPPORTUNITY_SOURCES:readonly OpportunitySource[]=[
  source('gov-jobs','Government jobs this week','South African Government','government',['everyone','graduate','accessibility'],
  'https://www.gov.za/government-jobs-week','Official national and provincial vacancy circulars; read each individual post for the department, closing date, requirements and Z83 form.',undefined,'Use the DPSA circular index for the latest edition, then verify each employer vacancy notice and deadline.'),
+ {id:'circular-40',title:'Public Service Vacancy Circular 40 of 2026',organisation:'DPSA',country:'ZA',category:'government',
+  audiences:['everyone','graduate','accessibility'],url:'https://www.dpsa.gov.za/newsroom/psvc/circular-40-of-2026/',
+  summary:'DPSA issued Circular 40 on 6 November 2026. Its first two pages correct older notices; they do not establish that every advertised position is still open. Read the exact department post and amendments before applying.',
+  reviewedOn:'2026-11-06',type:'dated-notice',publishedOn:'2026-11-06',verifiedOn:'2026-11-06',reviewDueOn:'2026-11-09',
+  notice:'Withdrawn Correctional Services posts: HO 2026/11/33, HO 2026/11/82, HO 2026/11/83, HO 2026/11/87 (Circular 38) and HO 2026/11/109 (Circular 39). GPW26/011 and GPW26/012: amended deadline 23 November 2026 at 16:00 SAST (walk-in) or 23:59 SAST (online). Gauteng Health REFS/057196: amended salary figures. Do not use the original deadlines or salaries without checking these amendments.',
+  evidenceSection:'Original DPSA Circular 40 PDF, printed pages 1–2, AMENDMENTS only; 248-page circular not exhaustively reviewed, individual eligibility/status not verified.'},
  {id:'circular-39',title:'Public Service Vacancy Circular 39 of 2026',organisation:'DPSA',country:'ZA',category:'government',
   audiences:['everyone','graduate','accessibility'],url:'https://www.dpsa.gov.za/newsroom/psvc/circular-39-of-2026/',
-  summary:'DPSA posted Circular 39 on 30 October 2026. Open its department sections and confirm each individual post and closing date. Publication does not prove that a vacancy remains open.',
+  summary:'DPSA posted Circular 39 on 30 October 2026. Circular 40 (6 November) subsequently withdrew Correctional Services HO 2026/11/109 and changed GPW26/011 and GPW26/012 closing dates; check the later amendments and individual post before acting.',
   reviewedOn:'2026-11-02',type:'dated-notice',publishedOn:'2026-10-30',verifiedOn:'2026-11-02',reviewDueOn:'2026-11-06',
   evidenceSection:'DPSA Circular 39 posting date and department links; individual vacancy status not verified.'},
  source('circular-38','Public Service Vacancy Circular 38 of 2026','DPSA','government',['everyone','graduate','accessibility'],
- 'https://www.dpsa.gov.za/newsroom/psvc/circular-38-of-2026/','Earlier edition retained for historical reference; individual posts may have closed. Check Circular 39 and the publisher index for newer editions.',undefined,'Published 23 October 2026, superseded as the newest listed edition by Circular 39. Not proof of active vacancies.'),
+ 'https://www.dpsa.gov.za/newsroom/psvc/circular-38-of-2026/','Earlier edition retained for reference. Circular 40 withdrew four Correctional Services references first advertised here; check later amendments and each employer notice.',undefined,'Published 23 October 2026, superseded by later Circulars 39 and 40. HO 2026/11/33, /82, /83 and /87 were withdrawn in Circular 40; not open jobs.'),
  source('dept-labour','Department of Employment and Labour jobs','Department of Employment and Labour','government',['everyone','graduate'],
  'https://www.labour.gov.za/Vacancies/Pages/Vacancies-List.aspx','Official departmental recruitment listings, career support and links to ESSA. Check each position deadline.'),
  source('nyda','NYDA Opportunities Corner','National Youth Development Agency','graduate',['youth','graduate','entrepreneur'],
@@ -81,7 +87,7 @@ export function matchOpportunitySources(category:OpportunityCategory|'all',audie
  const q=typeof query==='string'?query.trim().toLowerCase().slice(0,100):'';
  return ZA_OPPORTUNITY_SOURCES.filter(s=>(category==='all'||s.category===category)
   &&(audience==='all'||s.audiences.includes(audience))
-  &&(!q||(s.title+' '+s.organisation+' '+s.summary).toLowerCase().includes(q)));
+  &&(!q||(s.title+' '+s.organisation+' '+s.summary+' '+(s.notice??'')).toLowerCase().includes(q)));
 }
 
 /** Conservative routing for opportunity DISCOVERY, not CV writing or a generic interview. */
