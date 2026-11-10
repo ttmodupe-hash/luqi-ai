@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, CheckCircle2, Compass, Rocket, ShieldCheck, Sparkles, Target } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
+import { saveCapabilityJourney } from '../lib/capability-journey';
 import '../possibility-engine.css';
 
 const examples = [
@@ -19,9 +20,11 @@ function initialGoal(state: unknown) {
 
 export default function PossibilityEnginePage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const seeded = useMemo(() => initialGoal(location.state), [location.state]);
   const [goal, setGoal] = useState(seeded);
   const [submitted, setSubmitted] = useState(seeded);
+  const [saveNotice, setSaveNotice] = useState('');
   const plan = getPossibilityPlan(submitted);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -34,6 +37,17 @@ export default function PossibilityEnginePage() {
   function useExample(value: string) {
     setGoal(value);
     setSubmitted(value);
+    setSaveNotice('');
+  }
+
+  function saveJourney() {
+    if (!submitted) return;
+    const saved = saveCapabilityJourney(submitted);
+    if (!saved) {
+      setSaveNotice('This browser did not allow LUQI to save the journey on this device. The path still works without saving.');
+      return;
+    }
+    navigate('/journey');
   }
 
   return <main className="luqi-possibility">
@@ -96,11 +110,17 @@ export default function PossibilityEnginePage() {
           <h3>LUQI should keep asking: what barrier can we remove next?</h3>
           <p>Knowledge, practice space, tools, visibility and guidance can all be made easier to reach. Effort, judgment and official decisions still remain with the person and the responsible institution.</p>
         </div>
-        <Link className="luqi-possibility-primary" to="/ask" state={{ luqiHomeNeed: submitted }}>
-          Continue with Luqi <ArrowRight size={18} />
-        </Link>
+        <div className="luqi-possibility-next-actions">
+          <button type="button" className="luqi-possibility-primary" onClick={saveJourney}>
+            Save as my journey <Target size={18} />
+          </button>
+          <Link className="luqi-possibility-secondary-action" to="/ask" state={{ luqiHomeNeed: submitted }}>
+            Continue without saving <ArrowRight size={18} />
+          </Link>
+        </div>
       </div>
     </section>}
+    {saveNotice && <p className="luqi-possibility-save-notice" role="status">{saveNotice}</p>}
 
     <section className="luqi-possibility-principles" aria-label="Capability equality principles">
       <article><strong>01</strong><h3>Access</h3><p>Useful capability should work on ordinary devices and low-cost paths, not only premium hardware.</p></article>
