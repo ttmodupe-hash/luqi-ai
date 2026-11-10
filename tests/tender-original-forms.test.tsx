@@ -179,7 +179,7 @@ it('announces expired 30-minute review and locks old approvals without submittin
 
 it('announces recorded closing-time expiry before 30 minutes, revokes approvals and blocks export',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
- const deadline=new Date(Date.now()+2*60*1000).toISOString();
+ const deadline=new Date(Date.now()+2*60*1000).toISOString().replace(/\.\d{3}Z$/,'Z');
  fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:deadline}});
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
