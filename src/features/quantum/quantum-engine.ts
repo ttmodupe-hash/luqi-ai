@@ -44,6 +44,9 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
   }
   if (gate.kind !== 'h' && gate.kind !== 'x' && gate.kind !== 'rx') throw new Error('Unsupported gate.');
   const angle = gate.kind === 'rx' ? finite(gate.angle ?? NaN) : 0;
+  // The RX rotation is fixed for all basis pairs; evaluate trig only once per gate.
+  const rxCos = gate.kind === 'rx' ? Math.cos(angle / 2) : 0;
+  const rxSin = gate.kind === 'rx' ? Math.sin(angle / 2) : 0;
   for (let i = 0; i < state.length; i++) {
     if (i & target) continue;
     const a = state[i], b = state[i | target];
@@ -53,9 +56,8 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
     } else if (gate.kind === 'x') {
       result[i] = { ...b }; result[i | target] = { ...a };
     } else {
-      const c = Math.cos(angle / 2), s = Math.sin(angle / 2);
-      result[i] = add(scale(a, c), multiply(b, { re: 0, im: -s }));
-      result[i | target] = add(scale(b, c), multiply(a, { re: 0, im: -s }));
+      result[i] = add(scale(a, rxCos), multiply(b, { re: 0, im: -rxSin }));
+      result[i | target] = add(scale(b, rxCos), multiply(a, { re: 0, im: -rxSin }));
     }
   }
   return result;

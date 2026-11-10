@@ -134,6 +134,58 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     expect(stateMetrics(result.state).norm).toBeCloseTo(1, 12);
     expect(searchQaoaGrid(model, steps)).toEqual(result);
   });
+  it('applies a single computed RX rotation correctly to every pair in an eight-qubit state', () => {
+    // Exercise the maximum simulator width with unequal complex amplitudes.
+    let state = applyGate(zeroState(8), { kind: 'h', target: 1 });
+    state = applyGate(state, { kind: 'cx', control: 1, target: 7 });
+    state = applyGate(state, { kind: 'rz', target: 7, angle: 0.71 });
+    const original = structuredClone(state), target = 7, bit = 1 << target;
+    for (const angle of [-2.4, 0, 0.37, Math.PI]) {
+      const actual = applyGate(state, { kind: 'rx', target, angle });
+      const c = Math.cos(angle / 2), s = Math.sin(angle / 2);
+      for (let i = 0; i < state.length; i++) {
+        if (i & bit) continue;
+        const a = state[i], b = state[i | bit];
+        expect(actual[i].re).toBeCloseTo(c * a.re + s * b.im, 12);
+        expect(actual[i].im).toBeCloseTo(c * a.im - s * b.re, 12);
+        expect(actual[i | bit].re).toBeCloseTo(c * b.re + s * a.im, 12);
+        expect(actual[i | bit].im).toBeCloseTo(c * b.im - s * a.re, 12);
+      }
+      expect(stateMetrics(actual).norm).toBeCloseTo(1, 12);
+    }
+    expect(state).toEqual(original);
+  });
+  it('measures reproducible bounded CPU baselines without gating on noisy timing', () => {
+    // Paired measurements compare the original public API search with spectrum caching;
+    // both use the same RX implementation. These are CI CPU samples, not phone timings.
+    const model = { fields: [0.25, -0.5, 0.75, -0.25, 0.5, -0.125],
+      edges: [{ i: 0, j: 1, weight: 1.5 }, { i: 2, j: 3, weight: -0.375 }, { i: 4, j: 5, weight: 0.625 }] };
+    const steps = 15;
+    const original = () => {
+      let best = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
+      for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
+        const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
+        const candidate = qaoaLayer(model, gamma, beta);
+        if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
+      }
+      return { ...best, parameterPairs: steps ** 2 };
+    };
+    const cached = () => searchQaoaGrid(model, steps);
+    expect(cached()).toEqual(original());
+    original(); cached(); // Warm both paths before sampling.
+    const medianMs = (run: () => unknown) => {
+      const samples: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const start = process.hrtime.bigint();
+        run();
+        samples.push(Number(process.hrtime.bigint() - start) / 1e6);
+      }
+      return samples.sort((a, b) => a - b)[2];
+    };
+    const originalMs = medianMs(original), cachedMs = medianMs(cached);
+    // Informational measurements only; timing and ratio are never pass/fail gates.
+    console.info(`LUQI_QAOA_CPU_BENCH node=${process.version} platform=${process.platform}/${process.arch} qubits=6 steps=15 repeats=5 original_median_ms=${originalMs.toFixed(3)} cached_median_ms=${cachedMs.toFixed(3)}`);
+  });
   it('preserves bounded input validation and rejects invalid Hamiltonians', () => {
     const model = { fields: [0], edges: [] };
     for (const steps of [2, 26, 4.5, NaN, Infinity]) {
