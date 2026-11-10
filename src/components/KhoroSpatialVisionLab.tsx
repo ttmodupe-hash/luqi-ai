@@ -14,6 +14,17 @@ const modes: Array<{ value: SpatialMode; title: string; detail: string }> = [
   { value: 'CONTRACT_SHIELD', title: 'Contract review', detail: 'Find terms worth checking' },
   { value: 'SERIAL_AUDIT', title: 'Serial audit', detail: 'Local-only asset labels' },
 ];
+const demoScenes = [
+  { kicker: 'PHYSICS · MOTION', title: 'See the idea move before you upload anything',
+    detail: 'A local learning scene cycles through force, velocity and energy relationships without using a provider request.',
+    metric: 'F = ma', accent: 'Vector field' },
+  { kicker: 'NETWORKS · PACKET FLOW', title: 'Watch a packet cross a tiny network',
+    detail: 'The scene shifts to a router path so a learner can connect abstract theory to visible movement.',
+    metric: '10.0.0.0/24', accent: 'Route path' },
+  { kicker: 'SAFETY · CONTROL LAYERS', title: 'Turn controls into something you can inspect',
+    detail: 'The same surface can visualise layered controls, hotspots and sequence steps for practical training.',
+    metric: '3 layers', accent: 'Control map' },
+] as const;
 function boxStyle([top, left, bottom, right]: NormalizedBox) {
   return { top: (top / 10) + '%', left: (left / 10) + '%',
     width: ((right - left) / 10) + '%', height: ((bottom - top) / 10) + '%' };
@@ -80,6 +91,8 @@ export default function KhoroSpatialVisionLab() {
   const [serialText, setSerialText] = useState('');
   const [viewRelief, setViewRelief] = useState(false);
   const [tilt, setTilt] = useState(20), [spin, setSpin] = useState(-18);
+  const [demoActive, setDemoActive] = useState(true);
+  const [demoStep, setDemoStep] = useState(0);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -106,6 +119,11 @@ export default function KhoroSpatialVisionLab() {
     if (!viewRelief || !photo || !canvasRef.current) return;
     return drawIllustrativeRelief(canvasRef.current, photo, tilt, spin);
   }, [viewRelief, photo, tilt, spin]);
+  useEffect(() => {
+    if (!demoActive || photo) return;
+    const timer = window.setInterval(() => setDemoStep(step => (step + 1) % demoScenes.length), 3200);
+    return () => window.clearInterval(timer);
+  }, [demoActive, photo]);
 
   async function choosePhoto(file: File | undefined) {
     if (!file || busy || locked.current) return;
@@ -322,10 +340,38 @@ export default function KhoroSpatialVisionLab() {
       </section>
     </div>}
     {notice && <p className="luqi-spatial-notice" role="status">{notice}</p>}
-    {!photo && <div className="luqi-spatial-empty">
-      <h2>Start with a photo</h2>
-      <p>Everything begins locally. Choose a sample image to inspect it in 2D or a rotatable illustrative relief.</p>
-    </div>}
+    {!photo && <section className="luqi-spatial-demo" aria-label="Interactive local Spatial Vision demo">
+      <div className="luqi-spatial-demo-copy">
+        <p className="luqi-spatial-demo-kicker">LIVE · LOCAL · ZERO PROVIDER SPEND</p>
+        <h2>{demoScenes[demoStep].title}</h2>
+        <p>{demoScenes[demoStep].detail}</p>
+        <div className="luqi-spatial-demo-actions">
+          <button type="button" className="luqi-spatial-primary" onClick={() => setDemoActive(active => !active)}>
+            {demoActive ? 'Pause motion' : 'Play motion'}
+          </button>
+          <button type="button" className="luqi-spatial-secondary" onClick={() => {
+            setDemoStep(step => (step + 1) % demoScenes.length); setDemoActive(false);
+          }}>Next learning layer</button>
+        </div>
+        <p className="luqi-spatial-hint">Upload is optional. This built-in scene runs locally and makes no AI request.</p>
+      </div>
+      <div className="luqi-spatial-stage" data-scene={demoStep} aria-live="polite">
+        <div className="luqi-spatial-stage-orbit orbit-a" aria-hidden="true" />
+        <div className="luqi-spatial-stage-orbit orbit-b" aria-hidden="true" />
+        <div className="luqi-spatial-stage-core">
+          <span>{demoScenes[demoStep].metric}</span>
+          <small>{demoScenes[demoStep].accent}</small>
+        </div>
+        <div className="luqi-spatial-stage-node node-1" aria-hidden="true" />
+        <div className="luqi-spatial-stage-node node-2" aria-hidden="true" />
+        <div className="luqi-spatial-stage-node node-3" aria-hidden="true" />
+        <div className="luqi-spatial-stage-node node-4" aria-hidden="true" />
+        <div className="luqi-spatial-stage-caption">
+          <strong>{demoScenes[demoStep].kicker}</strong>
+          <span>Move · inspect · understand</span>
+        </div>
+      </div>
+    </section>}
     <div className="luqi-spatial-bottom-links">
       <Link to="/visual-tutor">Visual Tutor</Link>
       <Link to="/chat">Luqi Chat</Link>
