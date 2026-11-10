@@ -69,6 +69,12 @@ test('funding hub brings South African, pan-African and global publishers togeth
   await page.getByRole('textbox',{name:'Search funding programmes'}).fill('MIT');
   await expect(page.getByText('1 of 8 reviewed programme references match your filters.')).toBeVisible();
   const mit=page.getByRole('article',{name:'MIT Solve Global Challenges'});
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('IDEA');
+  await expect(mit).toContainText('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');
+  await expect(mit).toContainText('6 November 2026 at 12:00 EST (19:00 SAST)');
+  await expect(mit).toContainText('Check programme criteria');
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('MVP');
+  await expect(mit).not.toContainText('Concept-stage ideas are reviewed only under');
   await mit.getByRole('button',{name:'Prepare review draft'}).click();
   await expect(page.getByRole('textbox',{name:'Funding preparation draft text'}))
     .toHaveValue(/Project location: Kenya[\s\S]*CURRENT FUNDING WINDOW: NOT VERIFIED/);
