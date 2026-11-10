@@ -1,8 +1,8 @@
-/** Issuer-checked certification pathways (1 Nov 2026). No vendor content is reproduced.
+/** Issuer-checked certification pathways (2 Nov 2026). No vendor content is reproduced.
  * Each track links directly to original awarding-body exam and training pages.
  * The internal track IDs remain stable for existing Luqi learner progress.
  */
-export const CERT_REVIEWED_ON = '1 November 2026';
+export const CERT_REVIEWED_ON = '2 November 2026';
 export const LUQI_PRACTICE_GOAL = 80;
 export const CERT_PATHWAYS = {
   ccna_200_301: {
@@ -18,7 +18,7 @@ export const CERT_PATHWAYS = {
   ccnp_encor: {
     title: 'Cisco CCNP Enterprise · ENCOR', code: '350-401 ENCOR v1.2',
     issuer: 'Cisco', duration: '120-minute core exam',
-    status: 'Current Cisco ENCOR training supports v1.2',
+    status: 'Cisco training targets 350-401 ENCOR v1.2; the original training outline is linked here',
     examUrl: 'https://www.cisco.com/site/us/en/learn/training-certifications/exams/encor.html',
     learningUrl: 'https://www.cisco.com/site/us/en/learn/training-certifications/training/courses/encor.html',
     topics: ['Dual-stack enterprise networks', 'Layer 2 switching and OSPF',
@@ -29,7 +29,7 @@ export const CERT_PATHWAYS = {
   ccip_sp: {
     title: 'Cisco Service Provider Advanced Routing', code: '300-510 SPRI v1.1',
     issuer: 'Cisco', duration: '90-minute concentration exam',
-    status: 'Current SPRI learning path; the former CCIP designation retired in October 2012',
+    status: 'Cisco SPRI training targets v1.1; the former CCIP designation retired in October 2012',
     examUrl: 'https://www.cisco.com/site/us/en/learn/training-certifications/exams/spri.html',
     learningUrl: 'https://www.cisco.com/site/us/en/learn/training-certifications/training/courses/spri.html',
     topics: ['Service provider routing protocols', 'BGP policy', 'MPLS and label switching',
@@ -45,7 +45,7 @@ export const CERT_PATHWAYS = {
     topics: ['Responsible AI governance', 'Service outcomes and organisational context',
       'AI risk and operational oversight', 'Human approval and accountability',
       'Monitoring, feedback and improvement'],
-    examFacts: 'PeopleCert publishes 40 multiple-choice questions, 90 minutes, open-book and a 70% official minimum.',
+    examFacts: 'PeopleCert publishes 40 multiple-choice questions, 90 minutes, open-book and a 70% official minimum. Its training-completion requirement applies before exam results are released.',
   },
 } as const;
 export type CertificationTrack = keyof typeof CERT_PATHWAYS;

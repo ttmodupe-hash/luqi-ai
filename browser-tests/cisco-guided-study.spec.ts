@@ -1,0 +1,31 @@
+import {test,expect} from '@playwright/test';
+test('Cisco learning path teaches six source-mapped skills with real checks and lab handoffs', async ({page})=>{
+  const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/#/cert-academy?track=ccna_200_301');
+  const guide=page.getByRole('region',{name:'Luqi guided Cisco practice'});
+  await expect(guide.getByRole('heading',{name:/Six Cisco-aligned skills/})).toBeVisible();
+  await expect(guide.getByText('0 of 6 self-checks correct')).toBeVisible();
+  await guide.getByRole('button',{name:/A\. 192\.168\.10\.0 and 192\.168\.10\.63/}).click();
+  await expect(guide.getByText('1 of 6 self-checks correct')).toBeVisible();
+  await expect(guide.getByText(/Correct — you can explain this/)).toBeVisible();
+  await guide.getByRole('button',{name:/02 Network Access/}).click();
+  await expect(guide.getByText(/BPDU Guard protects edge ports/)).toHaveCount(0);
+  await guide.getByRole('button',{name:/B\. BPDU Guard/}).click();
+  await expect(guide.getByText(/BPDU Guard protects edge ports/)).toBeVisible();
+  await expect(guide.getByText('2 of 6 self-checks correct')).toBeVisible();
+  await guide.getByRole('button',{name:/01 Network Fundamentals/}).click();
+  await guide.getByRole('link',{name:'Open subnet & VLSM lab'}).click();
+  await expect(page.getByRole('region',{name:'Luqi VLSM network planner'})).toBeVisible();
+  expect(posts).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+test('source dates and official issuer links remain accessible without warnings stacked on lessons',async({page})=>{
+  await page.goto('/#/cert-academy');
+  await expect(page.getByText('Official exam details reviewed 2 November 2026.')).toBeVisible();
+  await expect(page.getByRole('link',{name:/Official exam details/})).toHaveAttribute('href',/cisco\.com/);
+  const guide=page.getByRole('region',{name:'Luqi guided Cisco practice'});
+  await expect(guide.getByText(/Mapped to Cisco's current 200-301 v1.1 topics/)).toBeVisible();
+  await expect(guide.getByRole('link',{name:'Cisco 2027 refresh schedule'})).toHaveAttribute('href',/blogs\.cisco\.com/);
+  expect(await page.getByText('Luqi practice explanation — check the original syllabus').count()).toBe(0);
+});

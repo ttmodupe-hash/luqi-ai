@@ -47,6 +47,7 @@ import CertMasterVideoCoach from "@/components/CertMasterVideoCoach";
 import AiPilotPage from "./AiPilotPage";
 import { evaluatePracticeCommand } from "../lib/certification-client";
 import { CERT_PATHWAYS, CERT_REVIEWED_ON, LUQI_PRACTICE_GOAL } from "../lib/certification-standards";
+import CiscoGuidedStudy from "../components/CiscoGuidedStudy";
 import { calculateIPv4Subnet } from "../lib/network-planner";
 import NetworkVlsmPlanner from "../components/NetworkVlsmPlanner";
 
@@ -171,7 +172,7 @@ const QUESTION_BANK: Question[] = [
     correctKey: "A",
     explanation: "/22 has 22 mask bits = 255.255.252.0. The interesting octet is 3rd octet. Block size = 256 - 252 = 4. 85 / 4 = 21 with remainder 1, so the subnet starts at 172.16.84.0. The next subnet is 172.16.88.0. Therefore, broadcast is 172.16.87.255. Host bits = 32 - 22 = 10 bits. Usable hosts = 2^10 - 2 = 1022.",
     trapWarning: "Never forget to subtract 2 for the network and broadcast addresses when asked for usable hosts!",
-    reference: "RFC 1878 & CCNA 200-301 Exam Topic 1.4: IPv4 Subnetting"
+    reference: "Cisco CCNA 200-301 v1.1 · Network Fundamentals topic 1.6, IPv4 addressing and subnetting"
   },
   {
     id: "ccna-2",
@@ -576,12 +577,8 @@ export default function CertMasterPage() {
   const [cliInput, setCliInput] = useState("");
   const [cliHistory, setCliHistory] = useState<{ command: string; output: string; prompt: string }[]>([
     {
-      command: "show version",
-      output: `Cisco IOS Software, C8000 Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.09.04a
-Technical Support: http://www.cisco.com/techsupport
-Compiled Thu 12-Oct-26 14:15 by prod_builder
-Luqi-AI NetGov Hardware Architecture with Hardware Crypto Accelerator.
-System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
+      command: "help",
+      output: "LUQI CLI practice ready. Choose a supported command or guided lab. This session is a local learning exercise, not connected to a router.",
       prompt: "Router>"
     }
   ]);
@@ -603,7 +600,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
   useEffect(() => {
     cliEpoch.current++; cliPending.current?.abort(); cliPending.current = null;
     setCliBusy(false); setCliNotice(''); setCliInput(''); setCoachQuery(''); setCliMode('user'); setCliPrompt('Router>');
-    setCliHistory([{ command: 'help', output: 'Local learning simulation: no physical router is connected. Choose a supported practice command.', prompt: 'Router>' }]);
+    setCliHistory([{ command: 'help', output: 'LUQI CLI practice: choose a guided lab or a supported command. Network device connection: none.', prompt: 'Router>' }]);
     setCurrentQIndex(0); setSelectedAnswers({}); setShowExplanation(false); setExamFinished(false);
     setIsTimerRunning(false); setExamMode('practice'); setTimeLeftSec(0); setFcIndex(0); setIsFlipped(false); setDrillFeedback(null);
     setActiveLabScenario(LAB_SCENARIOS.find(lab => lab.trackId === selectedTrack) ?? null);
@@ -680,19 +677,19 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
     if (type === "icmp") {
       setPacketLog((prev) => [
         `[${time}] ICMP Echo Request injected: PC1 (10.1.10.50) -> Server (172.16.1.100) via R1/R2. TTL=64, Seq=1.`,
-        `[${time}] ICMP Echo Reply received: 0% loss, RTT = 1.8ms (STP Forwarding active).`,
+        `[${time}] Modeled ICMP return path: R2 -> R1 -> PC1. Network delay and packet loss were not measured.`,
         ...prev
       ]);
     } else if (type === "bgp") {
       setPacketLog((prev) => [
         `[${time}] BGP UPDATE packet: AS 65001 advertised prefix 10.1.0.0/16 with Next-Hop-Self.`,
-        `[${time}] Peer R2 accepted prefix. Route added to BGP RIB with Local-Pref=100.`,
+        `[${time}] Modeled BGP update processing at R2 (candidate policy: Local-Pref=100); no actual peer or routing table was queried.`,
         ...prev
       ]);
     } else if (type === "ospf") {
       setPacketLog((prev) => [
         `[${time}] OSPFv2 Hello packet transmitted on multicast 224.0.0.5 (Area 0).`,
-        `[${time}] Adjacency State changed from 2-WAY to FULL with DR (2.2.2.2).`,
+        `[${time}] Modeled neighbour state progression: 2-WAY to FULL in the teaching scenario, not an observed adjacency.`,
         ...prev
       ]);
     }
@@ -700,7 +697,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-auto bg-slate-950 text-slate-100 pb-16">
       {/* Top Navbar */}
       <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -750,7 +747,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold text-white">Learn the skills. Follow the official certification pathway.</h2>
-              <p className="text-sm text-slate-200">Choose an awarding-body pathway, practise with Luqi's exercises, then use its current exam guide and training outline.</p>
+              <p className="text-sm text-slate-200">Choose a verified Cisco or PeopleCert pathway, learn through worked examples, and practise with real interactive tools and immediate explanations.</p>
               <p className="text-xs text-emerald-200">Official exam details reviewed {CERT_REVIEWED_ON}.</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -775,10 +772,11 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
             </div>
           </div>
           <details className="mt-3 text-sm text-slate-300">
-            <summary className="min-h-10 cursor-pointer py-2 font-medium text-slate-200">How Luqi practice works</summary>
-            <p className="max-w-4xl pb-2 text-xs leading-relaxed">Luqi creates its own study questions and local teaching scenarios, not copies of protected certification exam items. The network topology is a practice simulation and does not connect to actual routers. Awarding-body links above provide the official exam requirements; the {LUQI_PRACTICE_GOAL}% mastery goal measures progress only within Luqi.</p>
+            <summary className="min-h-10 cursor-pointer py-2 font-medium text-slate-200">Course sources and how the practice labs work</summary>
+            <p className="max-w-4xl pb-2 text-xs leading-relaxed">We map Luqi's original questions and guided exercises to the issuer's published objectives, with links to the formal requirements above. The CLI and topology are training models; the deterministic subnet calculator operates on real IPv4 arithmetic. The {LUQI_PRACTICE_GOAL}% goal tracks your Luqi practice, not an awarding-body exam score. Formal exams are booked with the issuer.</p>
           </details>
         </section>
+        {selectedTrack === "ccna_200_301" && <CiscoGuidedStudy />}
         {/* Track Selection Ribbon */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
@@ -1000,7 +998,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       {showExplanation && (
                         <div className="mt-6 p-4 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3">
                           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider">
-                            <CheckCircle2 className="w-4 h-4" /> Luqi practice explanation — check the original syllabus
+                            <CheckCircle2 className="w-4 h-4" /> Why this answer works
                           </div>
                           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                             {activeQuestion.explanation}
@@ -1219,7 +1217,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                       Guided Hands-On Labs
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-400">
-                      Choose a Luqi practice scenario for this course. Outputs are simulated, not measurements from a real network.
+                      Choose a troubleshooting goal, practise the commands, and inspect the expected teaching-model responses.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -1310,7 +1308,7 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                   </div>
 
                   {cliNotice && <p role="status" className="p-3 text-sm text-amber-200">{cliNotice}</p>}
-                  <p className="px-3 text-xs text-slate-400">Training simulation only. A successful sample is not evidence that a real packet or command ran.</p>
+                  <p className="px-3 text-xs text-emerald-200">Luqi CLI practice · Device connection: none</p>
                   {/* Terminal Input Bar */}
                   <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2 font-mono text-xs">
                     <span className="text-amber-400 font-bold shrink-0">{cliPrompt}</span>
@@ -1562,13 +1560,13 @@ System image file is "bootflash:c8000v-universalk9.17.09.04a.SPA.bin"`,
                           Binary Bit Representation (Network vs Host Partition)
                         </span>
                         <div className="font-mono text-xs space-y-1">
-                          <div className="flex items-center justify-between text-slate-400">
-                            <span>IP Binary:</span>
-                            <span className="text-amber-300">{subnetCalculations.binaryIp}</span>
+                          <div className="flex flex-wrap items-start justify-between gap-2 text-slate-400 min-w-0">
+                            <span className="shrink-0">IP Binary:</span>
+                            <span className="min-w-0 break-all text-right text-amber-300">{subnetCalculations.binaryIp}</span>
                           </div>
-                          <div className="flex items-center justify-between text-slate-400">
-                            <span>Mask Binary:</span>
-                            <span className="text-emerald-300">{subnetCalculations.binaryMask}</span>
+                          <div className="flex flex-wrap items-start justify-between gap-2 text-slate-400 min-w-0">
+                            <span className="shrink-0">Mask Binary:</span>
+                            <span className="min-w-0 break-all text-right text-emerald-300">{subnetCalculations.binaryMask}</span>
                           </div>
                         </div>
                       </div>
