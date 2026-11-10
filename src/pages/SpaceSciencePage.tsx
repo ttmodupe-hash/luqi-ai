@@ -114,6 +114,15 @@ export default function SpaceSciencePage() {
         {sources.map(source => <article className="luqi-space-card" key={source.id}>
           <p className="luqi-space-kicker">{source.publisher} · {source.category}</p><h3>{source.title}</h3>
           <p>{source.summary}</p><p className="luqi-space-boundary">{source.limitation}</p>
+          {source.id === 'ska-mid' && <details className="luqi-space-deep-dive">
+            <summary>Learn how SKA-Mid combines radio dishes</summary>
+            <p><strong>Resolution:</strong> An interferometer combines signals from separated dishes. SKAO explains that longer baselines can distinguish finer detail. Its published SKA-Mid design has a maximum baseline of 150 km.</p>
+            <p><strong>Sensitivity:</strong> Collecting area helps detect faint signals. SKAO describes a design collecting area of 33,000 square metres; a long baseline alone does not establish sensitivity.</p>
+            <p><strong>Survey speed:</strong> The design balances collecting area and field of view so the array can study large regions of sky, rather than relying on one enormous dish.</p>
+            <p><strong>Design, not live status:</strong> SKAO's 197-dish design includes the existing MeerKAT antennas. These are published design specifications, not a verified count of dishes installed or operating today.</p>
+            <p>Explanation checked against the linked original SKAO design page on 10 November 2026. The broader source-review date remains unchanged.</p>
+            <button type="button" onClick={() => jumpTo('space-experiments-title')}>Explore wavelength in the calculator above</button>
+          </details>}
           <a href={source.url} target="_blank" rel="noopener noreferrer">Read {source.publisher} source (new tab)</a>
         </article>)}
       </div>
