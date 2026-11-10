@@ -35,20 +35,35 @@ export async function tenderDigest(value:Uint8Array|string):Promise<string>{
   const hash=await crypto.subtle.digest('SHA-256',typeof value==='string'?encoder.encode(value):new Uint8Array(value));
   return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('');
 }
-export function validatePacketContext(context:TenderPacketContext,now=new Date()):string[]{
-  const missing:string[]=[];
-  for(const [key,label]of [['reference','Tender reference'],['issuer','Procuring authority'],['destination','Exact bid box, official portal or prescribed email'],['principal','Applicant or authorised representative']] as const){
-    const s=context[key];
-    if(typeof s!=='string'||!s.trim()||s.length>240||/[\x00-\x1f\u202a-\u202e\u2066-\u2069]/.test(s))missing.push(label);
+/** Structured local-only context checks for guiding the applicant to a missing field.
+ * Labels intentionally contain no applicant facts. The existing string-label API
+ * is preserved for packet and approval enforcement.
+ */
+export interface TenderPacketContextIssue {field:keyof TenderPacketContext;label:string}
+export function packetContextIssues(context:TenderPacketContext,now=new Date()):TenderPacketContextIssue[]{
+  const issues:TenderPacketContextIssue[]=[];
+  for(const [field,label]of [['reference','Tender reference'],['issuer','Procuring authority'],
+    ['destination','Exact bid box, official portal or prescribed email'],
+    ['principal','Applicant or authorised representative']] as const){
+    const value=context[field];
+    if(typeof value!=='string'||!value.trim()||value.length>240||/[\x00-\x1f\u202a-\u202e\u2066-\u2069]/.test(value))
+      issues.push({field,label});
   }
   // Explicit timezone only. A device's local timezone must never silently change a deadline.
   if(typeof context.deadline!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(context.deadline)||
     !Number.isFinite(Date.parse(context.deadline))||Date.parse(context.deadline)<=now.getTime()||
-    new Date(context.deadline.slice(0,10)+'T00:00:00Z').toISOString().slice(0,10)!==context.deadline.slice(0,10))missing.push('Future closing time with explicit timezone (for South Africa use +02:00)');
-  if(!['physical','portal','email'].includes(context.method))missing.push('Issuer-prescribed submission method');
-  if(!/^\d{1,12}(?:\.\d{1,2})?$/.test(context.priceZar)||Number(context.priceZar)<=0)missing.push('Applicant-entered positive offer amount in ZAR');
-  return missing;
+    new Date(context.deadline.slice(0,10)+'T00:00:00Z').toISOString().slice(0,10)!==context.deadline.slice(0,10))
+    issues.push({field:'deadline',label:'Future closing time with explicit timezone (for South Africa use +02:00)'});
+  if(!['physical','portal','email'].includes(context.method))
+    issues.push({field:'method',label:'Issuer-prescribed submission method'});
+  if(!/^\d{1,12}(?:\.\d{1,2})?$/.test(context.priceZar)||Number(context.priceZar)<=0)
+    issues.push({field:'priceZar',label:'Applicant-entered positive offer amount in ZAR'});
+  return issues;
 }
+export function validatePacketContext(context:TenderPacketContext,now=new Date()):string[]{
+  return packetContextIssues(context,now).map(issue=>issue.label);
+}
+
 export function appendTenderAudit(history:readonly TenderAuditEvent[],revision:number,action:TenderAuditEvent['action'],subject:string,now=new Date()):TenderAuditEvent[]{
   // Bound local history; stop new edits if full rather than silently deleting approval evidence.
   if(history.length>=1000)throw new Error('HISTORY_FULL');

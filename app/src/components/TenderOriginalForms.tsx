@@ -5,7 +5,7 @@ import {EMPTY_SUPPLIER_VALUES,SBD1_FIELDS,VERIFIED_SBD1,TENDER_FILE_MAX,TENDER_D
 import {TenderSupplierGuide} from './TenderSupplierGuide';
 import {runTenderDocument} from '../lib/tender-document-client';
 import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTenderAudit,prepareTenderPacket,
-  validatePacketContext,canExportTenderPacket,buildTenderOriginalArchive,
+  packetContextIssues,canExportTenderPacket,buildTenderOriginalArchive,
   type TenderPacketContext,type PreparedTenderPacket,type OriginalFormApprovals,
   type OriginalFormGate,type TenderAuditEvent} from '../lib/tender-document-review';
 
@@ -37,6 +37,7 @@ export function TenderOriginalForms(){
   const historyFull=history.length>=950;
   const accountRef=useRef(account);
   const fileInput=useRef<HTMLInputElement|null>(null),amendmentInput=useRef<HTMLInputElement|null>(null);
+  const contextInputs=useRef<Partial<Record<keyof TenderPacketContext,HTMLInputElement|HTMLSelectElement>>>({});
   useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer)},[]);
   useEffect(()=>()=>{epoch.current++;pending.current?.abort()},[]);
   function clearPrivateWork(){
@@ -133,8 +134,13 @@ export function TenderOriginalForms(){
   }
   async function prepare(){
     if(!primary?.inspection.templateId||busy||historyFull)return;
-    const missing=validatePacketContext(context);
-    if(missing.length){setMessage('Complete: '+missing.join('; '));return;}
+    const missing=packetContextIssues(context);
+    if(missing.length){
+      setMessage('Complete: '+missing.map(issue=>issue.label).join('; ')+'. Confirm the details against the issuer original. No document was filled.');
+      // Bring keyboard and screen-reader users directly to the first correction.
+      contextInputs.current[missing[0].field]?.focus();
+      return;
+    }
     const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);
     const controller=new AbortController();pending.current=controller;
     try{
@@ -226,12 +232,14 @@ export function TenderOriginalForms(){
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
               ['deadline','Closing time with timezone'],['destination','Exact official submission address'],['priceZar','Applicant-entered offer ZAR'],
             ] as const).map(([key,label])=><label key={key} className="block min-w-0 text-sm">{label}
-              <input aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
+              <input ref={node=>{if(node)contextInputs.current[key]=node;else delete contextInputs.current[key];}}
+                 aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
                 placeholder={key==='deadline'?'2026-11-30T11:00+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>
             </label>)}
             <label className="block text-sm">Issuer-prescribed submission method
-              <select aria-label="Original form submission method" value={context.method} className={inputStyle}
+              <select ref={node=>{if(node)contextInputs.current.method=node;else delete contextInputs.current.method;}}
+                 aria-label="Original form submission method" value={context.method} className={inputStyle}
                 onChange={e=>{setContext(previous=>({...previous,method:e.target.value as TenderPacketContext['method']}));invalidate('edit-context','method')}}>
                 <option value="">Confirm from issuer documents</option><option value="physical">Sealed physical bid / tender box</option>
                 <option value="portal">Authority-supported electronic portal</option><option value="email">Issuer-prescribed email</option>
