@@ -189,6 +189,29 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     }
     expect(state).toEqual(original);
   });
+  it('matches independent eight-qubit RX-gate sequence with one prepared mixer per beta', () => {
+    const model = { fields: [0.25, -0.5, 0.75, -0.25, 0.5, -0.125, 0.375, -0.875],
+      edges: [{ i: 0, j: 7, weight: 1.5 }, { i: 2, j: 5, weight: -0.375 }] };
+    const original = structuredClone(model), gamma = 0.47, energies = isingEnergies(model);
+    for (const beta of [-1.25, 0, 0.91, Math.PI]) {
+      const phased = uniformState(8).map((z, i) => {
+        const angle = -gamma * energies[i], c = Math.cos(angle), s = Math.sin(angle);
+        return { re: z.re * c - z.im * s, im: z.re * s + z.im * c };
+      });
+      let reference = phased;
+      for (let target = 0; target < 8; target++) {
+        reference = applyGate(reference, { kind: 'rx', target, angle: 2 * beta });
+      }
+      const actual = qaoaLayer(model, gamma, beta);
+      expect(actual.state).toEqual(reference);
+      expect(actual.expectedEnergy).toBeCloseTo(
+        probabilities(reference).reduce((sum, p, i) => sum + p * energies[i], 0), 12);
+      expect(stateMetrics(actual.state).norm).toBeCloseTo(1, 12);
+    }
+    expect(model).toEqual(original);
+    // The public layer must still reject finite betas whose doubled RX angle overflows.
+    expect(() => qaoaLayer(model, gamma, 1e308)).toThrow('Use finite numbers.');
+  });
   it('measures reproducible bounded CPU baselines without gating on noisy timing', () => {
     // Paired measurements compare the original public API search with spectrum caching;
     // both use the same RX implementation. These are CI CPU samples, not phone timings.

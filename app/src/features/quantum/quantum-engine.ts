@@ -137,10 +137,27 @@ export function exactIsingBaseline(model: IsingModel) {
   const energies = isingEnergies(model), minimum = Math.min(...energies);
   return { minimum, states: energies.flatMap((energy, index) => Math.abs(energy - minimum) < 1e-10 ? [index] : []), statesEvaluated: energies.length };
 }
-/** Apply the bounded mixer to a prepared gamma phase; applyGate never mutates inputs. */
+/** Apply an already computed RX pair; preserve applyGate's state validation and arithmetic. */
+function applyPreparedRx(state: Statevector, target: number, cosine: number, sine: number): Statevector {
+  const n = validateState(state);
+  if (!Number.isInteger(target) || target < 0 || target >= n) throw new Error('Invalid target qubit.');
+  const bit = 1 << target, result = state.map(z => ({ ...z }));
+  for (let i = 0; i < state.length; i++) {
+    if (i & bit) continue;
+    const a = state[i], b = state[i | bit];
+    result[i] = add(scale(a, cosine), multiply(b, { re: 0, im: -sine }));
+    result[i | bit] = add(scale(b, cosine), multiply(a, { re: 0, im: -sine }));
+  }
+  return result;
+}
+/** Apply the bounded mixer to a prepared gamma phase; neither input is mutated. */
 function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, beta: number) {
+  // All mixer qubits share angle 2*beta; evaluate trig once per candidate,
+  // not once per qubit. Keep the old finite-angle overflow guard.
+  const angle = finite(2 * beta);
+  const cosine = Math.cos(angle / 2), sine = Math.sin(angle / 2);
   let state = phased;
-  for (let target = 0; target < qubits; target++) state = applyGate(state, { kind: 'rx', target, angle: 2 * beta });
+  for (let target = 0; target < qubits; target++) state = applyPreparedRx(state, target, cosine, sine);
   const p = probabilities(state);
   return { state, expectedEnergy: p.reduce((s, x, i) => s + x * energies[i], 0) };
 }
