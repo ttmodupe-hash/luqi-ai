@@ -39,7 +39,7 @@ test('AI credit coaching stays local until a separate user-controlled Chat Send'
   await expect(page.getByRole('link', { name: /South African Government: National Credit Act 34 of 2005/ })).toHaveAttribute(
     'href', 'https://www.gov.za/documents/national-credit-act',
   );
-  await expect(page.getByRole('link', { name: /National Credit Regulator: credible-evidence guideline 005\\/2025/ })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /National Credit Regulator: credible-evidence guideline 005\/2025/ })).toHaveAttribute(
     'href', 'https://ncr.org.za/documents/Guidelines/Guideline%20December%202025.pdf',
   );
   await expect(page.getByText("The NCR's December 2025 credible-evidence guideline", { exact: false })).toContainText('objective, verifiable records');
