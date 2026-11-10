@@ -22,11 +22,12 @@ const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
-import CustomerEntryPage from "./pages/CustomerEntryPage";
+// One Luqi account: download the login/join page only when a user opens it.
+const CustomerEntryPage = lazy(() => import("./pages/CustomerEntryPage"));
 import OmegaTasksPage from './pages/OmegaTasksPage';
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
-// Keep core account/notes/help pages ready, and defer optional tool downloads.
+// Preserve core companion/notes and Omega markers; load dedicated login/join on demand.
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const AdminSovereignPortal = lazy(() => import("./components/AdminSovereignPortal"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));

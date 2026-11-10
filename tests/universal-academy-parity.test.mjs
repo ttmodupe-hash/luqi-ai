@@ -13,6 +13,11 @@ for(const root of ['src','app/src']) test(`Academy and specialist routes remain 
   }
   assert.match(source,/const UniversalAcademyPage = lazy\(/);
   // Core Omega release markers remain eager; only the public 404 page may be deferred.
+  // Login/join stay available through the same Luqi session, but need not load on public startup.
+  assert.match(source, /const CustomerEntryPage = lazy\\(\\(\\) => import\\("\\.\\/pages\\/CustomerEntryPage"\\)\\);/);
+  assert.doesNotMatch(source, /import CustomerEntryPage from/);
+  assert.match(source, /path="\\/login" element=\\{<CustomerEntryPage initialMode="signin" \\/>\\}/);
+  assert.match(source, /path="\\/join" element=\\{<CustomerEntryPage initialMode="signup" \\/>\\}/);
   assert.match(source, /import OmegaTasksPage from/);
   assert.doesNotMatch(source, /const OmegaTasksPage = lazy/);
   assert.equal(source.split('path="/omega-tasks"').length - 1, 1);

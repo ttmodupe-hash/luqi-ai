@@ -26,12 +26,12 @@ const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
-import CustomerEntryPage from "./pages/CustomerEntryPage";
+// One Luqi account: download the login/join page only when a user opens it.
+const CustomerEntryPage = lazy(() => import("./pages/CustomerEntryPage"));
 import OmegaTasksPage from './pages/OmegaTasksPage';
 
-// Load optional tools only when their route is rendered. Keep account, notes,
-// the release-observed core pages available in the initial bundle. Informational
-// help, privacy, and pricing routes load only when visited.
+// Defer optional routes while preserving core companion/notes and Omega release
+// markers in the entry. Login/join use the same account provider when opened.
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));

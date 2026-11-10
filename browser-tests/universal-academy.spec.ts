@@ -84,3 +84,24 @@ test('legacy certification routes retain interactive practice while Academy is a
   await page.goto('/#/academy');
   await expect(page.getByRole('heading', {name:'Universal Academy',exact:true})).toBeVisible();
 });
+
+
+test('on-demand Luqi account entry still opens login and registration at 320px without submitting', async ({page}) => {
+  await page.setViewportSize({width: 320, height: 840});
+  const writes: string[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method())) writes.push(request.method() + ' ' + new URL(request.url()).pathname);
+  });
+  await page.goto('/#/academy');
+  await expect(page.getByRole('heading', {name: 'Universal Academy', exact: true})).toBeVisible();
+  await page.goto('/#/login');
+  await expect(page.getByRole('heading', {name: 'Welcome to Luqi', exact: true})).toBeVisible();
+  await expect(page.getByText('One Luqi account', {exact: true})).toBeVisible();
+  await expect(page.getByRole('link', {name: 'Try three real Luqi replies first'})).toHaveAttribute('href', '#/try');
+  await page.goto('/#/join');
+  await expect(page.getByRole('heading', {name: 'Welcome to Luqi', exact: true})).toBeVisible();
+  expect(errors).toEqual([]);
+  expect(writes).toEqual([]);
+});
