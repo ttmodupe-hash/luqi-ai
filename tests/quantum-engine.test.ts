@@ -82,6 +82,28 @@ describe('QAOA costs compared with independent analytical references', () => {
       minimum: -1e-12, states: [1, 2], statesEvaluated: 4,
     });
   });
+  it('normalizes valid tiny feeder loads without coefficient underflow or NaN', () => {
+    // Two smallest representable positive kW loads have identical shares.
+    const subnormal = [Number.MIN_VALUE, Number.MIN_VALUE];
+    const snapshot = [...subnormal], small = loadBalanceModel(subnormal);
+    expect(small.total).toBe(2 * Number.MIN_VALUE);
+    expect(small.model.edges).toEqual([{ i: 0, j: 1, weight: 0.5 }]);
+    expect(small.constant).toBe(0.5);
+    expect(isingEnergies(small.model)).toEqual([0.5, -0.5, -0.5, 0.5]);
+    expect(subnormal).toEqual(snapshot);
+
+    // Independent dimensionless reference from the integer proportions 1:2:3.
+    const loads = [1e-200, 2e-200, 3e-200];
+    const balanced = loadBalanceModel(loads), spectrum = isingEnergies(balanced.model);
+    const fractions = [1 / 6, 2 / 6, 3 / 6];
+    expect([...balanced.model.edges.map(edge => edge.weight), balanced.constant].every(Number.isFinite)).toBe(true);
+    expect(balanced.constant).toBeCloseTo(14 / 36, 14);
+    for (let state = 0; state < spectrum.length; state++) {
+      const signed = fractions.reduce((sum, share, index) => sum + (state & (1 << index) ? -share : share), 0);
+      expect(spectrum[state] + balanced.constant).toBeCloseTo(signed ** 2, 12);
+    }
+    expect(loads).toEqual([1e-200, 2e-200, 3e-200]);
+  });
   it('maps feeder loads to squared imbalance with the required constant term', () => {
     const loads = [2, 3, 5, 7], model = loadBalanceModel(loads), energies = isingEnergies(model.model);
     energies.forEach((energy, state) => {

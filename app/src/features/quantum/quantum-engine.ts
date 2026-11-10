@@ -219,9 +219,12 @@ export function searchQaoaGrid(model: IsingModel, steps = 15) {
 export function loadBalanceModel(loads: number[]) {
   if (loads.length < 2 || loads.length > 6 || loads.some(x => !Number.isFinite(x) || x <= 0 || x > 100)) throw new Error('Use 2–6 positive loads, up to 100 kW each.');
   const total = loads.reduce((s, x) => s + x, 0), edges: IsingModel['edges'] = [];
-  for (let i = 0; i < loads.length; i++) for (let j = i + 1; j < loads.length; j++) edges.push({ i, j, weight: 2 * loads[i] * loads[j] / total ** 2 });
+  // Normalize before products: squaring a valid tiny total can underflow to
+  // zero and turn every coefficient into NaN (e.g. 2 × 1e-200 kW).
+  const shares = loads.map(load => load / total);
+  for (let i = 0; i < loads.length; i++) for (let j = i + 1; j < loads.length; j++) edges.push({ i, j, weight: 2 * shares[i] * shares[j] });
   return { model: { fields: loads.map(() => 0), edges }, total,
-    constant: loads.reduce((s, x) => s + x * x, 0) / total ** 2 };
+    constant: shares.reduce((s, share) => s + share * share, 0) };
 }
 export function surfaceCodeEstimate(distance: number, physical: number, threshold = 0.01) {
   if (!Number.isInteger(distance) || distance < 3 || distance > 13 || distance % 2 !== 1 ||
