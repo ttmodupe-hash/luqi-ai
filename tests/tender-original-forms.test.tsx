@@ -48,6 +48,7 @@ it('requires local-processing consent, makes no network calls and keeps unsuppor
 it('requires all seven gates and revokes the whole prepared version after a price or supplier edit',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const review=screen.getByRole('region',{name:'Original form applicant review'});
+ expect(within(review).getByText(/PREPARATION-CHECKLIST.txt/)).toBeTruthy();
  const checks=within(review).getAllByRole('checkbox');
  expect(checks).toHaveLength(7);expect(checks[6].hasAttribute('disabled')).toBe(true);
  for(const checkbox of checks)fireEvent.click(checkbox);
@@ -55,6 +56,15 @@ it('requires all seven gates and revokes the whole prepared version after a pric
  fireEvent.change(screen.getByLabelText('Applicant-entered offer ZAR'),{target:{value:'2000.00'}});
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  expect(screen.getByText(/all previous approvals cleared/)).toBeTruthy();
+ expect(network).not.toHaveBeenCalled();
+});
+it('shows whitespace-only optional contact values as blank in applicant review, matching the export checklist',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Postal address'),{target:{value:'   '}});
+ await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ const postal=within(review).getByText('Postal address',{exact:true});
+ expect(postal.parentElement?.textContent).toContain('Left blank for applicant completion');
  expect(network).not.toHaveBeenCalled();
 });
 it('clears approvals on addendum selection and rejects failed imports without restoring the old approval',async()=>{

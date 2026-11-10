@@ -41,6 +41,12 @@ describe('actual Treasury original and limited field mapping',()=>{
     await expect(fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Example\nSignature'})).rejects.toThrow('SUPPLIER_VALUES');
     await expect(fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Example',taxPin:'invented'} as never)).rejects.toThrow('SUPPLIER_VALUES');
   });
+  it('does not insert whitespace-only optional entries into otherwise untouched original cells',async()=>{
+    const baseline=unzipSync(await fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier'}));
+    const spaces=unzipSync(await fillVerifiedSbd1(original,{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',postalAddress:'   '}));
+    expect(spaces['word/document.xml']).toEqual(baseline['word/document.xml']);
+    for(const name of Object.keys(baseline))if(name!=='word/document.xml')expect(spaces[name]).toEqual(baseline[name]);
+  });
   it('does not fill an amended or lookalike original even when labels and filename match',async()=>{
     const bytes=altered(files=>{files['word/document.xml']=strToU8(strFromU8(files['word/document.xml']).replace('NAME OF BIDDER','NAME OF SUPPLIER'))});
     const result=await inspect(bytes,'treasury-revised-sbd1.docx');

@@ -73,7 +73,7 @@ export async function prepareTenderPacket(input:{inspection:TenderDocumentInspec
       {name:'original.docx',sha256:input.inspection.sha256,size:input.inspection.size,role:'original' as const},
       {name:'filled-sbd1-partial.docx',sha256:await tenderDigest(input.filled),size:input.filled.length,role:'filled-partial' as const},
       ...input.amendments.map(f=>({...f})),
-    ],enteredFieldIds:SBD1_FIELDS.filter(f=>input.values[f.id]).map(f=>f.id),
+    ],enteredFieldIds:SBD1_FIELDS.filter(f=>input.values[f.id].trim()).map(f=>f.id),
     status:'partial-form-for-manual-completion' as const,submissionConnected:false as const,legallySigned:false as const};
   return {...packet,digest:await tenderDigest(JSON.stringify(packet))};
 }
@@ -91,6 +91,39 @@ export async function sealTenderHistory(history:readonly TenderAuditEvent[]){
   }
   return {events:sealed,head:previous,identityVerified:false,scope:'local-applicant-review-record'};
 }
+/** Applicant-only checklist derived from the seven mapped field IDs.
+ * Deliberately excludes private values, applicant identity and tender price.
+ * This cannot assess completeness of any authority-specific submission.
+ */
+export function buildTenderPreparationChecklist(packet: PreparedTenderPacket): string {
+  const entered = new Set(packet.enteredFieldIds);
+  return [
+    'LUQI — SBD 1 PARTIAL-ORIGINAL PREPARATION CHECKLIST',
+    'Applicant aid only. Not an official authority checklist or proof of a complete bid.',
+    `Original: ${VERIFIED_SBD1.title}; mapping version ${packet.template.mappingVersion}`,
+    `Pinned original SHA-256: ${VERIFIED_SBD1.sha256}`,
+    `Original content last checked by Luqi: ${packet.template.sourceCheckedOn}`,
+    'Confirm that the procuring authority accepts this version and check newer addenda.',
+    '',
+    'Seven mapped supplier contact fields ONLY (entered means supplied, not independently verified):',
+    ...SBD1_FIELDS.map(field => `- ${field.label}: ${entered.has(field.id) ? 'ENTERED' : 'LEFT BLANK'}`),
+    'A blank optional contact field is not an export failure, but your issuer may require it.',
+    '',
+    'Applicant steps still outstanding — verify all against the actual issuer instructions:',
+    '[ ] Check the exact tender notice, applicable original forms and every addendum.',
+    '[ ] Complete all unmapped fields on the issuer originals, including bid details and declarations.',
+    '[ ] Complete and check your actual pricing, tax treatment and required schedules.',
+    '[ ] Check eligibility, briefing rules and every required supporting document.',
+    '[ ] Verify authority to sign; provide actual signatures and any required declarations.',
+    '[ ] Confirm the precise closing time, timezone and prescribed submission channel.',
+    '[ ] Submit the complete packet yourself and retain independent proof of receipt.',
+    '',
+    'STATUS: Partial original for manual completion. NOT submitted, receipt-confirmed or awarded.',
+    'This text lists field states, not private answers. The ZIP review record contains private',
+    'applicant context you entered; store and share the downloaded archive carefully.',
+    '',
+  ].join('\n');
+}
 /** Export bytes are checked again against the exact reviewed packet. No outbound adapter exists. */
 export async function buildTenderOriginalArchive(packet:PreparedTenderPacket,revision:number,gates:OriginalFormApprovals,
   files:{name:string;bytes:Uint8Array}[],history:readonly TenderAuditEvent[],now=new Date()):Promise<Uint8Array>{
@@ -107,6 +140,7 @@ export async function buildTenderOriginalArchive(packet:PreparedTenderPacket,rev
     gates:ORIGINAL_FORM_GATES.map(g=>({id:g.id,text:g.label,approved:gates[g.id]})),
     legallyBindingSignature:false,finalSubmissionApproved:false},history:historySeal};
   const archive:Record<string,Uint8Array>={};
+  archive['PREPARATION-CHECKLIST.txt']=strToU8(buildTenderPreparationChecklist(packet));
   for(const file of files){
     if(!/^(?:original\.docx|filled-sbd1-partial\.docx|amendment-[1-6]\.(?:pdf|docx|xlsx))$/.test(file.name))throw new Error('PACKET_CHANGED');
     archive[file.name]=file.bytes;
@@ -119,6 +153,7 @@ export async function buildTenderOriginalArchive(packet:PreparedTenderPacket,rev
     'Complete all remaining issuer fields, declarations, pricing schedules, signatures and attachments yourself.',
     'Check the actual issuer originals, addenda, eligibility, deadline and prescribed channel again before submitting.',
     'No document has been sent to any procuring authority. No submission adapter is enabled.',
+    'PREPARATION-CHECKLIST.txt lists the seven mapped field states and issuer checks; it is not a complete-bid assessment.',
     'The JSON record includes private context you entered. Keep this archive private.',
     'The hash chain records this local session; it does not independently verify identity, facts or legal authority.',
     'Any manual change after export requires a fresh review of the exact final documents.',
