@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen,within} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import TownshipEconomyPage from '../src/pages/TownshipEconomyPage';
 const fetchMock=vi.fn();
@@ -21,9 +21,14 @@ it('changes spaza funding into food licensing with municipal verification, witho
  fireEvent.change(screen.getByLabelText('Township support goal'),{target:{value:'licence'}});
  fireEvent.change(screen.getByLabelText('Business province'),{target:{value:'GP'}});
  fireEvent.change(screen.getByLabelText('Business municipality'),{target:{value:'City of Tshwane Metropolitan Municipality'}});
- expect(screen.getByText(/Certificate of Acceptability requirements/)).toBeTruthy();
- expect(screen.getByText(/City of Tshwane Metropolitan Municipality using the original government/)).toBeTruthy();
- expect(screen.queryByRole('textbox')).toBeNull();
+ const planner = within(screen.getByRole('region', {name: 'Township business planner'}));
+ // The new user-owned workbench may repeat guidance and legitimately has textboxes.
+ // Assert that original municipality guidance remains visible in its own section.
+ expect(planner.getByText(/Certificate of Acceptability requirements/)).toBeTruthy();
+ expect(planner.getByText(/City of Tshwane Metropolitan Municipality using the original government/)).toBeTruthy();
+ expect(planner.queryByRole('textbox')).toBeNull();
+ // Neither the original planner nor the new workbench should ask for national IDs.
+ expect(screen.queryByLabelText(/^(?:South African )?(?:national |identity )?ID(?: number)?$/i)).toBeNull();
  expect(fetchMock).not.toHaveBeenCalled();
 });
 it('shows expired review warning rather than promising ongoing verification',()=>{
