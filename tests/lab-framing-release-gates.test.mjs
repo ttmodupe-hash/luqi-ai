@@ -71,7 +71,7 @@ test('live status SHA is independently owner-pinned before either public framing
   const approved = post.indexOf('requireApprovedStatusRevision(');
   const publicCheck = post.indexOf('run: node scripts/verify-deployed-release.mjs');
   assert.ok(canonical >= 0 && approved > canonical && publicCheck > approved);
-  assert.match(post, /LUQI_STATUS_SHA: \\$\\{\\{ github.event.sha \\}\\}/);
-  assert.match(post, /LUQI_APPROVED_DEPLOYED_SHA: \\$\\{\\{ vars.LUQI_APPROVED_DEPLOYED_SHA \\}\\}/);
+  assert.match(post, /LUQI_STATUS_SHA: \$\{\{ github.event.sha \}\}/);
+  assert.match(post, /LUQI_APPROVED_DEPLOYED_SHA: \$\{\{ vars.LUQI_APPROVED_DEPLOYED_SHA \}\}/);
   assert.match(post, /if: github.event_name == 'status'/);
 });

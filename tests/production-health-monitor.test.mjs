@@ -154,8 +154,8 @@ test('both live status workflows fail closed when approved status SHA is missing
     const path = new URL('../.github/workflows/' + file, import.meta.url);
     const source = readFileSync(path, 'utf8');
     const section = file === 'production-operations.yml'
-      ? source.split('  observe-production:\\n')[1]
-      : source.split('  public-framing:\\n')[1];
+      ? source.split('  observe-production:\n')[1]
+      : source.split('  public-framing:\n')[1];
     assert.ok(section, 'postdeploy job missing: ' + file);
     const scope = section.indexOf('run: node scripts/check-canonical-railway-status.mjs');
     const approval = section.indexOf('requireApprovedStatusRevision(');
@@ -163,8 +163,8 @@ test('both live status workflows fail closed when approved status SHA is missing
       ? 'run: node scripts/production-health-monitor.mjs'
       : 'run: node scripts/verify-deployed-release.mjs');
     assert.ok(scope >= 0 && approval > scope && probe > approval, 'Approval must guard live probe: ' + file);
-    assert.match(section, /LUQI_STATUS_SHA: \\$\\{\\{ github.event.sha \\}\\}/);
-    assert.match(section, /LUQI_APPROVED_DEPLOYED_SHA: \\$\\{\\{ vars.LUQI_APPROVED_DEPLOYED_SHA \\}\\}/);
+    assert.match(section, /LUQI_STATUS_SHA: \$\{\{ github.event.sha \}\}/);
+    assert.match(section, /LUQI_APPROVED_DEPLOYED_SHA: \$\{\{ vars.LUQI_APPROVED_DEPLOYED_SHA \}\}/);
     assert.match(section, /if: github.event_name == 'status'/);
     assert.doesNotMatch(section, /continue-on-error:/);
   }
