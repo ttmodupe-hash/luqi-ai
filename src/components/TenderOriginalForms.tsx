@@ -178,7 +178,7 @@ export function TenderOriginalForms(){
     Date.parse(prepared.packet.context.deadline)
   ):0;
   const reviewExpired=!!prepared&&clock>=expiryAt;
-  const expiredByDeadline=!!prepared&&Date.parse(prepared.packet.context.deadline)<=Date.parse(prepared.packet.preparedAt)+30*60*1000;
+  const expiredByDeadline=!!prepared&&clock>=Date.parse(prepared.packet.context.deadline);
   const ready=canExportTenderPacket(prepared?.packet??null,revision,gates,new Date(clock));
   useEffect(()=>{
     // A review time-out permanently revokes its old approval checkmarks, even
