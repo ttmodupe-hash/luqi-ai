@@ -1,5 +1,12 @@
 # Outstanding LUQI work
 
+**10 November 2026 operations update:** see
+[production-readiness-20261110.md](production-readiness-20261110.md) for the
+verified account release, bounded monitoring, HTTP/MySQL concurrency and API
+rollback checks, and the specific recovery/access/acceptance gates still open.
+Historical allocation and activation descriptions below do not change live
+budgets or switches; this update performs no billing or provider activation.
+
 This is an evidence-based checkpoint, not a claim that all features are complete.
 The owner explicitly approved provider activation on 2026-10-23 within
 $100/month ($60 Gemini / $40 OpenAI). Production records that consent and both

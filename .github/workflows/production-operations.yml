@@ -1,0 +1,111 @@
+name: LUQI Production Operations
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  status:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-operations-${{ github.event_name }}-${{ github.event_name == 'status' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'status' }}
+
+jobs:
+  monitor-contracts:
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify fixed origins, revision binding, body bounds and real HTTP latency
+        run: node --test tests/production-health-monitor.test.mjs tests/http-load-probe.test.mjs
+
+  mysql-load-restart-rollback:
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-ephemeral-only-password
+          MYSQL_DATABASE: luqi_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-ephemeral-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      LUQI_MYSQL_CI_FIXTURE: 'true'
+      DATABASE_URL: mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_ci
+      NODE_ENV: test
+      LUQI_AI_PROVIDER_ENABLED: 'false'
+      LUQI_AI_BILLING_APPROVED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --include=dev
+      - name: Build actual current production server, SPA and operator commands
+        run: npm run build
+      - uses: actions/checkout@v4
+        with:
+          ref: 8f581283b63243d4d52031419c5a85a874adec6e
+          path: .ci-rollback
+          persist-credentials: false
+      - name: Compile the reviewed previous API bundle using the unchanged dependency lock
+        run: |
+          cmp package-lock.json .ci-rollback/package-lock.json
+          ln -s "$PWD/node_modules" .ci-rollback/node_modules
+          npx --no-install esbuild .ci-rollback/api/boot.ts --platform=node --bundle --format=esm --outfile=dist/rollback/boot.js --banner:js="import { createRequire } from 'module';const require = createRequire(import.meta.url);"
+      - name: Measure HTTP and private MySQL concurrency, fail-closed recovery, restart and API rollback
+        run: node --test tests/production-operations.integration.test.mjs
+      - name: Seed recovery counters in the disposable fixture
+        run: npx --no-install vitest run tests/mysql-backup-fixture.integration.test.ts
+      - name: Export, restore and compare complete fixture schema and contents
+        run: bash scripts/ci-mysql-restore.sh
+      - name: Verify the separate network-isolated restore path and cleanup
+        run: bash scripts/ci-isolated-restore-drill.sh
+      # No SQL, credentials, account content or unfiltered server logs are uploaded.
+
+  observe-production:
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'status' && github.event.state == 'success' &&
+        github.event.context == 'kind-spontaneity - web' && github.event.sha == github.sha &&
+        startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7') &&
+        contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Observe fixed public hosts, exact revision, MySQL and SPA entry
+        env:
+          LUQI_VERIFY_PUBLIC: 'true'
+          # PRs observe the already-deployed base, never claim their candidate is live.
+          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+        run: node scripts/production-health-monitor.mjs
+      - name: Record failed observation for the existing GitHub Actions notification channel
+        if: failure()
+        run: echo '::error::Luqi core observation failed. Review the Production Operations run and Railway. No automatic rollback, inference, credential or billing change was attempted.'
