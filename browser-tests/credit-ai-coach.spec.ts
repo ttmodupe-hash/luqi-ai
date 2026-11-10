@@ -30,6 +30,10 @@ test('AI credit coaching stays local until a separate user-controlled Chat Send'
   await expect(page.getByRole('link', { name: 'TransUnion: free annual report' })).toHaveAttribute(
     'href', 'https://www.transunion.co.za/product/annual-free-credit-report',
   );
+  await expect(page.getByRole('link', { name: /National Credit Regulator: 2007 NCA consumer guide/ })).toHaveAttribute(
+    'href', 'https://ncr.org.za/documents/pages/Brochures/ENGLISH.pdf',
+  );
+  await expect(page.getByText('The NCR guide above is from 2007', { exact: false })).toBeVisible();
   expect(writes).toEqual([]);
 
   await page.getByRole('button', { name: 'Try Luqi AI as a guest' }).click();

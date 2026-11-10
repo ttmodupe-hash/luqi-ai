@@ -86,8 +86,12 @@ export default function CreditAiCoach() {
         <li><a className="text-cyan-200 underline" href="https://www.transunion.co.za/product/annual-free-credit-report" target="_blank" rel="noopener noreferrer">TransUnion: free annual report</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.experian.co.za/consumer/my-free-credit-check-and-your-free-credit-report" target="_blank" rel="noopener noreferrer">Experian: consumer report and free disputes</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.cba.co.za/enquiries" target="_blank" rel="noopener noreferrer">Credit Bureau Association: other bureaus including XDS</a></li>
-        <li><a className="text-cyan-200 underline" href="https://ncr.org.za/documents/pages/Brochures/ENGLISH.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: NCA rights brochure</a></li>
+        <li><a className="text-cyan-200 underline" href="https://ncr.org.za/documents/pages/Brochures/ENGLISH.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: 2007 NCA consumer guide (historical)</a></li>
       </ul>
+      <p className="text-xs text-amber-200">
+        The NCR guide above is from 2007 and explicitly says it is not legally binding.
+        It may predate amendments; check the current Act, regulations and NCR guidance before acting.
+      </p>
       <p className="text-xs text-slate-300">
         NCA section 72 and Regulation 20 provide a dispute process, generally with a 20-business-day
         investigation requirement. Section 126B does not make every debt prescribed after three years.
