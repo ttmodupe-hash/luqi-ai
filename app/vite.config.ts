@@ -6,6 +6,7 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  worker: { format: "es" },
   base: './',
   plugins: [
     inspectAttr(),
@@ -39,6 +40,7 @@ export default defineConfig({
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
         manualChunks(id: string) {
+          if (id.replace(/\\/g, '/').endsWith('/src/lib/sa-province-map.ts')) return 'za-province-geometry';
           if (!id.includes("node_modules")) return undefined;
           if (/node_modules[\/]react-dom/.test(id)) return "vendor-react";
           if (/node_modules[\/](react|react-router|scheduler)[\/]/.test(id)) return "vendor-react";

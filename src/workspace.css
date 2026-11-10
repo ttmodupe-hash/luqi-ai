@@ -215,6 +215,12 @@
   border-radius: 8px;
 }
 .luqi-mobile-nav {
+  /* Keep destinations reachable inside the sticky header on short screens. */
+  max-height: calc(100vh - 6rem);
+  max-height: calc(100dvh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 8px;
   padding: 8px 24px 20px;
   display: grid;
   gap: 4px;

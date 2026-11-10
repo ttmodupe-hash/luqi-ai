@@ -1,5 +1,15 @@
 export const workspaceTools = [
   {
+    id: "launch-control", title: "Launch Control", category: "Tool 024: evidence and release operations",
+    description: "Run current Luqi release and health checks, review dependency workflows, restore portable checkpoints and prepare SPF, DKIM and DMARC records locally. External DNS, deployments and payment integrations require separate connections.",
+    status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",
+  },
+  {
+    id: "devsecnet", title: "DevSecNet Studio", category: "Tool 022: product, design and engineering",
+    description: "Draft a PRD, Fibonacci backlog and RAID register; check design-token contrast, review source locally, plan IPv4 networks and measure reference workloads. Editable ZAR/AI cost scenarios. No paid calls or network pushes.",
+    status: "Local planning and review tools", ready: true, path: "/devsecnet", icon: "academy",
+  },
+  {
     id: "archive", title: "Archive vault", category: "Local encrypted text records",
     description: "Create and verify a protected text record with an encrypted recovery file you control. No upload, account or paid AI. Pilot; cloud archives remain unavailable.",
     status: "Local encryption pilot", ready: true, path: "/archive", icon: "notes",

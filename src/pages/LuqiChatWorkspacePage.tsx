@@ -14,7 +14,7 @@ export default function LuqiChatWorkspacePage() {
   if (evidence.length) return <div className="luqi-chat-main"><RouteLoadBoundary>
     <CivicEvidenceChat key={location.search} claimId={evidence.length === 1 ? evidence[0] : ''} />
   </RouteLoadBoundary></div>;
-  if (query.get('civic') === '1') return <div className="luqi-chat-main"><RouteLoadBoundary><CivicEvidenceDesk /></RouteLoadBoundary></div>;
+  if (query.get('civic') === '1') return <div className="luqi-chat-main luqi-chat-main-civic"><RouteLoadBoundary><CivicEvidenceDesk /></RouteLoadBoundary></div>;
   return <div className="luqi-chat-main">
     <nav className="luqi-chat-workspace-links" aria-label="Evidence-based civic support">
       <Link to="/chat?civic=1">Civic evidence — understand public records and voting information</Link>
