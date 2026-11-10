@@ -45,6 +45,15 @@ function revision(result) {
   return b.commit;
 }
 
+// Status-event scope is not production authorisation: require a separately owner-approved
+// exact deployed SHA before starting public checks. Neither input is read from the site.
+export function requireApprovedStatusRevision(eventSha, approvedSha) {
+  if (typeof eventSha !== 'string' || !SHA.test(eventSha) ||
+      typeof approvedSha !== 'string' || !SHA.test(approvedSha) ||
+      eventSha !== approvedSha) fail();
+  return eventSha;
+}
+
 // The caller must independently supply an approved exact deployment SHA. Never derive it from a live host.
 export async function observeProduction({ expectedCommit, request = fetch, now = () => Date.now() } = {}) {
   if (typeof expectedCommit !== 'string' || !SHA.test(expectedCommit)) fail();

@@ -63,3 +63,15 @@ test('no escalation in permissions or live credentials', () => {
   assert.match(pre, /timeout-minutes: 12/);
   assert.match(post, /timeout-minutes: 12/);
 });
+
+
+test('live status SHA is independently owner-pinned before either public framing probe', () => {
+  assert.ok(post);
+  const canonical = post.indexOf('run: node scripts/check-canonical-railway-status.mjs');
+  const approved = post.indexOf('requireApprovedStatusRevision(');
+  const publicCheck = post.indexOf('run: node scripts/verify-deployed-release.mjs');
+  assert.ok(canonical >= 0 && approved > canonical && publicCheck > approved);
+  assert.match(post, /LUQI_STATUS_SHA: \\$\\{\\{ github.event.sha \\}\\}/);
+  assert.match(post, /LUQI_APPROVED_DEPLOYED_SHA: \\$\\{\\{ vars.LUQI_APPROVED_DEPLOYED_SHA \\}\\}/);
+  assert.match(post, /if: github.event_name == 'status'/);
+});

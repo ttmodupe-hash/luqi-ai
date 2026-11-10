@@ -55,7 +55,8 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
   public-framing:
-    # This is an independent post-deployment check, never a Wait-for-CI prerequisite.
+    # This is a post-deployment check with an independent owner-approved revision pin,
+    # never a Wait-for-CI prerequisite. Event scope alone does not prove Railway.
     if: >-
       github.event_name == 'status' &&
       github.event.state == 'success' &&
@@ -76,6 +77,15 @@ jobs:
         env:
           LUQI_MAIN_SHA: ${{ github.sha }}
         run: node scripts/check-canonical-railway-status.mjs
+      - name: Require owner-approved deployed SHA before trusting status observer
+        if: github.event_name == 'status'
+        env:
+          LUQI_STATUS_SHA: ${{ github.event.sha }}
+          LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}
+        run: >-
+          node --input-type=module -e
+          'import { requireApprovedStatusRevision } from "./scripts/production-health-monitor.mjs";
+          requireApprovedStatusRevision(process.env.LUQI_STATUS_SHA, process.env.LUQI_APPROVED_DEPLOYED_SHA)'
       - name: Observe the exact live release and existing safety boundaries
         env:
           LUQI_VERIFY_PUBLIC: 'true'

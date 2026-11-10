@@ -114,10 +114,19 @@ jobs:
         env:
           LUQI_MAIN_SHA: ${{ github.sha }}
         run: node scripts/check-canonical-railway-status.mjs
+      - name: Require owner-approved deployed SHA before trusting status observer
+        if: github.event_name == 'status'
+        env:
+          LUQI_STATUS_SHA: ${{ github.event.sha }}
+          LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}
+        run: >-
+          node --input-type=module -e
+          'import { requireApprovedStatusRevision } from "./scripts/production-health-monitor.mjs";
+          requireApprovedStatusRevision(process.env.LUQI_STATUS_SHA, process.env.LUQI_APPROVED_DEPLOYED_SHA)'
       - name: Observe fixed public hosts against independently trusted exact revision
         env:
           LUQI_VERIFY_PUBLIC: 'true'
-          # Status: exact canonical success event, verified in the preceding step.
+          # Status: scoped canonical event AND separately owner-approved SHA.
           # Schedule/manual: owner-admin GitHub repo variable, pinned only AFTER
           # independent Railway SUCCESS plus owner-authorised release review.
           # Missing or stale variable MUST fail closed; never read expected SHA
