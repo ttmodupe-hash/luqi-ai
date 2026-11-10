@@ -45,6 +45,7 @@ function revision(result) {
   return b.commit;
 }
 
+// The caller must independently supply an approved exact deployment SHA. Never derive it from a live host.
 export async function observeProduction({ expectedCommit, request = fetch, now = () => Date.now() } = {}) {
   if (typeof expectedCommit !== 'string' || !SHA.test(expectedCommit)) fail();
   const observations = [];
