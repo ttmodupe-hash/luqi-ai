@@ -5,7 +5,7 @@ import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/react';
 import {TenderOriginalForms} from '../src/components/TenderOriginalForms';
 import {runTenderDocument} from '../src/lib/tender-document-client';
-import {VERIFIED_SBD1, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
+import {TENDER_FILE_MAX,VERIFIED_SBD1, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
 import {CustomerSessionProvider,useCustomerSession} from '../src/providers/customer-session';
 vi.mock('../src/lib/tender-document-client',()=>({runTenderDocument:vi.fn()}));
 const run=vi.mocked(runTenderDocument),network=vi.fn();
@@ -63,6 +63,23 @@ it('clears approvals on addendum selection and rejects failed imports without re
  fireEvent.change(screen.getByLabelText('Add tender amendment'),{target:{files:[file('amended.docx')]}});
  await screen.findByText(/unsupported active feature/);
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+});
+it.each(['empty','oversized'] as const)('rejecting a %s addendum revokes an approved packet before export without changing applicant facts',async kind=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const checkbox of within(review).getAllByRole('checkbox'))fireEvent.click(checkbox);
+ expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(false);
+ const calls=run.mock.calls.length;
+ const rejected=file('synthetic-rejected-addendum.docx');
+ Object.defineProperty(rejected,'size',{value:kind==='empty'?0:TENDER_FILE_MAX+1});
+ fireEvent.change(screen.getByLabelText('Add tender amendment'),{target:{files:[rejected]}});
+ expect(screen.getByText(/The addendum was not added: Choose a non-empty file up to 3 MB/)).toBeTruthy();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect((screen.getByLabelText('Tender reference') as HTMLInputElement).value).toBe('SYNTHETIC-001');
+ expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('Synthetic supplier');
+ expect(screen.queryByText(/Addendum 1:/)).toBeNull();
+ expect(run).toHaveBeenCalledTimes(calls);
+ expect(network).not.toHaveBeenCalled();
 });
 it('discarding work aborts an in-flight parse and prevents a late result from repopulating private data',async()=>{
  let resolve!:(r:TenderDocumentResponse)=>void;
