@@ -176,3 +176,27 @@ it('announces expired 30-minute review and locks old approvals without submittin
  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(1);
  expect(network).not.toHaveBeenCalled();
 });
+
+it('announces recorded closing-time expiry before 30 minutes, revokes approvals and blocks export',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const deadline=new Date(Date.now()+2*60*1000).toISOString();
+ fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:deadline}});
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ const review=await screen.findByRole('region',{name:'Original form applicant review'});
+ for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+ const exportButton=within(review).getByRole('button',{name:'Export filled original and review record'});
+ expect(exportButton.hasAttribute('disabled')).toBe(false);
+ const observed=Date.now(),deviceClock=vi.spyOn(Date,'now').mockReturnValue(observed+3*60*1000);
+ await waitFor(()=>expect(within(review).getByRole('alert').textContent)
+   .toMatch(/recorded bid closing time has passed/),{timeout:3000});
+ expect(exportButton.hasAttribute('disabled')).toBe(true);
+ await waitFor(()=>expect(within(review).getAllByRole('checkbox').every(box=>
+   (box as HTMLInputElement).checked===false&&box.hasAttribute('disabled'))).toBe(true));
+ expect(within(review).getByRole('alert').textContent).toMatch(/Nothing was submitted/);
+ deviceClock.mockReturnValue(observed+1000);
+ await waitFor(()=>expect(within(review).queryByRole('alert')).toBeNull(),{timeout:3000});
+ expect(exportButton.hasAttribute('disabled')).toBe(true);
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(2);
+ expect(network).not.toHaveBeenCalled();
+});
