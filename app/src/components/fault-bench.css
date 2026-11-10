@@ -1,0 +1,84 @@
+.faultBench {
+  color: #eaf2ef;
+  background: #102725;
+  border: 1px solid #446762;
+  border-radius: 1rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  display: grid;
+  gap: 0.9rem;
+  max-width: 55rem;
+}
+.faultBench header small {
+  color: #8be1ba;
+  letter-spacing: 0.13em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.faultBench h2 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.2;
+  margin: 0.35rem 0;
+  font-weight: 700;
+}
+.faultBench p,
+.faultBench small {
+  max-width: 68ch;
+  line-height: 1.55;
+}
+.benchModes,
+.benchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.faultBench button,
+.faultBench select {
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid #72938c;
+  min-height: 44px;
+  background: #183b36;
+  color: #eef7f4;
+  font-weight: 600;
+}
+.faultBench select {
+  margin-left: 0.4rem;
+}
+.faultBench button[aria-pressed="true"],
+.benchActions button:first-child:enabled {
+  color: #09251d;
+  background: #93e5bd;
+  border-color: #93e5bd;
+}
+.faultBench button:disabled {
+  opacity: 0.55;
+}
+.faultBench :focus-visible {
+  outline: 3px solid #ffd581;
+  outline-offset: 3px;
+}
+.faultDiagram {
+  background: #0c1e20;
+  border-radius: 0.7rem;
+  border: 1px solid #375758;
+}
+.faultDiagram svg {
+  display: block;
+  margin: auto;
+  width: 100%;
+  max-width: 28rem;
+}
+.benchResult {
+  border-left: 3px solid #edbe72;
+  padding: 0.35rem 0.85rem;
+  min-height: 3.8rem;
+  line-height: 1.5;
+}
+.benchResult strong {
+  display: block;
+  color: #f6dbac;
+}
+.faultBench a {
+  color: #a3e8dc;
+  text-decoration: underline;
+}

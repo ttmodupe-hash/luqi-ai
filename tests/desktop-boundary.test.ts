@@ -44,7 +44,8 @@ describe('desktop window boundary', () => {
 });
 
 /** Exercise the actual smoke expression, not a duplicate heading assertion. */
-async function runDesktopSmoke(heading: string | null, hasShell = true, failEvaluation = false) {
+async function runDesktopSmoke(heading: string | null, hasShell = true, failEvaluation = false, delayed = false) {
+  let visibleHeading = delayed ? null : heading;
   let ready = () => {};
   const handlers = new Map<string, () => void | Promise<void>>();
   const exit = vi.fn();
@@ -58,10 +59,14 @@ async function runDesktopSmoke(heading: string | null, hasShell = true, failEval
         executeJavaScript: async (script: string) => {
           if (failEvaluation) throw new Error('Synthetic renderer failure');
           return runInNewContext(script, {document: {querySelector: (selector: string) => {
-            if (selector === '#workspace-content main #workspace-title') return heading === null ? null : {textContent: heading};
+            if (selector === '#workspace-content main #workspace-title') return visibleHeading === null ? null : {textContent: visibleHeading};
             if (selector === 'a[aria-label="Luqi workspace home"]') return hasShell ? {} : null;
             return null;
-          }}});
+          }}, MutationObserver: class {
+            constructor(private callback: () => void) {}
+            observe() { if (delayed) queueMicrotask(() => { visibleHeading = heading; this.callback(); }); }
+            disconnect() {}
+          }, setTimeout: (fn: () => void) => { queueMicrotask(fn); return 2; }, clearTimeout: vi.fn() });
         },
       };
       loadFile() {}
@@ -82,6 +87,10 @@ async function runDesktopSmoke(heading: string | null, hasShell = true, failEval
 }
 
 describe('packaged desktop homepage acceptance', () => {
+  it('waits for the actual lazy-loaded heading without weakening the predicate', async () => {
+    const {exit} = await runDesktopSmoke('Knowledge. People.A Stronger Africa.', true, false, true);
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
   it.each(['Knowledge. People.A Stronger Africa.', 'Knowledge. People. A Stronger Africa.', 'Knowledge. People.\nA Stronger Africa.'])('accepts the complete approved heading: %s', async heading => {
     const {exit, clearTimeout} = await runDesktopSmoke(heading);
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);

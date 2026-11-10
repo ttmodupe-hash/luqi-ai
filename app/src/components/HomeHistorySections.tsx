@@ -43,6 +43,7 @@ export default function HomeHistorySections() {
         </section>
         <nav className="luqi-quick-tools" aria-label="Quick access to Luqi's working tools">
           <div className="luqi-quick-tools-intro"><h2>Explore Luqi’s tools</h2><p>Useful starting points.</p></div>
+          <Link to="/drive"><Compass size={21} aria-hidden="true" /><span>Luqi-Drive GPS</span></Link>
           <Link to="/driver-rights"><ShieldCheck size={21} aria-hidden="true" /><span>Driver rights</span></Link>
           <Link to="/study-desk"><GraduationCap size={21} aria-hidden="true" /><span>Education</span></Link>
           <Link to="/tenders"><BriefcaseBusiness size={21} aria-hidden="true" /><span>Small tenders</span></Link>

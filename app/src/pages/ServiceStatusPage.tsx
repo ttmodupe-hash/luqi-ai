@@ -8,6 +8,7 @@ export default function ServiceStatusPage() {
         Understand which parts of Luqi responded to a read-only check. A configured AI connection is not the same as a successful AI reply.
       </p>
       <ApiSystemStatusDashboard humanReadable />
+      <a href="#/launch-control" className="inline-flex min-h-12 items-center rounded-lg border border-cyan-700 bg-slate-900 px-4 py-3 text-cyan-100">Open Launch Control — review a release and keep its evidence</a>
       <section className="my-6 space-y-3 rounded-xl border border-slate-700 bg-slate-950 p-5" aria-labelledby="earlier-ai-evidence">
         <h2 id="earlier-ai-evidence" className="text-xl font-semibold">Earlier verified AI reply</h2>
         <p className="text-slate-300">

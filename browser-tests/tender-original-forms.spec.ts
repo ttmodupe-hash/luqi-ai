@@ -6,7 +6,7 @@ test('the actual Treasury original is filled locally, exported with approval his
  await page.setViewportSize({width:320,height:740});
  const outbound:string[]=[];
  page.on('request',req=>{if(req.method()!=='GET'||/api\.openai|generativelanguage|\/luqi-core/.test(req.url()))outbound.push(req.method()+' '+req.url())});
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
  const panel=page.getByRole('region',{name:'Original government form assistance'});
  await expect(panel.getByLabel('Import original tender document')).toBeDisabled();
  await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
@@ -48,7 +48,7 @@ test('the actual Treasury original is filled locally, exported with approval his
  await expect(panel.getByLabel('SBD 1 Name of bidder')).toHaveCount(0);
 });
 test('pinned original loading is explicit and a changed lookalike cannot use the fill workflow',async({page})=>{
- await page.goto('/#/tenders');
+ await page.goto('/#/tenders');await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
  const panel=page.getByRole('region',{name:'Original government form assistance'});
  await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
  await panel.getByRole('button',{name:'Use verified Treasury SBD 1'}).click();

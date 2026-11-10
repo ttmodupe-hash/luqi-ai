@@ -57,3 +57,15 @@ contact restrictions, opt-out, no outsider disclosure, block enforcement, stale
 UI, account changes and hidden-page polling. Real disposable MySQL and two-account
 browser journeys verify consent-to-heartbeat-to-contact-online delivery without
 AI credentials or production customer messages.
+
+## Native Luqi People layout (2 November)
+
+The former collapsible Contacts launcher is replaced by an always-rendered
+in-page People & private chat rail. It is not a support popup or separate
+application. At 1120px+, the rail has a dedicated sticky right-hand grid
+column; narrower screens retain an inline card. Luqi Chat's mobile navigation
+contains a People tab, and contact links now open /chat/people?circle=...
+inside the same single-login Luqi Chat shell. Legacy /p2p remains in-shell.
+No invented contacts, online statuses, new privileges or AI inference.
+Production P2P activation remains subject to issue #344's operator gates.
+Orange Away server-side semantics are separate work in PR #420.
