@@ -22,6 +22,12 @@ test('free South African driver rights guide works at 320px without provider or 
   await page.getByRole('button', { name: 'Money demanded' }).click();
   await expect(page.getByRole('heading', { name: 'Luqi roadside safety — money demanded' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Original sources' })).toBeVisible();
+  const aartoCaution = page.getByRole('note', { name: 'AARTO rollout source caution' });
+  await expect(aartoCaution).toBeVisible();
+  await expect(aartoCaution).toContainText('1 July 2021');
+  await expect(aartoCaution).toContainText('1 July 2022');
+  await expect(aartoCaution.getByRole('link', { name: 'RTIA original FAQ' }))
+    .toHaveAttribute('href', 'https://www.rtia.co.za/faq.php?read=more');
   await expect(page.getByText(/Luqi does not place calls or share your location/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(unexpected).toEqual([]);
