@@ -5,9 +5,9 @@ export const workspaceTools = [
     status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",
   },
   {
-    id: "devsecnet", title: "DevSecNet Studio", category: "Tool 022: product, design and engineering",
-    description: "Draft a PRD, Fibonacci backlog and RAID register; check design-token contrast, review source locally, plan IPv4 networks and measure reference workloads. Editable ZAR/AI cost scenarios. No paid calls or network pushes.",
-    status: "Local planning and review tools", ready: true, path: "/devsecnet", icon: "academy",
+    id: "devsecnet", title: "Make a service website", category: "Tool 022: build and learn by doing",
+    description: "Enter a business name, services and public area to preview and download a real one-page website. No coding, account or AI needed. Advanced product, security and networking tools are optional.",
+    status: "Free local HTML download · not hosted", ready: true, path: "/devsecnet", icon: "academy",
   },
   {
     id: "archive", title: "Archive vault", category: "Local encrypted text records",
