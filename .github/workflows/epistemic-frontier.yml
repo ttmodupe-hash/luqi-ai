@@ -1,0 +1,41 @@
+name: LUQI Epistemic Frontier Safety
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/services/epistemic-*.ts'
+      - 'scripts/epistemic-radar.mjs'
+      - 'tests/epistemic-frontier.test.mjs'
+      - '.github/workflows/epistemic-frontier.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/services/epistemic-*.ts'
+      - 'scripts/epistemic-radar.mjs'
+      - 'tests/epistemic-frontier.test.mjs'
+      - '.github/workflows/epistemic-frontier.yml'
+permissions:
+  contents: read
+jobs:
+  policy-and-source-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install exact dependencies without lifecycle scripts
+        run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - name: Strictly compile the isolated evidence-policy modules
+        run: |
+          mkdir -p "$RUNNER_TEMP/luqi-epistemic-build"
+          printf '{"type":"module"}\n' > "$RUNNER_TEMP/luqi-epistemic-build/package.json"
+          node node_modules/typescript/bin/tsc --strict --skipLibCheck --target es2022 --module es2022 --moduleResolution bundler --lib es2022,dom --outDir "$RUNNER_TEMP/luqi-epistemic-build" api/services/epistemic-policy.ts api/services/epistemic-probe.ts
+      - name: Exercise actual policy and injected offline source responses
+        env:
+          LUQI_EPISTEMIC_BUILD_DIR: ${{ runner.temp }}/luqi-epistemic-build
+        run: node --test tests/epistemic-frontier.test.mjs
+# No schedule, workflow_dispatch, secrets, crawling, provider calls or deployment.
