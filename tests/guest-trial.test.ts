@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { buildPilotIntelligencePolicy } from '../api/services/pilotIntelligence';
 
 const reserve = vi.fn(), snapshot = vi.fn(), generate = vi.fn(), countTokens = vi.fn();
 vi.mock('../api/services/guestTrialBudget', async original => ({
@@ -105,6 +106,7 @@ describe('guest HTTP provider boundary with entirely synthetic inference', () =>
     expect(reserve).toHaveBeenCalledTimes(1);
     expect(generate).toHaveBeenCalledTimes(1);
     expect(generate.mock.calls[0][0].config.httpOptions.retryOptions.attempts).toBe(1);
+    expect(generate.mock.calls[0][0].config.systemInstruction).toContain(buildPilotIntelligencePolicy());
     expect(generate.mock.calls[0][0].contents).toContain('Why does it fall?');
   });
   it('never spends on a guest whose allowance is exhausted', async () => {
@@ -138,6 +140,8 @@ describe('expanded trial HTTP safety', () => {
     expect(reserve.mock.invocationCallOrder[0]).toBeLessThan(countTokens.mock.invocationCallOrder[0]);
     expect(countTokens.mock.invocationCallOrder[0]).toBeLessThan(generate.mock.invocationCallOrder[0]);
     expect(countTokens.mock.calls[0][1]).toContain('You are Luqi');
+    expect(countTokens.mock.calls[0][1]).toBe(generate.mock.calls[0][0].config.systemInstruction);
+    expect(countTokens.mock.calls[0][1]).toContain(buildPilotIntelligencePolicy());
     expect(countTokens.mock.calls[0][0]).toContain('Sawubona');
     expect(generate.mock.calls[0][0].config.maxOutputTokens).toBe(512);
   });

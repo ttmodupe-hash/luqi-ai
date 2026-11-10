@@ -1,6 +1,7 @@
 import { buildPilotInput, MAX_PILOT_INPUT_CHARS } from '../src/lib/pilot-input';
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PILOT_MODELS } from "../api/services/pilotModels";
+import { buildPilotIntelligencePolicy } from '../api/services/pilotIntelligence';
 
 const { reserve } = vi.hoisted(() => ({ reserve: vi.fn() }));
 vi.mock("../api/services/aiPilotBudget", async importOriginal => ({
@@ -222,6 +223,7 @@ describe('task-aware instructions use the same bounded paid transport', () => {
       const body = JSON.parse(options.body as string);
       const policy = provider === 'gemini' ? body.systemInstruction.parts.map((p: { text: string }) => p.text).join('') : body.instructions;
       expect(policy).toContain('Requested approach: REVIEW');
+      expect(policy).toContain(buildPilotIntelligencePolicy('review'));
       expect(policy).toContain('work or argument actually supplied');
       expect(policy).not.toContain('PRIVATE-USER-TEXT');
       expect(body).not.toHaveProperty('tools');
