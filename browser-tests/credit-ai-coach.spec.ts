@@ -36,6 +36,13 @@ test('AI credit coaching stays local until a separate user-controlled Chat Send'
   await expect(page.getByRole('link', { name: /National Credit Regulator: dispute complaints guideline 005\/2024/ })).toHaveAttribute(
     'href', 'https://www.ncr.org.za/phocadownload/GUIDELINES%20FOR%20THE%20SUBMISSION%20OF%20COMPLAINTS%20RELATING%20TO%20DISPUTED%20CONSUMER%20CREDIT%20INFORMATION.pdf',
   );
+  await expect(page.getByRole('link', { name: /South African Government: National Credit Act 34 of 2005/ })).toHaveAttribute(
+    'href', 'https://www.gov.za/documents/national-credit-act',
+  );
+  await expect(page.getByRole('link', { name: /National Credit Regulator: credible-evidence guideline 005\\/2025/ })).toHaveAttribute(
+    'href', 'https://ncr.org.za/documents/Guidelines/Guideline%20December%202025.pdf',
+  );
+  await expect(page.getByText("The NCR's December 2025 credible-evidence guideline", { exact: false })).toContainText('objective, verifiable records');
   await expect(page.getByRole('link', { name: 'National Credit Regulator: complaints and Form 29' })).toHaveAttribute(
     'href', 'https://www.ncr.org.za/index.php/departments/complaints',
   );

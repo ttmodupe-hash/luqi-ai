@@ -86,13 +86,22 @@ export default function CreditAiCoach() {
         <li><a className="text-cyan-200 underline" href="https://www.transunion.co.za/product/annual-free-credit-report" target="_blank" rel="noopener noreferrer">TransUnion: free annual report</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.experian.co.za/consumer/my-free-credit-check-and-your-free-credit-report" target="_blank" rel="noopener noreferrer">Experian: consumer report and free disputes</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.cba.co.za/enquiries" target="_blank" rel="noopener noreferrer">Credit Bureau Association: other bureaus including XDS</a></li>
+        <li><a className="text-cyan-200 underline" href="https://www.gov.za/documents/national-credit-act" target="_blank" rel="noopener noreferrer">South African Government: National Credit Act 34 of 2005 (original Act and amendment references)</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.ncr.org.za/phocadownload/GUIDELINES%20FOR%20THE%20SUBMISSION%20OF%20COMPLAINTS%20RELATING%20TO%20DISPUTED%20CONSUMER%20CREDIT%20INFORMATION.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: dispute complaints guideline 005/2024 (December 2024)</a></li>
+        <li><a className="text-cyan-200 underline" href="https://ncr.org.za/documents/Guidelines/Guideline%20December%202025.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: credible-evidence guideline 005/2025 (December 2025)</a></li>
         <li><a className="text-cyan-200 underline" href="https://www.ncr.org.za/index.php/departments/complaints" target="_blank" rel="noopener noreferrer">National Credit Regulator: complaints and Form 29</a></li>
         <li><a className="text-cyan-200 underline" href="https://ncr.org.za/documents/pages/Brochures/ENGLISH.pdf" target="_blank" rel="noopener noreferrer">National Credit Regulator: 2007 NCA consumer guide (historical)</a></li>
       </ul>
       <p className="text-xs text-amber-200">
         The NCR guide above is from 2007 and explicitly says it is not legally binding.
         It may predate amendments; check the current Act, regulations and NCR guidance before acting.
+      </p>
+      <p className="text-xs text-slate-300">
+        The NCR's December 2025 credible-evidence guideline explains that a bare reply such as
+        &ldquo;the listing is correct&rdquo; is not enough without objective, verifiable records.
+        The 2025 evidence guide refers back to the separate 2024 dispute-process guideline.
+        Request supporting evidence through the bureau's official dispute channel; do not upload
+        personal identity, banking or credit-report documents to this Luqi exercise.
       </p>
       <p className="text-xs text-slate-300">
         Challenge incorrect information with the credit bureau first and keep its reference number.
