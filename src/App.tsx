@@ -6,7 +6,9 @@ import { CustomerSessionProvider } from "./providers/customer-session";
 import { ChatWorkspaceProvider } from "./providers/chat-workspace";
 import { SovereignRegionProvider } from "./providers/sovereign-region";
 const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
-import { Toaster } from "@/components/ui/toaster";
+// The admin-only toast renderer does not belong in the public startup graph.
+const AdminToaster = lazy(() => import("@/components/ui/toaster").then(module => ({ default: module.Toaster })));
+
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
@@ -80,8 +82,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   if (isAdmin)
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
-        <Toaster />
-        <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
+        <RouteLoadBoundary>
+          <AdminToaster />
+          <AdminSovereignPortal />
+        </RouteLoadBoundary>
       </div>
     );
   return <CustomerSessionProvider><ChatWorkspaceProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></ChatWorkspaceProvider></CustomerSessionProvider>;
