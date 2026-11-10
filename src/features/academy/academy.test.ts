@@ -16,6 +16,19 @@ describe('universal academy deterministic engines', () => {
   it('does not report negative photoelectron energy below threshold', () => { expect(photoelectric(1e14,2)).toMatchObject({emitted:false,maximumKineticJ:0}); const result=photoelectric(8e14,2); expect(result.emitted).toBe(true); expect(result.maximumKineticJ).toBeCloseTo(6.62607015e-34*8e14-2*1.602176634e-19,30); });
   it('includes battery delivery loss and PV performance assumptions', () => { const result=solar(.4,6,.8,.9,10,5,.8); expect(result.deliveredKwh).toBeCloseTo(2.4); expect(result.nominalBatteryKwh).toBeCloseTo(3.333333333); expect(result.pvKw).toBe(2.5); expect(()=>solar(.4,6,0,.9,10,5,.8)).toThrow(); });
   it('generates reproducible valid practice for all tracks', () => { for (const track of ['ccna','security','aws','python','matric','solar'] as TrackId[]) for(let seed=0;seed<200;seed++){ const q=generatedPractice(track,seed); expect(generatedPractice(track,seed)).toEqual(q); expect(Number.isFinite(q.answer)).toBe(true); expect(gradePractice(q,String(q.answer))).toBe(true); expect(gradePractice(q,'')).toBe(false); expect(gradePractice(q,'NaN')).toBe(false); expect(gradePractice(q,String(q.answer+100000))).toBe(false); } });
+  it('does not pass incorrect IPv4 host counts or fractional Python sums under a percentage margin', () => {
+    const ccna = generatedPractice('ccna', 6); // /20, exactly 4094 usable addresses
+    expect(ccna.answer).toBe(4094);
+    expect(ccna.tolerance).toBe(0);
+    for (const input of ['4090', '4093', '4095', '4094.1']) expect(gradePractice(ccna, input)).toBe(false);
+    expect(gradePractice(ccna, '4094.0')).toBe(true);
+    const python = generatedPractice('python', 0);
+    expect(python.tolerance).toBe(0);
+    expect(gradePractice(python, String(python.answer + 0.1))).toBe(false);
+    expect(gradePractice(python, String(python.answer))).toBe(true);
+    // Physical/currency estimates retain their existing bounded numerical tolerance.
+    expect(generatedPractice('solar', 0).tolerance).toBeGreaterThan(0);
+  });
   it('rejects bad generation seeds', () => { expect(()=>generatedPractice('ccna',-1)).toThrow(); expect(()=>generatedPractice('ccna',.5)).toThrow(); });
   it('accepts only bounded HTTPS YouTube watch/share URLs', () => { expect(safeVideoId('https://www.youtube.com/watch?v=bQ8sdpGQu8c')).toBe('bQ8sdpGQu8c'); expect(safeVideoId('https://youtu.be/bQ8sdpGQu8c')).toBe('bQ8sdpGQu8c'); for (const url of ['javascript:alert(1)','https://youtube.com.evil.test/watch?v=bQ8sdpGQu8c','https://attacker@youtube.com/watch?v=bQ8sdpGQu8c','https://youtube.com:444/watch?v=bQ8sdpGQu8c','https://youtu.be/../../etc/passwd','http://youtu.be/bQ8sdpGQu8c']) expect(safeVideoId(url)).toBe(null); });
   it('builds learner-owned outlines without inventing subject content', () => { const plan=courseOutline('Water systems','Explain and test a safe filter model','Flow\nMaterials\nFlow',90); expect(plan.modules.map(m=>m.title)).toEqual(['Flow','Materials']); expect(plan.status).toContain('need review'); expect(()=>courseOutline('','goal','topic',90)).toThrow(); expect(()=>courseOutline('a','goal','topic',0)).toThrow(); expect(()=>courseOutline('a','goal','x'.repeat(161),90)).toThrow(); });

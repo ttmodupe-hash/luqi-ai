@@ -51,7 +51,9 @@ export function generatedPractice(track: TrackId, seed: number): Practice {
   let n = seed >>> 0;
   const random = (max: number) => { n = (Math.imul(1664525, n) + 1013904223) >>> 0; return n % max; };
   const a = random(9) + 2, b = random(8) + 2;
-  const question = (prompt: string, answer: number, unit: string, explanation: string): Practice => ({ id: `${track}-${seed}`, prompt, answer, unit, explanation, tolerance: Math.max(1e-8, Math.abs(answer) * .001) });
+  const question = (prompt: string, answer: number, unit: string, explanation: string): Practice => ({ id: `${track}-${seed}`, prompt, answer, unit, explanation,
+    // Host counts and Python integer sums are exact; a percent margin falsely credits wrong answers.
+    tolerance: track === 'ccna' || track === 'python' ? 0 : Math.max(1e-8, Math.abs(answer) * .001) });
   switch (track) {
     case 'ccna': { const prefix = 20 + random(11), answer = 2 ** (32 - prefix) - 2;
       return question(`For an ordinary IPv4 /${prefix} subnet, how many usable host addresses are available?`, answer, 'hosts', `32 - ${prefix} = ${32 - prefix} host bits; 2^${32 - prefix} - 2 = ${answer}. The /31 exception does not apply here.`); }
