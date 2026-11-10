@@ -229,3 +229,26 @@ it('reports closing-time expiry when a suspended review crosses both limits',asy
  expect(network).not.toHaveBeenCalled();
  deviceClock.mockRestore();
 });
+
+it('does not reprepare an expired bid after an observed device-clock rollback',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const deadline=new Date(Date.now()+2*60*1000).toISOString().replace(/\.\d{3}Z$/,'Z');
+ fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:deadline}});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ const review=await screen.findByRole('region',{name:'Original form applicant review'});
+ for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+ const observed=Date.now(),deviceClock=vi.spyOn(Date,'now').mockReturnValue(observed+3*60*1000);
+ await waitFor(()=>expect(within(review).getByRole('alert').textContent)
+   .toMatch(/recorded bid closing time has passed/),{timeout:3000});
+ await waitFor(()=>expect(within(review).getAllByRole('checkbox').every(box=>
+   (box as HTMLInputElement).checked===false&&box.hasAttribute('disabled'))).toBe(true));
+ deviceClock.mockReturnValue(observed+1000);
+ await new Promise(resolve=>setTimeout(resolve,1200)); // Recheck after rollback tick.
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ expect(screen.getByRole('status').textContent).toMatch(/Future closing time with explicit timezone/);
+ expect(within(review).getByRole('alert').textContent).toMatch(/recorded bid closing time has passed/);
+ expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(true);
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(2);
+ expect(network).not.toHaveBeenCalled();
+ deviceClock.mockRestore();
+});
