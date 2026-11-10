@@ -3,6 +3,7 @@ import {TenderOriginalForms} from '../components/TenderOriginalForms';
 import {TenderWatchNotices} from '../components/TenderWatchNotices';
 import {TenderOpportunityWorkspace,type TenderDeskView} from '../components/TenderOpportunityWorkspace';
 import {PROVINCES,type ProvinceCode} from '../lib/opportunity-sources';
+import {measureApi} from '../lib/uiTelemetry';
 import {CURATED_TENDER_NOTICES,TENDER_OFFICIAL_SOURCES,TENDER_REVIEWED_ON,
  filterTenders,tenderReviewFresh,tenderStatus,type TenderNotice,type TenderMethod} from '../lib/tender-sources';
 import {EMPTY_TENDER_DRAFT,EMPTY_TENDER_APPROVALS,TENDER_HUMAN_GATES,TENDER_DOCUMENT_PROMPTS,TENDER_DRAFT_MAX,
@@ -57,6 +58,7 @@ export default function TenderDeskPage(){
   setCheckingSources(true);setSourceMessage('Checking fixed original tender pages; this does not confirm applications remain open.');
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
   try{
+   const d=await measureApi('tender_sources_request',async()=>{
    const response=await fetch('/api/v1/tender-watch',{method:'GET',credentials:'omit',redirect:'error',
     cache:'no-store',signal:controller.signal,headers:{Accept:'application/json'}});
    if(!response.ok)throw Error('TENDER_SOURCE_MONITOR_UNAVAILABLE');
@@ -71,6 +73,8 @@ export default function TenderDeskPage(){
        !CURATED_TENDER_NOTICES.some(source=>source.id===n.id)||n.note!=='not_live_bid_availability'||!ids.add(n.id))){
     throw Error('INVALID_TENDER_MONITOR');
    }
+   return d;
+   });
    setSourceMonitor(d);
    setSourceMessage('Source text checked. Even a matching tender number and date are NOT proof that bids are still being accepted.');
   }catch{
@@ -163,8 +167,8 @@ export default function TenderDeskPage(){
        :status==='mandatory-briefing-review'?<p className="font-semibold text-red-200">Past compulsory briefing. Verify attendance and eligibility with the issuer before bidding.</p>
        :<p className="text-sm text-amber-200">Source-listed; issuer confirmation required before calling this an active bid.</p>}
       {!fresh&&<p className="text-xs text-amber-200">Source review is expired, due or cannot be verified for this date. Recheck the original publisher, bid documents and amendments.</p>}
-      <a href={n.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Read original tender and download issuer documents</a>
-      <div><button type="button" onClick={()=>pick(n)} aria-pressed={selectedId===n.id}
+      <a href={n.officialUrl} data-telemetry-action="tender_document_open" target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Read original tender and download issuer documents</a>
+      <div><button type="button" onClick={()=>pick(n)} data-telemetry-action="tender_prepare" aria-pressed={selectedId===n.id}
        className="rounded-lg border border-cyan-400 px-3 py-2 text-sm font-semibold text-cyan-100">
        Prepare bidder worksheet for this tender</button></div>
      </article>
@@ -175,7 +179,7 @@ export default function TenderDeskPage(){
   <section aria-label="Official tender source monitor" className="space-y-3 rounded-xl border border-slate-600 bg-slate-900 p-4">
    <h2 className="text-xl font-semibold">Luqi Tender Watch · bounded evidence check</h2>
    <p className="text-sm text-slate-300">Checks reviewed original government tender pages for published reference and closing-date text only. This free, read-only automation does not collect a bidder’s details, confirm eligibility, file applications or guarantee that any tender remains open.</p>
-   <button type="button" onClick={()=>{void checkTenderSources()}} disabled={checkingSources}
+   <button type="button" onClick={()=>{void checkTenderSources()}} data-telemetry-action="tender_sources_check" disabled={checkingSources}
     className="rounded-lg border border-cyan-400 px-4 py-3 font-medium disabled:opacity-50">
     {checkingSources?'Checking publisher pages…':'Check tender notice sources'}
    </button>
