@@ -245,7 +245,7 @@ it('does not reprepare an expired bid after an observed device-clock rollback',a
  deviceClock.mockReturnValue(observed+1000);
  await new Promise(resolve=>setTimeout(resolve,1200)); // Recheck after rollback tick.
  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
- expect(screen.getByRole('status').textContent).toMatch(/Future closing time with explicit timezone/);
+ expect(screen.getByText(/Complete: Future closing time with explicit timezone/)).toBeTruthy();
  expect(within(review).getByRole('alert').textContent).toMatch(/recorded bid closing time has passed/);
  expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(true);
  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(2);
