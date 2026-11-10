@@ -82,3 +82,29 @@ it('fails closed when source review expires but leaves official source and legal
   expect(screen.getByRole('heading', { name: 'Original sources' })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Open UNHCR legal-assistance directory' })).toBeTruthy();
 });
+
+it('shows a source-specific 10 Nov test-only alert while keeping older guide summaries expired', () => {
+  vi.setSystemTime(new Date('2026-11-10T13:00:00+02:00'));
+  show();
+  expect(screen.getByRole('alert').textContent).toContain('Source review expired');
+  expect(screen.queryByRole('heading', { name: /Find the current official application route/ })).toBeNull();
+  const heading = screen.getByRole('heading', { name: /Digital asylum update/ });
+  expect(heading).toBeTruthy();
+  expect(screen.getByText(/initial group of test cases only/)).toBeTruthy();
+  expect(screen.getByText(/not a formal application or/)).toBeTruthy();
+  const original = screen.getByRole('link', { name: 'Read the 10 November Home Affairs announcement' });
+  expect(original.getAttribute('href')).toBe('https://www.gov.za/news/media-statements/home-affairs-launches-first-phase-digital-asylum-system-cut-delays-clear');
+  expect(original.getAttribute('rel')).toContain('noopener');
+  expect(original.getAttribute('rel')).toContain('noreferrer');
+  expect(requests).not.toHaveBeenCalled();
+});
+
+it('expires only the new bulletin without renewing the full guide or inventing public intake', () => {
+  vi.setSystemTime(new Date('2026-11-13T00:00:00+02:00'));
+  show();
+  expect(screen.getByRole('alert').textContent).toContain('Source review expired');
+  expect(screen.getByText(/Public registration and later rollout steps are/)).toBeTruthy();
+  expect(screen.queryByText(/initial group of test cases only/)).toBeNull();
+  expect(screen.getByRole('link', { name: 'Read the 10 November Home Affairs announcement' })).toBeTruthy();
+  expect(requests).not.toHaveBeenCalled();
+});

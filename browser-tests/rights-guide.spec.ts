@@ -53,3 +53,30 @@ test('each visible procedural claim links to an original source, never to a fake
   }
   await expect(page.getByRole('button', { name: /submit claim|pay|book appointment/i })).toHaveCount(0);
 });
+
+test('10 Nov source-specific asylum test notice is keyboard-accessible and truthful on 320px mobile', async ({ page, baseURL }) => {
+  // Freeze passage-specific source status: this regression must remain deterministic after expiry.
+  await page.clock.install({ time: new Date('2026-11-10T13:00:00+02:00') });
+  await page.setViewportSize({ width: 320, height: 740 });
+  const unexpected: string[] = [];
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== new URL(baseURL!).origin) return route.abort();
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/v1/') || route.request().method() !== 'GET') {
+      unexpected.push(url.pathname);
+      return route.abort();
+    }
+    return route.continue();
+  });
+  await page.goto('/#/rights-guide');
+  await expect(page.getByRole('alert')).toContainText('Source review expired');
+  await expect(page.getByRole('heading', { name: /Digital asylum update/ })).toBeVisible();
+  await expect(page.getByText(/initial group of test cases only/)).toBeVisible();
+  const source = page.getByRole('link', { name: 'Read the 10 November Home Affairs announcement' });
+  await source.focus();
+  await expect(source).toBeFocused();
+  expect(await source.getAttribute('href')).toBe('https://www.gov.za/news/media-statements/home-affairs-launches-first-phase-digital-asylum-system-cut-delays-clear');
+  await expect(page.getByRole('button', { name: /submit|register asylum|upload biometrics/i })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+  expect(unexpected).toEqual([]);
+});

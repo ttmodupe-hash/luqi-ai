@@ -5,10 +5,14 @@
  */
 export const RIGHTS_REVIEWED_ON = '2026-10-26';
 export const RIGHTS_RECHECK_AFTER = '2026-11-02';
+// Independent, passage-specific bulletin. Does NOT renew the expired full legal guide.
+export const DIGITAL_ASYLUM_REVIEWED_ON = '2026-11-10';
+export const DIGITAL_ASYLUM_RECHECK_AFTER = '2026-11-12';
 
 export type RightsSourceId =
   | 'unhcr-asylum' | 'government-service' | 'court-ruling' | 'court-summary'
-  | 'government-withdrawal' | 'government-transition' | 'unhcr-rights' | 'unhcr-legal-aid';
+  | 'government-withdrawal' | 'government-transition' | 'government-digital-asylum-2026'
+  | 'unhcr-rights' | 'unhcr-legal-aid';
 
 export interface RightsSource {
   id: RightsSourceId;
@@ -62,6 +66,13 @@ export const RIGHTS_SOURCES: readonly RightsSource[] = [
     reviewedOn: RIGHTS_REVIEWED_ON,
   },
   {
+    id: 'government-digital-asylum-2026',
+    title: '10 November 2026: Digital Asylum System first phase — initial test cases only',
+    url: 'https://www.gov.za/news/media-statements/home-affairs-launches-first-phase-digital-asylum-system-cut-delays-clear',
+    publisher: 'South African Government / Department of Home Affairs',
+    reviewedOn: DIGITAL_ASYLUM_REVIEWED_ON,
+  },
+  {
     id: 'unhcr-rights',
     title: 'Rights and legal protection, including detention',
     url: 'https://help.unhcr.org/southafrica/rights-legal-protection/',
@@ -99,8 +110,8 @@ export const RIGHTS_INFORMATION: readonly RightsInformation[] = [
     id: 'begin',
     topic: 'starting',
     title: 'Find the current official application route',
-    explanation: 'UNHCR’s general guide describes Refugee Reception Office applications. On 9 October 2026 Home Affairs withdrew an earlier operational directive. On 11 October government announced a proposed phased intention-registration and appointment system expected by 10 November 2026. Neither announcement establishes that the new platform is operating. Check current official instructions or seek recognised legal assistance before travelling or making arrangements.',
-    sources: ['unhcr-asylum', 'government-withdrawal', 'government-transition'],
+    explanation: 'UNHCR’s general guide describes Refugee Reception Office applications. On 9 October 2026 Home Affairs withdrew an earlier operational directive. On 11 October government proposed phased intention registration. On 10 November 2026 Home Affairs announced that the first digital phase was being tested with a limited group, with public intake planned after a later software release; public registration was not confirmed open on that date. Registration of an intention is not a formal asylum application and does not itself grant any immigration status. Check newer official instructions or seek qualified legal assistance; do not presume a portal receipt offers blanket protection against enforcement.',
+    sources: ['unhcr-asylum', 'government-withdrawal', 'government-transition', 'government-digital-asylum-2026'],
   },
   {
     id: 'court',
@@ -167,6 +178,13 @@ export function legalInformationIsCurrent(now: Date = new Date()): boolean {
   const time = now.getTime();
   return Number.isFinite(time) && time >= Date.parse('2026-10-26T00:00:00+02:00')
     && time <= Date.parse('2026-11-02T23:59:59+02:00');
+}
+
+// Fail closed after 12 November: planned weekend release can change public intake.
+export function digitalAsylumNoticeIsCurrent(now: Date = new Date()): boolean {
+  const time = now.getTime();
+  return Number.isFinite(time) && time >= Date.parse('2026-11-10T00:00:00+02:00')
+    && time <= Date.parse('2026-11-12T23:59:59+02:00');
 }
 
 export function rightsLanguageHasSourceLinkedText(code: string): boolean {

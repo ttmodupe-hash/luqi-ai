@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   RIGHTS_INFORMATION, RIGHTS_LANGUAGES, RIGHTS_RECHECK_AFTER, RIGHTS_REVIEWED_ON,
-  RIGHTS_SOURCES, RIGHTS_TOPICS, legalInformationIsCurrent, rightsLanguageHasSourceLinkedText,
+  RIGHTS_SOURCES, RIGHTS_TOPICS, DIGITAL_ASYLUM_REVIEWED_ON, DIGITAL_ASYLUM_RECHECK_AFTER,
+  digitalAsylumNoticeIsCurrent, legalInformationIsCurrent, rightsLanguageHasSourceLinkedText,
   rightsSourcesFor, type RightsTopic,
 } from '../lib/rights-source-guide';
 
@@ -18,6 +19,9 @@ export default function RightsGuidePage() {
   const languageLabel = RIGHTS_LANGUAGES.find(item => item.code === language)?.name ?? 'Selected language';
   const october9 = RIGHTS_SOURCES.find(source => source.id === 'government-withdrawal');
   const october11 = RIGHTS_SOURCES.find(source => source.id === 'government-transition');
+  const digitalAsylumSource = RIGHTS_SOURCES.find(source => source.id === 'government-digital-asylum-2026');
+  const digitalBulletinFresh = digitalAsylumNoticeIsCurrent();
+  const digitalBulletinPublished = Date.now() >= Date.parse('2026-11-10T00:00:00+02:00');
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 text-slate-100" aria-labelledby="rights-guide-title">
@@ -63,7 +67,7 @@ export default function RightsGuidePage() {
 
       <section className="space-y-3" aria-labelledby="source-date-title">
         <h2 id="source-date-title" className="text-lg font-semibold">Source review and changes</h2>
-        <p className="text-sm text-slate-200">Last manual source check: <strong>{RIGHTS_REVIEWED_ON}</strong>.
+        <p className="text-sm text-slate-200">Last full-guide source check: <strong>{RIGHTS_REVIEWED_ON}</strong>.
           This is not a live government feed or a qualified lawyer's sign-off.</p>
         {!current ? (
           <p role="alert" className="rounded-lg border border-rose-400 bg-rose-950/40 p-4 text-sm">
@@ -84,6 +88,35 @@ export default function RightsGuidePage() {
           </p>
         )}
       </section>
+
+      {digitalBulletinPublished && digitalAsylumSource && (
+        <section className="space-y-2 rounded-xl border border-cyan-500/60 bg-slate-900 p-4" aria-labelledby="digital-asylum-update">
+          <h2 id="digital-asylum-update" className="text-lg font-semibold">Digital asylum update · 10 November 2026</h2>
+          {digitalBulletinFresh ? (
+            <p role="status" className="text-sm leading-relaxed">
+              Home Affairs says its Digital Asylum System is available for <strong>an initial group of test cases only</strong>.
+              Public intake was planned after a later weekend software release; LUQI has not verified that registration
+              is open to everyone. The first phase records an intention to apply, <strong>not a formal application or
+              immigration/refugee status</strong>. A receipt is not blanket protection against immigration enforcement.
+              Do not upload biometrics, identity details or case documents to LUQI. Home Affairs says assistance may be
+              available through Refugee Reception Offices for people without internet access.
+              This separately checked bulletin does not renew the expired full guide.
+            </p>
+          ) : (
+            <p role="status" className="text-sm leading-relaxed">
+              The 10 November first-phase announcement is now past its separate {DIGITAL_ASYLUM_RECHECK_AFTER}
+              review deadline. Public registration and later rollout steps are <strong>unverified here</strong>.
+              Do not assume the service is open or that registration grants status. Check newer official notices
+              or seek qualified legal assistance.
+            </p>
+          )}
+          <p className="text-xs text-slate-300">Original announcement checked {DIGITAL_ASYLUM_REVIEWED_ON}; public-service availability was not tested.</p>
+          <a href={digitalAsylumSource.url} target="_blank" rel="noopener noreferrer"
+            className="inline-block break-words text-cyan-300 underline underline-offset-2">
+            Read the 10 November Home Affairs announcement
+          </a>
+        </section>
+      )}
 
       <section className="space-y-4" aria-labelledby="rights-topics">
         <h2 id="rights-topics" className="text-xl font-semibold">Choose a topic</h2>
