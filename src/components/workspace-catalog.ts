@@ -1,5 +1,10 @@
 export const workspaceTools = [
   {
+    id: "universal-academy", title: "Universal Academy", category: "CCNA Security+ AWS Python Matric Solar K53 learning",
+    description: "Six expandable learning tracks, original worked examples, local practical labs, custom course plans and a reflection notebook. Not complete accredited courses or a full Python/cloud runtime.",
+    status: "Free local starter learning · optional external video", ready: true, path: "/academy", icon: "academy",
+  },
+  {
     id: "launch-control", title: "Launch Control", category: "Tool 024: evidence and release operations",
     description: "Run current Luqi release and health checks, review dependency workflows, restore portable checkpoints and prepare SPF, DKIM and DMARC records locally. External DNS, deployments and payment integrations require separate connections.",
     status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",

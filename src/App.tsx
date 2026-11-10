@@ -6,11 +6,13 @@ import { CustomerSessionProvider } from "./providers/customer-session";
 import { ChatWorkspaceProvider } from "./providers/chat-workspace";
 import { SovereignRegionProvider } from "./providers/sovereign-region";
 const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
-import { Toaster } from "@/components/ui/toaster";
+// The admin-only toast renderer does not belong in the public startup graph.
+const AdminToaster = lazy(() => import("@/components/ui/toaster").then(module => ({ default: module.Toaster })));
+
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
 // Pages
-const Home = lazy(() => import("./pages/Home"));
+import Home from "./pages/Home";
 const DevSecNetStudioPage = lazy(() => import("./features/devsecnet/DevSecNetStudioPage"));
 const LaunchControlPage = lazy(() => import("./features/launch/LaunchControlPage"));
 const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
@@ -19,17 +21,17 @@ const StartPage = lazy(() => import("./pages/StartPage"));
 const PossibilityEnginePage = lazy(() => import("./pages/PossibilityEnginePage"));
 const CapabilityJourneyPage = lazy(() => import("./pages/CapabilityJourneyPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
-import NotFoundPage from "./pages/NotFoundPage";
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
-import CustomerEntryPage from "./pages/CustomerEntryPage";
+// One Luqi account: download the login/join page only when a user opens it.
+const CustomerEntryPage = lazy(() => import("./pages/CustomerEntryPage"));
 import OmegaTasksPage from './pages/OmegaTasksPage';
 
-// Load optional tools only when their route is rendered. Keep account, notes,
-// the release-observed core pages available in the initial bundle. Informational
-// help, privacy, and pricing routes load only when visited.
+// Defer optional routes while preserving core companion/notes and Omega release
+// markers in the entry. Login/join use the same account provider when opened.
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
 const LabSimulatorPage = lazyQueryPage(() => import("./pages/LabSimulatorPage"));
@@ -62,6 +64,7 @@ const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePa
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
+const UniversalAcademyPage = lazy(() => import("./pages/UniversalAcademyPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
 const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
@@ -79,8 +82,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   if (isAdmin)
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
-        <Toaster />
-        <RouteLoadBoundary><AdminSovereignPortal /></RouteLoadBoundary>
+        <RouteLoadBoundary>
+          <AdminToaster />
+          <AdminSovereignPortal />
+        </RouteLoadBoundary>
       </div>
     );
   return <CustomerSessionProvider><ChatWorkspaceProvider><SovereignRegionProvider><WorkspaceLayout><RouteLoadBoundary>{children}</RouteLoadBoundary></WorkspaceLayout></SovereignRegionProvider></ChatWorkspaceProvider></CustomerSessionProvider>;
@@ -183,7 +188,9 @@ export default function App() {
         <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
+        <RouterRoute path="/academy" element={<UniversalAcademyPage />} />
         <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
+        <RouterRoute path="/cert-academy/legacy" element={<CertMasterPage />} />
         <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
         <RouterRoute path="/ccna" element={<CertMasterPage />} />
         <RouterRoute path="/ccnp" element={<CertMasterPage />} />

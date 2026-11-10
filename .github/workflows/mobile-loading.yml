@@ -22,12 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test graph accounting before dependency installation
-        run: node --test tests/mobile-bundle.test.mjs
+      - name: Test graph accounting and Academy source parity before dependency installation
+        run: node --test tests/mobile-bundle.test.mjs tests/universal-academy-parity.test.mjs
       - name: Install exact application dependencies without lifecycle scripts
         run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
-      - name: Verify safe loading and recovery with synthetic components
-        run: npx --no-install vitest run tests/route-load-boundary.test.tsx
+      - name: Verify safe loading and Academy interactions with synthetic components
+        run: npx --no-install vitest run tests/route-load-boundary.test.tsx src/features/academy/academy.test.ts src/features/academy/AcademyMathLab.test.tsx src/pages/UniversalAcademyPage.test.tsx
       - name: Strictly check both error-boundary implementations
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/RouteLoadBoundary.tsx app/src/components/RouteLoadBoundary.tsx
       - name: Verify every existing route and iframe target is preserved
@@ -54,11 +54,13 @@ jobs:
             // entry, consented visual tutor and lazy Spatial Vision Lab are reviewed additions; every older
             // route and iframe stays required. Tool 022 adds /devsecnet and /tool-022;
             // reviewed Tool 024 adds only /launch-control and /tool-024.
-            // /possibility and /journey are reviewed provider-free goal planning and device-local progress routes.
+            // Preserve reviewed /possibility and /journey goals and local-progress routes.
+            // Academy adds /academy and /cert-academy/legacy, keeping original
+            // /cert-academy and /exam-prep interactive routes intact.
             const routes = matches(after, routePattern);
             const approved = path.startsWith('app/')
-              ? ['/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/consumer-rights', '/devsecnet', '/download', '/drive', '/driver-rights', '/install', '/journey', '/launch-control', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/possibility', '/quantum-lab', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/tool-022', '/tool-024', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
-              : ['/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/devsecnet', '/download', '/drive', '/driver-rights', '/install', '/journey', '/launch-control', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/possibility', '/quantum-lab', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/tool-022', '/tool-024', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
+              ? ['/academy', '/admin', '/admin/knowledge-grading', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/consumer-rights', '/devsecnet', '/download', '/drive', '/driver-rights', '/install', '/journey', '/launch-control', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/possibility', '/quantum-lab', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/tool-022', '/tool-024', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor']
+              : ['/academy', '/ask', '/business-connect', '/business-connect/preview', '/business-connect/review', '/business-desk', '/businesses', '/businesses/:id', '/cert-academy/legacy', '/chat', '/chat/people', '/circles', '/comparative-evidence', '/devsecnet', '/download', '/drive', '/driver-rights', '/install', '/journey', '/launch-control', '/local-pulse', '/login', '/luqi-drive', '/municipal-services', '/municipalities', '/near-me', '/news', '/opportunities', '/p2p', '/payments', '/possibility', '/quantum-lab', '/rights-guide', '/sassa', '/social-support', '/space-science', '/spatial-vision', '/study-desk', '/tenders', '/tool-022', '/tool-024', '/township-business', '/township-economy', '/try', '/uif', '/visa', '/visa-entry', '/visual-tutor'];
             const additions = routes.filter(route => approved.includes(route));
             assert.deepEqual(additions, approved, 'Missing or duplicated approved routes: ' + path);
             assert.deepEqual(routes.filter(route => !approved.includes(route)),
@@ -79,6 +81,35 @@ jobs:
           cp "$RUNNER_TEMP/luqi-candidate-App.tsx" src/App.tsx
           node node_modules/vite/bin/vite.js build --manifest --outDir "$RUNNER_TEMP/luqi-mobile-after"
           node scripts/verify-mobile-bundle.mjs "$RUNNER_TEMP/luqi-mobile-before" "$RUNNER_TEMP/luqi-mobile-after" | tee mobile-bundle-report.json
+      - name: Exercise the built Academy in desktop and mobile browsers without providers
+        shell: bash
+        env:
+          LUQI_BROWSER_BASE_URL: http://127.0.0.1:4173
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$browser" ]; then
+            export LUQI_CHROMIUM_PATH="$browser"
+          else
+            npx --no-install playwright install --with-deps chromium --only-shell
+          fi
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --outDir "$RUNNER_TEMP/luqi-mobile-after" > "$RUNNER_TEMP/academy-preview.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then cat "$RUNNER_TEMP/academy-preview.log"; exit 1; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4173/ > /dev/null
+          npx --no-install playwright test browser-tests/universal-academy.spec.ts --workers=1
+      - name: Preserve synthetic Academy browser evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-academy-browser-evidence
+          path: test-results/
+          if-no-files-found: ignore
       - name: Preserve measured payload evidence only
         uses: actions/upload-artifact@v4
         with:

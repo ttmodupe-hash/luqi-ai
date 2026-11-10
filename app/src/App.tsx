@@ -8,7 +8,7 @@ import { SovereignRegionProvider } from "./providers/sovereign-region";
 const ServiceStatusPage = lazy(() => import("./pages/ServiceStatusPage"));
 import { Routes, Route as RouterRoute, useLocation, Navigate } from "react-router";
 
-const Home = lazy(() => import("./pages/Home"));
+import Home from "./pages/Home";
 const DevSecNetStudioPage = lazy(() => import("./features/devsecnet/DevSecNetStudioPage"));
 const LaunchControlPage = lazy(() => import("./features/launch/LaunchControlPage"));
 const QuantumLabPage = lazy(() => import("./features/quantum/QuantumLabPage"));
@@ -17,16 +17,17 @@ const StartPage = lazy(() => import("./pages/StartPage"));
 const PossibilityEnginePage = lazy(() => import("./pages/PossibilityEnginePage"));
 const CapabilityJourneyPage = lazy(() => import("./pages/CapabilityJourneyPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
-import NotFoundPage from "./pages/NotFoundPage";
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
-import CustomerEntryPage from "./pages/CustomerEntryPage";
+// One Luqi account: download the login/join page only when a user opens it.
+const CustomerEntryPage = lazy(() => import("./pages/CustomerEntryPage"));
 import OmegaTasksPage from './pages/OmegaTasksPage';
 import ConsumerRightsAssistant from "./components/ConsumerRightsAssistant";
 
-// Keep core account/notes/help pages ready, and defer optional tool downloads.
+// Preserve core companion/notes and Omega markers; load dedicated login/join on demand.
 const SovereignP2PMessenger = lazy(() => import("./components/SovereignP2PMessenger"));
 const AdminSovereignPortal = lazy(() => import("./components/AdminSovereignPortal"));
 const InstallAppPage = lazy(() => import("./pages/InstallAppPage"));
@@ -60,6 +61,7 @@ const ComparativeEvidencePage = lazy(() => import("./pages/ComparativeEvidencePa
 const ArchiveVaultPage = lazy(() => import("./pages/ArchiveVaultPage"));
 const AfricanOpportunityRadarPage = lazy(() => import("./pages/AfricanOpportunityRadarPage"));
 const CertMasterPage = lazy(() => import("./pages/CertMasterPage"));
+const UniversalAcademyPage = lazy(() => import("./pages/UniversalAcademyPage"));
 const TelemetryDashboardPage = lazy(() => import("./pages/TelemetryDashboardPage"));
 const ExperientialEducationPage = lazyQueryPage(() => import("./pages/ExperientialEducationPage"));
 const PendulumLabPage = lazy(() => import("./pages/PendulumLabPage"));
@@ -160,7 +162,9 @@ export default function App() {
         <RouterRoute path="/african-radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/radar" element={<AfricanOpportunityRadarPage />} />
         <RouterRoute path="/sensing" element={<AfricanOpportunityRadarPage />} />
+        <RouterRoute path="/academy" element={<UniversalAcademyPage />} />
         <RouterRoute path="/cert-academy" element={<CertMasterPage />} />
+        <RouterRoute path="/cert-academy/legacy" element={<CertMasterPage />} />
         <RouterRoute path="/exam-prep" element={<CertMasterPage />} />
         <RouterRoute path="/ccna" element={<CertMasterPage />} />
         <RouterRoute path="/ccnp" element={<CertMasterPage />} />
