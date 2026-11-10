@@ -19,6 +19,7 @@ describe('Possibility Engine release parity', () => {
 
   it('publishes the route, navigation and workspace catalog in both frontends', () => {
     for (const root of ['src', 'app/src']) {
+      expect(readFileSync(root + '/App.tsx', 'utf8')).toMatch(/const Home = lazy\(\(\) => import\("\.\/pages\/Home"\)\)/);
       expect(readFileSync(root + '/App.tsx', 'utf8')).toMatch(/path="\/possibility"/);
       expect(readFileSync(root + '/App.tsx', 'utf8')).toMatch(/path="\/journey"/);
       expect(readFileSync(root + '/components/WorkspaceLayout.tsx', 'utf8')).toMatch(/\["\/journey", "My journey"\]/);
