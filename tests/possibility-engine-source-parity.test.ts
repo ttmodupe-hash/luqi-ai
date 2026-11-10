@@ -21,10 +21,10 @@ describe('Possibility Engine release parity', () => {
     for (const root of ['src', 'app/src']) {
       expect(readFileSync(root + '/App.tsx', 'utf8')).toMatch(/path="\/possibility"/);
       expect(readFileSync(root + '/App.tsx', 'utf8')).toMatch(/path="\/journey"/);
-      expect(readFileSync(root + '/components/WorkspaceLayout.tsx', 'utf8')).toMatch(/\["\/possibility", "Possibility"\]/);
       expect(readFileSync(root + '/components/WorkspaceLayout.tsx', 'utf8')).toMatch(/\["\/journey", "My journey"\]/);
-      expect(readFileSync(root + '/components/workspace-catalog.ts', 'utf8')).toMatch(/id: "possibility-engine"/);
-      expect(readFileSync(root + '/components/workspace-catalog.ts', 'utf8')).toMatch(/id: "capability-journey"/);
+      expect(readFileSync(root + '/components/WorkspaceLayout.tsx', 'utf8')).not.toMatch(/\["\/possibility", "Possibility"\]/);
+      expect(readFileSync(root + '/components/workspace-catalog.ts', 'utf8')).not.toMatch(/id: "possibility-engine"/);
+      expect(readFileSync(root + '/components/workspace-catalog.ts', 'utf8')).not.toMatch(/id: "capability-journey"/);
       expect(readFileSync(root + '/pages/Home.tsx', 'utf8')).toMatch(/to="\/possibility">Build my path/);
     }
   });
