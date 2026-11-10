@@ -51,7 +51,7 @@ jobs:
       DATABASE_URL: "mysql://root:ci-ephemeral-only-password@127.0.0.1:3306/luqi_omega_ci"
       NODE_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Avoid the optional npm cache: storage egress failures stalled setup
       # for 10 minutes. npm ci installs from the committed lockfile below.
       - uses: actions/setup-node@v4

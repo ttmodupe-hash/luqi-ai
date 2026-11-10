@@ -81,7 +81,7 @@ jobs:
       LUQI_OPENAI_MONTHLY_USD: "40"
       NODE_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Avoid the optional npm cache: storage egress failures stalled setup
       # for 10 minutes. npm ci installs from the committed lockfile below.
       - uses: actions/setup-node@v4
@@ -118,7 +118,7 @@ jobs:
       LUQI_AI_PROVIDER_ENABLED: "false"
       LUQI_AI_BILLING_APPROVED: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Avoid the optional npm cache: storage egress failures stalled setup
       # for 10 minutes. npm ci installs from the committed lockfile below.
       - uses: actions/setup-node@v4
@@ -154,7 +154,7 @@ jobs:
       LUQI_AI_PROVIDER_ENABLED: "false"
       LUQI_AI_BILLING_APPROVED: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Avoid the optional npm cache: storage egress failures stalled setup
       # for 10 minutes. npm ci installs from the committed lockfile below.
       - uses: actions/setup-node@v4
