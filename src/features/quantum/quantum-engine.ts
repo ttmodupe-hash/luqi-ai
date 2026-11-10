@@ -129,25 +129,27 @@ export function exactIsingBaseline(model: IsingModel) {
   return { minimum, states: energies.flatMap((energy, index) => Math.abs(energy - minimum) < 1e-10 ? [index] : []), statesEvaluated: energies.length };
 }
 /** Compute from an already validated, fixed Ising spectrum; only a classical simulation. */
-function qaoaLayerFromEnergies(energies: number[], qubits: number, gamma: number, beta: number) {
-  let state = uniformState(qubits).map((z, i) => phase(z, -gamma * energies[i]));
+function qaoaLayerFromEnergies(energies: number[], initial: Statevector, qubits: number, gamma: number, beta: number) {
+  // No mutation of initial: the first map makes a fresh state for each angle pair.
+  let state = initial.map((z, i) => phase(z, -gamma * energies[i]));
   for (let target = 0; target < qubits; target++) state = applyGate(state, { kind: 'rx', target, angle: 2 * beta });
   const p = probabilities(state);
   return { state, expectedEnergy: p.reduce((s, x, i) => s + x * energies[i], 0) };
 }
 export function qaoaLayer(model: IsingModel, gamma: number, beta: number) {
   finite(gamma); finite(beta);
-  return qaoaLayerFromEnergies(isingEnergies(model), model.fields.length, gamma, beta);
+  const energies = isingEnergies(model), qubits = model.fields.length;
+  return qaoaLayerFromEnergies(energies, uniformState(qubits), qubits, gamma, beta);
 }
 export function searchQaoaGrid(model: IsingModel, steps = 15) {
   if (!Number.isInteger(steps) || steps < 3 || steps > 25) throw new Error('Use 3–25 grid steps.');
-  // The Ising Hamiltonian is fixed across this finite grid: evaluate it once,
-  // rather than allocating and validating an identical spectrum per candidate.
-  const energies = isingEnergies(model), qubits = model.fields.length;
-  let best = { gamma: 0, beta: 0, ...qaoaLayerFromEnergies(energies, qubits, 0, 0) };
+  // The Ising Hamiltonian and uniform initial state are fixed for this bounded
+  // grid; compute both once instead of allocating them for every angle pair.
+  const energies = isingEnergies(model), qubits = model.fields.length, initial = uniformState(qubits);
+  let best = { gamma: 0, beta: 0, ...qaoaLayerFromEnergies(energies, initial, qubits, 0, 0) };
   for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
     const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
-    const candidate = qaoaLayerFromEnergies(energies, qubits, gamma, beta);
+    const candidate = qaoaLayerFromEnergies(energies, initial, qubits, gamma, beta);
     if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
   }
   return { ...best, parameterPairs: steps ** 2 };
