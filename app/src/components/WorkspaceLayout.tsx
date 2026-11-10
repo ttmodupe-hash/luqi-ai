@@ -22,7 +22,7 @@ captureLuqiInstallPrompt();
 
 const navigation = [
   ["/chat", "Chat"],
-  ["/possibility", "Possibility"],
+  ["/journey", "My journey"],
   ["/drive", "Luqi-Drive GPS"],
   ["/near-me", "Near me"],
   ["/businesses", "Local businesses"],
