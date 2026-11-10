@@ -230,9 +230,18 @@ export function surfaceCodeEstimate(distance: number, physical: number, threshol
   if (!Number.isInteger(distance) || distance < 3 || distance > 13 || distance % 2 !== 1 ||
       !Number.isFinite(physical) || physical <= 0 || physical >= 1 ||
       !Number.isFinite(threshold) || threshold <= 0 || threshold >= 1) throw new Error('Invalid surface-code inputs.');
+  const thresholdRatio = threshold / physical, belowThreshold = physical < threshold;
+  // Inputs can be finite while the quotient overflows to Infinity. Never
+  // present an unrepresentable number as a scientific threshold metric.
+  if (!Number.isFinite(thresholdRatio) || thresholdRatio === 0)
+    throw new Error('Surface-code threshold ratio exceeds floating-point precision.');
+  // Illustrative scaling law, not a decoder simulation or hardware prediction.
+  const logicalErrorEstimate = belowThreshold
+    ? 0.1 * (physical / threshold) ** ((distance + 1) / 2) : null;
+  // An underflowed zero would falsely suggest a perfectly error-free system.
+  if (logicalErrorEstimate === 0)
+    throw new Error('Surface-code logical error estimate underflows floating-point precision.');
   return { distance, dataQubits: distance ** 2, syndromeQubits: distance ** 2 - 1,
-    patchQubits: 2 * distance ** 2 - 1, thresholdRatio: threshold / physical,
-    belowThreshold: physical < threshold,
-    // Illustrative scaling law, not a decoder simulation or hardware prediction.
-    logicalErrorEstimate: physical < threshold ? 0.1 * (physical / threshold) ** ((distance + 1) / 2) : null };
+    patchQubits: 2 * distance ** 2 - 1, thresholdRatio, belowThreshold,
+    logicalErrorEstimate };
 }

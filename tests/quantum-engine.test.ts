@@ -138,6 +138,22 @@ describe('surface-code assumptions', () => {
     expect(result.thresholdRatio).toBe(10);
     expect(result.logicalErrorEstimate).toBeCloseTo(0.1 * 0.1 ** ((d + 1) / 2), 14);
   });
+  it('refuses unrepresentable ratios and underflowed zero logical-error claims', () => {
+    // Independent scaling law for distance 3: 0.1 * (0.001 / 0.01)^2 = 0.001.
+    const ordinary = surfaceCodeEstimate(3, 0.001);
+    expect(ordinary.thresholdRatio).toBe(10);
+    expect(ordinary.logicalErrorEstimate).toBeCloseTo(0.001, 14);
+    // Extremely low but representable predictions remain valid.
+    const tiny = surfaceCodeEstimate(13, 1e-40);
+    expect(tiny.logicalErrorEstimate).toBeGreaterThan(0);
+    expect(Number.isFinite(tiny.thresholdRatio)).toBe(true);
+    // Both inputs are finite and positive, but threshold/physical overflows.
+    expect(() => surfaceCodeEstimate(3, Number.MIN_VALUE))
+      .toThrow('Surface-code threshold ratio exceeds floating-point precision.');
+    // The illustrative probability is positive analytically, not exactly 0.
+    expect(() => surfaceCodeEstimate(13, 1e-100))
+      .toThrow('Surface-code logical error estimate underflows floating-point precision.');
+  });
   it('does not predict suppression at/above an assumed threshold or accept invalid inputs', () => {
     expect(surfaceCodeEstimate(7, 0.01).logicalErrorEstimate).toBeNull();
     expect(surfaceCodeEstimate(7, 0.1).belowThreshold).toBe(false);
