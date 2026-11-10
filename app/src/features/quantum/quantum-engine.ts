@@ -128,19 +128,26 @@ export function exactIsingBaseline(model: IsingModel) {
   const energies = isingEnergies(model), minimum = Math.min(...energies);
   return { minimum, states: energies.flatMap((energy, index) => Math.abs(energy - minimum) < 1e-10 ? [index] : []), statesEvaluated: energies.length };
 }
-export function qaoaLayer(model: IsingModel, gamma: number, beta: number) {
-  finite(gamma); finite(beta); const energies = isingEnergies(model), n = model.fields.length;
-  let state = uniformState(n).map((z, i) => phase(z, -gamma * energies[i]));
-  for (let target = 0; target < n; target++) state = applyGate(state, { kind: 'rx', target, angle: 2 * beta });
+/** Compute from an already validated, fixed Ising spectrum; only a classical simulation. */
+function qaoaLayerFromEnergies(energies: number[], qubits: number, gamma: number, beta: number) {
+  let state = uniformState(qubits).map((z, i) => phase(z, -gamma * energies[i]));
+  for (let target = 0; target < qubits; target++) state = applyGate(state, { kind: 'rx', target, angle: 2 * beta });
   const p = probabilities(state);
   return { state, expectedEnergy: p.reduce((s, x, i) => s + x * energies[i], 0) };
 }
+export function qaoaLayer(model: IsingModel, gamma: number, beta: number) {
+  finite(gamma); finite(beta);
+  return qaoaLayerFromEnergies(isingEnergies(model), model.fields.length, gamma, beta);
+}
 export function searchQaoaGrid(model: IsingModel, steps = 15) {
   if (!Number.isInteger(steps) || steps < 3 || steps > 25) throw new Error('Use 3–25 grid steps.');
-  let best = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
+  // The Ising Hamiltonian is fixed across this finite grid: evaluate it once,
+  // rather than allocating and validating an identical spectrum per candidate.
+  const energies = isingEnergies(model), qubits = model.fields.length;
+  let best = { gamma: 0, beta: 0, ...qaoaLayerFromEnergies(energies, qubits, 0, 0) };
   for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
     const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
-    const candidate = qaoaLayer(model, gamma, beta);
+    const candidate = qaoaLayerFromEnergies(energies, qubits, gamma, beta);
     if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
   }
   return { ...best, parameterPairs: steps ** 2 };
