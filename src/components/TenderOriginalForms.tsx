@@ -264,8 +264,11 @@ export function TenderOriginalForms(){
       <p className="text-xs text-amber-200">Unsigned, partial original for manual completion. Review expires in 30 minutes or at the closing time. Every edit clears every approval. Prices and declarations have not been filled.</p>
       {reviewExpired&&<p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm text-amber-100">
         Review expired: {expiredByDeadline?'the recorded bid closing time has passed':'the 30-minute applicant review window has ended'}.
-        Earlier checkmarks no longer authorise this export. Confirm the issuer deadline, select Prepare exact original for review,
-        and approve the newly prepared packet before downloading. Nothing was submitted.
+        Earlier checkmarks no longer authorise this export.
+        {expiredByDeadline
+          ? ' Do not prepare or submit against this passed deadline. Check official issuer addenda for a formally extended closing time; only enter a new future deadline if the issuer confirms it, then prepare and approve a new packet.'
+          : ' Confirm the issuer deadline, select Prepare exact original for review, and approve the newly prepared packet before downloading.'}
+        Nothing was submitted.
       </p>}
       <dl className="space-y-1 text-sm">{SBD1_FIELDS.map(field=><div key={field.id} className="break-words"><dt className="font-semibold">{field.label}</dt><dd>{values[field.id]||'Left blank for applicant completion'}</dd></div>)}</dl>
       {prepared.packet.files.map(file=><p key={file.name} className="break-all text-xs">{file.role}: {file.name} · SHA-256 {file.sha256}</p>)}

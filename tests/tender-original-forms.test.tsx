@@ -165,6 +165,7 @@ it('announces expired 30-minute review and locks old approvals without submittin
  await waitFor(()=>expect(within(review).getByRole('alert').textContent)
    .toMatch(/30-minute applicant review window has ended/),{timeout:3000});
  expect(within(review).getByRole('alert').textContent).toMatch(/Nothing was submitted/);
+ expect(within(review).getByRole('alert').textContent).toMatch(/select Prepare exact original for review/);
  expect(exportButton.hasAttribute('disabled')).toBe(true);
  expect(within(review).getAllByRole('checkbox').every(box=>box.hasAttribute('disabled'))).toBe(true);
  await waitFor(()=>expect(within(review).getAllByRole('checkbox').every(box=>(box as HTMLInputElement).checked===false)).toBe(true));
@@ -199,6 +200,9 @@ it('announces recorded closing-time expiry before 30 minutes, revokes approvals 
  await waitFor(()=>expect(within(review).getAllByRole('checkbox').every(box=>
    (box as HTMLInputElement).checked===false&&box.hasAttribute('disabled'))).toBe(true));
  expect(within(review).getByRole('alert').textContent).toMatch(/Nothing was submitted/);
+ expect(within(review).getByRole('alert').textContent).toMatch(/Do not prepare or submit against this passed deadline/);
+ expect(within(review).getByRole('alert').textContent).toMatch(/only enter a new future deadline if the issuer confirms it/);
+ expect(within(review).getByRole('alert').textContent).not.toMatch(/select Prepare exact original for review/);
  deviceClock.mockReturnValue(observed+1000);
  await new Promise(resolve=>setTimeout(resolve,1200)); // One more timer tick after rollback.
  expect(within(review).getByRole('alert').textContent).toMatch(/recorded bid closing time has passed/);
