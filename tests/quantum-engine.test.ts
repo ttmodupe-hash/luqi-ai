@@ -134,6 +134,22 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     expect(stateMetrics(result.state).norm).toBeCloseTo(1, 12);
     expect(searchQaoaGrid(model, steps)).toEqual(result);
   });
+  it('matches the uncached public-layer reference across the maximum 25×25 angle grid', () => {
+    const model = { fields: [0.8, -1.1], edges: [{ i: 0, j: 1, weight: 0.17 }] };
+    const unchanged = structuredClone(model), steps = 25;
+    let best = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
+    for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
+      const gamma = 2 * Math.PI * g / (steps - 1);
+      const beta = Math.PI * b / (steps - 1);
+      const candidate = qaoaLayer(model, gamma, beta);
+      if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
+    }
+    const cached = searchQaoaGrid(model, steps);
+    expect(cached).toEqual({ ...best, parameterPairs: steps ** 2 });
+    expect(model).toEqual(unchanged);
+    expect(stateMetrics(cached.state).norm).toBeCloseTo(1, 12);
+    expect(searchQaoaGrid(model, steps)).toEqual(cached);
+  });
   it('applies a single computed RX rotation correctly to every pair in an eight-qubit state', () => {
     // Exercise the maximum simulator width with unequal complex amplitudes.
     let state = applyGate(zeroState(8), { kind: 'h', target: 1 });

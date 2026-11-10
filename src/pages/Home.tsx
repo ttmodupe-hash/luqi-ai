@@ -73,7 +73,8 @@ export default function Home() {
               <Link to="/comparative-evidence">African history</Link>
             </nav>
             <div className="luqi-hero-actions">
-              <Link className="luqi-primary" to="/try">Try Luqi free <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              <Link className="luqi-primary" to="/possibility">Build my path <ArrowUpRight size={17} aria-hidden="true" /></Link>
+              <Link className="luqi-secondary" to="/try">Try Luqi free <ArrowUpRight size={17} aria-hidden="true" /></Link>
               <Link className="luqi-secondary" to="/start">Get started</Link>
               <Link className="luqi-secondary" to="/join">Create account <ArrowUpRight size={17} aria-hidden="true" /></Link>
               <Link className="luqi-secondary" to="/chat">Already registered? Chat <ArrowUpRight size={17} aria-hidden="true" /></Link>

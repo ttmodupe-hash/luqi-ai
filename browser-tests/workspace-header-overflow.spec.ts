@@ -5,6 +5,9 @@ import { test, expect, type Page } from '@playwright/test';
 async function checkViewport(page: Page, width: number) {
   await page.setViewportSize({ width, height: 820 });
   await expect(page.getByRole('link', { name: 'Luqi workspace home' })).toBeVisible();
+  // The shell loads before the deferred homepage. Measure actual page content,
+  // retaining every viewport bound below rather than sampling its placeholder.
+  await expect(page.locator('.luqi-home')).toBeVisible();
   const dimensions = await page.evaluate(() => {
     const shell = document.querySelector('.luqi-shell')?.getBoundingClientRect();
     const header = document.querySelector('.luqi-header')?.getBoundingClientRect();

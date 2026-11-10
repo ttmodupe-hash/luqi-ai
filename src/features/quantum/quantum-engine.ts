@@ -137,13 +137,17 @@ export function exactIsingBaseline(model: IsingModel) {
   const energies = isingEnergies(model), minimum = Math.min(...energies);
   return { minimum, states: energies.flatMap((energy, index) => Math.abs(energy - minimum) < 1e-10 ? [index] : []), statesEvaluated: energies.length };
 }
-/** Compute from an already validated, fixed Ising spectrum; only a classical simulation. */
-function qaoaLayerFromEnergies(energies: number[], initial: Statevector, qubits: number, gamma: number, beta: number) {
-  // No mutation of initial: the first map makes a fresh state for each angle pair.
-  let state = initial.map((z, i) => phase(z, -gamma * energies[i]));
+/** Apply the bounded mixer to a prepared gamma phase; applyGate never mutates inputs. */
+function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, beta: number) {
+  let state = phased;
   for (let target = 0; target < qubits; target++) state = applyGate(state, { kind: 'rx', target, angle: 2 * beta });
   const p = probabilities(state);
   return { state, expectedEnergy: p.reduce((s, x, i) => s + x * energies[i], 0) };
+}
+/** Compute from a validated, fixed Ising spectrum; only a classical simulation. */
+function qaoaLayerFromEnergies(energies: number[], initial: Statevector, qubits: number, gamma: number, beta: number) {
+  const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
+  return qaoaLayerFromPhase(energies, phased, qubits, beta);
 }
 export function qaoaLayer(model: IsingModel, gamma: number, beta: number) {
   finite(gamma); finite(beta);
@@ -156,10 +160,16 @@ export function searchQaoaGrid(model: IsingModel, steps = 15) {
   // grid; compute both once instead of allocating them for every angle pair.
   const energies = isingEnergies(model), qubits = model.fields.length, initial = uniformState(qubits);
   let best = { gamma: 0, beta: 0, ...qaoaLayerFromEnergies(energies, initial, qubits, 0, 0) };
-  for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
-    const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
-    const candidate = qaoaLayerFromEnergies(energies, initial, qubits, gamma, beta);
-    if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
+  // Gamma changes only by row: prepare its phase once, then reuse immutably
+  // for all beta mixers. Peak state memory remains bounded to 1–8 qubits.
+  for (let g = 0; g < steps; g++) {
+    const gamma = 2 * Math.PI * g / (steps - 1);
+    const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
+    for (let b = 0; b < steps; b++) {
+      const beta = Math.PI * b / (steps - 1);
+      const candidate = qaoaLayerFromPhase(energies, phased, qubits, beta);
+      if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
+    }
   }
   return { ...best, parameterPairs: steps ** 2 };
 }
