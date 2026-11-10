@@ -64,3 +64,43 @@ test('frequency and source selection also work with the keyboard',async({page})=
  await expect(topic).toHaveValue('Radio astronomy');await expect(page.getByRole('article')).toHaveCount(3);
  expect(errors).toEqual([]);
 });
+
+
+test('SKAO deep dive is keyboard-accessible, grounded and remains within 320px',async({page,baseURL})=>{
+ await page.setViewportSize({width:320,height:840});
+ const requests:string[]=[];
+ page.on('request',request=>{
+  const url=new URL(request.url());
+  if((url.protocol==='http:'||url.protocol==='https:')&&url.origin!==new URL(baseURL!).origin)requests.push(url.origin);
+  if(request.method()==='POST')requests.push(url.pathname);
+ });
+ await page.goto('/#/space-science');
+ const details=page.locator('details.luqi-space-deep-dive');
+ await expect(details).toHaveCount(1);
+ const toggle=details.locator('summary');
+ await toggle.focus();await toggle.press('Enter');
+ await expect(details).toHaveAttribute('open','');
+ await expect(details.getByText(/maximum baseline of 150 km/)).toBeVisible();
+ await expect(details.getByText(/not a verified count of dishes installed or operating today/)).toBeVisible();
+ await details.getByRole('button',{name:'Explore wavelength in the calculator above'}).click();
+ await expect(page.getByRole('heading',{name:'Experiment with radio and distance'})).toBeFocused();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ await page.getByLabel('Topic',{exact:true}).selectOption('Space weather');
+ await expect(details).toHaveCount(0);
+ expect(requests).toEqual([]);
+});
+
+
+test('expired SKAO explanation fails closed at 320px and retains the original-source fallback',async({page,baseURL})=>{
+ await page.setViewportSize({width:320,height:840});
+ await page.clock.install({time:new Date('2026-12-01T00:00:01+02:00')});
+ const unwanted:string[]=[];
+ page.on('request',request=>{const u=new URL(request.url());if((u.protocol==='http:'||u.protocol==='https:')&&u.origin!==new URL(baseURL!).origin)unwanted.push(u.origin);if(request.method()==='POST')unwanted.push(u.pathname);});
+ await page.goto('/#/space-science');
+ await expect(page.getByText(/These source descriptions are due for review/)).toBeVisible();
+ await expect(page.locator('details.luqi-space-deep-dive')).toHaveCount(0);
+ await expect(page.getByText(/This detailed SKA-Mid explanation is paused/)).toBeVisible();
+ await expect(page.getByRole('link',{name:'Read SKA Observatory source (new tab)'})).toHaveAttribute('href','https://www.skao.int/en/explore/telescopes/ska-mid');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(unwanted).toEqual([]);
+});

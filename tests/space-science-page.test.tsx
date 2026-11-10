@@ -14,5 +14,27 @@ describe('Space Science interactions',()=>{
  it('checks an actual chosen answer and clears feedback when it changes',()=>{mount();const group=screen.getByRole('group',{name:/what happens to wavelength/});const check=within(group).getByRole('button',{name:'Check answer'});expect(check.hasAttribute('disabled')).toBe(true);fireEvent.click(within(group).getByLabelText('It halves'));fireEvent.click(check);expect(screen.getByText('1 of 3 practice answers correct.')).toBeTruthy();fireEvent.click(check);expect(screen.getByText('1 of 3 practice answers correct.')).toBeTruthy();fireEvent.click(within(group).getByLabelText('It doubles'));expect(screen.getByText('0 of 3 practice answers correct.')).toBeTruthy();fireEvent.click(check);expect(within(group).getByText(/Not quite/)).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Reset practice'}));expect(within(group).queryByText(/Not quite/)).toBeNull();});
  it('records export as a request, cleans its URL, and reports download failure',()=>{vi.useFakeTimers();const make=vi.fn(()=> 'blob:science-test'),revoke=vi.fn();vi.stubGlobal('URL',class extends URL { static createObjectURL=make; static revokeObjectURL=revoke; });vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});const app=mount();fireEvent.click(screen.getByRole('button',{name:'Download my study notes'}));expect(make).toHaveBeenCalledTimes(1);expect(screen.getByText(/download requested/)).toBeTruthy();app.unmount();expect(revoke).toHaveBeenCalledWith('blob:science-test');make.mockImplementation(()=>{throw new Error('blocked');});mount();fireEvent.click(screen.getByRole('button',{name:'Download my study notes'}));expect(screen.getByText(/could not start/)).toBeTruthy();});
  it('all external source links are deliberate new-tab links',()=>{mount();const links=screen.getAllByRole('link').filter(a=>a.getAttribute('href')?.startsWith('https:'));expect(links).toHaveLength(8);for(const link of links){expect(link.getAttribute('target')).toBe('_blank');expect(link.getAttribute('rel')).toBe('noopener noreferrer');}});
- it('shows review expiry and rechecks it while an old tab remains open',()=>{vi.useFakeTimers();vi.setSystemTime(new Date('2026-11-30T21:59:59Z'));mount();expect(screen.queryByText(/due for review/)).toBeNull();vi.setSystemTime(new Date('2026-11-30T22:00:01Z'));fireEvent(document,new Event('visibilitychange'));expect(screen.getByText(/due for review/)).toBeTruthy();});
+ it('shows review expiry and rechecks it while an old tab remains open',()=>{vi.useFakeTimers();vi.setSystemTime(new Date('2026-11-30T21:59:59Z'));mount();expect(screen.queryByText(/due for review/)).toBeNull();vi.setSystemTime(new Date('2026-11-30T22:00:01Z'));fireEvent(document,new Event('visibilitychange'));expect(screen.getByText(/due for review/)).toBeTruthy();expect(screen.queryByText('Learn how SKA-Mid combines radio dishes')).toBeNull();expect(screen.getByText(/This detailed SKA-Mid explanation is paused/)).toBeTruthy();expect(screen.getByRole('link',{name:'Read SKA Observatory source (new tab)'}).getAttribute('href')).toBe('https://www.skao.int/en/explore/telescopes/ska-mid');});
+ it('explains SKA-Mid in-page with traceable limits and a local follow-up',()=>{
+   const originalScroll = HTMLElement.prototype.scrollIntoView;
+   HTMLElement.prototype.scrollIntoView = vi.fn();
+   try {
+     const fetch = vi.fn(); vi.stubGlobal('fetch',fetch);
+     mount();
+     const trigger = screen.getByText('Learn how SKA-Mid combines radio dishes');
+     const details = trigger.closest('details');
+     expect(details).toBeTruthy();
+     expect(details?.textContent).toContain('maximum baseline of 150 km');
+     expect(details?.textContent).toContain('not a verified count of dishes installed or operating today');
+     expect(details?.textContent).toContain('10 November 2026');
+     details!.open = true;
+     fireEvent.click(within(details!).getByRole('button',{name:'Explore wavelength in the calculator above'}));
+     expect(document.activeElement?.id).toBe('space-experiments-title');
+     expect(fetch).not.toHaveBeenCalled();
+   } finally {
+     if (originalScroll) HTMLElement.prototype.scrollIntoView = originalScroll;
+     else delete (HTMLElement.prototype as {scrollIntoView?: unknown}).scrollIntoView;
+   }
+ });
+
 });
