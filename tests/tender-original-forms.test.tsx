@@ -153,3 +153,23 @@ it('clears earlier applicant data when the pinned Treasury replacement cannot be
  expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
 });
+
+it('focuses the first missing bid-context field and avoids filling until it is corrected',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic bidder'}});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ expect(document.activeElement).toBe(screen.getByLabelText('Tender reference'));
+ expect(screen.getByText(/Complete: Tender reference/).textContent).toContain('No document was filled.');
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ for(const [label,value]of [
+   ['Tender reference','SYNTH-002'],['Procuring authority','Synthetic authority'],
+   ['Exact official submission address','Synthetic test bid box'],
+   ['Applicant or authorised representative','Synthetic authorised person'],
+   ['Closing time with timezone','2090-11-30T11:00+02:00'],
+   ['Applicant-entered offer ZAR','2000.00'],
+ ])fireEvent.change(screen.getByLabelText(label),{target:{value}});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ expect(document.activeElement).toBe(screen.getByLabelText('Original form submission method'));
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
