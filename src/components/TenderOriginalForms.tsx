@@ -177,6 +177,13 @@ export function TenderOriginalForms(){
   const reviewExpired=!!prepared&&clock>=expiryAt;
   const expiredByDeadline=!!prepared&&Date.parse(prepared.packet.context.deadline)<=Date.parse(prepared.packet.preparedAt)+30*60*1000;
   const ready=canExportTenderPacket(prepared?.packet??null,revision,gates,new Date(clock));
+  useEffect(()=>{
+    // A review time-out permanently revokes its old approval checkmarks, even
+    // if the device clock subsequently moves backwards.
+    if(!reviewExpired||!ORIGINAL_FORM_GATES.some(g=>gates[g.id]))return;
+    setGates(emptyOriginalApprovals());
+    setHistory(previous=>previous.length>=1000?previous:appendTenderAudit(previous,revision,'revoke','all'));
+  },[reviewExpired,gates,revision]);
   return <section aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
     <p className="text-sm text-slate-200">Start with Treasury’s verified revised SBD 1 DOCX. Luqi fills seven supplier contact fields on the actual original. Required wording, tables, declarations, pricing and signature areas remain intact for your completion.</p>
