@@ -110,3 +110,37 @@ test('expired source review still blocks a preparation pack even with applicant 
  await expect(assistant.getByRole('button',{name:'Export human-approved preparation pack'})).toBeDisabled();
  expect(calls).toEqual([]);
 });
+
+test('GCIS USB search keeps original issuer links, keyboard navigation and a safe draft at 320px',async({page})=>{
+ await page.setViewportSize({width:320,height:760});
+ const writes:string[]=[];
+ page.on('request',r=>{if(!['GET','HEAD'].includes(r.method()))writes.push(r.method()+' '+r.url());});
+ await page.goto('/#/tenders');
+ const search=page.getByLabel('Search tender notices');
+ await search.focus();
+ await page.keyboard.type('USB');
+ const card=page.getByRole('article').filter({has:page.getByRole('heading',{name:/South African Sign Language interpreting/})});
+ await expect(card).toBeVisible();
+ await expect(page.getByRole('heading',{name:/Lead bond arranger/})).toHaveCount(0);
+ await expect(card.getByText(/No emailed bids/)).toBeVisible();
+ await expect(card.getByText(/Audio addendum contents NOT inspected/)).toBeVisible();
+ const pdf=card.getByRole('link',{name:'Original issuer specification (PDF)'});
+ const audio=card.getByRole('link',{name:'Issuer audio addendum (not reviewed by Luqi)'});
+ await expect(pdf).toHaveAttribute('href',/^https:\/\/www\.gcis\.gov\.za\/.+\.pdf$/);
+ await expect(audio).toHaveAttribute('href',/^https:\/\/www\.gcis\.gov\.za\/.+\.mp3$/);
+ await expect(pdf).toHaveAttribute('rel','noopener noreferrer');
+ await expect(audio).toHaveAttribute('rel','noopener noreferrer');
+ await pdf.focus();
+ await page.keyboard.press('Tab');
+ await expect(audio).toBeFocused();
+ await card.getByRole('button',{name:'Prepare bidder worksheet for this tender'}).click();
+ const assistant=page.getByRole('region',{name:'Luqi assisted tender preparation'});
+ await expect(assistant.getByRole('textbox',{name:'Official tender reference'})).toHaveValue('RFQ 012 2026/2027');
+ await assistant.getByRole('textbox',{name:'Bidder trading name'}).fill('Synthetic applicant - not a real bid');
+ await search.fill('fictional lunar printer');
+ await expect(page.getByText(/No reviewed notice matches/)).toBeVisible();
+ await expect(assistant.getByRole('textbox',{name:'Bidder trading name'})).toHaveValue('Synthetic applicant - not a real bid');
+ await expect(assistant.getByRole('button',{name:'Export human-approved preparation pack'})).toBeDisabled();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+});

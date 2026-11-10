@@ -34,6 +34,17 @@ describe('90% assistance with mandatory human bid control',()=>{
   expect(text).toContain('Final tender submission');
   expect(tenderDraftFileName(notice)).toMatch(/^luqi-tender-preparation-/);
  });
+ it('exports GCIS original, no-email rule and unverified audio alongside stale-source warning',()=>{
+  const gcis=CURATED_TENDER_NOTICES.find(n=>n.id==='gcis-sasl-012')!;
+  const content=buildTenderWorksheet(gcis,{...draft,tenderReference:'RFQ 012 2026/2027'},approved,new Date('2026-11-02T12:00:00+02:00'));
+  expect(content).toContain('Issuer original specification (PDF): https://www.gcis.gov.za/');
+  expect(content).toContain('Issuer audio addendum (NOT content-verified by Luqi)');
+  expect(content).toContain('No emailed bids');
+  expect(content).toContain('Private Bag X745');
+  expect(content).toContain('Original PDF sections last checked: 2026-11-02');
+  expect(content).toContain('NOT AN OFFICIAL TENDER FORM');
+  expect(content).toContain('OUTSTANDING: Source review is older than 48 hours');
+ });
  it('extracts cautious requirement hints without uploading or claiming completeness',()=>{
   expect(detectTenderDocumentMentions('Complete SBD 1, SBD 4, MBD 6.1, CSD, CIDB. Compulsory briefing.'))
    .toEqual(expect.arrayContaining(['SBD/MBD 1 (invitation)','SBD/MBD 4 (declarations)','CIDB eligibility','Possibly compulsory briefing / site visit']));

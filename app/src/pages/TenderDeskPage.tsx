@@ -158,12 +158,17 @@ export default function TenderDeskPage(){
        'Original reference/deadline could not be confirmed from the page.':
        'Source page unavailable.'}
       </p>}
-      {n.specialCondition&&<p className="text-sm text-amber-200">{n.specialCondition}</p>}
+      {n.specialCondition&&<p className="break-words text-sm text-amber-200">{n.specialCondition}</p>}
       {status==='past-deadline'?<p className="font-semibold text-red-200">Published closing time passed. Historical only.</p>
        :status==='mandatory-briefing-review'?<p className="font-semibold text-red-200">Past compulsory briefing. Verify attendance and eligibility with the issuer before bidding.</p>
        :<p className="text-sm text-amber-200">Source-listed; issuer confirmation required before calling this an active bid.</p>}
       {!fresh&&<p className="text-xs text-amber-200">Source review is expired, due or cannot be verified for this date. Recheck the original publisher, bid documents and amendments.</p>}
-      <a href={n.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Read original tender and download issuer documents</a>
+      {n.originalSpecificationUrl&&<p className="text-xs text-slate-300">{n.statusNote}</p>}
+      <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-2">
+       <a href={n.officialUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Read original tender and download issuer documents</a>
+       {n.originalSpecificationUrl&&<a href={n.originalSpecificationUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Original issuer specification (PDF)</a>}
+       {n.addendumAudioUrl&&<a href={n.addendumAudioUrl} target="_blank" rel="noopener noreferrer" className="inline-block break-words text-sm font-semibold text-cyan-200 underline">Issuer audio addendum (not reviewed by Luqi)</a>}
+      </div>
       <div><button type="button" onClick={()=>pick(n)} aria-pressed={selectedId===n.id}
        className="rounded-lg border border-cyan-400 px-3 py-2 text-sm font-semibold text-cyan-100">
        Prepare bidder worksheet for this tender</button></div>

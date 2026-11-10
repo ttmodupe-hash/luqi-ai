@@ -31,6 +31,26 @@ it('limits matches to provincial/local evidence without inventing exact tender n
  expect(result.map(x=>x.reference)).toEqual(['PS-F 02-2027']);
  expect(tenderReviewFresh(dsbd,new Date('2026-11-04T10:00:00+02:00'))).toBe(false);
 });
+it('finds GCIS USB requirements by exact source without renewing stale review dates',()=>{
+ const gcis=CURATED_TENDER_NOTICES.find(x=>x.id==='gcis-sasl-012')!;
+ expect(gcis.sourceReviewedOn).toBe('2026-10-29');
+ expect(gcis.originalDocumentCheckedOn).toBe('2026-11-02');
+ for(const link of [gcis.officialUrl,gcis.originalSpecificationUrl!,gcis.addendumAudioUrl!]){
+  expect(new URL(link).protocol).toBe('https:');expect(new URL(link).hostname).toBe('www.gcis.gov.za');
+ }
+ expect(gcis.originalSpecificationUrl).toMatch(/\.pdf$/);
+ expect(gcis.addendumAudioUrl).toMatch(/\.mp3$/);
+ expect(gcis.details).toContain('readable USB');
+ expect(gcis.specialCondition).toContain('No emailed bids');
+ const opts={province:null,includeHistory:false,now:new Date('2026-10-29T09:00:00+02:00')};
+ expect(filterTenders({...opts,query:'USB'}).map(n=>n.id)).toEqual(['gcis-sasl-012']);
+ expect(filterTenders({...opts,query:'RFQ 012'}).map(n=>n.id)).toEqual(['gcis-sasl-012']);
+ expect(filterTenders({...opts,query:'fictional lunar printer'})).toEqual([]);
+ expect(tenderReviewFresh(gcis,new Date('2026-11-02T09:00:00+02:00'))).toBe(false);
+ expect(tenderStatus(gcis,new Date('2026-11-06T10:59:59+02:00'))).toBe('source-review-needed');
+ expect(tenderStatus(gcis,new Date('2026-11-06T11:00:00+02:00'))).toBe('past-deadline');
+ expect(filterTenders({...opts,query:'USB',now:new Date('2026-11-06T11:00:00+02:00')})).toEqual([]);
+});
 it('detects tender intents without routing generic writing/study or job questions',()=>{
  expect(detectTenderIntent('Find tenders in Gauteng')).toBe(true);
  expect(detectTenderIntent('Help complete SBD 4 bid documents')).toBe(true);
