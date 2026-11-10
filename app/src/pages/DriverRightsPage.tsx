@@ -113,6 +113,11 @@ export default function DriverRightsPage() {
     <section className="space-y-2" aria-label="Original driver law sources">
       <h2 className="text-xl font-semibold">Original sources</h2>
       <p className="text-sm text-slate-300">Links are to government, responsible authorities and identified public-law compilations. Recheck each source for amendments and local procedure; not all source summaries are themselves legislation.</p>
+      <p role="note" aria-label="AARTO rollout source caution" className="rounded-lg border border-amber-500/60 bg-slate-900 p-3 text-sm text-amber-100">
+        <strong>Historical AARTO FAQ dates (passage checked 10 November 2026):</strong> The{' '}
+        <a href="https://www.rtia.co.za/faq.php?read=more" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline">RTIA original FAQ</a>{' '}
+        still says national rollout began on 1 July 2021 (question 19) and describes demerit points as planned for 1 July 2022 (question 27). These are historical statements, not proof that a particular rule is operating today. Check your notice and current implementation with the issuing authority or Department of Transport. This passage-specific check does not renew Luqi's full legal-source review.
+      </p>
       <ul className="list-disc space-y-2 pl-5 text-sm">
         {DRIVER_SOURCES.map(source => <li key={source.id}>
           <a className="break-words text-cyan-300 underline underline-offset-2" href={source.url}

@@ -63,3 +63,21 @@ it('hides unreviewed legal summaries after expiry but keeps safety, sources and 
   expect(screen.getByText(/National Traffic Call Centre:/)).toBeTruthy();
   expect(net).not.toHaveBeenCalled();
 });
+
+it('qualifies historical AARTO rollout dates without renewing expired legal guidance', () => {
+  show();
+  const note = screen.getByRole('note', { name: 'AARTO rollout source caution' });
+  expect(note.textContent).toMatch(/1 July 2021 \(question 19\)/);
+  expect(note.textContent).toMatch(/1 July 2022 \(question 27\)/);
+  expect(note.textContent).toMatch(/historical statements, not proof/);
+  const source = within(note).getByRole('link', { name: 'RTIA original FAQ' });
+  expect(source.getAttribute('href')).toBe('https://www.rtia.co.za/faq.php?read=more');
+  expect(source.getAttribute('rel')).toContain('noopener');
+  expect(source.getAttribute('rel')).toContain('noreferrer');
+  cleanup();
+  vi.setSystemTime(new Date('2026-11-12T08:00:00+02:00'));
+  show();
+  expect(screen.getByRole('alert').textContent).toMatch(/Detailed legal summaries have expired/);
+  expect(screen.getByRole('note', { name: 'AARTO rollout source caution' })).toBeTruthy();
+  expect(net).not.toHaveBeenCalled();
+});
