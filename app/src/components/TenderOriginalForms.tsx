@@ -62,7 +62,15 @@ export function TenderOriginalForms(){
   }
   async function inspectFile(file:File,amendment=false){
     if(!consent||busy||historyFull)return;
-    if(file.size<=0||file.size>TENDER_FILE_MAX){setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;}
+    if(file.size<=0||file.size>TENDER_FILE_MAX){
+      // A rejected attempted addendum must not leave an older approved packet exportable.
+      // Keep the original and entered facts, but require the applicant to review again.
+      if(amendment&&prepared){
+        invalidate('revoke','rejected-amendment');
+        setMessage('The addendum was not added: '+TENDER_DOCUMENT_ERRORS.FILE_SIZE+' Prior approvals were cleared. Prepare and review this packet again.');
+      }else setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);
+      return;
+    }
     if(amendment&&(!primary||amendments.length>=6)){setMessage('Choose an original first. Up to six addenda are supported.');return;}
     const version=++epoch.current;
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
