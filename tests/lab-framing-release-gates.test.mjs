@@ -15,7 +15,7 @@ test('predeployment PR/main job remains mandatory and contains actual sandbox/re
   assert.match(pre, /^    if: github.event_name == 'pull_request' \|\| github.event_name == 'push'$/m);
   for (const required of [
     'tests/lab-framing-release-gates.test.mjs',
-    'tests/frame-policy.test.ts', 'tests/lab-static-fallback.test.ts', 'tests/http-safety.test.ts',
+    'tests/frame-policy.test.ts', 'tests/lab-static-fallback.test.ts', 'tests/http-safety.test.ts', 'tests/release-observation.test.ts',
     'npm run build', 'playwright.framing.config.ts',
   ]) assert.ok(pre.includes(required), 'Predeploy safety step missing: ' + required);
   assert.doesNotMatch(pre, /LUQI_VERIFY_PUBLIC|LUQI_EXPECTED_COMMIT|verify-deployed-release|verify-lab-framing/);
