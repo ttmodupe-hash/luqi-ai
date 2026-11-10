@@ -2,7 +2,7 @@
 import React from 'react';
 import {webcrypto} from 'node:crypto';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
-import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/react';
+import {render,screen,fireEvent,cleanup,waitFor,within,act} from '@testing-library/react';
 import {TenderOriginalForms} from '../src/components/TenderOriginalForms';
 import {runTenderDocument} from '../src/lib/tender-document-client';
 import {VERIFIED_SBD1, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
@@ -152,4 +152,21 @@ it('clears earlier applicant data when the pinned Treasury replacement cannot be
  expect(screen.queryByDisplayValue('Synthetic supplier')).toBeNull();
  expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+});
+
+it('announces expired 30-minute review and locks old approvals without submitting or fetching',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+ const exportButton=within(review).getByRole('button',{name:'Export filled original and review record'});
+ expect(exportButton.hasAttribute('disabled')).toBe(false);
+ vi.useFakeTimers();
+ vi.setSystemTime(new Date(Date.now()+31*60*1000));
+ act(()=>{vi.advanceTimersByTime(1000)});
+ expect(within(review).getByRole('alert').textContent).toMatch(/30-minute applicant review window has ended/);
+ expect(within(review).getByRole('alert').textContent).toMatch(/Nothing was submitted/);
+ expect(exportButton.hasAttribute('disabled')).toBe(true);
+ expect(within(review).getAllByRole('checkbox').every(box=>box.hasAttribute('disabled'))).toBe(true);
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(1);
+ expect(network).not.toHaveBeenCalled();
 });
