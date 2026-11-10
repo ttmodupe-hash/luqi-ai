@@ -14,7 +14,7 @@ beforeEach(()=>{
  vi.stubGlobal('crypto',webcrypto);vi.stubGlobal('fetch',network);network.mockReset();run.mockReset();
  run.mockImplementation(async req=>req.action==='fill'?{...inspected,filled:new Uint8Array([4,5,6])}:inspected);
 });
-afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.useRealTimers()});
+afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals();vi.useRealTimers()});
 function file(name='original.docx'){
  const result=new File(['abc'],name,{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
  Object.defineProperty(result,'arrayBuffer',{value:async()=>new Uint8Array([1,2,3]).buffer});return result;
@@ -152,4 +152,25 @@ it('clears earlier applicant data when the pinned Treasury replacement cannot be
  expect(screen.queryByDisplayValue('Synthetic supplier')).toBeNull();
  expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+});
+
+
+it('does not claim a browser download was saved or that an application was submitted',async()=>{
+ const NativeURL=URL;
+ const createObjectURL=vi.fn(()=>'blob:synthetic-download');
+ class DownloadURL extends NativeURL {}
+ DownloadURL.createObjectURL=createObjectURL;
+ DownloadURL.revokeObjectURL=vi.fn();
+ vi.stubGlobal('URL',DownloadURL);
+ const click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const checkbox of within(review).getAllByRole('checkbox'))fireEvent.click(checkbox);
+ fireEvent.click(within(review).getByRole('button',{name:'Export filled original and review record'}));
+ expect(await screen.findByText(/Download requested\. Check your browser/)).toBeTruthy();
+ expect(screen.getByText(/browser settings may block or cancel saving/)).toBeTruthy();
+ expect(createObjectURL).toHaveBeenCalledOnce();
+ expect(click).toHaveBeenCalledOnce();
+ expect(network).not.toHaveBeenCalled();
+ expect(screen.queryByText(/record exported privately/)).toBeNull();
 });
