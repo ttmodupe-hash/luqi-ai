@@ -55,6 +55,8 @@ test('each visible procedural claim links to an original source, never to a fake
 });
 
 test('10 Nov source-specific asylum test notice is keyboard-accessible and truthful on 320px mobile', async ({ page, baseURL }) => {
+  // Freeze passage-specific source status: this regression must remain deterministic after expiry.
+  await page.clock.install({ time: new Date('2026-11-10T13:00:00+02:00') });
   await page.setViewportSize({ width: 320, height: 740 });
   const unexpected: string[] = [];
   await page.route('**/*', route => {
