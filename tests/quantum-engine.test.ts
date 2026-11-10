@@ -289,6 +289,30 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     // Informational measurements only; timing and ratio are never pass/fail gates.
     console.info(`LUQI_QAOA_CPU_BENCH node=${process.version} platform=${process.platform}/${process.arch} qubits=6 steps=15 repeats=5 original_median_ms=${originalMs.toFixed(3)} cached_median_ms=${cachedMs.toFixed(3)}`);
   });
+  it('accumulates the exact eight-qubit Ising observable without intermediate probability arrays', () => {
+    const model = {
+      fields: [0.125, -0.375, 0.625, -0.875, 0.3, -0.2, 0.1, -0.45],
+      edges: [{ i: 0, j: 7, weight: -0.42 }, { i: 3, j: 5, weight: 0.68 }],
+    };
+    const unchanged = structuredClone(model), energies = isingEnergies(model);
+    for (const [gamma, beta] of [[0, 0], [0.47, -0.31], [1.75, 0.91]]) {
+      const result = qaoaLayer(model, gamma, beta);
+      let expectation = 0, norm = 0;
+      for (let i = 0; i < result.state.length; i++) {
+        const z = result.state[i], probability = z.re * z.re + z.im * z.im;
+        norm += probability;
+        expectation += probability * energies[i];
+      }
+      expect(result.expectedEnergy).toBe(expectation);
+      expect(norm).toBeCloseTo(1, 12);
+      expect(result.state).toHaveLength(256);
+    }
+    const grid = searchQaoaGrid(model, 5), probabilitiesFromState = probabilities(grid.state);
+    expect(grid.expectedEnergy).toBe(
+      probabilitiesFromState.reduce((sum, p, i) => sum + p * energies[i], 0));
+    expect(model).toEqual(unchanged);
+  });
+
   it('preserves bounded input validation and rejects invalid Hamiltonians', () => {
     const model = { fields: [0], edges: [] };
     for (const steps of [2, 26, 4.5, NaN, Infinity]) {

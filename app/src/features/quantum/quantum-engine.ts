@@ -162,8 +162,15 @@ function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: num
   // mixer qubit. The cached phase row remains immutable across all beta values.
   const state = phased.map(z => ({ ...z }));
   for (let target = 0; target < qubits; target++) applyPreparedRxInPlace(state, target, cosine, sine);
-  const p = probabilities(state);
-  return { state, expectedEnergy: p.reduce((s, x, i) => s + x * energies[i], 0) };
+  // Preserve norm validation while streaming the energy observable directly.
+  // This avoids allocating a 2^n-number probability array for every grid pair.
+  validateState(state);
+  let expectedEnergy = 0;
+  for (let i = 0; i < state.length; i++) {
+    const z = state[i];
+    expectedEnergy += (z.re * z.re + z.im * z.im) * energies[i];
+  }
+  return { state, expectedEnergy };
 }
 /** Compute from a validated, fixed Ising spectrum; only a classical simulation. */
 function qaoaLayerFromEnergies(energies: number[], initial: Statevector, qubits: number, gamma: number, beta: number) {
