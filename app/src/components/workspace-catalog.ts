@@ -5,6 +5,11 @@ export const workspaceTools = [
     status: "Local goal paths · no account or paid AI", ready: true, path: "/possibility", icon: "academy",
   },
   {
+    id: "capability-journey", title: "My Capability Journey", category: "Device-local progress and next actions",
+    description: "Save one chosen goal on this device, mark real stages complete yourself and return to the next LUQI capability without paid AI or background tracking.",
+    status: "Device-local progress · user controlled", ready: true, path: "/journey", icon: "academy",
+  },
+  {
     id: "launch-control", title: "Launch Control", category: "Tool 024: evidence and release operations",
     description: "Run current Luqi release and health checks, review dependency workflows, restore portable checkpoints and prepare SPF, DKIM and DMARC records locally. External DNS, deployments and payment integrations require separate connections.",
     status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",
