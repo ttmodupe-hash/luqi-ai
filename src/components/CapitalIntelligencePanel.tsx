@@ -36,7 +36,7 @@ export default function CapitalIntelligencePanel(){
       <p className="text-xs font-bold uppercase tracking-wide text-cyan-300">Funding discovery · pilot · free</p>
       <h2 id="capital-title" className="text-2xl font-bold sm:text-3xl">Luqi Capital Intelligence</h2>
       <p className="max-w-4xl text-sm leading-relaxed text-slate-200">
-        Explore published South African funding programmes, identify what to check, and prepare a review draft.
+        Explore South African, pan-African and international funding and support programmes together. Filter by the project location, review the publisher’s conditions, and prepare one local worksheet.
         This is not an active-grant feed, an eligibility decision, investor matchmaking or an application submission.
       </p>
       <p className="text-xs text-slate-300">Official programme pages reviewed {CAPITAL_SOURCE_REVIEWED_ON}.
@@ -47,7 +47,7 @@ export default function CapitalIntelligencePanel(){
         <label className="grid min-w-0 gap-1 text-sm">Project location
           <select aria-label="Project location" value={country} onChange={e=>{setCountry(e.target.value as CapitalProfile['country']);reset();}}
             className="min-h-11 min-w-0 w-full rounded-lg border border-slate-500 bg-slate-950 p-2 text-white">
-            <option value="ZA">South Africa</option><option value="OTHER">Outside South Africa — eligibility unverified</option>
+            <option value="ZA">South Africa</option><option value="AFRICA_OTHER">Elsewhere in Africa</option><option value="OTHER">Outside Africa / international</option>
           </select>
         </label>
         <label className="grid min-w-0 gap-1 text-sm">Project stage
@@ -110,11 +110,11 @@ export default function CapitalIntelligencePanel(){
     <div className="grid min-w-0 gap-3 lg:grid-cols-3">
       {matches.map(m=><article key={m.programme.id} aria-label={m.programme.name}
           className="min-w-0 space-y-3 rounded-xl border border-slate-600 bg-slate-950 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">{m.programme.organisation}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">{m.programme.organisation} · {m.programme.scope==='SOUTH_AFRICA'?'South Africa':m.programme.scope==='PAN_AFRICA'?'Pan-African':'International'}</p>
         <h3 className="text-lg font-bold">{m.programme.name}</h3>
         <p className="text-sm font-semibold text-slate-200">{stateNames[m.state]}</p>
         <p className="text-xs text-slate-300">Suggested documents prepared: {m.preparationPercent}% (self-reported).</p>
-        <p className="text-xs text-amber-200">Current application window unverified.
+        <p className="text-xs text-amber-200">Programme reference only — current application window unverified.
           {m.reviewExpired?' Publisher source recheck overdue.':''}</p>
         {m.checks.length>0&&<ul className="list-disc space-y-1 pl-5 text-sm text-slate-300">
           {m.checks.map(text=><li key={text}>{text}</li>)}</ul>}
@@ -143,7 +143,7 @@ export default function CapitalIntelligencePanel(){
       <p className="text-xs text-slate-300">If your browser cannot download the text file, select and copy the worksheet above.
         For official submission use the publisher’s own current instructions.</p>
     </section>}
-    <p className="text-xs text-slate-400">Venture capital, Web3 grants and crowdfunding require their own verified sources and legal checks.
+    <p className="text-xs text-slate-400">Venture capital, Web3 grants and crowdfunding still require verified original publishers, jurisdiction-specific eligibility and legal checks.
       These are future catalogue categories, not live Luqi integrations. We do not collect IDs, financial statements or private source code here.</p>
   </section>;
 }

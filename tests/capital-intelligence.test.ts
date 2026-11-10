@@ -9,14 +9,16 @@ const profile:CapitalProfile={
 };
 describe('Capital Intelligence: explainable, evidence-bound local preparation',()=>{
   it('locks every known source to an official HTTPS publisher and never invents a current round',()=>{
-    expect(CAPITAL_PROGRAMMES).toHaveLength(3);
+    expect(CAPITAL_PROGRAMMES).toHaveLength(6);
+    expect(CAPITAL_PROGRAMMES.some(p=>p.scope==='PAN_AFRICA')).toBe(true);
+    expect(CAPITAL_PROGRAMMES.some(p=>p.scope==='INTERNATIONAL')).toBe(true);
     expect(new Set(CAPITAL_PROGRAMMES.map(p=>p.id)).size).toBe(CAPITAL_PROGRAMMES.length);
-    const hosts=new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za']);
+    const hosts=new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za','www.undp.org','www.thegef.org']);
     for(const programme of CAPITAL_PROGRAMMES){
       expect(programme.sourceStatus).toBe('PROGRAMME_REFERENCE_ONLY');
       expect(hosts.has(new URL(programme.sourceUrl).hostname)).toBe(true);
       expect(new URL(programme.sourceUrl).protocol).toBe('https:');
-      expect(programme.reviewedOn).toBe('2026-11-02');
+      expect(['2026-11-02','2026-11-03']).toContain(programme.reviewedOn);
       expect(Object.isFrozen(programme)).toBe(true);
       expect(Object.isFrozen(programme.conditions)).toBe(true);
       expect(Object.isFrozen(programme.suggestedArtifacts)).toBe(true);
@@ -45,7 +47,7 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
   });
   it('ranks documented programme fit first, never by the largest advertised grant amount',()=>{
     const matches=matchCapitalProgrammes(profile,new Date('2026-11-02T10:00:00Z'));
-    expect(matches).toHaveLength(3);
+    expect(matches).toHaveLength(6);
     const tia=matches.find(m=>m.programme.id==='tia-seed-fund')!;
     const idc=matches.find(m=>m.programme.id==='idc-development-finance')!;
     const nyda=matches.find(m=>m.programme.id==='nyda-grant-programme')!;
@@ -55,7 +57,7 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(nyda.state).toBe('CURRENTLY_NOT_ALIGNED');
     expect(nyda.checks.join(' ')).toMatch(/excludes research-and-development seed funding/);
     expect(matches[0].programme.id).toBe('tia-seed-fund');
-    expect(matches[2].programme.id).toBe('nyda-grant-programme');
+    expect(matches.find(m=>m.programme.id==='nyda-grant-programme')!.state).toBe('CURRENTLY_NOT_ALIGNED');
   });
   it('does not label unknown age or unregistered firm as eligible',()=>{
     const matches=matchCapitalProgrammes({...profile,purpose:'BUSINESS_GROWTH',age:undefined,registration:'NOT_REGISTERED'});
@@ -78,7 +80,18 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(matches.every(m=>m.reviewExpired)).toBe(true);
     expect(matches.every(m=>m.state!=='POTENTIAL_FIT_TO_EXPLORE')).toBe(true);
     expect(matches.every(m=>m.checks.some(x=>/source review is overdue/i.test(x)))).toBe(true);
-    expect(matches.every(m=>m.checks.some(x=>/South African projects only/i.test(x)))).toBe(true);
+    expect(matches.filter(m=>m.programme.scope==='SOUTH_AFRICA').every(m=>m.state==='CURRENTLY_NOT_ALIGNED')).toBe(true);
+    expect(matches.some(m=>m.programme.scope==='INTERNATIONAL')).toBe(true);
+  });
+  it('keeps international and African programmes visible without granting eligibility',()=>{
+    const africa=matchCapitalProgrammes({...profile,country:'AFRICA_OTHER'});
+    expect(africa.filter(m=>m.programme.scope==='PAN_AFRICA')).toHaveLength(2);
+    expect(africa.filter(m=>m.programme.scope==='SOUTH_AFRICA').every(m=>m.state==='CURRENTLY_NOT_ALIGNED')).toBe(true);
+    expect(africa.find(m=>m.programme.id==='gef-small-grants')!.checks.join(' ')).toMatch(/Country and applicant-organisation/);
+    const outside=matchCapitalProgrammes({...profile,country:'OTHER'});
+    expect(outside.find(m=>m.programme.id==='timbuktoo-creative-tech')!.checks.join(' ')).toMatch(/Africa-based or Africa-market/);
+    expect(outside.some(m=>m.programme.scope==='INTERNATIONAL')).toBe(true);
+    expect(()=>normalizeFundingPlatform({...CAPITAL_PROGRAMMES[0],scope:'EVERYWHERE' as any})).toThrow();
   });
   it('rejects malformed inputs and does not infer uploaded or externally verified documents',()=>{
     expect(()=>matchCapitalProgrammes({...profile,age:999})).toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
