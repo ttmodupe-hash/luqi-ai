@@ -27,8 +27,12 @@ afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(
 
 describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
   it('uses only OpenAI and its own reservation when explicitly selected, even with both keys present', async () => {
-    const fetcher = vi.fn(async (url: string) => {
+    const fetcher = vi.fn(async (url: string, options: RequestInit) => {
       expect(url).toBe('https://api.openai.com/v1/responses');
+      const policy = JSON.parse(options.body as string).instructions as string;
+      expect(policy).toContain('original source code as text');
+      expect(policy).toContain('Do not lead with a boilerplate inability to code or deploy');
+      expect(policy).toContain('never claim to have run tests, published an app, saved files or accessed a repository');
       expect(reserve.mock.calls).toEqual([['openai', 42, undefined, 20]]);
       return Response.json(openaiReply('Independent reply'));
     });
@@ -68,6 +72,9 @@ describe("paid pilot transport with real Gemini SDK and synthetic HTTP", () => {
       expect(request).not.toHaveProperty("tools");
       const instructions = request.systemInstruction.parts.map((part: { text: string }) => part.text).join('');
       expect(instructions).toContain('Current capabilities in this Chat: text conversation');
+      expect(instructions).toContain('original source code as text');
+      expect(instructions).toContain('Do not lead with a boilerplate inability to code or deploy');
+      expect(instructions).toContain('never claim to have run tests, published an app, saved files or accessed a repository');
       expect(instructions).toContain('still in development and are not available in this Chat');
       expect(instructions).toContain('offer a useful text alternative');
       return Response.json(geminiReply('Sawubona'));
