@@ -35,6 +35,14 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
   });
   it('fails closed on untrusted, malformed or credential-bearing publisher specs',()=>{
     const original=CAPITAL_PROGRAMMES[0];
+    // An impossible publisher review date would mislead users about evidence freshness.
+    for(const reviewedOn of ['2026-02-29','2026-11-31','2026-13-01',
+      '2026-00-02','2026-11-2','2026-11-02T00:00:00Z']){
+      expect(()=>normalizeFundingPlatform({...original,reviewedOn}))
+        .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    }
+    expect(normalizeFundingPlatform({...original,reviewedOn:'2024-02-29'}).reviewedOn)
+      .toBe('2024-02-29');
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'https://www.tia.org.za.evil.example/'})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'http://www.tia.org.za/'})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'https://user:secret@www.tia.org.za/'})).toThrow();

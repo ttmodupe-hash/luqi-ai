@@ -143,6 +143,12 @@ const STAGES = new Set<ProjectMaturity>(['IDEA','MVP','PRODUCTION']);
 const PURPOSES = new Set<ProjectPurpose>(['R_AND_D_SEED','BUSINESS_GROWTH','INDUSTRIAL_EXPANSION']);
 const REGISTRATIONS = new Set<Registration>(['REGISTERED','NOT_REGISTERED','UNKNOWN']);
 const bad = () => new Error('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+/** A provenance stamp must be a real Gregorian calendar day, not just YYYY-MM-DD-shaped. */
+function validPublisherReviewDate(raw:unknown):raw is string {
+  if (typeof raw !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)) return false;
+  const timestamp=Date.parse(raw+'T00:00:00.000Z');
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0,10)===raw;
+}
 
 /** Reject malformed/outside sources, clone nested data, and deep-freeze public specs. */
 export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatformSpec {
@@ -154,7 +160,7 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
       !TYPES.has(input.type) || !SCOPES.has(input.scope) ||
       typeof input.scopeNote !== 'string' || !input.scopeNote.trim() ||
       input.scopeNote.length > 350 || input.sourceStatus !== 'PROGRAMME_REFERENCE_ONLY' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(input.reviewedOn) ||
+      !validPublisherReviewDate(input.reviewedOn) ||
       !Array.isArray(input.focusSectors) || !input.focusSectors.length ||
       !input.focusSectors.every(s=>SECTORS.has(s)) ||
       !Array.isArray(input.suggestedArtifacts) ||
