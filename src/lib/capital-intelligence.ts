@@ -3,7 +3,7 @@
  * No investor access, live call detection, approval prediction or submission.
  * All input remains local to this browser view and is never sent to an API.
  */
-export type FundingType = 'SOVEREIGN_FUND' | 'DEVELOPMENT_FINANCE' | 'VENTURE_CAPITAL' | 'DECENTRALIZED_GRANT' | 'CROWDFUNDING' | 'GRANT' | 'INNOVATION_CHALLENGE';
+export type FundingType = 'SOVEREIGN_FUND' | 'DEVELOPMENT_FINANCE' | 'VENTURE_CAPITAL' | 'DECENTRALIZED_GRANT' | 'CROWDFUNDING' | 'GRANT' | 'INNOVATION_CHALLENGE' | 'SUPPORT_PROGRAMME';
 export type FundingScope = 'SOUTH_AFRICA' | 'PAN_AFRICA' | 'GLOBAL';
 export const FUNDING_SCOPE_LABELS:Readonly<Record<FundingScope,string>>=Object.freeze({
   SOUTH_AFRICA:'South Africa',PAN_AFRICA:'Across Africa',GLOBAL:'International',
@@ -11,7 +11,7 @@ export const FUNDING_SCOPE_LABELS:Readonly<Record<FundingScope,string>>=Object.f
 export const FUNDING_TYPE_LABELS:Readonly<Record<FundingType,string>>=Object.freeze({
   SOVEREIGN_FUND:'Public funding',DEVELOPMENT_FINANCE:'Development finance',
   VENTURE_CAPITAL:'Venture capital',DECENTRALIZED_GRANT:'Decentralized grant',
-  CROWDFUNDING:'Crowdfunding',GRANT:'Grant / seed support',INNOVATION_CHALLENGE:'Innovation challenge',
+  CROWDFUNDING:'Crowdfunding',GRANT:'Grant / seed support',INNOVATION_CHALLENGE:'Innovation challenge',SUPPORT_PROGRAMME:'Incubation / mentorship',
 });
 /** Project location only. Does not establish citizenship, residency or programme eligibility. */
 export const AFRICAN_COUNTRIES = Object.freeze([
@@ -132,12 +132,12 @@ export interface FundingMatch {
 const ALLOWED_PUBLISHERS = new Set([
   'www.tia.org.za','www.idc.co.za','www.nyda.gov.za',
   'www.tonyelumelufoundation.org','www.aecfafrica.org','afawa.afdb.org',
-  'www.globalinnovation.fund','solve.mit.edu',
+  'www.globalinnovation.fund','solve.mit.edu','www.undp.org','sgp.undp.org',
 ]);
 const AFRICAN_CODES = new Set<string>(AFRICAN_COUNTRIES.map(c=>c[0]));
 const SCOPES = new Set<FundingScope>(['SOUTH_AFRICA','PAN_AFRICA','GLOBAL']);
 const ARTIFACTS = new Set<Artifact>(Object.keys(ARTIFACT_LABELS) as Artifact[]);
-const TYPES = new Set<FundingType>(['SOVEREIGN_FUND','DEVELOPMENT_FINANCE','VENTURE_CAPITAL','DECENTRALIZED_GRANT','CROWDFUNDING','GRANT','INNOVATION_CHALLENGE']);
+const TYPES = new Set<FundingType>(['SOVEREIGN_FUND','DEVELOPMENT_FINANCE','VENTURE_CAPITAL','DECENTRALIZED_GRANT','CROWDFUNDING','GRANT','INNOVATION_CHALLENGE','SUPPORT_PROGRAMME']);
 const SECTORS = new Set<ProjectSector>(['TECH','INDUSTRY','OTHER']);
 const STAGES = new Set<ProjectMaturity>(['IDEA','MVP','PRODUCTION']);
 const PURPOSES = new Set<ProjectPurpose>(['R_AND_D_SEED','BUSINESS_GROWTH','INDUSTRIAL_EXPANSION']);
@@ -329,6 +329,48 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
       'MIT Solve Global Challenges generally require a functioning prototype or later; concept-stage ideas are reviewed only under the Indigenous Communities Fellowship. Geographic, applicant-type and prize rules vary.',
     ],conditions:{},
   }),
+
+  normalizeFundingPlatform({
+    id:'timbuktoo-creativetech',name:'UNDP timbuktoo CreativeTech Launchpad',
+    organisation:'United Nations Development Programme',type:'SUPPORT_PROGRAMME',scope:'PAN_AFRICA',
+    scopeNote:'Incubation for Africa-based startups or teams targeting African creative markets; not a cash-grant award.',
+    sourceUrl:'https://www.undp.org/south-africa/press-releases/undp-launches-call-applications-creativetech-startups-join-timbuktoo-launchpad',
+    applicationGuideUrl:'https://www.undp.org/south-africa/press-releases/undp-launches-call-applications-creativetech-startups-join-timbuktoo-launchpad',
+    reviewedOn:'2026-11-11',sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','OTHER'],suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','PITCH_DECK'],
+    selectionNotes:[
+      'UNDP describes incubation, mentorship and investment readiness, not a guaranteed cash award.',
+      'UNDP requires a prototype/MVP, a committed founding team and a creative-economy technology solution.',
+      'The 30 June 2026 notice mentions rolling quarterly cohorts. Confirm an actual current intake with UNDP.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'timbuktoo-greentech',name:'UNDP timbuktoo GreenTech Launchpad',
+    organisation:'United Nations Development Programme',type:'SUPPORT_PROGRAMME',scope:'PAN_AFRICA',
+    scopeNote:'Climate-tech incubation for African ventures or startups targeting African green markets, not cash-grant funding.',
+    sourceUrl:'https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups',
+    applicationGuideUrl:'https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups',
+    reviewedOn:'2026-11-11',sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],suggestedArtifacts:['CONCEPT_NOTE','PROTOTYPE_PROOF','PITCH_DECK'],
+    selectionNotes:[
+      'UNDP describes climate and environmental startup incubation, mentorship and investment readiness, not an awarded grant.',
+      'UNDP requires a prototype/MVP, a committed team and a clearly defined climate or environmental challenge.',
+      'The 29 July 2026 notice describes rolling quarterly cohorts; verify actual current intake with UNDP.',
+    ],conditions:{},
+  }),
+  normalizeFundingPlatform({
+    id:'gef-small-grants',name:'GEF Small Grants Programme',
+    organisation:'Global Environment Facility / GEF SGP',type:'GRANT',scope:'GLOBAL',
+    scopeNote:'Community-based and civil-society environmental projects in participating country programmes; not general startup capital.',
+    sourceUrl:'https://sgp.undp.org/',applicationGuideUrl:'https://sgp.undp.org/',
+    reviewedOn:'2026-11-11',sourceStatus:'PROGRAMME_REFERENCE_ONLY',
+    focusSectors:['TECH','INDUSTRY','OTHER'],suggestedArtifacts:['CONCEPT_NOTE','BUSINESS_PLAN'],
+    selectionNotes:[
+      'GEF SGP offers financial and technical support for community-driven environmental and sustainable-livelihood initiatives.',
+      'An ordinary for-profit startup is not automatically eligible; check organisation, implementing agency and country conditions.',
+      'Local proposal formats, participation and deadlines vary; Luqi has not verified any current national application window.',
+    ],conditions:{},
+  }),
 ]);
 export function capitalReviewIsCurrent(now:Date=new Date()):boolean {
   return Number.isFinite(now.getTime()) &&
@@ -355,8 +397,12 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
       checks.push('This South African programme is not presented as available to projects outside South Africa; verify any cross-border exceptions with the publisher.');
     }
     if(programme.scope==='PAN_AFRICA' && profile.country==='OTHER') {
-      mismatch=true;
-      checks.push('This African programme does not publish a general route for projects based outside Africa.');
+      if(programme.id.startsWith('timbuktoo-'))
+        checks.push('UNDP may consider teams serving African markets; outside-Africa project location alone cannot establish eligibility.');
+      else {
+        mismatch=true;
+        checks.push('This African programme does not publish a general route for projects based outside Africa.');
+      }
     }
     if(programme.scope!=='SOUTH_AFRICA' && !mismatch)
       checks.push('Check the exact country, applicant residence, registration, instrument and call-specific restrictions with the publisher.');
@@ -385,6 +431,16 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
       if(profile.maturity === 'IDEA')
         checks.push('MIT Solve Global Challenges generally require a functioning prototype. Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship; confirm that separate fellowship and the selected challenge before applying.');
     }
+    if(programme.id.startsWith('timbuktoo-')) {
+      checks.push('UNDP timbuktoo offers incubation and investment readiness, NOT a guaranteed cash grant.');
+      checks.push('Rolling quarterly cohorts were described in 2026 notices; verify actual current intake.');
+      if(profile.maturity==='IDEA') {
+        mismatch=true;
+        checks.push('UNDP requires a working prototype or MVP and a committed team; an idea alone does not meet the published requirements.');
+      }
+    }
+    if(programme.id==='gef-small-grants')
+      checks.push('GEF SGP targets eligible community-based or civil-society environmental projects, not ordinary startup capital; verify national country programmes and local calls.');
     if(reviewExpired) checks.push('Source review is overdue: recheck the publisher before relying on any criteria.');
     const missingArtifacts=programme.suggestedArtifacts.filter(a=>!present.has(a));
     const preparationPercent=programme.suggestedArtifacts.length===0 ? 0 :

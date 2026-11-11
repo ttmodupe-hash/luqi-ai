@@ -9,11 +9,11 @@ const profile:CapitalProfile={
 };
 describe('Capital Intelligence: explainable, evidence-bound local preparation',()=>{
   it('locks every known source to an official HTTPS publisher and never invents a current round',()=>{
-    expect(CAPITAL_PROGRAMMES).toHaveLength(8);
+    expect(CAPITAL_PROGRAMMES).toHaveLength(11);
     expect(new Set(CAPITAL_PROGRAMMES.map(p=>p.id)).size).toBe(CAPITAL_PROGRAMMES.length);
     const hosts=new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za',
       'www.tonyelumelufoundation.org','www.aecfafrica.org','afawa.afdb.org',
-      'www.globalinnovation.fund','solve.mit.edu']);
+      'www.globalinnovation.fund','solve.mit.edu','www.undp.org','sgp.undp.org']);
     expect(AFRICAN_COUNTRIES).toHaveLength(54);
     expect(new Set(AFRICAN_COUNTRIES.map(c=>c[0])).size).toBe(54);
     for(const programme of CAPITAL_PROGRAMMES){
@@ -21,7 +21,9 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       expect(hosts.has(new URL(programme.sourceUrl).hostname)).toBe(true);
       expect(new URL(programme.sourceUrl).protocol).toBe('https:');
       expect(programme.reviewedOn).toBe(
-        programme.scope==='SOUTH_AFRICA'?'2026-11-02':'2026-11-03');
+        programme.scope==='SOUTH_AFRICA'?'2026-11-02':
+        ['timbuktoo-creativetech','timbuktoo-greentech','gef-small-grants'].includes(programme.id)?
+          '2026-11-11':'2026-11-03');
       expect(['SOUTH_AFRICA','PAN_AFRICA','GLOBAL']).toContain(programme.scope);
       expect(programme.scopeNote.length).toBeGreaterThan(10);
       expect(Object.isFrozen(programme)).toBe(true);
@@ -88,7 +90,7 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
   });
   it('ranks documented programme fit first, never by the largest advertised grant amount',()=>{
     const matches=matchCapitalProgrammes(profile,new Date('2026-11-02T10:00:00Z'));
-    expect(matches).toHaveLength(8);
+    expect(matches).toHaveLength(11);
     const tia=matches.find(m=>m.programme.id==='tia-seed-fund')!;
     const idc=matches.find(m=>m.programme.id==='idc-development-finance')!;
     const nyda=matches.find(m=>m.programme.id==='nyda-grant-programme')!;
@@ -214,6 +216,27 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       'CURRENT FUNDING WINDOW: NOT VERIFIED — check the current original call.',
     ]);
     expect(lines.filter(line=>line.startsWith('Indicative fit:'))).toHaveLength(1);
+  });
+  it('retains unique sister PR #459 references and their eligibility restrictions',()=>{
+    const idea={...profile,country:'KE' as const,maturity:'IDEA' as const};
+    const matches=matchCapitalProgrammes(idea,new Date('2026-11-11T10:00:00Z'));
+    for(const id of ['timbuktoo-creativetech','timbuktoo-greentech']){
+      const result=matches.find(m=>m.programme.id===id)!;
+      expect(result.state).toBe('CURRENTLY_NOT_ALIGNED');
+      expect(result.checks.join(' ')).toMatch(/working prototype or MVP/);
+      expect(result.checks.join(' ')).toMatch(/NOT a guaranteed cash grant/);
+    }
+    const mvp=matchCapitalProgrammes({...idea,maturity:'MVP'},new Date('2026-11-11T10:00:00Z'));
+    expect(mvp.find(m=>m.programme.id==='timbuktoo-greentech')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    const gef=mvp.find(m=>m.programme.id==='gef-small-grants')!;
+    expect(gef.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(gef.checks.join(' ')).toMatch(/community-based or civil-society/);
+    expect(buildCapitalPreparationDraft(gef,{...idea,maturity:'MVP'},'Community wetlands','Local ecology',
+      new Date('2026-11-11T10:00:00Z'))).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+    const outside=matchCapitalProgrammes({...idea,country:'OTHER',maturity:'MVP'},
+      new Date('2026-11-11T10:00:00Z'));
+    expect(outside.find(m=>m.programme.id==='timbuktoo-creativetech')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(outside.find(m=>m.programme.id==='tef-entrepreneurship')!.state).toBe('CURRENTLY_NOT_ALIGNED');
   });
   it('generates an owner-reviewed, non-submitted plain text pack with source evidence',()=>{
     const m=matchCapitalProgrammes(profile)[0];

@@ -56,7 +56,7 @@ test('funding hub brings South African, pan-African and global publishers togeth
   const writes:string[]=[];
   page.on('request',request=>{if(request.method()!=='GET')writes.push(request.url());});
   await page.goto('/#/african-radar');
-  await expect(page.getByText('8 of 8 reviewed programme references match your filters.')).toBeVisible();
+  await expect(page.getByText('11 of 11 reviewed programme references match your filters.')).toBeVisible();
   await page.getByRole('combobox',{name:'Project location'}).selectOption('KE');
   await page.getByRole('combobox',{name:'Funding geography'}).selectOption('PAN_AFRICA');
   await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'})).toBeVisible();
@@ -64,12 +64,22 @@ test('funding hub brings South African, pan-African and global publishers togeth
     .toContainText('1 January to 1 March 2026 and has closed');
   await expect(page.getByRole('article',{name:'AECF Enterprise Challenge Finance'})).toBeVisible();
   await expect(page.getByRole('article',{name:'AFAWA Partner Finance'})).toBeVisible();
+  const incubator=page.getByRole('article',{name:'UNDP timbuktoo GreenTech Launchpad'});
+  await expect(incubator).toBeVisible();
+  await expect(page.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'})).toBeVisible();
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('IDEA');
+  await expect(incubator).toContainText('working prototype or MVP');
+  await expect(incubator).toContainText('Not currently aligned');
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('MVP');
+  await expect(incubator).toContainText('Check programme criteria');
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toHaveCount(0);
   await page.getByRole('combobox',{name:'Funding geography'}).selectOption('GLOBAL');
   await expect(page.getByRole('article',{name:'Global Innovation Fund'})).toBeVisible();
   await expect(page.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'GEF Small Grants Programme'}))
+    .toContainText('not ordinary startup capital');
   await page.getByRole('textbox',{name:'Search funding programmes'}).fill('MIT');
-  await expect(page.getByText('1 of 8 reviewed programme references match your filters.')).toBeVisible();
+  await expect(page.getByText('1 of 11 reviewed programme references match your filters.')).toBeVisible();
   const mit=page.getByRole('article',{name:'MIT Solve Global Challenges'});
   await page.getByRole('combobox',{name:'Project stage'}).selectOption('IDEA');
   await expect(mit).toContainText('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');

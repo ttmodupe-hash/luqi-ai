@@ -19,3 +19,10 @@ New records, **substantively checked 3 November 2026**:
 - Tests: exact-head 54-country uniqueness, official publisher allowlist, conflicting/extra payload rejection, country mismatch, null upload/POST observation, 320px responsive country/geography/funding-type filters, Kenya worksheet and existing TIA/IDC/NYDA regressions. Repeat mirrored root and `app/src` source parity, TypeScript, Vitest, Chromium/WebKit, security, CI.
 - Financial/legal/editorial review required before public release. Inspect whether publisher pages change; don't reset `reviewedOn` after HTTP 200 or an automation run. Open call monitoring belongs to the dedicated specialist watch and must source-check effective dates per issuer.
 - No applicant submission, cash guarantee, private applicant data, funds transfer, banking credential, payment toggle, paid inference, auth change, PWA policy or Railway environment config in this PR.
+
+
+## Unique sister PR #459 programme references reconciled 11 November 2026
+- [UNDP CreativeTech, 30 June 2026](https://www.undp.org/south-africa/press-releases/undp-launches-call-applications-creativetech-startups-join-timbuktoo-launchpad) requires prototype/MVP for creative incubator support, not a cash grant. Rolling 2026 quarterly cohort language does not certify live applications.
+- [UNDP GreenTech, 29 July 2026](https://www.undp.org/kenya/news/call-applications-join-timbuktoo-launchpad-greentech-startups) similarly describes climate-tech incubation, not direct funding, with prototype/MVP required.
+- [GEF Small Grants Programme](https://sgp.undp.org/) and [GEF phase 8 project](https://www.thegef.org/projects-operations/projects/11698) document community-driven environmental financing through country programmes, not unrestricted startup finance. The prior #459 GEF topic URL could not be fetched in this review, so the official SGP home page is used. Local open calls are unverified.
+- These three new entries carry 11 Nov source stamps. The eight earlier programme review dates are unchanged. #459 remains intact for independent coverage verification and potential owner-authorised consolidation; no PR was closed or content deleted.
