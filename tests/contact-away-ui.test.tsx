@@ -77,3 +77,29 @@ test('disabled messaging does not offer a pretend Away control',async()=>{
  presence={{sharing:true,away:false,message:'',setSharing:vi.fn(),setAway:vi.fn()}}/></MemoryRouter>);await flush();
  expect(screen.queryByRole('button',{name:'Show me as away'})).toBeNull();expect(mocks.contacts).not.toHaveBeenCalled();
 });
+
+test('Hide remains effective when it overtakes the first pending Online heartbeat',async()=>{
+  // The server ignores Hide for an unknown lease; model that real contract.
+  let completeBeat!:()=>void;let serverSequence=0;let shared=false;
+  mocks.presence.mockImplementation((_id:string, sequence:number, active:boolean)=>{
+    if(active)return new Promise(resolve=>{
+      completeBeat=()=>{
+        if(sequence>serverSequence){serverSequence=sequence;shared=true;}
+        resolve({accepted:true,ttlSeconds:75});
+      };
+    });
+    if(serverSequence && sequence>serverSequence){serverSequence=sequence;shared=false;}
+    return Promise.resolve({accepted:true,ttlSeconds:75});
+  });
+  const {result}=renderHook(()=>useContactPresence('synthetic'));
+  act(()=>result.current.setSharing(true));await flush();
+  expect(mocks.presence.mock.calls.map(call=>call.slice(1,3))).toEqual([[1,true]]);
+  act(()=>result.current.setSharing(false));await flush();
+  expect(shared).toBe(false);
+  expect(mocks.presence.mock.calls.map(call=>call.slice(1,3))).toEqual([[1,true],[2,false]]);
+  await act(async()=>{completeBeat();await Promise.resolve();});await flush();
+  // Once the delayed heartbeat has arrived, the same monotonic Hide is sent
+  // again. Without the fix, sharing stays Online for the full 75-second lease.
+  expect(shared).toBe(false);
+  expect(mocks.presence.mock.calls.map(call=>call.slice(1,3))).toEqual([[1,true],[2,false],[2,false]]);
+});

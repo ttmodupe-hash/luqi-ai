@@ -22,6 +22,7 @@ export function useContactPresence(token: string | undefined) {
     lease.current ??= crypto.randomUUID();
     const id = lease.current, api = p2pClient(token);
     let current = true, pending = false, lastAttempt = -Infinity, lastMode: boolean | undefined;
+    let revokeSequence: number | null = null;
     const beat = async () => {
       if (!current || pending || !navigator.onLine || document.visibilityState !== 'visible') return;
       const nextMode = mode.current;
@@ -37,6 +38,12 @@ export function useContactPresence(token: string | undefined) {
         if (current) setMessage('Online status could not be confirmed. Existing signals expire within 75 seconds.');
       } finally {
         pending = false;
+        // An initial Hide can reach the server before its first heartbeat.
+        // Unknown-lease Hide is intentionally ignored to prevent tab-capacity
+        // exhaustion. Re-send that same Hide after the pending beat settles.
+        if (!current && revokeSequence !== null) {
+          void api.presence(id, revokeSequence, false).catch(() => {});
+        }
         // A choice made during an in-flight heartbeat is applied afterwards.
         if (current && lastMode !== mode.current) void beat();
       }
@@ -49,8 +56,10 @@ export function useContactPresence(token: string | undefined) {
     return () => {
       current = false; sendChoice.current = null; clearInterval(timer);
       document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume);
-      // A newer sequence prevents a delayed earlier heartbeat from undoing Hide.
-      void api.presence(id, ++sequence.current, false).catch(() => {});
+      // Hide immediately, and also after a pending heartbeat settles: a Hide
+      // that reached an unknown lease first would otherwise be discarded.
+      revokeSequence = ++sequence.current;
+      void api.presence(id, revokeSequence, false).catch(() => {});
     };
   }, [sharing, token]);
   useEffect(() => { sendChoice.current?.(); }, [away]);
