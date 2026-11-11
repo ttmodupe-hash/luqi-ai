@@ -80,7 +80,8 @@ test('newer progress automatically announces stale state and accepts keyboard re
 
 test('an initially empty tab discovers a goal saved in another tab at 320px', async ({ page, context }) => {
   await page.evaluate(() => localStorage.removeItem('luqi:capability-journey:v1'));
-  await page.goto('/#/journey');
+  // The page is already at /#/journey from beforeEach; remount to read the cleared storage.
+  await page.reload();
   await expect(page.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeVisible();
 
   const otherTab = await context.newPage();
