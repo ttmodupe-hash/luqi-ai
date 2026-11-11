@@ -49,6 +49,16 @@ test('an older tab cannot overwrite or erase a later tab’s saved stage', async
     return raw ? JSON.parse(raw) as { completed: number[] } : null;
   });
   expect(persisted?.completed).toEqual([2]);
+  await page.getByRole('button', { name: 'Load latest saved journey' }).click();
+  await expect(page.getByRole('status')).toContainText('Loaded the latest saved journey');
+  await expect(page.getByText('25%', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /Mark complete:/i }).first().click();
+  await expect(page.getByText('50%', { exact: true })).toBeVisible();
+  const updated = await page.evaluate(() => {
+    const raw = localStorage.getItem('luqi:capability-journey:v1');
+    return raw ? (JSON.parse(raw) as { completed: number[] }).completed : null;
+  });
+  expect(updated).toEqual([0, 2]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await otherTab.close();
 });
