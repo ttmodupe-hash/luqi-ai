@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 
 test('320px Capital Intelligence prepares a real local document and blocks false NYDA R&D matches',async({page})=>{
   await page.setViewportSize({width:320,height:740});
@@ -29,8 +30,23 @@ test('320px Capital Intelligence prepares a real local document and blocks false
   await expect(field).toHaveValue(/Community Innovation/);
   await expect(field).toHaveValue(/No application has been submitted/);
   await expect(field).toHaveValue(/CURRENT FUNDING WINDOW: NOT VERIFIED/);
-  await expect(page.getByRole('link',{name:'Download preparation worksheet'}))
-    .toHaveAttribute('download','luqi-funding-preparation.txt');
+  const worksheetDownload=page.getByRole('link',{name:'Download preparation worksheet'});
+  await expect(worksheetDownload).toHaveAttribute('download','luqi-funding-preparation.txt');
+  // Actual browser download, not merely a download-shaped href: validate the file
+  // contents and the non-submission boundary at the 320px user viewport.
+  const [download]=await Promise.all([page.waitForEvent('download'),worksheetDownload.click()]);
+  expect(download.suggestedFilename()).toBe('luqi-funding-preparation.txt');
+  const path=await download.path();
+  expect(path).not.toBeNull();
+  if(!path)throw new Error('Funding worksheet download has no readable local file');
+  const exported=await readFile(path,'utf8');
+  expect(exported).toContain('Project: Community Innovation');
+  expect(exported).toContain('Project location: South Africa');
+  expect(exported).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+  expect(exported).toContain('No application has been submitted.');
+  expect(exported).toContain('Publisher review date:');
+  expect(exported).toContain('Programme reference: TIA Seed Fund');
+
   expect(risky).toEqual([]);
   const viewportReport=await page.evaluate(()=>({
     viewport:window.innerWidth,
