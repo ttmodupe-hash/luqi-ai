@@ -7,11 +7,18 @@ import {TenderOriginalForms} from '../src/components/TenderOriginalForms';
 import {runTenderDocument} from '../src/lib/tender-document-client';
 import {VERIFIED_SBD1,TENDER_FILE_MAX, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
 import {CustomerSessionProvider,useCustomerSession} from '../src/providers/customer-session';
+import {buildTenderOriginalArchive} from '../src/lib/tender-document-review';
 vi.mock('../src/lib/tender-document-client',()=>({runTenderDocument:vi.fn()}));
+vi.mock('../src/lib/tender-document-review',async importActual=>({
+ ...(await importActual<typeof import('../src/lib/tender-document-review')>()),
+ buildTenderOriginalArchive:vi.fn(),
+}));
 const run=vi.mocked(runTenderDocument),network=vi.fn();
+const archive=vi.mocked(buildTenderOriginalArchive);
 const inspected:TenderDocumentResponse={ok:true,inspection:{kind:'docx',sha256:VERIFIED_SBD1.sha256,size:3,templateId:VERIFIED_SBD1.id,fields:[],excerpt:'Original terms',notes:[]}};
 beforeEach(()=>{
  vi.stubGlobal('crypto',webcrypto);vi.stubGlobal('fetch',network);network.mockReset();run.mockReset();
+ archive.mockReset();archive.mockResolvedValue(new Uint8Array([7,8,9]));
  run.mockImplementation(async req=>req.action==='fill'?{...inspected,filled:new Uint8Array([4,5,6])}:inspected);
 });
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.useRealTimers()});
@@ -316,4 +323,29 @@ it('rejecting an oversized amendment revokes approval without reading it or losi
  expect(history.querySelector('ol li:last-child')?.textContent).not.toMatch(/Synthetic supplier|add-amendment/);
  expect(run.mock.calls.filter(([request])=>request.action==='inspect')).toHaveLength(1);
  expect(network).not.toHaveBeenCalled();
+});
+
+
+it('reports only a browser download request, never a confirmed saved file or submission',async()=>{
+ const originalURL=URL,createObjectURL=vi.fn(()=> 'blob:synthetic-form-review'),revokeObjectURL=vi.fn();
+ vi.stubGlobal('URL',class extends originalURL{
+   static createObjectURL=createObjectURL;
+   static revokeObjectURL=revokeObjectURL;
+ });
+ const click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+ fireEvent.click(within(review).getByRole('button',{name:'Export filled original and review record'}));
+ const status=await screen.findByText(/Download requested from this browser/);
+ expect(status.textContent).toMatch(/Check that luqi-sbd1-partial-review-pack\\.zip actually appears in Downloads/);
+ expect(status.textContent).toMatch(/browsers can block or discard files/);
+ expect(status.textContent).toMatch(/leaving or reloading clears this work/);
+ expect(status.textContent).toMatch(/Nothing was submitted/);
+ expect(status.textContent).not.toMatch(/download complete|receipt confirmed|approved by issuer/i);
+ expect(archive).toHaveBeenCalledOnce();
+ expect(createObjectURL).toHaveBeenCalledOnce();
+ expect(click).toHaveBeenCalledOnce();
+ expect(network).not.toHaveBeenCalled();
+ click.mockRestore();
 });
