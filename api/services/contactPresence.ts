@@ -2,7 +2,7 @@
  * Production currently runs one replica. Missing state is never online/offline proof. */
 export const PRESENCE_TTL_MS = 75_000;
 const RETAIN_MS = 15 * 60_000;
-type Lease = { sequence: number; active: boolean; away: boolean; expires: number; touched: number; modeWindowStarted: number; modeSwitches: number };
+type Lease = { sequence: number; active: boolean; away: boolean; expires: number; touched: number; modeWindowStarted: number; modeSwitches: number; reenableWindowStarted: number; reenableCount: number };
 export class ContactPresence {
   private users = new Map<number, Map<string, Lease>>();
   private swept = 0;
@@ -42,9 +42,17 @@ export class ContactPresence {
     // Hide and immediate re-enable must not reset the mode-toggle quota;
     // otherwise callers can evade it by cycling active=false/true.
     const withinModeWindow = !!previous && now - previous.modeWindowStarted < 10_000;
+    // Repeated Hide/re-enable can otherwise restart the lease and avoid the mode
+    // switch quota indefinitely. Never block Hide, but cap reactivations.
+    const withinReenableWindow = !!previous && now - previous.reenableWindowStarted < 10_000;
+    const reenableCount = withinReenableWindow ? previous!.reenableCount : 0;
+    const reactivating = active && previous?.active === false;
+    if (reactivating && reenableCount >= 3) throw Error('PRESENCE_RATE');
     leases.set(id, { sequence, active, away: active && away, expires: now + PRESENCE_TTL_MS, touched: now,
       modeWindowStarted: withinModeWindow ? previous!.modeWindowStarted : now,
-      modeSwitches: withinModeWindow ? previous!.modeSwitches : 0 });
+      modeSwitches: withinModeWindow ? previous!.modeSwitches : 0,
+      reenableWindowStarted: withinReenableWindow ? previous!.reenableWindowStarted : now,
+      reenableCount: reenableCount + (reactivating ? 1 : 0) });
   }
   read(user: number): 'online' | 'away' | 'offline' | 'not_shared' {
     const now = this.clock(); this.sweep(now);

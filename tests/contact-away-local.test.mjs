@@ -40,3 +40,20 @@ test('Hide and re-enable cannot reset mode-toggle quota within the same ten-seco
   assert.throws(()=>p.update(1,'a',10,true,true),/PRESENCE_RATE/);
   assert.equal(p.read(1),'online');
 });
+
+test('rapid Hide/re-enable cycles are capped without blocking immediate Hide',()=>{
+  const {p}=fixture();p.update(1,'a',1,true);
+  for(let sequence=2;sequence<=7;sequence+=2){
+    p.update(1,'a',sequence,false);p.update(1,'a',sequence+1,true);
+  }
+  p.update(1,'a',8,false);assert.equal(p.read(1),'not_shared');
+  assert.throws(()=>p.update(1,'a',9,true),/PRESENCE_RATE/);
+  p.update(1,'a',10,false);assert.equal(p.read(1),'not_shared');
+});
+test('legitimate re-enable works after mode window and preserves separate Online-tab precedence',()=>{
+  const {p,advance}=fixture();p.update(1,'a',1,true,true);
+  for(let sequence=2;sequence<=7;sequence+=2){p.update(1,'a',sequence,false);p.update(1,'a',sequence+1,true,true)}
+  p.update(1,'a',8,false);advance(10_000);p.update(1,'a',9,true,true);
+  p.update(1,'b',1,true);assert.equal(p.read(1),'online');
+  p.update(1,'b',2,false);assert.equal(p.read(1),'away');
+});
