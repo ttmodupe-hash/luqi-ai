@@ -17,7 +17,13 @@ export function zeroState(qubits = 2): Statevector {
 }
 export function validateState(state: Statevector): number {
   const n = Math.log2(state.length);
-  if (!Number.isInteger(n) || n < 1 || n > 8 || state.some(z => !Number.isFinite(z.re) || !Number.isFinite(z.im))) throw new Error('Invalid statevector.');
+  if (!Number.isInteger(n) || n < 1 || n > 8) throw new Error('Invalid statevector.');
+  // Visit every amplitude: Array#some silently skips missing sparse entries,
+  // otherwise a partially specified state may appear normalized.
+  for (let i = 0; i < state.length; i++) {
+    const z = state[i];
+    if (!z || !Number.isFinite(z.re) || !Number.isFinite(z.im)) throw new Error('Invalid statevector.');
+  }
   const norm = state.reduce((s, z) => s + z.re * z.re + z.im * z.im, 0);
   if (Math.abs(norm - 1) > 1e-9) throw new Error('Statevector must have unit norm.');
   return n;
@@ -26,7 +32,20 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
   const n = validateState(state);
   const validQubit = (q: number) => Number.isInteger(q) && q >= 0 && q < n;
   if (!validQubit(gate.target)) throw new Error('Invalid target qubit.');
-  const result = state.map(z => ({ ...z })), target = 1 << gate.target;
+  const target = 1 << gate.target;
+  if (gate.kind === 'rz') {
+    const angle = finite(gate.angle ?? NaN);
+    // One diagonal rotation per gate, not one trigonometric calculation per
+    // amplitude. The lower and upper basis halves use opposite phase signs.
+    const cosine = Math.cos(angle / 2), sine = Math.sin(angle / 2);
+    return state.map((z, i) => {
+      const signedSine = i & target ? sine : -sine;
+      return { re: z.re * cosine - z.im * signedSine,
+        im: z.re * signedSine + z.im * cosine };
+    });
+  }
+  // Clone only for gates that use the mutable result buffer; RZ maps once.
+  const result = state.map(z => ({ ...z }));
   if (gate.kind === 'cx' || gate.kind === 'cz') {
     if (!validQubit(gate.control) || gate.control === gate.target) throw new Error('Control and target must differ.');
     const control = 1 << gate.control;
@@ -38,12 +57,11 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
     }
     return result;
   }
-  if (gate.kind === 'rz') {
-    const angle = finite(gate.angle ?? NaN);
-    return state.map((z, i) => phase(z, (i & target ? 1 : -1) * angle / 2));
-  }
   if (gate.kind !== 'h' && gate.kind !== 'x' && gate.kind !== 'rx') throw new Error('Unsupported gate.');
   const angle = gate.kind === 'rx' ? finite(gate.angle ?? NaN) : 0;
+  // The RX rotation is fixed for all basis pairs; evaluate trig only once per gate.
+  const rxCos = gate.kind === 'rx' ? Math.cos(angle / 2) : 0;
+  const rxSin = gate.kind === 'rx' ? Math.sin(angle / 2) : 0;
   for (let i = 0; i < state.length; i++) {
     if (i & target) continue;
     const a = state[i], b = state[i | target];
@@ -53,9 +71,8 @@ export function applyGate(state: Statevector, gate: Gate): Statevector {
     } else if (gate.kind === 'x') {
       result[i] = { ...b }; result[i | target] = { ...a };
     } else {
-      const c = Math.cos(angle / 2), s = Math.sin(angle / 2);
-      result[i] = add(scale(a, c), multiply(b, { re: 0, im: -s }));
-      result[i | target] = add(scale(b, c), multiply(a, { re: 0, im: -s }));
+      result[i] = add(scale(a, rxCos), multiply(b, { re: 0, im: -rxSin }));
+      result[i | target] = add(scale(b, rxCos), multiply(a, { re: 0, im: -rxSin }));
     }
   }
   return result;
@@ -86,8 +103,15 @@ export function stateMetrics(state: Statevector) {
   if (n === 2) {
     const determinant = add(multiply(state[0], state[3]), scale(multiply(state[1], state[2]), -1));
     concurrence = Math.max(0, Math.min(1, 2 * Math.hypot(determinant.re, determinant.im)));
-    const eigenvalue = (1 + Math.sqrt(Math.max(0, 1 - concurrence ** 2))) / 2;
-    entanglementEntropy = entropy([eigenvalue, 1 - eigenvalue]);
+    // Rationalize the smaller reduced-state eigenvalue: (1 - sqrt(1-C²))/2
+    // cancels to zero for weak but representable entanglement.
+    const root = Math.sqrt(Math.max(0, 1 - concurrence ** 2));
+    const smallEigenvalue = concurrence ** 2 / (2 * (1 + root));
+    // log1p preserves the larger eigenvalue's contribution even when
+    // 1-smallEigenvalue rounds to exactly 1 in binary64.
+    entanglementEntropy = smallEigenvalue === 0 ? 0 :
+      -(smallEigenvalue * Math.log2(smallEigenvalue) +
+        (1 - smallEigenvalue) * Math.log1p(-smallEigenvalue) / Math.LN2);
   }
   return { probabilities: p, norm: p.reduce((s, x) => s + x, 0), concurrence,
     measurementEntropy: entropy(p), entanglementEntropy };
@@ -110,7 +134,11 @@ export type IsingModel = { fields: number[]; edges: { i: number; j: number; weig
 function validateModel(model: IsingModel): number {
   const n = model.fields.length; zeroState(n);
   const seen = new Set<string>();
-  if (model.fields.some(x => !Number.isFinite(x) || Math.abs(x) > 100_000)) throw new Error('Invalid field.');
+  // Index every position: Array#some skips holes and could accept a missing field as zero.
+  for (let i = 0; i < n; i++) {
+    const field = model.fields[i];
+    if (!Number.isFinite(field) || Math.abs(field) > 100_000) throw new Error('Invalid field.');
+  }
   for (const { i, j, weight } of model.edges) {
     const key = [i, j].sort((a, b) => a - b).join(':');
     if (!Number.isInteger(i) || !Number.isInteger(j) || i < 0 || j < 0 || i >= n || j >= n || i === j ||
@@ -126,39 +154,129 @@ export function isingEnergies(model: IsingModel): number[] {
 }
 export function exactIsingBaseline(model: IsingModel) {
   const energies = isingEnergies(model), minimum = Math.min(...energies);
-  return { minimum, states: energies.flatMap((energy, index) => Math.abs(energy - minimum) < 1e-10 ? [index] : []), statesEvaluated: energies.length };
+  // Compare the enumerated finite spectrum itself. A fixed absolute tolerance
+  // falsely labels distinct low-energy states as exact minima (e.g. 1e-12).
+  return { minimum, states: energies.flatMap((energy, index) => energy === minimum ? [index] : []), statesEvaluated: energies.length };
+}
+/** Rotate an internally owned state in place, retaining per-gate norm validation.
+ * The caller clones its shared gamma-phase state once; no public input is mutated.
+ */
+function applyPreparedRxInPlace(state: Statevector, target: number, cosine: number, sine: number): void {
+  const n = validateState(state);
+  if (!Number.isInteger(target) || target < 0 || target >= n) throw new Error('Invalid target qubit.');
+  const bit = 1 << target;
+  for (let i = 0; i < state.length; i++) {
+    if (i & bit) continue;
+    // Each RX pair is disjoint, so capture both original amplitudes before writing.
+    const a = state[i], b = state[i | bit];
+    // Capture scalar components before either output is changed. Avoid eight
+    // temporary Complex objects per basis pair on the inner QAOA mixer path.
+    const ar = a.re, ai = a.im, br = b.re, bi = b.im, imaginary = -sine;
+    // Preserve the public RX gate's arithmetic order, including signed zero.
+    a.re = ar * cosine + (br * 0 - bi * imaginary);
+    a.im = ai * cosine + (br * imaginary + bi * 0);
+    b.re = br * cosine + (ar * 0 - ai * imaginary);
+    b.im = bi * cosine + (ar * imaginary + ai * 0);
+  }
+}
+/** Apply the bounded mixer to a prepared gamma phase; neither input is mutated. */
+function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, cosine: number, sine: number, workspace?: Statevector) {
+  // Coefficients are prepared by the caller from finite angles. The public
+  // single-layer path still rejects overflow in its doubled RX angle.
+  // One clone per candidate, rather than a full statevector clone for each
+  // mixer qubit. The cached phase row remains immutable across all beta values.
+  const state = workspace ?? phased.map(z => ({ ...z }));
+  // The grid owns this scratch buffer: restore all amplitudes before each beta.
+  // Public qaoaLayer calls do not supply a workspace and retain fresh ownership.
+  if (workspace) for (let i = 0; i < phased.length; i++) {
+    state[i].re = phased[i].re;
+    state[i].im = phased[i].im;
+  }
+  for (let target = 0; target < qubits; target++) applyPreparedRxInPlace(state, target, cosine, sine);
+  // Preserve norm validation while streaming the energy observable directly.
+  // This avoids allocating a 2^n-number probability array for every grid pair.
+  validateState(state);
+  let expectedEnergy = 0;
+  for (let i = 0; i < state.length; i++) {
+    const z = state[i];
+    expectedEnergy += (z.re * z.re + z.im * z.im) * energies[i];
+  }
+  return { state, expectedEnergy };
+}
+/** Compute from a validated, fixed Ising spectrum; only a classical simulation. */
+function qaoaLayerFromEnergies(energies: number[], initial: Statevector, qubits: number, gamma: number, beta: number) {
+  const angle = finite(2 * beta);
+  const cosine = Math.cos(angle / 2), sine = Math.sin(angle / 2);
+  const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
+  return qaoaLayerFromPhase(energies, phased, qubits, cosine, sine);
 }
 export function qaoaLayer(model: IsingModel, gamma: number, beta: number) {
-  finite(gamma); finite(beta); const energies = isingEnergies(model), n = model.fields.length;
-  let state = uniformState(n).map((z, i) => phase(z, -gamma * energies[i]));
-  for (let target = 0; target < n; target++) state = applyGate(state, { kind: 'rx', target, angle: 2 * beta });
-  const p = probabilities(state);
-  return { state, expectedEnergy: p.reduce((s, x, i) => s + x * energies[i], 0) };
+  finite(gamma); finite(beta);
+  const energies = isingEnergies(model), qubits = model.fields.length;
+  return qaoaLayerFromEnergies(energies, uniformState(qubits), qubits, gamma, beta);
 }
 export function searchQaoaGrid(model: IsingModel, steps = 15) {
   if (!Number.isInteger(steps) || steps < 3 || steps > 25) throw new Error('Use 3–25 grid steps.');
-  let best = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
-  for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
-    const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
-    const candidate = qaoaLayer(model, gamma, beta);
-    if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
+  // The Ising Hamiltonian and uniform initial state are fixed for this bounded
+  // grid; compute both once instead of allocating them for every angle pair.
+  const energies = isingEnergies(model), qubits = model.fields.length, initial = uniformState(qubits);
+  let best = { gamma: 0, beta: 0, ...qaoaLayerFromEnergies(energies, initial, qubits, 0, 0) };
+  // Beta coefficients are fixed by column: evaluate trig once per beta,
+  // rather than again for every gamma row (at most 25 cached pairs).
+  const mixers = Array.from({ length: steps }, (_, b) => {
+    const beta = Math.PI * b / (steps - 1), angle = finite(2 * beta);
+    return { beta, cosine: Math.cos(angle / 2), sine: Math.sin(angle / 2) };
+  });
+  // Reuse a single internal candidate buffer across all 25×25 pairs at most;
+  // only winning states are cloned to prevent later candidates modifying them.
+  const workspace = initial.map(z => ({ ...z }));
+  // Gamma changes only by row: prepare its phase once, then reuse immutably
+  // for all beta mixers. Peak state memory remains bounded to 1–8 qubits.
+  for (let g = 0; g < steps; g++) {
+    const gamma = 2 * Math.PI * g / (steps - 1);
+    const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
+    for (const { beta, cosine, sine } of mixers) {
+      const candidate = qaoaLayerFromPhase(energies, phased, qubits, cosine, sine, workspace);
+      if (candidate.expectedEnergy < best.expectedEnergy) {
+        best = { gamma, beta, expectedEnergy: candidate.expectedEnergy,
+          state: workspace.map(z => ({ ...z })) };
+      }
+    }
   }
   return { ...best, parameterPairs: steps ** 2 };
 }
 export function loadBalanceModel(loads: number[]) {
-  if (loads.length < 2 || loads.length > 6 || loads.some(x => !Number.isFinite(x) || x <= 0 || x > 100)) throw new Error('Use 2–6 positive loads, up to 100 kW each.');
+  if (loads.length < 2 || loads.length > 6) throw new Error('Use 2–6 positive loads, up to 100 kW each.');
+  // Read by index so sparse inputs cannot silently become NaN feeder coefficients.
+  for (let i = 0; i < loads.length; i++) {
+    const load = loads[i];
+    if (!Number.isFinite(load) || load <= 0 || load > 100)
+      throw new Error('Use 2–6 positive loads, up to 100 kW each.');
+  }
   const total = loads.reduce((s, x) => s + x, 0), edges: IsingModel['edges'] = [];
-  for (let i = 0; i < loads.length; i++) for (let j = i + 1; j < loads.length; j++) edges.push({ i, j, weight: 2 * loads[i] * loads[j] / total ** 2 });
+  // Normalize before products: squaring a valid tiny total can underflow to
+  // zero and turn every coefficient into NaN (e.g. 2 × 1e-200 kW).
+  const shares = loads.map(load => load / total);
+  for (let i = 0; i < loads.length; i++) for (let j = i + 1; j < loads.length; j++) edges.push({ i, j, weight: 2 * shares[i] * shares[j] });
   return { model: { fields: loads.map(() => 0), edges }, total,
-    constant: loads.reduce((s, x) => s + x * x, 0) / total ** 2 };
+    constant: shares.reduce((s, share) => s + share * share, 0) };
 }
 export function surfaceCodeEstimate(distance: number, physical: number, threshold = 0.01) {
   if (!Number.isInteger(distance) || distance < 3 || distance > 13 || distance % 2 !== 1 ||
       !Number.isFinite(physical) || physical <= 0 || physical >= 1 ||
       !Number.isFinite(threshold) || threshold <= 0 || threshold >= 1) throw new Error('Invalid surface-code inputs.');
+  const thresholdRatio = threshold / physical, belowThreshold = physical < threshold;
+  // Inputs can be finite while the quotient overflows to Infinity. Never
+  // present an unrepresentable number as a scientific threshold metric.
+  if (!Number.isFinite(thresholdRatio) || thresholdRatio === 0)
+    throw new Error('Surface-code threshold ratio exceeds floating-point precision.');
+  // Illustrative scaling law, not a decoder simulation or hardware prediction.
+  const logicalErrorEstimate = belowThreshold
+    ? 0.1 * (physical / threshold) ** ((distance + 1) / 2) : null;
+  // An underflowed zero would falsely suggest a perfectly error-free system.
+  if (logicalErrorEstimate === 0)
+    throw new Error('Surface-code logical error estimate underflows floating-point precision.');
   return { distance, dataQubits: distance ** 2, syndromeQubits: distance ** 2 - 1,
-    patchQubits: 2 * distance ** 2 - 1, thresholdRatio: threshold / physical,
-    belowThreshold: physical < threshold,
-    // Illustrative scaling law, not a decoder simulation or hardware prediction.
-    logicalErrorEstimate: physical < threshold ? 0.1 * (physical / threshold) ** ((distance + 1) / 2) : null };
+    patchQubits: 2 * distance ** 2 - 1, thresholdRatio, belowThreshold,
+    logicalErrorEstimate };
 }

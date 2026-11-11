@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { bellState, exactIsingBaseline, groverIteration, loadBalanceModel,
+import { bellState, groverIteration, loadBalanceModel,
   qaoaLayer, searchQaoaGrid, stateMetrics, surfaceCodeEstimate, twoQubitQasm, uniformState } from './quantum-engine';
 import { allocateSmallBudget, shortestClosedTour } from './classical-baselines';
 import { QISKIT_BELL_EXAMPLE, QUANTUM_LESSONS, QUANTUM_TRACK_ID } from './academy';
@@ -9,6 +9,8 @@ import type { PqcLabResult } from './pqc-lab';
 import './quantum-lab.css';
 
 const clean = (x: number, digits = 6) => (Math.abs(x) < 1e-12 ? 0 : x).toFixed(digits);
+// Preserve small nonzero physical observables instead of rounding them to an exact-looking zero.
+const displayPositive = (x: number, digits = 4) => x > 0 && x < 10 ** -digits ? x.toExponential(3) : x.toFixed(digits);
 const amplitude = (re: number, im: number) => `${clean(re)} ${im < -1e-12 ? '−' : '+'} ${clean(Math.abs(im))}i`;
 function randCents(value: string) {
   if (!/^\d{1,7}(?:\.\d{1,2})?$/.test(value)) throw new Error('Use a positive rand amount with at most two decimals.');
@@ -42,9 +44,57 @@ export default function QuantumLabPage() {
   const balance = useMemo(() => {
     try {
       const values = loads.split(',').map(x => Number(x.trim())), model = loadBalanceModel(values);
-      const baseline = exactIsingBaseline(model.model), simulated = qaoaLayer(model.model, gamma, beta);
-      const chosen = baseline.states[0], feederA = values.reduce((s, x, i) => chosen & (1 << i) ? s : s + x, 0);
-      return { ...model, ...simulated, baseline, feederA, feederB: model.total - feederA };
+      const simulated = qaoaLayer(model.model, gamma, beta);
+      // Compute physical feeder totals per enumerated state. Recovering a
+      // squared imbalance by subtracting normalized Ising terms can cancel
+      // a genuine small positive cost to zero in binary64.
+      const feederTotals = (bits: number) => {
+        let feederA = 0, feederB = 0;
+        for (let i = 0; i < values.length; i++) {
+          if (bits & (1 << i)) feederB += values[i];
+          else feederA += values[i];
+        }
+        return { feederA, feederB };
+      };
+      // Rounded feeder totals can both equal 2 even where their underlying
+      // four-load partition differs by a representable sub-ULP residual.
+      // Neumaier summation keeps that signed residual for 2–6 loads.
+      const feederImbalance = (bits: number) => {
+        let sum = 0, compensation = 0;
+        for (let i = 0; i < values.length; i++) {
+          const term = bits & (1 << i) ? -values[i] : values[i];
+          const next = sum + term;
+          compensation += Math.abs(sum) >= Math.abs(term)
+            ? (sum - next) + term : (term - next) + sum;
+          sum = next;
+        }
+        return sum + compensation;
+      };
+      // A finite nonzero kW imbalance can have an unrepresentable kW²
+      // result (for example, 1e-200 squared). Never call that exact zero.
+      const physicalSquared = (bits: number) => {
+        const imbalance = feederImbalance(bits);
+        const squared = imbalance ** 2;
+        if (imbalance !== 0 && squared === 0)
+          throw new RangeError('Physical squared imbalance underflows binary64 precision.');
+        return squared;
+      };
+      // The normalized Ising spectrum can round distinct physical costs to
+      // the same energy. Choose the *physical* minimum over all <=64 states.
+      let chosen = 0, exactSquaredImbalance = Infinity;
+      for (let bits = 0; bits < simulated.state.length; bits++) {
+        const squared = physicalSquared(bits);
+        if (squared < exactSquaredImbalance) { exactSquaredImbalance = squared; chosen = bits; }
+      }
+      const { feederA, feederB } = feederTotals(chosen);
+      const exactAbsoluteImbalance = Math.abs(feederImbalance(chosen));
+      // At most 2^6=64 basis states, six loads each; the QAOA expectation
+      // is a probability-weighted sum of nonnegative physical costs.
+      const expectedSquaredImbalance = simulated.state.reduce((sum, z, bits) => {
+        return sum + (z.re * z.re + z.im * z.im) * physicalSquared(bits);
+      }, 0);
+      return { ...model, ...simulated, statesEvaluated: simulated.state.length,
+        feederA, feederB, exactAbsoluteImbalance, exactSquaredImbalance, expectedSquaredImbalance };
     } catch { return null; }
   }, [loads, gamma, beta]);
   const surface = useMemo(() => { try { return surfaceCodeEstimate(distance, Number(physical), Number(threshold)); } catch { return null; } }, [distance, physical, threshold]);
@@ -116,15 +166,16 @@ export default function QuantumLabPage() {
       <p>The p=1 QAOA simulation applies cost phases and an X mixer. Its expected cost is compared with exhaustive enumeration. This does not establish quantum speedup, fuel savings or optimality on a large real-world problem.</p>
       <h3>Two-feeder load partition</h3>
       <label>Appliance loads in kW (2–6 comma-separated values)<input value={loads} maxLength={80} onChange={e => { setLoads(e.target.value); setScanNotice(''); }} /></label>
-      <p>Indivisible simultaneous loads, two identical feeders, no losses or capacity constraints. Cost is squared imbalance divided by total load squared.</p>
+      <p>Indivisible simultaneous loads, two identical feeders, no losses or capacity constraints. The QAOA objective is dimensionless: squared feeder imbalance divided by squared total load. The reported minimum and expected squared imbalances are in physical kW². Feeder totals below are rounded for display; use the separately reported residual for near-balanced loads.</p>
       <div className="quantum-controls"><label>Gamma: {clean(gamma, 3)}<input aria-label="QAOA gamma" type="range" min={0} max={2 * Math.PI} step={0.01} value={gamma} onChange={e => setGamma(Number(e.target.value))} /></label>
         <label>Beta: {clean(beta, 3)}<input aria-label="QAOA beta" type="range" min={0} max={Math.PI} step={0.01} value={beta} onChange={e => setBeta(Number(e.target.value))} /></label></div>
-      {balance ? <><dl className="quantum-metrics"><div><dt>Exact best feeder totals</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
-        <div><dt>Exact minimum squared imbalance</dt><dd>{clean(Math.max(0, (balance.baseline.minimum + balance.constant) * balance.total ** 2), 4)} kW²</dd></div>
-        <div><dt>QAOA expected squared imbalance</dt><dd>{clean(Math.max(0, (balance.expectedEnergy + balance.constant) * balance.total ** 2), 4)} kW²</dd></div>
-        <div><dt>Classical states evaluated</dt><dd>{balance.baseline.statesEvaluated}</dd></div></dl>
+      {balance ? <><dl className="quantum-metrics"><div><dt>Best feeder totals (rounded)</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
+        <div><dt>Exact minimum absolute imbalance</dt><dd>{displayPositive(balance.exactAbsoluteImbalance, 4)} kW</dd></div>
+         <div><dt>Exact minimum squared imbalance</dt><dd>{displayPositive(balance.exactSquaredImbalance, 4)} kW²</dd></div>
+        <div><dt>QAOA expected squared imbalance</dt><dd>{displayPositive(balance.expectedSquaredImbalance, 4)} kW²</dd></div>
+        <div><dt>Classical states evaluated</dt><dd>{balance.statesEvaluated}</dd></div></dl>
         <button className="luqi-secondary" onClick={() => { const result = searchQaoaGrid(balance.model); setGamma(result.gamma); setBeta(result.beta); setScanNotice(`Compared ${result.parameterPairs} parameter pairs. Best point on this grid; not a proof of the global parameter optimum.`); }}>Scan p=1 parameter grid</button></>
-        : <p role="status">Enter 2–6 positive loads, each at most 100 kW.</p>}
+        : <p role="status">Enter 2–6 positive loads, each at most 100 kW. Nonzero squared costs below floating-point precision cannot be reported as exact zero.</p>}
       {scanNotice && <p role="status">{scanNotice}</p>}
       <details><summary>Inspect the Ising formulation</summary><p>For zi∈{'{−1,+1}'}, use Jij=2wiwj/W², hi=0 and constant Σwi²/W². This makes E(z)+constant=(Σwi zi/W)².</p></details>
       <h3>Multi-stop logistics: exact small reference</h3>
@@ -174,8 +225,9 @@ export default function QuantumLabPage() {
       surface: { physical: Number(physical), threshold: Number(threshold), result: surface, model: 'illustrative-below-threshold-scaling' },
       optimization: { loads, gamma, beta,
         feederModel: 'two-identical-feeders-no-capacity-constraints',
-        feederResult: balance ? { expectedSquaredImbalance: (balance.expectedEnergy + balance.constant) * balance.total ** 2,
-          exactSquaredImbalance: (balance.baseline.minimum + balance.constant) * balance.total ** 2,
+        feederResult: balance ? { expectedSquaredImbalance: balance.expectedSquaredImbalance,
+          exactAbsoluteImbalance: balance.exactAbsoluteImbalance,
+          exactSquaredImbalance: balance.exactSquaredImbalance,
           exactFeederTotals: [balance.feederA, balance.feederB] } : null,
         suppliedTravelMatrix: tourInput, exactTour: tour, projectBudgetZar: budget, projects, exactAllocation: allocation },
       pqcExperimentScope: 'Ephemeral self-test of public message abc only; not a signature over this notebook.',
