@@ -73,6 +73,36 @@ describe('LUQI Capability Journey', () => {
     expect(readCapabilityJourney()?.completed).toEqual([]);
   });
 
+  it('does not update another goal that replaced the displayed journey in a second tab', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    saveCapabilityJourney('I want to start a township business');
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+  });
+
+  it('does not erase a different goal saved from another tab', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    saveCapabilityJourney('I want to start a township business');
+    fireEvent.click(screen.getByRole('button', { name: /Clear saved journey/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+  });
+
+  it('does not overwrite more recent stage completion from another tab', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    setCapabilityJourneyStep(2, true);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(readCapabilityJourney()?.completed).toEqual([2]);
+    expect(screen.getByText('0%')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+  });
+
   it('lets the user clear the device-local journey', () => {
     saveCapabilityJourney('I want to build an app for my community');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);

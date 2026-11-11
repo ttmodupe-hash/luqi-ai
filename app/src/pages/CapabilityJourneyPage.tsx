@@ -19,8 +19,27 @@ export default function CapabilityJourneyPage() {
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
   const nextStep = plan && nextIndex >= 0 ? plan.steps[nextIndex] : null;
 
+  // Detect known other-tab changes before mutating this device-local record.
+  // localStorage has no cross-tab transaction guarantee.
+  function journeySnapshotMatchesSaved(): boolean {
+    const saved = readCapabilityJourney();
+    return Boolean(saved && journey &&
+      saved.goal === journey.goal &&
+      saved.startedAt === journey.startedAt &&
+      saved.updatedAt === journey.updatedAt &&
+      saved.completed.join(',') === journey.completed.join(','));
+  }
+
+  function warnStaleJourney() {
+    setNotice('This journey changed in another tab or was cleared. Reload before editing so you do not change a different goal.');
+  }
+
   function toggle(index: number) {
     if (!journey) return;
+    if (!journeySnapshotMatchesSaved()) {
+      warnStaleJourney();
+      return;
+    }
     const complete = !journey.completed.includes(index);
     const updated = setCapabilityJourneyStep(index, complete);
     if (!updated || updated.completed.includes(index) !== complete) {
@@ -32,6 +51,10 @@ export default function CapabilityJourneyPage() {
   }
 
   function clearJourney() {
+    if (!journeySnapshotMatchesSaved()) {
+      warnStaleJourney();
+      return;
+    }
     if (!clearCapabilityJourney()) {
       setNotice('This browser did not allow the saved journey to be cleared.');
       return;
