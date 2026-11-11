@@ -78,6 +78,34 @@ test('newer progress automatically announces stale state and accepts keyboard re
   await otherTab.close();
 });
 
+test('an initially empty tab discovers a goal saved in another tab at 320px', async ({ page, context }) => {
+  await page.evaluate(() => localStorage.removeItem('luqi:capability-journey:v1'));
+  await page.goto('/#/journey');
+  await expect(page.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeVisible();
+
+  const otherTab = await context.newPage();
+  const posts: string[] = [];
+  otherTab.on('request', request => {
+    if (request.method() === 'POST') posts.push(request.url());
+  });
+  const origin = new URL(page.url()).origin;
+  await otherTab.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== origin || /^\\/(api|v1)\\//.test(url.pathname)) return route.abort();
+    return route.continue();
+  });
+  await otherTab.goto('/#/possibility');
+  await otherTab.getByRole('button', { name: 'I want to become a network engineer' }).click();
+  await otherTab.getByRole('button', { name: /Save as my journey/i }).click();
+  await expect(page.getByRole('status')).toContainText('saved in another tab');
+  await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(posts).toEqual([]);
+  await otherTab.close();
+});
+
 test('denied storage write does not claim that a stage was completed', async ({ page }) => {
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
