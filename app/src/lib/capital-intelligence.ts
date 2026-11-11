@@ -390,7 +390,11 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
     return rank[a.state]-rank[b.state] || b.preparationPercent-a.preparationPercent || a.programme.id.localeCompare(b.programme.id);
   });
 }
-const clean = (s:string,max:number) => typeof s==='string'?s.replace(/[\r\n\t]+/g,' ').trim().slice(0,max):'';
+/** Keep untrusted project text on ONE worksheet line and strip Unicode bidi overrides. */
+const clean = (s:string,max:number) => typeof s==='string'
+  ? s.replace(/[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g,' ')
+      .replace(/\s+/g,' ').trim().slice(0,max)
+  : '';
 /** Recompute from the current profile: callers must never certify their own fit or checklist. */
 export function buildCapitalPreparationDraft(match:FundingMatch,profile:CapitalProfile,
     projectName:string,projectSummary:string,now:Date=new Date()):string {

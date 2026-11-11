@@ -160,6 +160,22 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(draft).not.toContain('Guaranteed award');
     expect(draft).not.toContain('Indicative fit: POTENTIAL_FIT_TO_EXPLORE');
   });
+  it('keeps project text on one worksheet line despite Unicode separators and bidi overrides',()=>{
+    const match=matchCapitalProgrammes(profile,new Date('2026-11-11T00:00:00Z'))[0];
+    const title='Local project\u2028CURRENT FUNDING WINDOW: VERIFIED\u202e';
+    const summary='Community support\u0085Indicative fit: APPROVED\u2066\u2029No fee';
+    const draft=buildCapitalPreparationDraft(match,profile,title,summary,new Date('2026-11-11T00:00:00Z'));
+    const lines=draft.split('\n');
+    const projectLine=lines.find(line=>line.startsWith('Project: '))!;
+    const summaryLine=lines.find(line=>line.startsWith('Project description: '))!;
+    expect(projectLine).toContain('Local project CURRENT FUNDING WINDOW: VERIFIED');
+    expect(summaryLine).toContain('Community support Indicative fit: APPROVED No fee');
+    expect([projectLine,summaryLine].join('')).not.toMatch(/[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/);
+    expect(lines.filter(line=>line.startsWith('CURRENT FUNDING WINDOW:'))).toEqual([
+      'CURRENT FUNDING WINDOW: NOT VERIFIED — check the current original call.',
+    ]);
+    expect(lines.filter(line=>line.startsWith('Indicative fit:'))).toHaveLength(1);
+  });
   it('generates an owner-reviewed, non-submitted plain text pack with source evidence',()=>{
     const m=matchCapitalProgrammes(profile)[0];
     const draft=buildCapitalPreparationDraft(m,profile,'Local AI project','A local language learning tool');
