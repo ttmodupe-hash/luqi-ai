@@ -47,7 +47,7 @@ describe('LUQI Capability Journey', () => {
     const request = vi.spyOn(window, 'fetch');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
     expect(screen.getByText('25%')).toBeTruthy();
-    expect(screen.getByText('Work inside a real lab')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Work inside a real lab' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Continue mission/i }).getAttribute('href')).toBe('/lab-simulator');
     expect(request).not.toHaveBeenCalled();
   });
