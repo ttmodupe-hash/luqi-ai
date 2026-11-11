@@ -84,6 +84,20 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
   });
 
+  it('loads newer stage progress in-page and then permits a confirmed edit', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    setCapabilityJourneyStep(2, true);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByText('25%')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(screen.getByText('50%')).toBeTruthy();
+    expect(readCapabilityJourney()?.completed).toEqual([0, 2]);
+  });
+
   it('does not erase a different goal saved from another tab', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
