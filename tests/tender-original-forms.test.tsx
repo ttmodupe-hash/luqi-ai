@@ -298,6 +298,31 @@ it('asks for missing bidder and invalid optional email before any fill, without 
  expect(network).not.toHaveBeenCalled();
 });
 
+it('focuses the first missing or invalid bid-context answer without fabricating facts or filling a document',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});
+ const prepare=screen.getByRole('button',{name:'Prepare exact original for review'});
+ fireEvent.click(prepare);
+ expect(document.activeElement).toBe(screen.getByLabelText('Tender reference'));
+ expect(screen.getByText(/Complete: Tender reference/)).toBeTruthy();
+ for(const [label,value] of [
+  ['Tender reference','SYNTHETIC-002'],['Procuring authority','Synthetic authority'],
+  ['Exact official submission address','Synthetic portal'],
+  ['Applicant or authorised representative','Synthetic contact'],
+  ['Applicant-entered offer ZAR','500.00'],
+ ])fireEvent.change(screen.getByLabelText(label),{target:{value}});
+ fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:'not-a-deadline'}});
+ fireEvent.click(prepare);
+ expect(document.activeElement).toBe(screen.getByLabelText('Closing time with timezone'));
+ expect(screen.getByText(/Future closing time with explicit timezone/)).toBeTruthy();
+ fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:'2090-11-30T11:00+02:00'}});
+ fireEvent.click(prepare);
+ expect(document.activeElement).toBe(screen.getByLabelText('Original form submission method'));
+ expect(screen.getByText(/Issuer-prescribed submission method/)).toBeTruthy();
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('rejecting a zero-byte replacement clears prior applicant data and approvals without parsing',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const review=screen.getByRole('region',{name:'Original form applicant review'});

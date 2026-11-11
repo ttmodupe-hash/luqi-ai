@@ -13,6 +13,17 @@ import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTe
 interface LocalTenderFile {name:string;mime:string;bytes:Uint8Array;inspection:TenderDocumentInspection}
 const inputStyle='mt-1 block w-full min-w-0 rounded-lg border border-slate-500 bg-slate-950 p-3 text-white';
 const buttonStyle='rounded-lg border border-cyan-400 px-3 py-3 text-sm font-semibold text-cyan-100 disabled:opacity-50';
+// Match the existing packet-validator messages to their editable controls.
+// These are prompts for applicant correction, not issuer-verified requirements.
+const CONTEXT_ISSUE_FOCUS: Record<string, keyof TenderPacketContext> = {
+  'Tender reference':'reference',
+  'Procuring authority':'issuer',
+  'Exact bid box, official portal or prescribed email':'destination',
+  'Applicant or authorised representative':'principal',
+  'Future closing time with explicit timezone (for South Africa use +02:00)':'deadline',
+  'Issuer-prescribed submission method':'method',
+  'Applicant-entered positive offer amount in ZAR':'priceZar',
+};
 function saveArchive(bytes:Uint8Array){
   const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'application/zip'}));
   const a=document.createElement('a');a.href=url;a.download='luqi-sbd1-partial-review-pack.zip';
@@ -38,6 +49,7 @@ export function TenderOriginalForms(){
   const historyFull=history.length>=950;
   const accountRef=useRef(account);
   const fileInput=useRef<HTMLInputElement|null>(null),amendmentInput=useRef<HTMLInputElement|null>(null);
+  const contextInputs=useRef<Partial<Record<keyof TenderPacketContext,HTMLInputElement|HTMLSelectElement>>>({});
   // Preserve the latest observed local time while this review is mounted: a backwards
   // device-clock change must not reopen approvals after a recorded expiry.
   // This is not trusted issuer time and cannot prevent tampering before observation.
@@ -155,7 +167,14 @@ export function TenderOriginalForms(){
       return;
     }
     const missing=validatePacketContext(context,observedNow());
-    if(missing.length){setMessage('Complete: '+missing.join('; '));return;}
+    if(missing.length){
+      setMessage('Complete: '+missing.join('; '));
+      // On Prepare, focus the first invalid or missing context answer, rather
+      // than forcing applicants to search the full form or filling it for them.
+      const target=CONTEXT_ISSUE_FOCUS[missing[0]];
+      if(target)contextInputs.current[target]?.focus();
+      return;
+    }
     const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);
     const controller=new AbortController();pending.current=controller;
     try{
@@ -261,12 +280,14 @@ export function TenderOriginalForms(){
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
               ['deadline','Closing time with timezone'],['destination','Exact official submission address'],['priceZar','Applicant-entered offer ZAR'],
             ] as const).map(([key,label])=><label key={key} className="block min-w-0 text-sm">{label}
-              <input aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
+              <input ref={node=>{if(node)contextInputs.current[key]=node;else delete contextInputs.current[key];}}
+                aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
                 placeholder={key==='deadline'?'YYYY-MM-DDTHH:mm+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>
             </label>)}
             <label className="block text-sm">Issuer-prescribed submission method
-              <select aria-label="Original form submission method" value={context.method} className={inputStyle}
+              <select ref={node=>{if(node)contextInputs.current.method=node;else delete contextInputs.current.method;}}
+                aria-label="Original form submission method" value={context.method} className={inputStyle}
                 onChange={e=>{setContext(previous=>({...previous,method:e.target.value as TenderPacketContext['method']}));invalidate('edit-context','method')}}>
                 <option value="">Confirm from issuer documents</option><option value="physical">Sealed physical bid / tender box</option>
                 <option value="portal">Authority-supported electronic portal</option><option value="email">Issuer-prescribed email</option>
