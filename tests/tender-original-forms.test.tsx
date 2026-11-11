@@ -362,6 +362,26 @@ it('asks for missing bidder and invalid optional email before any fill, without 
  expect(network).not.toHaveBeenCalled();
 });
 
+it('links missing bid-context errors to their controls without inventing answers or filling',async()=>{
+  render(<TenderOriginalForms/>);await importOriginal();
+  fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});
+  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+  const reference=screen.getByLabelText('Tender reference');
+  expect(reference.getAttribute('aria-invalid')).toBe('true');
+  const explanationId=reference.getAttribute('aria-describedby');
+  expect(explanationId).toBeTruthy();
+  expect(document.getElementById(explanationId!)?.textContent).toContain('Tender reference');
+  const method=screen.getByLabelText('Original form submission method');
+  expect(method.getAttribute('aria-invalid')).toBe('true');
+  expect(document.getElementById(method.getAttribute('aria-describedby')!)?.textContent).toMatch(/issuer-prescribed submission method/);
+  fireEvent.change(reference,{target:{value:'SYNTHETIC-REF-1'}});
+  expect(reference.getAttribute('aria-invalid')).toBe('false');
+  expect(reference.hasAttribute('aria-describedby')).toBe(false);
+  expect(document.getElementById(explanationId!)).toBeNull();
+  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(0);
+  expect(network).not.toHaveBeenCalled();
+});
+
 it('focuses the first missing or invalid bid-context answer without fabricating facts or filling a document',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();
  fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});

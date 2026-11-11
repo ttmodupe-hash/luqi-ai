@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useId,useRef,useState} from 'react';
 import {useOptionalCustomerSession} from '../providers/customer-session';
 import {EMPTY_SUPPLIER_VALUES,SBD1_FIELDS,VERIFIED_SBD1,TENDER_FILE_MAX,TENDER_DOCUMENT_ERRORS,
   type SupplierValues,type TenderDocumentInspection} from '../lib/tender-document-contract';
@@ -44,6 +44,8 @@ export function TenderOriginalForms(){
   const [gates,setGates]=useState<OriginalFormApprovals>(emptyOriginalApprovals);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [contextReviewAttempted,setContextReviewAttempted]=useState(false);
+  const contextHelpId=useId();
   const [clock,setClock]=useState(Date.now());
   const epoch=useRef(0),pending=useRef<AbortController|null>(null);
   const historyFull=history.length>=950;
@@ -69,6 +71,7 @@ export function TenderOriginalForms(){
     epoch.current++;pending.current?.abort();pending.current=null;
     setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
     setPrepared(null);setGates(emptyOriginalApprovals());setHistory([]);setRevision(0);setBusy(false);setConsent(false);
+    setContextReviewAttempted(false);
     setMessage('Private work cleared from this tab. Any files you downloaded remain on your device.');
     if(fileInput.current)fileInput.current.value='';if(amendmentInput.current)amendmentInput.current.value='';
   }
@@ -100,6 +103,7 @@ export function TenderOriginalForms(){
     // before parsing (empty/oversized), or subsequently fails inspection.
     if(amendment&&prepared&&ORIGINAL_FORM_GATES.some(g=>gates[g.id]))audit('revoke','all',next);
     if(!amendment){
+      setContextReviewAttempted(false);
       // A newly selected original starts a different application. Never carry over
       // another application's tender reference, principal, price or channel.
       setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
@@ -141,7 +145,7 @@ export function TenderOriginalForms(){
     // Treat choosing the pinned original as a replacement immediately. On network or
     // integrity failure, a stale applicant's packet must not remain in this session.
     setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});
-    setContext({...EMPTY_PACKET_CONTEXT});setHistory([]);
+    setContext({...EMPTY_PACKET_CONTEXT});setHistory([]);setContextReviewAttempted(false);
     const controller=new AbortController();pending.current=controller;
     const timer=setTimeout(()=>controller.abort(),8000);
     try{
@@ -182,6 +186,7 @@ export function TenderOriginalForms(){
     }
     const missing=validatePacketContext(context,observedNow());
     if(missing.length){
+      setContextReviewAttempted(true);
       setMessage('Complete: '+missing.join('; '));
       // On Prepare, focus the first invalid or missing context answer, rather
       // than forcing applicants to search the full form or filling it for them.
@@ -189,6 +194,7 @@ export function TenderOriginalForms(){
       if(target)contextInputs.current[target]?.focus();
       return;
     }
+    setContextReviewAttempted(false);
     const version=++epoch.current;setBusy(true);
     // Re-preparing discards the earlier review and approvals, even if the
     // worker rejects the new attempt. Reflect that revocation in local history.
@@ -246,6 +252,9 @@ export function TenderOriginalForms(){
     setGates(emptyOriginalApprovals());
     setHistory(previous=>previous.length>=1000?previous:appendTenderAudit(previous,revision,'revoke','all'));
   },[reviewExpired,gates,revision]);
+  // Expose applicant-correctable context issues after a Prepare attempt;
+  // these are review-packet prompts, not universal issuer requirements.
+  const contextIssues=contextReviewAttempted?validatePacketContext(context,observedNow()):[];
   return <section ref={formRoot} aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
     <p className="text-sm text-slate-200">Start with Treasury’s verified revised SBD 1 DOCX. Luqi fills seven supplier contact fields on the actual original. Required wording, tables, declarations, pricing and signature areas remain intact for your completion.</p>
@@ -300,19 +309,28 @@ export function TenderOriginalForms(){
             {([
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
               ['deadline','Closing time with timezone'],['destination','Exact official submission address'],['priceZar','Applicant-entered offer ZAR'],
-            ] as const).map(([key,label])=><label key={key} className="block min-w-0 text-sm">{label}
+            ] as const).map(([key,label])=>{
+              const issue=contextIssues.find(entry=>CONTEXT_ISSUE_FOCUS[entry]===key);
+              const helpId=contextHelpId+'-'+key;
+              return <label key={key} className="block min-w-0 text-sm">{label}
               <input ref={node=>{if(node)contextInputs.current[key]=node;else delete contextInputs.current[key];}}
                 aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
+                aria-invalid={Boolean(issue)} aria-describedby={issue?helpId:undefined}
                 placeholder={key==='deadline'?'YYYY-MM-DDTHH:mm+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>
-            </label>)}
+              {issue&&<span id={helpId} className="mt-1 block text-xs text-amber-200">Check this answer: {issue}. Use your own records and the issuer instructions; Luqi does not verify it.</span>}
+            </label>;
+            })}
             <label className="block text-sm">Issuer-prescribed submission method
               <select ref={node=>{if(node)contextInputs.current.method=node;else delete contextInputs.current.method;}}
                 aria-label="Original form submission method" value={context.method} className={inputStyle}
+                aria-invalid={contextIssues.includes('Issuer-prescribed submission method')}
+                aria-describedby={contextIssues.includes('Issuer-prescribed submission method')?contextHelpId+'-method':undefined}
                 onChange={e=>{setContext(previous=>({...previous,method:e.target.value as TenderPacketContext['method']}));invalidate('edit-context','method')}}>
                 <option value="">Confirm from issuer documents</option><option value="physical">Sealed physical bid / tender box</option>
                 <option value="portal">Authority-supported electronic portal</option><option value="email">Issuer-prescribed email</option>
               </select>
+              {contextIssues.includes('Issuer-prescribed submission method')&&<span id={contextHelpId+'-method'} className="mt-1 block text-xs text-amber-200">Check the issuer-prescribed submission method against the original invitation and addenda. Luqi does not verify the channel.</span>}
             </label>
           </div>
         </fieldset>
