@@ -145,7 +145,7 @@ const REGISTRATIONS = new Set<Registration>(['REGISTERED','NOT_REGISTERED','UNKN
 const bad = () => new Error('INVALID_CAPITAL_PROFILE_OR_SOURCE');
 /** A provenance stamp must be a real Gregorian calendar day, not just YYYY-MM-DD-shaped. */
 function validPublisherReviewDate(raw:unknown):raw is string {
-  if (typeof raw !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)) return false;
+  if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
   const timestamp=Date.parse(raw+'T00:00:00.000Z');
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0,10)===raw;
 }
