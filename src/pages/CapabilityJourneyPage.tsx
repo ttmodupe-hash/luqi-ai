@@ -14,6 +14,7 @@ import '../capability-journey.css';
 export default function CapabilityJourneyPage() {
   const [journey, setJourney] = useState<CapabilityJourney | null>(() => readCapabilityJourney());
   const [notice, setNotice] = useState('');
+  const [needsReload, setNeedsReload] = useState(false);
   const plan = useMemo(() => journey ? getPossibilityPlan(journey.goal) : null, [journey]);
   const progress = capabilityJourneyProgress(journey);
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
@@ -31,7 +32,15 @@ export default function CapabilityJourneyPage() {
   }
 
   function warnStaleJourney() {
-    setNotice('This journey changed in another tab or was cleared. Reload before editing so you do not change a different goal.');
+    setNeedsReload(true);
+    setNotice('This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.');
+  }
+
+  function loadLatestSavedJourney() {
+    const latest = readCapabilityJourney();
+    setJourney(latest);
+    setNeedsReload(false);
+    setNotice(latest ? 'Loaded the latest saved journey from this browser.' : 'No saved journey remains on this device. You can choose a new goal.');
   }
 
   function toggle(index: number) {
@@ -47,6 +56,7 @@ export default function CapabilityJourneyPage() {
       return;
     }
     setJourney(updated);
+    setNeedsReload(false);
     setNotice(complete ? 'Stage marked complete on this device.' : 'Stage reopened on this device.');
   }
 
@@ -60,6 +70,7 @@ export default function CapabilityJourneyPage() {
       return;
     }
     setJourney(null);
+    setNeedsReload(false);
     setNotice('Saved journey cleared from this device.');
   }
 
@@ -129,6 +140,7 @@ export default function CapabilityJourneyPage() {
         <button type="button" onClick={clearJourney}><RotateCcw size={16} /> Clear saved journey</button>
       </section>
       {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+      {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
     </>}
   </main>;
 }
