@@ -149,6 +149,32 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('button', { name: 'Load latest saved journey' })).toBeTruthy();
   });
 
+  it('distinguishes storage access denial from another-tab changes during edits and notifications', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Synthetic privacy denial', 'SecurityError');
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/i);
+    expect(screen.getByRole('status').textContent).not.toMatch(/changed in another tab/i);
+    expect(screen.getByText('0%')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Clear saved journey/i }));
+    expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/i);
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+
+    fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
+    expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/i);
+    expect(screen.getByRole('status').textContent).not.toMatch(/changed in another tab/i);
+
+    denied.mockRestore();
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/i);
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+  });
+
   it('notifies about removal by another tab before a user edits', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
