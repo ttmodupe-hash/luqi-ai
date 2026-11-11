@@ -2,6 +2,8 @@
  * Production currently runs one replica. Missing state is never online/offline proof. */
 export const PRESENCE_TTL_MS = 75_000;
 const RETAIN_MS = 15 * 60_000;
+// Preserve hidden/expired sequence tombstones without counting them as live tabs.
+const MAX_RETAINED_LEASES_PER_USER = 16;
 type Lease = { sequence: number; active: boolean; away: boolean; expires: number; touched: number; modeWindowStarted: number; modeSwitches: number; reenableWindowStarted: number; reenableCount: number };
 export class ContactPresence {
   private users = new Map<number, Map<string, Lease>>();
@@ -29,7 +31,15 @@ export class ContactPresence {
     // consume the four-lease quota and block real foreground tabs for 15 min.
     if (!previous && !active) return;
     if (previous && sequence <= previous.sequence) return;
-    if (!previous && leases.size >= 4) throw Error('PRESENCE_CAPACITY');
+    // Keep tombstones to reject delayed pre-Hide packets, but let users open
+    // fresh tabs after closing old ones. Bound retained state per account.
+    if (!previous && leases.size >= MAX_RETAINED_LEASES_PER_USER) throw Error('PRESENCE_CAPACITY');
+    const activating = active && (!previous || !previous.active || previous.expires <= now);
+    if (activating) {
+      const live = [...leases.entries()].filter(([leaseId, lease]) =>
+        leaseId !== id && lease.active && lease.expires > now).length;
+      if (live >= 4) throw Error('PRESENCE_CAPACITY');
+    }
     if (active && previous?.active && now - previous.touched < 10_000) {
       if (previous.away === away) throw Error('PRESENCE_RATE');
       // Preserve immediate deliberate changes, but bound alternating mode flips:

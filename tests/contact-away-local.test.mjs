@@ -64,3 +64,29 @@ test('legitimate re-enable works after mode window and preserves separate Online
   p.update(1,'b',1,true);assert.equal(p.read(1),'online');
   p.update(1,'b',2,false);assert.equal(p.read(1),'away');
 });
+
+test('fresh tab accepted after four legitimate Hides with old sequences still fenced',()=>{
+  const {p}=fixture();
+  for(let i=0;i<4;i++){p.update(7,`old-${i}`,1,true);p.update(7,`old-${i}`,2,false)}
+  assert.equal(p.read(7),'not_shared');p.update(7,'fresh',1,true);
+  p.update(7,'old-0',1,true);assert.equal(p.read(7),'online');
+});
+test('retained inactive sessions do not permit a fifth live tab or stale reactivation',()=>{
+  const {p}=fixture();
+  for(let i=0;i<4;i++){p.update(7,`old-${i}`,1,true);p.update(7,`old-${i}`,2,false)}
+  for(let i=0;i<4;i++)p.update(7,`fresh-${i}`,1,true);
+  assert.throws(()=>p.update(7,'fifth',1,true),/PRESENCE_CAPACITY/);
+  assert.throws(()=>p.update(7,'old-0',3,true),/PRESENCE_CAPACITY/);
+});
+test('expired prior tabs do not prevent a new foreground lease',()=>{
+  const {p,advance}=fixture();
+  for(let i=0;i<4;i++)p.update(7,`old-${i}`,1,true);
+  advance(PRESENCE_TTL_MS);p.update(7,'fresh',1,true);
+  assert.equal(p.read(7),'online');
+});
+test('retained tombstone memory remains bounded to sixteen per account',()=>{
+  const {p}=fixture();
+  for(let i=0;i<16;i++){p.update(7,`old-${i}`,1,true);p.update(7,`old-${i}`,2,false)}
+  assert.throws(()=>p.update(7,'fresh',1,true),/PRESENCE_CAPACITY/);
+  assert.equal(p.read(7),'not_shared');
+});
