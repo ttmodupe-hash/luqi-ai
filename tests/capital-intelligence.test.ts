@@ -63,6 +63,29 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(Object.prototype.hasOwnProperty.call(withExtras.conditions,'arbitraryRule')).toBe(false);
     expect(Object.isFrozen(withExtras.conditions)).toBe(true);
   });
+  it('rejects sparse or duplicated document arrays that would falsify preparedness',()=>{
+    const original=CAPITAL_PROGRAMMES[0];
+    // Array.every and Array.filter skip holes: two missing entries formerly
+    // produced a misleading 100% preparation score from zero actual documents.
+    expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:new Array(2) as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:[,'CONCEPT_NOTE'] as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:['CONCEPT_NOTE','CONCEPT_NOTE']}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,focusSectors:[,'TECH'] as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,selectionNotes:[,'Verified description'] as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>matchCapitalProgrammes({...profile,availableArtifacts:new Array(1) as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>matchCapitalProgrammes({...profile,availableArtifacts:['CONCEPT_NOTE','CONCEPT_NOTE']}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(normalizeFundingPlatform({...original,suggestedArtifacts:['CONCEPT_NOTE','BUSINESS_PLAN']})
+      .suggestedArtifacts).toEqual(['CONCEPT_NOTE','BUSINESS_PLAN']);
+    expect(matchCapitalProgrammes(profile).find(m=>m.programme.id==='tia-seed-fund')!
+      .preparationPercent).toBe(33);
+  });
   it('ranks documented programme fit first, never by the largest advertised grant amount',()=>{
     const matches=matchCapitalProgrammes(profile,new Date('2026-11-02T10:00:00Z'));
     expect(matches).toHaveLength(8);

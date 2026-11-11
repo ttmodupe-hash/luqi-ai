@@ -164,11 +164,12 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
       input.scopeNote.length > 350 || input.sourceStatus !== 'PROGRAMME_REFERENCE_ONLY' ||
       !validPublisherReviewDate(input.reviewedOn) ||
       !Array.isArray(input.focusSectors) || !input.focusSectors.length ||
-      !input.focusSectors.every(s=>SECTORS.has(s)) ||
+      !Array.from(input.focusSectors).every(s=>SECTORS.has(s)) ||
       !Array.isArray(input.suggestedArtifacts) ||
-      !input.suggestedArtifacts.every(a=>ARTIFACTS.has(a)) ||
+      (!Array.from(input.suggestedArtifacts).every(a=>ARTIFACTS.has(a)) ||
+       new Set(input.suggestedArtifacts).size !== input.suggestedArtifacts.length) ||
       !Array.isArray(input.selectionNotes) ||
-      !input.selectionNotes.every(s=>typeof s === 'string' && s.length <= 400) ||
+      !Array.from(input.selectionNotes).every(s=>typeof s === 'string' && s.length <= 400) ||
       !input.conditions || typeof input.conditions !== 'object') throw bad();
   for (const raw of [input.sourceUrl,input.applicationGuideUrl]) {
     if (typeof raw !== 'string') throw bad();
@@ -184,6 +185,8 @@ export function normalizeFundingPlatform(input:FundingPlatformSpec):FundingPlatf
       conditions.minimumAge > conditions.maximumAge) throw bad();
   if (conditions.excludesResearchSeed !== undefined && typeof conditions.excludesResearchSeed !== 'boolean') throw bad();
   if (conditions.requiresRegisteredBusiness !== undefined && typeof conditions.requiresRegisteredBusiness !== 'boolean') throw bad();
+  // Array.from above visits sparse-array holes; Array.every alone would skip them
+  // and could falsely count missing suggested documents as already prepared.
   // Project only known, validated contract keys. Never spread untrusted
   // extras or nested values into the supposedly immutable funding matrix.
   const safeConditions=Object.freeze({
@@ -338,7 +341,8 @@ function validateProfile(profile:CapitalProfile):void {
     (profile.age !== undefined && (!Number.isInteger(profile.age) || profile.age < 0 || profile.age > 120)) ||
     !Array.isArray(profile.availableArtifacts) ||
     profile.availableArtifacts.length > ARTIFACTS.size ||
-    !profile.availableArtifacts.every(a=>ARTIFACTS.has(a))) throw bad();
+    (!Array.from(profile.availableArtifacts).every(a=>ARTIFACTS.has(a)) ||
+     new Set(profile.availableArtifacts).size !== profile.availableArtifacts.length)) throw bad();
 }
 export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date()):FundingMatch[] {
   validateProfile(profile);
