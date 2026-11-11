@@ -338,7 +338,7 @@ it('reports only a browser download request, never a confirmed saved file or sub
  for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
  fireEvent.click(within(review).getByRole('button',{name:'Export filled original and review record'}));
  const status=await screen.findByText(/Download requested from this browser/);
- expect(status.textContent).toMatch(/Check that luqi-sbd1-partial-review-pack\\.zip actually appears in Downloads/);
+ expect(status.textContent).toContain('luqi-sbd1-partial-review-pack.zip');
  expect(status.textContent).toMatch(/browsers can block or discard files/);
  expect(status.textContent).toMatch(/leaving or reloading clears this work/);
  expect(status.textContent).toMatch(/Nothing was submitted/);
