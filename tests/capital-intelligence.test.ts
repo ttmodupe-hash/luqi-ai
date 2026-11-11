@@ -141,6 +141,25 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(m.missingArtifacts.length).toBeGreaterThan(0);
     expect(m.preparationPercent).toBeLessThan(100);
   });
+  it('recomputes worksheet restrictions instead of trusting a stale or forged match',()=>{
+    const earlier={...profile,purpose:'BUSINESS_GROWTH' as const,age:23};
+    const match=matchCapitalProgrammes(earlier,new Date('2026-11-03T12:00:00Z'))
+      .find(m=>m.programme.id==='nyda-grant-programme')!;
+    expect(match.state).toBe('POTENTIAL_FIT_TO_EXPLORE');
+    const altered={...match,state:'POTENTIAL_FIT_TO_EXPLORE' as const,checks:['Guaranteed award'],
+      missingArtifacts:[],preparationPercent:100,reviewExpired:false};
+    const later={...profile,country:'KE' as const,age:23,availableArtifacts:[]};
+    const draft=buildCapitalPreparationDraft(altered,later,'Community idea','Research seed',
+      new Date('2027-01-03T10:00:00Z'));
+    expect(draft).toContain('Project location: Kenya');
+    expect(draft).toContain('Indicative fit: CURRENTLY_NOT_ALIGNED');
+    expect(draft).toContain('NYDA explicitly excludes research-and-development seed funding');
+    expect(draft).toContain('Source review is overdue: recheck the publisher');
+    expect(draft).toContain('Self-reported missing preparation items:');
+    expect(draft).toContain('- Concept note document');
+    expect(draft).not.toContain('Guaranteed award');
+    expect(draft).not.toContain('Indicative fit: POTENTIAL_FIT_TO_EXPLORE');
+  });
   it('generates an owner-reviewed, non-submitted plain text pack with source evidence',()=>{
     const m=matchCapitalProgrammes(profile)[0];
     const draft=buildCapitalPreparationDraft(m,profile,'Local AI project','A local language learning tool');
