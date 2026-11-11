@@ -17,7 +17,13 @@ export function zeroState(qubits = 2): Statevector {
 }
 export function validateState(state: Statevector): number {
   const n = Math.log2(state.length);
-  if (!Number.isInteger(n) || n < 1 || n > 8 || state.some(z => !Number.isFinite(z.re) || !Number.isFinite(z.im))) throw new Error('Invalid statevector.');
+  if (!Number.isInteger(n) || n < 1 || n > 8) throw new Error('Invalid statevector.');
+  // Visit every amplitude: Array#some silently skips missing sparse entries,
+  // otherwise a partially specified state may appear normalized.
+  for (let i = 0; i < state.length; i++) {
+    const z = state[i];
+    if (!z || !Number.isFinite(z.re) || !Number.isFinite(z.im)) throw new Error('Invalid statevector.');
+  }
   const norm = state.reduce((s, z) => s + z.re * z.re + z.im * z.im, 0);
   if (Math.abs(norm - 1) > 1e-9) throw new Error('Statevector must have unit norm.');
   return n;

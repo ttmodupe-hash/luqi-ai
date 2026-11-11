@@ -31,6 +31,23 @@ describe('two-qubit statevector calculations', () => {
     probabilities(amplified).forEach((p, i) => expect(p).toBeCloseTo(i === marked ? 1 : 0, 14));
     expect(probabilities(groverIteration(amplified, marked))[marked]).toBeCloseTo(0.25, 14);
   });
+  it('rejects missing statevector amplitudes instead of reporting a complete normalized state', () => {
+    // Array#some skips holes, and the remaining |0> amplitude still has norm 1.
+    const sparse = [{ re: 1, im: 0 }, ,] as ReturnType<typeof zeroState>;
+    expect(sparse.length).toBe(2);
+    expect(() => validateState(sparse)).toThrow('Invalid statevector.');
+    expect(() => probabilities(sparse)).toThrow('Invalid statevector.');
+    expect(() => stateMetrics(sparse)).toThrow('Invalid statevector.');
+    expect(() => applyGate(sparse, { kind: 'h', target: 0 })).toThrow('Invalid statevector.');
+    const missing = [{ re: 1, im: 0 }, undefined] as unknown as ReturnType<typeof zeroState>;
+    expect(() => validateState(missing)).toThrow('Invalid statevector.');
+    const wide = new Array(256) as ReturnType<typeof zeroState>;
+    wide[0] = { re: 1, im: 0 };
+    expect(() => validateState(wide)).toThrow('Invalid statevector.');
+    // Fully specified pure states remain valid, including exact zero amplitudes.
+    expect(validateState(zeroState(1))).toBe(1);
+    expect(probabilities(zeroState(1))).toEqual([1, 0]);
+  });
   it('preserves norm through supported unitary gates and rejects invalid dimensions/inputs', () => {
     let state = bellState(-0.7);
     for (const angle of [-Math.PI, -0.4, 0, 1.7, 2 * Math.PI]) {
