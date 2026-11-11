@@ -124,6 +124,17 @@ it('discarding work aborts an in-flight parse and prevents a late result from re
  await waitFor(()=>expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull());
 });
 
+it('holds uncertain issuer instructions for applicant clarification without guessing or enabling export',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const note=screen.getByRole('note');
+ expect(note.textContent).toMatch(/issuer notice, SBD schedules or addenda contradict/);
+ expect(note.textContent).toMatch(/mandatory briefing, qualification, closing time or required attachment/);
+ expect(note.textContent).toMatch(/seek written issuer clarification before confirming the approval gates/);
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(run.mock.calls.some(([request])=>request.action==='fill')).toBe(false);
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('leaves the issuer closing time blank and supplies a format hint instead of a fictional deadline',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();
  const closing=screen.getByLabelText('Closing time with timezone') as HTMLInputElement;

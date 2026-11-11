@@ -305,6 +305,7 @@ export function TenderOriginalForms(){
           onChange={(field,value)=>{setValues(previous=>({...previous,[field]:value}));invalidate('edit-field',field)}}/>
         <fieldset disabled={busy||historyFull} className="space-y-3"><legend className="font-semibold">Bid context for your private review record</legend>
           <p className="text-xs text-slate-300">These values identify the review packet, not the authority’s bid invitation, prices or declarations. Confirm the closing time, submission method and destination against the exact issuer originals and addenda. Luqi does not independently verify the bid deadline or channel you enter.</p>
+          <p role="note" className="text-xs text-amber-200">If the issuer notice, SBD schedules or addenda contradict each other on a mandatory briefing, qualification, closing time or required attachment, stop and seek written issuer clarification before confirming the approval gates. Luqi cannot resolve conflicting issuer instructions or establish eligibility.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {([
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
