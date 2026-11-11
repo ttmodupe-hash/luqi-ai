@@ -96,6 +96,10 @@ export default function CapabilityJourneyPage() {
           </div>
         </div>
       </section>
+      {(notice || needsReload) && <section className="luqi-journey-recovery" aria-label="Journey storage notice">
+        {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+        {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
+      </section>}
 
       <section className="luqi-journey-mission" aria-labelledby="journey-mission-title">
         <div>
@@ -139,8 +143,6 @@ export default function CapabilityJourneyPage() {
         </div>
         <button type="button" onClick={clearJourney}><RotateCcw size={16} /> Clear saved journey</button>
       </section>
-      {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
-      {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
     </>}
   </main>;
 }
