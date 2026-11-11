@@ -14,6 +14,7 @@ import '../capability-journey.css';
 
 const STALE_JOURNEY_NOTICE = 'This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.';
 const NEW_JOURNEY_NOTICE = 'A journey was saved in another tab. Load the latest saved journey to continue on this device.';
+const UNREADABLE_STORAGE_NOTICE = 'Browser storage is unavailable. This view has not been replaced. Allow browser storage and try again.';
 
 function savedJourneyMatches(first: CapabilityJourney | null, second: CapabilityJourney | null): boolean {
   return Boolean(first && second &&
@@ -21,6 +22,15 @@ function savedJourneyMatches(first: CapabilityJourney | null, second: Capability
     first.startedAt === second.startedAt &&
     first.updatedAt === second.updatedAt &&
     first.completed.join(',') === second.completed.join(','));
+}
+
+function canReadJourneyStorage(): boolean {
+  try {
+    window.localStorage.getItem(CAPABILITY_JOURNEY_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export default function CapabilityJourneyPage() {
@@ -36,6 +46,12 @@ export default function CapabilityJourneyPage() {
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== null && event.key !== CAPABILITY_JOURNEY_KEY) return;
+      // An access denial is not proof that another tab edited or deleted a goal.
+      if (!canReadJourneyStorage()) {
+        setNeedsReload(true);
+        setNotice(UNREADABLE_STORAGE_NOTICE);
+        return;
+      }
       const saved = readCapabilityJourney();
       if (journey ? !savedJourneyMatches(journey, saved) : saved !== null) {
         setNeedsReload(true);
@@ -60,11 +76,9 @@ export default function CapabilityJourneyPage() {
   function loadLatestSavedJourney() {
     // A failed storage read must not be mistaken for another tab clearing the goal.
     // Keep the visible state and recovery action until the device store is readable.
-    try {
-      window.localStorage.getItem(CAPABILITY_JOURNEY_KEY);
-    } catch {
+    if (!canReadJourneyStorage()) {
       setNeedsReload(true);
-      setNotice('Browser storage is unavailable. This view has not been replaced. Allow browser storage and try again.');
+      setNotice(UNREADABLE_STORAGE_NOTICE);
       return;
     }
     const latest = readCapabilityJourney();
@@ -75,6 +89,11 @@ export default function CapabilityJourneyPage() {
 
   function toggle(index: number) {
     if (!journey) return;
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
     if (!journeySnapshotMatchesSaved()) {
       warnStaleJourney();
       return;
@@ -91,6 +110,11 @@ export default function CapabilityJourneyPage() {
   }
 
   function clearJourney() {
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
     if (!journeySnapshotMatchesSaved()) {
       warnStaleJourney();
       return;
