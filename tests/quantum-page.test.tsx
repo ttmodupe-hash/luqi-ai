@@ -43,6 +43,23 @@ it('preserves a real near-balanced feeder cost instead of displaying a fabricate
 });
 
 
+it('finds the true physical feeder minimum when rounded Ising energies tie', () => {
+  mount();
+  const loads = [1, 1.00000001, 1.00000003, 1.00000004];
+  // Independent bounded enumeration over the sixteen physical assignments.
+  const squared = Array.from({ length: 16 }, (_, mask) => {
+    const a = loads.reduce((sum, x, i) => sum + (mask & (1 << i) ? 0 : x), 0);
+    const b = loads.reduce((sum, x, i) => sum + (mask & (1 << i) ? x : 0), 0);
+    return (a - b) ** 2;
+  });
+  expect(Math.min(...squared)).toBe(0);
+  fireEvent.change(screen.getByLabelText(/Appliance loads in kW/),
+    { target: { value: loads.join(', ') } });
+  expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent)
+    .toBe('0.0000 kW²');
+  expect(screen.getByText('Classical states evaluated').nextElementSibling?.textContent).toBe('16');
+});
+
 it('exports nonzero physical feeder imbalance and a direct probability-weighted QAOA expectation', async () => {
   let savedBlob: Blob | null = null;
   vi.stubGlobal('URL', {

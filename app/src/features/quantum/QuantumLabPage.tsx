@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { bellState, exactIsingBaseline, groverIteration, loadBalanceModel,
+import { bellState, groverIteration, loadBalanceModel,
   qaoaLayer, searchQaoaGrid, stateMetrics, surfaceCodeEstimate, twoQubitQasm, uniformState } from './quantum-engine';
 import { allocateSmallBudget, shortestClosedTour } from './classical-baselines';
 import { QISKIT_BELL_EXAMPLE, QUANTUM_LESSONS, QUANTUM_TRACK_ID } from './academy';
@@ -44,7 +44,7 @@ export default function QuantumLabPage() {
   const balance = useMemo(() => {
     try {
       const values = loads.split(',').map(x => Number(x.trim())), model = loadBalanceModel(values);
-      const baseline = exactIsingBaseline(model.model), simulated = qaoaLayer(model.model, gamma, beta);
+      const simulated = qaoaLayer(model.model, gamma, beta);
       // Compute physical feeder totals per enumerated state. Recovering a
       // squared imbalance by subtracting normalized Ising terms can cancel
       // a genuine small positive cost to zero in binary64.
@@ -56,15 +56,23 @@ export default function QuantumLabPage() {
         }
         return { feederA, feederB };
       };
-      const chosen = baseline.states[0], { feederA, feederB } = feederTotals(chosen);
-      const exactSquaredImbalance = (feederA - feederB) ** 2;
+      // The normalized Ising spectrum can round distinct physical costs to
+      // the same energy. Choose the *physical* minimum over all <=64 states.
+      let chosen = 0, exactSquaredImbalance = Infinity;
+      for (let bits = 0; bits < simulated.state.length; bits++) {
+        const { feederA: a, feederB: b } = feederTotals(bits);
+        const squared = (a - b) ** 2;
+        if (squared < exactSquaredImbalance) { exactSquaredImbalance = squared; chosen = bits; }
+      }
+      const { feederA, feederB } = feederTotals(chosen);
       // At most 2^6=64 basis states, six loads each; the QAOA expectation
       // is a probability-weighted sum of nonnegative physical costs.
       const expectedSquaredImbalance = simulated.state.reduce((sum, z, bits) => {
         const { feederA: a, feederB: b } = feederTotals(bits);
         return sum + (z.re * z.re + z.im * z.im) * (a - b) ** 2;
       }, 0);
-      return { ...model, ...simulated, baseline, feederA, feederB, exactSquaredImbalance, expectedSquaredImbalance };
+      return { ...model, ...simulated, statesEvaluated: simulated.state.length,
+        feederA, feederB, exactSquaredImbalance, expectedSquaredImbalance };
     } catch { return null; }
   }, [loads, gamma, beta]);
   const surface = useMemo(() => { try { return surfaceCodeEstimate(distance, Number(physical), Number(threshold)); } catch { return null; } }, [distance, physical, threshold]);
@@ -142,7 +150,7 @@ export default function QuantumLabPage() {
       {balance ? <><dl className="quantum-metrics"><div><dt>Exact best feeder totals</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
         <div><dt>Exact minimum squared imbalance</dt><dd>{displayPositive(balance.exactSquaredImbalance, 4)} kW²</dd></div>
         <div><dt>QAOA expected squared imbalance</dt><dd>{displayPositive(balance.expectedSquaredImbalance, 4)} kW²</dd></div>
-        <div><dt>Classical states evaluated</dt><dd>{balance.baseline.statesEvaluated}</dd></div></dl>
+        <div><dt>Classical states evaluated</dt><dd>{balance.statesEvaluated}</dd></div></dl>
         <button className="luqi-secondary" onClick={() => { const result = searchQaoaGrid(balance.model); setGamma(result.gamma); setBeta(result.beta); setScanNotice(`Compared ${result.parameterPairs} parameter pairs. Best point on this grid; not a proof of the global parameter optimum.`); }}>Scan p=1 parameter grid</button></>
         : <p role="status">Enter 2–6 positive loads, each at most 100 kW.</p>}
       {scanNotice && <p role="status">{scanNotice}</p>}
