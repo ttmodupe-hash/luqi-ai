@@ -133,6 +133,8 @@ export interface FundingMatch {
   readonly missingArtifacts:readonly Artifact[];
   readonly checks:readonly string[];
   readonly reviewExpired:boolean;
+  /** The visitor's clock predates this source review: freshness unknown, not overdue. */
+  readonly clockBeforeReview:boolean;
 }
 const ALLOWED_PUBLISHERS = new Set([
   'www.tia.org.za','www.idc.co.za','www.nyda.gov.za',
@@ -405,6 +407,9 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
   validateProfile(profile);
   const present=new Set(profile.availableArtifacts);
   return CAPITAL_PROGRAMMES.map(programme=>{
+    const localInstant=now.getTime();
+    const publisherReviewStart=Date.parse(programme.reviewedOn+'T00:00:00+02:00');
+    const clockBeforeReview=Number.isFinite(localInstant) && localInstant<publisherReviewStart;
     const reviewExpired=!capitalReviewIsCurrent(now,programme.reviewedOn);
     const checks:string[]=[];
     let mismatch=false;
@@ -459,13 +464,15 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
       checks.push('GEF SGP targets eligible community-based or civil-society environmental projects, not ordinary startup capital; verify national country programmes and local calls.');
       checks.push('The GEF SGP CSO Challenge Program 2026 application call closed on 15 September 2026. This historic deadline does not mean every national GEF SGP call is closed; verify each country programme.');
     }
-    if(reviewExpired) checks.push('Source review is overdue: recheck the publisher before relying on any criteria.');
+    if(reviewExpired) checks.push(clockBeforeReview
+      ? 'Device date precedes the publisher review: check your device date and verify the source before relying on its criteria. Freshness is unverified.'
+      : 'Source review is overdue: recheck the publisher before relying on any criteria.');
     const missingArtifacts=programme.suggestedArtifacts.filter(a=>!present.has(a));
     const preparationPercent=programme.suggestedArtifacts.length===0 ? 0 :
       Math.round((programme.suggestedArtifacts.length-missingArtifacts.length)*100/programme.suggestedArtifacts.length);
     return {programme,
       state:mismatch?'CURRENTLY_NOT_ALIGNED':checks.length?'CHECK_PUBLISHER_CRITERIA':'POTENTIAL_FIT_TO_EXPLORE',
-      preparationPercent,missingArtifacts,checks,reviewExpired,
+      preparationPercent,missingArtifacts,checks,reviewExpired,clockBeforeReview,
     } satisfies FundingMatch;
   }).sort((a,b)=>{
     const rank:Record<MatchState,number>={POTENTIAL_FIT_TO_EXPLORE:0,CHECK_PUBLISHER_CRITERIA:1,CURRENTLY_NOT_ALIGNED:2};

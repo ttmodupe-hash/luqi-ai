@@ -17,6 +17,13 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       vi.setSystemTime(new Date('2025-01-01T00:00:00Z'));
       expect(normalizeFundingPlatform(approved).reviewedOn).toBe('2026-11-11');
       expect(capitalReviewIsCurrent(new Date(),approved.reviewedOn)).toBe(false);
+      const earlier=matchCapitalProgrammes(profile,new Date());
+      const source=earlier.find(m=>m.programme.id===approved.id)!;
+      expect(source.reviewExpired).toBe(true);
+      expect(source.clockBeforeReview).toBe(true);
+      expect(source.state).toBe('CHECK_PUBLISHER_CRITERIA');
+      expect(source.checks.join(' ')).toContain('Device date precedes the publisher review');
+      expect(source.checks.join(' ')).not.toContain('Source review is overdue');
       // A phone clock set far ahead must not manufacture authorised review evidence.
       vi.setSystemTime(new Date('2099-01-01T00:00:00Z'));
       expect(()=>normalizeFundingPlatform({...approved,reviewedOn:'2099-01-01'}))
@@ -139,6 +146,7 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     const tia=matches.find(m=>m.programme.id==='tia-seed-fund')!;
     const undp=matches.find(m=>m.programme.id==='timbuktoo-creativetech')!;
     expect(tia.reviewExpired).toBe(true);
+    expect(tia.clockBeforeReview).toBe(false);
     expect(tia.checks.join(' ')).toContain('Source review is overdue');
     expect(undp.reviewExpired).toBe(false);
     expect(undp.checks.join(' ')).not.toContain('Source review is overdue');

@@ -43,6 +43,18 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'IDEA'}});
    expect(screen.queryByRole('textbox',{name:'Funding preparation draft text'})).toBeNull();
  });
+ it('distinguishes an outdated device clock from an overdue publisher review',()=>{
+   vi.useFakeTimers();
+   vi.setSystemTime(new Date('2025-01-01T10:00:00Z'));
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   const creative=screen.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'});
+   expect(creative.textContent).toContain('Device date is earlier than this publisher review');
+   expect(creative.textContent).not.toContain('Publisher source recheck overdue');
+   expect(creative.textContent).toContain('Freshness is unverified');
+   expect(creative.textContent).toContain('Check programme criteria');
+   expect(fetcher).not.toHaveBeenCalled();
+ });
  it('does not accept excessive or invalid ages and explains cross-border uncertainty',()=>{
    render(<CapitalIntelligencePanel/>);
    const age=screen.getByLabelText('Founder age (optional, checked locally)') as HTMLInputElement;

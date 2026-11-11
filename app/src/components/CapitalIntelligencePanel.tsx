@@ -163,7 +163,9 @@ export default function CapitalIntelligencePanel(){
         <p className="text-xs text-slate-400">Publisher description last reviewed: {m.programme.reviewedOn}</p>
         <p className="text-xs text-slate-300">Suggested documents prepared: {m.preparationPercent}% (self-reported).</p>
         <p className="text-xs text-amber-200">Current application window unverified.
-          {m.reviewExpired?' Publisher source recheck overdue.':''}</p>
+          {m.reviewExpired?(m.clockBeforeReview
+            ?' Device date is earlier than this publisher review; confirm your clock and the source.'
+            :' Publisher source recheck overdue.'):''}</p>
         {m.checks.length>0&&<ul className="list-disc space-y-1 pl-5 text-sm text-slate-300">
           {m.checks.map(text=><li key={text}>{text}</li>)}</ul>}
         <p className="text-xs text-slate-300">Still to prepare: {m.missingArtifacts.length

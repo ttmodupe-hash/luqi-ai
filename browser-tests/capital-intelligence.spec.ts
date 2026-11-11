@@ -69,6 +69,17 @@ test('Capital Intelligence requires a recheck when publisher review expires',asy
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toContainText('Check programme criteria');
 });
 
+test('320px wrong device date never claims a publisher review is overdue',async({page})=>{
+  await page.setViewportSize({width:320,height:740});
+  await page.clock.setFixedTime(new Date('2025-01-01T10:00:00Z'));
+  await page.goto('/#/african-radar');
+  const creative=page.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'});
+  await expect(creative).toContainText('Device date is earlier than this publisher review');
+  await expect(creative).not.toContainText('Publisher source recheck overdue');
+  await expect(creative).toContainText('Freshness is unverified');
+  await expect(creative).toContainText('Check programme criteria');
+});
+
 test('funding hub brings South African, pan-African and global publishers together at 320px',async({page})=>{
   await page.setViewportSize({width:320,height:740});
   const writes:string[]=[];
