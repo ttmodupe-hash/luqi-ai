@@ -4,13 +4,17 @@ on:
     branches: [main]
   push:
     branches: [main]
+  status:
 permissions:
   contents: read
 concurrency:
-  group: lab-framing-${{ github.ref }}
-  cancel-in-progress: true
+  # Status deliveries are isolated; no main-push safety job may be cancelled.
+  group: lab-framing-${{ github.event_name }}-${{ github.event_name == 'status' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   production-browser-boundary:
+    # Only candidate pre-deployment checks; no public release identity assertions.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-24.04
     # Official Microsoft browser image includes preinstalled browser engines and system dependencies.
     # Pin the exact Playwright 1.58.2 Noble image digest to avoid slow unbounded APT mirrors.
@@ -25,9 +29,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
+      - name: Verify predeploy gate and canonical Railway status provenance with offline fixtures
+        run: node --test tests/lab-framing-release-gates.test.mjs tests/canonical-railway-status.test.mjs
       - run: npm ci --legacy-peer-deps --include=dev
-      - name: Test HTTP framing, missing assets and privacy boundaries
-        run: npx --no-install vitest run tests/frame-policy.test.ts tests/lab-static-fallback.test.ts tests/http-safety.test.ts
+      - name: Test HTTP framing, missing assets, exact release identity and privacy boundaries
+        run: npx --no-install vitest run tests/frame-policy.test.ts tests/lab-static-fallback.test.ts tests/http-safety.test.ts tests/release-observation.test.ts
       - name: Strictly type-check response policy
         run: npx --no-install tsc --noEmit --strict --skipLibCheck --target es2022 --module esnext --moduleResolution bundler --esModuleInterop api/lib/framePolicy.ts api/lib/httpSafety.ts api/lib/vite.ts
       - name: Build the actual production server and UI without credentials
@@ -49,8 +55,15 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
   public-framing:
-    if: github.event_name == 'push'
-    needs: production-browser-boundary
+    # This is a post-deployment check with an independent owner-approved revision pin,
+    # never a Wait-for-CI prerequisite. Event scope alone does not prove Railway.
+    if: >-
+      github.event_name == 'status' &&
+      github.event.state == 'success' &&
+      github.event.context == 'kind-spontaneity - web' &&
+      github.event.sha == github.sha &&
+      startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7') &&
+      contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -60,13 +73,26 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
+      - name: Reject foreign, stale, preview or unsuccessful Railway statuses
+        env:
+          LUQI_MAIN_SHA: ${{ github.sha }}
+        run: node scripts/check-canonical-railway-status.mjs
+      - name: Require owner-approved deployed SHA before trusting status observer
+        if: github.event_name == 'status'
+        env:
+          LUQI_STATUS_SHA: ${{ github.event.sha }}
+          LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}
+        run: >-
+          node --input-type=module -e
+          'import { requireApprovedStatusRevision } from "./scripts/production-health-monitor.mjs";
+          requireApprovedStatusRevision(process.env.LUQI_STATUS_SHA, process.env.LUQI_APPROVED_DEPLOYED_SHA)'
       - name: Observe the exact live release and existing safety boundaries
         env:
           LUQI_VERIFY_PUBLIC: 'true'
-          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+          LUQI_EXPECTED_COMMIT: ${{ github.event.sha }}
         run: node scripts/verify-deployed-release.mjs
       - name: Verify deployed lab documents and restrictive framing policy
         env:
           LUQI_VERIFY_PUBLIC: 'true'
-          LUQI_EXPECTED_COMMIT: ${{ github.sha }}
+          LUQI_EXPECTED_COMMIT: ${{ github.event.sha }}
         run: node scripts/verify-lab-framing.mjs

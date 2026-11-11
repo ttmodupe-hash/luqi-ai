@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { MONITOR_ORIGINS, observeProduction } from '../scripts/production-health-monitor.mjs';
+import { readFileSync } from 'node:fs';
+import { MONITOR_ORIGINS, observeProduction, requireApprovedStatusRevision } from '../scripts/production-health-monitor.mjs';
 
 const commit = 'a'.repeat(40), now = 1794280000000;
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
@@ -96,4 +97,75 @@ test('requires an exact commit before network and never prints a supplied secret
   });
   assert.equal(child.status, 1);
   assert.ok(!(child.stdout + child.stderr).includes('private-marker'));
+});
+
+
+test('a matching but unapproved revision on BOTH live hosts is rejected, not self-authorized', async () => {
+  const unapproved = 'b'.repeat(40);
+  const f = fixture({ mutate: (url, response) => url.endsWith('/v1/release')
+    ? json({ format: 'luqi.release.v1', commit: unapproved }) : response });
+  await assert.rejects(run({ request: f.request }));
+  let calls = 0;
+  await assert.rejects(observeProduction({ request: async () => { calls++; } }));
+  assert.equal(calls, 0, 'Missing independent SHA must fail BEFORE fetching any host');
+  await assert.rejects(run({ expectedCommit: 'short', request: async () => { calls++; } }));
+  assert.equal(calls, 0);
+});
+
+test('PR checks cannot demand a not-yet-deployed SHA; live observer stays independently pinned', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/production-operations.yml', import.meta.url), 'utf8');
+  const pre = workflow.split('\n  monitor-contracts:\n')[1]?.split('\n  mysql-load-restart-rollback:\n')[0];
+  const post = workflow.split('\n  observe-production:\n')[1];
+  assert.ok(pre && post, 'Missing pre/post deployment jobs');
+  assert.match(pre, /github.event_name == 'pull_request'/);
+  assert.match(post, /github.ref == 'refs\/heads\/main'/);
+  assert.doesNotMatch(post, /github.event_name == 'pull_request'|github.event.pull_request.base.sha/);
+  assert.match(post, /github.event_name == 'schedule'/);
+  assert.match(post, /github.event_name == 'workflow_dispatch'/);
+  assert.match(post, /github.event_name == 'status'/);
+  assert.match(post, /github.event.sha == github.sha/);
+  assert.match(post, /run: node scripts\/check-canonical-railway-status.mjs/);
+  assert.ok(post.indexOf('check-canonical-railway-status.mjs') < post.indexOf('production-health-monitor.mjs'));
+  assert.match(post, /vars.LUQI_APPROVED_DEPLOYED_SHA/);
+  assert.match(post, /github.event_name == 'status' && github.event.sha/);
+  assert.doesNotMatch(post, /LUQI_OBSERVE_LIVE_BASELINE|baselineOnly|site[_ -]?returned[_ -]?sha|continue-on-error/);
+  assert.match(workflow, /cancel-in-progress: \$\{\{ github.event_name == 'pull_request' \}\}/);
+  assert.doesNotMatch(workflow, /pull_request_target:|workflow_run:|permissions:[\s\S]*?contents: write/);
+});
+
+
+test('status observer requires an independently approved full SHA before any live probe', () => {
+  assert.equal(requireApprovedStatusRevision(commit, commit), commit);
+  const wrong = 'b'.repeat(40);
+  for (const [eventSha, approvedSha] of [
+    [commit, undefined], [commit, ''], [commit, 'short'],
+    [commit, wrong], [undefined, commit], ['', commit],
+    ['A'.repeat(40), 'A'.repeat(40)], [wrong, commit],
+  ]) {
+    assert.throws(() => requireApprovedStatusRevision(eventSha, approvedSha),
+      /PRODUCTION_OBSERVATION_FAILED/);
+  }
+  // The same event/release SHA is insufficient without a separate owner pin.
+  assert.throws(() => requireApprovedStatusRevision(commit, wrong));
+});
+
+test('both live status workflows fail closed when approved status SHA is missing or mismatched', () => {
+  for (const file of ['production-operations.yml', 'lab-framing.yml']) {
+    const path = new URL('../.github/workflows/' + file, import.meta.url);
+    const source = readFileSync(path, 'utf8');
+    const section = file === 'production-operations.yml'
+      ? source.split('  observe-production:\n')[1]
+      : source.split('  public-framing:\n')[1];
+    assert.ok(section, 'postdeploy job missing: ' + file);
+    const scope = section.indexOf('run: node scripts/check-canonical-railway-status.mjs');
+    const approval = section.indexOf('requireApprovedStatusRevision(');
+    const probe = section.indexOf(file === 'production-operations.yml'
+      ? 'run: node scripts/production-health-monitor.mjs'
+      : 'run: node scripts/verify-deployed-release.mjs');
+    assert.ok(scope >= 0 && approval > scope && probe > approval, 'Approval must guard live probe: ' + file);
+    assert.match(section, /LUQI_STATUS_SHA: \$\{\{ github.event.sha \}\}/);
+    assert.match(section, /LUQI_APPROVED_DEPLOYED_SHA: \$\{\{ vars.LUQI_APPROVED_DEPLOYED_SHA \}\}/);
+    assert.match(section, /if: github.event_name == 'status'/);
+    assert.doesNotMatch(section, /continue-on-error:/);
+  }
 });

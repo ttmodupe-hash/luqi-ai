@@ -3,6 +3,9 @@ import { pathToFileURL } from 'node:url';
 
 const REPOSITORY = 'ttmodupe-hash/luqi-ai';
 const CONTEXT = 'kind-spontaneity - web';
+// Verified from GitHub commit-status REST on the canonical Railway SUCCESS commit.
+// GitHub attests the status actor; this still does NOT attest Railway deployment success.
+const RAILWAY_ACTOR = Object.freeze({ id: 68434857, login: 'railway-app[bot]' });
 const PATH = '/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7';
 const ENVIRONMENT = '1e192ef3-1fa6-4684-81fc-60165c7b0e22';
 const SHA = /^[a-f0-9]{40}$/;
@@ -19,6 +22,17 @@ export function canonicalRailwayStatusReason(event, currentMainSha) {
   if (event.state !== 'success') return 'not-success';
   if (event.context !== CONTEXT) return 'wrong-service-context';
   if (event.repository?.full_name !== REPOSITORY) return 'wrong-repository';
+  // GitHub generates sender/creator fields for status events. Bind the trusted
+  // status identity to the observed Railway GitHub App account, not a writable
+  // context or URL alone. Missing or foreign identity must fail closed.
+  const sender = event.sender;
+  if (sender?.id !== RAILWAY_ACTOR.id || sender.login !== RAILWAY_ACTOR.login ||
+      sender.type !== 'Bot') return 'untrusted-status-sender';
+  const creator = event.creator;
+  if (creator != null && (creator.id !== RAILWAY_ACTOR.id ||
+      creator.login !== RAILWAY_ACTOR.login || creator.type !== 'Bot')) {
+    return 'untrusted-status-creator';
+  }
   // GitHub caps status.branches at ten; it may omit main. Exact equality of the
   // event commit to GITHUB_SHA (default-branch HEAD for status events) is the
   // authoritative current-main guard. Do not require status.branches metadata.

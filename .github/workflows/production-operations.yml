@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: production-operations-${{ github.event_name }}-${{ github.event_name == 'status' && github.run_id || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'status' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   monitor-contracts:
@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify fixed origins, revision binding, body bounds and real HTTP latency
-        run: node --test tests/production-health-monitor.test.mjs tests/http-load-probe.test.mjs
+        run: node --test tests/production-health-monitor.test.mjs tests/http-load-probe.test.mjs tests/canonical-railway-status.test.mjs
 
   mysql-load-restart-rollback:
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -88,15 +88,18 @@ jobs:
         run: bash scripts/ci-isolated-restore-drill.sh
       # No SQL, credentials, account content or unfiltered server logs are uploaded.
 
+
   observe-production:
+    # This is NOT a PR required check: candidate acceptance is handled by
+    # monitor-contracts and disposable mysql-load-restart-rollback above.
+    # Live identity verification requires independent release provenance.
     if: >-
-      github.event_name == 'pull_request' ||
-      (github.ref == 'refs/heads/main' &&
+      github.ref == 'refs/heads/main' &&
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'status' && github.event.state == 'success' &&
         github.event.context == 'kind-spontaneity - web' && github.event.sha == github.sha &&
         startsWith(github.event.target_url, 'https://railway.com/project/9f627cb8-3136-4b30-89d2-32ca648a1e5f/service/a9b293e0-1966-43be-80ef-3dd27acc6ab7') &&
-        contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22'))))
+        contains(github.event.target_url, 'environmentId=1e192ef3-1fa6-4684-81fc-60165c7b0e22')))
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -106,12 +109,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Observe fixed public hosts, exact revision, MySQL and SPA entry
+      - name: Verify independently scoped canonical Railway production SUCCESS event
+        if: github.event_name == 'status'
+        env:
+          LUQI_MAIN_SHA: ${{ github.sha }}
+        run: node scripts/check-canonical-railway-status.mjs
+      - name: Require owner-approved deployed SHA before trusting status observer
+        if: github.event_name == 'status'
+        env:
+          LUQI_STATUS_SHA: ${{ github.event.sha }}
+          LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}
+        run: >-
+          node --input-type=module -e
+          'import { requireApprovedStatusRevision } from "./scripts/production-health-monitor.mjs";
+          requireApprovedStatusRevision(process.env.LUQI_STATUS_SHA, process.env.LUQI_APPROVED_DEPLOYED_SHA)'
+      - name: Observe fixed public hosts against independently trusted exact revision
         env:
           LUQI_VERIFY_PUBLIC: 'true'
-          # PRs observe the already-deployed base, never claim their candidate is live.
-          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
+          # Status: scoped canonical event AND separately owner-approved SHA.
+          # Schedule/manual: owner-admin GitHub repo variable, pinned only AFTER
+          # independent Railway SUCCESS plus owner-authorised release review.
+          # Missing or stale variable MUST fail closed; never read expected SHA
+          # from /v1/release or substitute undeployed github.sha.
+          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || vars.LUQI_APPROVED_DEPLOYED_SHA }}
         run: node scripts/production-health-monitor.mjs
       - name: Record failed observation for the existing GitHub Actions notification channel
         if: failure()
-        run: echo '::error::Luqi core observation failed. Review the Production Operations run and Railway. No automatic rollback, inference, credential or billing change was attempted.'
+        run: echo '::error::Luqi core observation failed. Verify the independently approved deployed SHA, canonical Railway SUCCESS and public hosts. No automatic rollback, paid inference or account action was attempted.'
