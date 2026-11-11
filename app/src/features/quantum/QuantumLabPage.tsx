@@ -56,23 +56,36 @@ export default function QuantumLabPage() {
         }
         return { feederA, feederB };
       };
+      // Rounded feeder totals can both equal 2 even where their underlying
+      // four-load partition differs by a representable sub-ULP residual.
+      // Neumaier summation keeps that signed residual for 2–6 loads.
+      const feederImbalance = (bits: number) => {
+        let sum = 0, compensation = 0;
+        for (let i = 0; i < values.length; i++) {
+          const term = bits & (1 << i) ? -values[i] : values[i];
+          const next = sum + term;
+          compensation += Math.abs(sum) >= Math.abs(term)
+            ? (sum - next) + term : (term - next) + sum;
+          sum = next;
+        }
+        return sum + compensation;
+      };
       // The normalized Ising spectrum can round distinct physical costs to
       // the same energy. Choose the *physical* minimum over all <=64 states.
       let chosen = 0, exactSquaredImbalance = Infinity;
       for (let bits = 0; bits < simulated.state.length; bits++) {
-        const { feederA: a, feederB: b } = feederTotals(bits);
-        const squared = (a - b) ** 2;
+        const squared = feederImbalance(bits) ** 2;
         if (squared < exactSquaredImbalance) { exactSquaredImbalance = squared; chosen = bits; }
       }
       const { feederA, feederB } = feederTotals(chosen);
+      const exactAbsoluteImbalance = Math.abs(feederImbalance(chosen));
       // At most 2^6=64 basis states, six loads each; the QAOA expectation
       // is a probability-weighted sum of nonnegative physical costs.
       const expectedSquaredImbalance = simulated.state.reduce((sum, z, bits) => {
-        const { feederA: a, feederB: b } = feederTotals(bits);
-        return sum + (z.re * z.re + z.im * z.im) * (a - b) ** 2;
+        return sum + (z.re * z.re + z.im * z.im) * feederImbalance(bits) ** 2;
       }, 0);
       return { ...model, ...simulated, statesEvaluated: simulated.state.length,
-        feederA, feederB, exactSquaredImbalance, expectedSquaredImbalance };
+        feederA, feederB, exactAbsoluteImbalance, exactSquaredImbalance, expectedSquaredImbalance };
     } catch { return null; }
   }, [loads, gamma, beta]);
   const surface = useMemo(() => { try { return surfaceCodeEstimate(distance, Number(physical), Number(threshold)); } catch { return null; } }, [distance, physical, threshold]);
@@ -148,7 +161,8 @@ export default function QuantumLabPage() {
       <div className="quantum-controls"><label>Gamma: {clean(gamma, 3)}<input aria-label="QAOA gamma" type="range" min={0} max={2 * Math.PI} step={0.01} value={gamma} onChange={e => setGamma(Number(e.target.value))} /></label>
         <label>Beta: {clean(beta, 3)}<input aria-label="QAOA beta" type="range" min={0} max={Math.PI} step={0.01} value={beta} onChange={e => setBeta(Number(e.target.value))} /></label></div>
       {balance ? <><dl className="quantum-metrics"><div><dt>Exact best feeder totals</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
-        <div><dt>Exact minimum squared imbalance</dt><dd>{displayPositive(balance.exactSquaredImbalance, 4)} kW²</dd></div>
+        <div><dt>Exact minimum absolute imbalance</dt><dd>{displayPositive(balance.exactAbsoluteImbalance, 4)} kW</dd></div>
+         <div><dt>Exact minimum squared imbalance</dt><dd>{displayPositive(balance.exactSquaredImbalance, 4)} kW²</dd></div>
         <div><dt>QAOA expected squared imbalance</dt><dd>{displayPositive(balance.expectedSquaredImbalance, 4)} kW²</dd></div>
         <div><dt>Classical states evaluated</dt><dd>{balance.statesEvaluated}</dd></div></dl>
         <button className="luqi-secondary" onClick={() => { const result = searchQaoaGrid(balance.model); setGamma(result.gamma); setBeta(result.beta); setScanNotice(`Compared ${result.parameterPairs} parameter pairs. Best point on this grid; not a proof of the global parameter optimum.`); }}>Scan p=1 parameter grid</button></>
@@ -203,6 +217,7 @@ export default function QuantumLabPage() {
       optimization: { loads, gamma, beta,
         feederModel: 'two-identical-feeders-no-capacity-constraints',
         feederResult: balance ? { expectedSquaredImbalance: balance.expectedSquaredImbalance,
+          exactAbsoluteImbalance: balance.exactAbsoluteImbalance,
           exactSquaredImbalance: balance.exactSquaredImbalance,
           exactFeederTotals: [balance.feederA, balance.feederB] } : null,
         suppliedTravelMatrix: tourInput, exactTour: tour, projectBudgetZar: budget, projects, exactAllocation: allocation },

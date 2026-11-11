@@ -43,6 +43,24 @@ it('preserves a real near-balanced feeder cost instead of displaying a fabricate
 });
 
 
+it('keeps a sub-ULP load residual when individually rounded feeder totals appear equal', () => {
+  mount();
+  // Three exact unit loads plus the next representable binary64 value.
+  // Every two-versus-two assignment has a nonzero residual of one ULP.
+  const epsilon = Number.EPSILON;
+  const loads = [1, 1, 1, 1 + epsilon];
+  expect(loads[3] - 1).toBe(epsilon);
+  fireEvent.change(screen.getByLabelText(/Appliance loads in kW/),
+    { target: { value: loads.join(', ') } });
+  expect(screen.getByText('Exact minimum absolute imbalance').nextElementSibling?.textContent)
+    .toBe('2.220e-16 kW');
+  expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent)
+    .toBe('4.930e-32 kW²');
+  expect(screen.getByText('Exact best feeder totals').nextElementSibling?.textContent)
+    .toBe('2.00 / 2.00 kW');
+  expect(fetch).not.toHaveBeenCalled();
+});
+
 it('finds the true physical feeder minimum when rounded Ising energies tie', () => {
   mount();
   const loads = [1, 1.00000001, 1.00000003, 1.00000004];
@@ -88,6 +106,7 @@ it('exports nonzero physical feeder imbalance and a direct probability-weighted 
     const b = loads.reduce((v, load, i) => v + (bits & (1 << i) ? load : 0), 0);
     return sum + (z.re ** 2 + z.im ** 2) * (a - b) ** 2;
   }, 0);
+  expect(exported.exactAbsoluteImbalance).toBeCloseTo(Math.abs(loads[0] - loads[1]), 12);
   expect(exported.exactSquaredImbalance).toBeGreaterThan(0);
   expect(exported.exactSquaredImbalance).toBeCloseTo((loads[0] - loads[1]) ** 2, 22);
   expect(exported.expectedSquaredImbalance).toBeCloseTo(expected, 12);
