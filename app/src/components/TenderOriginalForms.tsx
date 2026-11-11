@@ -3,6 +3,7 @@ import {useOptionalCustomerSession} from '../providers/customer-session';
 import {EMPTY_SUPPLIER_VALUES,SBD1_FIELDS,VERIFIED_SBD1,TENDER_FILE_MAX,TENDER_DOCUMENT_ERRORS,
   type SupplierValues,type TenderDocumentInspection} from '../lib/tender-document-contract';
 import {TenderSupplierGuide} from './TenderSupplierGuide';
+import {supplierFieldProgress} from '../lib/tender-field-guide';
 import {runTenderDocument} from '../lib/tender-document-client';
 import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTenderAudit,prepareTenderPacket,
   validatePacketContext,canExportTenderPacket,buildTenderOriginalArchive,
@@ -139,6 +140,13 @@ export function TenderOriginalForms(){
   }
   async function prepare(){
     if(!primary?.inspection.templateId||busy||historyFull)return;
+    // Ask for missing/invalid contact facts before invoking the document worker.
+    // Optional blank fields are not errors; never insert example values.
+    const attention=supplierFieldProgress(values,SBD1_FIELDS).attention;
+    if(attention.length){
+      setMessage('Check supported SBD 1 contact fields before preparing: '+attention.map(({field,issue})=>field.label+': '+issue).join('; '));
+      return;
+    }
     const missing=validatePacketContext(context,observedNow());
     if(missing.length){setMessage('Complete: '+missing.join('; '));return;}
     const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);

@@ -262,3 +262,22 @@ it('does not reprepare an expired bid after an observed device-clock rollback',a
  expect(network).not.toHaveBeenCalled();
  deviceClock.mockRestore();
 });
+
+it('asks for missing bidder and invalid optional email before any fill, without requiring optional blanks',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const prepare=screen.getByRole('button',{name:'Prepare exact original for review'});
+ fireEvent.click(prepare);
+ expect(screen.getByText(/Check supported SBD 1 contact fields before preparing: Name of bidder: Enter the bidder name/)).toBeTruthy();
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(0);
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'not-an-email'}});
+ fireEvent.click(prepare);
+ expect(screen.getByText(/Email address: Check the email format/)).toBeTruthy();
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(0);
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:''}});
+ fireEvent.click(prepare);
+ expect(screen.getByText(/Complete: Tender reference/)).toBeTruthy();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
