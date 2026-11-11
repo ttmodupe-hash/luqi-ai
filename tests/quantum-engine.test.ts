@@ -387,6 +387,28 @@ describe('QAOA grid optimisation preserves numerical results', () => {
     expect(model).toEqual(original);
   });
 
+  it('keeps eight-qubit grid winners detached from a reused candidate workspace', () => {
+    const model = {
+      fields: [0.25, -0.5, 0.75, -0.25, 0.5, -0.125, 0.375, -0.875],
+      edges: [{ i: 0, j: 7, weight: 1.5 }, { i: 2, j: 5, weight: -0.375 }],
+    };
+    const unchanged = structuredClone(model), steps = 7;
+    let reference = { gamma: 0, beta: 0, ...qaoaLayer(model, 0, 0) };
+    for (let g = 0; g < steps; g++) for (let b = 0; b < steps; b++) {
+      const gamma = 2 * Math.PI * g / (steps - 1), beta = Math.PI * b / (steps - 1);
+      const candidate = qaoaLayer(model, gamma, beta);
+      if (candidate.expectedEnergy < reference.expectedEnergy) reference = { gamma, beta, ...candidate };
+    }
+    const actual = searchQaoaGrid(model, steps), snapshot = structuredClone(actual);
+    expect(actual).toEqual({ ...reference, parameterPairs: steps ** 2 });
+    expect(validateState(actual.state)).toBe(8);
+    expect(new Set(actual.state).size).toBe(256);
+    // Caller changes must not leak into the engine's workspace on a later search.
+    actual.state[0].re += 0.25;
+    expect(searchQaoaGrid(model, steps)).toEqual(snapshot);
+    expect(model).toEqual(unchanged);
+  });
+
   it('preserves bounded input validation and rejects invalid Hamiltonians', () => {
     const model = { fields: [0], edges: [] };
     for (const steps of [2, 26, 4.5, NaN, Infinity]) {

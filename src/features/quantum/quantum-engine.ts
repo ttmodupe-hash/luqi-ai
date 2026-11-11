@@ -163,12 +163,18 @@ function applyPreparedRxInPlace(state: Statevector, target: number, cosine: numb
   }
 }
 /** Apply the bounded mixer to a prepared gamma phase; neither input is mutated. */
-function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, cosine: number, sine: number) {
+function qaoaLayerFromPhase(energies: number[], phased: Statevector, qubits: number, cosine: number, sine: number, workspace?: Statevector) {
   // Coefficients are prepared by the caller from finite angles. The public
   // single-layer path still rejects overflow in its doubled RX angle.
   // One clone per candidate, rather than a full statevector clone for each
   // mixer qubit. The cached phase row remains immutable across all beta values.
-  const state = phased.map(z => ({ ...z }));
+  const state = workspace ?? phased.map(z => ({ ...z }));
+  // The grid owns this scratch buffer: restore all amplitudes before each beta.
+  // Public qaoaLayer calls do not supply a workspace and retain fresh ownership.
+  if (workspace) for (let i = 0; i < phased.length; i++) {
+    state[i].re = phased[i].re;
+    state[i].im = phased[i].im;
+  }
   for (let target = 0; target < qubits; target++) applyPreparedRxInPlace(state, target, cosine, sine);
   // Preserve norm validation while streaming the energy observable directly.
   // This avoids allocating a 2^n-number probability array for every grid pair.
@@ -204,14 +210,20 @@ export function searchQaoaGrid(model: IsingModel, steps = 15) {
     const beta = Math.PI * b / (steps - 1), angle = finite(2 * beta);
     return { beta, cosine: Math.cos(angle / 2), sine: Math.sin(angle / 2) };
   });
+  // Reuse a single internal candidate buffer across all 25×25 pairs at most;
+  // only winning states are cloned to prevent later candidates modifying them.
+  const workspace = initial.map(z => ({ ...z }));
   // Gamma changes only by row: prepare its phase once, then reuse immutably
   // for all beta mixers. Peak state memory remains bounded to 1–8 qubits.
   for (let g = 0; g < steps; g++) {
     const gamma = 2 * Math.PI * g / (steps - 1);
     const phased = initial.map((z, i) => phase(z, -gamma * energies[i]));
     for (const { beta, cosine, sine } of mixers) {
-      const candidate = qaoaLayerFromPhase(energies, phased, qubits, cosine, sine);
-      if (candidate.expectedEnergy < best.expectedEnergy) best = { gamma, beta, ...candidate };
+      const candidate = qaoaLayerFromPhase(energies, phased, qubits, cosine, sine, workspace);
+      if (candidate.expectedEnergy < best.expectedEnergy) {
+        best = { gamma, beta, expectedEnergy: candidate.expectedEnergy,
+          state: workspace.map(z => ({ ...z })) };
+      }
     }
   }
   return { ...best, parameterPairs: steps ** 2 };
