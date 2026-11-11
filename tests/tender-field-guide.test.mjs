@@ -23,7 +23,8 @@ for(const [id,value]of [['bidderName',''],['bidderName',' '],['email','x'],['ema
  test('bounded validation '+id+' '+JSON.stringify(value),()=>assert.ok(supplierFieldIssue(field(id),value)));
 test('only actual supplied acceptable text counts as entered',()=>{
  const v={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic',email:'bad',postalAddress:' '};const r=supplierFieldProgress(v,SBD1_FIELDS);
- assert.equal(r.entered,1);assert.equal(r.blank,5);assert.equal(r.attention.length,1);assert.equal(r.attention[0].field.id,'email');
+ assert.equal(r.entered,1);assert.equal(r.blank,4);assert.equal(r.attention.length,2);
+ assert.deepEqual(r.attention.map(({field})=>field.id),['postalAddress','email']);
  assert.equal(supplierFieldIssue(field('bidderName'),'A & B'),null);
  assert.equal(supplierFieldIssue(field('email'),'test@example.test'),null);
 });
