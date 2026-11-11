@@ -63,6 +63,21 @@ test('an older tab cannot overwrite or erase a later tab’s saved stage', async
   await otherTab.close();
 });
 
+test('newer progress automatically announces stale state and accepts keyboard recovery at 320px', async ({ page, context }) => {
+  const otherTab = await context.newPage();
+  await otherTab.goto('/#/journey');
+  await otherTab.getByRole('button', { name: /Mark complete:/i }).nth(2).click();
+  await expect(otherTab.getByText('25%', { exact: true })).toBeVisible();
+  // No user action in the first tab: the browser dispatches the real storage event.
+  await expect(page.getByRole('status')).toContainText('changed in another tab');
+  await expect(page.getByText('0%', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('25%', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await otherTab.close();
+});
+
 test('denied storage write does not claim that a stage was completed', async ({ page }) => {
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
