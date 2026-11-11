@@ -68,6 +68,17 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    expect(mit.textContent).toContain('19:00 SAST');
    expect(fetcher).not.toHaveBeenCalled();
  });
+ it('shows the closed TEF 2026 application round before a user prepares a worksheet',()=>{
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'KE'}});
+   const tef=screen.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'});
+   expect(tef.textContent).toContain('1 January to 1 March 2026 and has closed');
+   fireEvent.click(within(tef).getByRole('button',{name:'Prepare review draft'}));
+   const text=screen.getByRole('textbox',{name:'Funding preparation draft text'}) as HTMLTextAreaElement;
+   expect(text.value).toContain('does not establish an open 2027 round');
+   expect(fetcher).not.toHaveBeenCalled();
+ });
  it('offers pan-African and global sources for Kenyan project locations without declaring eligibility',()=>{
    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
    render(<CapitalIntelligencePanel/>);

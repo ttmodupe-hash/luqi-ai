@@ -374,6 +374,8 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
       checks.push('TIA may require proven proof of concept; confirm the instrument’s technology readiness rules.');
     if(programme.id === 'idc-development-finance' && profile.maturity === 'IDEA')
       checks.push('IDC examines bankability, viability and owner contribution, which an idea alone may not demonstrate.');
+    if(programme.id === 'tef-entrepreneurship')
+      checks.push('The published 2026 TEF Entrepreneurship Programme application window was 1 January to 1 March 2026 and has closed. This does not establish an open 2027 round; check the latest official TEF announcement before applying.');
     if(programme.id === 'mit-solve-challenges') {
       checks.push('The 2027 Global Economic Prosperity Challenge closed on 6 November 2026 at 12:00 EST (19:00 SAST); this past deadline does not establish any currently open challenge.');
       if(profile.maturity === 'IDEA')

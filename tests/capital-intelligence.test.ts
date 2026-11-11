@@ -122,6 +122,19 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(draft).toContain('Across Africa');
     expect(draft).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
   });
+  it('surfaces the publisher-confirmed closed TEF 2026 window in results and offline worksheets',()=>{
+    const kenya={...profile,country:'KE' as const,purpose:'BUSINESS_GROWTH' as const,age:28};
+    const tef=matchCapitalProgrammes(kenya,new Date('2026-11-11T10:00:00Z'))
+      .find(m=>m.programme.id==='tef-entrepreneurship')!;
+    expect(tef.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(tef.checks.join(' ')).toContain('1 January to 1 March 2026 and has closed');
+    expect(tef.checks.join(' ')).toContain('does not establish an open 2027 round');
+    const worksheet=buildCapitalPreparationDraft(tef,kenya,'Community workshop','Local enterprise',
+      new Date('2026-11-11T10:00:00Z'));
+    expect(worksheet).toContain('1 January to 1 March 2026 and has closed');
+    expect(worksheet).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+    expect(worksheet).not.toContain('CURRENT FUNDING WINDOW: OPEN');
+  });
   it('explains MIT Solve concept-stage fellowship exception and its expired 2026 deadline',()=>{
     const now=new Date('2026-11-11T10:00:00Z');
     const idea=matchCapitalProgrammes({...profile,country:'KE',maturity:'IDEA'},now)

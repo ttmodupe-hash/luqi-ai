@@ -60,6 +60,8 @@ test('funding hub brings South African, pan-African and global publishers togeth
   await page.getByRole('combobox',{name:'Project location'}).selectOption('KE');
   await page.getByRole('combobox',{name:'Funding geography'}).selectOption('PAN_AFRICA');
   await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'}))
+    .toContainText('1 January to 1 March 2026 and has closed');
   await expect(page.getByRole('article',{name:'AECF Enterprise Challenge Finance'})).toBeVisible();
   await expect(page.getByRole('article',{name:'AFAWA Partner Finance'})).toBeVisible();
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toHaveCount(0);
