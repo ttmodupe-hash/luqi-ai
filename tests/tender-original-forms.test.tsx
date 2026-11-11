@@ -86,6 +86,24 @@ it('records explicit final-release revocation when an earlier approval gate chan
  expect(network).not.toHaveBeenCalled();
 });
 
+it('records revocation before a failed re-prepare instead of leaving old approvals as the final audit event',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const checkbox of within(review).getAllByRole('checkbox'))fireEvent.click(checkbox);
+ expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(false);
+ const fillsBefore=run.mock.calls.filter(([request])=>request.action==='fill').length;
+ run.mockResolvedValueOnce({ok:false,code:'DOCUMENT_INVALID'});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ await screen.findByText('The document is malformed or uses an unsupported structure.');
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ const history=screen.getByText(/Local approval and amendment history/).parentElement!;
+ expect(history.querySelector('ol li:last-child')?.textContent).toMatch(/ · revoke · all$/);
+ expect(history.textContent).not.toContain('Synthetic supplier');
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(fillsBefore+1);
+ expect(archive).not.toHaveBeenCalled();
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('clears approvals on addendum selection and rejects failed imports without restoring the old approval',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  run.mockResolvedValueOnce({ok:false,code:'DOCUMENT_UNSAFE'});

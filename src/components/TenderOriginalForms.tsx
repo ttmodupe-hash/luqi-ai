@@ -180,7 +180,11 @@ export function TenderOriginalForms(){
       if(target)contextInputs.current[target]?.focus();
       return;
     }
-    const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);
+    const version=++epoch.current;setBusy(true);
+    // Re-preparing discards the earlier review and approvals, even if the
+    // worker rejects the new attempt. Reflect that revocation in local history.
+    if(prepared&&ORIGINAL_FORM_GATES.some(g=>gates[g.id]))audit('revoke','all');
+    setGates(emptyOriginalApprovals());setPrepared(null);
     const controller=new AbortController();pending.current=controller;
     try{
       const result=await runTenderDocument({action:'fill',name:primary.name,mime:primary.mime,bytes:primary.bytes,values},controller.signal);
