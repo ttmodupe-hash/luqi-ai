@@ -9,6 +9,8 @@ import type { PqcLabResult } from './pqc-lab';
 import './quantum-lab.css';
 
 const clean = (x: number, digits = 6) => (Math.abs(x) < 1e-12 ? 0 : x).toFixed(digits);
+// Preserve small nonzero physical observables instead of rounding them to an exact-looking zero.
+const displayPositive = (x: number, digits = 4) => x > 0 && x < 10 ** -digits ? x.toExponential(3) : x.toFixed(digits);
 const amplitude = (re: number, im: number) => `${clean(re)} ${im < -1e-12 ? '−' : '+'} ${clean(Math.abs(im))}i`;
 function randCents(value: string) {
   if (!/^\d{1,7}(?:\.\d{1,2})?$/.test(value)) throw new Error('Use a positive rand amount with at most two decimals.');
@@ -120,7 +122,7 @@ export default function QuantumLabPage() {
       <div className="quantum-controls"><label>Gamma: {clean(gamma, 3)}<input aria-label="QAOA gamma" type="range" min={0} max={2 * Math.PI} step={0.01} value={gamma} onChange={e => setGamma(Number(e.target.value))} /></label>
         <label>Beta: {clean(beta, 3)}<input aria-label="QAOA beta" type="range" min={0} max={Math.PI} step={0.01} value={beta} onChange={e => setBeta(Number(e.target.value))} /></label></div>
       {balance ? <><dl className="quantum-metrics"><div><dt>Exact best feeder totals</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
-        <div><dt>Exact minimum squared imbalance</dt><dd>{clean(Math.max(0, (balance.baseline.minimum + balance.constant) * balance.total ** 2), 4)} kW²</dd></div>
+        <div><dt>Exact minimum squared imbalance</dt><dd>{displayPositive((balance.feederA - balance.feederB) ** 2, 4)} kW²</dd></div>
         <div><dt>QAOA expected squared imbalance</dt><dd>{clean(Math.max(0, (balance.expectedEnergy + balance.constant) * balance.total ** 2), 4)} kW²</dd></div>
         <div><dt>Classical states evaluated</dt><dd>{balance.baseline.statesEvaluated}</dd></div></dl>
         <button className="luqi-secondary" onClick={() => { const result = searchQaoaGrid(balance.model); setGamma(result.gamma); setBeta(result.beta); setScanNotice(`Compared ${result.parameterPairs} parameter pairs. Best point on this grid; not a proof of the global parameter optimum.`); }}>Scan p=1 parameter grid</button></>

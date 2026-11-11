@@ -32,6 +32,15 @@ it('renders calculated states and local planning references without network requ
   expect(LabWorker.instances).toHaveLength(0); expect(fetch).not.toHaveBeenCalled();
 });
 
+it('preserves a real near-balanced feeder cost instead of displaying a fabricated zero', () => {
+  mount();
+  const input = screen.getByLabelText(/Appliance loads in kW/);
+  fireEvent.change(input, { target: { value: '1, 1.00000001' } });
+  expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent).toBe('1.000e-16 kW²');
+  fireEvent.change(input, { target: { value: '1, 1' } });
+  expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent).toBe('0.0000 kW²');
+});
+
 it('keeps error estimates outside their model and starts cryptography only on an explicit fixed command', () => {
   mount();
   fireEvent.change(screen.getByLabelText('Physical error probability'), { target: { value: '0.1' } });
