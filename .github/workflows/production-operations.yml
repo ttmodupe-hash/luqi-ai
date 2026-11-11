@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify fixed origins, revision binding, body bounds and real HTTP latency
-        run: node --test tests/production-health-monitor.test.mjs tests/http-load-probe.test.mjs
+        run: node --test tests/production-health-monitor.test.mjs tests/http-load-probe.test.mjs tests/canonical-railway-status.test.mjs
 
   mysql-load-restart-rollback:
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
