@@ -84,6 +84,15 @@ it('discarding work aborts an in-flight parse and prevents a late result from re
  await waitFor(()=>expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull());
 });
 
+it('leaves the issuer closing time blank and supplies a format hint instead of a fictional deadline',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const closing=screen.getByLabelText('Closing time with timezone') as HTMLInputElement;
+ expect(closing.value).toBe('');
+ expect(closing.placeholder).toBe('YYYY-MM-DDTHH:mm+02:00');
+ expect(closing.placeholder).not.toMatch(/\\d{4}-\\d{2}-\\d{2}T/);
+ expect(network).not.toHaveBeenCalled();
+});
+
 function expectEmptyBidContext(){
  for(const label of ['Tender reference','Procuring authority','Applicant or authorised representative',
    'Closing time with timezone','Exact official submission address','Applicant-entered offer ZAR'])
