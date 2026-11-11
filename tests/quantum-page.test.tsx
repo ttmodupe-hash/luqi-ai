@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router';
 import QuantumLabPage from '../src/features/quantum/QuantumLabPage';
 import { PUBLIC_ABC_SHA256 } from '../src/features/quantum/pqc-contract';
+import { loadBalanceModel, qaoaLayer } from '../src/features/quantum/quantum-engine';
 
 class LabWorker {
   static instances: LabWorker[] = [];
@@ -14,7 +15,7 @@ class LabWorker {
   constructor() { LabWorker.instances.push(this); }
 }
 beforeEach(() => { LabWorker.instances = []; vi.stubGlobal('Worker', LabWorker); vi.stubGlobal('fetch', vi.fn()); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
 const mount = () => render(<MemoryRouter><QuantumLabPage /></MemoryRouter>);
 
 it('renders calculated states and local planning references without network requests or automatic cryptography', () => {
@@ -39,6 +40,42 @@ it('preserves a real near-balanced feeder cost instead of displaying a fabricate
   expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent).toBe('1.000e-16 kW²');
   fireEvent.change(input, { target: { value: '1, 1' } });
   expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent).toBe('0.0000 kW²');
+});
+
+
+it('exports nonzero physical feeder imbalance and a direct probability-weighted QAOA expectation', async () => {
+  let savedBlob: Blob | null = null;
+  vi.stubGlobal('URL', {
+    createObjectURL: vi.fn((blob: Blob) => { savedBlob = blob; return 'blob:luqi-test'; }),
+    revokeObjectURL: vi.fn(),
+  });
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  mount();
+  const loads = [1, 1.00000001];
+  fireEvent.change(screen.getByLabelText(/Appliance loads in kW/),
+    { target: { value: loads.join(', ') } });
+  fireEvent.click(screen.getByRole('button', { name: 'Download experiment notebook' }));
+  expect(savedBlob).not.toBeNull();
+  const json = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(savedBlob!);
+  });
+  const exported = JSON.parse(json).optimization.feederResult;
+  const state = qaoaLayer(loadBalanceModel(loads).model, 0.8, 0.4).state;
+  // Independent physical interpretation: assign each load by its basis bit,
+  // square the actual feeder-total difference, and weight by |amplitude|².
+  const expected = state.reduce((sum, z, bits) => {
+    const a = loads.reduce((v, load, i) => v + (bits & (1 << i) ? 0 : load), 0);
+    const b = loads.reduce((v, load, i) => v + (bits & (1 << i) ? load : 0), 0);
+    return sum + (z.re ** 2 + z.im ** 2) * (a - b) ** 2;
+  }, 0);
+  expect(exported.exactSquaredImbalance).toBeGreaterThan(0);
+  expect(exported.exactSquaredImbalance).toBeCloseTo((loads[0] - loads[1]) ** 2, 22);
+  expect(exported.expectedSquaredImbalance).toBeCloseTo(expected, 12);
+  expect(Number(screen.getByText('QAOA expected squared imbalance')
+    .nextElementSibling?.textContent?.split(' ')[0])).toBeCloseTo(expected, 3);
 });
 
 it('keeps error estimates outside their model and starts cryptography only on an explicit fixed command', () => {
