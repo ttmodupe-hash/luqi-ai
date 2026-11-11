@@ -88,6 +88,11 @@ export const ARTIFACT_LABELS: Readonly<Record<Artifact,string>> = Object.freeze(
 export const CAPITAL_SOURCE_REVIEWED_ON = '2026-11-02';
 export const CAPITAL_GLOBAL_SOURCES_REVIEWED_ON = '2026-11-03';
 export const CAPITAL_SOURCE_RECHECK_ON = '2026-12-02';
+/** Most recent substantively approved publisher stamp in this immutable catalogue.
+ * This is an authoring gate, not an inferred live review or application window.
+ * Advance only with original publisher evidence; never trust a visitor's device clock.
+ */
+const CAPITAL_LATEST_APPROVED_REVIEW_ON = '2026-11-11';
 export interface FundingPlatformSpec {
   readonly id:string;
   readonly name:string;
@@ -147,9 +152,10 @@ const bad = () => new Error('INVALID_CAPITAL_PROFILE_OR_SOURCE');
 function validPublisherReviewDate(raw:unknown):raw is string {
   if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
   const timestamp=Date.parse(raw+'T00:00:00.000Z');
-  // A future stamp cannot be evidence that a publisher was already reviewed. South Africa has fixed UTC+02:00.
-  const todaySast=new Date(Date.now()+2*60*60*1000).toISOString().slice(0,10);
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0,10)===raw && raw<=todaySast;
+  // The local device clock can be years behind (offline/older Android), or far ahead.
+  // Keep the approved catalogue loadable without accepting an unapproved future stamp.
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0,10)===raw &&
+    raw<=CAPITAL_LATEST_APPROVED_REVIEW_ON;
 }
 
 /** Reject malformed/outside sources, clone nested data, and deep-freeze public specs. */

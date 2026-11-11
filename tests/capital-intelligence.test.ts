@@ -1,4 +1,4 @@
-import {describe,it,expect} from 'vitest';
+import {describe,it,expect,vi} from 'vitest';
 import {ARTIFACT_LABELS,AFRICAN_COUNTRIES,CAPITAL_PROGRAMMES,capitalReviewIsCurrent,
   normalizeFundingPlatform,matchCapitalProgrammes,buildCapitalPreparationDraft,
   type CapitalProfile} from '../src/lib/capital-intelligence';
@@ -8,6 +8,22 @@ const profile:CapitalProfile={
   registration:'UNKNOWN',age:27,availableArtifacts:['CONCEPT_NOTE'],
 };
 describe('Capital Intelligence: explainable, evidence-bound local preparation',()=>{
+  it('loads approved source records despite skewed device clocks without certifying future reviews',()=>{
+    const approved=CAPITAL_PROGRAMMES.find(p=>p.id==='timbuktoo-creativetech')!;
+    expect(approved.reviewedOn).toBe('2026-11-11');
+    vi.useFakeTimers();
+    try {
+      // A phone clock left in 2025 must not crash the immutable catalogue on import.
+      vi.setSystemTime(new Date('2025-01-01T00:00:00Z'));
+      expect(normalizeFundingPlatform(approved).reviewedOn).toBe('2026-11-11');
+      expect(capitalReviewIsCurrent(new Date(),approved.reviewedOn)).toBe(false);
+      // A phone clock set far ahead must not manufacture authorised review evidence.
+      vi.setSystemTime(new Date('2099-01-01T00:00:00Z'));
+      expect(()=>normalizeFundingPlatform({...approved,reviewedOn:'2099-01-01'}))
+        .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+      expect(capitalReviewIsCurrent(new Date(),approved.reviewedOn)).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
   it('locks every known source to an official HTTPS publisher and never invents a current round',()=>{
     expect(CAPITAL_PROGRAMMES).toHaveLength(11);
     expect(new Set(CAPITAL_PROGRAMMES.map(p=>p.id)).size).toBe(CAPITAL_PROGRAMMES.length);
