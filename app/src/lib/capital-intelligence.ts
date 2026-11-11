@@ -378,6 +378,8 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
  * Future-dated source reviews are never treated as completed reviews.
  */
 export function capitalReviewIsCurrent(now:Date=new Date(),reviewedOn:string=CAPITAL_SOURCE_REVIEWED_ON):boolean {
+  // Date.parse rolls impossible dates (e.g. 2026-02-29) into March; never certify that review.
+  if(!validPublisherReviewDate(reviewedOn)) return false;
   const reviewStart=Date.parse(reviewedOn+'T00:00:00+02:00');
   const instant=now.getTime();
   return Number.isFinite(instant) && Number.isFinite(reviewStart) &&

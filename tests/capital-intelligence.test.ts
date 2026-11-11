@@ -133,6 +133,13 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(matchCapitalProgrammes(profile,afterDeadline)
       .find(m=>m.programme.id==='timbuktoo-creativetech')!.reviewExpired).toBe(true);
   });
+  it('fails closed when an exported freshness check receives impossible or future review dates',()=>{
+    expect(capitalReviewIsCurrent(new Date('2026-03-01T10:00:00Z'),'2026-02-29')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-12-01T10:00:00Z'),'2026-11-31')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-11-11T10:00:00Z'),'2026-11-2')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-11-11T10:00:00Z'),'2099-01-01')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-11-11T10:00:00Z'),'2026-11-11')).toBe(true);
+  });
   it('handles country uncertainty, stale evidence and invalid timestamps without fake open status',()=>{
     const d=new Date('2027-01-12T10:00:00Z');
     expect(capitalReviewIsCurrent(new Date('2026-11-02T10:00:00Z'))).toBe(true);
