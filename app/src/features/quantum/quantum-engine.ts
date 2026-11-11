@@ -103,8 +103,15 @@ export function stateMetrics(state: Statevector) {
   if (n === 2) {
     const determinant = add(multiply(state[0], state[3]), scale(multiply(state[1], state[2]), -1));
     concurrence = Math.max(0, Math.min(1, 2 * Math.hypot(determinant.re, determinant.im)));
-    const eigenvalue = (1 + Math.sqrt(Math.max(0, 1 - concurrence ** 2))) / 2;
-    entanglementEntropy = entropy([eigenvalue, 1 - eigenvalue]);
+    // Rationalize the smaller reduced-state eigenvalue: (1 - sqrt(1-C²))/2
+    // cancels to zero for weak but representable entanglement.
+    const root = Math.sqrt(Math.max(0, 1 - concurrence ** 2));
+    const smallEigenvalue = concurrence ** 2 / (2 * (1 + root));
+    // log1p preserves the larger eigenvalue's contribution even when
+    // 1-smallEigenvalue rounds to exactly 1 in binary64.
+    entanglementEntropy = smallEigenvalue === 0 ? 0 :
+      -(smallEigenvalue * Math.log2(smallEigenvalue) +
+        (1 - smallEigenvalue) * Math.log1p(-smallEigenvalue) / Math.LN2);
   }
   return { probabilities: p, norm: p.reduce((s, x) => s + x, 0), concurrence,
     measurementEntropy: entropy(p), entanglementEntropy };

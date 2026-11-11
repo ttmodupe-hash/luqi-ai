@@ -25,6 +25,26 @@ describe('two-qubit statevector calculations', () => {
     expect(independent.entanglementEntropy).toBeCloseTo(0, 14);
     expect(bell.measurementEntropy).toBeCloseTo(1, 14); expect(bell.entanglementEntropy).toBeCloseTo(1, 14);
   });
+  it('retains small nonzero entanglement entropy without cancellation', () => {
+    // For sqrt(1-p)|00> + sqrt(p)|11>, the reduced-state eigenvalues
+    // are exactly (1-p,p). This reference does not use concurrence.
+    for (const epsilon of [1e-9, 1e-7, 1e-3]) {
+      const p = epsilon ** 2;
+      const state = [
+        { re: Math.sqrt(1 - p), im: 0 }, { re: 0, im: 0 },
+        { re: 0, im: 0 }, { re: epsilon, im: 0 },
+      ];
+      const before = structuredClone(state);
+      const expected = -(p * Math.log2(p) + (1 - p) * Math.log1p(-p) / Math.LN2);
+      const actual = stateMetrics(state).entanglementEntropy;
+      expect(actual).not.toBeNull();
+      expect(actual!).toBeGreaterThan(0);
+      expect(Math.abs(actual! / expected - 1)).toBeLessThan(1e-9);
+      expect(state).toEqual(before);
+    }
+    expect(stateMetrics(zeroState()).entanglementEntropy).toBe(0);
+    expect(stateMetrics(bellState()).entanglementEntropy).toBeCloseTo(1, 14);
+  });
   it.each([0, 1, 2, 3])('amplifies marked state %i through an oracle and diffusion, then shows over-iteration', marked => {
     const initial = uniformState(2), amplified = groverIteration(initial, marked);
     probabilities(initial).forEach(p => expect(p).toBeCloseTo(0.25, 14));
