@@ -99,6 +99,29 @@ describe('LUQI Capability Journey', () => {
     expect(readCapabilityJourney()?.completed).toEqual([0, 2]);
   });
 
+  it('notifies about newer progress before the user touches the page', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    setCapabilityJourneyStep(2, true);
+    fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    expect(screen.getByText('0%')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByText('25%')).toBeTruthy();
+    expect(readCapabilityJourney()?.completed).toEqual([2]);
+  });
+
+  it('notifies about removal by another tab before a user edits', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    localStorage.removeItem(CAPABILITY_JOURNEY_KEY);
+    fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeTruthy();
+    expect(readCapabilityJourney()).toBeNull();
+  });
+
   it('presents stale-tab recovery before the mission and supports keyboard activation', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
