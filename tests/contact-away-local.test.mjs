@@ -33,3 +33,10 @@ test('normal heartbeat after ten seconds recovers mode change allowance',()=>{
   advance(10_000);p.update(1,'a',8,true,true);assert.equal(p.read(1),'away');
   p.update(1,'a',9,true,false);assert.equal(p.read(1),'online');
 });
+test('Hide and re-enable cannot reset mode-toggle quota within the same ten-second window',()=>{
+  const {p}=fixture();p.update(1,'a',1,true);
+  for(let sequence=2;sequence<=7;sequence++)p.update(1,'a',sequence,true,sequence%2===0);
+  p.update(1,'a',8,false);p.update(1,'a',9,true,false);
+  assert.throws(()=>p.update(1,'a',10,true,true),/PRESENCE_RATE/);
+  assert.equal(p.read(1),'online');
+});

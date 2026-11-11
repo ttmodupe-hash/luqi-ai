@@ -39,8 +39,12 @@ export class ContactPresence {
       return;
     }
     // Keep an inactive tombstone briefly so a delayed older heartbeat cannot undo Hide.
+    // Hide and immediate re-enable must not reset the mode-toggle quota;
+    // otherwise callers can evade it by cycling active=false/true.
+    const withinModeWindow = !!previous && now - previous.modeWindowStarted < 10_000;
     leases.set(id, { sequence, active, away: active && away, expires: now + PRESENCE_TTL_MS, touched: now,
-      modeWindowStarted: now, modeSwitches: 0 });
+      modeWindowStarted: withinModeWindow ? previous!.modeWindowStarted : now,
+      modeSwitches: withinModeWindow ? previous!.modeSwitches : 0 });
   }
   read(user: number): 'online' | 'away' | 'offline' | 'not_shared' {
     const now = this.clock(); this.sweep(now);
