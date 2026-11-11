@@ -58,10 +58,19 @@ export default function CapabilityJourneyPage() {
   }
 
   function loadLatestSavedJourney() {
+    // A failed storage read must not be mistaken for another tab clearing the goal.
+    // Keep the visible state and recovery action until the device store is readable.
+    try {
+      window.localStorage.getItem(CAPABILITY_JOURNEY_KEY);
+    } catch {
+      setNeedsReload(true);
+      setNotice('Browser storage is unavailable. This view has not been replaced. Allow browser storage and try again.');
+      return;
+    }
     const latest = readCapabilityJourney();
     setJourney(latest);
     setNeedsReload(false);
-    setNotice(latest ? 'Loaded the latest saved journey from this browser.' : 'No saved journey remains on this device. You can choose a new goal.');
+    setNotice(latest ? 'Loaded the latest saved journey from this browser.' : 'No readable saved journey is available on this device. It may have been cleared or become invalid. You can choose a new goal.');
   }
 
   function toggle(index: number) {
