@@ -23,6 +23,56 @@ class FailClosedHealingTests(unittest.TestCase):
     def setUp(self):
         self.manager = SelfHealingPipelineManager()
 
+    def test_untrusted_advisory_target_is_withheld_from_all_outputs(self):
+        target = "api/9901011234088_syntheticSecretMarker.py"
+        job = self.manager.trigger_self_healing("Synthetic incident", target)
+        self.assertEqual(job.target_file, "[TARGET_WITHHELD]")
+        self.assertNotIn(target, repr(job))
+        self.assertNotIn(target, repr(self.manager.jobs))
+        self.assertNotIn(target, repr(self.manager.list_jobs()))
+        self.assertFalse(job.ci_verified)
+        self.assertFalse(job.deployed)
+
+    def test_private_correlation_preserved_for_withheld_targets(self):
+        first = self.manager.trigger_self_healing("Synthetic timeout", "api/a.py")
+        second = self.manager.trigger_self_healing("Synthetic timeout", "api/b.py")
+        third = self.manager.trigger_self_healing("Synthetic timeout", "api/a.py")
+        self.assertEqual(first.target_file, "[TARGET_WITHHELD]")
+        self.assertEqual(second.target_file, "[TARGET_WITHHELD]")
+        self.assertEqual(first.evidence_sha256, third.evidence_sha256)
+        self.assertNotEqual(first.evidence_sha256, second.evidence_sha256)
+        self.assertEqual(
+            self.manager.trigger_self_healing("No target").target_file, "unassigned"
+        )
+
+    def test_oversize_raw_padding_is_rejected_before_trimming(self):
+        # Previously whitespace padding bypassed the post-strip limit, causing
+        # unbounded input processing and correlation for untrusted reports.
+        over_limit = " " * (4000 * 250) + "timeout"
+        with self.assertRaisesRegex(ValueError, "too long"):
+            self.manager.trigger_self_healing(over_limit, "api/synthetic.py")
+        self.assertEqual(self.manager.list_jobs(), [])
+
+    def test_oversize_report_never_calls_stripping_hook(self):
+        # A synthetic str subclass proves the bound is checked before any
+        # report normalization. The input never enters triage/HMAC processing.
+        class UntrustedString(str):
+            def strip(self, *args, **kwargs):
+                raise AssertionError("Oversized report must be rejected before strip")
+        with self.assertRaisesRegex(ValueError, "too long"):
+            self.manager.trigger_self_healing(UntrustedString("x" * 4001))
+        self.assertEqual(self.manager.list_jobs(), [])
+
+    def test_valid_boundary_length_stays_accepted_and_non_authoritative(self):
+        report = "timeout" + ("x" * (4000 - 7))
+        job = self.manager.trigger_self_healing(report, "api/synthetic.py")
+        self.assertEqual(job.bug_report, "[REPORT_WITHHELD]")
+        self.assertEqual(job.target_file, "[TARGET_WITHHELD]")
+        self.assertEqual(job.heuristic_category, "potential_reliability")
+        self.assertFalse(job.execution_verified)
+        self.assertFalse(job.ci_verified)
+        self.assertFalse(job.deployed)
+
     def test_no_fabricated_history_is_seeded(self):
         self.assertEqual(self.manager.list_jobs(), [])
 

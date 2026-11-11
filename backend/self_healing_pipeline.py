@@ -28,6 +28,7 @@ MAX_REPORT_LENGTH = 4000
 MAX_JOBS_IN_MEMORY = 100
 _SAFE_PATH = re.compile(r"^[a-zA-Z0-9_./-]{1,180}$")
 _REPORT_WITHHELD = "[REPORT_WITHHELD]"
+_TARGET_WITHHELD = "[TARGET_WITHHELD]"
 # Shared refusal string; never delegate the manager boundary to an injectable tool.
 _SANDBOX_BLOCKED = (
     "BLOCKED: application-host code execution is disabled. "
@@ -42,11 +43,14 @@ def _utc_now() -> str:
 
 
 def _sanitize_report(value: str) -> str:
-    if not isinstance(value, str) or not value.strip():
+    if not isinstance(value, str):
         raise ValueError("Bug report must be a nonempty string.")
-    text = value.strip()
-    if len(text) > MAX_REPORT_LENGTH:
+    # Bound untrusted input BEFORE strip/lower/UTF-8/HMAC work. Otherwise an
+    # arbitrarily long whitespace-padded report can bypass the size limit.
+    if len(value) > MAX_REPORT_LENGTH:
         raise ValueError("Bug report is too long.")
+    if not value.strip():
+        raise ValueError("Bug report must be a nonempty string.")
     # No regex can reliably identify all tokens or personal data in free-form
     # diagnostic text. Never retain or return the original report content.
     return _REPORT_WITHHELD
@@ -168,6 +172,9 @@ class SelfHealingPipelineManager:
     ) -> PipelineJob:
         withheld = _sanitize_report(bug_report)
         advisory_path = _safe_target(target_file)
+        # User-supplied paths may carry identifiers or confidential names.
+        # Validate syntax for correlation but never return the raw path.
+        display_target = "unassigned" if target_file is None else _TARGET_WITHHELD
         category = _heuristic_category(bug_report)
         # Correlation only: keyed digest resists offline guesses of short
         # secret values. It cannot prove the report or any fix is authentic.
@@ -179,7 +186,7 @@ class SelfHealingPipelineManager:
         job = PipelineJob(
             job_id=f"sh_{uuid.uuid4().hex[:16]}",
             bug_report=withheld,
-            target_file=advisory_path,
+            target_file=display_target,
             status="AWAITING_EXTERNAL_REVIEW",
             evidence_sha256=evidence_hash,
             heuristic_category=category,
