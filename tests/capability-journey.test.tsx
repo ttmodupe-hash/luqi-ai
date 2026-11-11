@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { findWorkspaceTools } from '../src/components/workspace-catalog';
@@ -97,6 +97,23 @@ describe('LUQI Capability Journey', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(screen.getByText('50%')).toBeTruthy();
     expect(readCapabilityJourney()?.completed).toEqual([0, 2]);
+  });
+
+  it('presents stale-tab recovery before the mission and supports keyboard activation', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    setCapabilityJourneyStep(2, true); // Emulate another tab changing saved progress.
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    const recovery = screen.getByRole('region', { name: 'Journey storage notice' });
+    const mission = document.querySelector('.luqi-journey-mission');
+    expect(mission).not.toBeNull();
+    expect(recovery.compareDocumentPosition(mission!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const action = within(recovery).getByRole('button', { name: 'Load latest saved journey' });
+    action.focus();
+    expect(document.activeElement).toBe(action);
+    fireEvent.click(action);
+    expect(screen.queryByRole('button', { name: 'Load latest saved journey' })).toBeNull();
+    expect(readCapabilityJourney()?.completed).toEqual([2]);
   });
 
   it('does not erase a different goal saved from another tab', () => {
