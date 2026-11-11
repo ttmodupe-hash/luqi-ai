@@ -236,7 +236,7 @@ export function validateSupplierValues(values:SupplierValues):void{
   if(!values||typeof values!=='object'||Object.keys(values).sort().join('|')!==SBD1_FIELDS.map(f=>f.id).sort().join('|'))fail('SUPPLIER_VALUES');
   for(const field of SBD1_FIELDS){const value=values[field.id];
     if(typeof value!=='string'||value.length>field.max||/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]|\p{Cs}/u.test(value)||
-      (field.required&&!value.trim()))fail('SUPPLIER_VALUES');
+      (field.required&&!value.trim())||(!field.required&&value.length>0&&!value.trim()))fail('SUPPLIER_VALUES');
   }
   if(values.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email))fail('SUPPLIER_VALUES');
 }

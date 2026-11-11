@@ -5,7 +5,8 @@ import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/react';
 import {TenderOriginalForms} from '../src/components/TenderOriginalForms';
 import {runTenderDocument} from '../src/lib/tender-document-client';
-import {VERIFIED_SBD1,TENDER_FILE_MAX, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
+import {VERIFIED_SBD1,TENDER_FILE_MAX,EMPTY_SUPPLIER_VALUES, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
+import {validateSupplierValues} from '../src/lib/tender-document-engine';
 import {CustomerSessionProvider,useCustomerSession} from '../src/providers/customer-session';
 import {buildTenderOriginalArchive} from '../src/lib/tender-document-review';
 vi.mock('../src/lib/tender-document-client',()=>({runTenderDocument:vi.fn()}));
@@ -41,6 +42,24 @@ async function fillContext(){
  fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
  await screen.findByRole('region',{name:'Original form applicant review'});
 }
+it('rejects whitespace-only optional contact entries instead of calling them blank or inserting spaces into the original',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});
+ fireEvent.change(screen.getByLabelText('SBD 1 Postal address'),{target:{value:'   '}});
+ const sample={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',postalAddress:'   '};
+ expect(()=>validateSupplierValues(sample)).toThrow('SUPPLIER_VALUES');
+ expect(()=>validateSupplierValues({...sample,postalAddress:''})).not.toThrow();
+ expect(screen.getByRole('button',{name:'Go to Postal address'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Guide me step by step'}));
+ fireEvent.click(screen.getByRole('button',{name:'Go to Postal address'}));
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Postal address')));
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ expect(screen.getByText(/Check supported SBD 1 contact fields before preparing/)).toBeTruthy();
+ expect(run.mock.calls.some(([request])=>request.action==='fill')).toBe(false);
+ expect(network).not.toHaveBeenCalled();
+ fireEvent.change(screen.getByLabelText('SBD 1 Postal address'),{target:{value:''}});
+ expect(screen.queryByRole('button',{name:'Go to Postal address'})).toBeNull();
+});
 it('requires local-processing consent, makes no network calls and keeps unsupported exports blocked',async()=>{
  render(<TenderOriginalForms/>);
  expect(screen.getByRole('button',{name:'Use verified Treasury SBD 1'}).hasAttribute('disabled')).toBe(true);

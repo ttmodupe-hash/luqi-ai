@@ -22,6 +22,7 @@ export function supplierFieldIssue(field: SupplierFieldSpec, value: unknown): st
   if (value.length > field.max) return `Use no more than ${field.max} characters for this original field.`;
   if (/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]|\p{Cs}/u.test(value)) return 'Use a single line without hidden control characters.';
   if (field.required && !value.trim()) return 'Enter the bidder name before preparing this partial export.';
+  if (!field.required && value.length > 0 && !value.trim()) return 'Clear spaces to leave this optional contact field empty, or enter a real contact value.';
   if (field.id === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Check the email format, including @ and the domain. Remove spaces.';
   return null;
 }
