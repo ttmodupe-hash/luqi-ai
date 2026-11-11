@@ -5,7 +5,7 @@ import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/react';
 import {TenderOriginalForms} from '../src/components/TenderOriginalForms';
 import {runTenderDocument} from '../src/lib/tender-document-client';
-import {VERIFIED_SBD1, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
+import {VERIFIED_SBD1,TENDER_FILE_MAX, type TenderDocumentResponse} from '../src/lib/tender-document-contract';
 import {CustomerSessionProvider,useCustomerSession} from '../src/providers/customer-session';
 vi.mock('../src/lib/tender-document-client',()=>({runTenderDocument:vi.fn()}));
 const run=vi.mocked(runTenderDocument),network=vi.fn();
@@ -279,5 +279,36 @@ it('asks for missing bidder and invalid optional email before any fill, without 
  expect(screen.getByText(/Complete: Tender reference/)).toBeTruthy();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  expect(run.mock.calls.filter(call=>call[0].action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
+
+it('rejecting a zero-byte replacement clears prior applicant data and approvals without parsing',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+ expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(false);
+ const empty=new File([],'empty-replacement.docx',{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+ fireEvent.change(screen.getByLabelText('Import original tender document'),{target:{files:[empty]}});
+ expect(screen.getByText('Choose a non-empty file up to 3 MB.')).toBeTruthy();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull();
+ expect(screen.queryByDisplayValue('Synthetic supplier')).toBeNull();
+ expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
+ expect(run.mock.calls.filter(([request])=>request.action==='inspect')).toHaveLength(1);
+ expect(network).not.toHaveBeenCalled();
+});
+
+it('rejecting an oversized amendment revokes approval without reading it or losing the original',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+ expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(false);
+ const oversized=file('oversized-amendment.docx');
+ Object.defineProperty(oversized,'size',{value:TENDER_FILE_MAX+1});
+ fireEvent.change(screen.getByLabelText('Add tender amendment'),{target:{files:[oversized]}});
+ expect(screen.getByText('Choose a non-empty file up to 3 MB.')).toBeTruthy();
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('Synthetic supplier');
+ expect(run.mock.calls.filter(([request])=>request.action==='inspect')).toHaveLength(1);
  expect(network).not.toHaveBeenCalled();
 });

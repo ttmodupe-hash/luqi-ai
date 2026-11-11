@@ -69,7 +69,6 @@ export function TenderOriginalForms(){
   }
   async function inspectFile(file:File,amendment=false){
     if(!consent||busy||historyFull)return;
-    if(file.size<=0||file.size>TENDER_FILE_MAX){setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;}
     if(amendment&&(!primary||amendments.length>=6)){setMessage('Choose an original first. Up to six addenda are supported.');return;}
     const version=++epoch.current;
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
@@ -81,6 +80,11 @@ export function TenderOriginalForms(){
       setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
       // Also clear the prior application's audit even if inspection rejects the replacement.
       setHistory([]);
+    }
+    // Invalid-size selections are still replacement attempts: never retain an
+    // older applicant's approved packet or private facts just because parsing was skipped.
+    if(file.size<=0||file.size>TENDER_FILE_MAX){
+      setBusy(false);pending.current=null;setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;
     }
     setMessage('Checking file type, archive limits and unsupported active content locally…');
     try{
