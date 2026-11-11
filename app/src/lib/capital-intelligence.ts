@@ -373,9 +373,15 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
     ],conditions:{},
   }),
 ]);
-export function capitalReviewIsCurrent(now:Date=new Date()):boolean {
-  return Number.isFinite(now.getTime()) &&
-    now.getTime() <= Date.parse(CAPITAL_SOURCE_RECHECK_ON+'T23:59:59+02:00');
+/** Per-publisher 30-day freshness, calculated in South African calendar days.
+ * A newer source must not inherit an earlier catalogue-wide recheck deadline.
+ * Future-dated source reviews are never treated as completed reviews.
+ */
+export function capitalReviewIsCurrent(now:Date=new Date(),reviewedOn:string=CAPITAL_SOURCE_REVIEWED_ON):boolean {
+  const reviewStart=Date.parse(reviewedOn+'T00:00:00+02:00');
+  const instant=now.getTime();
+  return Number.isFinite(instant) && Number.isFinite(reviewStart) &&
+    instant>=reviewStart && instant<reviewStart+31*24*60*60*1000;
 }
 function validateProfile(profile:CapitalProfile):void {
   if (!profile || (profile.country !== 'OTHER' && !AFRICAN_CODES.has(profile.country)) ||
@@ -389,8 +395,9 @@ function validateProfile(profile:CapitalProfile):void {
 }
 export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date()):FundingMatch[] {
   validateProfile(profile);
-  const present=new Set(profile.availableArtifacts), reviewExpired=!capitalReviewIsCurrent(now);
+  const present=new Set(profile.availableArtifacts);
   return CAPITAL_PROGRAMMES.map(programme=>{
+    const reviewExpired=!capitalReviewIsCurrent(now,programme.reviewedOn);
     const checks:string[]=[];
     let mismatch=false;
     if(programme.scope==='SOUTH_AFRICA' && profile.country!=='ZA') {

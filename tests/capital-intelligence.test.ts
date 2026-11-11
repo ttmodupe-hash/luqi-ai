@@ -114,6 +114,25 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       expect(matches.find(m=>m.programme.id==='tia-seed-fund')!.state).not.toBe('CURRENTLY_NOT_ALIGNED');
     }
   });
+  it('checks each publisher review date rather than expiring all new sources on the oldest date',()=>{
+    const decFour=new Date('2026-12-04T12:00:00Z');
+    expect(capitalReviewIsCurrent(decFour)).toBe(false);
+    expect(capitalReviewIsCurrent(decFour,'2026-11-11')).toBe(true);
+    expect(capitalReviewIsCurrent(new Date('2026-11-10T12:00:00Z'),'2026-11-11')).toBe(false);
+    const matches=matchCapitalProgrammes(profile,decFour);
+    const tia=matches.find(m=>m.programme.id==='tia-seed-fund')!;
+    const undp=matches.find(m=>m.programme.id==='timbuktoo-creativetech')!;
+    expect(tia.reviewExpired).toBe(true);
+    expect(tia.checks.join(' ')).toContain('Source review is overdue');
+    expect(undp.reviewExpired).toBe(false);
+    expect(undp.checks.join(' ')).not.toContain('Source review is overdue');
+    const onDeadline=new Date('2026-12-11T21:59:59.999Z');
+    const afterDeadline=new Date('2026-12-11T22:00:00.000Z');
+    expect(capitalReviewIsCurrent(onDeadline,'2026-11-11')).toBe(true);
+    expect(capitalReviewIsCurrent(afterDeadline,'2026-11-11')).toBe(false);
+    expect(matchCapitalProgrammes(profile,afterDeadline)
+      .find(m=>m.programme.id==='timbuktoo-creativetech')!.reviewExpired).toBe(true);
+  });
   it('handles country uncertainty, stale evidence and invalid timestamps without fake open status',()=>{
     const d=new Date('2027-01-12T10:00:00Z');
     expect(capitalReviewIsCurrent(new Date('2026-11-02T10:00:00Z'))).toBe(true);
