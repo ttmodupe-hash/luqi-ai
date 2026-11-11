@@ -53,6 +53,14 @@ export function readCapabilityJourney(): CapabilityJourney | null {
   }
 }
 
+// Confirm persistence using a readback. Some storage wrappers silently
+// drop writes without throwing; UI success requires the exact saved bytes.
+function writeConfirmed(storage: Storage, journey: CapabilityJourney): boolean {
+  const serialized = JSON.stringify(journey);
+  storage.setItem(CAPABILITY_JOURNEY_KEY, serialized);
+  return storage.getItem(CAPABILITY_JOURNEY_KEY) === serialized;
+}
+
 export function saveCapabilityJourney(goalInput: string): CapabilityJourney | null {
   const goal = goalInput.trim();
   const plan = getPossibilityPlan(goal);
@@ -69,8 +77,7 @@ export function saveCapabilityJourney(goalInput: string): CapabilityJourney | nu
     updatedAt: now,
   };
   try {
-    storage.setItem(CAPABILITY_JOURNEY_KEY, JSON.stringify(journey));
-    return journey;
+    return writeConfirmed(storage, journey) ? journey : null;
   } catch {
     return null;
   }
@@ -88,8 +95,7 @@ export function setCapabilityJourneyStep(index: number, complete: boolean): Capa
     updatedAt: Date.now(),
   };
   try {
-    storage.setItem(CAPABILITY_JOURNEY_KEY, JSON.stringify(journey));
-    return journey;
+    return writeConfirmed(storage, journey) ? journey : current;
   } catch {
     return current;
   }
@@ -100,7 +106,7 @@ export function clearCapabilityJourney(): boolean {
   if (!storage) return false;
   try {
     storage.removeItem(CAPABILITY_JOURNEY_KEY);
-    return true;
+    return storage.getItem(CAPABILITY_JOURNEY_KEY) === null;
   } catch {
     return false;
   }

@@ -82,3 +82,19 @@ test('denied storage write does not claim that a stage was completed', async ({ 
   });
   expect(completed).toEqual([]);
 });
+
+test('silent storage no-op at 320px never claims completed or cleared progress', async ({ page }) => {
+  await page.evaluate(() => {
+    Storage.prototype.setItem = function () { /* Synthetic storage wrapper dropping writes */ };
+  });
+  await page.getByRole('button', { name: /Mark complete:/i }).first().click();
+  await expect(page.getByRole('status')).toContainText('could not be confirmed as saved');
+  await expect(page.getByText('0%', { exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    Storage.prototype.removeItem = function () { /* Synthetic storage wrapper dropping removal */ };
+  });
+  await page.getByRole('button', { name: /Clear saved journey/i }).click();
+  await expect(page.getByRole('status')).toContainText('did not allow the saved journey to be cleared');
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});

@@ -125,6 +125,33 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByText(/Start with a goal worth working toward/i)).toBeTruthy();
   });
 
+
+  it('rejects silently ignored goal saves instead of reporting persisted success', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => undefined);
+    expect(saveCapabilityJourney('I want to become a network engineer')).toBeNull();
+    expect(readCapabilityJourney()).toBeNull();
+  });
+
+  it('does not report a completed stage when the browser silently drops the write', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => undefined);
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+    expect(screen.getByText('0%')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/could not be confirmed as saved/i);
+  });
+
+  it('does not claim a journey was cleared when the browser ignores removal', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => undefined);
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Clear saved journey/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/did not allow.*cleared/i);
+  });
+
   it('rejects malformed or oversized stored goals rather than trusting browser storage', () => {
     localStorage.setItem(CAPABILITY_JOURNEY_KEY, JSON.stringify({ version: 1, goal: 'x'.repeat(501), completed: [0], startedAt: 1, updatedAt: 1 }));
     expect(readCapabilityJourney()).toBeNull();
