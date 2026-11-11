@@ -64,6 +64,28 @@ it('requires all seven gates and revokes the whole prepared version after a pric
  expect(screen.getByText(/all previous approvals cleared/)).toBeTruthy();
  expect(network).not.toHaveBeenCalled();
 });
+it('records explicit final-release revocation when an earlier approval gate changes',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ const gates=within(review).getAllByRole('checkbox') as HTMLInputElement[];
+ for(const checkbox of gates)fireEvent.click(checkbox);
+ const exportButton=within(review).getByRole('button',{name:'Export filled original and review record'});
+ expect(exportButton.hasAttribute('disabled')).toBe(false);
+ expect(gates[6].checked).toBe(true);
+ // Change the eligibility attestation after an exact packet was release-approved.
+ fireEvent.click(gates[1]);
+ expect(gates[1].checked).toBe(false);
+ expect(gates[6].checked).toBe(false);
+ expect(gates[6].hasAttribute('disabled')).toBe(true);
+ expect(exportButton.hasAttribute('disabled')).toBe(true);
+ const trail=screen.getByText(/Local approval and amendment history/).parentElement!;
+ const rows=Array.from(trail.querySelectorAll('ol li'),element=>element.textContent||'');
+ expect(rows.at(-2)).toMatch(/ · revoke · release$/);
+ expect(rows.at(-1)).toMatch(/ · revoke · eligibility$/);
+ expect(rows.join(' ')).not.toContain('Synthetic supplier');
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('clears approvals on addendum selection and rejects failed imports without restoring the old approval',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  run.mockResolvedValueOnce({ok:false,code:'DOCUMENT_UNSAFE'});

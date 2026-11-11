@@ -199,6 +199,9 @@ export function TenderOriginalForms(){
     if(!prepared||busy||historyFull||observedNow().getTime()>=Math.min(
       Date.parse(prepared.packet.preparedAt)+30*60*1000,Date.parse(prepared.packet.context.deadline)))return;
     setGates(previous=>({...previous,[id]:checked,...(id==='release'?{}:{release:false})}));
+    // Changing an earlier review gate also revokes the applicant's final release
+    // permission. Record that dependent revocation, not just the gate edit.
+    if(id!=='release'&&gates.release)audit('revoke','release');
     audit(checked?'approve':'revoke',id);setMessage('Approval history updated for this exact prepared version.');
   }
   async function download(){
