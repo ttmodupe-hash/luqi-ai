@@ -230,6 +230,16 @@ it('reports closing-time expiry when a suspended review crosses both limits',asy
  deviceClock.mockRestore();
 });
 
+it('does not mislabel applicant-entered bid deadlines or submission channels as issuer-verified',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ expect(screen.getByText(/Luqi does not independently verify the bid deadline or channel you enter/)).toBeTruthy();
+ await fillContext();
+ const review=screen.getByRole('region',{name:'Original form applicant review'});
+ expect(within(review).getByText(/Luqi has not independently verified the entered deadline or submission channel/)).toBeTruthy();
+ expect(within(review).getByRole('button',{name:'Export filled original and review record'}).hasAttribute('disabled')).toBe(true);
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('does not reprepare an expired bid after an observed device-clock rollback',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const deadline=new Date(Date.now()+2*60*1000).toISOString().replace(/\.\d{3}Z$/,'Z');

@@ -240,7 +240,7 @@ export function TenderOriginalForms(){
         <TenderSupplierGuide values={values} disabled={busy||historyFull}
           onChange={(field,value)=>{setValues(previous=>({...previous,[field]:value}));invalidate('edit-field',field)}}/>
         <fieldset disabled={busy||historyFull} className="space-y-3"><legend className="font-semibold">Bid context for your private review record</legend>
-          <p className="text-xs text-slate-300">These values identify the review packet. They do not fill the authority’s bid invitation, pricing schedule or declarations. Confirm them against the issuer originals.</p>
+          <p className="text-xs text-slate-300">These values identify the review packet, not the authority’s bid invitation, prices or declarations. Confirm the closing time, submission method and destination against the exact issuer originals and addenda. Luqi does not independently verify the bid deadline or channel you enter.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {([
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
@@ -281,7 +281,7 @@ export function TenderOriginalForms(){
           checked={gates[g.id]} onChange={e=>gate(g.id,e.target.checked)} className="mt-1"/><span>{g.label}</span>
       </label>)}
       <button type="button" className={buttonStyle} disabled={!ready||busy||historyFull} onClick={()=>{void download()}}>Export filled original and review record</button>
-      {!ready&&<p className="text-xs text-amber-200">Export requires current review, all seven approvals and a future verified closing time.</p>}
+      {!ready&&<p className="text-xs text-amber-200">Export requires current review, all seven approvals and a future closing time you confirmed from the issuer. Luqi has not independently verified the entered deadline or submission channel.</p>}
     </section>}
     {history.length>0&&<details><summary className="cursor-pointer text-sm">Local approval and amendment history ({history.length})</summary>
       <p className="my-2 text-xs text-slate-300">No private field values appear here. Consecutive typing in one field is combined into one edit event. This local record does not independently verify identity, legal authority or the truth of a declaration.</p>
