@@ -12,3 +12,24 @@ test('same-mode heartbeat throttle retained',()=>{const {p}=fixture();p.update(1
 test('state is isolated per account and process',()=>{const {p}=fixture();p.update(1,'a',1,true,true);assert.equal(p.read(2),'not_shared');assert.equal(new ContactPresence().read(1),'not_shared')});
 test('four lease cap is unchanged',()=>{const {p}=fixture();for(let i=0;i<4;i++)p.update(1,String(i),1,true,true);assert.throws(()=>p.update(1,'5',1,true,true),/PRESENCE_CAPACITY/)});
 test('capacity never evicts another user to fabricate state',()=>{const p=new ContactPresence(()=>1000000,1);p.update(1,'a',1,true,true);assert.throws(()=>p.update(2,'a',1,true),/PRESENCE_CAPACITY/);assert.equal(p.read(1),'away');assert.equal(p.read(2),'not_shared')});
+
+test('rapid alternating online/away cannot bypass presence rate limits or prolong lease',()=>{
+  const {p,advance}=fixture();p.update(1,'a',1,true);
+  for(let sequence=2;sequence<=7;sequence++)p.update(1,'a',sequence,true,sequence%2===0);
+  assert.equal(p.read(1),'online');
+  assert.throws(()=>p.update(1,'a',8,true,true),/PRESENCE_RATE/);
+  advance(PRESENCE_TTL_MS);assert.equal(p.read(1),'offline');
+});
+test('Hide always revokes even when rapid mode-change quota is exhausted',()=>{
+  const {p}=fixture();p.update(1,'a',1,true);
+  for(let sequence=2;sequence<=7;sequence++)p.update(1,'a',sequence,true,sequence%2===0);
+  assert.throws(()=>p.update(1,'a',8,true,true),/PRESENCE_RATE/);
+  p.update(1,'a',9,false);p.update(1,'a',8,true,true);
+  assert.equal(p.read(1),'not_shared');
+});
+test('normal heartbeat after ten seconds recovers mode change allowance',()=>{
+  const {p,advance}=fixture();p.update(1,'a',1,true);
+  for(let sequence=2;sequence<=7;sequence++)p.update(1,'a',sequence,true,sequence%2===0);
+  advance(10_000);p.update(1,'a',8,true,true);assert.equal(p.read(1),'away');
+  p.update(1,'a',9,true,false);assert.equal(p.read(1),'online');
+});

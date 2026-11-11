@@ -2,7 +2,7 @@
  * Production currently runs one replica. Missing state is never online/offline proof. */
 export const PRESENCE_TTL_MS = 75_000;
 const RETAIN_MS = 15 * 60_000;
-type Lease = { sequence: number; active: boolean; away: boolean; expires: number; touched: number };
+type Lease = { sequence: number; active: boolean; away: boolean; expires: number; touched: number; modeWindowStarted: number; modeSwitches: number };
 export class ContactPresence {
   private users = new Map<number, Map<string, Lease>>();
   private swept = 0;
@@ -29,12 +29,18 @@ export class ContactPresence {
     if (!previous && leases.size >= 4) throw Error('PRESENCE_CAPACITY');
     if (active && previous?.active && now - previous.touched < 10_000) {
       if (previous.away === away) throw Error('PRESENCE_RATE');
-      // A deliberate status change does not extend the lease or bypass heartbeat throttling.
-      leases.set(id, { ...previous, sequence, away });
+      // Preserve immediate deliberate changes, but bound alternating mode flips:
+      // without this cap each opposite-mode request evades same-mode throttling.
+      // Mode-only changes never renew the 75-second lease or its heartbeat clock.
+      const modeWindowStarted = now - previous.modeWindowStarted < 10_000 ? previous.modeWindowStarted : now;
+      const modeSwitches = modeWindowStarted === previous.modeWindowStarted ? previous.modeSwitches : 0;
+      if (modeSwitches >= 6) throw Error('PRESENCE_RATE');
+      leases.set(id, { ...previous, sequence, away, modeWindowStarted, modeSwitches: modeSwitches + 1 });
       return;
     }
     // Keep an inactive tombstone briefly so a delayed older heartbeat cannot undo Hide.
-    leases.set(id, { sequence, active, away: active && away, expires: now + PRESENCE_TTL_MS, touched: now });
+    leases.set(id, { sequence, active, away: active && away, expires: now + PRESENCE_TTL_MS, touched: now,
+      modeWindowStarted: now, modeSwitches: 0 });
   }
   read(user: number): 'online' | 'away' | 'offline' | 'not_shared' {
     const now = this.clock(); this.sweep(now);
