@@ -7,6 +7,8 @@ test('320px Capital Intelligence prepares a real local document and blocks false
     if(request.method()==='POST'||/\/api\/v1\/sensing\//.test(request.url()))risky.push(request.url());
   });
   await page.goto('/#/opportunities');
+  await expect(page.getByRole('region',{name:'Fund your project'}))
+    .toContainText('South African, pan-African and international programme references');
   await page.getByRole('link',{name:'Prepare a funding shortlist'}).click();
   await expect(page).toHaveURL(/#\/african-radar$/);
   await expect(page.getByRole('heading',{name:'Luqi Capital Intelligence'})).toBeVisible();
