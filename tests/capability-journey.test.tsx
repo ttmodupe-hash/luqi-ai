@@ -99,6 +99,28 @@ describe('LUQI Capability Journey', () => {
     expect(readCapabilityJourney()?.completed).toEqual([0, 2]);
   });
 
+  it('offers keyboard-accessible recovery when another tab saves the first goal', () => {
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeTruthy();
+    saveCapabilityJourney('I want to become a network engineer');
+    fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
+    expect(screen.getByRole('status').textContent).toMatch(/saved in another tab/i);
+    const recovery = screen.getByRole('button', { name: 'Load latest saved journey' });
+    recovery.focus();
+    expect(document.activeElement).toBe(recovery);
+    fireEvent.click(recovery);
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
+  });
+
+  it('does not offer empty-journey recovery for unrelated storage changes', () => {
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    localStorage.setItem('unrelated-preference', 'ok');
+    fireEvent(window, new StorageEvent('storage', { key: 'unrelated-preference', storageArea: localStorage }));
+    expect(screen.queryByRole('button', { name: 'Load latest saved journey' })).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('notifies about newer progress before the user touches the page', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
