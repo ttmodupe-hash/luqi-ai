@@ -85,6 +85,8 @@ test('funding hub brings South African, pan-African and global publishers togeth
   const mit=page.getByRole('article',{name:'MIT Solve Global Challenges'});
   await page.getByRole('combobox',{name:'Project stage'}).selectOption('IDEA');
   await expect(mit).toContainText('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');
+  await expect(mit).toContainText('Indigenous innovators serving communities in the United States and Canada');
+  await expect(mit).toContainText('not a worldwide exception for idea-stage projects');
   await expect(mit).toContainText('6 November 2026 at 12:00 EST (19:00 SAST)');
   await expect(mit).toContainText('Check programme criteria');
   await page.getByRole('combobox',{name:'Project stage'}).selectOption('MVP');

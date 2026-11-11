@@ -166,6 +166,13 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       .find(m=>m.programme.id==='mit-solve-challenges')!;
     expect(idea.state).toBe('CHECK_PUBLISHER_CRITERIA');
     expect(idea.checks.join(' ')).toMatch(/functioning prototype.*Concept-stage ideas.*Indigenous Communities Fellowship/);
+    expect(idea.checks.join(' ')).toContain('Indigenous innovators serving communities in the United States and Canada');
+    expect(idea.checks.join(' ')).toContain('not a worldwide exception for idea-stage projects');
+    expect(idea.programme.selectionNotes.join(' ')).toContain('not a general worldwide idea-stage exception');
+    const outside=matchCapitalProgrammes({...profile,country:'OTHER',maturity:'IDEA'},now)
+      .find(m=>m.programme.id==='mit-solve-challenges')!;
+    expect(outside.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(outside.checks.join(' ')).toContain('United States and Canada');
     expect(idea.checks.join(' ')).toContain('6 November 2026 at 12:00 EST (19:00 SAST)');
     expect(idea.checks.join(' ')).toMatch(/past deadline does not establish any currently open challenge/);
     const prototype=matchCapitalProgrammes({...profile,country:'KE',maturity:'MVP'},now)

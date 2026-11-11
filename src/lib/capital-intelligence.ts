@@ -326,7 +326,7 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
     selectionNotes:[
       'MIT Solve describes global challenge-based innovation competitions, not automatic venture investment or a guaranteed grant.',
       'The 2027 Global Economic Prosperity Challenge closed on 6 November 2026 at 12:00 EST (19:00 SAST); this is historical, not a live application window.',
-      'MIT Solve Global Challenges generally require a functioning prototype or later; concept-stage ideas are reviewed only under the Indigenous Communities Fellowship. Geographic, applicant-type and prize rules vary.',
+      'MIT Solve Global Challenges generally require a functioning prototype or later; concept-stage ideas are reviewed only under the Indigenous Communities Fellowship, focused on Indigenous innovators and communities in the United States and Canada. This is not a general worldwide idea-stage exception; other criteria vary.',
     ],conditions:{},
   }),
 
@@ -429,7 +429,7 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
     if(programme.id === 'mit-solve-challenges') {
       checks.push('The 2027 Global Economic Prosperity Challenge closed on 6 November 2026 at 12:00 EST (19:00 SAST); this past deadline does not establish any currently open challenge.');
       if(profile.maturity === 'IDEA')
-        checks.push('MIT Solve Global Challenges generally require a functioning prototype. Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship; confirm that separate fellowship and the selected challenge before applying.');
+        checks.push('MIT Solve Global Challenges generally require a functioning prototype. Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship, which focuses on Indigenous innovators serving communities in the United States and Canada; it is not a worldwide exception for idea-stage projects. Check the Fellowship and selected challenge separately before applying.');
     }
     if(programme.id.startsWith('timbuktoo-')) {
       checks.push('UNDP timbuktoo offers incubation and investment readiness, NOT a guaranteed cash grant.');

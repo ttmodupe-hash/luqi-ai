@@ -61,6 +61,8 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'IDEA'}});
    const mit=screen.getByRole('article',{name:'MIT Solve Global Challenges'});
    expect(mit.textContent).toContain('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');
+    expect(mit.textContent).toContain('Indigenous innovators serving communities in the United States and Canada');
+    expect(mit.textContent).toContain('not a worldwide exception for idea-stage projects');
    expect(mit.textContent).toContain('6 November 2026 at 12:00 EST (19:00 SAST)');
    expect(mit.textContent).toContain('Check programme criteria');
    fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'MVP'}});
