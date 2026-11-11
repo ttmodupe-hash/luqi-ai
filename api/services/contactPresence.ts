@@ -31,6 +31,12 @@ export class ContactPresence {
     // consume the four-lease quota and block real foreground tabs for 15 min.
     if (!previous && !active) return;
     if (previous && sequence <= previous.sequence) return;
+    // A repeated Hide raises the sequence fence but must never refresh the
+    // tombstone retention clock; otherwise retries can lock out new tabs.
+    if (previous && !previous.active && !active) {
+      leases.set(id, { ...previous, sequence });
+      return;
+    }
     // Keep tombstones to reject delayed pre-Hide packets, but let users open
     // fresh tabs after closing old ones. Bound retained state per account.
     if (!previous && leases.size >= MAX_RETAINED_LEASES_PER_USER) throw Error('PRESENCE_CAPACITY');

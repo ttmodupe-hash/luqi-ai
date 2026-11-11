@@ -90,3 +90,20 @@ test('retained tombstone memory remains bounded to sixteen per account',()=>{
   assert.throws(()=>p.update(7,'fresh',1,true),/PRESENCE_CAPACITY/);
   assert.equal(p.read(7),'not_shared');
 });
+
+test('repeated Hide cannot prolong tombstone capacity lockout beyond retention',()=>{
+  const {p,advance}=fixture();
+  for(let i=0;i<16;i++){p.update(7,`old-${i}`,1,true);p.update(7,`old-${i}`,2,false)}
+  advance(14*60_000);
+  for(let i=0;i<16;i++){p.update(7,`old-${i}`,3,false);p.update(7,`old-${i}`,2,true)}
+  assert.equal(p.read(7),'not_shared');
+  advance(2*60_000);
+  p.update(7,'replacement',1,true);
+  assert.equal(p.read(7),'online');
+});
+test('newer repeated Hide sequence keeps older queued heartbeat revoked',()=>{
+  const {p}=fixture();
+  p.update(7,'a',1,true);p.update(7,'a',2,false);
+  p.update(7,'a',4,false);p.update(7,'a',3,true,true);
+  assert.equal(p.read(7),'not_shared');
+});
