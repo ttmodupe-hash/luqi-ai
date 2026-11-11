@@ -13,6 +13,7 @@ import {
 import '../capability-journey.css';
 
 const STALE_JOURNEY_NOTICE = 'This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.';
+const NEW_JOURNEY_NOTICE = 'A journey was saved in another tab. Load the latest saved journey to continue on this device.';
 
 function savedJourneyMatches(first: CapabilityJourney | null, second: CapabilityJourney | null): boolean {
   return Boolean(first && second &&
@@ -31,14 +32,14 @@ export default function CapabilityJourneyPage() {
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
   const nextStep = plan && nextIndex >= 0 ? plan.steps[nextIndex] : null;
 
-  // Browser storage events arrive in OTHER tabs. Warn before users attempt a stale edit.
+  // Storage events arrive in OTHER tabs, including when this page has no goal yet.
   useEffect(() => {
-    if (!journey) return;
     const onStorage = (event: StorageEvent) => {
       if (event.key !== null && event.key !== CAPABILITY_JOURNEY_KEY) return;
-      if (!savedJourneyMatches(journey, readCapabilityJourney())) {
+      const saved = readCapabilityJourney();
+      if (journey ? !savedJourneyMatches(journey, saved) : saved !== null) {
         setNeedsReload(true);
-        setNotice(STALE_JOURNEY_NOTICE);
+        setNotice(journey ? STALE_JOURNEY_NOTICE : NEW_JOURNEY_NOTICE);
       }
     };
     window.addEventListener('storage', onStorage);
@@ -102,6 +103,7 @@ export default function CapabilityJourneyPage() {
       <p>LUQI will build the path first. You choose whether to save that goal on this device and track progress.</p>
       <Link className="luqi-journey-primary" to="/possibility">Build my path <ArrowRight size={18} /></Link>
       {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+      {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
     </section> : <>
       <section className="luqi-journey-hero" aria-labelledby="journey-title">
         <div>
