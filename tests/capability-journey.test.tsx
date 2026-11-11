@@ -3,6 +3,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
+import { findWorkspaceTools } from '../src/components/workspace-catalog';
 import CapabilityJourneyPage from '../src/pages/CapabilityJourneyPage';
 import PossibilityEnginePage from '../src/pages/PossibilityEnginePage';
 import {
@@ -159,4 +160,16 @@ describe('LUQI Capability Journey', () => {
     expect(readCapabilityJourney()).toBeNull();
     expect(clearCapabilityJourney()).toBe(true);
   });
+});
+
+// Source-backed discovery contract: no separate journey tool or account is created.
+it('finds the existing saved journey through the canonical in-page tool search', () => {
+  const entry = findWorkspaceTools('my journey').find(tool => tool.id === 'capability-journey');
+  expect(entry).toMatchObject({
+    path: '/journey', category: 'Ask & Learn', ready: true,
+    signIn: 'Not required', consent: 'Explicit device-local browser save',
+    aiCost: 'No paid inference', productionStatus: 'Not independently verified in production',
+    fallback: 'Build a path at /possibility without saving',
+  });
+  expect(findWorkspaceTools('journey', 'ready').some(tool => tool.id === 'capability-journey')).toBe(true);
 });
