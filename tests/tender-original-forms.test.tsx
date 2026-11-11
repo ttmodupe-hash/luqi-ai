@@ -239,6 +239,30 @@ it('announces expired 30-minute review and locks old approvals without submittin
  expect(network).not.toHaveBeenCalled();
 });
 
+it('revokes approval immediately on background-tab return before the next timer tick',async()=>{
+  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+  const review=screen.getByRole('region',{name:'Original form applicant review'});
+  for(const box of within(review).getAllByRole('checkbox'))fireEvent.click(box);
+  const exportButton=within(review).getByRole('button',{name:'Export filled original and review record'});
+  expect(exportButton.hasAttribute('disabled')).toBe(false);
+  const observed=Date.now(),deviceClock=vi.spyOn(Date,'now').mockReturnValue(observed+31*60*1000);
+  // Simulate returning to the tab while interval callbacks have been throttled.
+  // The visibility event must update review status synchronously.
+  fireEvent(document,new Event('visibilitychange'));
+  expect(within(review).getByRole('alert').textContent).toMatch(/30-minute applicant review window has ended/);
+  expect(exportButton.hasAttribute('disabled')).toBe(true);
+  expect(within(review).getAllByRole('checkbox').every(box=>box.hasAttribute('disabled')&&
+    !(box as HTMLInputElement).checked)).toBe(true);
+  // A subsequent backwards device-clock correction cannot re-enable approval.
+  deviceClock.mockReturnValue(observed+1000);
+  fireEvent(window,new Event('pageshow'));
+  expect(within(review).getByRole('alert').textContent).toMatch(/Review expired/);
+  expect(exportButton.hasAttribute('disabled')).toBe(true);
+  expect(archive).not.toHaveBeenCalled();
+  expect(network).not.toHaveBeenCalled();
+  deviceClock.mockRestore();
+});
+
 it('announces recorded closing-time expiry before 30 minutes, revokes approvals and blocks export',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const deadline=new Date(Date.now()+2*60*1000).toISOString().replace(/\.\d{3}Z$/,'Z');

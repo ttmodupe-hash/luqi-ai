@@ -54,7 +54,16 @@ export function TenderOriginalForms(){
   // Preserve the latest observed local time while this review is mounted: a backwards
   // device-clock change must not reopen approvals after a recorded expiry.
   // This is not trusted issuer time and cannot prevent tampering before observation.
-  useEffect(()=>{const timer=setInterval(()=>setClock(previous=>Math.max(previous,Date.now())),1000);return()=>clearInterval(timer)},[]);
+  useEffect(()=>{
+    const observe=()=>setClock(previous=>Math.max(previous,Date.now()));
+    const timer=setInterval(observe,1000);
+    // Background-tab timers can be throttled. Refresh the applicant's expiry
+    // warning and disabled approvals as soon as the tab becomes visible again.
+    document.addEventListener('visibilitychange',observe);
+    window.addEventListener('pageshow',observe);
+    return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',observe);
+      window.removeEventListener('pageshow',observe);};
+  },[]);
   useEffect(()=>()=>{epoch.current++;pending.current?.abort()},[]);
   function clearPrivateWork(){
     epoch.current++;pending.current?.abort();pending.current=null;
