@@ -104,6 +104,18 @@ describe('QAOA costs compared with independent analytical references', () => {
     }
     expect(loads).toEqual([1e-200, 2e-200, 3e-200]);
   });
+  it('rejects missing numeric array elements instead of fabricating an Ising model or invalid feeder costs', () => {
+    // Array#some skips holes; an omitted field previously behaved as an invented zero.
+    const sparseFields = [, 1] as number[];
+    expect(() => isingEnergies({ fields: sparseFields, edges: [] })).toThrow('Invalid field.');
+    expect(() => exactIsingBaseline({ fields: new Array<number>(2), edges: [] })).toThrow('Invalid field.');
+    expect(() => searchQaoaGrid({ fields: sparseFields, edges: [] }, 3)).toThrow('Invalid field.');
+    expect(() => loadBalanceModel([, 2] as number[])).toThrow('Use 2–6 positive loads');
+    expect(() => loadBalanceModel(new Array<number>(2))).toThrow('Use 2–6 positive loads');
+    // Explicit zeros are valid: do not mistake them for missing measurements.
+    expect(isingEnergies({ fields: [0, 1], edges: [] })).toEqual([1, 1, -1, -1]);
+    expect(loadBalanceModel([1, 2]).total).toBe(3);
+  });
   it('maps feeder loads to squared imbalance with the required constant term', () => {
     const loads = [2, 3, 5, 7], model = loadBalanceModel(loads), energies = isingEnergies(model.model);
     energies.forEach((energy, state) => {

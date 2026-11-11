@@ -121,7 +121,11 @@ export type IsingModel = { fields: number[]; edges: { i: number; j: number; weig
 function validateModel(model: IsingModel): number {
   const n = model.fields.length; zeroState(n);
   const seen = new Set<string>();
-  if (model.fields.some(x => !Number.isFinite(x) || Math.abs(x) > 100_000)) throw new Error('Invalid field.');
+  // Index every position: Array#some skips holes and could accept a missing field as zero.
+  for (let i = 0; i < n; i++) {
+    const field = model.fields[i];
+    if (!Number.isFinite(field) || Math.abs(field) > 100_000) throw new Error('Invalid field.');
+  }
   for (const { i, j, weight } of model.edges) {
     const key = [i, j].sort((a, b) => a - b).join(':');
     if (!Number.isInteger(i) || !Number.isInteger(j) || i < 0 || j < 0 || i >= n || j >= n || i === j ||
@@ -229,7 +233,13 @@ export function searchQaoaGrid(model: IsingModel, steps = 15) {
   return { ...best, parameterPairs: steps ** 2 };
 }
 export function loadBalanceModel(loads: number[]) {
-  if (loads.length < 2 || loads.length > 6 || loads.some(x => !Number.isFinite(x) || x <= 0 || x > 100)) throw new Error('Use 2–6 positive loads, up to 100 kW each.');
+  if (loads.length < 2 || loads.length > 6) throw new Error('Use 2–6 positive loads, up to 100 kW each.');
+  // Read by index so sparse inputs cannot silently become NaN feeder coefficients.
+  for (let i = 0; i < loads.length; i++) {
+    const load = loads[i];
+    if (!Number.isFinite(load) || load <= 0 || load > 100)
+      throw new Error('Use 2–6 positive loads, up to 100 kW each.');
+  }
   const total = loads.reduce((s, x) => s + x, 0), edges: IsingModel['edges'] = [];
   // Normalize before products: squaring a valid tiny total can underflow to
   // zero and turn every coefficient into NaN (e.g. 2 × 1e-200 kW).
