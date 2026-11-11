@@ -166,10 +166,10 @@ export default function QuantumLabPage() {
       <p>The p=1 QAOA simulation applies cost phases and an X mixer. Its expected cost is compared with exhaustive enumeration. This does not establish quantum speedup, fuel savings or optimality on a large real-world problem.</p>
       <h3>Two-feeder load partition</h3>
       <label>Appliance loads in kW (2–6 comma-separated values)<input value={loads} maxLength={80} onChange={e => { setLoads(e.target.value); setScanNotice(''); }} /></label>
-      <p>Indivisible simultaneous loads, two identical feeders, no losses or capacity constraints. Cost is squared imbalance divided by total load squared.</p>
+      <p>Indivisible simultaneous loads, two identical feeders, no losses or capacity constraints. The QAOA objective is dimensionless: squared feeder imbalance divided by squared total load. The reported minimum and expected squared imbalances are in physical kW². Feeder totals below are rounded for display; use the separately reported residual for near-balanced loads.</p>
       <div className="quantum-controls"><label>Gamma: {clean(gamma, 3)}<input aria-label="QAOA gamma" type="range" min={0} max={2 * Math.PI} step={0.01} value={gamma} onChange={e => setGamma(Number(e.target.value))} /></label>
         <label>Beta: {clean(beta, 3)}<input aria-label="QAOA beta" type="range" min={0} max={Math.PI} step={0.01} value={beta} onChange={e => setBeta(Number(e.target.value))} /></label></div>
-      {balance ? <><dl className="quantum-metrics"><div><dt>Exact best feeder totals</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
+      {balance ? <><dl className="quantum-metrics"><div><dt>Best feeder totals (rounded)</dt><dd>{clean(balance.feederA, 2)} / {clean(balance.feederB, 2)} kW</dd></div>
         <div><dt>Exact minimum absolute imbalance</dt><dd>{displayPositive(balance.exactAbsoluteImbalance, 4)} kW</dd></div>
          <div><dt>Exact minimum squared imbalance</dt><dd>{displayPositive(balance.exactSquaredImbalance, 4)} kW²</dd></div>
         <div><dt>QAOA expected squared imbalance</dt><dd>{displayPositive(balance.expectedSquaredImbalance, 4)} kW²</dd></div>

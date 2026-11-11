@@ -21,6 +21,8 @@ const mount = () => render(<MemoryRouter><QuantumLabPage /></MemoryRouter>);
 it('renders calculated states and local planning references without network requests or automatic cryptography', () => {
   mount();
   expect(screen.getByRole('heading', { name: 'Quantum & PQC Lab', exact: true })).toBeTruthy();
+  expect(screen.getByText(/QAOA objective is dimensionless:.*physical kW²/)).toBeTruthy();
+  expect(screen.getByText('Best feeder totals (rounded)')).toBeTruthy();
   expect(screen.getByText('Entanglement entropy').nextElementSibling?.textContent).toBe('1.000000 bits');
   expect(screen.getByRole('status', { name: 'Route baseline' }).textContent).toContain('Cost 18; 6 tours');
   expect(screen.getByRole('status', { name: 'Capital baseline' }).textContent).toContain('Tools, Training');
@@ -72,7 +74,7 @@ it('keeps a sub-ULP load residual when individually rounded feeder totals appear
     .toBe('2.220e-16 kW');
   expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent)
     .toBe('4.930e-32 kW²');
-  expect(screen.getByText('Exact best feeder totals').nextElementSibling?.textContent)
+  expect(screen.getByText('Best feeder totals (rounded)').nextElementSibling?.textContent)
     .toBe('2.00 / 2.00 kW');
   expect(fetch).not.toHaveBeenCalled();
 });
