@@ -50,6 +50,7 @@ export function TenderOriginalForms(){
   const accountRef=useRef(account);
   const fileInput=useRef<HTMLInputElement|null>(null),amendmentInput=useRef<HTMLInputElement|null>(null);
   const contextInputs=useRef<Partial<Record<keyof TenderPacketContext,HTMLInputElement|HTMLSelectElement>>>({});
+  const formRoot=useRef<HTMLElement|null>(null);
   // Preserve the latest observed local time while this review is mounted: a backwards
   // device-clock change must not reopen approvals after a recorded expiry.
   // This is not trusted issuer time and cannot prevent tampering before observation.
@@ -164,6 +165,10 @@ export function TenderOriginalForms(){
     const attention=supplierFieldProgress(values,SBD1_FIELDS).attention;
     if(attention.length){
       setMessage('Check supported SBD 1 contact fields before preparing: '+attention.map(({field,issue})=>field.label+': '+issue).join('; '));
+      // Reuse the guide's existing Go-to action to reveal and focus the first
+      // correction input, including when it is hidden in step-by-step mode.
+      const choices=formRoot.current?.querySelectorAll<HTMLButtonElement>('[aria-label="Contact fields needing attention"] button');
+      Array.from(choices??[]).find(button=>button.textContent?.trim()===`Go to ${attention[0].field.label}`)?.click();
       return;
     }
     const missing=validatePacketContext(context,observedNow());
@@ -225,7 +230,7 @@ export function TenderOriginalForms(){
     setGates(emptyOriginalApprovals());
     setHistory(previous=>previous.length>=1000?previous:appendTenderAudit(previous,revision,'revoke','all'));
   },[reviewExpired,gates,revision]);
-  return <section aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
+  return <section ref={formRoot} aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
     <p className="text-sm text-slate-200">Start with Treasury’s verified revised SBD 1 DOCX. Luqi fills seven supplier contact fields on the actual original. Required wording, tables, declarations, pricing and signature areas remain intact for your completion.</p>
     <p className="text-sm text-amber-200">PDF: interactive field names only. Excel XLSX: cell text only. Other DOCX: text only. Filling these files is blocked until their exact originals have reviewed mappings. Scans, OCR, DOC/XLS, macros and signed files are unsupported.</p>

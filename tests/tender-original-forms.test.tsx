@@ -323,6 +323,27 @@ it('focuses the first missing or invalid bid-context answer without fabricating 
  expect(network).not.toHaveBeenCalled();
 });
 
+it('focuses a missing or invalid supplier contact answer from the full and step-by-step views without filling',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const prepare=screen.getByRole('button',{name:'Prepare exact original for review'});
+ fireEvent.click(screen.getByRole('button',{name:'Guide me step by step'}));
+ fireEvent.click(screen.getByRole('button',{name:'Next contact field'}));
+ expect(screen.queryByLabelText('SBD 1 Name of bidder')).toBeNull();
+ fireEvent.click(prepare);
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Name of bidder')));
+ expect(screen.getByText(/Check supported SBD 1 contact fields before preparing/)).toBeTruthy();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});
+ fireEvent.click(screen.getByRole('button',{name:'Show all contact fields'}));
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'not-an-email'}});
+ fireEvent.click(screen.getByRole('button',{name:'Guide me step by step'}));
+ fireEvent.click(screen.getByRole('button',{name:'Previous contact field'}));
+ expect(screen.queryByLabelText('SBD 1 Email address')).toBeNull();
+ fireEvent.click(prepare);
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Email address')));
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('rejecting a zero-byte replacement clears prior applicant data and approvals without parsing',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const review=screen.getByRole('region',{name:'Original form applicant review'});
