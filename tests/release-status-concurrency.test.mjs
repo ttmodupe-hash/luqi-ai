@@ -42,7 +42,10 @@ for (const [file, prefix, timeout, probe] of workflows) {
   test(file + ': live verification remains exact-commit and status/manual only', () => {
     assert.ok(text.includes("if: github.event_name == 'status' || github.event_name == 'workflow_dispatch'"));
     assert.ok(text.includes('LUQI_VERIFY_PUBLIC: "true"'));
-    assert.ok(text.includes("LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || github.sha }}"));
+    assert.ok(text.includes('LUQI_EXPECTED_COMMIT: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}'));
+        assert.ok(text.includes('LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}'));
+        assert.ok(text.includes('requireApprovedStatusRevision('));
+        assert.ok(!text.includes("LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || github.sha }}"));
     assert.ok(text.includes('run: node ' + probe));
   });
   test(file + ': tests are wired into the existing workflow and path trigger', () => {
