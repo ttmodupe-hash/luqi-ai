@@ -43,6 +43,9 @@ export function validatePacketContext(context:TenderPacketContext,now=new Date()
   }
   // Explicit timezone only. A device's local timezone must never silently change a deadline.
   if(typeof context.deadline!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(context.deadline)||
+    // Do not accept JavaScript's normalised 24:00 as the next day's midnight.
+    // An issuer closing time must be entered unambiguously with a 00–23 hour.
+    Number(context.deadline.slice(11,13))>23||
     !Number.isFinite(Date.parse(context.deadline))||Date.parse(context.deadline)<=now.getTime()||
     new Date(context.deadline.slice(0,10)+'T00:00:00Z').toISOString().slice(0,10)!==context.deadline.slice(0,10))missing.push('Future closing time with explicit timezone (for South Africa use +02:00)');
   if(!['physical','portal','email'].includes(context.method))missing.push('Issuer-prescribed submission method');

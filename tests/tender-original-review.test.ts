@@ -26,7 +26,8 @@ it('requires each of seven approvals and binds review to the exact revision, dea
  expect(canExportTenderPacket(packet,1,all(),new Date(now.getTime()+30*60*1000))).toBe(false);
 });
 it('refuses ambiguous timezones, past deadlines, invalid prices and empty channels',()=>{
- for(const change of [{deadline:'2026-11-30T11:00'},{deadline:'2027-02-30T11:00+02:00'},{deadline:'2026-10-30T09:00+02:00'},
+ for(const change of [{deadline:'2026-11-30T11:00'},{deadline:'2027-02-30T11:00+02:00'},
+   {deadline:'2026-11-30T24:00+02:00'},{deadline:'2026-10-30T09:00+02:00'},
    {priceZar:'0'},{priceZar:'-1'},{priceZar:'1e6'},{priceZar:'NaN'},{method:''},{destination:''}]){
   expect(validatePacketContext({...context,...change} as TenderPacketContext,now).length).toBeGreaterThan(0);
  }
