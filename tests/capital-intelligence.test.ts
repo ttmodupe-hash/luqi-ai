@@ -1,5 +1,5 @@
-import {describe,it,expect} from 'vitest';
-import {ARTIFACT_LABELS,CAPITAL_PROGRAMMES,capitalReviewIsCurrent,
+import {describe,it,expect,vi} from 'vitest';
+import {ARTIFACT_LABELS,AFRICAN_COUNTRIES,CAPITAL_PROGRAMMES,capitalReviewIsCurrent,
   normalizeFundingPlatform,matchCapitalProgrammes,buildCapitalPreparationDraft,
   type CapitalProfile} from '../src/lib/capital-intelligence';
 
@@ -8,15 +8,47 @@ const profile:CapitalProfile={
   registration:'UNKNOWN',age:27,availableArtifacts:['CONCEPT_NOTE'],
 };
 describe('Capital Intelligence: explainable, evidence-bound local preparation',()=>{
+  it('loads approved source records despite skewed device clocks without certifying future reviews',()=>{
+    const approved=CAPITAL_PROGRAMMES.find(p=>p.id==='timbuktoo-creativetech')!;
+    expect(approved.reviewedOn).toBe('2026-11-11');
+    vi.useFakeTimers();
+    try {
+      // A phone clock left in 2025 must not crash the immutable catalogue on import.
+      vi.setSystemTime(new Date('2025-01-01T00:00:00Z'));
+      expect(normalizeFundingPlatform(approved).reviewedOn).toBe('2026-11-11');
+      expect(capitalReviewIsCurrent(new Date(),approved.reviewedOn)).toBe(false);
+      const earlier=matchCapitalProgrammes(profile,new Date());
+      const source=earlier.find(m=>m.programme.id===approved.id)!;
+      expect(source.reviewExpired).toBe(true);
+      expect(source.clockBeforeReview).toBe(true);
+      expect(source.state).toBe('CHECK_PUBLISHER_CRITERIA');
+      expect(source.checks.join(' ')).toContain('Device date precedes the publisher review');
+      expect(source.checks.join(' ')).not.toContain('Source review is overdue');
+      // A phone clock set far ahead must not manufacture authorised review evidence.
+      vi.setSystemTime(new Date('2099-01-01T00:00:00Z'));
+      expect(()=>normalizeFundingPlatform({...approved,reviewedOn:'2099-01-01'}))
+        .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+      expect(capitalReviewIsCurrent(new Date(),approved.reviewedOn)).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
   it('locks every known source to an official HTTPS publisher and never invents a current round',()=>{
-    expect(CAPITAL_PROGRAMMES).toHaveLength(3);
+    expect(CAPITAL_PROGRAMMES).toHaveLength(11);
     expect(new Set(CAPITAL_PROGRAMMES.map(p=>p.id)).size).toBe(CAPITAL_PROGRAMMES.length);
-    const hosts=new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za']);
+    const hosts=new Set(['www.tia.org.za','www.idc.co.za','www.nyda.gov.za',
+      'www.tonyelumelufoundation.org','www.aecfafrica.org','afawa.afdb.org',
+      'www.globalinnovation.fund','solve.mit.edu','www.undp.org','sgp.undp.org']);
+    expect(AFRICAN_COUNTRIES).toHaveLength(54);
+    expect(new Set(AFRICAN_COUNTRIES.map(c=>c[0])).size).toBe(54);
     for(const programme of CAPITAL_PROGRAMMES){
       expect(programme.sourceStatus).toBe('PROGRAMME_REFERENCE_ONLY');
       expect(hosts.has(new URL(programme.sourceUrl).hostname)).toBe(true);
       expect(new URL(programme.sourceUrl).protocol).toBe('https:');
-      expect(programme.reviewedOn).toBe('2026-11-02');
+      expect(programme.reviewedOn).toBe(
+        programme.scope==='SOUTH_AFRICA'?'2026-11-02':
+        ['timbuktoo-creativetech','timbuktoo-greentech','gef-small-grants'].includes(programme.id)?
+          '2026-11-11':'2026-11-03');
+      expect(['SOUTH_AFRICA','PAN_AFRICA','GLOBAL']).toContain(programme.scope);
+      expect(programme.scopeNote.length).toBeGreaterThan(10);
       expect(Object.isFrozen(programme)).toBe(true);
       expect(Object.isFrozen(programme.conditions)).toBe(true);
       expect(Object.isFrozen(programme.suggestedArtifacts)).toBe(true);
@@ -28,6 +60,17 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
   });
   it('fails closed on untrusted, malformed or credential-bearing publisher specs',()=>{
     const original=CAPITAL_PROGRAMMES[0];
+    // An impossible publisher review date would mislead users about evidence freshness.
+    for(const reviewedOn of ['2026-02-29','2026-11-31','2026-13-01',
+      '2026-00-02','2026-11-2','2026-11-02T00:00:00Z']){
+      expect(()=>normalizeFundingPlatform({...original,reviewedOn}))
+        .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    }
+    // The catalogue must not certify a review that has not yet occurred.
+    expect(()=>normalizeFundingPlatform({...original,reviewedOn:'2099-01-01'}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(normalizeFundingPlatform({...original,reviewedOn:'2024-02-29'}).reviewedOn)
+      .toBe('2024-02-29');
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'https://www.tia.org.za.evil.example/'})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'http://www.tia.org.za/'})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'https://user:secret@www.tia.org.za/'})).toThrow();
@@ -35,6 +78,8 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(()=>normalizeFundingPlatform({...original,focusSectors:['UNVERIFIED' as any]})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:['TAX_ID' as any]})).toThrow();
     expect(()=>normalizeFundingPlatform({...original,id:'__proto__'})).toThrow();
+    expect(()=>normalizeFundingPlatform({...original,scope:'ANYWHERE' as any})).toThrow();
+    expect(()=>normalizeFundingPlatform({...original,scopeNote:''})).toThrow();
     const withExtras=normalizeFundingPlatform({
       ...original,unreviewedPayload:{mutableSecret:'do not expose'},
       conditions:{...original.conditions,arbitraryRule:{credential:'no'}},
@@ -43,9 +88,32 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(Object.prototype.hasOwnProperty.call(withExtras.conditions,'arbitraryRule')).toBe(false);
     expect(Object.isFrozen(withExtras.conditions)).toBe(true);
   });
+  it('rejects sparse or duplicated document arrays that would falsify preparedness',()=>{
+    const original=CAPITAL_PROGRAMMES[0];
+    // Array.every and Array.filter skip holes: two missing entries formerly
+    // produced a misleading 100% preparation score from zero actual documents.
+    expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:new Array(2) as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:[,'CONCEPT_NOTE'] as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,suggestedArtifacts:['CONCEPT_NOTE','CONCEPT_NOTE']}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,focusSectors:[,'TECH'] as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>normalizeFundingPlatform({...original,selectionNotes:[,'Verified description'] as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>matchCapitalProgrammes({...profile,availableArtifacts:new Array(1) as any}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(()=>matchCapitalProgrammes({...profile,availableArtifacts:['CONCEPT_NOTE','CONCEPT_NOTE']}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
+    expect(normalizeFundingPlatform({...original,suggestedArtifacts:['CONCEPT_NOTE','BUSINESS_PLAN']})
+      .suggestedArtifacts).toEqual(['CONCEPT_NOTE','BUSINESS_PLAN']);
+    expect(matchCapitalProgrammes(profile).find(m=>m.programme.id==='tia-seed-fund')!
+      .preparationPercent).toBe(33);
+  });
   it('ranks documented programme fit first, never by the largest advertised grant amount',()=>{
     const matches=matchCapitalProgrammes(profile,new Date('2026-11-02T10:00:00Z'));
-    expect(matches).toHaveLength(3);
+    expect(matches).toHaveLength(11);
     const tia=matches.find(m=>m.programme.id==='tia-seed-fund')!;
     const idc=matches.find(m=>m.programme.id==='idc-development-finance')!;
     const nyda=matches.find(m=>m.programme.id==='nyda-grant-programme')!;
@@ -55,7 +123,7 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(nyda.state).toBe('CURRENTLY_NOT_ALIGNED');
     expect(nyda.checks.join(' ')).toMatch(/excludes research-and-development seed funding/);
     expect(matches[0].programme.id).toBe('tia-seed-fund');
-    expect(matches[2].programme.id).toBe('nyda-grant-programme');
+    expect(matches.at(-1)!.programme.id).toBe('nyda-grant-programme');
   });
   it('does not label unknown age or unregistered firm as eligible',()=>{
     const matches=matchCapitalProgrammes({...profile,purpose:'BUSINESS_GROWTH',age:undefined,registration:'NOT_REGISTERED'});
@@ -69,6 +137,33 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       expect(matches.find(m=>m.programme.id==='tia-seed-fund')!.state).not.toBe('CURRENTLY_NOT_ALIGNED');
     }
   });
+  it('checks each publisher review date rather than expiring all new sources on the oldest date',()=>{
+    const decFour=new Date('2026-12-04T12:00:00Z');
+    expect(capitalReviewIsCurrent(decFour)).toBe(false);
+    expect(capitalReviewIsCurrent(decFour,'2026-11-11')).toBe(true);
+    expect(capitalReviewIsCurrent(new Date('2026-11-10T12:00:00Z'),'2026-11-11')).toBe(false);
+    const matches=matchCapitalProgrammes(profile,decFour);
+    const tia=matches.find(m=>m.programme.id==='tia-seed-fund')!;
+    const undp=matches.find(m=>m.programme.id==='timbuktoo-creativetech')!;
+    expect(tia.reviewExpired).toBe(true);
+    expect(tia.clockBeforeReview).toBe(false);
+    expect(tia.checks.join(' ')).toContain('Source review is overdue');
+    expect(undp.reviewExpired).toBe(false);
+    expect(undp.checks.join(' ')).not.toContain('Source review is overdue');
+    const onDeadline=new Date('2026-12-11T21:59:59.999Z');
+    const afterDeadline=new Date('2026-12-11T22:00:00.000Z');
+    expect(capitalReviewIsCurrent(onDeadline,'2026-11-11')).toBe(true);
+    expect(capitalReviewIsCurrent(afterDeadline,'2026-11-11')).toBe(false);
+    expect(matchCapitalProgrammes(profile,afterDeadline)
+      .find(m=>m.programme.id==='timbuktoo-creativetech')!.reviewExpired).toBe(true);
+  });
+  it('fails closed when an exported freshness check receives impossible or future review dates',()=>{
+    expect(capitalReviewIsCurrent(new Date('2026-03-01T10:00:00Z'),'2026-02-29')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-12-01T10:00:00Z'),'2026-11-31')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-11-11T10:00:00Z'),'2026-11-2')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-11-11T10:00:00Z'),'2099-01-01')).toBe(false);
+    expect(capitalReviewIsCurrent(new Date('2026-11-11T10:00:00Z'),'2026-11-11')).toBe(true);
+  });
   it('handles country uncertainty, stale evidence and invalid timestamps without fake open status',()=>{
     const d=new Date('2027-01-12T10:00:00Z');
     expect(capitalReviewIsCurrent(new Date('2026-11-02T10:00:00Z'))).toBe(true);
@@ -78,7 +173,63 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     expect(matches.every(m=>m.reviewExpired)).toBe(true);
     expect(matches.every(m=>m.state!=='POTENTIAL_FIT_TO_EXPLORE')).toBe(true);
     expect(matches.every(m=>m.checks.some(x=>/source review is overdue/i.test(x)))).toBe(true);
-    expect(matches.every(m=>m.checks.some(x=>/South African projects only/i.test(x)))).toBe(true);
+    expect(matches.filter(m=>m.programme.scope==='SOUTH_AFRICA')
+      .every(m=>m.state==='CURRENTLY_NOT_ALIGNED')).toBe(true);
+    expect(matches.filter(m=>m.programme.scope==='GLOBAL')
+      .every(m=>m.state==='CHECK_PUBLISHER_CRITERIA')).toBe(true);
+  });
+  it('serves Africa and global funding references without labelling cross-border eligibility confirmed',()=>{
+    const kenya=matchCapitalProgrammes({...profile,country:'KE',purpose:'BUSINESS_GROWTH',age:28},
+      new Date('2026-11-03T10:00:00Z'));
+    expect(kenya.find(m=>m.programme.id==='tef-entrepreneurship')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(kenya.find(m=>m.programme.id==='aecf-challenge-finance')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(kenya.find(m=>m.programme.id==='mit-solve-challenges')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(kenya.filter(m=>m.programme.scope==='SOUTH_AFRICA')
+      .every(m=>m.state==='CURRENTLY_NOT_ALIGNED')).toBe(true);
+    const global=matchCapitalProgrammes({...profile,country:'OTHER'},
+      new Date('2026-11-03T10:00:00Z'));
+    expect(global.find(m=>m.programme.id==='tef-entrepreneurship')!.state).toBe('CURRENTLY_NOT_ALIGNED');
+    expect(global.find(m=>m.programme.id==='global-innovation-fund')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(()=>matchCapitalProgrammes({...profile,country:'NOT_A_COUNTRY' as any})).toThrow();
+    const tef=kenya.find(m=>m.programme.id==='tef-entrepreneurship')!;
+    const draft=buildCapitalPreparationDraft(tef,{...profile,country:'KE'},'Cross-border idea','Education');
+    expect(draft).toContain('Project location: Kenya');
+    expect(draft).toContain('Across Africa');
+    expect(draft).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+  });
+  it('surfaces the publisher-confirmed closed TEF 2026 window in results and offline worksheets',()=>{
+    const kenya={...profile,country:'KE' as const,purpose:'BUSINESS_GROWTH' as const,age:28};
+    const tef=matchCapitalProgrammes(kenya,new Date('2026-11-11T10:00:00Z'))
+      .find(m=>m.programme.id==='tef-entrepreneurship')!;
+    expect(tef.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(tef.checks.join(' ')).toContain('1 January to 1 March 2026 and has closed');
+    expect(tef.checks.join(' ')).toContain('does not establish an open 2027 round');
+    const worksheet=buildCapitalPreparationDraft(tef,kenya,'Community workshop','Local enterprise',
+      new Date('2026-11-11T10:00:00Z'));
+    expect(worksheet).toContain('1 January to 1 March 2026 and has closed');
+    expect(worksheet).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+    expect(worksheet).not.toContain('CURRENT FUNDING WINDOW: OPEN');
+  });
+  it('explains MIT Solve concept-stage fellowship exception and its expired 2026 deadline',()=>{
+    const now=new Date('2026-11-11T10:00:00Z');
+    const idea=matchCapitalProgrammes({...profile,country:'KE',maturity:'IDEA'},now)
+      .find(m=>m.programme.id==='mit-solve-challenges')!;
+    expect(idea.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(idea.checks.join(' ')).toMatch(/functioning prototype.*Concept-stage ideas.*Indigenous Communities Fellowship/);
+    expect(idea.checks.join(' ')).toContain('Indigenous innovators serving communities in the United States and Canada');
+    expect(idea.checks.join(' ')).toContain('not a worldwide exception for idea-stage projects');
+    expect(idea.programme.selectionNotes.join(' ')).toContain('not a general worldwide idea-stage exception');
+    const outside=matchCapitalProgrammes({...profile,country:'OTHER',maturity:'IDEA'},now)
+      .find(m=>m.programme.id==='mit-solve-challenges')!;
+    expect(outside.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(outside.checks.join(' ')).toContain('United States and Canada');
+    expect(idea.checks.join(' ')).toContain('6 November 2026 at 12:00 EST (19:00 SAST)');
+    expect(idea.checks.join(' ')).toMatch(/past deadline does not establish any currently open challenge/);
+    const prototype=matchCapitalProgrammes({...profile,country:'KE',maturity:'MVP'},now)
+      .find(m=>m.programme.id==='mit-solve-challenges')!;
+    expect(prototype.checks.join(' ')).not.toMatch(/Concept-stage ideas are reviewed only/);
+    expect(prototype.checks.join(' ')).toContain('19:00 SAST');
+    expect(prototype.state).toBe('CHECK_PUBLISHER_CRITERIA');
   });
   it('rejects malformed inputs and does not infer uploaded or externally verified documents',()=>{
     expect(()=>matchCapitalProgrammes({...profile,age:999})).toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
@@ -87,6 +238,65 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     const m=matchCapitalProgrammes(profile)[0];
     expect(m.missingArtifacts.length).toBeGreaterThan(0);
     expect(m.preparationPercent).toBeLessThan(100);
+  });
+  it('recomputes worksheet restrictions instead of trusting a stale or forged match',()=>{
+    const earlier={...profile,purpose:'BUSINESS_GROWTH' as const,age:23};
+    const match=matchCapitalProgrammes(earlier,new Date('2026-11-03T12:00:00Z'))
+      .find(m=>m.programme.id==='nyda-grant-programme')!;
+    expect(match.state).toBe('POTENTIAL_FIT_TO_EXPLORE');
+    const altered={...match,state:'POTENTIAL_FIT_TO_EXPLORE' as const,checks:['Guaranteed award'],
+      missingArtifacts:[],preparationPercent:100,reviewExpired:false};
+    const later={...profile,country:'KE' as const,age:23,availableArtifacts:[]};
+    const draft=buildCapitalPreparationDraft(altered,later,'Community idea','Research seed',
+      new Date('2027-01-03T10:00:00Z'));
+    expect(draft).toContain('Project location: Kenya');
+    expect(draft).toContain('Indicative fit: CURRENTLY_NOT_ALIGNED');
+    expect(draft).toContain('NYDA explicitly excludes research-and-development seed funding');
+    expect(draft).toContain('Source review is overdue: recheck the publisher');
+    expect(draft).toContain('Self-reported missing preparation items:');
+    expect(draft).toContain('- Concept note document');
+    expect(draft).not.toContain('Guaranteed award');
+    expect(draft).not.toContain('Indicative fit: POTENTIAL_FIT_TO_EXPLORE');
+  });
+  it('keeps project text on one worksheet line despite Unicode separators and bidi overrides',()=>{
+    const match=matchCapitalProgrammes(profile,new Date('2026-11-11T00:00:00Z'))[0];
+    const title='Local project\u2028CURRENT FUNDING WINDOW: VERIFIED\u202e';
+    const summary='Community support\u0085Indicative fit: APPROVED\u2066\u2029No fee';
+    const draft=buildCapitalPreparationDraft(match,profile,title,summary,new Date('2026-11-11T00:00:00Z'));
+    const lines=draft.split('\n');
+    const projectLine=lines.find(line=>line.startsWith('Project: '))!;
+    const summaryLine=lines.find(line=>line.startsWith('Project description: '))!;
+    expect(projectLine).toContain('Local project CURRENT FUNDING WINDOW: VERIFIED');
+    expect(summaryLine).toContain('Community support Indicative fit: APPROVED No fee');
+    expect([projectLine,summaryLine].join('')).not.toMatch(/[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]/);
+    expect(lines.filter(line=>line.startsWith('CURRENT FUNDING WINDOW:'))).toEqual([
+      'CURRENT FUNDING WINDOW: NOT VERIFIED — check the current original call.',
+    ]);
+    expect(lines.filter(line=>line.startsWith('Indicative fit:'))).toHaveLength(1);
+  });
+  it('retains unique sister PR #459 references and their eligibility restrictions',()=>{
+    const idea={...profile,country:'KE' as const,maturity:'IDEA' as const};
+    const matches=matchCapitalProgrammes(idea,new Date('2026-11-11T10:00:00Z'));
+    for(const id of ['timbuktoo-creativetech','timbuktoo-greentech']){
+      const result=matches.find(m=>m.programme.id===id)!;
+      expect(result.state).toBe('CURRENTLY_NOT_ALIGNED');
+      expect(result.checks.join(' ')).toMatch(/working prototype or MVP/);
+      expect(result.checks.join(' ')).toMatch(/NOT a guaranteed cash grant/);
+    }
+    const mvp=matchCapitalProgrammes({...idea,maturity:'MVP'},new Date('2026-11-11T10:00:00Z'));
+    expect(mvp.find(m=>m.programme.id==='timbuktoo-greentech')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    const gef=mvp.find(m=>m.programme.id==='gef-small-grants')!;
+    expect(gef.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(gef.checks.join(' ')).toMatch(/community-based or civil-society/);
+    expect(gef.checks.join(' ')).toContain('closed on 15 September 2026');
+    expect(gef.checks.join(' ')).toContain('does not mean every national GEF SGP call is closed');
+    expect(gef.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(buildCapitalPreparationDraft(gef,{...idea,maturity:'MVP'},'Community wetlands','Local ecology',
+      new Date('2026-11-11T10:00:00Z'))).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+    const outside=matchCapitalProgrammes({...idea,country:'OTHER',maturity:'MVP'},
+      new Date('2026-11-11T10:00:00Z'));
+    expect(outside.find(m=>m.programme.id==='timbuktoo-creativetech')!.state).toBe('CHECK_PUBLISHER_CRITERIA');
+    expect(outside.find(m=>m.programme.id==='tef-entrepreneurship')!.state).toBe('CURRENTLY_NOT_ALIGNED');
   });
   it('generates an owner-reviewed, non-submitted plain text pack with source evidence',()=>{
     const m=matchCapitalProgrammes(profile)[0];

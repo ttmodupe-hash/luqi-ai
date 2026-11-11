@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 
 test('320px Capital Intelligence prepares a real local document and blocks false NYDA R&D matches',async({page})=>{
   await page.setViewportSize({width:320,height:740});
@@ -7,6 +8,8 @@ test('320px Capital Intelligence prepares a real local document and blocks false
     if(request.method()==='POST'||/\/api\/v1\/sensing\//.test(request.url()))risky.push(request.url());
   });
   await page.goto('/#/opportunities');
+  await expect(page.getByRole('region',{name:'Fund your project'}))
+    .toContainText('South African, pan-African and international programme references');
   await page.getByRole('link',{name:'Prepare a funding shortlist'}).click();
   await expect(page).toHaveURL(/#\/african-radar$/);
   await expect(page.getByRole('heading',{name:'Luqi Capital Intelligence'})).toBeVisible();
@@ -27,8 +30,23 @@ test('320px Capital Intelligence prepares a real local document and blocks false
   await expect(field).toHaveValue(/Community Innovation/);
   await expect(field).toHaveValue(/No application has been submitted/);
   await expect(field).toHaveValue(/CURRENT FUNDING WINDOW: NOT VERIFIED/);
-  await expect(page.getByRole('link',{name:'Download preparation worksheet'}))
-    .toHaveAttribute('download','luqi-funding-preparation.txt');
+  const worksheetDownload=page.getByRole('link',{name:'Download preparation worksheet'});
+  await expect(worksheetDownload).toHaveAttribute('download','luqi-funding-preparation.txt');
+  // Actual browser download, not merely a download-shaped href: validate the file
+  // contents and the non-submission boundary at the 320px user viewport.
+  const [download]=await Promise.all([page.waitForEvent('download'),worksheetDownload.click()]);
+  expect(download.suggestedFilename()).toBe('luqi-funding-preparation.txt');
+  const path=await download.path();
+  expect(path).not.toBeNull();
+  if(!path)throw new Error('Funding worksheet download has no readable local file');
+  const exported=await readFile(path,'utf8');
+  expect(exported).toContain('Project: Community Innovation');
+  expect(exported).toContain('Project location: South Africa');
+  expect(exported).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
+  expect(exported).toContain('No application has been submitted.');
+  expect(exported).toContain('Publisher review date:');
+  expect(exported).toContain('Programme reference: TIA Seed Fund');
+
   expect(risky).toEqual([]);
   const viewportReport=await page.evaluate(()=>({
     viewport:window.innerWidth,
@@ -49,4 +67,67 @@ test('Capital Intelligence requires a recheck when publisher review expires',asy
   await page.goto('/#/african-radar');
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toContainText('Publisher source recheck overdue');
   await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toContainText('Check programme criteria');
+});
+
+test('320px wrong device date never claims a publisher review is overdue',async({page})=>{
+  await page.setViewportSize({width:320,height:740});
+  await page.clock.setFixedTime(new Date('2025-01-01T10:00:00Z'));
+  await page.goto('/#/african-radar');
+  const creative=page.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'});
+  await expect(creative).toContainText('Device date is earlier than this publisher review');
+  await expect(creative).not.toContainText('Publisher source recheck overdue');
+  await expect(creative).toContainText('Freshness is unverified');
+  await expect(creative).toContainText('Check programme criteria');
+});
+
+test('funding hub brings South African, pan-African and global publishers together at 320px',async({page})=>{
+  await page.setViewportSize({width:320,height:740});
+  const writes:string[]=[];
+  page.on('request',request=>{if(request.method()!=='GET')writes.push(request.url());});
+  await page.goto('/#/african-radar');
+  await expect(page.getByText('11 of 11 reviewed programme references match your filters.')).toBeVisible();
+  await page.getByRole('combobox',{name:'Project location'}).selectOption('KE');
+  await page.getByRole('combobox',{name:'Funding geography'}).selectOption('PAN_AFRICA');
+  await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'}))
+    .toContainText('1 January to 1 March 2026 and has closed');
+  await expect(page.getByRole('article',{name:'AECF Enterprise Challenge Finance'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'AFAWA Partner Finance'})).toBeVisible();
+  const incubator=page.getByRole('article',{name:'UNDP timbuktoo GreenTech Launchpad'});
+  await expect(incubator).toBeVisible();
+  await expect(page.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'})).toBeVisible();
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('IDEA');
+  await expect(incubator).toContainText('working prototype or MVP');
+  await expect(incubator).toContainText('Not currently aligned');
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('MVP');
+  await expect(incubator).toContainText('Check programme criteria');
+  await expect(page.getByRole('article',{name:'TIA Seed Fund'})).toHaveCount(0);
+  await page.getByRole('combobox',{name:'Funding geography'}).selectOption('GLOBAL');
+  await expect(page.getByRole('article',{name:'Global Innovation Fund'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'GEF Small Grants Programme'}))
+    .toContainText('not ordinary startup capital');
+  await expect(page.getByRole('article',{name:'GEF Small Grants Programme'}))
+    .toContainText('closed on 15 September 2026');
+  await page.getByRole('textbox',{name:'Search funding programmes'}).fill('MIT');
+  await expect(page.getByText('1 of 11 reviewed programme references match your filters.')).toBeVisible();
+  const mit=page.getByRole('article',{name:'MIT Solve Global Challenges'});
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('IDEA');
+  await expect(mit).toContainText('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');
+  await expect(mit).toContainText('Indigenous innovators serving communities in the United States and Canada');
+  await expect(mit).toContainText('not a worldwide exception for idea-stage projects');
+  await expect(mit).toContainText('6 November 2026 at 12:00 EST (19:00 SAST)');
+  await expect(mit).toContainText('Check programme criteria');
+  await page.getByRole('combobox',{name:'Project stage'}).selectOption('MVP');
+  await expect(mit).not.toContainText('Concept-stage ideas are reviewed only under');
+  await mit.getByRole('button',{name:'Prepare review draft'}).click();
+  await expect(page.getByRole('textbox',{name:'Funding preparation draft text'}))
+    .toHaveValue(/Project location: Kenya[\s\S]*CURRENT FUNDING WINDOW: NOT VERIFIED/);
+  await page.getByRole('combobox',{name:'Funding geography'}).selectOption('ALL');
+  await page.getByRole('textbox',{name:'Search funding programmes'}).fill('');
+  await page.getByRole('combobox',{name:'Funding type'}).selectOption('GRANT');
+  await expect(page.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'})).toBeVisible();
+  await expect(page.getByRole('article',{name:'Global Innovation Fund'})).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  expect(writes).toEqual([]);
 });

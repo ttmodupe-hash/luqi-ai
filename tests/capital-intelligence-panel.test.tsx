@@ -11,8 +11,8 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
    render(<CapitalIntelligencePanel/>);
    expect(screen.getByRole('heading',{name:'Luqi Capital Intelligence'})).toBeTruthy();
-   expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(3);
-   expect(screen.getByText(/current application windows or closing dates have been verified/i)).toBeTruthy();
+   expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(11);
+   expect(screen.getByText(/No current application windows or closing dates are certified/i)).toBeTruthy();
    expect(screen.getByRole('article',{name:'NYDA Grant Programme'}).textContent).toContain('Not currently aligned');
    expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toContain('Potential programme to explore');
    expect(fetcher).not.toHaveBeenCalled();
@@ -43,12 +43,80 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'IDEA'}});
    expect(screen.queryByRole('textbox',{name:'Funding preparation draft text'})).toBeNull();
  });
+ it('distinguishes an outdated device clock from an overdue publisher review',()=>{
+   vi.useFakeTimers();
+   vi.setSystemTime(new Date('2025-01-01T10:00:00Z'));
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   const creative=screen.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'});
+   expect(creative.textContent).toContain('Device date is earlier than this publisher review');
+   expect(creative.textContent).not.toContain('Publisher source recheck overdue');
+   expect(creative.textContent).toContain('Freshness is unverified');
+   expect(creative.textContent).toContain('Check programme criteria');
+   expect(fetcher).not.toHaveBeenCalled();
+ });
  it('does not accept excessive or invalid ages and explains cross-border uncertainty',()=>{
    render(<CapitalIntelligencePanel/>);
    const age=screen.getByLabelText('Founder age (optional, checked locally)') as HTMLInputElement;
    fireEvent.change(age,{target:{value:'999'}});
    expect(age.value).toBe('');
    fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'OTHER'}});
-   expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toMatch(/cross-border eligibility is unconfirmed/);
+   expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toMatch(/verify any cross-border exceptions with the publisher/i);
+   expect(screen.getByRole('article',{name:'TIA Seed Fund'}).textContent).toContain('Not currently aligned');
+ });
+
+ it('shows the MIT Solve idea-stage exception and expired deadline without any network call',()=>{
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'KE'}});
+   fireEvent.change(screen.getByLabelText('Funding geography'),{target:{value:'GLOBAL'}});
+   fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'IDEA'}});
+   const mit=screen.getByRole('article',{name:'MIT Solve Global Challenges'});
+   expect(mit.textContent).toContain('Concept-stage ideas are reviewed only under the Indigenous Communities Fellowship');
+    expect(mit.textContent).toContain('Indigenous innovators serving communities in the United States and Canada');
+    expect(mit.textContent).toContain('not a worldwide exception for idea-stage projects');
+   expect(mit.textContent).toContain('6 November 2026 at 12:00 EST (19:00 SAST)');
+   expect(mit.textContent).toContain('Check programme criteria');
+   fireEvent.change(screen.getByLabelText('Project stage'),{target:{value:'MVP'}});
+   expect(mit.textContent).not.toContain('Concept-stage ideas are reviewed only under');
+   expect(mit.textContent).toContain('19:00 SAST');
+   expect(fetcher).not.toHaveBeenCalled();
+ });
+ it('shows the closed TEF 2026 application round before a user prepares a worksheet',()=>{
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'KE'}});
+   const tef=screen.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'});
+   expect(tef.textContent).toContain('1 January to 1 March 2026 and has closed');
+   fireEvent.click(within(tef).getByRole('button',{name:'Prepare review draft'}));
+   const text=screen.getByRole('textbox',{name:'Funding preparation draft text'}) as HTMLTextAreaElement;
+   expect(text.value).toContain('does not establish an open 2027 round');
+   expect(fetcher).not.toHaveBeenCalled();
+ });
+ it('offers pan-African and global sources for Kenyan project locations without declaring eligibility',()=>{
+   const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+   render(<CapitalIntelligencePanel/>);
+   fireEvent.change(screen.getByLabelText('Project location'),{target:{value:'KE'}});
+   fireEvent.change(screen.getByLabelText('Funding geography'),{target:{value:'PAN_AFRICA'}});
+   expect(screen.getByRole('article',{name:'Tony Elumelu Foundation Entrepreneurship Programme'}).textContent)
+     .toContain('Check programme criteria');
+   expect(screen.getByRole('article',{name:'AECF Enterprise Challenge Finance'})).toBeTruthy();
+   expect(screen.getByRole('article',{name:'UNDP timbuktoo CreativeTech Launchpad'})).toBeTruthy();
+   expect(screen.getByRole('article',{name:'UNDP timbuktoo GreenTech Launchpad'}).textContent)
+     .toContain('NOT a guaranteed cash grant');
+   expect(screen.queryByRole('article',{name:'TIA Seed Fund'})).toBeNull();
+   fireEvent.change(screen.getByLabelText('Funding geography'),{target:{value:'GLOBAL'}});
+   expect(screen.getByRole('article',{name:'Global Innovation Fund'})).toBeTruthy();
+   expect(screen.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeTruthy();
+   expect(screen.getByRole('article',{name:'GEF Small Grants Programme'}).textContent)
+     .toContain('not ordinary startup capital');
+   expect(screen.getByRole('article',{name:'GEF Small Grants Programme'}).textContent)
+     .toContain('closed on 15 September 2026');
+   fireEvent.change(screen.getByLabelText('Search funding programmes'),{target:{value:'MIT'}});
+   expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(1);
+   fireEvent.click(screen.getByRole('button',{name:'Prepare review draft'}));
+   expect((screen.getByRole('textbox',{name:'Funding preparation draft text'}) as HTMLTextAreaElement).value)
+     .toMatch(/Project location: Kenya[\s\S]*CURRENT FUNDING WINDOW: NOT VERIFIED/);
+   expect(fetcher).not.toHaveBeenCalled();
  });
 });
