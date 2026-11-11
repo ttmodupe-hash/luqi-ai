@@ -1,15 +1,26 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Check, Circle, Flag, RotateCcw, ShieldCheck, Target, Trophy } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
 import {
   capabilityJourneyProgress,
   clearCapabilityJourney,
+  CAPABILITY_JOURNEY_KEY,
   readCapabilityJourney,
   setCapabilityJourneyStep,
   type CapabilityJourney,
 } from '../lib/capability-journey';
 import '../capability-journey.css';
+
+const STALE_JOURNEY_NOTICE = 'This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.';
+
+function savedJourneyMatches(first: CapabilityJourney | null, second: CapabilityJourney | null): boolean {
+  return Boolean(first && second &&
+    first.goal === second.goal &&
+    first.startedAt === second.startedAt &&
+    first.updatedAt === second.updatedAt &&
+    first.completed.join(',') === second.completed.join(','));
+}
 
 export default function CapabilityJourneyPage() {
   const [journey, setJourney] = useState<CapabilityJourney | null>(() => readCapabilityJourney());
@@ -20,20 +31,29 @@ export default function CapabilityJourneyPage() {
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
   const nextStep = plan && nextIndex >= 0 ? plan.steps[nextIndex] : null;
 
+  // Browser storage events arrive in OTHER tabs. Warn before users attempt a stale edit.
+  useEffect(() => {
+    if (!journey) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== CAPABILITY_JOURNEY_KEY) return;
+      if (!savedJourneyMatches(journey, readCapabilityJourney())) {
+        setNeedsReload(true);
+        setNotice(STALE_JOURNEY_NOTICE);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [journey]);
+
   // Detect known other-tab changes before mutating this device-local record.
   // localStorage has no cross-tab transaction guarantee.
   function journeySnapshotMatchesSaved(): boolean {
-    const saved = readCapabilityJourney();
-    return Boolean(saved && journey &&
-      saved.goal === journey.goal &&
-      saved.startedAt === journey.startedAt &&
-      saved.updatedAt === journey.updatedAt &&
-      saved.completed.join(',') === journey.completed.join(','));
+    return savedJourneyMatches(journey, readCapabilityJourney());
   }
 
   function warnStaleJourney() {
     setNeedsReload(true);
-    setNotice('This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.');
+    setNotice(STALE_JOURNEY_NOTICE);
   }
 
   function loadLatestSavedJourney() {
