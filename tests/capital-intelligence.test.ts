@@ -238,6 +238,9 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
     const gef=mvp.find(m=>m.programme.id==='gef-small-grants')!;
     expect(gef.state).toBe('CHECK_PUBLISHER_CRITERIA');
     expect(gef.checks.join(' ')).toMatch(/community-based or civil-society/);
+    expect(gef.checks.join(' ')).toContain('closed on 15 September 2026');
+    expect(gef.checks.join(' ')).toContain('does not mean every national GEF SGP call is closed');
+    expect(gef.state).toBe('CHECK_PUBLISHER_CRITERIA');
     expect(buildCapitalPreparationDraft(gef,{...idea,maturity:'MVP'},'Community wetlands','Local ecology',
       new Date('2026-11-11T10:00:00Z'))).toContain('CURRENT FUNDING WINDOW: NOT VERIFIED');
     const outside=matchCapitalProgrammes({...idea,country:'OTHER',maturity:'MVP'},

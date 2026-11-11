@@ -98,6 +98,8 @@ describe('Capital Intelligence accessible browser-only user journey',()=>{
    expect(screen.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeTruthy();
    expect(screen.getByRole('article',{name:'GEF Small Grants Programme'}).textContent)
      .toContain('not ordinary startup capital');
+   expect(screen.getByRole('article',{name:'GEF Small Grants Programme'}).textContent)
+     .toContain('closed on 15 September 2026');
    fireEvent.change(screen.getByLabelText('Search funding programmes'),{target:{value:'MIT'}});
    expect(screen.getAllByRole('button',{name:'Prepare review draft'})).toHaveLength(1);
    fireEvent.click(screen.getByRole('button',{name:'Prepare review draft'}));

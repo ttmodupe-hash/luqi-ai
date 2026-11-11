@@ -369,6 +369,7 @@ export const CAPITAL_PROGRAMMES:readonly FundingPlatformSpec[] = Object.freeze([
       'GEF SGP offers financial and technical support for community-driven environmental and sustainable-livelihood initiatives.',
       'An ordinary for-profit startup is not automatically eligible; check organisation, implementing agency and country conditions.',
       'Local proposal formats, participation and deadlines vary; Luqi has not verified any current national application window.',
+      'The 2026 GEF SGP CSO Challenge Program call closed on 15 September 2026; this dated challenge is distinct from national SGP funding routes, whose current windows remain unverified.',
     ],conditions:{},
   }),
 ]);
@@ -439,8 +440,10 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
         checks.push('UNDP requires a working prototype or MVP and a committed team; an idea alone does not meet the published requirements.');
       }
     }
-    if(programme.id==='gef-small-grants')
+    if(programme.id==='gef-small-grants') {
       checks.push('GEF SGP targets eligible community-based or civil-society environmental projects, not ordinary startup capital; verify national country programmes and local calls.');
+      checks.push('The GEF SGP CSO Challenge Program 2026 application call closed on 15 September 2026. This historic deadline does not mean every national GEF SGP call is closed; verify each country programme.');
+    }
     if(reviewExpired) checks.push('Source review is overdue: recheck the publisher before relying on any criteria.');
     const missingArtifacts=programme.suggestedArtifacts.filter(a=>!present.has(a));
     const preparationPercent=programme.suggestedArtifacts.length===0 ? 0 :

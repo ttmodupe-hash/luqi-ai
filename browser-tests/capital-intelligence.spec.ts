@@ -80,6 +80,8 @@ test('funding hub brings South African, pan-African and global publishers togeth
   await expect(page.getByRole('article',{name:'MIT Solve Global Challenges'})).toBeVisible();
   await expect(page.getByRole('article',{name:'GEF Small Grants Programme'}))
     .toContainText('not ordinary startup capital');
+  await expect(page.getByRole('article',{name:'GEF Small Grants Programme'}))
+    .toContainText('closed on 15 September 2026');
   await page.getByRole('textbox',{name:'Search funding programmes'}).fill('MIT');
   await expect(page.getByText('1 of 11 reviewed programme references match your filters.')).toBeVisible();
   const mit=page.getByRole('article',{name:'MIT Solve Global Challenges'});
