@@ -499,3 +499,20 @@ it('reports only a browser download request, never a confirmed saved file or sub
  expect(network).not.toHaveBeenCalled();
  click.mockRestore();
 });
+
+it('explains rejected 24-hour deadline input beside the focused field without guessing or filling',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+ const fillsBefore=run.mock.calls.filter(([request])=>request.action==='fill').length;
+ const closing=screen.getByLabelText('Closing time with timezone') as HTMLInputElement;
+ fireEvent.change(closing,{target:{value:'2090-11-30T24:00+02:00'}});
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ expect(document.activeElement).toBe(closing);
+ expect(closing.getAttribute('aria-invalid')).toBe('true');
+ const errorHelp=document.getElementById(closing.getAttribute('aria-describedby')||'');
+ expect(errorHelp?.textContent).toMatch(/Hour 24 may roll into the next day/);
+ expect(errorHelp?.textContent).toMatch(/enter 00 through 23; do not guess a replacement/);
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(fillsBefore);
+ expect(archive).not.toHaveBeenCalled();
+ expect(network).not.toHaveBeenCalled();
+});

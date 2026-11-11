@@ -319,7 +319,7 @@ export function TenderOriginalForms(){
                 aria-invalid={Boolean(issue)} aria-describedby={issue?helpId:undefined}
                 placeholder={key==='deadline'?'YYYY-MM-DDTHH:mm+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>
-              {issue&&<span id={helpId} className="mt-1 block text-xs text-amber-200">Check this answer: {issue}. Use your own records and the issuer instructions; Luqi does not verify it.</span>}
+              {issue&&<span id={helpId} className="mt-1 block text-xs text-amber-200">Check this answer: {issue}. {key==='deadline'&&context.deadline.slice(11,13)==='24'?'Hour 24 may roll into the next day. Confirm the closing hour with the issuer and enter 00 through 23; do not guess a replacement. ':''}Use your own records and the issuer instructions; Luqi does not verify it.</span>}
             </label>;
             })}
             <label className="block text-sm">Issuer-prescribed submission method
