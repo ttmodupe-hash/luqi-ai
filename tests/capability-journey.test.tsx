@@ -133,6 +133,22 @@ describe('LUQI Capability Journey', () => {
     expect(readCapabilityJourney()?.completed).toEqual([2]);
   });
 
+  it('keeps the visible journey and recovery action when browser storage becomes unreadable', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    setCapabilityJourneyStep(2, true); // A different tab saved newer progress.
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Storage denied', 'SecurityError');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(screen.getByText('0%')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/);
+    expect(screen.getByRole('button', { name: 'Load latest saved journey' })).toBeTruthy();
+  });
+
   it('notifies about removal by another tab before a user edits', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
