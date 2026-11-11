@@ -398,7 +398,7 @@ it('focuses the first missing or invalid bid-context answer without fabricating 
  fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:'not-a-deadline'}});
  fireEvent.click(prepare);
  expect(document.activeElement).toBe(screen.getByLabelText('Closing time with timezone'));
- expect(screen.getByText(/Future closing time with explicit timezone/)).toBeTruthy();
+ expect(screen.getAllByText(/Future closing time with explicit timezone/).length).toBeGreaterThan(0);
  fireEvent.change(screen.getByLabelText('Closing time with timezone'),{target:{value:'2090-11-30T11:00+02:00'}});
  fireEvent.click(prepare);
  expect(document.activeElement).toBe(screen.getByLabelText('Original form submission method'));
