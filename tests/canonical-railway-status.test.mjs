@@ -85,3 +85,23 @@ test('canonical success requires GitHub-authenticated Railway App status identit
     target_url: valid.target_url.replace('1e192ef3-1fa6-4684-81fc-60165c7b0e22',
       '88c0b148-c1c6-452d-98cc-adb798cda688') }, sha), 'wrong-environment');
 });
+
+test('every status/manual public check is owner-pinned before live observation', () => {
+  for (const [source, expectedProbe] of [
+    [web, 'verify-deployed-release.mjs'],
+    [domain, 'verify-custom-domain.mjs'],
+  ]) {
+    const canonical = source.indexOf('run: node scripts/check-canonical-railway-status.mjs');
+    const approval = source.indexOf('requireApprovedStatusRevision(');
+    const publicProbe = source.indexOf('run: node scripts/' + expectedProbe);
+    assert.ok(canonical !== -1 && approval > canonical && publicProbe > approval,
+      'Independent approved pin must precede public probe, after canonical event validation');
+    const guard = source.slice(source.lastIndexOf('      - name: ', approval), publicProbe);
+    assert.ok(guard.includes("if: github.event_name == 'status' || github.event_name == 'workflow_dispatch'"));
+    assert.ok(guard.includes("LUQI_STATUS_SHA: ${{ github.event_name == 'status' && github.event.sha || vars.LUQI_APPROVED_DEPLOYED_SHA }}"));
+    assert.ok(guard.includes('LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}'));
+    assert.ok(guard.includes('LUQI_EXPECTED_COMMIT: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}'));
+    assert.ok(!guard.includes('LUQI_EXPECTED_COMMIT: ${{ github.'),
+      'Neither event nor undeployed main can self-approve a public revision');
+  }
+});

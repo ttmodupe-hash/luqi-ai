@@ -59,9 +59,19 @@ jobs:
         env:
           LUQI_MAIN_SHA: ${{ github.sha }}
         run: node scripts/check-canonical-railway-status.mjs
+      - name: Require independently owner-approved SHA before any live public check
+        if: github.event_name == 'status' || github.event_name == 'workflow_dispatch'
+        env:
+          # A status event cannot authorise itself; manual checks use the approved pin.
+          LUQI_STATUS_SHA: ${{ github.event_name == 'status' && github.event.sha || vars.LUQI_APPROVED_DEPLOYED_SHA }}
+          LUQI_APPROVED_DEPLOYED_SHA: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}
+        run: >-
+          node --input-type=module -e
+          'import { requireApprovedStatusRevision } from "./scripts/production-health-monitor.mjs";
+          requireApprovedStatusRevision(process.env.LUQI_STATUS_SHA, process.env.LUQI_APPROVED_DEPLOYED_SHA)'
       - name: Wait for the expected live commit and verify its public safety boundaries
         if: github.event_name == 'status' || github.event_name == 'workflow_dispatch'
         env:
           LUQI_VERIFY_PUBLIC: "true"
-          LUQI_EXPECTED_COMMIT: ${{ github.event_name == 'status' && github.event.sha || github.sha }}
+          LUQI_EXPECTED_COMMIT: ${{ vars.LUQI_APPROVED_DEPLOYED_SHA }}
         run: node scripts/verify-deployed-release.mjs
