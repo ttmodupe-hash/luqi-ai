@@ -25,6 +25,9 @@ export class ContactPresence {
       leases = new Map(); this.users.set(user, leases);
     }
     const previous = leases.get(id);
+    // A Hide for an unknown tab is a no-op; otherwise fabricated tombstones
+    // consume the four-lease quota and block real foreground tabs for 15 min.
+    if (!previous && !active) return;
     if (previous && sequence <= previous.sequence) return;
     if (!previous && leases.size >= 4) throw Error('PRESENCE_CAPACITY');
     if (active && previous?.active && now - previous.touched < 10_000) {

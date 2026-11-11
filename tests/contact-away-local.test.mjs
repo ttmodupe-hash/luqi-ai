@@ -11,6 +11,13 @@ test('quick online-away-online changes do not extend original lease',()=>{const 
 test('same-mode heartbeat throttle retained',()=>{const {p}=fixture();p.update(1,'a',1,true,true);assert.throws(()=>p.update(1,'a',2,true,true),/PRESENCE_RATE/)});
 test('state is isolated per account and process',()=>{const {p}=fixture();p.update(1,'a',1,true,true);assert.equal(p.read(2),'not_shared');assert.equal(new ContactPresence().read(1),'not_shared')});
 test('four lease cap is unchanged',()=>{const {p}=fixture();for(let i=0;i<4;i++)p.update(1,String(i),1,true,true);assert.throws(()=>p.update(1,'5',1,true,true),/PRESENCE_CAPACITY/)});
+test('Hide for unknown tab IDs cannot exhaust the four genuine foreground leases',()=>{
+  const {p}=fixture();p.update(1,'first',1,true);
+  for(const id of ['ghost-1','ghost-2','ghost-3','ghost-4','ghost-5'])p.update(1,id,1,false);
+  p.update(1,'second',1,true);p.update(1,'third',1,true);p.update(1,'fourth',1,true);
+  assert.equal(p.read(1),'online');
+  assert.throws(()=>p.update(1,'fifth',1,true),/PRESENCE_CAPACITY/);
+});
 test('capacity never evicts another user to fabricate state',()=>{const p=new ContactPresence(()=>1000000,1);p.update(1,'a',1,true,true);assert.throws(()=>p.update(2,'a',1,true),/PRESENCE_CAPACITY/);assert.equal(p.read(1),'away');assert.equal(p.read(2),'not_shared')});
 
 test('rapid alternating online/away cannot bypass presence rate limits or prolong lease',()=>{
