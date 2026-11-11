@@ -74,6 +74,9 @@ export function TenderOriginalForms(){
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
     // Clear approvals as soon as a replacement is selected, even when parsing fails.
     const next=revision+1;setRevision(next);setPrepared(null);setGates(emptyOriginalApprovals());setBusy(true);
+    // Preserve a truthful local revocation record even if an amendment is rejected
+    // before parsing (empty/oversized), or subsequently fails inspection.
+    if(amendment&&prepared&&ORIGINAL_FORM_GATES.some(g=>gates[g.id]))audit('revoke','all',next);
     if(!amendment){
       // A newly selected original starts a different application. Never carry over
       // another application's tender reference, principal, price or channel.

@@ -309,6 +309,11 @@ it('rejecting an oversized amendment revokes approval without reading it or losi
  expect(screen.getByText('Choose a non-empty file up to 3 MB.')).toBeTruthy();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
  expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('Synthetic supplier');
+ // Rejecting an amendment must also leave an explicit revocation event, rather than
+ // a local audit trail that ends with the old applicant approvals still granted.
+ const history=screen.getByText(/Local approval and amendment history/).parentElement!;
+ expect(history.querySelector('ol li:last-child')?.textContent).toMatch(/ · revoke · all$/);
+ expect(history.querySelector('ol li:last-child')?.textContent).not.toMatch(/Synthetic supplier|add-amendment/);
  expect(run.mock.calls.filter(([request])=>request.action==='inspect')).toHaveLength(1);
  expect(network).not.toHaveBeenCalled();
 });
