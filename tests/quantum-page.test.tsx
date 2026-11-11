@@ -43,6 +43,22 @@ it('preserves a real near-balanced feeder cost instead of displaying a fabricate
 });
 
 
+it('refuses to label an underflowed nonzero physical imbalance as exact zero', () => {
+  mount();
+  const input = screen.getByLabelText(/Appliance loads in kW/);
+  // Independent decimal arithmetic gives a strictly positive minimum
+  // squared imbalance near 1e-400 kW², unrepresentable in JS binary64.
+  fireEvent.change(input, { target: { value: '1e-200, 2e-200' } });
+  expect(screen.queryByText('Exact minimum squared imbalance')).toBeNull();
+  expect(screen.getByText(/Nonzero squared costs below floating-point precision/)).toBeTruthy();
+  // Ordinary and exactly balanced inputs must remain usable.
+  fireEvent.change(input, { target: { value: '1, 2' } });
+  expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent).toBe('1.0000 kW²');
+  fireEvent.change(input, { target: { value: '1, 1' } });
+  expect(screen.getByText('Exact minimum squared imbalance').nextElementSibling?.textContent).toBe('0.0000 kW²');
+  expect(fetch).not.toHaveBeenCalled();
+});
+
 it('keeps a sub-ULP load residual when individually rounded feeder totals appear equal', () => {
   mount();
   // Three exact unit loads plus the next representable binary64 value.

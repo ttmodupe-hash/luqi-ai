@@ -70,11 +70,20 @@ export default function QuantumLabPage() {
         }
         return sum + compensation;
       };
+      // A finite nonzero kW imbalance can have an unrepresentable kW²
+      // result (for example, 1e-200 squared). Never call that exact zero.
+      const physicalSquared = (bits: number) => {
+        const imbalance = feederImbalance(bits);
+        const squared = imbalance ** 2;
+        if (imbalance !== 0 && squared === 0)
+          throw new RangeError('Physical squared imbalance underflows binary64 precision.');
+        return squared;
+      };
       // The normalized Ising spectrum can round distinct physical costs to
       // the same energy. Choose the *physical* minimum over all <=64 states.
       let chosen = 0, exactSquaredImbalance = Infinity;
       for (let bits = 0; bits < simulated.state.length; bits++) {
-        const squared = feederImbalance(bits) ** 2;
+        const squared = physicalSquared(bits);
         if (squared < exactSquaredImbalance) { exactSquaredImbalance = squared; chosen = bits; }
       }
       const { feederA, feederB } = feederTotals(chosen);
@@ -82,7 +91,7 @@ export default function QuantumLabPage() {
       // At most 2^6=64 basis states, six loads each; the QAOA expectation
       // is a probability-weighted sum of nonnegative physical costs.
       const expectedSquaredImbalance = simulated.state.reduce((sum, z, bits) => {
-        return sum + (z.re * z.re + z.im * z.im) * feederImbalance(bits) ** 2;
+        return sum + (z.re * z.re + z.im * z.im) * physicalSquared(bits);
       }, 0);
       return { ...model, ...simulated, statesEvaluated: simulated.state.length,
         feederA, feederB, exactAbsoluteImbalance, exactSquaredImbalance, expectedSquaredImbalance };
@@ -166,7 +175,7 @@ export default function QuantumLabPage() {
         <div><dt>QAOA expected squared imbalance</dt><dd>{displayPositive(balance.expectedSquaredImbalance, 4)} kW²</dd></div>
         <div><dt>Classical states evaluated</dt><dd>{balance.statesEvaluated}</dd></div></dl>
         <button className="luqi-secondary" onClick={() => { const result = searchQaoaGrid(balance.model); setGamma(result.gamma); setBeta(result.beta); setScanNotice(`Compared ${result.parameterPairs} parameter pairs. Best point on this grid; not a proof of the global parameter optimum.`); }}>Scan p=1 parameter grid</button></>
-        : <p role="status">Enter 2–6 positive loads, each at most 100 kW.</p>}
+        : <p role="status">Enter 2–6 positive loads, each at most 100 kW. Nonzero squared costs below floating-point precision cannot be reported as exact zero.</p>}
       {scanNotice && <p role="status">{scanNotice}</p>}
       <details><summary>Inspect the Ising formulation</summary><p>For zi∈{'{−1,+1}'}, use Jij=2wiwj/W², hi=0 and constant Σwi²/W². This makes E(z)+constant=(Σwi zi/W)².</p></details>
       <h3>Multi-stop logistics: exact small reference</h3>
