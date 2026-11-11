@@ -391,11 +391,14 @@ export function matchCapitalProgrammes(profile:CapitalProfile,now:Date=new Date(
   });
 }
 const clean = (s:string,max:number) => typeof s==='string'?s.replace(/[\r\n\t]+/g,' ').trim().slice(0,max):'';
+/** Recompute from the current profile: callers must never certify their own fit or checklist. */
 export function buildCapitalPreparationDraft(match:FundingMatch,profile:CapitalProfile,
-    projectName:string,projectSummary:string):string {
+    projectName:string,projectSummary:string,now:Date=new Date()):string {
   validateProfile(profile);
-  if(!CAPITAL_PROGRAMMES.includes(match.programme))throw bad();
-  const missing=match.missingArtifacts.map(a=>'- '+ARTIFACT_LABELS[a]).join('\n') || '- None self-reported missing';
+  if(!match || !CAPITAL_PROGRAMMES.includes(match.programme))throw bad();
+  const verified=matchCapitalProgrammes(profile,now).find(m=>m.programme===match.programme);
+  if(!verified)throw bad();
+  const missing=verified.missingArtifacts.map(a=>'- '+ARTIFACT_LABELS[a]).join('\n') || '- None self-reported missing';
   return [
     'LUQI CAPITAL INTELLIGENCE — REVIEW DRAFT',
     'This is a preparation worksheet, NOT a verified grant application.',
@@ -413,13 +416,13 @@ export function buildCapitalPreparationDraft(match:FundingMatch,profile:CapitalP
     'Application guidance: '+match.programme.applicationGuideUrl,
     'Publisher review date: '+match.programme.reviewedOn,
     'CURRENT FUNDING WINDOW: NOT VERIFIED — check the current original call.',
-    'Indicative fit: '+match.state+' (not an eligibility finding)',
+    'Indicative fit: '+verified.state+' (not an eligibility finding)',
     'Suggested preparation items — not a certified call checklist:',
     ...match.programme.suggestedArtifacts.map(a=>'- '+ARTIFACT_LABELS[a]),
     'Self-reported missing preparation items:',
     missing,
     'Checks to resolve:',
-    ...(match.checks.length?match.checks.map(s=>'- '+s):['- Confirm the actual live call, deadlines and original requirements.']),
+    ...(verified.checks.length?verified.checks.map(s=>'- '+s):['- Confirm the actual live call, deadlines and original requirements.']),
     '',
     'NEXT: Open the publisher’s current call and review its specific rules and official forms.',
     'Do not share identity documents, tax records or proprietary source code with Luqi in this tool.',
