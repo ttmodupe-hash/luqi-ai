@@ -147,7 +147,9 @@ const bad = () => new Error('INVALID_CAPITAL_PROFILE_OR_SOURCE');
 function validPublisherReviewDate(raw:unknown):raw is string {
   if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
   const timestamp=Date.parse(raw+'T00:00:00.000Z');
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0,10)===raw;
+  // A future stamp cannot be evidence that a publisher was already reviewed. South Africa has fixed UTC+02:00.
+  const todaySast=new Date(Date.now()+2*60*60*1000).toISOString().slice(0,10);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0,10)===raw && raw<=todaySast;
 }
 
 /** Reject malformed/outside sources, clone nested data, and deep-freeze public specs. */

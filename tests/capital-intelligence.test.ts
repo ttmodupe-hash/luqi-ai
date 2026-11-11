@@ -41,6 +41,9 @@ describe('Capital Intelligence: explainable, evidence-bound local preparation',(
       expect(()=>normalizeFundingPlatform({...original,reviewedOn}))
         .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
     }
+    // The catalogue must not certify a review that has not yet occurred.
+    expect(()=>normalizeFundingPlatform({...original,reviewedOn:'2099-01-01'}))
+      .toThrow('INVALID_CAPITAL_PROFILE_OR_SOURCE');
     expect(normalizeFundingPlatform({...original,reviewedOn:'2024-02-29'}).reviewedOn)
       .toBe('2024-02-29');
     expect(()=>normalizeFundingPlatform({...original,sourceUrl:'https://www.tia.org.za.evil.example/'})).toThrow();
