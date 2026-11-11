@@ -262,7 +262,7 @@ export function TenderOriginalForms(){
               ['deadline','Closing time with timezone'],['destination','Exact official submission address'],['priceZar','Applicant-entered offer ZAR'],
             ] as const).map(([key,label])=><label key={key} className="block min-w-0 text-sm">{label}
               <input aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
-                placeholder={key==='deadline'?'2026-11-30T11:00+02:00':undefined}
+                placeholder={key==='deadline'?'YYYY-MM-DDTHH:mm+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>
             </label>)}
             <label className="block text-sm">Issuer-prescribed submission method
