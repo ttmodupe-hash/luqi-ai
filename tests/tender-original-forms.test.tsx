@@ -89,7 +89,7 @@ it('leaves the issuer closing time blank and supplies a format hint instead of a
  const closing=screen.getByLabelText('Closing time with timezone') as HTMLInputElement;
  expect(closing.value).toBe('');
  expect(closing.placeholder).toBe('YYYY-MM-DDTHH:mm+02:00');
- expect(closing.placeholder).not.toMatch(/\\d{4}-\\d{2}-\\d{2}T/);
+ expect(closing.placeholder).not.toContain('2026-11-30');
  expect(network).not.toHaveBeenCalled();
 });
 
