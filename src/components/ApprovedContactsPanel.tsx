@@ -71,9 +71,10 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
           const label = status === 'online' ? 'Online' : status === 'away' ? 'Away' : status === 'offline' ? 'Offline' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
           return <li key={person.circleId} className="luqi-contact-person">
             <span className={'luqi-contact-avatar is-' + status} aria-hidden="true">{person.name.slice(0, 1).toLocaleUpperCase()}<i /></span>
-            <div><Link to={'/p2p?circle=' + encodeURIComponent(person.circleId)} onClick={close}>{person.name}</Link><small>{label}</small></div>
+            <div><Link to={'/chat/people?circle=' + encodeURIComponent(person.circleId)} onClick={close}>{person.name}</Link><small>{label}</small></div>
           </li>;
         })}</ul>
+        {found.length > 0 && <p className="luqi-people-in-app-hint">Select a person to open their private conversation inside Luqi.</p>}
         {!found.length && <p>{contacts.length ? 'No approved contact matches this name.' : 'No mutually approved contacts yet. Add a private invitation in your circles.'}</p>}
       </>}
       {presence && ((state === 'ready' && eligible) || presence.sharing) && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
@@ -89,7 +90,7 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
       </p>}
       {presence?.message && (state === 'ready' || !presence.sharing) &&
         <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
-      <Link to="/p2p" onClick={close}>Manage contacts &amp; circles</Link>
+      <Link className="luqi-people-manage" to="/chat/people" onClick={close}>Open private chat in Luqi</Link>
     </>}
     <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means a recent foreground signal. Away is your explicit choice. Offline means a previously shared signal expired after 75 seconds, not proof that a device is disconnected. Another Online tab can keep you online; hidden or unconfirmed status stays neutral. No last-seen history is shared.</p>
   </div>;

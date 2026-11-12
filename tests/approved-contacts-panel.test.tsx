@@ -19,6 +19,9 @@ it('uses the existing login, filters approved names locally and treats names as 
  mocks.contacts.mockResolvedValue({contacts:[{circleId:crypto.randomUUID(),userId:8,name:'<img src=x onerror=alert(1)>',accountActive:true,presence:'not_shared'},
   {circleId:crypto.randomUUID(),userId:9,name:'Naledi',accountActive:true,presence:'not_shared'}]});
  const view=draw();await screen.findByRole('link',{name:'Naledi'});
+ // Preserve the integrated chat route already on main; don't send contacts back to legacy P2P.
+ expect(screen.getByRole('link',{name:'Naledi'}).getAttribute('href')).toMatch(/^\/chat\/people\?circle=/);
+ expect(screen.getByRole('link',{name:'Open private chat in Luqi'}).getAttribute('href')).toBe('/chat/people');
  expect(screen.queryByRole('link',{name:'Sign in to see contacts'})).toBeNull();
  expect(view.container.querySelector('img')).toBeNull();
  fireEvent.change(screen.getByLabelText('Find a contact'),{target:{value:'naledi'}});
