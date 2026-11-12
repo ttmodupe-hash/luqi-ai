@@ -107,3 +107,21 @@ test('newer repeated Hide sequence keeps older queued heartbeat revoked',()=>{
   p.update(7,'a',4,false);p.update(7,'a',3,true,true);
   assert.equal(p.read(7),'not_shared');
 });
+
+test('backward clock adjustment cannot resurrect expired Online',()=>{
+  let now=1_000_000;const p=new ContactPresence(()=>now);
+  p.update(7,'rollback-online',1,true);now+=PRESENCE_TTL_MS;
+  assert.equal(p.read(7),'offline');now-=PRESENCE_TTL_MS+5_000;
+  assert.equal(p.read(7),'offline');
+});
+test('backward clock adjustment cannot resurrect expired Away',()=>{
+  let now=1_000_000;const p=new ContactPresence(()=>now);
+  p.update(7,'rollback-away',1,true,true);now+=PRESENCE_TTL_MS;
+  assert.equal(p.read(7),'offline');now-=PRESENCE_TTL_MS+5_000;
+  assert.equal(p.read(7),'offline');
+});
+test('invalid clock cannot publish an unverified status',()=>{
+  const p=new ContactPresence(()=>Number.NaN);
+  assert.throws(()=>p.update(7,'bad-clock',1,true),/PRESENCE_CLOCK/);
+  assert.throws(()=>p.read(7),/PRESENCE_CLOCK/);
+});

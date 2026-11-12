@@ -8,7 +8,16 @@ type Lease = { sequence: number; active: boolean; away: boolean; expires: number
 export class ContactPresence {
   private users = new Map<number, Map<string, Lease>>();
   private swept = 0;
-  constructor(private clock = () => Date.now(), private capacity = 5000) {}
+  private lastObservedTime = Number.NEGATIVE_INFINITY;
+  // Presence uses elapsed process-local time; wall-clock corrections must not
+  // revive an expired public Online/Away signal after it became Offline.
+  constructor(private clock = () => performance.now(), private capacity = 5000) {}
+  private now() {
+    const observed = this.clock();
+    if (!Number.isFinite(observed)) throw Error('PRESENCE_CLOCK');
+    this.lastObservedTime = Math.max(this.lastObservedTime, observed);
+    return this.lastObservedTime;
+  }
   private sweep(now: number) {
     if (now - this.swept < 30_000) return;
     this.swept = now;
@@ -17,9 +26,9 @@ export class ContactPresence {
       if (!leases.size) this.users.delete(user);
     }
   }
-  prune() { this.sweep(this.clock()); }
+  prune() { this.sweep(this.now()); }
   update(user: number, id: string, sequence: number, active: boolean, away = false) {
-    const now = this.clock(); this.sweep(now);
+    const now = this.now(); this.sweep(now);
     let leases = this.users.get(user);
     if (!leases) {
       if (!active) return;
@@ -74,7 +83,7 @@ export class ContactPresence {
       reenableCount: reenableCount + (reactivating ? 1 : 0) });
   }
   read(user: number): 'online' | 'away' | 'offline' | 'not_shared' {
-    const now = this.clock(); this.sweep(now);
+    const now = this.now(); this.sweep(now);
     const leases = this.users.get(user);
     if (!leases) return 'not_shared';
     const shared = [...leases.values()].filter(lease => lease.active && now - lease.touched < RETAIN_MS);
