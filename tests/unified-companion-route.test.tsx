@@ -33,7 +33,8 @@ describe('Luqi Companion keeps real chat and private notes in separate customer 
       expect(routes).toContain('path="/companion" element={<CompanionPage />}');
       // AI Companion remains a real chat on its own discoverable route.
       expect(routes).toContain('path="/ai-companion" element={<UnifiedCompanionPage />}');
-      expect(routes).toContain('path="/mentor" element={<UnifiedCompanionPage />}');
+      // Keep the original Mentor bookmark pointing to saved notes, never silently repurpose it.
+      expect(routes).toContain('path="/mentor" element={<CompanionPage />}');
     }
     for (const prefix of ['src/', 'app/src/']) {
       const navigation = readFileSync(prefix + 'components/WorkspaceLayout.tsx', 'utf8');

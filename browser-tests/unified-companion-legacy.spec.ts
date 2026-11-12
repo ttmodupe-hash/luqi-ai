@@ -19,6 +19,9 @@ test('existing /companion bookmark preserves private-notes sign-in and export su
   await expect(page.getByRole('heading', { name: 'Companion conversations' })).toBeVisible();
   await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+  await page.goto('/#/mentor');
+  await expect(page.getByRole('heading', { name: 'Companion conversations' })).toBeVisible();
+  await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
   await page.goto('/#/companion/notes');
   await expect(page.getByRole('heading', { name: 'Companion conversations' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -33,6 +36,8 @@ test('new AI Companion is accessible and private notes stay separate without pai
   await page.goto('/#/ai-companion');
   await expect(page.getByRole('heading', { name: 'Think, learn and move forward together.' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Talk with LUQI' })).toBeVisible();
+  // Guests must retain an unauthenticated trial entry, without a provider request.
+  await expect(page.getByRole('link', { name: 'Try three replies without registering' })).toBeVisible();
   await page.getByRole('link', { name: /My private notes/i }).click();
   await expect(page.getByRole('heading', { name: 'Companion conversations' })).toBeVisible();
   expect(paid).toHaveLength(0);

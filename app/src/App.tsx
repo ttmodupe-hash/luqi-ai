@@ -137,7 +137,7 @@ export default function App() {
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/companion/notes" element={<CompanionPage />} />
-        <RouterRoute path="/mentor" element={<UnifiedCompanionPage />} />
+        <RouterRoute path="/mentor" element={<CompanionPage />} />
         <RouterRoute path="/ai-companion" element={<UnifiedCompanionPage />} />
         <RouterRoute path="/telemetry" element={<TelemetryDashboardPage />} />
         <RouterRoute path="/super-core" element={<TelemetryDashboardPage />} />
