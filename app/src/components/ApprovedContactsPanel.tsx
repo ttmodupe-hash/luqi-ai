@@ -19,7 +19,7 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
   useEffect(() => {
     if (!session) return;
     let current = true, pending = false, verified = false, epoch = 0;
-    setContacts([]); setCheckedAt(0); setState('checking');
+    setContacts([]); setCheckedAt(0); setEligible(false); setState('checking');
     const api = p2pClient(session.token);
     const visible = () => document.visibilityState !== 'hidden';
     const refresh = async () => {
@@ -75,14 +75,16 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
           </li>;
         })}</ul>
         {!found.length && <p>{contacts.length ? 'No approved contact matches this name.' : 'No mutually approved contacts yet. Add a private invitation in your circles.'}</p>}
-        {presence && eligible && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
-          onChange={event => presence.setSharing(event.target.checked)} /> Share my online status from this tab</label>}
-        {presence?.sharing && eligible && presence.setAway && <button type="button" className="luqi-presence-mode"
-          aria-pressed={presence.away === true} onClick={() => presence.setAway?.(!presence.away)}>
-          {presence.away ? 'Show me as online' : 'Show me as away'}
-        </button>}
-        {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       </>}
+      {presence && ((state === 'ready' && eligible) || presence.sharing) && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
+        onChange={event => presence.setSharing(event.target.checked)} /> {state === 'ready' && eligible
+          ? 'Share my online status from this tab'
+          : 'Stop sharing my online status from this tab'}</label>}
+      {presence?.sharing && state === 'ready' && eligible && presence.setAway && <button type="button" className="luqi-presence-mode"
+        aria-pressed={presence.away === true} onClick={() => presence.setAway?.(!presence.away)}>
+        {presence.away ? 'Show me as online' : 'Show me as away'}
+      </button>}
+      {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       <Link to="/p2p" onClick={close}>Manage contacts &amp; circles</Link>
     </>}
     <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means a recent foreground signal. Away is your explicit choice. Offline means a previously shared signal expired after 75 seconds, not proof that a device is disconnected. Another Online tab can keep you online; hidden or unconfirmed status stays neutral. No last-seen history is shared.</p>

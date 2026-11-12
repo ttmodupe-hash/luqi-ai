@@ -132,3 +132,30 @@ test('late Online failure cannot replace a pending Away confirmation',async()=>{
  await act(async()=>{settleAway({accepted:true,ttlSeconds:75});});await flush();
  expect(result.current.message).toContain('Sharing Away');
 });
+
+test('sharing remains revocable when the contacts roster is unavailable',async()=>{
+ mocks.status.mockRejectedValueOnce(Error('synthetic status outage'));
+ const stop=vi.fn();
+ render(<MemoryRouter><Panel session={{token:'synthetic',user:{email:'fixture@example.invalid'}}} close={()=>{}}
+  presence={{sharing:true,away:true,message:'Sharing Away',setSharing:stop,setAway:vi.fn()}}/></MemoryRouter>);
+ await flush();
+ const hide=screen.getByRole('checkbox',{name:'Stop sharing my online status from this tab'});
+ expect((hide as HTMLInputElement).checked).toBe(true);
+ fireEvent.click(hide);
+ expect(stop).toHaveBeenCalledWith(false);
+ expect(screen.queryByRole('button',{name:'Show me as online'})).toBeNull();
+});
+test('disabled contacts still offer Hide but never unverified new consent',async()=>{
+ mocks.status.mockResolvedValueOnce({enabled:false});
+ const stop=vi.fn(), session={token:'synthetic',user:{email:'fixture@example.invalid'}};
+ const view=render(<MemoryRouter><Panel session={session} close={()=>{}}
+  presence={{sharing:true,away:false,message:'',setSharing:stop,setAway:vi.fn()}}/></MemoryRouter>);
+ await flush();
+ fireEvent.click(screen.getByRole('checkbox',{name:'Stop sharing my online status from this tab'}));
+ expect(stop).toHaveBeenCalledWith(false);
+ view.rerender(<MemoryRouter><Panel session={session} close={()=>{}}
+  presence={{sharing:false,away:false,message:'',setSharing:stop,setAway:vi.fn()}}/></MemoryRouter>);
+ await flush();
+ expect(screen.queryByRole('checkbox')).toBeNull();
+ expect(screen.queryByRole('button',{name:'Show me as away'})).toBeNull();
+});
