@@ -31,6 +31,16 @@ test('320px keyboard stage completion persists without provider requests', async
   expect(posts).toEqual([]);
 });
 
+test('clearing a saved journey by keyboard restores focus at 320px', async ({ page }) => {
+  const clear = page.getByRole('button', { name: /Clear saved journey/i });
+  await clear.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeFocused();
+  await expect(page.getByRole('status')).toContainText('Saved journey cleared from this device.');
+  expect(await page.evaluate(() => localStorage.getItem('luqi:capability-journey:v1'))).toBeNull();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test('an older tab cannot overwrite or erase a later tab’s saved stage', async ({ page, context }) => {
   const otherTab = await context.newPage();
   await otherTab.goto('/#/journey');

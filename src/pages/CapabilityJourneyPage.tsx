@@ -40,7 +40,7 @@ export default function CapabilityJourneyPage() {
   const [notice, setNotice] = useState(initialStorageUnavailable ? INITIAL_UNREADABLE_STORAGE_NOTICE : '');
   const [needsReload, setNeedsReload] = useState(initialStorageUnavailable);
   const focusAfterRecovery = useRef(false);
-  // Recovery removes the keyboard-activated button. Keep the user's place.
+  // Recovery or clearing removes the keyboard-activated button. Keep the user's place.
   useLayoutEffect(() => {
     if (!focusAfterRecovery.current) return;
     focusAfterRecovery.current = false;
@@ -133,6 +133,8 @@ export default function CapabilityJourneyPage() {
       setNotice('This browser did not allow the saved journey to be cleared.');
       return;
     }
+    // Clearing unmounts this button; move keyboard focus to the empty-state heading.
+    focusAfterRecovery.current = true;
     setJourney(null);
     setNeedsReload(false);
     setNotice('Saved journey cleared from this device.');

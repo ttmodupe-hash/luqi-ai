@@ -290,9 +290,13 @@ describe('LUQI Capability Journey', () => {
   it('lets the user clear the device-local journey', () => {
     saveCapabilityJourney('I want to build an app for my community');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Clear saved journey/i }));
+    const clear = screen.getByRole('button', { name: /Clear saved journey/i });
+    clear.focus();
+    fireEvent.click(clear);
     expect(readCapabilityJourney()).toBeNull();
-    expect(screen.getByText(/Start with a goal worth working toward/i)).toBeTruthy();
+    const emptyHeading = screen.getByRole('heading', { name: /Start with a goal worth working toward/i });
+    expect(document.activeElement).toBe(emptyHeading);
+    expect(screen.getByRole('status').textContent).toMatch(/Saved journey cleared from this device/i);
   });
 
 
