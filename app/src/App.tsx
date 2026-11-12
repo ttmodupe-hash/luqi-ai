@@ -135,7 +135,7 @@ export default function App() {
         <RouterRoute path="/public" element={<Home />} />
         <RouterRoute path="/portal" element={<Home />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
-        <RouterRoute path="/companion" element={<UnifiedCompanionPage />} />
+        <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/companion/notes" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<UnifiedCompanionPage />} />
         <RouterRoute path="/ai-companion" element={<UnifiedCompanionPage />} />

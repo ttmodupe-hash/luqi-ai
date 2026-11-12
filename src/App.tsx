@@ -147,7 +147,7 @@ export default function App() {
         {["/register", "/signup", "/sign-up"].map(path => <RouterRoute key={path} path={path} element={<Navigate to="/join" replace />} />)}
         <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
-        <RouterRoute path="/companion" element={<UnifiedCompanionPage />} />
+        <RouterRoute path="/companion" element={<CompanionPage />} />
         <RouterRoute path="/companion/notes" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<UnifiedCompanionPage />} />
         <RouterRoute path="/ai-companion" element={<UnifiedCompanionPage />} />

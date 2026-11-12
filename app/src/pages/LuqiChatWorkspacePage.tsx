@@ -22,7 +22,7 @@ export default function LuqiChatWorkspacePage() {
     <AiPilotPage embedded workspaceMode />
     <nav className="luqi-chat-workspace-links" aria-label="More Luqi support">
       <Link to="/ask">Explore Africa and plan a goal locally</Link>
-      <Link to="/companion">AI Companion and next steps</Link>
+      <Link to="/ai-companion">AI Companion and next steps</Link>
       <Link to="/companion/notes">Open saved private notes</Link>
       <Link to="/service-status">Service status</Link>
     </nav>

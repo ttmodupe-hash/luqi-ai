@@ -35,7 +35,7 @@ const navigation = [
   ["/visa-entry", "Visa & Entry"],
   ["/spatial-vision", "👁️ Spatial Vision & 3D Lab"],
   ["/", "Workspace"],
-  ["/companion", "AI Companion"],
+  ["/ai-companion", "AI Companion"],
   ["/companion/notes", "Private notes"],
   ["/omega-tasks", "Luqi tools"],
   ["/content-studio", "Create"],
