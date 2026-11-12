@@ -34,3 +34,41 @@ test('Start and Chat expose free public support navigation',async({page})=>{
  await expect(page).toHaveURL(/#\/social-support$/);
  await expect(page.getByRole('heading',{name:'SASSA grants and UIF claims support'})).toBeVisible();
 });
+
+test('SASSA, UIF and combined help disclose expired review without a daily-watch promise at 320px',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-11-09T15:00:00+02:00'));
+ await page.setViewportSize({width:320,height:740});
+ const posted:string[]=[];
+ page.on('request',r=>{if(r.method()==='POST')posted.push(r.url());});
+ for(const route of ['social-support','sassa','uif']){
+  await page.goto('/#/'+route);
+  await expect(page.getByText(/Use these steps to prepare your enquiry, and verify current rates/)).toBeVisible();
+  await expect(page.getByText(/Luqi does not access your agency account or continuously update these instructions/)).toBeVisible();
+  await expect(page.getByText(/past their review window/)).toBeVisible();
+  await expect(page.getByText(/separate daily official-source review/)).toHaveCount(0);
+  await expect(page.getByRole('link',{name:/official website/}).first()).toHaveAttribute('rel','noopener noreferrer');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ }
+ await page.getByRole('button',{name:'SASSA grants'}).focus();
+ await page.keyboard.press('Enter');
+ await expect(page.getByRole('button',{name:'SASSA grants'})).toHaveAttribute('aria-pressed','true');
+ await page.getByLabel('Help topic').selectOption('sassa-status');
+ await expect(page.getByRole('heading',{name:'SASSA status, payments and appeals'})).toBeVisible();
+ expect(posted).toEqual([]);
+});
+
+test('an idle 320px SASSA guide flags expired source review when the tab resumes',async({page})=>{
+ await page.setViewportSize({width:320,height:740});
+ await page.clock.setFixedTime(new Date('2026-11-05T20:00:00+02:00'));
+ const posted:string[]=[];
+ page.on('request',r=>{if(r.method()==='POST')posted.push(r.url());});
+ await page.goto('/#/sassa');
+ await expect(page.getByText(/past their review window/)).toHaveCount(0);
+ await page.clock.setFixedTime(new Date('2026-11-06T08:00:00+02:00'));
+ await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+ await expect(page.getByText(/past their review window/)).toBeVisible();
+ await expect(page.getByRole('link',{name:/Official SASSA SRD portal/}))
+   .toHaveAttribute('href','https://srd.sassa.gov.za/');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(posted).toEqual([]);
+});
