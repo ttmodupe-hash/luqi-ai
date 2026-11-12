@@ -48,11 +48,12 @@ test('an older tab cannot overwrite or erase a later tab’s saved stage', async
   await otherTab.getByRole('button', { name: /Mark complete:/i }).nth(2).click();
   await expect(otherTab.getByText('25%', { exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: /Mark complete:/i }).first().click();
+  // The real cross-tab storage event proactively locks the older view.
+  // Clicking a disabled control would time out, not validate stale-edit safety.
   await expect(page.getByRole('status')).toContainText('changed in another tab');
   await expect(page.getByText('0%', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: /Clear saved journey/i }).click();
-  await expect(page.getByRole('status')).toContainText('changed in another tab');
+  await expect(page.getByRole('button', { name: /Mark complete:/i }).first()).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Clear saved journey/i })).toBeDisabled();
 
   const persisted = await page.evaluate(() => {
     const raw = localStorage.getItem('luqi:capability-journey:v1');
