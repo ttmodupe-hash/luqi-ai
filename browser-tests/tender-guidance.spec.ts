@@ -22,7 +22,8 @@ test('guided original-form fields keep answers and route corrections at 320px',a
  await expect(panel.getByLabel('SBD 1 Email address')).toBeFocused();
  await panel.getByLabel('SBD 1 Email address').fill('synthetic@example.test');
  await expect(panel.getByRole('button',{name:'Go to Email address'})).toHaveCount(0);
- await expect(panel.getByText('3 of 7 supported contact fields have valid-format entries.')).toBeVisible();
+ await expect(panel.getByText('3 of 7 supported contact fields contain entries without detected input errors.')).toBeVisible();
+ await expect(panel.getByText(/The count checks text length, hidden characters and basic email syntax only/)).toBeVisible();
  await panel.getByRole('button',{name:'Review all contact fields'}).click();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await panel.screenshot({path:testInfo.outputPath('tender-guided-fields.png')});
