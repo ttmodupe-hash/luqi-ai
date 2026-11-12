@@ -49,6 +49,12 @@ def _sanitize_report(value: str) -> str:
     # arbitrarily long whitespace-padded report can bypass the size limit.
     if len(value) > MAX_REPORT_LENGTH:
         raise ValueError("Bug report is too long.")
+    # JSON can decode escaped lone surrogates. Reject before strict UTF-8 HMAC.
+    # Do not let malformed caller input turn validation into a server error.
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError("Bug report contains invalid Unicode.") from exc
     if not value.strip():
         raise ValueError("Bug report must be a nonempty string.")
     # No regex can reliably identify all tokens or personal data in free-form

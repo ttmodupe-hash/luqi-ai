@@ -3,6 +3,7 @@
 Deliberately runs with the standard library only; no credentials or AI vendor
 services, Docker daemon, repository write access, or host code execution.
 """
+import json
 import os
 import tempfile
 import unittest
@@ -197,6 +198,21 @@ class FailClosedHealingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.manager.trigger_self_healing("x" * 4001)
         self.assertEqual(self.manager.list_jobs(), [])
+
+    def test_escaped_lone_surrogates_rejected_without_job_or_500(self):
+        for encoded in (r'"timeout \ud800"', r'"\udc00 incident"'):
+            with self.subTest(encoded=encoded):
+                report = json.loads(encoded)
+                with self.assertRaisesRegex(ValueError, "invalid Unicode"):
+                    self.manager.trigger_self_healing(report, "api/synthetic.py")
+        self.assertEqual(self.manager.list_jobs(), [])
+
+    def test_valid_unicode_report_fingerprint_is_stable(self):
+        first = self.manager.trigger_self_healing("café \u2713", "api/synthetic.py")
+        second = self.manager.trigger_self_healing("café \u2713", "api/synthetic.py")
+        self.assertEqual(first.evidence_sha256, second.evidence_sha256)
+        self.assertFalse(first.execution_verified)
+        self.assertFalse(first.deployed)
 
     def test_returned_intake_job_cannot_forge_registered_state(self):
         returned = self.manager.trigger_self_healing("Synthetic outage")
