@@ -227,6 +227,33 @@ it('clears private inputs when the shared customer account changes',async()=>{
 });
 
 
+it('never paints the previous applicant’s private answers during an account switch, before passive cleanup',async()=>{
+ const glimpses:string[]=[];
+ function Switch(){const customer=useCustomerSession();return <button onClick={()=>customer.acceptSession({token:'synthetic',user:{email:'other@example.test',name:'Other'}} as never)}>Switch privacy test account</button>}
+ function AccountPaintProbe(){
+   const customer=useCustomerSession();
+   const email=customer.session?.user.email;
+   React.useLayoutEffect(()=>{
+     // Layout effects observe the committed DOM before TenderOriginalForms's
+     // passive account-change cleanup runs. Old contact values must be absent.
+     if(email==='other@example.test'){
+       const input=document.querySelector<HTMLInputElement>('[aria-label="SBD 1 Name of bidder"]');
+       glimpses.push(input?.value??'[not rendered]');
+     }
+   },[email]);
+   return null;
+ }
+ render(<CustomerSessionProvider><Switch/><TenderOriginalForms/><AccountPaintProbe/></CustomerSessionProvider>);
+ await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic private supplier'}});
+ fireEvent.click(screen.getByRole('button',{name:'Switch privacy test account'}));
+ expect(glimpses).toContain('[not rendered]');
+ expect(glimpses).not.toContain('Synthetic private supplier');
+ await waitFor(()=>expect(screen.queryByDisplayValue('Synthetic private supplier')).toBeNull());
+ expect(network).not.toHaveBeenCalled();
+});
+
+
 it('clears the previous applicant audit even when a replacement original fails inspection',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  expect(screen.getByText(/Local approval and amendment history/)).toBeTruthy();

@@ -255,6 +255,9 @@ export function TenderOriginalForms(){
   // Expose applicant-correctable context issues after a Prepare attempt;
   // these are review-packet prompts, not universal issuer requirements.
   const contextIssues=contextReviewAttempted?validatePacketContext(context,observedNow()):[];
+  // A customer-session change renders before the passive clearing effect runs.
+  // Never paint the previous applicant's private fields under the new account.
+  if(accountRef.current!==account) return <section role="status" aria-live="polite" aria-label="Original government form assistance">Clearing previous applicant’s local form work…</section>;
   return <section ref={formRoot} aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
     <p className="text-sm text-slate-200">Start with Treasury’s verified revised SBD 1 DOCX. Luqi fills seven supplier contact fields on the actual original. Required wording, tables, declarations, pricing and signature areas remain intact for your completion.</p>
