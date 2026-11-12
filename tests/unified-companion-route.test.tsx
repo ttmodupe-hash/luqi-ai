@@ -103,4 +103,25 @@ describe('Luqi Companion keeps real chat and private notes in separate customer 
     } finally { window.localStorage.removeItem(key); }
   });
 
+
+  it('conceals a revealed shared-device goal when the desktop window loses focus, without re-revealing it on focus', () => {
+    const key = 'luqi:capability-journey:v1';
+    const goal = 'Private goal hidden after changing desktop windows';
+    window.localStorage.setItem(key, JSON.stringify({
+      version: 1, goal, track: 'general', completed: [], startedAt: 10, updatedAt: 10,
+    }));
+    try {
+      render(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByText('Goal: ' + goal)).toBeTruthy();
+      fireEvent.blur(window);
+      expect(screen.queryByText('Goal: ' + goal)).toBeNull();
+      fireEvent.focus(window);
+      expect(screen.queryByText('Goal: ' + goal)).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByText('Goal: ' + goal)).toBeTruthy();
+      fireEvent(window, new Event('pagehide'));
+      expect(screen.queryByText('Goal: ' + goal)).toBeNull();
+    } finally { window.localStorage.removeItem(key); }
+  });
 });

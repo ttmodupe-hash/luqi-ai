@@ -45,6 +45,13 @@ test('new AI Companion is accessible and private notes stay separate without pai
   await expect(page.getByText('Goal: Sensitive shared-device journey example')).toBeVisible();
   await page.getByRole('button', { name: 'Hide saved goal' }).click();
   await expect(page.getByText('Goal: Sensitive shared-device journey example')).toHaveCount(0);
+  // A desktop focus change must conceal the same explicitly revealed local goal.
+  await page.getByRole('button', { name: 'Show a saved goal on this device' }).click();
+  await expect(page.getByText('Goal: Sensitive shared-device journey example')).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(page.getByText('Goal: Sensitive shared-device journey example')).toHaveCount(0);
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByText('Goal: Sensitive shared-device journey example')).toHaveCount(0);
   // Guests must retain an unauthenticated trial entry, without a provider request.
   await expect(page.getByRole('link', { name: 'Try three replies without registering' })).toBeVisible();
   await page.getByRole('link', { name: /My private notes/i }).click();

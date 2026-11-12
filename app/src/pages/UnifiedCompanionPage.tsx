@@ -16,16 +16,18 @@ function DeviceLocalJourneyPreview() {
     const hideWhenBackgrounded = () => {
       if (document.visibilityState === 'hidden') setSnapshot(undefined);
     };
-    const hideOnPageExit = () => setSnapshot(undefined);
+    const hideOnFocusLoss = () => setSnapshot(undefined);
     const hideOnExternalChange = (event: StorageEvent) => {
       if (event.key === null || event.key === CAPABILITY_JOURNEY_KEY) setSnapshot(undefined);
     };
     document.addEventListener('visibilitychange', hideWhenBackgrounded);
-    window.addEventListener('pagehide', hideOnPageExit);
+    window.addEventListener('blur', hideOnFocusLoss);
+    window.addEventListener('pagehide', hideOnFocusLoss);
     window.addEventListener('storage', hideOnExternalChange);
     return () => {
       document.removeEventListener('visibilitychange', hideWhenBackgrounded);
-      window.removeEventListener('pagehide', hideOnPageExit);
+      window.removeEventListener('blur', hideOnFocusLoss);
+      window.removeEventListener('pagehide', hideOnFocusLoss);
       window.removeEventListener('storage', hideOnExternalChange);
     };
   }, []);
@@ -36,7 +38,7 @@ function DeviceLocalJourneyPreview() {
     : null;
   return <>
     <section className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-200 sm:p-5" aria-label="Device-local journey privacy">
-      <p>A goal saved in this browser may belong to someone else who used this device. Its text stays hidden unless you choose to view it and is never added to AI requests.</p>
+      <p>A goal saved in this browser may belong to someone else who used this device. Its text stays hidden unless you choose to view it, hides when this window loses focus, and is never added to AI requests.</p>
       {snapshot === undefined && <button type="button" onClick={() => setSnapshot(readCapabilityJourney())}
         className="mt-3 rounded-xl border border-cyan-500 px-4 py-3 font-semibold text-cyan-100 hover:bg-cyan-900/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
         Show a saved goal on this device
