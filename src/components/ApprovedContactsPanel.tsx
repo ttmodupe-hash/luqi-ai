@@ -4,6 +4,7 @@ import type { AccountSession } from '../lib/private-conversations';
 import { p2pClient } from '../lib/p2p-client';
 import type { P2PApprovedContact } from '../../contracts/p2p';
 import type { ContactPresenceControls } from './useContactPresence';
+import './contact-presence-status.css';
 
 export default function ApprovedContactsPanel({ session, presence }: {
   session: AccountSession | null; presence?: ContactPresenceControls;
@@ -18,7 +19,7 @@ export default function ApprovedContactsPanel({ session, presence }: {
   useEffect(() => {
     if (!session) return;
     let current = true, pending = false, verified = false, epoch = 0;
-    setContacts([]); setCheckedAt(0); setState('checking');
+    setContacts([]); setCheckedAt(0); setEligible(false); setState('checking');
     const api = p2pClient(session.token);
     const visible = () => document.visibilityState !== 'hidden';
     const refresh = async () => {
@@ -67,7 +68,7 @@ export default function ApprovedContactsPanel({ session, presence }: {
           onChange={event => setQuery(event.target.value)} autoComplete="off" /></label>
         <ul aria-label="Your approved contacts">{found.map(person => {
           const status = fresh ? person.presence : 'unknown';
-          const label = status === 'online' ? 'Online' : status === 'offline' ? 'Offline or away' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
+          const label = status === 'online' ? 'Online' : status === 'away' ? 'Away' : status === 'offline' ? 'Offline' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
           return <li key={person.circleId} className="luqi-contact-person">
             <span className={'luqi-contact-avatar is-' + status} aria-hidden="true">{person.name.slice(0, 1).toLocaleUpperCase()}<i /></span>
             <div><Link to={'/chat/people?circle=' + encodeURIComponent(person.circleId)}>{person.name}</Link><small>{label}</small></div>
@@ -75,12 +76,22 @@ export default function ApprovedContactsPanel({ session, presence }: {
         })}</ul>
         {found.length > 0 && <p className="luqi-people-in-app-hint">Select a person to open their private conversation inside Luqi.</p>}
         {!found.length && <p>{contacts.length ? 'No approved contact matches this name.' : 'No mutually approved contacts yet. Add a private invitation in your circles.'}</p>}
-        {presence && eligible && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
-          onChange={event => presence.setSharing(event.target.checked)} /> Share my online status from this tab</label>}
-        {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       </>}
+      {presence && ((state === 'ready' && eligible) || presence.sharing) && <label className="luqi-presence-consent"><input type="checkbox" checked={presence.sharing}
+        onChange={event => presence.setSharing(event.target.checked)} /> {state === 'ready' && eligible
+          ? 'Share my online status from this tab'
+          : 'Stop sharing my online status from this tab'}</label>}
+      {presence?.sharing && state === 'ready' && eligible && presence.setAway && <button type="button" className="luqi-presence-mode"
+        aria-pressed={presence.away === true} onClick={() => presence.setAway?.(!presence.away)}>
+        {presence.away ? 'Show me as online' : 'Show me as away'}
+      </button>}
+      {presence?.sharing && state !== 'ready' && <p className="luqi-collaboration-privacy" role="status">
+        Shared status is not confirmed. You can stop sharing from this tab.
+      </p>}
+      {presence?.message && (state === 'ready' || !presence.sharing) &&
+        <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       <Link className="luqi-people-manage" to="/chat/people">Open private chat in Luqi</Link>
     </>}
-    <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means recent foreground activity; closed or background tabs may take up to 75 seconds to become away. Other sharing tabs can keep you online. No last-seen history is shared.</p>
+    <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means a recent foreground signal. Away is your explicit choice. Offline means a previously shared signal expired after 75 seconds, not proof that a device is disconnected. Another Online tab can keep you online; hidden or unconfirmed status stays neutral. No last-seen history is shared.</p>
   </div>;
 }

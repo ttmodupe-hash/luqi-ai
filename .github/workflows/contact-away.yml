@@ -1,0 +1,26 @@
+name: LUQI Contact Away
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: contact-away-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  explicit-presence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node --experimental-transform-types --test tests/contact-away-local.test.mjs
+      - run: npm ci --legacy-peer-deps --include=dev --ignore-scripts
+      - run: npx --no-install vitest run tests/contact-away-ui.test.tsx tests/approved-contacts-panel.test.tsx tests/p2p-routes.test.ts tests/p2p-parity.test.ts
+      - run: npx --no-install tsc --noEmit --strict --skipLibCheck --jsx react-jsx --target es2022 --module esnext --moduleResolution bundler --esModuleInterop src/components/useContactPresence.ts src/components/ApprovedContactsPanel.tsx src/lib/p2p-client.ts
