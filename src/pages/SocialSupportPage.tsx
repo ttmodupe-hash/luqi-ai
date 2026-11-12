@@ -1,6 +1,6 @@
 import { useEffect,useState } from 'react';
 import { Link } from 'react-router';
-import { SOCIAL_SUPPORT_REVIEWED_ON, SOCIAL_SUPPORT_TOPICS, isSocialSupportReviewFresh,
+import { SOCIAL_SUPPORT_REVIEWED_ON, SOCIAL_SUPPORT_RECHECK_AFTER, SOCIAL_SUPPORT_TOPICS, isSocialSupportReviewFresh,
  listSupportTopics, supportTopic, type SupportAgency } from '../lib/social-support-sources';
 
 /** Free, on-device public information. No identity forms, government integration or provider call. */
@@ -13,7 +13,25 @@ export default function SocialSupportPage({defaultAgency='sassa'}:{defaultAgency
  },[defaultAgency]);
  const current=supportTopic(selected);
  const active=current?.agency===agency?current:listSupportTopics(agency)[0];
- const fresh=isSocialSupportReviewFresh(new Date());
+ // A long-lived tab must not keep displaying a stale review as current after
+ // expiry. Recheck on resume, and schedule just the next review boundary.
+ const [fresh,setFresh]=useState(()=>isSocialSupportReviewFresh(new Date()));
+ useEffect(()=>{
+   const refresh=()=>setFresh(isSocialSupportReviewFresh(new Date()));
+   const deadline=Date.parse(SOCIAL_SUPPORT_RECHECK_AFTER+'T23:59:59+02:00');
+   const remaining=deadline-Date.now()+1;
+   const timer=remaining>0 && remaining<=2_147_483_647
+     ? window.setTimeout(refresh,remaining) : null;
+   window.addEventListener('focus',refresh);
+   window.addEventListener('pageshow',refresh);
+   document.addEventListener('visibilitychange',refresh);
+   return ()=>{
+     if(timer!==null)window.clearTimeout(timer);
+     window.removeEventListener('focus',refresh);
+     window.removeEventListener('pageshow',refresh);
+     document.removeEventListener('visibilitychange',refresh);
+   };
+ },[]);
  function changeAgency(next:SupportAgency){
    setAgency(next);setSelected(next==='uif'?'uif-unemployed':'sassa-srd');
  }
@@ -74,7 +92,7 @@ export default function SocialSupportPage({defaultAgency='sassa'}:{defaultAgency
     <p className="text-sm text-slate-200"><strong>UIF:</strong> 0800 030 007. For claims and online-service problems, contact UIF directly or visit a Labour Centre.</p>
    </div>
    <p className="text-sm text-slate-300">Do not pay anyone who promises a grant or UIF approval. Do not share passwords, identity numbers, bank details or OTP codes with Luqi. Government support channels may use identity verification on their own official sites.</p>
-   <p className="text-xs text-slate-300">Luqi’s owner receives a separate daily official-source review; this page does not automatically synchronize policy or private claim information.</p>
+   <p className="text-xs text-slate-300">Use these steps to prepare your enquiry, and verify current rates, payment dates, eligibility, claim channels and appeal deadlines on the original SASSA or UIF websites. Luqi does not access your agency account or continuously update these instructions.</p>
   </section>
   <nav aria-label="More Luqi services" className="flex flex-wrap gap-4 text-sm">
    <Link className="text-cyan-200 underline" to="/opportunities">Jobs and funding opportunities</Link>
