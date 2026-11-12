@@ -30,7 +30,7 @@ export function supplierFieldProgress(values: SupplierValues, fields: readonly S
   const rows = fields.map(field => {
     const value = values[field.id];
     const issue = supplierFieldIssue(field, value);
-    const state: SupplierFieldState = issue ? 'attention' : value.trim() ? 'entered' : 'blank';
+    const state: SupplierFieldState = issue ? 'attention' : typeof value === 'string' && value.trim() ? 'entered' : 'blank';
     return {field, state, issue};
   });
   return {rows, entered: rows.filter(row => row.state === 'entered').length,

@@ -30,6 +30,15 @@ test('invisible Unicode format characters cannot count as real bidder names or c
   assert.ok(progress.attention.some(({field:item})=>item.id===id));
  }
 });
+test('malformed supplier values fail safely without fabricating progress or losing optional blanks',()=>{
+ const values={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',telephoneNumber:null,email:undefined};
+ const original={...values};
+ const result=supplierFieldProgress(values,SBD1_FIELDS);
+ assert.equal(result.entered,1);assert.equal(result.blank,4);assert.equal(result.total,7);
+ assert.deepEqual(result.attention.map(({field})=>field.id),['telephoneNumber','email']);
+ assert.deepEqual(values,original);
+ assert.equal(supplierFieldIssue(field('cellphone'),''),null);
+});
 test('only actual supplied acceptable text counts as entered',()=>{
  const v={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic',email:'bad',postalAddress:' '};const r=supplierFieldProgress(v,SBD1_FIELDS);
  assert.equal(r.entered,1);assert.equal(r.blank,4);assert.equal(r.attention.length,2);
