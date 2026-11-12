@@ -32,6 +32,22 @@ it('refuses ambiguous timezones, past deadlines, invalid prices and empty channe
   expect(validatePacketContext({...context,...change} as TenderPacketContext,now).length).toBeGreaterThan(0);
  }
 });
+it('blocks invisible Unicode format characters in required bid context before preparation',()=>{
+  const labels: Array<[keyof TenderPacketContext,string]> = [
+    ['reference','Tender reference'],['issuer','Procuring authority'],
+    ['destination','Exact bid box, official portal or prescribed email'],
+    ['principal','Applicant or authorised representative'],
+  ];
+  // Synthetic facts only. Neither invisible-only placeholders nor hidden characters
+  // inside a seemingly real tender reference, name or channel are trustworthy inputs.
+  for(const [key,label] of labels){
+    for(const value of ['\u200B','Synthetic\u2060 value']){
+      const input=value.replace(/\\u([0-9a-fA-F]{4})/g,(_,code)=>String.fromCharCode(parseInt(code,16)));
+      expect(validatePacketContext({...context,[key]:input},now)).toContain(label);
+    }
+  }
+  expect(validatePacketContext(context,now)).toEqual([]);
+});
 it('changes the digest for each material context or file amendment',async()=>{
  const {packet}=await prepare();
  for(const change of [{priceZar:'2000.00'},{deadline:'2026-12-30T11:00+02:00'},{reference:'SYNTHETIC-002'},
