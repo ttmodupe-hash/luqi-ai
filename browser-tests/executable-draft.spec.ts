@@ -14,6 +14,10 @@ test("executes a local draft in WASM and requires review before export", async (
       paidRequests.push(request.url());
   });
   await page.goto("/#/devsecnet?panel=engineering");
+  // Advanced development remains available, but is intentionally not the
+  // first thing presented to ordinary customers.
+  await page.getByText("For developers: write and test a JavaScript function", { exact: true }).click();
+  await expect(page.getByLabel("Project idea for this function")).toBeVisible();
   await page
     .getByLabel("Project idea for this function")
     .fill("A school connectivity offer");

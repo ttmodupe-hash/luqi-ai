@@ -39,10 +39,11 @@ import {
 } from "./reference-examples";
 import "./devsecnet.css";
 import ExecutableDraftWorkflow from "./ExecutableDraftWorkflow";
+import SimpleWebsiteStarter from "./SimpleWebsiteStarter";
 const PANELS = [
   ["product", "S1 · Product & PM"],
   ["design", "S2 · Design"],
-  ["engineering", "S3 · Engineering"],
+  ["engineering", "S3 · Make a website"],
   ["security", "S4 · Security"],
   ["network", "S5 · Network"],
   ["compute", "S6 · Compute & costs"],
@@ -102,7 +103,7 @@ export default function DevSecNetStudioPage() {
   const [params] = useSearchParams(),
     panel = PANELS.some((p) => p[0] === params.get("panel"))
       ? params.get("panel")!
-      : "product";
+      : "engineering";
   const [plan, setPlan] = useState<ProductPlan>(emptyPlan),
     [money, setMoney] = useState({ price: "", cost: "", fixed: "", units: "" });
   const [colors, setColors] = useState({
@@ -587,39 +588,38 @@ export default function DevSecNetStudioPage() {
   else if (panel === "engineering")
     content = (
       <>
-        <ExecutableDraftWorkflow />
-        <h2>S3 · Engineering reference desk</h2>
+        <SimpleWebsiteStarter key={identity ?? "guest"} />
+        <details className="advancedDevTools">
+          <summary>For developers: write and test a JavaScript function</summary>
+          <ExecutableDraftWorkflow />
+        </details>
+        <details className="advancedDevTools">
+          <summary>For experienced developers: code and network examples</summary>
+          <p>
+            These references are illustrative and do not create a working application.
+            They are for developers who already understand programming.
+          </p>
+          {DEVSECNET_EXAMPLES.map((ex) => (
+            <details key={ex.id}>
+              <summary>{ex.title}</summary>
+              <p>{ex.note}</p>
+              <pre>{ex.code}</pre>
+              <button onClick={() => save({
+                title: ex.title, note: ex.note, code: ex.code, executed: false,
+              }, "luqi-reference-example.json")}>
+                Download reference
+              </button>
+            </details>
+          ))}
+        </details>
         <p>
-          Typed examples for human review. They are never executed, deployed or
-          substituted for your code. A working application still needs
-          authentication, validation, idempotency, transactional writes, tests
-          and rollback.
+          Want to learn technical skills through practice instead of reading code?
+          {" "}<Link to="/ccna">Try the networking academy</Link>
+          {" "}or{" "}<Link to="/study-desk">make your own study cards</Link>.
         </p>
-        {DEVSECNET_EXAMPLES.map((ex) => (
-          <details key={ex.id}>
-            <summary>{ex.title}</summary>
-            <p>{ex.note}</p>
-            <pre>{ex.code}</pre>
-            <button
-              onClick={() =>
-                save(
-                  {
-                    title: ex.title,
-                    note: ex.note,
-                    code: ex.code,
-                    executed: false,
-                  },
-                  "luqi-reference-example.json",
-                )
-              }
-            >
-              Download reference
-            </button>
-          </details>
-        ))}
         <p>
-          <Link to="/chat">Open AI Chat</Link> for an explicitly requested
-          review under existing consent and budget controls.
+          Experienced developers can{" "}<Link to="/chat">request an AI review</Link>
+          {" "}with explicit consent and the existing allowance.
         </p>
       </>
     );
@@ -849,13 +849,18 @@ export default function DevSecNetStudioPage() {
       <header>
         <Link to="/">← LUQI workspace</Link>
         <p>TOOL 022 · SOVEREIGN DEVSECNET STUDIO</p>
-        <h1>Plan. Design. Review. Measure.</h1>
+        <h1>Build something useful. Learn by doing.</h1>
         <p>
-          Six practical workstreams, with your decisions at the center. Local
-          calculations and tests run in your browser. Optional AI drafting needs
-          your consent and uses the existing allowance. Changing accounts or
-          leaving clears drafts from this page.
+          Start with a practical result. Create a simple website for your service,
+          plan a business or practise a skill. Each link leads to a working
+          local tool, not a list of technical promises. Nothing is published automatically.
         </p>
+        <nav className="userGoals" aria-label="Choose a useful outcome">
+          <Link to="/devsecnet?panel=engineering">Make a service website</Link>
+          <Link to="/business-desk">Plan a small business</Link>
+          <Link to="/study-desk">Make study cards</Link>
+          <Link to="/ccna">Practise networking</Link>
+        </nav>
       </header>
       <nav aria-label="Studio workstreams">
         {PANELS.map(([id, title]) => (
@@ -870,6 +875,8 @@ export default function DevSecNetStudioPage() {
       </nav>
       <section>{content}</section>
       <section>
+        <details className="advancedDevTools">
+          <summary>For technical teams: infrastructure proposals and costs</summary>
         <h2>Resource blueprint · proposals only</h2>
         <div className="table-scroll">
           <table>
@@ -915,6 +922,7 @@ export default function DevSecNetStudioPage() {
           Autonomous multi-agent execution, network pushes and fault-tolerant
           quantum hardware are not activated by this planning studio.
         </p>
+        </details>
       </section>
       <footer>
         <p role="status">{notice}</p>
@@ -929,12 +937,15 @@ export default function DevSecNetStudioPage() {
             Cancel local operation
           </button>
         )}
+        <details className="advancedDevTools">
+          <summary>For technical teams: source references</summary>
         <h2>Primary technical references</h2>
         {DEVSECNET_SOURCES.map((s) => (
           <a key={s.url} href={s.url} target="_blank" rel="noreferrer">
             {s.title}
           </a>
         ))}
+        </details>
       </footer>
     </main>
   );
