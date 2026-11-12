@@ -287,6 +287,41 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
   });
 
+  it('rechecks an outdated mission link even without a storage event', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    const mission = screen.getByRole('link', { name: /Continue mission/i });
+    saveCapabilityJourney('I want to start a township business'); // synthetic same-tab change
+    fireEvent.click(mission);
+    expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    expect(screen.queryByRole('link', { name: /Continue mission/i })).toBeNull();
+  });
+
+  it('rechecks a capability link even without a storage event', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    const capability = screen.getAllByRole('link', { name: /Open capability|Review capability/i })[0];
+    setCapabilityJourneyStep(2, true); // silent saved-progress change
+    fireEvent.click(capability);
+    expect(readCapabilityJourney()?.completed).toEqual([2]);
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    expect(screen.queryAllByRole('link', { name: /Open capability|Review capability/i })).toHaveLength(0);
+  });
+
+  it('blocks an existing mission link when storage becomes unreadable', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    const mission = screen.getByRole('link', { name: /Continue mission/i });
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Synthetic blocked storage', 'SecurityError');
+    });
+    fireEvent.click(mission);
+    expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/i);
+    expect(screen.getByRole('button', { name: 'Load latest saved journey' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Continue mission/i })).toBeNull();
+  });
+
   it('prevents navigation to a stale goal until the user reloads the latest saved journey', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);

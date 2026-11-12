@@ -146,6 +146,37 @@ test('320px stale goal does not navigate to the previous mission before keyboard
   await otherTab.close();
 });
 
+test('320px keyboard guards mission and stage navigation without a storage event', async ({ page }) => {
+  const key = 'luqi:capability-journey:v1';
+  // Same-document writes do not emit a storage event here.
+  await page.evaluate(key => {
+    const saved = JSON.parse(localStorage.getItem(key)!);
+    localStorage.setItem(key, JSON.stringify({
+      ...saved, goal: 'I want to start a township business', completed: [], updatedAt: saved.updatedAt + 1,
+    }));
+  }, key);
+  await page.getByRole('link', { name: /Continue mission/i }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/#\/journey$/);
+  await expect(page.getByRole('status')).toContainText('changed in another tab');
+  await expect(page.getByRole('link', { name: /Continue mission/i })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to start a township business' })).toBeFocused();
+
+  await page.evaluate(key => {
+    const saved = JSON.parse(localStorage.getItem(key)!);
+    localStorage.setItem(key, JSON.stringify({ ...saved, completed: [2], updatedAt: saved.updatedAt + 1 }));
+  }, key);
+  await page.getByRole('link', { name: /Open capability|Review capability/i }).first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/#\/journey$/);
+  await expect(page.getByRole('status')).toContainText('changed in another tab');
+  await expect(page.getByRole('link', { name: /Open capability|Review capability/i })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test('denied storage write does not claim that a stage was completed', async ({ page }) => {
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;

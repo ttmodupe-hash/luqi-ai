@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Check, Circle, Flag, RotateCcw, ShieldCheck, Target, Trophy } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
@@ -80,6 +80,24 @@ export default function CapabilityJourneyPage() {
   function warnStaleJourney() {
     setNeedsReload(true);
     setNotice(STALE_JOURNEY_NOTICE);
+  }
+
+  // A storage event may be delayed or absent. Check again before following a link.
+  function guardJourneyNavigation(event: MouseEvent<HTMLAnchorElement>) {
+    if (needsReload) {
+      event.preventDefault();
+      return;
+    }
+    if (!canReadJourneyStorage()) {
+      event.preventDefault();
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (!journeySnapshotMatchesSaved()) {
+      event.preventDefault();
+      warnStaleJourney();
+    }
   }
 
   function loadLatestSavedJourney() {
@@ -181,8 +199,8 @@ export default function CapabilityJourneyPage() {
         </div>
         {needsReload
           ? <p className="luqi-journey-device">Load the latest saved journey before continuing this mission.</p>
-          : nextStep ? <Link className="luqi-journey-primary" to={nextStep.path}>Continue mission <ArrowRight size={18} /></Link>
-          : <Link className="luqi-journey-primary" to="/possibility">Set the next goal <Trophy size={18} /></Link>}
+          : nextStep ? <Link className="luqi-journey-primary" to={nextStep.path} onClick={guardJourneyNavigation}>Continue mission <ArrowRight size={18} /></Link>
+          : <Link className="luqi-journey-primary" to="/possibility" onClick={guardJourneyNavigation}>Set the next goal <Trophy size={18} /></Link>}
       </section>
 
       <section className="luqi-journey-stages" aria-label="Journey stages">
@@ -200,7 +218,7 @@ export default function CapabilityJourneyPage() {
               <span>{step.detail}</span>
               {needsReload
                 ? <span>Load latest saved journey to open this capability.</span>
-                : <Link to={step.path}>{complete ? 'Review capability' : 'Open capability'} <ArrowRight size={15} /></Link>}
+                : <Link to={step.path} onClick={guardJourneyNavigation}>{complete ? 'Review capability' : 'Open capability'} <ArrowRight size={15} /></Link>}
             </div>
           </article>;
         })}
