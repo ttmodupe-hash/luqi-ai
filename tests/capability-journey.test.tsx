@@ -32,6 +32,25 @@ describe('LUQI Capability Journey', () => {
     expect(saved?.completed).toEqual([]);
   });
 
+  it('does not overwrite the saved goal with an outdated preview after the input changes', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    setCapabilityJourneyStep(0, true);
+    render(<MemoryRouter><PossibilityEnginePage /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'I want to become a network engineer' }));
+    fireEvent.change(screen.getByLabelText('What do you want to make possible?'), {
+      target: { value: 'I want to start a township business' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Save as my journey/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+    expect(readCapabilityJourney()?.completed).toEqual([0]);
+    expect(screen.getByRole('status').textContent).toMatch(/Build the updated path before saving/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Build my LUQI path' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Save as my journey/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+  });
+
   it('tracks only user-confirmed stages with exact percentage math', () => {
     const saved = saveCapabilityJourney('I want to start a township business');
     expect(capabilityJourneyProgress(saved)).toBe(0);

@@ -32,6 +32,7 @@ export default function PossibilityEnginePage() {
     const value = goal.trim();
     if (!value || value.length > 500) return;
     setSubmitted(value);
+    setSaveNotice('');
   }
 
   function useExample(value: string) {
@@ -42,6 +43,12 @@ export default function PossibilityEnginePage() {
 
   function saveJourney() {
     if (!submitted) return;
+    // Do not silently save an older preview after the user edits the goal.
+    // The person must review the newly built path before opting into storage.
+    if (goal.trim() !== submitted) {
+      setSaveNotice('Your goal has changed. Build the updated path before saving it on this device.');
+      return;
+    }
     const saved = saveCapabilityJourney(submitted);
     if (!saved) {
       setSaveNotice('This browser did not allow LUQI to save the journey on this device. The path still works without saving.');
