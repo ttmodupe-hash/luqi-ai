@@ -179,3 +179,10 @@
   margin-bottom: 32px;
   overflow-wrap: anywhere;
 }
+
+/* Some WebKit layouts exposed nested <summary> elements from a closed
+   Advanced disclosure. Preserve native disclosure behavior while ensuring
+   all non-summary descendants remain inaccessible until expanded. */
+.luqi-devsecnet .advancedDevTools:not([open]) > :not(summary) {
+  display: none !important;
+}
