@@ -789,5 +789,86 @@ class TestNestedRetirementDependencies(unittest.TestCase):
     def test_nested_endpoint_dependency_is_early_refused(self):
         self._assert_prebody_denial(nested=True)
 
+
+class MountedRetirementPrebodySafety(unittest.TestCase):
+    """Mounted FastAPI apps must not bypass retired-route prebody refusal."""
+
+    @staticmethod
+    def _protected_child():
+        child = FastAPI()
+
+        @child.post("/upload")
+        async def retired(
+            file: UploadFile = File(...),
+            _guard=Depends(require_legacy_route_disabled),
+        ):
+            raise AssertionError("Retired handler must not run")
+        return child
+
+    @staticmethod
+    def _client(root):
+        root.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=root)
+        class Spy:
+            reads = 0
+            async def __call__(self, scope, receive, send):
+                async def observed_receive():
+                    self.reads += 1
+                    return await receive()
+                await root(scope, observed_receive, send)
+        spy = Spy()
+        return TestClient(spy), spy
+
+    def test_mounted_guard_refuses_before_multipart_receive(self):
+        root = FastAPI()
+        root.mount("/legacy", self._protected_child())
+        client, spy = self._client(root)
+        response = client.post(
+            "/legacy/upload", files={"file": ("x.bin", b"x" * 1048576)}
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(spy.reads, 0)
+
+    def test_nested_mount_refuses_before_multipart_receive(self):
+        root, middle = FastAPI(), FastAPI()
+        middle.mount("/two", self._protected_child())
+        root.mount("/one", middle)
+        client, spy = self._client(root)
+        response = client.post(
+            "/one/two/upload", files={"file": ("x.bin", b"x" * 1048576)}
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual(spy.reads, 0)
+
+    def test_unprotected_mount_still_accepts_multipart(self):
+        root, child = FastAPI(), FastAPI()
+
+        @child.post("/upload")
+        async def public(file: UploadFile = File(...)):
+            return {"filename": file.filename}
+        root.mount("/public", child)
+        client, spy = self._client(root)
+        response = client.post(
+            "/public/upload", files={"file": ("fixture.txt", b"ok")}
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["filename"], "fixture.txt")
+        self.assertGreater(spy.reads, 0)
+
+    def test_first_full_match_keeps_public_duplicate_precedence(self):
+        root, public = FastAPI(), FastAPI()
+
+        @public.post("/upload")
+        async def public_upload():
+            return {"ok": True}
+        root.mount("/legacy", public)
+        root.mount("/legacy", self._protected_child())
+        client, spy = self._client(root)
+        response = client.post("/legacy/upload")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json(), {"ok": True})
+        self.assertEqual(spy.reads, 0)
+
 if __name__ == "__main__":
     unittest.main()

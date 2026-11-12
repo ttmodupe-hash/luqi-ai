@@ -12,7 +12,7 @@ assume they share user IDs or wallet balances with the legacy SQLite ledger.
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from starlette.routing import Match
+from starlette.routing import Match, Mount
 
 
 def require_legacy_route_disabled() -> None:
@@ -58,6 +58,30 @@ def _has_retirement_dependency(root):
     return False
 
 
+def _matches_retired_http_route(scope, routes):
+    """Mirror first-full-match routing across FastAPI mounts, without body reads.
+
+    A mounted FastAPI app owns its own APIRoutes. Looking only at the outer
+    router misses their prebody retirement guards. Do not inspect arbitrary
+    ASGI applications that do not expose Starlette routing metadata.
+    """
+    for route in tuple(routes):
+        match, child_scope = route.matches(scope)
+        if match is not Match.FULL:
+            continue
+        if isinstance(route, APIRoute):
+            return _has_retirement_dependency(route.dependant)
+        if isinstance(route, Mount):
+            nested_router = getattr(route.app, "router", None)
+            nested_routes = getattr(nested_router, "routes", None)
+            if nested_routes is not None:
+                return _matches_retired_http_route(
+                    {**scope, **child_scope}, nested_routes
+                )
+        return False
+    return False
+
+
 class LegacyPrebodyRefusalMiddleware:
     """Refuse registered retired HTTP endpoints before JSON or multipart parsing.
 
@@ -76,28 +100,20 @@ class LegacyPrebodyRefusalMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            # Snapshot the current routing table without parsing request data.
-            # Preserve the router's first-full-match precedence for duplicates.
-            for route in tuple(self.route_owner.router.routes):
-                match, _ = route.matches(scope)
-                if match is Match.FULL:
-                    if isinstance(route, APIRoute) and _has_retirement_dependency(
-                        route.dependant
-                    ):
-                        response = JSONResponse(
-                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            headers={"Cache-Control": "no-store"},
-                            content={"detail": {
-                                "code": "LEGACY_API_RETIRED",
-                                "message": (
-                                    "This legacy API is unavailable pending verified account "
-                                    "ownership, provider-signed webhooks and durable billing."
-                                ),
-                            }},
-                        )
-                        # Never call receive(): no file upload, JSON parsing,
-                        # authentication spoof, or billable handler can proceed.
-                        await response(scope, receive, send)
-                        return
-                    break
+            # Respect the first full match, including mounted FastAPI routers.
+            if _matches_retired_http_route(scope, self.route_owner.router.routes):
+                response = JSONResponse(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    headers={"Cache-Control": "no-store"},
+                    content={"detail": {
+                        "code": "LEGACY_API_RETIRED",
+                        "message": (
+                            "This legacy API is unavailable pending verified account "
+                            "ownership, provider-signed webhooks and durable billing."
+                        ),
+                    }},
+                )
+                # Never call receive(): no file upload or request body parsed.
+                await response(scope, receive, send)
+                return
         await self.app(scope, receive, send)
