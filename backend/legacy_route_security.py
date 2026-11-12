@@ -12,7 +12,7 @@ assume they share user IDs or wallet balances with the legacy SQLite ledger.
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from starlette.routing import Host, Match, Mount
+from starlette.routing import Host, Match, Mount, Router
 
 
 def require_legacy_route_disabled() -> None:
@@ -72,6 +72,10 @@ def _routed_app_routes(app):
         if app is None or id(app) in seen:
             break
         seen.add(id(app))
+        # Starlette Router can be mounted directly, without a FastAPI wrapper.
+        # Its .routes own the same compiled APIRoute dependency metadata.
+        if isinstance(app, Router):
+            return app.routes
         router = getattr(app, "router", None)
         routes = getattr(router, "routes", None)
         if routes is not None:

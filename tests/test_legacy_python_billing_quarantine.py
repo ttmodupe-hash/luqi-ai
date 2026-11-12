@@ -980,3 +980,66 @@ class MountedRetirementPrebodySafety(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DirectStarletteRouterMountPrebodyTests(unittest.TestCase):
+    """Guard direct Starlette Router mounts before untrusted input is parsed."""
+
+    def test_mounted_router_refuses_malformed_json_and_upload_prebody(self):
+        from fastapi.routing import APIRoute
+        from starlette.routing import Router
+
+        executed = []
+
+        async def retired(payload: dict):
+            executed.append(True)
+            return {"unsafe": True}
+
+        async def public():
+            return {"public": True}
+
+        nested = Router(routes=[
+            APIRoute("/retired", retired, methods=["POST"],
+                     dependencies=[Depends(require_legacy_route_disabled)]),
+            APIRoute("/public", public, methods=["GET"]),
+        ])
+        app = FastAPI()
+        app.mount("/v1", nested)
+        app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+
+        class ReceiveProbe:
+            def __init__(self, downstream):
+                self.app = downstream
+                self.http_body_reads = 0
+
+            async def __call__(self, scope, receive, send):
+                async def observed_receive():
+                    # TestClient lifespan receives are not HTTP body reads.
+                    if scope.get("type") == "http":
+                        self.http_body_reads += 1
+                    return await receive()
+                await self.app(scope, observed_receive, send)
+
+        probe = ReceiveProbe(app)
+        with TestClient(probe) as client:
+            malformed = client.post(
+                "/v1/retired", content=b"{bad",
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(malformed.status_code, 503)
+            self.assertEqual(malformed.json()["detail"]["code"], "LEGACY_API_RETIRED")
+            self.assertEqual(malformed.headers["cache-control"], "no-store")
+            self.assertEqual(probe.http_body_reads, 0)
+
+            upload = client.post(
+                "/v1/retired",
+                files={"file": ("synthetic.bin", b"x" * (1024 * 1024),
+                                "application/octet-stream")},
+            )
+            self.assertEqual(upload.status_code, 503)
+            self.assertEqual(probe.http_body_reads, 0)
+            self.assertEqual(executed, [])
+
+            allowed = client.get("/v1/public")
+            self.assertEqual(allowed.status_code, 200)
+            self.assertEqual(allowed.json(), {"public": True})
