@@ -37,7 +37,8 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
       <button type="button" className={buttonStyle} aria-pressed={!guided} onClick={()=>changeView(false)}>Show all contact fields</button>
       <button type="button" className={buttonStyle} aria-pressed={guided} onClick={()=>changeView(true)}>Guide me step by step</button>
     </div>
-    <p role="status" aria-live="polite" className="text-sm text-cyan-100">{progress.entered} of {progress.total} supported contact fields have valid-format entries.</p>
+    <p role="status" aria-live="polite" className="text-sm text-cyan-100">{progress.entered} of {progress.total} supported contact fields contain entries without detected input errors.</p>
+    <p className="text-xs text-slate-300">The count checks text length, hidden characters and basic email syntax only; it does not validate phone numbers, addresses or identity.</p>
     <p className="text-xs text-amber-200">This is not overall application completion or verification of your facts. Other official fields, declarations, prices and signatures remain for you. A blank field allowed in this partial export may still be required by your issuer.</p>
     {progress.attention.length>0 && <div className="space-y-2 rounded-lg border border-amber-600 p-3" aria-label="Contact fields needing attention">
       <p className="text-sm">Fields to check before preparing the partial original:</p>

@@ -546,3 +546,16 @@ it('explains rejected 24-hour deadline input beside the focused field without gu
  expect(archive).not.toHaveBeenCalled();
  expect(network).not.toHaveBeenCalled();
 });
+
+it('counts supported entries without claiming verified phone formats or full completion',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ expect(screen.getByText('0 of 7 supported contact fields contain entries without detected input errors.')).toBeTruthy();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic bidder'}});
+ fireEvent.change(screen.getByLabelText('SBD 1 Telephone number'),{target:{value:'SYNTHETIC-NOT-VERIFIED'}});
+ expect(screen.getByText('2 of 7 supported contact fields contain entries without detected input errors.')).toBeTruthy();
+ expect(screen.getByText(/The count checks text length, hidden characters and basic email syntax only/)).toBeTruthy();
+ expect(screen.getByText(/This is not overall application completion or verification of your facts/)).toBeTruthy();
+ expect(screen.queryByText(/valid-format entries/)).toBeNull();
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
