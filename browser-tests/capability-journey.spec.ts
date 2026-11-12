@@ -124,7 +124,7 @@ test('320px stale goal does not navigate to the previous mission before keyboard
   const origin = new URL(page.url()).origin;
   await otherTab.route('**/*', route => {
     const url = new URL(route.request().url());
-    if (url.origin !== origin || /^\\/(api|v1)\\//.test(url.pathname)) return route.abort();
+    if (url.origin !== origin || /^\/(api|v1)\//.test(url.pathname)) return route.abort();
     return route.continue();
   });
   await otherTab.goto('/#/possibility');
