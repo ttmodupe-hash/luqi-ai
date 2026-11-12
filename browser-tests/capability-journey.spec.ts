@@ -142,3 +142,36 @@ test('silent storage no-op at 320px never claims completed or cleared progress',
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+
+test('edited goal cannot forward an outdated preview at 320px using keyboard', async ({ page }) => {
+  // The beforeEach fixture already saved a separate, device-local goal.
+  const originalGoal = 'I want to become a network engineer';
+  const newGoal = 'I want to start a township business';
+  await page.goto('/#/possibility');
+  await page.getByRole('button', { name: originalGoal }).click();
+  await page.getByLabel('What do you want to make possible?').fill(newGoal);
+
+  const continueLink = page.getByRole('link', { name: /Continue without saving/i });
+  await continueLink.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(page).toHaveURL(/\/#\/possibility$/);
+  await expect(page.getByRole('status')).toContainText('Build the updated path before continuing');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('luqi:capability-journey:v1') || 'null')?.goal)).toBe(originalGoal);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+
+  // Only a deliberately rebuilt path may be passed to Ask Luqi; this is
+  // navigation-state verification, not a claim that an AI reply was generated.
+  await page.getByRole('button', { name: 'Build my LUQI path' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Your goal has changed. Build the updated path before continuing.')).toHaveCount(0);
+  await continueLink.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/#\/ask$/);
+  const forwardedGoal = await page.evaluate(() =>
+    (history.state as { usr?: { luqiHomeNeed?: string } } | null)?.usr?.luqiHomeNeed,
+  );
+  expect(forwardedGoal).toBe(newGoal);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('luqi:capability-journey:v1') || 'null')?.goal)).toBe(originalGoal);
+});
