@@ -239,7 +239,9 @@ class SelfHealingPipelineManager:
     ) -> Tuple[bool, str]:
         # The caller's reviewer string is NOT proof of identity.
         # In-process approval cannot merge/deploy or change the job to deployed.
-        if job_id not in self._jobs:
+        # JSON callers may supply arrays/objects. Never let an unhashable
+        # identifier raise TypeError before the fail-closed refusal.
+        if type(job_id) is not str or job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,
@@ -252,7 +254,9 @@ class SelfHealingPipelineManager:
         self, job_id: str, reason: str = "Requires manual code review",
         reviewer: str = "unverified"
     ) -> Tuple[bool, str]:
-        if job_id not in self._jobs:
+        # JSON callers may supply arrays/objects. Never let an unhashable
+        # identifier raise TypeError before the fail-closed refusal.
+        if type(job_id) is not str or job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,

@@ -315,5 +315,30 @@ class FailClosedHealingTests(unittest.TestCase):
         self.assertFalse(entries[0]["ci_verified"])
         self.assertFalse(entries[0]["deployed"])
 
+    def test_malformed_review_identifiers_fail_closed_without_server_error(self):
+        # HTTP/JSON callers can submit arrays and objects, not only strings.
+        # Never turn a denied action into an unhandled TypeError or alter evidence.
+        job = self.manager.trigger_self_healing("Synthetic incident")
+        prior = self.manager.list_jobs()
+
+        class UnhashableString(str):
+            __hash__ = None
+
+        invalid_ids = ([], {}, [job.job_id], {"job_id": job.job_id},
+                       UnhashableString(job.job_id), None, 4)
+        for method in (self.manager.authorize_deployment,
+                       self.manager.reject_deployment):
+            for candidate in invalid_ids:
+                with self.subTest(method=method.__name__,
+                                  kind=type(candidate).__name__):
+                    allowed, message = method(candidate, reviewer="synthetic-admin")
+                    self.assertFalse(allowed)
+                    self.assertEqual(message, "Proposal not found.")
+                    self.assertEqual(self.manager.list_jobs(), prior)
+            allowed, message = method(job.job_id, reviewer="synthetic-admin")
+            self.assertFalse(allowed)
+            self.assertEqual(self.manager.list_jobs(), prior)
+
+
 if __name__ == "__main__":
     unittest.main()
