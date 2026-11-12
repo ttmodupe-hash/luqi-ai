@@ -139,6 +139,8 @@ test('sharing remains revocable when the contacts roster is unavailable',async()
  render(<MemoryRouter><Panel session={{token:'synthetic',user:{email:'fixture@example.invalid'}}} close={()=>{}}
   presence={{sharing:true,away:true,message:'Sharing Away',setSharing:stop,setAway:vi.fn()}}/></MemoryRouter>);
  await flush();
+ expect(screen.getByText(/Shared status is not confirmed/)).toBeTruthy();
+ expect(screen.queryByText('Sharing Away')).toBeNull();
  const hide=screen.getByRole('checkbox',{name:'Stop sharing my online status from this tab'});
  expect((hide as HTMLInputElement).checked).toBe(true);
  fireEvent.click(hide);

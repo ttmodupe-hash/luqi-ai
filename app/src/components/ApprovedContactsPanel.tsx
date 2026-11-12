@@ -84,7 +84,11 @@ export default function ApprovedContactsPanel({ session, close, presence }: {
         aria-pressed={presence.away === true} onClick={() => presence.setAway?.(!presence.away)}>
         {presence.away ? 'Show me as online' : 'Show me as away'}
       </button>}
-      {presence?.message && <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
+      {presence?.sharing && state !== 'ready' && <p className="luqi-collaboration-privacy" role="status">
+        Shared status is not confirmed. You can stop sharing from this tab.
+      </p>}
+      {presence?.message && (state === 'ready' || !presence.sharing) &&
+        <p className="luqi-collaboration-privacy" role="status">{presence.message}</p>}
       <Link to="/p2p" onClick={close}>Manage contacts &amp; circles</Link>
     </>}
     <p className="luqi-collaboration-privacy">Only mutually approved contacts. Updates every 30 seconds while visible. Online means a recent foreground signal. Away is your explicit choice. Offline means a previously shared signal expired after 75 seconds, not proof that a device is disconnected. Another Online tab can keep you online; hidden or unconfirmed status stays neutral. No last-seen history is shared.</p>
