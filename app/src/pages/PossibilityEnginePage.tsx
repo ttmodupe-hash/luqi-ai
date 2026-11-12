@@ -121,7 +121,13 @@ export default function PossibilityEnginePage() {
           <button type="button" className="luqi-possibility-primary" onClick={saveJourney}>
             Save as my journey <Target size={18} />
           </button>
-          <Link className="luqi-possibility-secondary-action" to="/ask" state={{ luqiHomeNeed: submitted }}>
+          <Link className="luqi-possibility-secondary-action" to="/ask" state={{ luqiHomeNeed: submitted }}
+            onClick={event => {
+              // The optional continuation must never forward an outdated goal either.
+              if (goal.trim() === submitted) return;
+              event.preventDefault();
+              setSaveNotice('Your goal has changed. Build the updated path before continuing.');
+            }}>
             Continue without saving <ArrowRight size={18} />
           </Link>
         </div>

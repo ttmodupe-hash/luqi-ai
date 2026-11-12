@@ -2,7 +2,7 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { findWorkspaceTools } from '../src/components/workspace-catalog';
 import CapabilityJourneyPage from '../src/pages/CapabilityJourneyPage';
 import PossibilityEnginePage from '../src/pages/PossibilityEnginePage';
@@ -49,6 +49,33 @@ describe('LUQI Capability Journey', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save as my journey/i }));
     expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
     expect(readCapabilityJourney()?.completed).toEqual([]);
+  });
+
+
+  it('does not continue to Ask Luqi with an outdated preview after editing a goal', () => {
+    function CapturedAskGoal() {
+      const location = useLocation();
+      const state = location.state as { luqiHomeNeed?: string } | null;
+      return <output data-testid="forwarded-goal">{state?.luqiHomeNeed ?? ''}</output>;
+    }
+    render(<MemoryRouter initialEntries={['/possibility']}>
+      <Routes>
+        <Route path="/possibility" element={<PossibilityEnginePage />} />
+        <Route path="/ask" element={<CapturedAskGoal />} />
+      </Routes>
+    </MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'I want to become a network engineer' }));
+    fireEvent.change(screen.getByLabelText('What do you want to make possible?'), {
+      target: { value: 'I want to start a township business' },
+    });
+    fireEvent.click(screen.getByRole('link', { name: /Continue without saving/i }));
+    expect(screen.queryByTestId('forwarded-goal')).toBeNull();
+    expect(screen.getByRole('status').textContent).toMatch(/Build the updated path before continuing/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Build my LUQI path' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: /Continue without saving/i }));
+    expect(screen.getByTestId('forwarded-goal').textContent).toBe('I want to start a township business');
+    expect(readCapabilityJourney()).toBeNull();
   });
 
   it('tracks only user-confirmed stages with exact percentage math', () => {
