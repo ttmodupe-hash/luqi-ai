@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, CheckCircle2, Compass, Rocket, ShieldCheck, Sparkles, Target } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
@@ -25,6 +25,14 @@ export default function PossibilityEnginePage() {
   const [goal, setGoal] = useState(seeded);
   const [submitted, setSubmitted] = useState(seeded);
   const [saveNotice, setSaveNotice] = useState('');
+  // A new explicit goal can arrive while React Router keeps this page mounted.
+  // Rebuild its local preview, but preserve drafts for unrelated or invalid state.
+  useEffect(() => {
+    if (!seeded) return;
+    setGoal(seeded);
+    setSubmitted(seeded);
+    setSaveNotice('');
+  }, [location.key, seeded]);
   const plan = getPossibilityPlan(submitted);
   const previewIsStale = Boolean(plan && goal.trim() !== submitted);
 

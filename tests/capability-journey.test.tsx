@@ -2,7 +2,7 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { findWorkspaceTools } from '../src/components/workspace-catalog';
 import CapabilityJourneyPage from '../src/pages/CapabilityJourneyPage';
 import PossibilityEnginePage from '../src/pages/PossibilityEnginePage';
@@ -30,6 +30,51 @@ describe('LUQI Capability Journey', () => {
     const saved = readCapabilityJourney();
     expect(saved?.goal).toBe('I want to become a network engineer');
     expect(saved?.completed).toEqual([]);
+  });
+
+  it('refreshes an already-mounted path for a new explicit goal without saving or sending AI', () => {
+    function Handoff() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => navigate('/possibility', {
+        state: { luqiGoal: 'I want to start a township business' },
+      })}>Open new handed-off goal</button>;
+    }
+    render(<MemoryRouter initialEntries={['/possibility']}>
+      <Routes><Route path="/possibility" element={<><Handoff /><PossibilityEnginePage /></>} /></Routes>
+    </MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'I want to become a network engineer' }));
+    fireEvent.change(screen.getByLabelText('What do you want to make possible?'), {
+      target: { value: 'An unfinished local draft' },
+    });
+    expect(screen.getByText('Preview needs update')).toBeTruthy();
+    // Same route: React Router preserves the component instance and its initializers.
+    fireEvent.click(screen.getByRole('button', { name: 'Open new handed-off goal' }));
+    expect((screen.getByLabelText('What do you want to make possible?') as HTMLInputElement).value)
+      .toBe('I want to start a township business');
+    expect(screen.getByText('Path ready')).toBeTruthy();
+    expect(screen.getByText('I want to start a township business')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /Open this capability/i })).toHaveLength(4);
+    expect(readCapabilityJourney()).toBeNull();
+  });
+
+  it('does not erase an unfinished draft when later route state has an invalid goal', () => {
+    function BadHandoff() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => navigate('/possibility', {
+        state: { luqiGoal: 'x'.repeat(501) },
+      })}>Open invalid goal</button>;
+    }
+    render(<MemoryRouter initialEntries={['/possibility']}>
+      <Routes><Route path="/possibility" element={<><BadHandoff /><PossibilityEnginePage /></>} /></Routes>
+    </MemoryRouter>);
+    fireEvent.change(screen.getByLabelText('What do you want to make possible?'), {
+      target: { value: 'My unsaved draft' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Open invalid goal' }));
+    expect((screen.getByLabelText('What do you want to make possible?') as HTMLInputElement).value)
+      .toBe('My unsaved draft');
+    expect(screen.queryByText('Path ready')).toBeNull();
+    expect(readCapabilityJourney()).toBeNull();
   });
 
   it('does not overwrite the saved goal with an outdated preview after the input changes', () => {
