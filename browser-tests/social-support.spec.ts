@@ -56,3 +56,19 @@ test('SASSA, UIF and combined help disclose expired review without a daily-watch
  await expect(page.getByRole('heading',{name:'SASSA status, payments and appeals'})).toBeVisible();
  expect(posted).toEqual([]);
 });
+
+test('an idle 320px SASSA guide flags expired source review when the tab resumes',async({page})=>{
+ await page.setViewportSize({width:320,height:740});
+ await page.clock.setFixedTime(new Date('2026-11-05T20:00:00+02:00'));
+ const posted:string[]=[];
+ page.on('request',r=>{if(r.method()==='POST')posted.push(r.url());});
+ await page.goto('/#/sassa');
+ await expect(page.getByText(/past their review window/)).toHaveCount(0);
+ await page.clock.setFixedTime(new Date('2026-11-06T08:00:00+02:00'));
+ await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+ await expect(page.getByText(/past their review window/)).toBeVisible();
+ await expect(page.getByRole('link',{name:/Official SASSA SRD portal/}))
+   .toHaveAttribute('href','https://srd.sassa.gov.za/');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(posted).toEqual([]);
+});
