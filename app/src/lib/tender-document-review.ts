@@ -39,7 +39,7 @@ export function validatePacketContext(context:TenderPacketContext,now=new Date()
   const missing:string[]=[];
   for(const [key,label]of [['reference','Tender reference'],['issuer','Procuring authority'],['destination','Exact bid box, official portal or prescribed email'],['principal','Applicant or authorised representative']] as const){
     const s=context[key];
-    if(typeof s!=='string'||!s.trim()||s.length>240||/[\x00-\x1f\u202a-\u202e\u2066-\u2069]|\p{Cf}/u.test(s))missing.push(label);
+    if(typeof s!=='string'||!s.trim()||s.length>240||/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]|\p{Cs}|\p{Cf}/u.test(s))missing.push(label);
   }
   // Explicit timezone only. A device's local timezone must never silently change a deadline.
   if(typeof context.deadline!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(context.deadline)||
