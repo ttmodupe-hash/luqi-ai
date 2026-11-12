@@ -31,11 +31,11 @@ export function useContactPresence(token: string | undefined) {
       try {
         if (nextMode) await api.presence(id, ++sequence.current, true, true);
         else await api.presence(id, ++sequence.current, true);
-        if (current) setMessage(nextMode
+        if (current && mode.current === nextMode) setMessage(nextMode
           ? 'Sharing Away with approved contacts. Another Online tab can keep you online.'
           : 'Sharing recent activity with approved contacts.');
       } catch {
-        if (current) setMessage('Online status could not be confirmed. Existing signals expire within 75 seconds.');
+        if (current && mode.current === nextMode) setMessage('Online status could not be confirmed. Existing signals expire within 75 seconds.');
       } finally {
         pending = false;
         // An initial Hide can reach the server before its first heartbeat.
@@ -65,13 +65,15 @@ export function useContactPresence(token: string | undefined) {
   useEffect(() => { sendChoice.current?.(); }, [away]);
   return { sharing, away, message,
     setAway: (value: boolean) => {
-      if (!token || !sharing) return;
+      if (!token || !sharing || away === value) return;
+      // Do not imply a choice has been published before its request completes.
+      setMessage('Updating your shared status…');
       setChoice({ token, enabled: true, away: value });
     },
     setSharing: (enabled: boolean) => {
       if (!token) return;
       setChoice({ token, enabled, away: false });
-      if (!enabled) setMessage('Updates stopped. Any existing online signal expires within 75 seconds.');
+      if (!enabled) setMessage('Updates stopped. Any existing shared signal expires within 75 seconds.');
     },
   };
 }

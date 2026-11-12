@@ -103,3 +103,32 @@ test('Hide remains effective when it overtakes the first pending Online heartbea
   expect(shared).toBe(false);
   expect(mocks.presence.mock.calls.map(call=>call.slice(1,3))).toEqual([[1,true],[2,false],[2,false]]);
 });
+
+test('late Online success cannot overstate a pending Away change',async()=>{
+ let settleOnline!:(value:unknown)=>void, settleAway!:(value:unknown)=>void;
+ mocks.presence.mockImplementationOnce(()=>new Promise(done=>{settleOnline=done;}))
+   .mockImplementationOnce(()=>new Promise(done=>{settleAway=done;}));
+ const {result}=renderHook(()=>useContactPresence('synthetic'));
+ act(()=>result.current.setSharing(true));await flush();
+ act(()=>result.current.setAway(true));await flush();
+ expect(result.current.message).toContain('Updating your shared status');
+ await act(async()=>{settleOnline({accepted:true,ttlSeconds:75});});await flush();
+ expect(mocks.presence).toHaveBeenCalledTimes(2);
+ expect(result.current.message).toContain('Updating your shared status');
+ expect(result.current.message).not.toContain('Sharing recent activity');
+ await act(async()=>{settleAway({accepted:true,ttlSeconds:75});});await flush();
+ expect(result.current.message).toContain('Sharing Away');
+});
+test('late Online failure cannot replace a pending Away confirmation',async()=>{
+ let failOnline!:(reason:unknown)=>void, settleAway!:(value:unknown)=>void;
+ mocks.presence.mockImplementationOnce(()=>new Promise((_,reject)=>{failOnline=reject;}))
+   .mockImplementationOnce(()=>new Promise(done=>{settleAway=done;}));
+ const {result}=renderHook(()=>useContactPresence('synthetic'));
+ act(()=>result.current.setSharing(true));await flush();
+ act(()=>result.current.setAway(true));await flush();
+ await act(async()=>{failOnline(Error('delayed stale Online failure'));});await flush();
+ expect(mocks.presence).toHaveBeenCalledTimes(2);
+ expect(result.current.message).toContain('Updating your shared status');
+ await act(async()=>{settleAway({accepted:true,ttlSeconds:75});});await flush();
+ expect(result.current.message).toContain('Sharing Away');
+});
