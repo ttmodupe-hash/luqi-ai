@@ -26,6 +26,7 @@ export default function PossibilityEnginePage() {
   const [submitted, setSubmitted] = useState(seeded);
   const [saveNotice, setSaveNotice] = useState('');
   const plan = getPossibilityPlan(submitted);
+  const previewIsStale = Boolean(plan && goal.trim() !== submitted);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,10 +97,11 @@ export default function PossibilityEnginePage() {
           <h2>{plan.affirmation}</h2>
           <p>{plan.outcome}</p>
         </div>
-        <div className="luqi-possibility-badge"><CheckCircle2 size={20} /><span>Path ready</span></div>
+        <div className="luqi-possibility-badge"><CheckCircle2 size={20} /><span>{previewIsStale ? "Preview needs update" : "Path ready"}</span></div>
       </div>
 
       <div className="luqi-possibility-goal"><span>Your goal</span><strong>{submitted}</strong></div>
+      {previewIsStale && <p className="luqi-possibility-save-notice">This path is for your previous goal. Build the updated path before opening a capability.</p>}
 
       <div className="luqi-possibility-steps">
         {plan.steps.map((step, index) => <article key={step.stage}>
@@ -107,7 +109,7 @@ export default function PossibilityEnginePage() {
           <p>{step.stage}</p>
           <h3>{step.title}</h3>
           <span>{step.detail}</span>
-          <Link to={step.path}>Open this capability <ArrowRight size={16} /></Link>
+          {previewIsStale ? <span>Build the updated path to open this capability.</span> : <Link to={step.path}>Open this capability <ArrowRight size={16} /></Link>}
         </article>)}
       </div>
 

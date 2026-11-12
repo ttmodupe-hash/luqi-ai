@@ -221,6 +221,9 @@ test('edited goal cannot forward an outdated preview at 320px using keyboard', a
   await page.goto('/#/possibility');
   await page.getByRole('button', { name: originalGoal }).click();
   await page.getByLabel('What do you want to make possible?').fill(newGoal);
+  await expect(page.getByRole('link', { name: /Open this capability/i })).toHaveCount(0);
+  await expect(page.getByText('Preview needs update')).toBeVisible();
+  await expect(page.getByText(/This path is for your previous goal/i)).toBeVisible();
 
   const continueLink = page.getByRole('link', { name: /Continue without saving/i });
   await continueLink.focus();
@@ -236,6 +239,8 @@ test('edited goal cannot forward an outdated preview at 320px using keyboard', a
   await page.getByRole('button', { name: 'Build my LUQI path' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('Your goal has changed. Build the updated path before continuing.')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Open this capability/i })).toHaveCount(4);
+  await expect(page.getByText('Path ready')).toBeVisible();
   await continueLink.focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/#\/ask$/);
