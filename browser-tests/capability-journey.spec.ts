@@ -177,6 +177,32 @@ test('320px keyboard guards mission and stage navigation without a storage event
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
+test('320px transient storage denial disables edits until keyboard recovery', async ({ page }) => {
+  await page.evaluate(() => {
+    const original = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key: string) {
+      if (key === 'luqi:capability-journey:v1') throw new DOMException('Synthetic temporary denial', 'SecurityError');
+      return original.call(this, key);
+    };
+    window.dispatchEvent(new StorageEvent('storage', { key: 'luqi:capability-journey:v1' }));
+    Storage.prototype.getItem = original;
+  });
+  await expect(page.getByRole('status')).toContainText('Browser storage is unavailable');
+  await expect(page.getByRole('button', { name: /Mark complete:/i }).first()).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Clear saved journey/i })).toBeDisabled();
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('luqi:capability-journey:v1')!));
+  expect(stored.completed).toEqual([]);
+
+  await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
+  await expect(page.getByRole('button', { name: /Mark complete:/i }).first()).toBeEnabled();
+  await page.getByRole('button', { name: /Mark complete:/i }).first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('25%', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test('denied storage write does not claim that a stage was completed', async ({ page }) => {
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;

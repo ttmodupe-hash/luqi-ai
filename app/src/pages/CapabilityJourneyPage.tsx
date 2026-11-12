@@ -116,7 +116,8 @@ export default function CapabilityJourneyPage() {
   }
 
   function toggle(index: number) {
-    if (!journey) return;
+    // A pending recovery explicitly blocks edits, even after storage access returns.
+    if (!journey || needsReload) return;
     if (!canReadJourneyStorage()) {
       setNeedsReload(true);
       setNotice(UNREADABLE_STORAGE_NOTICE);
@@ -138,6 +139,7 @@ export default function CapabilityJourneyPage() {
   }
 
   function clearJourney() {
+    if (needsReload) return;
     if (!canReadJourneyStorage()) {
       setNeedsReload(true);
       setNotice(UNREADABLE_STORAGE_NOTICE);
@@ -208,7 +210,7 @@ export default function CapabilityJourneyPage() {
           const complete = journey.completed.includes(index);
           const current = index === nextIndex;
           return <article key={step.stage} className={complete ? 'complete' : current ? 'current' : ''}>
-            <button type="button" className="luqi-journey-check" onClick={() => toggle(index)}
+            <button type="button" className="luqi-journey-check" disabled={needsReload} onClick={() => toggle(index)}
               aria-pressed={complete} aria-label={(complete ? 'Reopen ' : 'Mark complete: ') + step.title}>
               {complete ? <Check size={19} /> : <Circle size={19} />}
             </button>
@@ -230,7 +232,7 @@ export default function CapabilityJourneyPage() {
           <h2>LUQI tracks actions you confirm—not imaginary success.</h2>
           <p>Mark a stage complete only when you have actually done the work you intended. Future versions can add evidence, assessments and verified milestones without pretending they already exist.</p>
         </div>
-        <button type="button" onClick={clearJourney}><RotateCcw size={16} /> Clear saved journey</button>
+        <button type="button" onClick={clearJourney} disabled={needsReload}><RotateCcw size={16} /> Clear saved journey</button>
       </section>
     </>}
   </main>;

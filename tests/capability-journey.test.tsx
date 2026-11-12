@@ -244,6 +244,35 @@ describe('LUQI Capability Journey', () => {
     expect(readCapabilityJourney()?.completed).toEqual([]);
   });
 
+  it('requires explicit recovery before editing after a transient storage access denial', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Synthetic temporary denial', 'SecurityError');
+    });
+    fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
+    expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/i);
+    denied.mockRestore();
+
+    const stage = screen.getAllByRole('button', { name: /Mark complete:/i })[0] as HTMLButtonElement;
+    const clear = screen.getByRole('button', { name: /Clear saved journey/i }) as HTMLButtonElement;
+    expect(stage.disabled).toBe(true);
+    expect(clear.disabled).toBe(true);
+    fireEvent.click(stage);
+    fireEvent.click(clear);
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+
+    const recovery = screen.getByRole('button', { name: 'Load latest saved journey' });
+    recovery.focus();
+    fireEvent.click(recovery);
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBe(document.activeElement);
+    expect((screen.getAllByRole('button', { name: /Mark complete:/i })[0] as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: /Clear saved journey/i }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
+    expect(readCapabilityJourney()?.completed).toEqual([0]);
+  });
+
   it('notifies about removal by another tab before a user edits', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
