@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Check, Circle, Flag, RotateCcw, ShieldCheck, Target, Trophy } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
@@ -39,6 +39,13 @@ export default function CapabilityJourneyPage() {
   const [initialStorageUnavailable] = useState(() => !canReadJourneyStorage());
   const [notice, setNotice] = useState(initialStorageUnavailable ? INITIAL_UNREADABLE_STORAGE_NOTICE : '');
   const [needsReload, setNeedsReload] = useState(initialStorageUnavailable);
+  const focusAfterRecovery = useRef(false);
+  // Recovery removes the keyboard-activated button. Keep the user's place.
+  useLayoutEffect(() => {
+    if (!focusAfterRecovery.current) return;
+    focusAfterRecovery.current = false;
+    document.getElementById(journey ? 'journey-title' : 'journey-empty-title')?.focus();
+  }, [journey, needsReload]);
   const plan = useMemo(() => journey ? getPossibilityPlan(journey.goal) : null, [journey]);
   const progress = capabilityJourneyProgress(journey);
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
@@ -84,6 +91,7 @@ export default function CapabilityJourneyPage() {
       return;
     }
     const latest = readCapabilityJourney();
+    focusAfterRecovery.current = true;
     setJourney(latest);
     setNeedsReload(false);
     setNotice(latest ? 'Loaded the latest saved journey from this browser.' : 'No readable saved journey is available on this device. It may have been cleared or become invalid. You can choose a new goal.');
@@ -134,7 +142,7 @@ export default function CapabilityJourneyPage() {
     {!journey || !plan ? <section className="luqi-journey-empty" aria-labelledby="journey-empty-title">
       <div className="luqi-journey-empty-icon"><Target size={42} aria-hidden="true" /></div>
       <p className="luqi-journey-kicker">YOUR CAPABILITY JOURNEY</p>
-      <h1 id="journey-empty-title">Start with a goal worth working toward.</h1>
+      <h1 id="journey-empty-title" tabIndex={-1}>Start with a goal worth working toward.</h1>
       <p>LUQI will build the path first. You choose whether to save that goal on this device and track progress.</p>
       <Link className="luqi-journey-primary" to="/possibility">Build my path <ArrowRight size={18} /></Link>
       {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
@@ -143,7 +151,7 @@ export default function CapabilityJourneyPage() {
       <section className="luqi-journey-hero" aria-labelledby="journey-title">
         <div>
           <p className="luqi-journey-kicker"><Flag size={15} aria-hidden="true" /> YOUR CAPABILITY JOURNEY</p>
-          <h1 id="journey-title">{journey.goal}</h1>
+          <h1 id="journey-title" tabIndex={-1}>{journey.goal}</h1>
           <p>{plan.affirmation}</p>
           <p className="luqi-journey-device"><ShieldCheck size={15} aria-hidden="true" /> Saved only in this browser on this device. LUQI has not uploaded this goal or sent it to an AI provider.</p>
         </div>

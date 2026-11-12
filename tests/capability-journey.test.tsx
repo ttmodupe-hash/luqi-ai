@@ -155,7 +155,7 @@ describe('LUQI Capability Journey', () => {
     recovery.focus();
     expect(document.activeElement).toBe(recovery);
     fireEvent.click(recovery);
-    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBe(document.activeElement);
     expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
   });
 
@@ -263,6 +263,7 @@ describe('LUQI Capability Journey', () => {
     action.focus();
     expect(document.activeElement).toBe(action);
     fireEvent.click(action);
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBe(document.activeElement);
     expect(screen.queryByRole('button', { name: 'Load latest saved journey' })).toBeNull();
     expect(readCapabilityJourney()?.completed).toEqual([2]);
   });

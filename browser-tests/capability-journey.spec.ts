@@ -74,6 +74,7 @@ test('newer progress automatically announces stale state and accepts keyboard re
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('25%', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await otherTab.close();
 });
@@ -102,6 +103,7 @@ test('an initially empty tab discovers a goal saved in another tab at 320px', as
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(posts).toEqual([]);
   await otherTab.close();
