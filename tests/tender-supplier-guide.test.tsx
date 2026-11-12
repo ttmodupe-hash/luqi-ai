@@ -11,7 +11,9 @@ afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
 it('starts with existing fields, specific help and no guessed personal details',()=>{
  const network=vi.fn();vi.stubGlobal('fetch',network);render(<Fixture/>);
  for(const field of SBD1_FIELDS){const input=screen.getByLabelText('SBD 1 '+field.label) as HTMLInputElement;expect(input.value).toBe('');expect(input.getAttribute('aria-describedby')).toBeTruthy();}
- expect(screen.getByText('0 of 7 supported contact fields have valid-format entries.')).toBeTruthy();
+ const progress=screen.getByRole('status');
+ expect(progress.textContent).toBe('0 of 7 supported contact fields contain entries without detected input errors.');
+ expect(progress.textContent).not.toMatch(/validated|verified|valid-format/i);
  expect(screen.getAllByRole('textbox')).toHaveLength(7);expect(network).not.toHaveBeenCalled();
 });
 it('moves through the selected field and preserves controlled values across views',async()=>{
