@@ -8,10 +8,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from fastapi import APIRouter, Depends, FastAPI, WebSocket
+from fastapi import APIRouter, Depends, FastAPI, WebSocket, UploadFile, File
 from starlette.websockets import WebSocketDisconnect
 from fastapi.testclient import TestClient
-from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket
+from fastapi.middleware.cors import CORSMiddleware
+from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket, LegacyPrebodyRefusalMiddleware
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -512,6 +513,168 @@ class AdditionalLegacyAliasDenialTests(unittest.TestCase):
                         response = client.request(verb.upper(), path)
                         self.assertEqual(response.status_code, 503)
                         self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+
+
+class LegacyPrebodyRefusalTests(unittest.TestCase):
+    """Synthetic FastAPI/Starlette regression: retired routes never parse bodies."""
+
+    class ReceiveProbe:
+        def __init__(self, app):
+            self.app = app
+            self.read_count = 0
+
+        async def __call__(self, scope, receive, send):
+            async def observed_receive():
+                self.read_count += 1
+                return await receive()
+            await self.app(scope, observed_receive, send)
+
+    def setUp(self):
+        self.executed = []
+        app = FastAPI()
+
+        @app.get("/health")
+        async def health():
+            return {"status": "ok"}
+
+        @app.post("/workspace/upload-asset",
+                  dependencies=[Depends(require_legacy_route_disabled)])
+        async def upload(file: UploadFile = File(...)):
+            self.executed.append("upload")
+            return {"unsafe": True}
+
+        @app.post("/api/v1/simulation/verify-terminal",
+                  dependencies=[Depends(require_legacy_route_disabled)])
+        async def verify(payload: dict):
+            self.executed.append("verify")
+            return {"unsafe": True}
+
+        router = APIRouter(dependencies=[Depends(require_legacy_route_disabled)])
+
+        @router.post("/billing/topup")
+        async def topup():
+            self.executed.append("topup")
+            return {"unsafe": True}
+
+        app.include_router(router, prefix="/api/v1")
+        app.include_router(router, prefix="/v1")
+        app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+        app.add_middleware(CORSMiddleware, allow_origins=["https://example.invalid"],
+                           allow_methods=["*"])
+        self.probe = self.ReceiveProbe(app)
+        self.client = TestClient(self.probe)
+
+    def tearDown(self):
+        self.client.close()
+
+    def test_multipart_refused_without_reading_one_megabyte_body(self):
+        result = self.client.post(
+            "/workspace/upload-asset",
+            files={"file": ("synthetic.bin", b"x" * (1024 * 1024),
+                            "application/octet-stream")},
+            headers={"Origin": "https://example.invalid"},
+        )
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual(result.json()["detail"]["code"], "LEGACY_API_RETIRED")
+        self.assertEqual(result.headers["cache-control"], "no-store")
+        self.assertEqual(result.headers["access-control-allow-origin"],
+                         "https://example.invalid")
+        self.assertEqual(self.probe.read_count, 0)
+        self.assertEqual(self.executed, [])
+
+    def test_malformed_json_and_forged_auth_refused_before_parsing(self):
+        result = self.client.post(
+            "/api/v1/simulation/verify-terminal", content=b"{bad",
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer synthetic-forgery"},
+        )
+        self.assertEqual(result.status_code, 503)
+        self.assertEqual(self.probe.read_count, 0)
+        self.assertEqual(self.executed, [])
+
+    def test_router_level_dependency_is_inherited_under_both_prefixes(self):
+        for path in ("/api/v1/billing/topup", "/v1/billing/topup"):
+            with self.subTest(path=path):
+                result = self.client.post(
+                    path, content=b"{bad", headers={"Content-Type": "application/json"}
+                )
+                self.assertEqual(result.status_code, 503)
+                self.assertEqual(self.probe.read_count, 0)
+        self.assertEqual(self.executed, [])
+
+    def test_health_cors_preflight_and_wrong_method_remain_unchanged(self):
+        health = self.client.get("/health")
+        self.assertEqual(health.status_code, 200)
+        self.assertEqual(health.json(), {"status": "ok"})
+        preflight = self.client.options(
+            "/workspace/upload-asset",
+            headers={"Origin": "https://example.invalid",
+                     "Access-Control-Request-Method": "POST"},
+        )
+        self.assertEqual(preflight.status_code, 200)
+        self.assertEqual(self.client.get("/workspace/upload-asset").status_code, 405)
+        self.assertEqual(self.executed, [])
+
+    def test_encoded_route_has_same_refusal(self):
+        self.assertEqual(
+            self.client.post("/workspace/%75pload-asset").status_code, 503
+        )
+        self.assertEqual(self.executed, [])
+
+    def test_first_full_match_precedence_is_not_rewritten(self):
+        def duplicate_app(guard_first):
+            app = FastAPI()
+            async def public():
+                return {"public": True}
+            async def retired():
+                self.fail("Retired handler executed")
+            if guard_first:
+                app.add_api_route("/collision", retired, methods=["POST"],
+                                  dependencies=[Depends(require_legacy_route_disabled)])
+                app.add_api_route("/collision", public, methods=["POST"])
+            else:
+                app.add_api_route("/collision", public, methods=["POST"])
+                app.add_api_route("/collision", retired, methods=["POST"],
+                                  dependencies=[Depends(require_legacy_route_disabled)])
+            app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+            return TestClient(app)
+        self.assertEqual(duplicate_app(True).post("/collision").status_code, 503)
+        self.assertEqual(duplicate_app(False).post("/collision").json(),
+                         {"public": True})
+
+    def test_parameterized_path_and_websocket_are_supported(self):
+        app = FastAPI()
+
+        @app.post("/retired/{task_id}",
+                  dependencies=[Depends(require_legacy_route_disabled)])
+        async def retired(task_id: str, payload: dict):
+            self.fail("Retired handler executed")
+
+        @app.websocket("/ws/test")
+        async def socket(ws: WebSocket):
+            await ws.accept()
+            await ws.close(code=1000)
+
+        app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+        with TestClient(app) as client:
+            result = client.post(
+                "/retired/abc", content=b"{bad",
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(result.status_code, 503)
+            with client.websocket_connect("/ws/test") as ws:
+                self.assertEqual(ws.receive()["type"], "websocket.close")
+
+    def test_actual_main_installs_early_gate_inside_cors(self):
+        content = (ROOT / "main.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)",
+            content,
+        )
+        self.assertLess(
+            content.index("app.add_middleware(LegacyPrebodyRefusalMiddleware"),
+            content.index("app.add_middleware(\n    CORSMiddleware"),
+        )
 
 if __name__ == "__main__":
     unittest.main()

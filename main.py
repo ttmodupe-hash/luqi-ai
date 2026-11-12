@@ -40,7 +40,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import settings
-from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket
+from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket, LegacyPrebodyRefusalMiddleware
 
 # ── Logging ──────────────────────────────────────────────────────────────
 logger = logging.getLogger("luqi")
@@ -148,6 +148,7 @@ app = FastAPI(
 )
 
 # CORS
+app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
