@@ -430,5 +430,88 @@ class LegacyUnmeteredAiRetirementTests(unittest.TestCase):
 
 
 
+class AdditionalLegacyAliasDenialTests(unittest.TestCase):
+    """Source-level regression for unmigrated sensitive legacy FastAPI handlers."""
+
+    ROUTES = {
+        "verify_terminal_command": ("post", ("/api/v1/simulation/verify-terminal",)),
+        "get_simulation_ledger": ("get", ("/api/v1/simulation/ledger",)),
+        "process_khoro_legal_endpoint": ("post", ("/api/khoro-legal", "/api/v1/khoro-legal")),
+        "process_external_evaluator_probe": ("post", ("/api/v1/governance/evaluator-benchmark", "/governance/evaluator-benchmark")),
+        "sign_media_asset_endpoint": ("post", ("/api/v1/provenance/sign-asset",)),
+        "execute_super_intelligence_asset_synthesis": ("post", ("/api/v1/studio/synthesize-asset", "/studio/synthesize-asset")),
+        "log_student_lab_progression": ("post", ("/api/v1/analytics/log-progression", "/analytics/log-progression")),
+        "run_low_level_indexing_audit": ("get", ("/api/v1/diagnostics/database-indexes", "/diagnostics/database-indexes")),
+        "evaluate_dual_use_input": ("post", ("/api/v1/security/dual-use-filter", "/security/dual-use-filter")),
+        "generate_and_publish_system_card": ("post", ("/api/v1/governance/generate-system-card", "/governance/generate-system-card")),
+        "list_published_system_cards": ("get", ("/api/v1/governance/system-cards", "/governance/system-cards")),
+        "execute_realtime_shield_audit": ("post", ("/api/v1/security/shield-audit", "/security/shield-audit")),
+        "run_live_security_diagnostics": ("get", ("/api/v1/security/diagnostics", "/security/diagnostics")),
+    }
+
+    def test_exact_real_source_aliases_have_both_refusal_boundaries(self):
+        tree = ast.parse((ROOT / "main.py").read_text(encoding="utf-8"))
+        all_handlers = [node for node in tree.body if isinstance(node, ast.AsyncFunctionDef)]
+        actual_path_owners = {}
+        for node in all_handlers:
+            for decorator in node.decorator_list:
+                if not isinstance(decorator, ast.Call):
+                    continue
+                func = decorator.func
+                if not (isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name)
+                        and func.value.id == "app" and func.attr in ("get", "post", "put", "patch", "delete")
+                        and decorator.args and isinstance(decorator.args[0], ast.Constant)
+                        and isinstance(decorator.args[0].value, str)):
+                    continue
+                actual_path_owners.setdefault(decorator.args[0].value, []).append((func.attr, node.name, decorator))
+        total = 0
+        for name, (verb, paths) in self.ROUTES.items():
+            with self.subTest(handler=name):
+                nodes = [node for node in all_handlers if node.name == name]
+                self.assertEqual(len(nodes), 1, "Expected one exact handler")
+                node = nodes[0]
+                for path in paths:
+                    owners = actual_path_owners.get(path, [])
+                    self.assertEqual(len(owners), 1, "Sensitive URL collision or missing handler: " + path)
+                    method, owner, decorator = owners[0]
+                    self.assertEqual((method, owner), (verb, name))
+                    deps = [kw.value for kw in decorator.keywords if kw.arg == "dependencies"]
+                    self.assertEqual(len(deps), 1, "Route dependency missing for " + path)
+                    self.assertIsInstance(deps[0], ast.List)
+                    self.assertEqual(len(deps[0].elts), 1)
+                    depends_call = deps[0].elts[0]
+                    self.assertIsInstance(depends_call, ast.Call)
+                    self.assertIsInstance(depends_call.func, ast.Name)
+                    self.assertEqual(depends_call.func.id, "Depends")
+                    self.assertEqual(len(depends_call.args), 1)
+                    self.assertIsInstance(depends_call.args[0], ast.Name)
+                    self.assertEqual(depends_call.args[0].id, "require_legacy_route_disabled")
+                    total += 1
+                first = node.body[0]
+                if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) and isinstance(first.value.value, str):
+                    first = node.body[1]
+                self.assertIsInstance(first, ast.Expr, "Direct-call guard missing from " + name)
+                self.assertIsInstance(first.value, ast.Call)
+                self.assertIsInstance(first.value.func, ast.Name)
+                self.assertEqual(first.value.func.id, "require_legacy_route_disabled")
+                self.assertFalse(first.value.args)
+        self.assertEqual(total, 23)
+
+    def test_synthetic_registered_http_aliases_refuse_before_handler(self):
+        app = FastAPI()
+        async def forbidden():
+            self.fail("Unmigrated handler executed instead of refusal")
+        for verb, paths in self.ROUTES.values():
+            for path in paths:
+                app.add_api_route(path, forbidden, methods=[verb.upper()],
+                                  dependencies=[Depends(require_legacy_route_disabled)])
+        with TestClient(app) as client:
+            for verb, paths in self.ROUTES.values():
+                for path in paths:
+                    with self.subTest(method=verb, path=path):
+                        response = client.request(verb.upper(), path)
+                        self.assertEqual(response.status_code, 503)
+                        self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+
 if __name__ == "__main__":
     unittest.main()

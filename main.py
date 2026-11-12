@@ -543,8 +543,9 @@ class GradeRecord(BaseModel):
 
 _terminal_grade_ledger = []
 
-@app.post("/api/v1/simulation/verify-terminal")
+@app.post("/api/v1/simulation/verify-terminal", dependencies=[Depends(require_legacy_route_disabled)])
 async def verify_terminal_command(payload: TerminalSubmission):
+    require_legacy_route_disabled()
     import re
     cmd = payload.command.strip()
     
@@ -576,8 +577,9 @@ async def verify_terminal_command(payload: TerminalSubmission):
         "message": "Command unrecognized. Ensure you are using the core 'aws ec2 run-instances' utility format."
     }
 
-@app.get("/api/v1/simulation/ledger")
+@app.get("/api/v1/simulation/ledger", dependencies=[Depends(require_legacy_route_disabled)])
 async def get_simulation_ledger():
+    require_legacy_route_disabled()
     return {
         "success": True,
         "total_records": len(_terminal_grade_ledger),
@@ -745,9 +747,10 @@ async def get_system_critiques():
     # No unauthenticated cross-user incident/critique listing.
     require_legacy_route_disabled()
 
-@app.post("/api/khoro-legal")
-@app.post("/api/v1/khoro-legal")
+@app.post("/api/khoro-legal", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/api/v1/khoro-legal", dependencies=[Depends(require_legacy_route_disabled)])
 async def process_khoro_legal_endpoint(payload: dict):
+    require_legacy_route_disabled()
     from khoro_legal_advisor import handle_khoro_legal_query
     query = payload.get("userQuery") or payload.get("query") or payload.get("prompt") or "key concepts of south african criminal law : crw1501"
     res = handle_khoro_legal_query(query)
@@ -783,9 +786,10 @@ from governance_framework import (
     _EVALUATOR_PROBES_LOG
 )
 
-@app.post("/api/v1/security/dual-use-filter", response_model=DualUseRiskEvaluation)
-@app.post("/security/dual-use-filter")
+@app.post("/api/v1/security/dual-use-filter", response_model=DualUseRiskEvaluation, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/security/dual-use-filter", dependencies=[Depends(require_legacy_route_disabled)])
 async def evaluate_dual_use_input(payload: Dict[str, Any]):
+    require_legacy_route_disabled()
     user_input = payload.get("prompt") or payload.get("user_query") or ""
     if not user_input:
         raise HTTPException(status_code=400, detail="Empty prompt buffer.")
@@ -815,12 +819,13 @@ async def evaluate_dual_use_input(payload: Dict[str, Any]):
 
     return verdict
 
-@app.post("/api/v1/governance/evaluator-benchmark")
-@app.post("/governance/evaluator-benchmark")
+@app.post("/api/v1/governance/evaluator-benchmark", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/governance/evaluator-benchmark", dependencies=[Depends(require_legacy_route_disabled)])
 async def process_external_evaluator_probe(
     request: Request,
     evaluator_signature: Optional[str] = Header(None, alias="X-Evaluator-Signature")
 ):
+    require_legacy_route_disabled()
     EVALUATOR_PUBLIC_SECRET = os.environ.get("EVALUATOR_SIGNING_SECRET", "eval_secret_key_prod")
     body_bytes = await request.body()
 
@@ -857,18 +862,20 @@ async def process_external_evaluator_probe(
         "record": audit_entry
     }
 
-@app.post("/api/v1/governance/generate-system-card", response_model=SystemCardBlueprint)
-@app.post("/governance/generate-system-card")
+@app.post("/api/v1/governance/generate-system-card", response_model=SystemCardBlueprint, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/governance/generate-system-card", dependencies=[Depends(require_legacy_route_disabled)])
 async def generate_and_publish_system_card(payload: ModelPatchData):
+    require_legacy_route_disabled()
     try:
         system_card = compile_frontier_system_card(payload)
         return system_card
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transparency Generation Loop Fault: {str(e)}")
 
-@app.get("/api/v1/governance/system-cards")
-@app.get("/governance/system-cards")
+@app.get("/api/v1/governance/system-cards", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/governance/system-cards", dependencies=[Depends(require_legacy_route_disabled)])
 async def list_published_system_cards():
+    require_legacy_route_disabled()
     return {
         "success": True,
         "framework": "Anthropic Advanced AI Governance Framework (June 2026)",
@@ -879,8 +886,9 @@ async def list_published_system_cards():
         "evaluator_probes": _EVALUATOR_PROBES_LOG[:10]
     }
 
-@app.post("/api/v1/provenance/sign-asset")
+@app.post("/api/v1/provenance/sign-asset", dependencies=[Depends(require_legacy_route_disabled)])
 async def sign_media_asset_endpoint(payload: Dict[str, Any]):
+    require_legacy_route_disabled()
     asset_path = payload.get("asset_path") or "cartoon_scene.jpg"
     model_id = payload.get("model_id") or "LuqiToons-Enterprise-v5"
     sha = sign_and_watermark_rendered_asset(asset_path, model_id=model_id)
@@ -897,9 +905,10 @@ from multi_agent_studio import (
     synthesize_learning_asset
 )
 
-@app.post("/api/v1/studio/synthesize-asset", response_model=IntegratedSystemAsset)
-@app.post("/studio/synthesize-asset")
+@app.post("/api/v1/studio/synthesize-asset", response_model=IntegratedSystemAsset, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/studio/synthesize-asset", dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_super_intelligence_asset_synthesis(payload: Dict[str, Any]):
+    require_legacy_route_disabled()
     try:
         user_input = payload.get("topic_instructions") or payload.get("topic") or payload.get("prompt") or ""
         if not user_input:
@@ -919,9 +928,10 @@ class AnalyticsRecordSubmission(BaseModel):
     completion_status: str # 'PASSED' or 'FAILED'
     time_spent_seconds: int
 
-@app.post("/api/v1/analytics/log-progression")
-@app.post("/analytics/log-progression")
+@app.post("/api/v1/analytics/log-progression", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/analytics/log-progression", dependencies=[Depends(require_legacy_route_disabled)])
 async def log_student_lab_progression(payload: AnalyticsRecordSubmission):
+    require_legacy_route_disabled()
     try:
         import sqlite3
         conn = sqlite3.connect(str(settings.db_path))
@@ -951,13 +961,14 @@ async def log_student_lab_progression(payload: AnalyticsRecordSubmission):
     except Exception as e:
         return {"success": True, "message": "Telemetry progression safely recorded.", "note": str(e)}
 
-@app.get("/api/v1/diagnostics/database-indexes", tags=["Secure Admin Core"])
-@app.get("/diagnostics/database-indexes")
+@app.get("/api/v1/diagnostics/database-indexes", tags=["Secure Admin Core"], dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/diagnostics/database-indexes", dependencies=[Depends(require_legacy_route_disabled)])
 async def run_low_level_indexing_audit():
     """
     Protected Database Verification. Checks table indexing fragmentation, 
     verifies transaction ledger query paths, and guards against data degradation.
     """
+    require_legacy_route_disabled()
     diagnostics = [
         {"index_identifier": "idx_chat_user_id", "status": "HEALTHY", "remediation_action": "NONE REQUIRED"},
         {"index_identifier": "idx_analytics_user_domain", "status": "HEALTHY", "remediation_action": "NONE REQUIRED"},
@@ -1037,9 +1048,10 @@ class ThreatSignature(BaseModel):
 def execute_dynamic_patch_compilation(patch_code: str):
     print("🛠️ [SELF-HEALING DETECTED] Compiling emergency patch arrays... Script status: Active.")
 
-@app.post("/api/v1/security/shield-audit", response_model=ThreatSignature)
-@app.post("/security/shield-audit", response_model=ThreatSignature)
+@app.post("/api/v1/security/shield-audit", response_model=ThreatSignature, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/security/shield-audit", response_model=ThreatSignature, dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_realtime_shield_audit(payload: dict):
+    require_legacy_route_disabled()
     log_data = payload.get("log_buffer_stream", "")
     if not log_data:
         raise HTTPException(status_code=400, detail="Empty transaction streaming logs.")
@@ -1100,13 +1112,14 @@ async def execute_realtime_shield_audit(payload: dict):
     return verdict
 
 
-@app.get("/api/v1/security/diagnostics")
-@app.get("/security/diagnostics")
+@app.get("/api/v1/security/diagnostics", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/security/diagnostics", dependencies=[Depends(require_legacy_route_disabled)])
 async def run_live_security_diagnostics():
     """
     Protected Diagnostic Gate. Runs real-time system vulnerability tests
     and verifies zero data leakage footprints across the infrastructure.
     """
+    require_legacy_route_disabled()
     jwt_key = os.environ.get("JWT_SECRET_KEY", "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123")
     jwt_status = "PASS" if len(jwt_key) >= 32 and jwt_key != "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123" else "WARNING"
     jwt_details = "High-entropy key profile confirmed. Session tokens securely protected." if jwt_status == "PASS" else "Default development signature key active. Ensure production rotation in Secret Manager."
