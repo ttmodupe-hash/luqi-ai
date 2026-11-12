@@ -179,7 +179,9 @@ export default function CapabilityJourneyPage() {
             <p>Completion here means you marked all four LUQI stages complete. It is not a certification, job guarantee or independent assessment.</p>
           </>}
         </div>
-        {nextStep ? <Link className="luqi-journey-primary" to={nextStep.path}>Continue mission <ArrowRight size={18} /></Link>
+        {needsReload
+          ? <p className="luqi-journey-device">Load the latest saved journey before continuing this mission.</p>
+          : nextStep ? <Link className="luqi-journey-primary" to={nextStep.path}>Continue mission <ArrowRight size={18} /></Link>
           : <Link className="luqi-journey-primary" to="/possibility">Set the next goal <Trophy size={18} /></Link>}
       </section>
 
@@ -196,7 +198,9 @@ export default function CapabilityJourneyPage() {
               <p>{step.stage}</p>
               <h3>{step.title}</h3>
               <span>{step.detail}</span>
-              <Link to={step.path}>{complete ? 'Review capability' : 'Open capability'} <ArrowRight size={15} /></Link>
+              {needsReload
+                ? <span>Load latest saved journey to open this capability.</span>
+                : <Link to={step.path}>{complete ? 'Review capability' : 'Open capability'} <ArrowRight size={15} /></Link>}
             </div>
           </article>;
         })}

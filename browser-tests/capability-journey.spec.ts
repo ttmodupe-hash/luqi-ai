@@ -119,6 +119,33 @@ test('an initially empty tab discovers a goal saved in another tab at 320px', as
   await otherTab.close();
 });
 
+test('320px stale goal does not navigate to the previous mission before keyboard recovery', async ({ page, context }) => {
+  const otherTab = await context.newPage();
+  const origin = new URL(page.url()).origin;
+  await otherTab.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== origin || /^\\/(api|v1)\\//.test(url.pathname)) return route.abort();
+    return route.continue();
+  });
+  await otherTab.goto('/#/possibility');
+  await otherTab.getByLabel('What do you want to make possible?').fill('I want to start a township business');
+  await otherTab.getByRole('button', { name: 'Build my LUQI path' }).click();
+  await otherTab.getByRole('button', { name: /Save as my journey/i }).click();
+
+  await expect(page.getByRole('status')).toContainText('changed in another tab');
+  await expect(page.getByRole('link', { name: /Continue mission/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Open capability|Review capability/i })).toHaveCount(0);
+  await expect(page.getByText('Load the latest saved journey before continuing this mission.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to start a township business' })).toBeFocused();
+  await expect(page.getByRole('link', { name: /Continue mission/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Open capability|Review capability/i })).toHaveCount(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await otherTab.close();
+});
+
 test('denied storage write does not claim that a stage was completed', async ({ page }) => {
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;

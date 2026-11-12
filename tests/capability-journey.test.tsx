@@ -287,6 +287,26 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
   });
 
+  it('prevents navigation to a stale goal until the user reloads the latest saved journey', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: /Continue mission/i })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /Open capability|Review capability/i })).toHaveLength(4);
+
+    saveCapabilityJourney('I want to start a township business');
+    fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
+    expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
+    expect(screen.queryByRole('link', { name: /Continue mission/i })).toBeNull();
+    expect(screen.queryAllByRole('link', { name: /Open capability|Review capability/i })).toHaveLength(0);
+
+    const recovery = screen.getByRole('button', { name: 'Load latest saved journey' });
+    recovery.focus();
+    fireEvent.click(recovery);
+    expect(screen.getByRole('heading', { name: 'I want to start a township business' })).toBe(document.activeElement);
+    expect(screen.getByRole('link', { name: /Continue mission/i })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /Open capability|Review capability/i })).toHaveLength(4);
+  });
+
   it('lets the user clear the device-local journey', () => {
     saveCapabilityJourney('I want to build an app for my community');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
