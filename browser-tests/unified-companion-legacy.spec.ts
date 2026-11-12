@@ -33,9 +33,16 @@ test('new AI Companion is accessible and private notes stay separate without pai
     if (request.method() === 'POST' && /\/api\/v1\/luqi-core(?:\?|$)/.test(request.url())) paid.push(request.url());
   });
   await page.setViewportSize({ width: 320, height: 740 });
+  await page.addInitScript(() => localStorage.setItem('luqi:capability-journey:v1', JSON.stringify({
+    version: 1, goal: 'Sensitive shared-device journey example', track: 'general',
+    completed: [], startedAt: 10, updatedAt: 10,
+  })));
   await page.goto('/#/ai-companion');
+  await expect(page.getByText('Goal: Sensitive shared-device journey example')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Think, learn and move forward together.' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Talk with LUQI' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show a saved goal on this device' }).click();
+  await expect(page.getByText('Goal: Sensitive shared-device journey example')).toBeVisible();
   // Guests must retain an unauthenticated trial entry, without a provider request.
   await expect(page.getByRole('link', { name: 'Try three replies without registering' })).toBeVisible();
   await page.getByRole('link', { name: /My private notes/i }).click();

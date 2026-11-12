@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { readFileSync } from 'node:fs';
 import UnifiedCompanionPage from '../src/pages/UnifiedCompanionPage';
@@ -48,4 +48,23 @@ describe('Luqi Companion keeps real chat and private notes in separate customer 
     expect(companion).not.toMatch(/conversationClient|private-conversations|downloadPrivateNotesExport/);
     expect(companion.match(/<AiPilotPage embedded workspaceMode \/>/g)).toHaveLength(1);
   });
+  it("conceals a previous user's device-local goal until explicitly revealed", () => {
+    const key = 'luqi:capability-journey:v1';
+    const goal = 'My private business cash-flow goal';
+    window.localStorage.setItem(key, JSON.stringify({
+      version: 1, goal, track: 'business', completed: [0], startedAt: 10, updatedAt: 10,
+    }));
+    try {
+      render(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      expect(screen.queryByText('Goal: ' + goal)).toBeNull();
+      expect(screen.getByText(/may belong to someone else who used this device/)).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByText('Goal: ' + goal)).toBeTruthy();
+      expect(screen.getByText(/not included in AI requests/)).toBeTruthy();
+      expect(screen.getAllByTestId('existing-ai-chat')).toHaveLength(1);
+    } finally {
+      window.localStorage.removeItem(key);
+    }
+  });
+
 });
