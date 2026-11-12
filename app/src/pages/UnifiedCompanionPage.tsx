@@ -50,7 +50,7 @@ export default function UnifiedCompanionPage() {
         <MessageCircle size={19} className="text-cyan-300" aria-hidden="true" />
         <h2 className="text-xl font-semibold">Talk with LUQI</h2>
       </div>
-      <p className="mb-4 text-sm text-slate-300">AI responses require a signed-in account, explicit provider-processing acknowledgement and available trial capacity. No message is sent until you choose to send it.</p>
+      <p className="mb-4 text-sm text-slate-300">Guest and signed-in AI access follow their existing consent and allowance limits. No message is sent until you choose to send it.</p>
       <AiPilotPage embedded workspaceMode />
     </section>
     <p className="flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
