@@ -80,6 +80,7 @@ export default function LanguageSelectorDropdown({
   // Group filtered languages
   const groups = [
     { title: "South Africa (11 Official)", items: filteredLanguages.filter((l) => l.region === "South Africa (11 Official)") },
+    { title: "Community variety · experimental", items: filteredLanguages.filter((l) => l.region === "Community variety (experimental)") },
     { title: "Pan-Africa", items: filteredLanguages.filter((l) => l.region === "Pan-Africa") },
     { title: "Global Scientific & Trade", items: filteredLanguages.filter((l) => l.region === "Global") },
   ].filter((g) => g.items.length > 0);
@@ -94,7 +95,7 @@ export default function LanguageSelectorDropdown({
         aria-label={`Choose Luqi language (${currentLang.nativeName})`}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        title={`Active Language: ${currentLang.nativeName} (${currentLang.name}) — 22 Languages Supported`}
+        title={`Reply preference: ${currentLang.nativeName} (${currentLang.name}); some options are experimental`}
       >
         <span className="text-base leading-none" role="img" aria-label={currentLang.name}>
           {currentLang.flag}
@@ -125,7 +126,7 @@ export default function LanguageSelectorDropdown({
                 <span>Reply language</span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold">
-                22 Languages
+                {LANGUAGES.length} reply options
               </span>
             </div>
 
@@ -194,7 +195,7 @@ export default function LanguageSelectorDropdown({
 
           {/* Footer note */}
           <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 text-[10px] text-slate-500 flex items-center justify-between px-3">
-            <span>Used for your next Luqi reply</span>
+            <span>Preference, not validated translation</span>
             <span className="font-mono text-amber-400/80">Your choice</span>
           </div>
         </div>

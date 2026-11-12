@@ -224,6 +224,13 @@
   padding: 8px 24px 20px;
   display: grid;
   gap: 4px;
+  /* Keep the long sticky-header menu scrollable within a small iPhone viewport.
+     Otherwise WebKit cannot scroll late menu links into the visible screen. */
+  max-height: calc(100vh - 86px);
+  max-height: calc(100dvh - 86px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .luqi-mobile-nav a {
   display: flex;

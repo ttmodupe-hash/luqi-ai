@@ -3,6 +3,8 @@ import type { LanguageInfo } from '../lib/languages';
 
 const greetings: Record<string, [string, string]> = {
   en: ['Hello', 'How can Luqi be of service today?'],
+  // Owner-provided colloquial greetings; reviewed language translation not claimed.
+  sepitori: ['Heita', 'Ola dah! Luqi is here. What shall we work on today?'],
   af: ['Hallo', 'Hoe kan Luqi jou vandag help?'],
   tn: ['Dumela', 'Luqi e ka go thusa jang gompieno?'],
   nso: ['Dumela', 'Luqi e ka go thuša bjang lehono?'],
@@ -23,10 +25,11 @@ export default function LuqiPersonalWelcome({ name, language, disabled = false }
   const displayName = (name?.trim() || preferredName.trim()).slice(0, 120);
   const copy = greetings[language.code];
   const [hello, question] = copy ?? greetings.en;
-  return <section aria-label="Your Luqi welcome" lang={copy ? language.code : 'en'}>
+  return <section aria-label="Your Luqi welcome" lang={language.code === 'sepitori' ? 'en-ZA' : copy ? language.code : 'en'}>
     <h2>{hello}{displayName ? `, ${displayName}` : ''}.</h2>
     <p>{question}</p>
     <p>You can chat with Luqi in {language.nativeName}. Prefer to talk? Voice conversation is still in development; you can use your phone’s keyboard dictation to compose a message, review it, then send.</p>
+    {language.code === 'sepitori' && <p>Colloquial greeting preview only. Sepitori varies by community and is not a standardised, independently validated translation. Choose English whenever you prefer.</p>}
     {!copy && <p>The welcome is shown in English while this language’s interface translation is being prepared.</p>}
     {!name?.trim() && <label>What should Luqi call you? (optional, for this visit)
       <input className="luqi-access-input" value={preferredName} maxLength={120} disabled={disabled}
