@@ -113,6 +113,24 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
   });
 
+  it('warns about unreadable storage on first load instead of claiming the saved goal is absent', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Synthetic blocked storage', 'SecurityError');
+    });
+
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    expect(screen.getByRole('status').textContent).toMatch(/previously saved journey may still exist/i);
+    expect(screen.getByRole('button', { name: 'Load latest saved journey' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'I want to become a network engineer' })).toBeNull();
+
+    denied.mockRestore();
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(screen.getByText('0%')).toBeTruthy();
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+  });
+
   it('does not offer empty-journey recovery for unrelated storage changes', () => {
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
     localStorage.setItem('unrelated-preference', 'ok');

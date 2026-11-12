@@ -15,6 +15,7 @@ import '../capability-journey.css';
 const STALE_JOURNEY_NOTICE = 'This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.';
 const NEW_JOURNEY_NOTICE = 'A journey was saved in another tab. Load the latest saved journey to continue on this device.';
 const UNREADABLE_STORAGE_NOTICE = 'Browser storage is unavailable. This view has not been replaced. Allow browser storage and try again.';
+const INITIAL_UNREADABLE_STORAGE_NOTICE = 'Browser storage is unavailable. A previously saved journey may still exist on this device. Allow browser storage and load the latest journey before saving a new goal.';
 
 function savedJourneyMatches(first: CapabilityJourney | null, second: CapabilityJourney | null): boolean {
   return Boolean(first && second &&
@@ -35,8 +36,9 @@ function canReadJourneyStorage(): boolean {
 
 export default function CapabilityJourneyPage() {
   const [journey, setJourney] = useState<CapabilityJourney | null>(() => readCapabilityJourney());
-  const [notice, setNotice] = useState('');
-  const [needsReload, setNeedsReload] = useState(false);
+  const [initialStorageUnavailable] = useState(() => !canReadJourneyStorage());
+  const [notice, setNotice] = useState(initialStorageUnavailable ? INITIAL_UNREADABLE_STORAGE_NOTICE : '');
+  const [needsReload, setNeedsReload] = useState(initialStorageUnavailable);
   const plan = useMemo(() => journey ? getPossibilityPlan(journey.goal) : null, [journey]);
   const progress = capabilityJourneyProgress(journey);
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
