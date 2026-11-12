@@ -49,22 +49,22 @@ class LegacyPrebodyRefusalMiddleware:
 
     def __init__(self, app, route_owner):
         self.app = app
-        # Main mounts its routers before the middleware stack is first built.
-        # Retain route order: a later duplicate must not shadow an earlier one.
-        self.routes = tuple(
-            (route, isinstance(route, APIRoute) and any(
-                dependency.dependency is require_legacy_route_disabled
-                for dependency in route.dependencies
-            ))
-            for route in route_owner.router.routes
-        )
+        # Resolve routes at request time: FastAPI can add/replace a route after
+        # the middleware stack has been constructed. Caching the route list
+        # would let late-registered retired endpoints parse bodies before denial.
+        self.route_owner = route_owner
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            for route, retired in self.routes:
+            # Snapshot the current routing table without parsing request data.
+            # Preserve the router's first-full-match precedence for duplicates.
+            for route in tuple(self.route_owner.router.routes):
                 match, _ = route.matches(scope)
                 if match is Match.FULL:
-                    if retired:
+                    if isinstance(route, APIRoute) and any(
+                        dependency.dependency is require_legacy_route_disabled
+                        for dependency in route.dependencies
+                    ):
                         response = JSONResponse(
                             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                             headers={"Cache-Control": "no-store"},

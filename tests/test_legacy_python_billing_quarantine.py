@@ -676,5 +676,77 @@ class LegacyPrebodyRefusalTests(unittest.TestCase):
             content.index("app.add_middleware(\n    CORSMiddleware"),
         )
 
+
+class TestDynamicLegacyPrebodyRouteChanges(unittest.TestCase):
+    """Fail closed when plugins register/replace routes after stack construction."""
+
+    def test_late_registered_route_refuses_before_json_parsing(self):
+        app = FastAPI()
+
+        @app.get("/health-dynamic")
+        async def health():
+            return {"ok": True}
+
+        app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+        self.assertEqual(TestClient(app).get("/health-dynamic").status_code, 200)
+
+        @app.post("/retired-dynamic", dependencies=[Depends(require_legacy_route_disabled)])
+        async def retired(payload: dict):
+            self.fail("Retired handler executed")
+
+        reads = []
+        class ReceiveSpy:
+            async def __call__(self, scope, receive, send):
+                async def observed_receive():
+                    reads.append(True)
+                    return await receive()
+                await app(scope, observed_receive, send)
+
+        response = TestClient(ReceiveSpy()).post(
+            "/retired-dynamic", content=b"{bad",
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+        self.assertEqual(reads, [], "Body was parsed before fail-closed refusal")
+
+    def test_route_replacement_same_count_does_not_stale_guard(self):
+        from fastapi.routing import APIRoute
+        app = FastAPI()
+
+        @app.post("/replace-dynamic")
+        async def original(payload: dict):
+            return {"public": True}
+
+        app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+        self.assertEqual(
+            TestClient(app).post("/replace-dynamic", json={"x": 1}).status_code,
+            200,
+        )
+        index = next(i for i, route in enumerate(app.router.routes)
+                     if getattr(route, "path", None) == "/replace-dynamic")
+
+        async def retired(payload: dict):
+            self.fail("Retired handler executed")
+
+        app.router.routes[index] = APIRoute(
+            "/replace-dynamic", retired, methods=["POST"],
+            dependencies=[Depends(require_legacy_route_disabled)],
+        )
+        reads = []
+        class ReceiveSpy:
+            async def __call__(self, scope, receive, send):
+                async def observed_receive():
+                    reads.append(True)
+                    return await receive()
+                await app(scope, observed_receive, send)
+
+        response = TestClient(ReceiveSpy()).post(
+            "/replace-dynamic", content=b"{bad",
+            headers={"Content-Type": "application/json"},
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(reads, [], "Replaced route skipped early refusal")
+
 if __name__ == "__main__":
     unittest.main()
