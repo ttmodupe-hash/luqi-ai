@@ -31,3 +31,38 @@ test('guided original-form fields keep answers and route corrections at 320px',a
  await expect(panel.getByRole('button',{name:'Guide me step by step'})).toHaveCount(0);
  expect(writes).toEqual([]);
 });
+
+test('keyboard-only guided contact navigation retains focus and factual entries at 320px',async({page})=>{
+ await page.setViewportSize({width:320,height:840});
+ const writes:string[]=[];
+ page.on('request',request=>{if(request.method()!=='GET')writes.push(request.method()+' '+request.url());});
+ await page.goto('/#/tenders');
+ await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Original government form assistance'});
+ await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
+ await panel.getByLabel('Import original tender document').setInputFiles(fixture);
+ const guide=panel.getByRole('button',{name:'Guide me step by step'});
+ await guide.focus();
+ await page.keyboard.press('Enter');
+ await expect(panel.getByLabel('SBD 1 Name of bidder')).toBeFocused();
+ await page.keyboard.type('Synthetic keyboard bidder');
+ await page.keyboard.press('Tab');
+ await expect(panel.getByRole('button',{name:'Next contact field'})).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(panel.getByLabel('SBD 1 Postal address')).toBeFocused();
+ await page.keyboard.type('Synthetic keyboard postal address');
+ await page.keyboard.press('Tab');
+ await expect(panel.getByRole('button',{name:'Previous contact field'})).toBeFocused();
+ await page.keyboard.press('Tab');
+ await expect(panel.getByRole('button',{name:'Next contact field'})).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(panel.getByLabel('SBD 1 Street address')).toBeFocused();
+ await page.keyboard.press('Tab');
+ await expect(panel.getByRole('button',{name:'Previous contact field'})).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(panel.getByLabel('SBD 1 Postal address')).toBeFocused();
+ await expect(panel.getByLabel('SBD 1 Postal address')).toHaveValue('Synthetic keyboard postal address');
+ await expect(panel.getByText('2 of 7 supported contact fields contain entries without detected input errors.')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+});
