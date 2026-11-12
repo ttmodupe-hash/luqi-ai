@@ -52,7 +52,7 @@ describe('LUQI Capability Journey', () => {
     expect((screen.getByLabelText('What do you want to make possible?') as HTMLInputElement).value)
       .toBe('I want to start a township business');
     expect(screen.getByText('Path ready')).toBeTruthy();
-    expect(screen.getByText('I want to start a township business')).toBeTruthy();
+    expect(screen.getByText('I want to start a township business', { selector: '.luqi-possibility-goal strong' })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Open this capability/i })).toHaveLength(4);
     expect(readCapabilityJourney()).toBeNull();
   });
