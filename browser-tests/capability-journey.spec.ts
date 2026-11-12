@@ -252,7 +252,7 @@ test('edited goal cannot forward an outdated preview at 320px using keyboard', a
   await expect(page.getByText('Preview needs update')).toBeVisible();
   await expect(page.getByText(/This path is for your previous goal/i)).toBeVisible();
 
-  const continueLink = page.getByRole('link', { name: /Continue without saving/i });
+  const continueLink = page.getByRole('link', { name: /Free local guide · no journey save or AI request/i });
   await continueLink.focus();
   await page.keyboard.press('Enter');
 

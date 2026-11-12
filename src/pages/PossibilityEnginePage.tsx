@@ -138,7 +138,7 @@ export default function PossibilityEnginePage() {
               event.preventDefault();
               setSaveNotice('Your goal has changed. Build the updated path before continuing.');
             }}>
-            Continue without saving <ArrowRight size={18} />
+            Free local guide · no journey save or AI request <ArrowRight size={18} />
           </Link>
         </div>
       </div>

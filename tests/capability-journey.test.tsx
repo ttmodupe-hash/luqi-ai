@@ -116,14 +116,14 @@ describe('LUQI Capability Journey', () => {
     expect(screen.queryAllByRole('link', { name: /Open this capability/i })).toHaveLength(0);
     expect(screen.getByText(/This path is for your previous goal/i)).toBeTruthy();
     expect(screen.getByText('Preview needs update')).toBeTruthy();
-    fireEvent.click(screen.getByRole('link', { name: /Continue without saving/i }));
+    fireEvent.click(screen.getByRole('link', { name: /Free local guide · no journey save or AI request/i }));
     expect(screen.queryByTestId('forwarded-goal')).toBeNull();
     expect(screen.getByRole('status').textContent).toMatch(/Build the updated path before continuing/i);
     fireEvent.click(screen.getByRole('button', { name: 'Build my LUQI path' }));
     expect(screen.queryAllByRole('link', { name: /Open this capability/i })).toHaveLength(4);
     expect(screen.getByText('Path ready')).toBeTruthy();
     expect(screen.queryByRole('status')).toBeNull();
-    fireEvent.click(screen.getByRole('link', { name: /Continue without saving/i }));
+    fireEvent.click(screen.getByRole('link', { name: /Free local guide · no journey save or AI request/i }));
     expect(screen.getByTestId('forwarded-goal').textContent).toBe('I want to start a township business');
     expect(readCapabilityJourney()).toBeNull();
   });
