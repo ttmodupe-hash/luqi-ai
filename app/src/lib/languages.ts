@@ -3,7 +3,7 @@ export interface LanguageInfo {
   name: string;
   nativeName: string;
   flag: string;
-  region: "South Africa (11 Official)" | "Pan-Africa" | "Global";
+  region: "South Africa (11 Official)" | "Community variety (experimental)" | "Pan-Africa" | "Global";
 }
 
 /** UI language preferences. AI translation still depends on an enabled model provider. */
@@ -15,6 +15,7 @@ export const LANGUAGES: LanguageInfo[] = [
   { code:"st", name:"Southern Sotho", nativeName:"Sesotho", flag:"🇿🇦", region:"South Africa (11 Official)" },
   { code:"tn", name:"Tswana", nativeName:"Setswana", flag:"🇿🇦", region:"South Africa (11 Official)" },
   { code:"nso", name:"Northern Sotho", nativeName:"Sepedi", flag:"🇿🇦", region:"South Africa (11 Official)" },
+  { code:"sepitori", name:"Sepitori (experimental)", nativeName:"Sepitori", flag:"🇿🇦", region:"Community variety (experimental)" },
   { code:"ss", name:"Swati", nativeName:"siSwati", flag:"🇿🇦", region:"South Africa (11 Official)" },
   { code:"nr", name:"Southern Ndebele", nativeName:"isiNdebele", flag:"🇿🇦", region:"South Africa (11 Official)" },
   { code:"ve", name:"Venda", nativeName:"Tshivenda", flag:"🇿🇦", region:"South Africa (11 Official)" },

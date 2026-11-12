@@ -145,10 +145,21 @@ test("navigation and skip link work at small widths without changing hash routes
     page.getByRole("button", { name: "Open navigation" }),
   ).toBeFocused();
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await page
-    .getByRole("navigation", { name: "Mobile navigation" })
-    .getByRole("link", { name: "Private notes" })
-    .click();
+  const mobileNavigation = page.getByRole("navigation", { name: "Mobile navigation" });
+  await expect(mobileNavigation).toBeVisible();
+  // A real 320px iPhone must be able to scroll to late menu destinations.
+  // Keep the pointer click and subsequent route/heading assertions unchanged.
+  expect(
+    await mobileNavigation.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return (
+        element.scrollHeight > element.clientHeight &&
+        box.top >= 0 &&
+        box.bottom <= window.innerHeight + 1
+      );
+    }),
+  ).toBe(true);
+  await mobileNavigation.getByRole("link", { name: "Private notes" }).click();
   await expect(
     page.getByRole("heading", { name: "Companion conversations" }),
   ).toBeVisible();
