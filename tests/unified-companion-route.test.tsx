@@ -6,11 +6,16 @@ import { MemoryRouter } from 'react-router';
 import { readFileSync } from 'node:fs';
 import UnifiedCompanionPage from '../src/pages/UnifiedCompanionPage';
 
+const sessionFixture = vi.hoisted(() => ({ current: null as null | { token: string; user: { email: string } } }));
+vi.mock('../src/providers/customer-session', () => ({
+  useOptionalCustomerSession: () => ({ session: sessionFixture.current }),
+}));
+
 vi.mock('../src/pages/AiPilotPage', () => ({
   default: ({ embedded, workspaceMode }: { embedded?: boolean; workspaceMode?: boolean }) =>
     <div data-testid="existing-ai-chat" data-embedded={String(embedded)} data-workspace={String(workspaceMode)} />,
 }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); sessionFixture.current = null; });
 
 describe('Luqi Companion keeps real chat and private notes in separate customer paths', () => {
   it('embeds exactly one existing Chat with a separate private-notes link and accurate guest copy', () => {
@@ -65,6 +70,37 @@ describe('Luqi Companion keeps real chat and private notes in separate customer 
     } finally {
       window.localStorage.removeItem(key);
     }
+  });
+
+  it('snapshots the revealed goal, supports hiding and revokes reveal when the account changes', () => {
+    const key = 'luqi:capability-journey:v1';
+    const firstGoal = 'A previous user private business plan';
+    const secondGoal = 'Another person personal goal';
+    const save = (goal: string) => window.localStorage.setItem(key, JSON.stringify({
+      version: 1, goal, track: 'general', completed: [], startedAt: 10, updatedAt: 10,
+    }));
+    const accountA = { token: 'opaque-a', user: { email: 'a@example.test' } };
+    sessionFixture.current = accountA;
+    save(firstGoal);
+    try {
+      const view = render(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByText('Goal: ' + firstGoal)).toBeTruthy();
+      save(secondGoal);
+      view.rerender(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      expect(screen.queryByText('Goal: ' + secondGoal)).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Hide saved goal' }));
+      expect(screen.queryByText('Goal: ' + firstGoal)).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByText('Goal: ' + secondGoal)).toBeTruthy();
+      sessionFixture.current = { token: 'opaque-b', user: { email: 'b@example.test' } };
+      view.rerender(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      expect(screen.queryByText('Goal: ' + secondGoal)).toBeNull();
+      sessionFixture.current = accountA;
+      view.rerender(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      expect(screen.queryByText('Goal: ' + secondGoal)).toBeNull();
+      expect(screen.getByRole('button', { name: 'Show a saved goal on this device' })).toBeTruthy();
+    } finally { window.localStorage.removeItem(key); }
   });
 
 });
