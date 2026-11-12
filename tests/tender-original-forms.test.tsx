@@ -94,6 +94,20 @@ it('requires all seven gates and revokes the whole prepared version after a pric
  expect(screen.getByText(/all previous approvals cleared/)).toBeTruthy();
  expect(network).not.toHaveBeenCalled();
 });
+it('shows exact applicant-entered bid context for review before approval without claiming issuer verification',async()=>{
+  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
+  const review=screen.getByRole('region',{name:'Original form applicant review'});
+  const contextReview=within(review).getByRole('region',{name:'Entered bid context review'});
+  for(const expected of ['SYNTHETIC-001','Synthetic test authority','Synthetic applicant',
+    '2090-11-30T11:00+02:00','physical','Synthetic test bid box','1000.00']){
+    expect(within(contextReview).getByText(expected)).toBeTruthy();
+  }
+  expect(within(contextReview).getByText(/not inserted into SBD 1 or independently checked/)).toBeTruthy();
+  const fills=run.mock.calls.filter(([request])=>request.action==='fill');
+  expect(fills).toHaveLength(1);
+  expect(JSON.stringify(fills[0][0])).not.toContain('1000.00');
+  expect(network).not.toHaveBeenCalled();
+});
 it('records explicit final-release revocation when an earlier approval gate changes',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();await fillContext();
  const review=screen.getByRole('region',{name:'Original form applicant review'});

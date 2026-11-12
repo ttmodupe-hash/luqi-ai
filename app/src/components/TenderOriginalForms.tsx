@@ -354,6 +354,23 @@ export function TenderOriginalForms(){
         Nothing was submitted.
       </p>}
       <dl className="space-y-1 text-sm">{SBD1_FIELDS.map(field=><div key={field.id} className="break-words"><dt className="font-semibold">{field.label}</dt><dd>{values[field.id]||'Left blank for applicant completion'}</dd></div>)}</dl>
+      <section aria-label="Entered bid context review" className="space-y-2 rounded-lg border border-slate-600 p-3">
+        <h4 className="font-semibold">Your entered bid context (not issuer-verified)</h4>
+        <p className="text-xs text-amber-200">These applicant-entered details are recorded in your private review packet. They are not inserted into SBD 1 or independently checked against the issuer. Recheck the original notice and addenda before approving; Luqi submits nothing.</p>
+        <dl className="grid min-w-0 gap-2 text-sm sm:grid-cols-2">
+          {([
+            ['Tender reference',prepared.packet.context.reference],
+            ['Procuring authority',prepared.packet.context.issuer],
+            ['Applicant or authorised representative',prepared.packet.context.principal],
+            ['Recorded closing time',prepared.packet.context.deadline],
+            ['Recorded submission method',prepared.packet.context.method],
+            ['Recorded submission destination',prepared.packet.context.destination],
+            ['Applicant-entered offer (ZAR; review record only)',prepared.packet.context.priceZar],
+          ] as const).map(([label,value])=><div key={label} className="min-w-0 break-words">
+            <dt className="font-semibold">{label}</dt><dd className="break-all">{value}</dd>
+          </div>)}
+        </dl>
+      </section>
       {prepared.packet.files.map(file=><p key={file.name} className="break-all text-xs">{file.role}: {file.name} · SHA-256 {file.sha256}</p>)}
       {ORIGINAL_FORM_GATES.map(g=><label key={g.id} className="flex items-start gap-2 rounded-lg border border-slate-700 p-3 text-sm">
         <input type="checkbox" disabled={busy||historyFull||reviewExpired||(g.id==='release'&&!ORIGINAL_FORM_GATES.filter(x=>x.id!=='release').every(x=>gates[x.id]))}
