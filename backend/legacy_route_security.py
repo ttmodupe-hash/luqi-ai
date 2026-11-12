@@ -58,6 +58,28 @@ def _has_retirement_dependency(root):
     return False
 
 
+
+def _routed_app_routes(app):
+    """Find route metadata through ordinary ASGI middleware wrappers.
+
+    Mount/Host.app may be CORSMiddleware, GZipMiddleware, etc., with FastAPI
+    behind one or more `.app` links. Only introspect; never execute wrappers,
+    inspect bodies or assume opaque applications are safe. A cycle or excessive
+    nesting is treated as unknown rather than looping indefinitely.
+    """
+    seen = set()
+    for _ in range(16):
+        if app is None or id(app) in seen:
+            break
+        seen.add(id(app))
+        router = getattr(app, "router", None)
+        routes = getattr(router, "routes", None)
+        if routes is not None:
+            return routes
+        app = getattr(app, "app", None)
+    return None
+
+
 def _matches_retired_http_route(scope, routes):
     """Mirror first-full-match routing across FastAPI mounts, without body reads.
 
@@ -72,8 +94,7 @@ def _matches_retired_http_route(scope, routes):
         if isinstance(route, APIRoute):
             return _has_retirement_dependency(route.dependant)
         if isinstance(route, (Mount, Host)):
-            nested_router = getattr(route.app, "router", None)
-            nested_routes = getattr(nested_router, "routes", None)
+            nested_routes = _routed_app_routes(route.app)
             if nested_routes is not None:
                 return _matches_retired_http_route(
                     {**scope, **child_scope}, nested_routes

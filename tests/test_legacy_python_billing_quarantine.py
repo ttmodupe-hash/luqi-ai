@@ -930,5 +930,53 @@ class MountedRetirementPrebodySafety(unittest.TestCase):
         self.assertEqual(response.json(), {"ok": True})
         self.assertEqual(spy.reads, 0)
 
+
+    def test_cors_wrapped_mount_retired_upload_refused_prebody(self):
+        root = FastAPI()
+        root.mount("/legacy", CORSMiddleware(
+            self._protected_child(), allow_origins=["https://allowed.example.test"]
+        ))
+        client, spy = self._client(root)
+        response = client.post(
+            "/legacy/upload", files={"file": ("x.bin", b"x" * 1048576)}
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+        self.assertEqual(spy.reads, 0, "CORS-wrapped retired endpoint consumed request body")
+
+    def test_nested_middleware_wrappers_refuse_before_body(self):
+        from starlette.middleware.gzip import GZipMiddleware
+        root = FastAPI()
+        wrapped = GZipMiddleware(CORSMiddleware(
+            self._protected_child(), allow_origins=["https://allowed.example.test"]
+        ))
+        root.mount("/legacy", wrapped)
+        client, spy = self._client(root)
+        response = client.post(
+            "/legacy/upload", files={"file": ("x.bin", b"x" * 65536)}
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual(spy.reads, 0, "Nested ASGI wrappers bypassed prebody refusal")
+
+    def test_wrapped_public_upload_preserves_functionality(self):
+        from starlette.middleware.gzip import GZipMiddleware
+        root, child = FastAPI(), FastAPI()
+
+        @child.post("/upload")
+        async def public(file: UploadFile = File(...)):
+            return {"filename": file.filename}
+
+        root.mount("/public", GZipMiddleware(CORSMiddleware(
+            child, allow_origins=["https://allowed.example.test"]
+        )))
+        client, spy = self._client(root)
+        response = client.post(
+            "/public/upload", files={"file": ("fixture.txt", b"ok")}
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["filename"], "fixture.txt")
+        self.assertGreater(spy.reads, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
