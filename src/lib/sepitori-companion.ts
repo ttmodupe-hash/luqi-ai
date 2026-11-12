@@ -15,10 +15,10 @@ export function readLocalSepitoriSignal(input: unknown): LocalSepitoriSignal | n
   if (!text) return null;
 
   // An explicit refusal always takes precedence; never infer identity.
-  if (/^(?:please )?(?:no|not) sepitori(?: please)?$/.test(text) ||
-      /^(?:please )?(?:stop|don't|dont|do not) (?:speaking|speak|using|use) sepitori(?: please)?$/.test(text) ||
-      /^(?:i )?(?:don't|dont|do not) want to (?:speak|talk|chat) in sepitori(?: please)?$/.test(text) ||
-      /^(?:please )?(?:english|english only|use english|speak english|reply in english|talk in english)(?: please)?$/.test(text)) {
+  if (/^(?:please )?(?:no|not) (?:sepitori|se pitori|pitori)(?: please)?$/.test(text) ||
+      /^(?:please )?(?:stop|don't|dont|do not) (?:speaking|speak|using|use) (?:sepitori|se pitori|pitori)(?: please)?$/.test(text) ||
+      /^(?:i )?(?:don't|dont|do not) want to (?:speak|talk|chat) in (?:sepitori|se pitori|pitori)(?: please)?$/.test(text) ||
+      /^(?:please )?(?:english|english only|use english|speak english|reply in english|talk in english)(?:,? please)?$/.test(text)) {
     return { kind: 'language', code: 'en' };
   }
   if (/^(?:please )?(?:sepitori|se pitori|pitori)(?: please)?$/.test(text) ||
