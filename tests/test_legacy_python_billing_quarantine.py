@@ -748,5 +748,46 @@ class TestDynamicLegacyPrebodyRouteChanges(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(reads, [], "Replaced route skipped early refusal")
 
+
+class TestNestedRetirementDependencies(unittest.TestCase):
+    """A retired Depends must reject before parsing, however it was declared."""
+
+    def _assert_prebody_denial(self, nested: bool):
+        app = FastAPI()
+        if nested:
+            async def inner_guard(_blocked=Depends(require_legacy_route_disabled)):
+                return None
+            guard = inner_guard
+        else:
+            guard = require_legacy_route_disabled
+
+        @app.post("/retired/dependency-upload")
+        async def retired(file: UploadFile = File(...), _guard=Depends(guard)):
+            self.fail("Retired handler executed")
+
+        app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
+        reads = []
+
+        class ReceiveSpy:
+            async def __call__(self, scope, receive, send):
+                async def observed_receive():
+                    reads.append(True)
+                    return await receive()
+                await app(scope, observed_receive, send)
+
+        response = TestClient(ReceiveSpy()).post(
+            "/retired/dependency-upload",
+            files={"file": ("synthetic.bin", b"x" * 1048576)},
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+        self.assertEqual(reads, [], "Retired nested dependency parsed multipart first")
+
+    def test_endpoint_parameter_dependency_is_early_refused(self):
+        self._assert_prebody_denial(nested=False)
+
+    def test_nested_endpoint_dependency_is_early_refused(self):
+        self._assert_prebody_denial(nested=True)
+
 if __name__ == "__main__":
     unittest.main()

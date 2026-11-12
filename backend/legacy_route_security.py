@@ -38,6 +38,26 @@ async def reject_legacy_websocket(websocket) -> None:
     await websocket.close(code=1008, reason="LEGACY_API_RETIRED")
 
 
+def _has_retirement_dependency(root):
+    """Walk FastAPI's compiled dependency tree, including parameter/nested guards.
+
+    Decorator-level route.dependencies is not exhaustive: Depends can also be
+    declared in the endpoint signature or nested inside another dependency.
+    This read-only walk has no request access and invokes no dependencies.
+    """
+    stack = [root]
+    visited = set()
+    while stack:
+        node = stack.pop()
+        if id(node) in visited:
+            continue
+        visited.add(id(node))
+        if node.call is require_legacy_route_disabled:
+            return True
+        stack.extend(node.dependencies)
+    return False
+
+
 class LegacyPrebodyRefusalMiddleware:
     """Refuse registered retired HTTP endpoints before JSON or multipart parsing.
 
@@ -61,9 +81,8 @@ class LegacyPrebodyRefusalMiddleware:
             for route in tuple(self.route_owner.router.routes):
                 match, _ = route.matches(scope)
                 if match is Match.FULL:
-                    if isinstance(route, APIRoute) and any(
-                        dependency.dependency is require_legacy_route_disabled
-                        for dependency in route.dependencies
+                    if isinstance(route, APIRoute) and _has_retirement_dependency(
+                        route.dependant
                     ):
                         response = JSONResponse(
                             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
