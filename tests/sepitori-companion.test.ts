@@ -46,6 +46,25 @@ describe('Luqi Sepitori companionship is an explicit user-controlled preference'
     ('honours comma-separated polite refusal without provider inference: %s', text => {
       expect(readLocalSepitoriSignal(text)).toEqual({ kind: 'language', code: 'en' });
     });
+  it.each([
+    ['Switch to English', 'en'], ['Switch back to English', 'en'],
+    ['Go back to English', 'en'], ['Change to English', 'en'],
+    ['Please switch to English, please!', 'en'],
+    ['Switch to Sepitori', 'sepitori'], ['Switch to Pitori', 'sepitori'],
+    ['Change to se Pitori', 'sepitori'], ['Go back to Sepitori', 'sepitori'],
+    ['Please switch back to Pitori.', 'sepitori'],
+  ] as const)('handles explicit local switch command %s without provider inference', (input, code) => {
+    expect(readLocalSepitoriSignal(input)).toEqual({ kind: 'language', code });
+  });
+  it.each([
+    'What does switch to English mean?', 'How do I switch to English?',
+    'I want to switch to English because I am tired', 'Switch to English and explain my bill',
+    'My friend said switch to Sepitori', 'Heita, please switch to English',
+    'Go back to English later', 'Can you go back to English?',
+  ])('never intercepts a non-command explanation or question: %s', input => {
+    expect(readLocalSepitoriSignal(input)).toBeNull();
+  });
+
   it('preserves polite opt-in and never intercepts quoted or extended requests', () => {
     expect(readLocalSepitoriSignal('Please use Pitori, please.'))
       .toEqual({ kind: 'language', code: 'sepitori' });

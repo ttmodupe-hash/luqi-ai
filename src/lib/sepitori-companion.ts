@@ -14,6 +14,10 @@ export function readLocalSepitoriSignal(input: unknown): LocalSepitoriSignal | n
     .replace(/[.!?]+$/g, '').replace(/,\s*please$/g, ' please').replace(/\s+/g, ' ');
   if (!text) return null;
 
+  // A whole-message instruction changes language locally; never infer it from a question.
+  const switchCommand = /^(?:please )?(?:(?:switch|change)(?: back)? to|go back to) (english|sepitori|se pitori|pitori)(?: please)?$/.exec(text);
+  if (switchCommand) return { kind: 'language', code: switchCommand[1] === 'english' ? 'en' : 'sepitori' };
+
   // An explicit refusal always takes precedence; never infer identity.
   if (/^(?:please )?(?:no|not) (?:sepitori|se pitori|pitori)(?: please)?$/.test(text) ||
       /^(?:please )?(?:stop|don't|dont|do not) (?:speaking|speak|using|use) (?:sepitori|se pitori|pitori)(?: please)?$/.test(text) ||
