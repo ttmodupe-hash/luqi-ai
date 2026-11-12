@@ -31,7 +31,7 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
     setGuided(next);setFocusRequest(value=>value+1);
   }
   return <fieldset disabled={disabled} className="min-w-0 space-y-3">
-    <legend className="font-semibold">Your verified supplier facts</legend>
+    <legend className="font-semibold">Your entered supplier contact details</legend>
     <p className="text-xs text-slate-300">Only facts you type are inserted. Leave unknown or inapplicable fields blank. No certificates, tax compliance, eligibility or experience are invented. Do not enter passwords, OTPs, tax PINs, ID numbers or bank details.</p>
     <div className="flex flex-wrap gap-3" role="group" aria-label="Supplier entry view">
       <button type="button" className={buttonStyle} aria-pressed={!guided} onClick={()=>changeView(false)}>Show all contact fields</button>

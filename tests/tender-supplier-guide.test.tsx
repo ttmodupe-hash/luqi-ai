@@ -11,6 +11,8 @@ afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
 it('starts with existing fields, specific help and no guessed personal details',()=>{
  const network=vi.fn();vi.stubGlobal('fetch',network);render(<Fixture/>);
  for(const field of SBD1_FIELDS){const input=screen.getByLabelText('SBD 1 '+field.label) as HTMLInputElement;expect(input.value).toBe('');expect(input.getAttribute('aria-describedby')).toBeTruthy();}
+ expect(screen.getByText('Your entered supplier contact details')).toBeTruthy();
+ expect(screen.queryByText('Your verified supplier facts')).toBeNull();
  const progress=screen.getByRole('status');
  expect(progress.textContent).toBe('0 of 7 supported contact fields contain entries without detected input errors.');
  expect(progress.textContent).not.toMatch(/validated|verified|valid-format/i);
