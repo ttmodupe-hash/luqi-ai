@@ -11,7 +11,7 @@ export type LocalSepitoriSignal =
 export function readLocalSepitoriSignal(input: unknown): LocalSepitoriSignal | null {
   if (typeof input !== 'string' || input.length > 100 || /[\r\n]/.test(input)) return null;
   const text = input.normalize('NFKC').trim().toLocaleLowerCase('en-ZA')
-    .replace(/[.!?]+$/g, '').replace(/\s+/g, ' ');
+    .replace(/[.!?]+$/g, '').replace(/,\s*please$/g, ' please').replace(/\s+/g, ' ');
   if (!text) return null;
 
   // An explicit refusal always takes precedence; never infer identity.

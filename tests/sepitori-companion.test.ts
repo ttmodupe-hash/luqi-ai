@@ -41,4 +41,18 @@ describe('Luqi Sepitori companionship is an explicit user-controlled preference'
     ('never intercepts an ordinary question containing Pitori or a greeting: %s', text => {
       expect(readLocalSepitoriSignal(text)).toBeNull();
     });
+  it.each(['No Pitori, please', 'No Sepitori, please!',
+    'Please stop speaking Pitori, please.', 'Do not use se Pitori, please'])
+    ('honours comma-separated polite refusal without provider inference: %s', text => {
+      expect(readLocalSepitoriSignal(text)).toEqual({ kind: 'language', code: 'en' });
+    });
+  it('preserves polite opt-in and never intercepts quoted or extended requests', () => {
+    expect(readLocalSepitoriSignal('Please use Pitori, please.'))
+      .toEqual({ kind: 'language', code: 'sepitori' });
+    expect(readLocalSepitoriSignal('I heard someone say no Pitori, please'))
+      .toBeNull();
+    expect(readLocalSepitoriSignal('No Pitori, please explain what that phrase means'))
+      .toBeNull();
+  });
+
 });
