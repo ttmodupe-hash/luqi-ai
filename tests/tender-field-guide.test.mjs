@@ -21,6 +21,15 @@ test('complete contact fields do not imply completion of the official applicatio
 });
 for(const [id,value]of [['bidderName',''],['bidderName',' '],['email','x'],['email',' x@example.test'],['email',' '],['cellphone','a\nb'],['streetAddress','x\u202e'],['bidderName','x'.repeat(71)],['telephoneCode',null]])
  test('bounded validation '+id+' '+JSON.stringify(value),()=>assert.ok(supplierFieldIssue(field(id),value)));
+test('invisible Unicode format characters cannot count as real bidder names or contact answers',()=>{
+ for(const [id,value] of [['bidderName','\\u200B'],['postalAddress','\\u2060'],['email','user\\u200B@example.test']]){
+  const input=value.replace(/\\u([0-9a-fA-F]{4})/g,(_,code)=>String.fromCharCode(parseInt(code,16)));
+  assert.ok(supplierFieldIssue(field(id),input));
+  const entries={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic supplier',[id]:input};
+  const progress=supplierFieldProgress(entries,SBD1_FIELDS);
+  assert.ok(progress.attention.some(({field:item})=>item.id===id));
+ }
+});
 test('only actual supplied acceptable text counts as entered',()=>{
  const v={...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic',email:'bad',postalAddress:' '};const r=supplierFieldProgress(v,SBD1_FIELDS);
  assert.equal(r.entered,1);assert.equal(r.blank,4);assert.equal(r.attention.length,2);

@@ -60,6 +60,17 @@ it('rejects whitespace-only optional contact entries instead of calling them bla
  fireEvent.change(screen.getByLabelText('SBD 1 Postal address'),{target:{value:''}});
  expect(screen.queryByRole('button',{name:'Go to Postal address'})).toBeNull();
 });
+it('rejects invisible-only supplier names in guidance and worker before filling the original',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const hidden=String.fromCharCode(0x200b);
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:hidden}});
+ expect(()=>validateSupplierValues({...EMPTY_SUPPLIER_VALUES,bidderName:hidden})).toThrow('SUPPLIER_VALUES');
+ expect(screen.getByRole('button',{name:'Go to Name of bidder'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Prepare exact original for review'}));
+ expect(screen.getByText(/Check supported SBD 1 contact fields before preparing/)).toBeTruthy();
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
 it('requires local-processing consent, makes no network calls and keeps unsupported exports blocked',async()=>{
  render(<TenderOriginalForms/>);
  expect(screen.getByRole('button',{name:'Use verified Treasury SBD 1'}).hasAttribute('disabled')).toBe(true);
