@@ -12,7 +12,7 @@ assume they share user IDs or wallet balances with the legacy SQLite ledger.
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from starlette.routing import Match, Mount
+from starlette.routing import Host, Match, Mount
 
 
 def require_legacy_route_disabled() -> None:
@@ -71,7 +71,7 @@ def _matches_retired_http_route(scope, routes):
             continue
         if isinstance(route, APIRoute):
             return _has_retirement_dependency(route.dependant)
-        if isinstance(route, Mount):
+        if isinstance(route, (Mount, Host)):
             nested_router = getattr(route.app, "router", None)
             nested_routes = getattr(nested_router, "routes", None)
             if nested_routes is not None:

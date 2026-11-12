@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from fastapi import APIRouter, Depends, FastAPI, WebSocket, UploadFile, File
+from starlette.routing import Host
 from starlette.websockets import WebSocketDisconnect
 from fastapi.testclient import TestClient
 from fastapi.middleware.cors import CORSMiddleware
@@ -866,6 +867,65 @@ class MountedRetirementPrebodySafety(unittest.TestCase):
         root.mount("/legacy", self._protected_child())
         client, spy = self._client(root)
         response = client.post("/legacy/upload")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json(), {"ok": True})
+        self.assertEqual(spy.reads, 0)
+
+
+    def test_host_routed_retired_upload_refused_before_body(self):
+        root = FastAPI()
+        root.router.routes.insert(0, Host("api.example.test", app=self._protected_child()))
+        client, spy = self._client(root)
+        response = client.post(
+            "/upload", files={"file": ("x.bin", b"x" * 1048576)},
+            headers={"host": "api.example.test"},
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual(response.json()["detail"]["code"], "LEGACY_API_RETIRED")
+        self.assertEqual(spy.reads, 0, "Host-routed retired upload parsed request body")
+
+    def test_mounted_host_routed_retired_upload_refused_before_body(self):
+        intermediate, root = FastAPI(), FastAPI()
+        intermediate.router.routes.insert(
+            0, Host("api.example.test", app=self._protected_child())
+        )
+        root.mount("/legacy", intermediate)
+        client, spy = self._client(root)
+        response = client.post(
+            "/legacy/upload", files={"file": ("x.bin", b"x" * 65536)},
+            headers={"host": "api.example.test"},
+        )
+        self.assertEqual(response.status_code, 503, response.text)
+        self.assertEqual(spy.reads, 0)
+
+    def test_public_host_routed_upload_still_works(self):
+        root, child = FastAPI(), FastAPI()
+
+        @child.post("/upload")
+        async def public(file: UploadFile = File(...)):
+            return {"filename": file.filename}
+
+        root.router.routes.insert(0, Host("public.example.test", app=child))
+        client, spy = self._client(root)
+        response = client.post(
+            "/upload", files={"file": ("fixture.txt", b"ok")},
+            headers={"host": "public.example.test"},
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["filename"], "fixture.txt")
+        self.assertGreater(spy.reads, 0)
+
+    def test_first_matching_public_host_preserves_precedence(self):
+        root, public = FastAPI(), FastAPI()
+
+        @public.post("/upload")
+        async def public_upload():
+            return {"ok": True}
+
+        root.router.routes.insert(0, Host("api.example.test", app=self._protected_child()))
+        root.router.routes.insert(0, Host("api.example.test", app=public))
+        client, spy = self._client(root)
+        response = client.post("/upload", headers={"host": "api.example.test"})
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json(), {"ok": True})
         self.assertEqual(spy.reads, 0)
