@@ -161,3 +161,28 @@ test('disabled contacts still offer Hide but never unverified new consent',async
  expect(screen.queryByRole('checkbox')).toBeNull();
  expect(screen.queryByRole('button',{name:'Show me as away'})).toBeNull();
 });
+
+test('account B never paints account A contact names before passive cleanup', async()=>{
+ const a={token:'account-a',user:{email:'a@example.invalid'}};
+ const b={token:'account-b',user:{email:'b@example.invalid'}};
+ const privateName='Private contact approved only for A';
+ mocks.contacts.mockResolvedValueOnce({contacts:[{circleId:'circle-a',name:privateName,presence:'online'}]})
+   .mockResolvedValue({contacts:[]});
+ const frames:string[]=[];
+ function Probe({session}:{session:typeof a}){
+   React.useLayoutEffect(()=>{
+     frames.push(document.querySelector('.luqi-approved-contacts')?.textContent||'');
+   },[session.token]);
+   return <Panel session={session}/>;
+ }
+ const view=render(<MemoryRouter><Probe session={a}/></MemoryRouter>);
+ await flush();
+ expect(screen.getByText(privateName)).toBeTruthy();
+ const before=frames.length;
+ view.rerender(<MemoryRouter><Probe session={b}/></MemoryRouter>);
+ expect(frames.length).toBeGreaterThan(before);
+ for(const frame of frames.slice(before))expect(frame).not.toContain(privateName);
+ await flush();
+ expect(screen.queryByText(privateName)).toBeNull();
+ expect(screen.queryByText('1 contact online')).toBeNull();
+});
