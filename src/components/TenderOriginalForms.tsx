@@ -318,7 +318,7 @@ export function TenderOriginalForms(){
               const helpId=contextHelpId+'-'+key;
               return <label key={key} className="block min-w-0 text-sm">{label}
               <input ref={node=>{if(node)contextInputs.current[key]=node;else delete contextInputs.current[key];}}
-                aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
+                aria-label={label} maxLength={key==='priceZar'?16:241} autoComplete="off" value={context[key]} className={inputStyle}
                 aria-invalid={Boolean(issue)} aria-describedby={issue?helpId:undefined}
                 placeholder={key==='deadline'?'YYYY-MM-DDTHH:mm+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>

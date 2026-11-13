@@ -54,6 +54,40 @@ test('pasted overlength bidder name remains invalid instead of silently becoming
  expect(writes).toEqual([]);
 });
 
+test('overlength bid price and submission destination never pass review after browser paste at 320px',async({page})=>{
+ await page.setViewportSize({width:320,height:840});
+ const writes:string[]=[];
+ page.on('request',request=>{if(request.method()!=='GET')writes.push(request.method()+' '+request.url());});
+ await page.goto('/#/tenders');
+ await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Original government form assistance'});
+ await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
+ await panel.getByLabel('Import original tender document').setInputFiles(fixture);
+ for(const [label,value] of [
+  ['SBD 1 Name of bidder','Synthetic supplier'],['Tender reference','TEST-2026-OVERFLOW'],
+  ['Procuring authority','Synthetic authority'],['Applicant or authorised representative','Synthetic applicant'],
+  ['Closing time with timezone','2090-11-30T11:00+02:00'],
+  ['Exact official submission address','Synthetic tender box'],
+ ])await panel.getByLabel(label).fill(value);
+ await panel.getByLabel('Original form submission method').selectOption('physical');
+ const price=panel.getByLabel('Applicant-entered offer ZAR');
+ await price.fill('123456789012.345999');
+ await expect(price).toHaveValue('123456789012.345'); // maximum accepted price is 15 characters
+ await panel.getByRole('button',{name:'Prepare exact original for review'}).click();
+ await expect(price).toHaveAttribute('aria-invalid','true');
+ await expect(price).toBeFocused();
+ await price.fill('123456789012.34');
+ const destination=panel.getByLabel('Exact official submission address');
+ await destination.fill('D'.repeat(400));
+ await expect(destination).toHaveValue('D'.repeat(241));
+ await panel.getByRole('button',{name:'Prepare exact original for review'}).click();
+ await expect(destination).toHaveAttribute('aria-invalid','true');
+ await expect(destination).toBeFocused();
+ await expect(panel.getByRole('region',{name:'Original form applicant review'})).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+});
+
 test('keyboard-only guided contact navigation retains focus and factual entries at 320px',async({page})=>{
  await page.setViewportSize({width:320,height:840});
  const writes:string[]=[];

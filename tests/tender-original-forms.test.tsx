@@ -464,6 +464,35 @@ it('links missing bid-context errors to their controls without inventing answers
   expect(network).not.toHaveBeenCalled();
 });
 
+it('overlong bid price and destination cannot silently become acceptable reviewed facts',async()=>{
+ render(<TenderOriginalForms/>);await importOriginal();
+ const price=screen.getByLabelText('Applicant-entered offer ZAR') as HTMLInputElement;
+ const destination=screen.getByLabelText('Exact official submission address') as HTMLInputElement;
+ // One extra browser character is an invalid sentinel, not an accepted truncated amount/address.
+ expect(price.maxLength).toBe(16);expect(destination.maxLength).toBe(241);
+ for(const [label,value] of [
+  ['SBD 1 Name of bidder','Synthetic supplier'],['Tender reference','TEST-2026-OVERFLOW'],
+  ['Procuring authority','Synthetic authority'],['Applicant or authorised representative','Synthetic applicant'],
+  ['Closing time with timezone','2090-11-30T11:00+02:00'],
+  ['Exact official submission address','Synthetic tender box'],
+ ])fireEvent.change(screen.getByLabelText(label),{target:{value}});
+ fireEvent.change(screen.getByLabelText('Original form submission method'),{target:{value:'physical'}});
+ fireEvent.change(price,{target:{value:'123456789012.345'}});
+ const prepare=screen.getByRole('button',{name:'Prepare exact original for review'});
+ fireEvent.click(prepare);
+ expect(price.getAttribute('aria-invalid')).toBe('true');
+ expect(document.activeElement).toBe(price);
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ fireEvent.change(price,{target:{value:'123456789012.34'}});
+ fireEvent.change(destination,{target:{value:'D'.repeat(241)}});
+ fireEvent.click(prepare);
+ expect(destination.getAttribute('aria-invalid')).toBe('true');
+ expect(document.activeElement).toBe(destination);
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(run.mock.calls.filter(([request])=>request.action==='fill')).toHaveLength(0);
+ expect(network).not.toHaveBeenCalled();
+});
+
 it('focuses the first missing or invalid bid-context answer without fabricating facts or filling a document',async()=>{
  render(<TenderOriginalForms/>);await importOriginal();
  fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic supplier'}});
