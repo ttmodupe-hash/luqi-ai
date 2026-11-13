@@ -64,6 +64,28 @@ it('format guidance agrees with the existing worker validator for bounded inputs
   if(accepted)expect(()=>validateSupplierValues(values)).not.toThrow();else expect(()=>validateSupplierValues(values)).toThrow();
  }
 });
+it('updates optional-blank progress as contact facts change without treating invalid entries as blanks',()=>{
+ const writes=vi.fn(),edits=vi.fn();vi.stubGlobal('fetch',writes);
+ function LiveFixture(){const[values,setValues]=useState({...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'});return <TenderSupplierGuide values={values} onChange={(id,value)=>{edits(id,value);setValues(v=>({...v,[id]:value}));}}/>;}
+ render(<LiveFixture/>);
+ const originalReview=screen.getByText('Review 6 blank optional contact fields');
+ fireEvent.click(originalReview);
+ const disclosure=originalReview.closest('details')!;
+ expect(within(disclosure).getAllByRole('button')).toHaveLength(6);
+ fireEvent.change(screen.getByLabelText('SBD 1 Postal address'),{target:{value:'Synthetic postbox'}});
+ expect(screen.getByText('Review 5 blank optional contact fields')).toBeTruthy();
+ expect(within(disclosure).queryByRole('button',{name:'Go to Postal address'})).toBeNull();
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'invalid-email'}});
+ expect(screen.getByText('Review 4 blank optional contact fields')).toBeTruthy();
+ expect(within(disclosure).queryByRole('button',{name:'Go to Email address'})).toBeNull();
+ expect(screen.getByLabelText('SBD 1 Email address').getAttribute('aria-invalid')).toBe('true');
+ expect(screen.getByRole('status').textContent).toContain('2 of 7 supported contact fields');
+ fireEvent.change(screen.getByLabelText('SBD 1 Email address'),{target:{value:'synthetic@example.test'}});
+ expect(screen.getByText('Review 4 blank optional contact fields')).toBeTruthy();
+ expect(screen.getByRole('status').textContent).toContain('3 of 7 supported contact fields');
+ expect(edits).toHaveBeenCalledTimes(3);
+ expect(writes).not.toHaveBeenCalled();
+});
 it('unmounting and reopening does not restore an old answer',()=>{
  const app=render(<Fixture/>);fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Private synthetic bidder'}});app.unmount();render(<Fixture/>);
  expect(screen.queryByDisplayValue('Private synthetic bidder')).toBeNull();
