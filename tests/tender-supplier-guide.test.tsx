@@ -12,6 +12,8 @@ it('starts with existing fields, specific help and no guessed personal details',
  const network=vi.fn();vi.stubGlobal('fetch',network);render(<Fixture/>);
  for(const field of SBD1_FIELDS){const input=screen.getByLabelText('SBD 1 '+field.label) as HTMLInputElement;expect(input.value).toBe('');expect(input.getAttribute('aria-describedby')).toBeTruthy();}
  expect(screen.getByText('0 of 7 supported contact fields have valid-format entries.')).toBeTruthy();
+ expect(screen.getByText('Supplier contact facts you enter')).toBeTruthy();
+ expect(screen.queryByText('Your verified supplier facts')).toBeNull();
  expect(screen.getAllByRole('textbox')).toHaveLength(7);expect(network).not.toHaveBeenCalled();
 });
 it('moves through the selected field and preserves controlled values across views',async()=>{
