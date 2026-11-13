@@ -45,6 +45,9 @@ test('320px long unbroken goal wraps without exposing shared-device data or hori
   await page.goto('/#/possibility');
   await page.getByLabel('What do you want to make possible?').fill(syntheticGoal);
   await page.getByRole('button', { name: 'Build my LUQI path' }).click();
+  // Verify the complete visible workbench does not overflow before asking for
+  // replacement consent; a 320px action must remain reachable by a real click.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.getByRole('button', { name: /Save as my journey/i }).click();
   await expect(page.getByRole('status')).toContainText('A different journey is already saved');
   await page.getByRole('button', { name: /Replace saved journey on this device/i }).click();
