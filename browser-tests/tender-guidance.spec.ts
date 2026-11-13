@@ -32,6 +32,28 @@ test('guided original-form fields keep answers and route corrections at 320px',a
  expect(writes).toEqual([]);
 });
 
+test('pasted overlength bidder name remains invalid instead of silently becoming approved text at 320px',async({page})=>{
+ await page.setViewportSize({width:320,height:840});
+ const writes:string[]=[];
+ page.on('request',request=>{if(request.method()!=='GET')writes.push(request.method()+' '+request.url());});
+ await page.goto('/#/tenders');
+ await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Original government form assistance'});
+ await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
+ await panel.getByLabel('Import original tender document').setInputFiles(fixture);
+ const bidder=panel.getByLabel('SBD 1 Name of bidder');
+ await bidder.fill('X'.repeat(160));
+ await expect(bidder).toHaveValue('X'.repeat(71));
+ await expect(bidder).toHaveAttribute('aria-invalid','true');
+ await expect(panel.getByText('Use no more than 70 characters for this original field.')).toBeVisible();
+ await expect(panel.getByText('0 of 7 supported contact fields contain entries without detected input errors.')).toBeVisible();
+ await panel.getByRole('button',{name:'Prepare exact original for review'}).click();
+ await expect(panel.getByText(/Check supported SBD 1 contact fields before preparing/)).toBeVisible();
+ await expect(panel.getByRole('region',{name:'Original form applicant review'})).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+});
+
 test('keyboard-only guided contact navigation retains focus and factual entries at 320px',async({page})=>{
  await page.setViewportSize({width:320,height:840});
  const writes:string[]=[];
