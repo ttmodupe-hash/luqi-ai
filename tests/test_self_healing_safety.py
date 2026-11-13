@@ -328,12 +328,13 @@ class FailClosedHealingTests(unittest.TestCase):
                        UnhashableString(job.job_id), None, 4)
         for method in (self.manager.authorize_deployment,
                        self.manager.reject_deployment):
+            expected_denial = method(job.job_id, reviewer="synthetic-admin")[1]
             for candidate in invalid_ids:
                 with self.subTest(method=method.__name__,
                                   kind=type(candidate).__name__):
                     allowed, message = method(candidate, reviewer="synthetic-admin")
                     self.assertFalse(allowed)
-                    self.assertEqual(message, "Proposal not found.")
+                    self.assertEqual(message, expected_denial)
                     self.assertEqual(self.manager.list_jobs(), prior)
             allowed, message = method(job.job_id, reviewer="synthetic-admin")
             self.assertFalse(allowed)
@@ -363,14 +364,46 @@ class FailClosedHealingTests(unittest.TestCase):
         )
         for operation in (self.manager.authorize_deployment,
                           self.manager.reject_deployment):
+            expected_denial = operation(existing.job_id, reviewer="fake-admin")[1]
             for candidate in invalid:
                 with self.subTest(operation=operation.__name__,
                                   input_type=type(candidate).__name__):
                     permitted, message = operation(candidate, reviewer="fake-admin")
                     self.assertFalse(permitted)
-                    self.assertEqual(message, "Proposal not found.")
+                    self.assertEqual(message, expected_denial)
             permitted, message = operation(existing.job_id, reviewer="fake-admin")
             self.assertFalse(permitted)
+        self.assertEqual(self.manager.list_jobs(), original)
+
+
+    def test_denied_review_calls_do_not_reveal_private_proposal_existence(self):
+        # The caller has not proved its identity. It must not learn whether
+        # a private incident identifier is registered; no registry access is
+        # necessary because BOTH operations always refuse.
+        existing = self.manager.trigger_self_healing("Synthetic private incident")
+        original = self.manager.list_jobs()
+
+        class NoLookup(dict):
+            def __contains__(self, key):
+                raise AssertionError("Unverified operation queried the incident registry")
+
+            def get(self, key, default=None):
+                raise AssertionError("Unverified operation queried the incident registry")
+
+            def __getitem__(self, key):
+                raise AssertionError("Unverified operation queried the incident registry")
+
+        self.manager._jobs = NoLookup(self.manager._jobs)
+        for operation in (self.manager.authorize_deployment,
+                          self.manager.reject_deployment):
+            responses = [
+                operation(identifier, reviewer="synthetic-admin")
+                for identifier in (existing.job_id, "sh_" + "0" * 16,
+                                   "not-an-id", [], {}, None, "x" * 300_000)
+            ]
+            self.assertTrue(all(not permitted for permitted, _ in responses))
+            self.assertEqual(len({message for _, message in responses}), 1)
+            self.assertNotIn(existing.job_id, responses[0][1])
         self.assertEqual(self.manager.list_jobs(), original)
 
 

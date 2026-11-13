@@ -27,7 +27,6 @@ from typing import Any, Dict, List, Optional, Tuple
 MAX_REPORT_LENGTH = 4000
 MAX_JOBS_IN_MEMORY = 100
 _SAFE_PATH = re.compile(r"^[a-zA-Z0-9_./-]{1,180}$")
-_PROPOSAL_ID = re.compile(r"sh_[a-f0-9]{16}\Z")
 _REPORT_WITHHELD = "[REPORT_WITHHELD]"
 _TARGET_WITHHELD = "[TARGET_WITHHELD]"
 # Shared refusal string; never delegate the manager boundary to an injectable tool.
@@ -37,11 +36,6 @@ _SANDBOX_BLOCKED = (
 )
 # In-memory-only keyed fingerprint; never treat as durable incident evidence.
 _FINGERPRINT_KEY = secrets.token_bytes(32)
-
-
-def _valid_proposal_id(value: Any) -> bool:
-    """Reject malformed or oversized caller IDs before touching the job register."""
-    return type(value) is str and len(value) == 19 and _PROPOSAL_ID.fullmatch(value) is not None
 
 
 def _utc_now() -> str:
@@ -243,12 +237,7 @@ class SelfHealingPipelineManager:
     def authorize_deployment(
         self, job_id: str, reviewer: str = "unverified"
     ) -> Tuple[bool, str]:
-        # The caller's reviewer string is NOT proof of identity.
-        # In-process approval cannot merge/deploy or change the job to deployed.
-        # JSON callers may supply arrays/objects. Never let an unhashable
-        # identifier raise TypeError before the fail-closed refusal.
-        if not _valid_proposal_id(job_id) or job_id not in self._jobs:
-            return False, "Proposal not found."
+        """Refuse deployment without revealing existence of private proposals."""
         return (
             False,
             "Deployment is blocked. Verified reviewer identity, independent CI, "
@@ -260,14 +249,11 @@ class SelfHealingPipelineManager:
         self, job_id: str, reason: str = "Requires manual code review",
         reviewer: str = "unverified"
     ) -> Tuple[bool, str]:
-        # JSON callers may supply arrays/objects. Never let an unhashable
-        # identifier raise TypeError before the fail-closed refusal.
-        if not _valid_proposal_id(job_id) or job_id not in self._jobs:
-            return False, "Proposal not found."
+        """Refuse unauthenticated state changes without an existence oracle."""
         return (
             False,
             "Review state cannot be changed by an unverified in-process caller. "
-            "Use an authenticated external approval workflow.",
+            "No review or deployment state changed.",
         )
 
     def list_jobs(self) -> List[Dict[str, Any]]:
