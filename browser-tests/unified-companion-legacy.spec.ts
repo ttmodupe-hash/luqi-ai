@@ -77,7 +77,9 @@ test('320px shared-device journey read denial is not falsely reported as an abse
     };
   });
   await page.getByRole('button', { name: 'Show a saved goal on this device' }).click();
-  await expect(page.getByRole('status')).toContainText('Browser storage could not be read');
+  // Scope the live-region assertion to the journey: the app shell also has a connection status.
+  await expect(page.getByRole('region', { name: 'Device-local journey privacy' }).getByRole('status'))
+    .toContainText('Browser storage could not be read');
   await expect(page.getByText(/No readable saved journey was found/i)).toHaveCount(0);
   await expect(page.getByText('Goal: Sensitive goal retained while storage is blocked')).toHaveCount(0);
   await page.evaluate(() => {
