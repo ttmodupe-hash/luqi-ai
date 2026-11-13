@@ -21,7 +21,27 @@ afterEach(() => {
   localStorage.clear();
 });
 
+function showSavedJourneyIfPresent() {
+  const button = screen.queryByRole('button', { name: 'Show saved journey on this device' });
+  if (button) fireEvent.click(button);
+}
+
 describe('LUQI Capability Journey', () => {
+  it("conceals previous device user's goal and progress until reveal, including after blur", () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    setCapabilityJourneyStep(0, true);
+    render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    expect(screen.getByRole('heading', { name: 'A journey is saved on this browser.' })).toBeTruthy();
+    expect(screen.queryByText('I want to become a network engineer')).toBeNull();
+    expect(screen.queryByText('25%')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mark complete:/i })).toBeNull();
+    showSavedJourneyIfPresent();
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    fireEvent.blur(window);
+    expect(screen.queryByText('I want to become a network engineer')).toBeNull();
+    expect(screen.queryByText('25%')).toBeNull();
+    expect(readCapabilityJourney()?.completed).toEqual([0]);
+  });
   it('saves only after an explicit save action', () => {
     render(<MemoryRouter><PossibilityEnginePage /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'I want to become a network engineer' }));
@@ -183,6 +203,7 @@ describe('LUQI Capability Journey', () => {
     setCapabilityJourneyStep(0, true);
     const request = vi.spyOn(window, 'fetch');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     expect(screen.getByText('25%')).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Work inside a real lab' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Continue mission/i }).getAttribute('href')).toBe('/lab-simulator');
@@ -192,6 +213,7 @@ describe('LUQI Capability Journey', () => {
   it('confirms completion only after storage succeeds', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(readCapabilityJourney()?.completed).toEqual([0]);
     expect(screen.getByText('25%')).toBeTruthy();
@@ -204,6 +226,7 @@ describe('LUQI Capability Journey', () => {
       throw new DOMException('Storage blocked', 'QuotaExceededError');
     });
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(screen.getByText('0%')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toMatch(/could not be confirmed as saved/i);
@@ -213,6 +236,7 @@ describe('LUQI Capability Journey', () => {
   it('does not update another goal that replaced the displayed journey in a second tab', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     saveCapabilityJourney('I want to start a township business');
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
@@ -224,10 +248,12 @@ describe('LUQI Capability Journey', () => {
   it('loads newer stage progress in-page and then permits a confirmed edit', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     setCapabilityJourneyStep(2, true);
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByText('25%')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
@@ -237,6 +263,7 @@ describe('LUQI Capability Journey', () => {
 
   it('offers keyboard-accessible recovery when another tab saves the first goal', () => {
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeTruthy();
     saveCapabilityJourney('I want to become a network engineer');
     fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
@@ -245,6 +272,7 @@ describe('LUQI Capability Journey', () => {
     recovery.focus();
     expect(document.activeElement).toBe(recovery);
     fireEvent.click(recovery);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBe(document.activeElement);
     expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
   });
@@ -263,6 +291,7 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('status').textContent).toMatch(/saved in another tab/i);
     expect(screen.queryByRole('link', { name: /Build my path/i })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
     expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
   });
@@ -274,6 +303,7 @@ describe('LUQI Capability Journey', () => {
     });
 
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('status').textContent).toMatch(/previously saved journey may still exist/i);
     expect(screen.getByRole('button', { name: 'Load latest saved journey' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: /Build my path/i })).toBeNull();
@@ -281,6 +311,7 @@ describe('LUQI Capability Journey', () => {
 
     denied.mockRestore();
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
     expect(screen.getByText('0%')).toBeTruthy();
     expect(readCapabilityJourney()?.completed).toEqual([]);
@@ -288,6 +319,7 @@ describe('LUQI Capability Journey', () => {
 
   it('does not offer empty-journey recovery for unrelated storage changes', () => {
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     localStorage.setItem('unrelated-preference', 'ok');
     fireEvent(window, new StorageEvent('storage', { key: 'unrelated-preference', storageArea: localStorage }));
     expect(screen.queryByRole('button', { name: 'Load latest saved journey' })).toBeNull();
@@ -297,11 +329,13 @@ describe('LUQI Capability Journey', () => {
   it('notifies about newer progress before the user touches the page', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     setCapabilityJourneyStep(2, true);
     fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
     expect(screen.getByText('0%')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByText('25%')).toBeTruthy();
     expect(readCapabilityJourney()?.completed).toEqual([2]);
   });
@@ -309,6 +343,7 @@ describe('LUQI Capability Journey', () => {
   it('keeps the visible journey and recovery action when browser storage becomes unreadable', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     setCapabilityJourneyStep(2, true); // A different tab saved newer progress.
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
@@ -316,6 +351,7 @@ describe('LUQI Capability Journey', () => {
       throw new DOMException('Storage denied', 'SecurityError');
     });
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
     expect(screen.getByText('0%')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toMatch(/Browser storage is unavailable/);
@@ -325,6 +361,7 @@ describe('LUQI Capability Journey', () => {
   it('distinguishes storage access denial from another-tab changes during edits and notifications', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('Synthetic privacy denial', 'SecurityError');
     });
@@ -344,6 +381,7 @@ describe('LUQI Capability Journey', () => {
 
     denied.mockRestore();
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/i);
     expect(readCapabilityJourney()?.completed).toEqual([]);
   });
@@ -351,6 +389,7 @@ describe('LUQI Capability Journey', () => {
   it('requires explicit recovery before editing after a transient storage access denial', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('Synthetic temporary denial', 'SecurityError');
     });
@@ -370,6 +409,7 @@ describe('LUQI Capability Journey', () => {
     const recovery = screen.getByRole('button', { name: 'Load latest saved journey' });
     recovery.focus();
     fireEvent.click(recovery);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBe(document.activeElement);
     expect((screen.getAllByRole('button', { name: /Mark complete:/i })[0] as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole('button', { name: /Clear saved journey/i }) as HTMLButtonElement).disabled).toBe(false);
@@ -380,10 +420,12 @@ describe('LUQI Capability Journey', () => {
   it('notifies about removal by another tab before a user edits', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     localStorage.removeItem(CAPABILITY_JOURNEY_KEY);
     fireEvent(window, new StorageEvent('storage', { key: CAPABILITY_JOURNEY_KEY, storageArea: localStorage }));
     expect(screen.getByRole('status').textContent).toMatch(/changed in another tab/i);
     fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: /Start with a goal worth working toward/i })).toBeTruthy();
     expect(readCapabilityJourney()).toBeNull();
   });
@@ -391,6 +433,7 @@ describe('LUQI Capability Journey', () => {
   it('presents stale-tab recovery before the mission and supports keyboard activation', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     setCapabilityJourneyStep(2, true); // Emulate another tab changing saved progress.
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     const recovery = screen.getByRole('region', { name: 'Journey storage notice' });
@@ -401,6 +444,7 @@ describe('LUQI Capability Journey', () => {
     action.focus();
     expect(document.activeElement).toBe(action);
     fireEvent.click(action);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBe(document.activeElement);
     expect(screen.queryByRole('button', { name: 'Load latest saved journey' })).toBeNull();
     expect(readCapabilityJourney()?.completed).toEqual([2]);
@@ -409,6 +453,7 @@ describe('LUQI Capability Journey', () => {
   it('does not erase a different goal saved from another tab', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     saveCapabilityJourney('I want to start a township business');
     fireEvent.click(screen.getByRole('button', { name: /Clear saved journey/i }));
     expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
@@ -418,6 +463,7 @@ describe('LUQI Capability Journey', () => {
   it('does not overwrite more recent stage completion from another tab', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     setCapabilityJourneyStep(2, true);
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(readCapabilityJourney()?.completed).toEqual([2]);
@@ -428,6 +474,7 @@ describe('LUQI Capability Journey', () => {
   it('rechecks an outdated mission link even without a storage event', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     const mission = screen.getByRole('link', { name: /Continue mission/i });
     saveCapabilityJourney('I want to start a township business'); // synthetic same-tab change
     fireEvent.click(mission);
@@ -439,6 +486,7 @@ describe('LUQI Capability Journey', () => {
   it('rechecks a capability link even without a storage event', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     const capability = screen.getAllByRole('link', { name: /Open capability|Review capability/i })[0];
     setCapabilityJourneyStep(2, true); // silent saved-progress change
     fireEvent.click(capability);
@@ -450,6 +498,7 @@ describe('LUQI Capability Journey', () => {
   it('blocks an existing mission link when storage becomes unreadable', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     const mission = screen.getByRole('link', { name: /Continue mission/i });
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('Synthetic blocked storage', 'SecurityError');
@@ -463,6 +512,7 @@ describe('LUQI Capability Journey', () => {
   it('prevents navigation to a stale goal until the user reloads the latest saved journey', () => {
     saveCapabilityJourney('I want to become a network engineer');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('link', { name: /Continue mission/i })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Open capability|Review capability/i })).toHaveLength(4);
 
@@ -475,6 +525,7 @@ describe('LUQI Capability Journey', () => {
     const recovery = screen.getByRole('button', { name: 'Load latest saved journey' });
     recovery.focus();
     fireEvent.click(recovery);
+    showSavedJourneyIfPresent();
     expect(screen.getByRole('heading', { name: 'I want to start a township business' })).toBe(document.activeElement);
     expect(screen.getByRole('link', { name: /Continue mission/i })).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /Open capability|Review capability/i })).toHaveLength(4);
@@ -483,6 +534,7 @@ describe('LUQI Capability Journey', () => {
   it('lets the user clear the device-local journey', () => {
     saveCapabilityJourney('I want to build an app for my community');
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     const clear = screen.getByRole('button', { name: /Clear saved journey/i });
     clear.focus();
     fireEvent.click(clear);
@@ -503,6 +555,7 @@ describe('LUQI Capability Journey', () => {
     saveCapabilityJourney('I want to become a network engineer');
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => undefined);
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     fireEvent.click(screen.getAllByRole('button', { name: /Mark complete:/i })[0]);
     expect(readCapabilityJourney()?.completed).toEqual([]);
     expect(screen.getByText('0%')).toBeTruthy();
@@ -513,6 +566,7 @@ describe('LUQI Capability Journey', () => {
     saveCapabilityJourney('I want to become a network engineer');
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => undefined);
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
+    showSavedJourneyIfPresent();
     fireEvent.click(screen.getByRole('button', { name: /Clear saved journey/i }));
     expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
     expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();

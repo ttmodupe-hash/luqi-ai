@@ -11,6 +11,8 @@ import {
   type CapabilityJourney,
 } from '../lib/capability-journey';
 import '../capability-journey.css';
+import { useOptionalCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
 
 const STALE_JOURNEY_NOTICE = 'This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.';
 const NEW_JOURNEY_NOTICE = 'A journey was saved in another tab. Load the latest saved journey to continue on this device.';
@@ -39,17 +41,38 @@ export default function CapabilityJourneyPage() {
   const [initialStorageUnavailable] = useState(() => !canReadJourneyStorage());
   const [notice, setNotice] = useState(initialStorageUnavailable ? INITIAL_UNREADABLE_STORAGE_NOTICE : '');
   const [needsReload, setNeedsReload] = useState(initialStorageUnavailable);
+  // Device-local storage is not account-scoped. Require deliberate disclosure.
+  const identity = customerSessionBoundary(useOptionalCustomerSession()?.session ?? null);
+  const [revealed, setRevealed] = useState(false);
+  const [revealOwner, setRevealOwner] = useState<string | null>(null);
+  const privateViewVisible = revealed && revealOwner === identity;
   const focusAfterRecovery = useRef(false);
   // Recovery or clearing removes the keyboard-activated button. Keep the user's place.
   useLayoutEffect(() => {
     if (!focusAfterRecovery.current) return;
     focusAfterRecovery.current = false;
-    document.getElementById(journey ? 'journey-title' : 'journey-empty-title')?.focus();
-  }, [journey, needsReload]);
+    document.getElementById(journey ? (privateViewVisible ? 'journey-title' : 'journey-privacy-title') : 'journey-empty-title')?.focus();
+  }, [journey, needsReload, privateViewVisible]);
   const plan = useMemo(() => journey ? getPossibilityPlan(journey.goal) : null, [journey]);
   const progress = capabilityJourneyProgress(journey);
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
   const nextStep = plan && nextIndex >= 0 ? plan.steps[nextIndex] : null;
+
+  // Account changes hide the previous identity before paint; losing focus
+  // also hides the device-shared journey without deleting its local record.
+  useLayoutEffect(() => { setRevealed(false); }, [identity]);
+  useEffect(() => {
+    const hide = () => setRevealed(false);
+    const onVisibility = () => { if (document.visibilityState === 'hidden') hide(); };
+    window.addEventListener('blur', hide);
+    window.addEventListener('pagehide', hide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('blur', hide);
+      window.removeEventListener('pagehide', hide);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   // Storage events arrive in OTHER tabs, including when this page has no goal yet.
   useEffect(() => {
@@ -130,6 +153,7 @@ export default function CapabilityJourneyPage() {
     }
     const latest = readCapabilityJourney();
     focusAfterRecovery.current = true;
+    setRevealed(false);
     setJourney(latest);
     setNeedsReload(false);
     setNotice(latest ? 'Loaded the latest saved journey from this browser.' : 'No readable saved journey is available on this device. It may have been cleared or become invalid. You can choose a new goal.');
@@ -175,13 +199,37 @@ export default function CapabilityJourneyPage() {
     }
     // Clearing unmounts this button; move keyboard focus to the empty-state heading.
     focusAfterRecovery.current = true;
+    setRevealed(false);
     setJourney(null);
     setNeedsReload(false);
     setNotice('Saved journey cleared from this device.');
   }
 
+  function showSavedJourney() {
+    if (!journey || needsReload) return;
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (!journeySnapshotMatchesSaved()) { warnStaleJourney(); return; }
+    focusAfterRecovery.current = true;
+    setRevealOwner(identity);
+    setRevealed(true);
+  }
+
   return <main className="luqi-journey">
-    {!journey || !plan ? <section className="luqi-journey-empty" aria-labelledby="journey-empty-title">
+    {journey && plan && !privateViewVisible ? <section className="luqi-journey-empty" aria-labelledby="journey-privacy-title">
+      <div className="luqi-journey-empty-icon"><ShieldCheck size={42} aria-hidden="true" /></div>
+      <p className="luqi-journey-kicker">YOUR CAPABILITY JOURNEY</p>
+      <h1 id="journey-privacy-title" tabIndex={-1}>A journey is saved on this browser.</h1>
+      <p>Goals and progress stored on this device are not tied to your Luqi account. On a shared phone or computer they may belong to someone else.</p>
+      {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+      {needsReload
+        ? <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>
+        : <button type="button" className="luqi-journey-primary" onClick={showSavedJourney}>Show saved journey on this device</button>}
+      <p className="luqi-journey-device">Switching away hides the goal again. This reminder is not account-level access protection.</p>
+    </section> : !journey || !plan ? <section className="luqi-journey-empty" aria-labelledby="journey-empty-title">
       <div className="luqi-journey-empty-icon"><Target size={42} aria-hidden="true" /></div>
       <p className="luqi-journey-kicker">YOUR CAPABILITY JOURNEY</p>
       <h1 id="journey-empty-title" tabIndex={-1}>Start with a goal worth working toward.</h1>

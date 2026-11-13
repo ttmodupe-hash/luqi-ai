@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+async function revealIfSaved(page: import('@playwright/test').Page) {
+  const button = page.getByRole('button', { name: 'Show saved journey on this device' });
+  if (await button.count()) await button.click();
+}
+
 // Only synthetic device-local goals. The network guard prevents paid API calls.
 test.beforeEach(async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 320, height: 780 });
@@ -12,7 +17,24 @@ test.beforeEach(async ({ page, baseURL }) => {
   await page.goto('/#/possibility');
   await page.getByRole('button', { name: 'I want to become a network engineer' }).click();
   await page.getByRole('button', { name: /Save as my journey/i }).click();
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
+});
+
+test('320px shared-device privacy gate hides the saved goal on reload and focus loss', async ({ page }) => {
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'A journey is saved on this browser.' })).toBeVisible();
+  await expect(page.getByText('I want to become a network engineer')).toHaveCount(0);
+  await expect(page.getByText('0%', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show saved journey on this device' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(page.getByRole('heading', { name: 'A journey is saved on this browser.' })).toBeVisible();
+  await expect(page.getByText('I want to become a network engineer')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('luqi:capability-journey:v1') || 'null')?.goal))
+    .toBe('I want to become a network engineer');
 });
 
 test('320px different-goal replacement requires two deliberate actions and preserves old progress until consent', async ({ page }) => {
@@ -31,6 +53,7 @@ test('320px different-goal replacement requires two deliberate actions and prese
   expect(prior.completed).toEqual([0]);
   await page.getByRole('button', { name: /Replace saved journey on this device/i }).focus();
   await page.keyboard.press('Enter');
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to start a township business' })).toBeVisible();
   await expect(page.getByText('0%', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -48,6 +71,7 @@ test('320px keyboard stage completion persists without provider requests', async
   await expect(page.getByRole('status')).toContainText('Stage marked complete on this device.');
   await expect(page.getByText('25%', { exact: true })).toBeVisible();
   await page.reload();
+  await revealIfSaved(page);
   await expect(page.getByText('25%', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(posts).toEqual([]);
@@ -66,6 +90,7 @@ test('clearing a saved journey by keyboard restores focus at 320px', async ({ pa
 test('an older tab cannot overwrite or erase a later tab’s saved stage', async ({ page, context }) => {
   const otherTab = await context.newPage();
   await otherTab.goto('/#/journey');
+  await revealIfSaved(otherTab);
   await expect(otherTab.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
   await otherTab.getByRole('button', { name: /Mark complete:/i }).nth(2).click();
   await expect(otherTab.getByText('25%', { exact: true })).toBeVisible();
@@ -83,6 +108,7 @@ test('an older tab cannot overwrite or erase a later tab’s saved stage', async
   });
   expect(persisted?.completed).toEqual([2]);
   await page.getByRole('button', { name: 'Load latest saved journey' }).click();
+  await revealIfSaved(page);
   await expect(page.getByRole('status')).toContainText('Loaded the latest saved journey');
   await expect(page.getByText('25%', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Mark complete:/i }).first().click();
@@ -99,6 +125,7 @@ test('an older tab cannot overwrite or erase a later tab’s saved stage', async
 test('newer progress automatically announces stale state and accepts keyboard recovery at 320px', async ({ page, context }) => {
   const otherTab = await context.newPage();
   await otherTab.goto('/#/journey');
+  await revealIfSaved(otherTab);
   await otherTab.getByRole('button', { name: /Mark complete:/i }).nth(2).click();
   await expect(otherTab.getByText('25%', { exact: true })).toBeVisible();
   // No user action in the first tab: the browser dispatches the real storage event.
