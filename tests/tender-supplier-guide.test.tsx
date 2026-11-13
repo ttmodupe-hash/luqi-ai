@@ -65,6 +65,19 @@ it('format guidance agrees with the existing worker validator for bounded inputs
   if(accepted)expect(()=>validateSupplierValues(values)).not.toThrow();else expect(()=>validateSupplierValues(values)).toThrow();
  }
 });
+it('does not silently truncate a pasted bidder name to a valid length',()=>{
+ const network=vi.fn();vi.stubGlobal('fetch',network);render(<Fixture/>);
+ const field=SBD1_FIELDS.find(f=>f.id==='bidderName')!;
+ const input=screen.getByLabelText('SBD 1 '+field.label) as HTMLInputElement;
+ // The extra character is an overflow sentinel: real browsers can truncate
+ // at maxlength, but never to a value that accidentally passes validation.
+ expect(input.maxLength).toBe(field.max+1);
+ fireEvent.change(input,{target:{value:'X'.repeat(field.max+1)}});
+ expect(input.getAttribute('aria-invalid')).toBe('true');
+ expect(screen.getByText('Use no more than '+field.max+' characters for this original field.')).toBeTruthy();
+ expect(screen.getByRole('status').textContent).toContain('0 of 7 supported contact fields');
+ expect(network).not.toHaveBeenCalled();
+});
 it('unmounting and reopening does not restore an old answer',()=>{
  const app=render(<Fixture/>);fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Private synthetic bidder'}});app.unmount();render(<Fixture/>);
  expect(screen.queryByDisplayValue('Private synthetic bidder')).toBeNull();
