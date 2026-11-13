@@ -62,6 +62,29 @@ test('account switch withdraws the previous lease and needs new consent',async()
  rerender({token:'second'});await flush();expect(result.current.sharing).toBe(false);expect(result.current.away).toBe(false);
  expect(mocks.presence.mock.calls.at(-1)?.[2]).toBe(false);
 });
+test('account A consent and status cannot reappear after an A → B → A switch',async()=>{
+ const {result,rerender}=renderHook(({token})=>useContactPresence(token),{initialProps:{token:'account-a'}});
+ act(()=>result.current.setSharing(true));await flush();
+ const firstLease=mocks.presence.mock.calls[0][0];
+ expect(result.current.sharing).toBe(true);
+ expect(result.current.message).toContain('Sharing recent activity');
+ rerender({token:'account-b'});await flush();
+ expect(result.current.sharing).toBe(false);
+ expect(result.current.away).toBe(false);
+ expect(result.current.message).toBe('');
+ expect(mocks.presence.mock.calls.at(-1)?.slice(2)).toEqual([false]);
+ rerender({token:'account-a'});await flush();
+ expect(result.current.sharing).toBe(false);
+ expect(result.current.away).toBe(false);
+ expect(result.current.message).toBe('');
+ const noConsentCalls=mocks.presence.mock.calls.length;
+ await act(async()=>{vi.advanceTimersByTime(60_000);});await flush();
+ expect(mocks.presence).toHaveBeenCalledTimes(noConsentCalls);
+ act(()=>result.current.setSharing(true));await flush();
+ expect(result.current.sharing).toBe(true);
+ expect(mocks.presence.mock.calls.at(-1)?.[0]).not.toBe(firstLease);
+});
+
 test('eligible opted-in user gets an explicit reversible Away control',async()=>{
  const setAway=vi.fn();const presence={sharing:true,away:false,message:'',setSharing:vi.fn(),setAway};
  const session={token:'synthetic',user:{email:'fixture@example.invalid'}};

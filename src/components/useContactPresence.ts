@@ -10,17 +10,32 @@ export interface ContactPresenceControls {
 }
 
 export function useContactPresence(token: string | undefined) {
-  const [choice, setChoice] = useState<{ token: string; enabled: boolean; away: boolean } | null>(null);
-  const [message, setMessage] = useState('');
-  const lease = useRef<string | null>(null), sequence = useRef(0);
-  const sharing = !!token && choice?.token === token && choice.enabled;
-  const away = sharing && choice?.away === true;
+  // A prior account's consent or status notice must never resurface on an
+  // A → B → A session transition, even before passive effect cleanup runs.
+  const [account, setAccount] = useState<{
+    token: string | undefined; generation: number;
+    choice: { enabled: boolean; away: boolean } | null; message: string;
+  }>({ token, generation: 0, choice: null, message: '' });
+  if (account.token !== token) {
+    // React's guarded render-time adjustment prevents a stale committed frame.
+    setAccount({ token, generation: account.generation + 1, choice: null, message: '' });
+  }
+  const activeAccount = account.token === token ? account : null;
+  const generation = activeAccount?.generation;
+  const sharing = !!token && activeAccount?.choice?.enabled === true;
+  const away = sharing && activeAccount?.choice?.away === true;
+  const message = activeAccount?.message ?? '';
+  const setMessage = (value: string) => setAccount(previous =>
+    previous.token === token && previous.generation === generation
+      ? { ...previous, message: value } : previous);
+  const lease = useRef<{ key: string; id: string } | null>(null), sequence = useRef(0);
   const mode = useRef(false), sendChoice = useRef<(() => void) | null>(null);
   mode.current = away;
   useEffect(() => {
     if (!sharing || !token) return;
-    lease.current ??= crypto.randomUUID();
-    const id = lease.current, api = p2pClient(token);
+    const sessionKey = generation + ':' + token;
+    if (lease.current?.key !== sessionKey) lease.current = { key: sessionKey, id: crypto.randomUUID() };
+    const id = lease.current.id, api = p2pClient(token);
     let current = true, pending = false, lastAttempt = -Infinity, lastMode: boolean | undefined;
     let revokeSequence: number | null = null;
     const beat = async () => {
@@ -61,19 +76,22 @@ export function useContactPresence(token: string | undefined) {
       revokeSequence = ++sequence.current;
       void api.presence(id, revokeSequence, false).catch(() => {});
     };
-  }, [sharing, token]);
+  }, [sharing, token, generation]);
   useEffect(() => { sendChoice.current?.(); }, [away]);
   return { sharing, away, message,
     setAway: (value: boolean) => {
       if (!token || !sharing || away === value) return;
       // Do not imply a choice has been published before its request completes.
       setMessage('Updating your shared status…');
-      setChoice({ token, enabled: true, away: value });
+      setAccount(previous => previous.token === token && previous.generation === generation
+        ? { ...previous, choice: { enabled: true, away: value } } : previous);
     },
     setSharing: (enabled: boolean) => {
       if (!token) return;
-      setChoice({ token, enabled, away: false });
-      if (!enabled) setMessage('Updates stopped. Any existing shared signal expires within 75 seconds.');
+      setAccount(previous => previous.token === token && previous.generation === generation
+        ? { ...previous, choice: { enabled, away: false },
+            message: enabled ? previous.message : 'Updates stopped. Any existing shared signal expires within 75 seconds.' }
+        : previous);
     },
   };
 }
