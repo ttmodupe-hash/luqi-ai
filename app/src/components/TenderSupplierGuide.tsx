@@ -46,6 +46,15 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
         <p className="break-words text-xs text-amber-200">{issue}</p>
       </div>)}
     </div>}
+    {progress.blank>0 && <details className="min-w-0 space-y-2 rounded-lg border border-slate-700 p-3" aria-label="Blank optional contact field review">
+      <summary className="cursor-pointer text-sm font-semibold">Review {progress.blank} blank optional contact fields</summary>
+      <p className="mt-2 text-xs text-slate-300">These fields are optional for Luqi's partial export only; the issuer may still require them. Leave unknown answers empty rather than entering examples.</p>
+      <ul className="mt-2 space-y-2">{progress.rows.filter(row=>row.state==='blank'&&!row.field.required).map(({field})=>
+        <li key={field.id} className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+          <button type="button" className={buttonStyle} onClick={()=>move(SBD1_FIELDS.findIndex(item=>item.id===field.id))}>Go to {field.label}</button>
+          <span className="break-words text-slate-300">Blank in the partial export; confirm the issuer's requirements.</span>
+        </li>)}</ul>
+    </details>}
     {guided && <p className="text-sm font-semibold">Contact field {step+1} of {SBD1_FIELDS.length}</p>}
     <div className={guided?'space-y-3':'grid gap-3 sm:grid-cols-2'}>
       {progress.rows.filter((_,index)=>!guided||index===step).map(({field,issue})=>{
