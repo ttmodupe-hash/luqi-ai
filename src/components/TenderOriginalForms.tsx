@@ -1,8 +1,9 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useId,useRef,useState} from 'react';
 import {useOptionalCustomerSession} from '../providers/customer-session';
 import {EMPTY_SUPPLIER_VALUES,SBD1_FIELDS,VERIFIED_SBD1,TENDER_FILE_MAX,TENDER_DOCUMENT_ERRORS,
   type SupplierValues,type TenderDocumentInspection} from '../lib/tender-document-contract';
 import {TenderSupplierGuide} from './TenderSupplierGuide';
+import {supplierFieldProgress} from '../lib/tender-field-guide';
 import {runTenderDocument} from '../lib/tender-document-client';
 import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTenderAudit,prepareTenderPacket,
   validatePacketContext,canExportTenderPacket,buildTenderOriginalArchive,
@@ -12,6 +13,17 @@ import {EMPTY_PACKET_CONTEXT,ORIGINAL_FORM_GATES,emptyOriginalApprovals,appendTe
 interface LocalTenderFile {name:string;mime:string;bytes:Uint8Array;inspection:TenderDocumentInspection}
 const inputStyle='mt-1 block w-full min-w-0 rounded-lg border border-slate-500 bg-slate-950 p-3 text-white';
 const buttonStyle='rounded-lg border border-cyan-400 px-3 py-3 text-sm font-semibold text-cyan-100 disabled:opacity-50';
+// Match the existing packet-validator messages to their editable controls.
+// These are prompts for applicant correction, not issuer-verified requirements.
+const CONTEXT_ISSUE_FOCUS: Record<string, keyof TenderPacketContext> = {
+  'Tender reference':'reference',
+  'Procuring authority':'issuer',
+  'Exact bid box, official portal or prescribed email':'destination',
+  'Applicant or authorised representative':'principal',
+  'Future closing time with explicit timezone (for South Africa use +02:00)':'deadline',
+  'Issuer-prescribed submission method':'method',
+  'Applicant-entered positive offer amount in ZAR':'priceZar',
+};
 function saveArchive(bytes:Uint8Array){
   const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:'application/zip'}));
   const a=document.createElement('a');a.href=url;a.download='luqi-sbd1-partial-review-pack.zip';
@@ -32,17 +44,34 @@ export function TenderOriginalForms(){
   const [gates,setGates]=useState<OriginalFormApprovals>(emptyOriginalApprovals);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [contextReviewAttempted,setContextReviewAttempted]=useState(false);
+  const contextHelpId=useId();
   const [clock,setClock]=useState(Date.now());
   const epoch=useRef(0),pending=useRef<AbortController|null>(null);
   const historyFull=history.length>=950;
   const accountRef=useRef(account);
   const fileInput=useRef<HTMLInputElement|null>(null),amendmentInput=useRef<HTMLInputElement|null>(null);
-  useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer)},[]);
+  const contextInputs=useRef<Partial<Record<keyof TenderPacketContext,HTMLInputElement|HTMLSelectElement>>>({});
+  const formRoot=useRef<HTMLElement|null>(null);
+  // Preserve the latest observed local time while this review is mounted: a backwards
+  // device-clock change must not reopen approvals after a recorded expiry.
+  // This is not trusted issuer time and cannot prevent tampering before observation.
+  useEffect(()=>{
+    const observe=()=>setClock(previous=>Math.max(previous,Date.now()));
+    const timer=setInterval(observe,1000);
+    // Background-tab timers can be throttled. Refresh the applicant's expiry
+    // warning and disabled approvals as soon as the tab becomes visible again.
+    document.addEventListener('visibilitychange',observe);
+    window.addEventListener('pageshow',observe);
+    return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',observe);
+      window.removeEventListener('pageshow',observe);};
+  },[]);
   useEffect(()=>()=>{epoch.current++;pending.current?.abort()},[]);
   function clearPrivateWork(){
     epoch.current++;pending.current?.abort();pending.current=null;
     setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
     setPrepared(null);setGates(emptyOriginalApprovals());setHistory([]);setRevision(0);setBusy(false);setConsent(false);
+    setContextReviewAttempted(false);
     setMessage('Private work cleared from this tab. Any files you downloaded remain on your device.');
     if(fileInput.current)fileInput.current.value='';if(amendmentInput.current)amendmentInput.current.value='';
   }
@@ -51,6 +80,9 @@ export function TenderOriginalForms(){
   useEffect(()=>{
     if(accountRef.current!==account){accountRef.current=account;clearPrivateWork();}
   },[account]); // Account switch/logout/expiry clears private inputs and in-flight results.
+  // Never allow a clock correction to move this mounted review's observed time backwards.
+  // This is a session-local guard, not trusted issuer or network time.
+  const observedNow=()=>new Date(Math.max(clock,Date.now()));
   function audit(action:TenderAuditEvent['action'],subject:string,nextRevision=revision){
     setHistory(previous=>appendTenderAudit(previous,nextRevision,action,subject));
   }
@@ -62,18 +94,26 @@ export function TenderOriginalForms(){
   }
   async function inspectFile(file:File,amendment=false){
     if(!consent||busy||historyFull)return;
-    if(file.size<=0||file.size>TENDER_FILE_MAX){setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;}
     if(amendment&&(!primary||amendments.length>=6)){setMessage('Choose an original first. Up to six addenda are supported.');return;}
     const version=++epoch.current;
     pending.current?.abort();const controller=new AbortController();pending.current=controller;
     // Clear approvals as soon as a replacement is selected, even when parsing fails.
     const next=revision+1;setRevision(next);setPrepared(null);setGates(emptyOriginalApprovals());setBusy(true);
+    // Preserve a truthful local revocation record even if an amendment is rejected
+    // before parsing (empty/oversized), or subsequently fails inspection.
+    if(amendment&&prepared&&ORIGINAL_FORM_GATES.some(g=>gates[g.id]))audit('revoke','all',next);
     if(!amendment){
+      setContextReviewAttempted(false);
       // A newly selected original starts a different application. Never carry over
       // another application's tender reference, principal, price or channel.
       setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});setContext({...EMPTY_PACKET_CONTEXT});
       // Also clear the prior application's audit even if inspection rejects the replacement.
       setHistory([]);
+    }
+    // Invalid-size selections are still replacement attempts: never retain an
+    // older applicant's approved packet or private facts just because parsing was skipped.
+    if(file.size<=0||file.size>TENDER_FILE_MAX){
+      setBusy(false);pending.current=null;setMessage(TENDER_DOCUMENT_ERRORS.FILE_SIZE);return;
     }
     setMessage('Checking file type, archive limits and unsupported active content locally…');
     try{
@@ -105,7 +145,7 @@ export function TenderOriginalForms(){
     // Treat choosing the pinned original as a replacement immediately. On network or
     // integrity failure, a stale applicant's packet must not remain in this session.
     setPrimary(null);setAmendments([]);setValues({...EMPTY_SUPPLIER_VALUES});
-    setContext({...EMPTY_PACKET_CONTEXT});setHistory([]);
+    setContext({...EMPTY_PACKET_CONTEXT});setHistory([]);setContextReviewAttempted(false);
     const controller=new AbortController();pending.current=controller;
     const timer=setTimeout(()=>controller.abort(),8000);
     try{
@@ -133,9 +173,33 @@ export function TenderOriginalForms(){
   }
   async function prepare(){
     if(!primary?.inspection.templateId||busy||historyFull)return;
-    const missing=validatePacketContext(context);
-    if(missing.length){setMessage('Complete: '+missing.join('; '));return;}
-    const version=++epoch.current;setBusy(true);setGates(emptyOriginalApprovals());setPrepared(null);
+    // Ask for missing/invalid contact facts before invoking the document worker.
+    // Optional blank fields are not errors; never insert example values.
+    const attention=supplierFieldProgress(values,SBD1_FIELDS).attention;
+    if(attention.length){
+      setMessage('Check supported SBD 1 contact fields before preparing: '+attention.map(({field,issue})=>field.label+': '+issue).join('; '));
+      // Reuse the guide's existing Go-to action to reveal and focus the first
+      // correction input, including when it is hidden in step-by-step mode.
+      const choices=formRoot.current?.querySelectorAll<HTMLButtonElement>('[aria-label="Contact fields needing attention"] button');
+      Array.from(choices??[]).find(button=>button.textContent?.trim()===`Go to ${attention[0].field.label}`)?.click();
+      return;
+    }
+    const missing=validatePacketContext(context,observedNow());
+    if(missing.length){
+      setContextReviewAttempted(true);
+      setMessage('Complete: '+missing.join('; '));
+      // On Prepare, focus the first invalid or missing context answer, rather
+      // than forcing applicants to search the full form or filling it for them.
+      const target=CONTEXT_ISSUE_FOCUS[missing[0]];
+      if(target)contextInputs.current[target]?.focus();
+      return;
+    }
+    setContextReviewAttempted(false);
+    const version=++epoch.current;setBusy(true);
+    // Re-preparing discards the earlier review and approvals, even if the
+    // worker rejects the new attempt. Reflect that revocation in local history.
+    if(prepared&&ORIGINAL_FORM_GATES.some(g=>gates[g.id]))audit('revoke','all');
+    setGates(emptyOriginalApprovals());setPrepared(null);
     const controller=new AbortController();pending.current=controller;
     try{
       const result=await runTenderDocument({action:'fill',name:primary.name,mime:primary.mime,bytes:primary.bytes,values},controller.signal);
@@ -143,35 +207,58 @@ export function TenderOriginalForms(){
       if(!result.ok||!result.filled){setMessage(TENDER_DOCUMENT_ERRORS[result.ok?'DOCUMENT_INVALID':result.code]);return;}
       const packet=await prepareTenderPacket({inspection:primary.inspection,originalName:primary.name,filled:result.filled,values,
         amendments:amendments.map((a,i)=>({name:`amendment-${i+1}.${a.inspection.kind}`,sha256:a.inspection.sha256,size:a.bytes.length,role:'amendment'})),
-        context,revision});
+        context,revision},observedNow());
       if(version!==epoch.current||controller.signal.aborted)return;
-      setPrepared({packet,filled:result.filled});setClock(Date.now());audit('prepare',packet.digest);
+      setPrepared({packet,filled:result.filled});setClock(previous=>Math.max(previous,Date.now()));audit('prepare',packet.digest);
       setMessage('Review the exact entered fields, packet digest and addenda, then complete each applicant approval. Export remains unsigned and partial.');
     }catch{if(version===epoch.current)setMessage('The review packet could not be prepared. Check the fields and context.');}
     finally{if(version===epoch.current){setBusy(false);pending.current=null;}}
   }
   function gate(id:OriginalFormGate,checked:boolean){
-    if(!prepared||busy||historyFull)return;
+    if(!prepared||busy||historyFull||observedNow().getTime()>=Math.min(
+      Date.parse(prepared.packet.preparedAt)+30*60*1000,Date.parse(prepared.packet.context.deadline)))return;
     setGates(previous=>({...previous,[id]:checked,...(id==='release'?{}:{release:false})}));
+    // Changing an earlier review gate also revokes the applicant's final release
+    // permission. Record that dependent revocation, not just the gate edit.
+    if(id!=='release'&&gates.release)audit('revoke','release');
     audit(checked?'approve':'revoke',id);setMessage('Approval history updated for this exact prepared version.');
   }
   async function download(){
-    if(!primary||!prepared||!canExportTenderPacket(prepared.packet,revision,gates)||busy||historyFull)return;
+    if(!primary||!prepared||!canExportTenderPacket(prepared.packet,revision,gates,observedNow())||busy||historyFull)return;
     const version=++epoch.current;setBusy(true);
     try{
       const finalHistory=appendTenderAudit(history,revision,'export',prepared.packet.digest);
       const bytes=await buildTenderOriginalArchive(prepared.packet,revision,gates,[
         {name:'original.docx',bytes:primary.bytes},{name:'filled-sbd1-partial.docx',bytes:prepared.filled},
         ...amendments.map((a,i)=>({name:`amendment-${i+1}.${a.inspection.kind}`,bytes:a.bytes})),
-      ],finalHistory);
-      if(version!==epoch.current||!canExportTenderPacket(prepared.packet,revision,gates))return;
+      ],finalHistory,observedNow());
+      if(version!==epoch.current||!canExportTenderPacket(prepared.packet,revision,gates,observedNow()))return;
       saveArchive(bytes);setHistory(finalHistory);
-      setMessage('Partial original and review record exported privately. Complete the remaining official fields and signatures before your own submission. Nothing was submitted.');
+      setMessage('Download requested from this browser. Check that luqi-sbd1-partial-review-pack.zip actually appears in Downloads; browsers can block or discard files. If missing, retry while this tab remains open, because leaving or reloading clears this work. Complete remaining official fields and signatures before submitting yourself. Nothing was submitted.');
     }catch{if(version===epoch.current)setMessage('Export stopped: the packet changed, approval expired or review is incomplete. Prepare and approve it again.');}
     finally{if(version===epoch.current)setBusy(false)}
   }
+  const expiryAt=prepared?Math.min(
+    Date.parse(prepared.packet.preparedAt)+30*60*1000,
+    Date.parse(prepared.packet.context.deadline)
+  ):0;
+  const reviewExpired=!!prepared&&clock>=expiryAt;
+  const expiredByDeadline=!!prepared&&clock>=Date.parse(prepared.packet.context.deadline);
   const ready=canExportTenderPacket(prepared?.packet??null,revision,gates,new Date(clock));
-  return <section aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
+  useEffect(()=>{
+    // A review time-out permanently revokes its old approval checkmarks, even
+    // if the device clock subsequently moves backwards.
+    if(!reviewExpired||!ORIGINAL_FORM_GATES.some(g=>gates[g.id]))return;
+    setGates(emptyOriginalApprovals());
+    setHistory(previous=>previous.length>=1000?previous:appendTenderAudit(previous,revision,'revoke','all'));
+  },[reviewExpired,gates,revision]);
+  // Expose applicant-correctable context issues after a Prepare attempt;
+  // these are review-packet prompts, not universal issuer requirements.
+  const contextIssues=contextReviewAttempted?validatePacketContext(context,observedNow()):[];
+  // A customer-session change renders before the passive clearing effect runs.
+  // Never paint the previous applicant's private fields under the new account.
+  if(accountRef.current!==account) return <section role="status" aria-live="polite" aria-label="Original government form assistance">Clearing previous applicant’s local form work…</section>;
+  return <section ref={formRoot} aria-label="Original government form assistance" className="space-y-4 rounded-xl border border-cyan-600 bg-slate-900 p-4">
     <h2 className="text-xl font-semibold">Fill a supported original government form</h2>
     <p className="text-sm text-slate-200">Start with Treasury’s verified revised SBD 1 DOCX. Luqi fills seven supplier contact fields on the actual original. Required wording, tables, declarations, pricing and signature areas remain intact for your completion.</p>
     <p className="text-sm text-amber-200">PDF: interactive field names only. Excel XLSX: cell text only. Other DOCX: text only. Filling these files is blocked until their exact originals have reviewed mappings. Scans, OCR, DOC/XLS, macros and signed files are unsupported.</p>
@@ -220,22 +307,34 @@ export function TenderOriginalForms(){
         <TenderSupplierGuide values={values} disabled={busy||historyFull}
           onChange={(field,value)=>{setValues(previous=>({...previous,[field]:value}));invalidate('edit-field',field)}}/>
         <fieldset disabled={busy||historyFull} className="space-y-3"><legend className="font-semibold">Bid context for your private review record</legend>
-          <p className="text-xs text-slate-300">These values identify the review packet. They do not fill the authority’s bid invitation, pricing schedule or declarations. Confirm them against the issuer originals.</p>
+          <p className="text-xs text-slate-300">These values identify the review packet, not the authority’s bid invitation, prices or declarations. Confirm the closing time, submission method and destination against the exact issuer originals and addenda. Luqi does not independently verify the bid deadline or channel you enter.</p>
+          <p role="note" className="text-xs text-amber-200">If the issuer notice, SBD schedules or addenda contradict each other on a mandatory briefing, qualification, closing time or required attachment, stop and seek written issuer clarification before confirming the approval gates. Luqi cannot resolve conflicting issuer instructions or establish eligibility.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {([
               ['reference','Tender reference'],['issuer','Procuring authority'],['principal','Applicant or authorised representative'],
               ['deadline','Closing time with timezone'],['destination','Exact official submission address'],['priceZar','Applicant-entered offer ZAR'],
-            ] as const).map(([key,label])=><label key={key} className="block min-w-0 text-sm">{label}
-              <input aria-label={label} maxLength={key==='priceZar'?15:240} autoComplete="off" value={context[key]} className={inputStyle}
-                placeholder={key==='deadline'?'2026-11-30T11:00+02:00':undefined}
+            ] as const).map(([key,label])=>{
+              const issue=contextIssues.find(entry=>CONTEXT_ISSUE_FOCUS[entry]===key);
+              const helpId=contextHelpId+'-'+key;
+              return <label key={key} className="block min-w-0 text-sm">{label}
+              <input ref={node=>{if(node)contextInputs.current[key]=node;else delete contextInputs.current[key];}}
+                aria-label={label} maxLength={key==='priceZar'?16:241} autoComplete="off" value={context[key]} className={inputStyle}
+                aria-invalid={Boolean(issue)} aria-describedby={issue?helpId:undefined}
+                placeholder={key==='deadline'?'YYYY-MM-DDTHH:mm+02:00':undefined}
                 onChange={e=>{setContext(previous=>({...previous,[key]:e.target.value}));invalidate('edit-context',key)}}/>
-            </label>)}
+              {issue&&<span id={helpId} className="mt-1 block text-xs text-amber-200">Check this answer: {issue}. {key==='deadline'&&context.deadline.slice(11,13)==='24'?'Hour 24 may roll into the next day. Confirm the closing hour with the issuer and enter 00 through 23; do not guess a replacement. ':''}Use your own records and the issuer instructions; Luqi does not verify it.</span>}
+            </label>;
+            })}
             <label className="block text-sm">Issuer-prescribed submission method
-              <select aria-label="Original form submission method" value={context.method} className={inputStyle}
+              <select ref={node=>{if(node)contextInputs.current.method=node;else delete contextInputs.current.method;}}
+                aria-label="Original form submission method" value={context.method} className={inputStyle}
+                aria-invalid={contextIssues.includes('Issuer-prescribed submission method')}
+                aria-describedby={contextIssues.includes('Issuer-prescribed submission method')?contextHelpId+'-method':undefined}
                 onChange={e=>{setContext(previous=>({...previous,method:e.target.value as TenderPacketContext['method']}));invalidate('edit-context','method')}}>
                 <option value="">Confirm from issuer documents</option><option value="physical">Sealed physical bid / tender box</option>
                 <option value="portal">Authority-supported electronic portal</option><option value="email">Issuer-prescribed email</option>
               </select>
+              {contextIssues.includes('Issuer-prescribed submission method')&&<span id={contextHelpId+'-method'} className="mt-1 block text-xs text-amber-200">Check the issuer-prescribed submission method against the original invitation and addenda. Luqi does not verify the channel.</span>}
             </label>
           </div>
         </fieldset>
@@ -246,14 +345,39 @@ export function TenderOriginalForms(){
       <h3 className="font-semibold">Review version {prepared.packet.revision}</h3>
       <p className="break-all text-xs">Exact packet digest: {prepared.packet.digest}</p>
       <p className="text-xs text-amber-200">Unsigned, partial original for manual completion. Review expires in 30 minutes or at the closing time. Every edit clears every approval. Prices and declarations have not been filled.</p>
+      {reviewExpired&&<p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm text-amber-100">
+        Review expired: {expiredByDeadline?'the recorded bid closing time has passed':'the 30-minute applicant review window has ended'}.
+        Earlier checkmarks no longer authorise this export.
+        {expiredByDeadline
+          ? ' Do not prepare or submit against this passed deadline. Check official issuer addenda for a formally extended closing time; only enter a new future deadline if the issuer confirms it, then prepare and approve a new packet.'
+          : ' Confirm the issuer deadline, select Prepare exact original for review, and approve the newly prepared packet before downloading.'}
+        Nothing was submitted.
+      </p>}
       <dl className="space-y-1 text-sm">{SBD1_FIELDS.map(field=><div key={field.id} className="break-words"><dt className="font-semibold">{field.label}</dt><dd>{values[field.id]||'Left blank for applicant completion'}</dd></div>)}</dl>
+      <section aria-label="Entered bid context review" className="space-y-2 rounded-lg border border-slate-600 p-3">
+        <h4 className="font-semibold">Your entered bid context (not issuer-verified)</h4>
+        <p className="text-xs text-amber-200">These applicant-entered details are recorded in your private review packet. They are not inserted into SBD 1 or independently checked against the issuer. Recheck the original notice and addenda before approving; Luqi submits nothing.</p>
+        <dl className="grid min-w-0 gap-2 text-sm sm:grid-cols-2">
+          {([
+            ['Tender reference',prepared.packet.context.reference],
+            ['Procuring authority',prepared.packet.context.issuer],
+            ['Applicant or authorised representative',prepared.packet.context.principal],
+            ['Recorded closing time',prepared.packet.context.deadline],
+            ['Recorded submission method',prepared.packet.context.method],
+            ['Recorded submission destination',prepared.packet.context.destination],
+            ['Applicant-entered offer (ZAR; review record only)',prepared.packet.context.priceZar],
+          ] as const).map(([label,value])=><div key={label} className="min-w-0 break-words">
+            <dt className="font-semibold">{label}</dt><dd className="break-all">{value}</dd>
+          </div>)}
+        </dl>
+      </section>
       {prepared.packet.files.map(file=><p key={file.name} className="break-all text-xs">{file.role}: {file.name} · SHA-256 {file.sha256}</p>)}
       {ORIGINAL_FORM_GATES.map(g=><label key={g.id} className="flex items-start gap-2 rounded-lg border border-slate-700 p-3 text-sm">
-        <input type="checkbox" disabled={busy||historyFull||(g.id==='release'&&!ORIGINAL_FORM_GATES.filter(x=>x.id!=='release').every(x=>gates[x.id]))}
+        <input type="checkbox" disabled={busy||historyFull||reviewExpired||(g.id==='release'&&!ORIGINAL_FORM_GATES.filter(x=>x.id!=='release').every(x=>gates[x.id]))}
           checked={gates[g.id]} onChange={e=>gate(g.id,e.target.checked)} className="mt-1"/><span>{g.label}</span>
       </label>)}
       <button type="button" className={buttonStyle} disabled={!ready||busy||historyFull} onClick={()=>{void download()}}>Export filled original and review record</button>
-      {!ready&&<p className="text-xs text-amber-200">Export requires current review, all seven approvals and a future verified closing time.</p>}
+      {!ready&&<p className="text-xs text-amber-200">Export requires current review, all seven approvals and a future closing time you confirmed from the issuer. Luqi has not independently verified the entered deadline or submission channel.</p>}
     </section>}
     {history.length>0&&<details><summary className="cursor-pointer text-sm">Local approval and amendment history ({history.length})</summary>
       <p className="my-2 text-xs text-slate-300">No private field values appear here. Consecutive typing in one field is combined into one edit event. This local record does not independently verify identity, legal authority or the truth of a declaration.</p>

@@ -26,10 +26,27 @@ it('requires each of seven approvals and binds review to the exact revision, dea
  expect(canExportTenderPacket(packet,1,all(),new Date(now.getTime()+30*60*1000))).toBe(false);
 });
 it('refuses ambiguous timezones, past deadlines, invalid prices and empty channels',()=>{
- for(const change of [{deadline:'2026-11-30T11:00'},{deadline:'2027-02-30T11:00+02:00'},{deadline:'2026-10-30T09:00+02:00'},
+ for(const change of [{deadline:'2026-11-30T11:00'},{deadline:'2027-02-30T11:00+02:00'},
+   {deadline:'2026-11-30T24:00+02:00'},{deadline:'2026-10-30T09:00+02:00'},
    {priceZar:'0'},{priceZar:'-1'},{priceZar:'1e6'},{priceZar:'NaN'},{method:''},{destination:''}]){
   expect(validatePacketContext({...context,...change} as TenderPacketContext,now).length).toBeGreaterThan(0);
  }
+});
+it('blocks invisible Unicode, surrogate code units and DEL in required bid context before preparation',()=>{
+  const labels: Array<[keyof TenderPacketContext,string]> = [
+    ['reference','Tender reference'],['issuer','Procuring authority'],
+    ['destination','Exact bid box, official portal or prescribed email'],
+    ['principal','Applicant or authorised representative'],
+  ];
+  // Synthetic facts only. Neither invisible-only placeholders nor hidden characters
+  // inside a seemingly real tender reference, name or channel are trustworthy inputs.
+  for(const [key,label] of labels){
+    for(const value of ['\u200B','Synthetic\u2060 value','Synthetic\uD800 value','Synthetic\u007f value']){
+      const input=value.replace(/\\u([0-9a-fA-F]{4})/g,(_,code)=>String.fromCharCode(parseInt(code,16)));
+      expect(validatePacketContext({...context,[key]:input},now)).toContain(label);
+    }
+  }
+  expect(validatePacketContext(context,now)).toEqual([]);
 });
 it('changes the digest for each material context or file amendment',async()=>{
  const {packet}=await prepare();

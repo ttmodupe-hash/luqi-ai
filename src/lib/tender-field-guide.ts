@@ -20,8 +20,9 @@ export type SupplierFieldState = 'entered' | 'blank' | 'attention';
 export function supplierFieldIssue(field: SupplierFieldSpec, value: unknown): string | null {
   if (typeof value !== 'string') return 'Enter text for this field.';
   if (value.length > field.max) return `Use no more than ${field.max} characters for this original field.`;
-  if (/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]|\p{Cs}/u.test(value)) return 'Use a single line without hidden control characters.';
+  if (/[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]|\p{Cs}|\p{Cf}/u.test(value)) return 'Use a single line without hidden control characters.';
   if (field.required && !value.trim()) return 'Enter the bidder name before preparing this partial export.';
+  if (!field.required && value.length > 0 && !value.trim()) return 'Clear spaces to leave this optional contact field empty, or enter a real contact value.';
   if (field.id === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Check the email format, including @ and the domain. Remove spaces.';
   return null;
 }
@@ -29,7 +30,7 @@ export function supplierFieldProgress(values: SupplierValues, fields: readonly S
   const rows = fields.map(field => {
     const value = values[field.id];
     const issue = supplierFieldIssue(field, value);
-    const state: SupplierFieldState = issue ? 'attention' : value.trim() ? 'entered' : 'blank';
+    const state: SupplierFieldState = issue ? 'attention' : typeof value === 'string' && value.trim() ? 'entered' : 'blank';
     return {field, state, issue};
   });
   return {rows, entered: rows.filter(row => row.state === 'entered').length,

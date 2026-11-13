@@ -31,13 +31,14 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
     setGuided(next);setFocusRequest(value=>value+1);
   }
   return <fieldset disabled={disabled} className="min-w-0 space-y-3">
-    <legend className="font-semibold">Your verified supplier facts</legend>
+    <legend className="font-semibold">Your entered supplier contact details</legend>
     <p className="text-xs text-slate-300">Only facts you type are inserted. Leave unknown or inapplicable fields blank. No certificates, tax compliance, eligibility or experience are invented. Do not enter passwords, OTPs, tax PINs, ID numbers or bank details.</p>
     <div className="flex flex-wrap gap-3" role="group" aria-label="Supplier entry view">
       <button type="button" className={buttonStyle} aria-pressed={!guided} onClick={()=>changeView(false)}>Show all contact fields</button>
       <button type="button" className={buttonStyle} aria-pressed={guided} onClick={()=>changeView(true)}>Guide me step by step</button>
     </div>
-    <p role="status" aria-live="polite" className="text-sm text-cyan-100">{progress.entered} of {progress.total} supported contact fields have valid-format entries.</p>
+    <p role="status" aria-live="polite" className="text-sm text-cyan-100">{progress.entered} of {progress.total} supported contact fields contain entries without detected input errors.</p>
+    <p className="text-xs text-slate-300">The count checks text length, hidden characters and basic email syntax only; it does not validate phone numbers, addresses or identity.</p>
     <p className="text-xs text-amber-200">This is not overall application completion or verification of your facts. Other official fields, declarations, prices and signatures remain for you. A blank field allowed in this partial export may still be required by your issuer.</p>
     {progress.attention.length>0 && <div className="space-y-2 rounded-lg border border-amber-600 p-3" aria-label="Contact fields needing attention">
       <p className="text-sm">Fields to check before preparing the partial original:</p>
@@ -54,7 +55,7 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
           <label htmlFor={inputId} className="block text-sm font-semibold">{field.label}{field.required?' (required for this export)':''}</label>
           <p className="text-sm">{help.question}</p>
           <input ref={node=>{if(node)inputs.current[field.id]=node;else delete inputs.current[field.id];}}
-            id={inputId} aria-label={'SBD 1 '+field.label} maxLength={field.max}
+            id={inputId} aria-label={'SBD 1 '+field.label} maxLength={field.max+1}
             type={field.id==='email'?'email':'text'} autoComplete="off" value={values[field.id]}
             aria-invalid={Boolean(issue)} aria-required={field.required}
             aria-describedby={inputId+'-help'+(issue?' '+inputId+'-issue':'')} className={inputStyle}
