@@ -27,7 +27,7 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
     setStep(index);setFocusRequest(value=>value+1);
   }
   function changeView(next: boolean) {
-    if(disabled) return;
+    if(disabled || next===guided) return;
     setGuided(next);setFocusRequest(value=>value+1);
   }
   return <fieldset disabled={disabled} className="min-w-0 space-y-3">

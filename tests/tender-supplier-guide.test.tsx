@@ -132,3 +132,20 @@ it('a blank optional jump focuses the matching visible field in complete-form mo
  expect(edits).not.toHaveBeenCalled();
  expect(writes).not.toHaveBeenCalled();
 });
+
+it('reselecting the current supplier entry view keeps keyboard focus and never edits answers',async()=>{
+ const writes=vi.fn(), edits=vi.fn();vi.stubGlobal('fetch',writes);
+ render(<TenderSupplierGuide values={{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'}} onChange={edits}/>);
+ const all=screen.getByRole('button',{name:'Show all contact fields'});
+ all.focus();fireEvent.click(all);
+ expect(document.activeElement).toBe(all);
+ const guide=screen.getByRole('button',{name:'Guide me step by step'});
+ fireEvent.click(guide);
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Name of bidder')));
+ guide.focus();fireEvent.click(guide);
+ expect(document.activeElement).toBe(guide);
+ expect(screen.getByLabelText('SBD 1 Name of bidder')).toBeTruthy();
+ expect(screen.getByRole('status').textContent).toContain('1 of 7 supported contact fields');
+ expect(edits).not.toHaveBeenCalled();
+ expect(writes).not.toHaveBeenCalled();
+});
