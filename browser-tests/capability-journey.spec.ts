@@ -40,6 +40,21 @@ test('320px shared-device privacy gate hides the saved goal on reload and focus 
     .toBe('I want to become a network engineer');
 });
 
+test('320px long unbroken goal wraps without exposing shared-device data or horizontal scrolling', async ({ page }) => {
+  const syntheticGoal = 'NetworkEngineeringTrainingPath'.repeat(12);
+  await page.goto('/#/possibility');
+  await page.getByLabel('What do you want to make possible?').fill(syntheticGoal);
+  await page.getByRole('button', { name: 'Build my LUQI path' }).click();
+  await page.getByRole('button', { name: /Save as my journey/i }).click();
+  await expect(page.getByRole('status')).toContainText('A different journey is already saved');
+  await page.getByRole('button', { name: /Replace saved journey on this device/i }).click();
+  await expect(page.getByRole('heading', { name: 'A journey is saved on this browser.' })).toBeVisible();
+  await expect(page.getByText(syntheticGoal)).toHaveCount(0);
+  await revealIfSaved(page);
+  await expect(page.getByRole('heading', { name: syntheticGoal })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
 test('320px different-goal replacement requires two deliberate actions and preserves old progress until consent', async ({ page }) => {
   const posts: string[] = [];
   page.on('request', request => {
