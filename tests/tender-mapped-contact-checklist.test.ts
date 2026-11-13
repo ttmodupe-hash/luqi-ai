@@ -7,12 +7,12 @@ import {buildTenderOriginalArchive,mappedContactChecklist,tenderDigest,
 describe('SBD 1 private partial-export contact checklist',()=>{
   it('lists the seven mapped fields only and treats optional blanks as gaps, not failures',()=>{
     const lines=mappedContactChecklist(['bidderName','email','not-a-form-field']);
-    expect(lines.filter(line=>/^\\[[ x]\\]/.test(line))).toHaveLength(SBD1_FIELDS.length);
-    expect(lines.join('\\n')).toContain('[x] Name of bidder: entered in the partial original');
-    expect(lines.join('\\n')).toContain('[x] Email address: entered in the partial original');
-    expect(lines.join('\\n')).toContain('[ ] Postal address: left blank; accepted by Luqi partial export');
-    expect(lines.join('\\n')).toContain('not the complete official form');
-    expect(lines.join('\\n')).not.toContain('not-a-form-field');
+    expect(lines.filter(line=>line.startsWith('[x] ')||line.startsWith('[ ] '))).toHaveLength(SBD1_FIELDS.length);
+    expect(lines.join(' ')).toContain('[x] Name of bidder: entered in the partial original');
+    expect(lines.join(' ')).toContain('[x] Email address: entered in the partial original');
+    expect(lines.join(' ')).toContain('[ ] Postal address: left blank; accepted by Luqi partial export');
+    expect(lines.join(' ')).toContain('not the complete official form');
+    expect(lines.join(' ')).not.toContain('not-a-form-field');
   });
 
   it('includes gap checks in an approved synthetic ZIP without copying applicant facts into README',async()=>{
