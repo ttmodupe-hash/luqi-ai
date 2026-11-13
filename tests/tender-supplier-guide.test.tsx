@@ -75,3 +75,18 @@ it('unlocking the form after processing does not repeat an old navigation focus'
  app.rerender(frame(true));app.rerender(frame(false));
  expect(document.activeElement).toBe(screen.getByRole('button',{name:'Review controls'}));
 });
+
+it('reviews optional blank contacts by opening the selected field without inventing answers',async()=>{
+ const network=vi.fn(),edits=vi.fn();vi.stubGlobal('fetch',network);
+ render(<TenderSupplierGuide values={{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'}} onChange={edits}/>);
+ const disclosure=screen.getByText('Review 6 blank optional contact fields');
+ fireEvent.click(disclosure);
+ expect(screen.getByText(/optional for Luqi's partial export only/)).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Go to Email address'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Guide me step by step'}));
+ fireEvent.click(screen.getByRole('button',{name:'Go to Email address'}));
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Email address')));
+ expect((screen.getByLabelText('SBD 1 Email address') as HTMLInputElement).value).toBe('');
+ expect(screen.getByRole('status').textContent).toContain('1 of 7 supported contact fields');
+ expect(edits).not.toHaveBeenCalled();expect(network).not.toHaveBeenCalled();
+});
