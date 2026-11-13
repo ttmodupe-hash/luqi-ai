@@ -100,6 +100,26 @@ export default function CapabilityJourneyPage() {
     }
   }
 
+  // An empty tab can be stale before the browser dispatches its storage event.
+  // Do not navigate away and invite an accidental replacement of a saved goal.
+  function guardNewJourneyNavigation(event: MouseEvent<HTMLAnchorElement>) {
+    if (needsReload) {
+      event.preventDefault();
+      return;
+    }
+    if (!canReadJourneyStorage()) {
+      event.preventDefault();
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (readCapabilityJourney()) {
+      event.preventDefault();
+      setNeedsReload(true);
+      setNotice(NEW_JOURNEY_NOTICE);
+    }
+  }
+
   function loadLatestSavedJourney() {
     // A failed storage read must not be mistaken for another tab clearing the goal.
     // Keep the visible state and recovery action until the device store is readable.
@@ -166,7 +186,9 @@ export default function CapabilityJourneyPage() {
       <p className="luqi-journey-kicker">YOUR CAPABILITY JOURNEY</p>
       <h1 id="journey-empty-title" tabIndex={-1}>Start with a goal worth working toward.</h1>
       <p>LUQI will build the path first. You choose whether to save that goal on this device and track progress.</p>
-      <Link className="luqi-journey-primary" to="/possibility">Build my path <ArrowRight size={18} /></Link>
+      {needsReload
+        ? <p className="luqi-journey-device">Load the latest saved journey before choosing a new goal so you do not replace progress saved in another tab.</p>
+        : <Link className="luqi-journey-primary" to="/possibility" onClick={guardNewJourneyNavigation}>Build my path <ArrowRight size={18} /></Link>}
       {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
       {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
     </section> : <>

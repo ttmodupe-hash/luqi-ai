@@ -111,6 +111,7 @@ test('an initially empty tab discovers a goal saved in another tab at 320px', as
   await otherTab.getByRole('button', { name: 'I want to become a network engineer' }).click();
   await otherTab.getByRole('button', { name: /Save as my journey/i }).click();
   await expect(page.getByRole('status')).toContainText('saved in another tab');
+  await expect(page.getByRole('link', { name: /Build my path/i })).toHaveCount(0);
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
@@ -118,6 +119,25 @@ test('an initially empty tab discovers a goal saved in another tab at 320px', as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(posts).toEqual([]);
   await otherTab.close();
+});
+
+test('320px empty tab protects a newly saved goal before any storage event', async ({ page }) => {
+  const key = 'luqi:capability-journey:v1';
+  const raw = await page.evaluate(key => localStorage.getItem(key), key);
+  expect(raw).not.toBeNull();
+  await page.evaluate(key => localStorage.removeItem(key), key);
+  await page.reload();
+  await expect(page.getByRole('link', { name: /Build my path/i })).toBeVisible();
+  await page.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key, raw: raw! });
+  await page.getByRole('link', { name: /Build my path/i }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/#\/journey$/);
+  await expect(page.getByRole('status')).toContainText('saved in another tab');
+  await expect(page.getByRole('link', { name: /Build my path/i })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
 test('320px stale goal does not navigate to the previous mission before keyboard recovery', async ({ page, context }) => {

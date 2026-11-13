@@ -209,6 +209,24 @@ describe('LUQI Capability Journey', () => {
     expect(screen.getByRole('status').textContent).toMatch(/Loaded the latest saved journey/);
   });
 
+  it('blocks an empty tab from replacing a newly saved goal before the storage event arrives', () => {
+    render(<MemoryRouter initialEntries={['/journey']}>
+      <Routes>
+        <Route path="/journey" element={<CapabilityJourneyPage />} />
+        <Route path="/possibility" element={<p>New goal destination</p>} />
+      </Routes>
+    </MemoryRouter>);
+    expect(screen.getByRole('link', { name: /Build my path/i })).toBeTruthy();
+    saveCapabilityJourney('I want to become a network engineer'); // No same-tab storage event.
+    fireEvent.click(screen.getByRole('link', { name: /Build my path/i }));
+    expect(screen.queryByText('New goal destination')).toBeNull();
+    expect(screen.getByRole('status').textContent).toMatch(/saved in another tab/i);
+    expect(screen.queryByRole('link', { name: /Build my path/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Load latest saved journey' }));
+    expect(screen.getByRole('heading', { name: 'I want to become a network engineer' })).toBeTruthy();
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+  });
+
   it('warns about unreadable storage on first load instead of claiming the saved goal is absent', () => {
     saveCapabilityJourney('I want to become a network engineer');
     const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
@@ -218,6 +236,7 @@ describe('LUQI Capability Journey', () => {
     render(<MemoryRouter><CapabilityJourneyPage /></MemoryRouter>);
     expect(screen.getByRole('status').textContent).toMatch(/previously saved journey may still exist/i);
     expect(screen.getByRole('button', { name: 'Load latest saved journey' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Build my path/i })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'I want to become a network engineer' })).toBeNull();
 
     denied.mockRestore();
