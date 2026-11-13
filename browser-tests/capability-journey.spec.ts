@@ -136,6 +136,8 @@ test('newer progress automatically announces stale state and accepts keyboard re
   await expect(page.getByText('0%', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
+  // Recovery restores the record but the shared-device privacy gate stays closed.
+  await revealIfSaved(page);
   await expect(page.getByText('25%', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -210,6 +212,8 @@ test('320px stale goal does not navigate to the previous mission before keyboard
   // replacement-confirmation step; no cross-tab change exists until consent.
   await expect(otherTab.getByRole('status')).toContainText('A different journey is already saved');
   await otherTab.getByRole('button', { name: /Replace saved journey on this device/i }).click();
+  // The replacement saves locally; viewing the saved goal still requires a deliberate reveal.
+  await revealIfSaved(otherTab);
   await expect(otherTab.getByRole('heading', { name: 'I want to start a township business' })).toBeVisible();
 
   await expect(page.getByRole('status')).toContainText('changed in another tab');
