@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build exact Railway Dockerfile
         run: docker build --progress=plain --file Dockerfile --tag luqi-railway-smoke:ci .
       - name: Verify operator CLIs are included in the production image

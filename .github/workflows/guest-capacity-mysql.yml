@@ -25,7 +25,7 @@ jobs:
       LUQI_GUEST_MYSQL_FIXTURE: 'true'
       DATABASE_URL: mysql://root:disposable-guest-fixture@127.0.0.1:3306/luqi_guest_ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
