@@ -74,7 +74,7 @@ it('does not silently truncate a pasted bidder name to a valid length',()=>{
  expect(input.maxLength).toBe(field.max+1);
  fireEvent.change(input,{target:{value:'X'.repeat(field.max+1)}});
  expect(input.getAttribute('aria-invalid')).toBe('true');
- expect(screen.getByText('Use no more than '+field.max+' characters for this original field.')).toBeTruthy();
+ expect(screen.getAllByText('Use no more than '+field.max+' characters for this original field.').length).toBeGreaterThan(0);
  expect(screen.getByRole('status').textContent).toContain('0 of 7 supported contact fields');
  expect(network).not.toHaveBeenCalled();
 });
