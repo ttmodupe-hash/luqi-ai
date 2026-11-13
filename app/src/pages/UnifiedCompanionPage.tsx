@@ -12,6 +12,21 @@ import '../chat-workspace.css';
  * An account-boundary change remounts this component and revokes the reveal. */
 function DeviceLocalJourneyPreview() {
   const [snapshot, setSnapshot] = useState<CapabilityJourney | null | undefined>(undefined);
+  const [storageUnreadable, setStorageUnreadable] = useState(false);
+  function revealSavedGoal() {
+    // readCapabilityJourney() returns null for both an absent record and a denied
+    // storage read. Do not tell a shared-device user their goal is missing when
+    // browser privacy controls may simply be blocking access.
+    try {
+      window.localStorage.getItem(CAPABILITY_JOURNEY_KEY);
+    } catch {
+      setSnapshot(undefined);
+      setStorageUnreadable(true);
+      return;
+    }
+    setStorageUnreadable(false);
+    setSnapshot(readCapabilityJourney());
+  }
   useEffect(() => {
     const hideWhenBackgrounded = () => {
       if (document.visibilityState === 'hidden') setSnapshot(undefined);
@@ -39,7 +54,7 @@ function DeviceLocalJourneyPreview() {
   return <>
     <section className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-200 sm:p-5" aria-label="Device-local journey privacy">
       <p>A goal saved in this browser may belong to someone else who used this device. Its text stays hidden unless you choose to view it, hides when this window loses focus, and is never added to AI requests.</p>
-      {snapshot === undefined && <button type="button" onClick={() => setSnapshot(readCapabilityJourney())}
+      {snapshot === undefined && <button type="button" onClick={revealSavedGoal}
         className="mt-3 rounded-xl border border-cyan-500 px-4 py-3 font-semibold text-cyan-100 hover:bg-cyan-900/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
         Show a saved goal on this device
       </button>}
@@ -47,7 +62,8 @@ function DeviceLocalJourneyPreview() {
         className="mt-3 rounded-xl border border-slate-500 px-4 py-3 font-semibold text-slate-100 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
         Hide saved goal
       </button>}
-      {snapshot === null && !journey && <p role="status" className="mt-2">No saved journey was found in this browser.</p>}
+      {storageUnreadable && <p role="status" className="mt-2">Browser storage could not be read. A saved journey may still exist on this device. Check your browser storage settings and try again.</p>}
+      {snapshot === null && !journey && <p role="status" className="mt-2">No readable saved journey was found in this browser.</p>}
     </section>
     {journey && plan && <section className="rounded-2xl border border-blue-700/60 bg-slate-900 p-4 sm:p-6" aria-label="Your saved capability journey">
       <div className="flex items-center gap-2 text-cyan-300"><Compass size={18} aria-hidden="true" /><h2 className="font-semibold">Your next step</h2></div>

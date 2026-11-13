@@ -59,3 +59,32 @@ test('new AI Companion is accessible and private notes stay separate without pai
   expect(paid).toHaveLength(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
+
+test('320px shared-device journey read denial is not falsely reported as an absent goal', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.addInitScript(() => localStorage.setItem('luqi:capability-journey:v1', JSON.stringify({
+    version: 1, goal: 'Sensitive goal retained while storage is blocked', track: 'general',
+    completed: [], startedAt: 10, updatedAt: 10,
+  })));
+  await page.goto('/#/ai-companion');
+  await page.evaluate(() => {
+    const original = Storage.prototype.getItem;
+    (window as Window & { __restoreJourneyGetItem?: () => void }).__restoreJourneyGetItem =
+      () => { Storage.prototype.getItem = original; };
+    Storage.prototype.getItem = function (key: string) {
+      if (key === 'luqi:capability-journey:v1') throw new DOMException('Synthetic denied read', 'SecurityError');
+      return original.call(this, key);
+    };
+  });
+  await page.getByRole('button', { name: 'Show a saved goal on this device' }).click();
+  await expect(page.getByRole('status')).toContainText('Browser storage could not be read');
+  await expect(page.getByText(/No readable saved journey was found/i)).toHaveCount(0);
+  await expect(page.getByText('Goal: Sensitive goal retained while storage is blocked')).toHaveCount(0);
+  await page.evaluate(() => {
+    (window as Window & { __restoreJourneyGetItem?: () => void }).__restoreJourneyGetItem?.();
+  });
+  await page.getByRole('button', { name: 'Show a saved goal on this device' }).click();
+  await expect(page.getByText('Goal: Sensitive goal retained while storage is blocked')).toBeVisible();
+  await expect(page.getByText(/Browser storage could not be read/i)).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});

@@ -124,4 +124,26 @@ describe('Luqi Companion keeps real chat and private notes in separate customer 
       expect(screen.queryByText('Goal: ' + goal)).toBeNull();
     } finally { window.localStorage.removeItem(key); }
   });
+
+  it('does not misreport an inaccessible saved goal as absent and permits a safe retry', () => {
+    const key = 'luqi:capability-journey:v1';
+    const goal = 'A previous user personal goal still saved';
+    window.localStorage.setItem(key, JSON.stringify({
+      version: 1, goal, track: 'general', completed: [], startedAt: 10, updatedAt: 10,
+    }));
+    const getItem = vi.spyOn(Storage.prototype, 'getItem');
+    try {
+      render(<MemoryRouter><UnifiedCompanionPage /></MemoryRouter>);
+      getItem.mockImplementation(() => { throw new DOMException('Synthetic denied read', 'SecurityError'); });
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByRole('status').textContent).toMatch(/storage could not be read/i);
+      expect(screen.getByRole('status').textContent).toMatch(/saved journey may still exist/i);
+      expect(screen.queryByText(/no readable saved journey was found/i)).toBeNull();
+      expect(screen.queryByText('Goal: ' + goal)).toBeNull();
+      getItem.mockRestore();
+      fireEvent.click(screen.getByRole('button', { name: 'Show a saved goal on this device' }));
+      expect(screen.getByText('Goal: ' + goal)).toBeTruthy();
+      expect(screen.queryByText(/storage could not be read/i)).toBeNull();
+    } finally { getItem.mockRestore(); window.localStorage.removeItem(key); }
+  });
 });
