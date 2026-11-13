@@ -24,6 +24,7 @@ const TermsPage = lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 import CompanionPage from "./pages/CompanionPage";
+const UnifiedCompanionPage = lazy(() => import("./pages/UnifiedCompanionPage"));
 import CustomerEntryPage from "./pages/CustomerEntryPage";
 import OmegaTasksPage from './pages/OmegaTasksPage';
 
@@ -147,8 +148,9 @@ export default function App() {
         <RouterRoute path="/join" element={<CustomerEntryPage initialMode="signup" />} />
         <RouterRoute path="/omega-tasks" element={<OmegaTasksPage />} />
         <RouterRoute path="/companion" element={<CompanionPage />} />
+        <RouterRoute path="/companion/notes" element={<CompanionPage />} />
         <RouterRoute path="/mentor" element={<CompanionPage />} />
-        <RouterRoute path="/ai-companion" element={<CompanionPage />} />
+        <RouterRoute path="/ai-companion" element={<UnifiedCompanionPage />} />
         <RouterRoute path="/multimodal-hub" element={<MultimodalHubPage />} />
         <RouterRoute path="/multimodal" element={<MultimodalHubPage />} />
         <RouterRoute path="/bioscience" element={<MultimodalHubPage />} />
