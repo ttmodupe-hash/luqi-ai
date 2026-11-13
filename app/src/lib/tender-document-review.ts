@@ -30,6 +30,19 @@ export interface PreparedTenderPacket {
   enteredFieldIds:string[];
   status:'partial-form-for-manual-completion';submissionConnected:false;legallySigned:false;
 }
+/** Deterministic, non-identifying field checklist for an applicant's local ZIP.
+ * A blank optional mapping is not an issuer-specific eligibility determination.
+ */
+export function mappedContactChecklist(enteredFieldIds: readonly string[]): string[] {
+  const entered=new Set(enteredFieldIds);
+  return [
+    'Mapped SBD 1 supplier contacts only (seven fields, not the complete official form):',
+    ...SBD1_FIELDS.map(field=>`[${entered.has(field.id)?'x':' '}] ${field.label}: ${entered.has(field.id)
+      ?'entered in the partial original; check accuracy before manual submission'
+      :'left blank; accepted by Luqi partial export, but confirm issuer-specific requirements'}`),
+    'This checklist cannot establish which fields your particular issuer requires.',
+  ];
+}
 const encoder=new TextEncoder();
 export async function tenderDigest(value:Uint8Array|string):Promise<string>{
   const hash=await crypto.subtle.digest('SHA-256',typeof value==='string'?encoder.encode(value):new Uint8Array(value));
@@ -117,6 +130,7 @@ export async function buildTenderOriginalArchive(packet:PreparedTenderPacket,rev
   archive['luqi-review-record.json']=strToU8(JSON.stringify(manifest,null,2));
   archive['READ-ME.txt']=strToU8([
     'Luqi partial original form export',
+    ...mappedContactChecklist(packet.enteredFieldIds),
     'Only the listed supplier contact fields were filled on a hash-verified Treasury SBD 1 original.',
     'This is NOT a complete bid, legal signature, final submission authorisation or verified issuer acceptance.',
     'Complete all remaining issuer fields, declarations, pricing schedules, signatures and attachments yourself.',
