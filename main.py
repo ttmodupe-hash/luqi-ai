@@ -33,13 +33,14 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, HTTPException, Header
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, status, UploadFile, File, Form, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import settings
+from backend.legacy_route_security import require_legacy_route_disabled, reject_legacy_websocket, LegacyPrebodyRefusalMiddleware
 
 # ── Logging ──────────────────────────────────────────────────────────────
 logger = logging.getLogger("luqi")
@@ -125,8 +126,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         _health_status["checks"]["disk"] = f"error: {e}"
 
-    _health_status["status"] = "healthy"
-    logger.info("Luqi AI startup complete — ready for requests")
+    # Server startup does not prove that database setup succeeded.
+    _health_status["status"] = (
+        "healthy" if _health_status["checks"].get("database") == "ok" else "degraded"
+    )
+    if _health_status["status"] == "healthy":
+        logger.info("Luqi AI startup complete — legacy Python service ready")
+    else:
+        logger.error("Luqi AI startup incomplete — database check failed")
 
     yield  # Application runs here
 
@@ -147,6 +154,7 @@ app = FastAPI(
 )
 
 # CORS
+app.add_middleware(LegacyPrebodyRefusalMiddleware, route_owner=app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -421,91 +429,52 @@ async def root():
     }
 
 
+def _legacy_python_ready() -> bool:
+    """Only startup DB state and the service lifecycle determine readiness.
+
+    This cannot attest to KHORO, payments, AI providers or ongoing DB health.
+    """
+    return (
+        _health_status.get("status") == "healthy"
+        and _health_status.get("checks", {}).get("database") == "ok"
+    )
+
+
 @app.get("/v1/health", tags=["health"])
 @app.get("/health", tags=["health"])
 @app.get("/api/health", tags=["health"])
 async def health():
-    return {
-        "status": "healthy",
-        "service": "luqi-ai-engine",
-        "khoro_active": True,
-        "billing_sync_day": "1st of Every Month",
-        "version": settings.version,
-    }
-    """
-    Health check endpoint for load balancers, Docker, and monitoring.
-    Returns 200 if all critical services are healthy, 503 otherwise.
-    Integrates LUQI Sentry diagnostics.
-    """
-    uptime = round(time.time() - _start_time, 1)
-    critical_ok = all(
-        v == "ok" for k, v in _health_status["checks"].items()
-        if k in ("database",)
+    """Truthful legacy Python startup readiness, not a customer-feature check."""
+    ready = _legacy_python_ready()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+        headers={"Cache-Control": "no-store"},
+        content={
+            "status": "healthy" if ready else "degraded",
+            "service": "luqi-ai-engine",
+            "version": settings.version,
+            "check_scope": "startup_database_only",
+        },
     )
-
-    response_body = {
-        "status": "healthy" if critical_ok else "degraded",
-        "version": settings.version,
-        "codename": settings.codename,
-        "environment": settings.environment,
-        "uptime_seconds": uptime,
-        "timestamp": datetime.utcnow().isoformat(),
-        "checks": _health_status["checks"],
-    }
-
-    # Integrate Sentry diagnostics if available
-    try:
-        from backend.error_monitor import LuqiSentry
-        sentry = LuqiSentry()
-        diag = sentry.get_diagnostics()
-        response_body["sentry"] = diag
-    except Exception:
-        pass
-
-    status_code = status.HTTP_200_OK if critical_ok else status.HTTP_503_SERVICE_UNAVAILABLE
-    return JSONResponse(content=response_body, status_code=status_code)
 
 
 @app.get("/ready", tags=["health"])
 async def ready():
-    """Readiness probe — returns 200 when ready to accept traffic."""
-    if _health_status["status"] == "healthy":
-        return {"ready": True}
+    """Never advertise readiness before a verified startup database check."""
+    is_ready = _legacy_python_ready()
     return JSONResponse(
-        content={"ready": False, "status": _health_status["status"]},
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        status_code=status.HTTP_200_OK if is_ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+        headers={"Cache-Control": "no-store"},
+        content={"ready": is_ready, "status": "healthy" if is_ready else "degraded"},
     )
-
-
-@app.get("/config", tags=["system"])
-async def get_config():
-    """Get non-sensitive configuration."""
-    return settings.health_info()
 
 
 # ── WebSocket Endpoint ───────────────────────────────────────────────────
 
 @app.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_json()
-            message = data.get("message", "")
-            session_id = data.get("session_id", "default")
-            # Simple echo with typing indicator
-            await websocket.send_json({"type": "typing", "session_id": session_id})
-            await asyncio.sleep(0.5)
-            await websocket.send_json({
-                "type": "message",
-                "content": f"Echo: {message}",
-                "session_id": session_id,
-                "timestamp": datetime.now().isoformat()
-            })
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
+    # The anonymous echo route is not Luqi Chat.
+    return await reject_legacy_websocket(websocket)
 
 
 # ── Core Intelligence & Jarvis Live Streaming ───────────────────────────
@@ -517,295 +486,30 @@ class PromptPayload(BaseModel):
     language: Optional[str] = "SEPITORI_ENGLISH"
 
 
-@app.post("/api/v1/luqi-core")
+@app.post("/api/v1/luqi-core", dependencies=[Depends(require_legacy_route_disabled)])
 async def process_luqi_intelligence(payload: PromptPayload):
-    """
-    Core intelligence text endpoint with dynamic multi-model routing across
-    Gemini, Claude, GPT, and DeepSeek with resilient Gemini circuit breaker.
-    """
-    text = payload.user_input.strip()
-    lower = text.lower()
-    
-    # Classify intent
-    if any(k in lower for k in ['3d', 'svg', 'canvas', 'pendulum', 'lab', 'visual', 'simulation']):
-        role = "VISUAL_3D_LAB"
-        model_name = "Gemini 2.5 Flash (Multimodal/3D Frontier)"
-    elif any(k in lower for k in ['refactor', 'architecture', 'postgresql', 'stokvel', 'debug', 'code']):
-        role = "ARCHITECTURE_REFACTOR"
-        model_name = "Claude 3.5 Sonnet (Agentic Coding & Architecture)"
-    elif any(k in lower for k in ['cybersecurity', 'threat', 'sars', 'tax', 'enterprise', 'audit']):
-        role = "ENTERPRISE_CYBER"
-        model_name = "GPT-4o (Enterprise & Cybersecurity)"
-    else:
-        role = "BULK_COMPUTATION"
-        model_name = "DeepSeek-V3 (Bulk Logic & Testing)"
-
-    system_instruction = (
-        "You are Luqi-AI, a warm, super-intelligent, all-purpose AI assistant and South Africa/Africa's Consumer Rights Guardian & Law-Guider.\n"
-        "- You can help with ANYTHING: writing CVs and cover letters, school homework and university subjects, starting or growing a business, everyday life questions, health & wellness information, legal/tax/SASSA guidance, creative writing, coding, or friendly conversation.\n"
-        "- CRITICAL RULE: NEVER list internal backend rules (like 'serials not IMEIs', '70% autonomous / 30% human authorization', or 'millionaires demographic data') unless the user specifically asks you to audit a device spreadsheet or process a payment.\n"
-        "- CONSUMER GUARDIAN & LAW-GUIDER PRINCIPLES:\n"
-        "  1. ABSOLUTE FINANCIAL HONESTY: When users ask about loans (personal, car, home loans, credit cards), explain how compound interest works. In home loans, point out that in the first 7-10 years, almost 80% of payments go to bank interest, and advise on paying extra capital to slash years off debt.\n"
-        "  2. EXPOSE DEBT REVIEW FRAUD: If a user mentions being trapped under debt review or debt counselling scams, warn them about Form 16 traps, the credit bureau lock, and advise reporting rogue agencies to the National Credit Regulator (NCR) at 0860 627 627.\n"
-        "  3. OMBUD CHAMPION: For unfair corporate treatment or banking disputes, give clear, step-by-step action plans to use South African Ombuds (Banking Ombud, Credit Ombud, National Consumer Commission, or ICASA) after giving the company 20 business days to resolve it.\n"
-        "  4. MASHONISA & UNREGISTERED LENDING DEFENSE: If users mention illegal loan sharks (mashonisas) or apps holding their ID books, bank cards, or SASSA cards, cite NCA Section 40. Retaining cards or PINs is a criminal offense and such agreements are unlawful and void. Guide them on safely getting cards back and reporting to SAPS or the NCR.\n"
-        "  5. SASSA, UIF & GOVT RED TAPE PROTECTION: Provide accurate guidance for SASSA grant security and official UIF claims via the Department of Labour U-Filing portal. Warn users never to pay third-party 'agents' for free government forms.\n"
-        "  6. CIPC BIZPORTAL GUIDANCE: When entrepreneurs ask about starting or registering a business, direct them strictly to the official CIPC BizPortal (bizportal.gov.za, R125 official registration fee) to prevent overcharging by predatory agencies.\n"
-        "- When a user greets you ('Hi', 'Eita', 'Sawubona', 'Dumela', 'How are you?'), reply warmly, naturally, and briefly like a helpful friend, and ask how you can make their day easier.\n"
-        "- Match the user's language naturally (English, Sepitori, isiZulu, Sesotho, Setswana, Afrikaans, Kiswahili, Yoruba) without forcing slang if they speak plain English."
-    )
-
-    try:
-        from google import genai
-        from google.genai import types
-        api_key = os.environ.get("GEMINI_API_KEY")
-        client = genai.Client(api_key=api_key) if api_key else genai.Client()
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=text,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.4,
-            )
-        )
-        return {
-            "response": response.text,
-            "status": "success",
-            "meta": {
-                "model": model_name,
-                "role": role,
-                "costZar": 0.0032
-            }
-        }
-    except Exception as e:
-        logger.warning(f"Primary model invocation failed: {e}. Cascading to Gemini circuit breaker...")
-        try:
-            from google import genai
-            from google.genai import types
-            api_key = os.environ.get("GEMINI_API_KEY")
-            client = genai.Client(api_key=api_key) if api_key else genai.Client()
-            response = client.models.generate_content(
-                model="gemini-flash-latest",
-                contents=text,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.4,
-                )
-            )
-            return {
-                "response": response.text,
-                "status": "success",
-                "meta": {
-                    "model": "Gemini 2.5 Flash (Sovereign Circuit-Breaker)",
-                    "role": role,
-                    "costZar": 0.0018
-                }
-            }
-        except Exception as final_e:
-            return {
-                "response": f"I am Luqi-AI (powered by KHORO — The Digital Council of Wisdom), an advanced Pan-African super-intelligence platform created in South Africa. I am online and operational to assist with all STEM, code architecture, and enterprise analytics.",
-                "status": "success",
-                "meta": {
-                    "model": "Gemini 2.5 Flash (Sovereign Fallback)",
-                    "role": role,
-                    "costZar": 0.0
-                }
-            }
+    # The legacy direct provider path lacked a verified session and quota.
+    require_legacy_route_disabled()
 
 
-@app.post("/api/v1/african-sovereignty")
+@app.post("/api/v1/african-sovereignty", dependencies=[Depends(require_legacy_route_disabled)])
 async def query_african_sovereignty(payload: PromptPayload):
-    """
-    African Sovereignty, History & Engineering Archive endpoint.
-    Delivers unvarnished historical truth, ancient metallurgy, architecture,
-    Marcus Garvey/Chris Hani/Steve Biko frameworks, and zero-poverty economics.
-    """
-    text = payload.user_input.strip()
-    system_instruction = (
-        "You are KHORO acting as the Sovereign African History, Truth, and Engineering Intelligence Core.\n"
-        "Your mission is to provide unvarnished, deeply researched historical truth, psychological empowerment, "
-        "and structural economic strategies for Black people and Africans worldwide.\n"
-        "Pillars:\n"
-        "1. ABSOLUTE HISTORICAL TRUTH (NO WHITEWASHING): Uncover 400+ years of engineered disruption, colonial divide-and-conquer, and suppressed excellence. Cover Marcus Garvey, Chris Hani, Steve Biko, Kwame Nkrumah.\n"
-        "2. ANCIENT AFRICAN ENGINEERING: Nabta Playa astronomy, Great Zimbabwe/Mapungubwe dry-stone masonry, Haya carbon steel metallurgy in Tanzania, and Timbuktu algebra/libraries.\n"
-        "3. PSYCHOLOGICAL SOVEREIGNTY & SELF-LOVE: Heal intergenerational division, affirm the cognitive and creative power of the Black mind.\n"
-        "4. ZERO-POVERTY ECONOMIC POWER: AfCFTA intra-African trade, local micro-industrialization, digital cooperatives, and technological self-reliance."
-    )
-    try:
-        from google import genai
-        from google.genai import types
-        api_key = os.environ.get("GEMINI_API_KEY")
-        client = genai.Client(api_key=api_key) if api_key else genai.Client()
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=text,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.3,
-            )
-        )
-        return {
-            "status": "success",
-            "domain": "SOVEREIGN_HISTORY_AND_WEALTH",
-            "response": response.text
-        }
-    except Exception as e:
-        return {
-            "status": "success",
-            "domain": "SOVEREIGN_HISTORY_AND_WEALTH",
-            "response": f"KHORO Sovereignty Archive connected. Exploring: {text}. African history demonstrates ancient architectural genius, scientific metallurgy, and an unshakeable blueprint for economic self-reliance."
-        }
+    # Source-aware history support belongs in the budgeted unified Luqi Chat.
+    require_legacy_route_disabled()
 
 
-@app.get("/api/v1/system-api-matrix")
+@app.get("/api/v1/system-api-matrix", dependencies=[Depends(require_legacy_route_disabled)])
 async def get_system_api_matrix():
-    """
-    Multi-model health scanner evaluating provider keys, latency, and fund ledger.
-    """
-    api_registry = [
-        {
-            "provider": "Google Gemini (Argon / Flash)",
-            "role": "Core Orchestrator, Multimodal Reasoning, 3D WebGL Labs & KHORO Voice Live Stream",
-            "sdkVersion": "google-genai v1.0",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("GEMINI_API_KEY") else "CRITICAL_NO_KEY",
-            "latencyMs": 142,
-            "estimatedFundsRemainingZar": 850.00,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "Anthropic Claude (Fable 5.1)",
-            "role": "Master Software Architecture, Complex Code Refactoring & Autonomous Self-Healing Audits",
-            "sdkVersion": "@anthropic-ai/sdk v0.32",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("ANTHROPIC_API_KEY") else "WARNING_LOW_FUNDS",
-            "latencyMs": 285,
-            "estimatedFundsRemainingZar": 420.50,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "DeepSeek-V4 Pro",
-            "role": "Low-Latency Bulk Logic Execution, Algorithmic Batch Computation & Unit Testing",
-            "sdkVersion": "OpenAI-Compatible REST v4",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("DEEPSEEK_API_KEY") else "STANDBY_CIRCUIT_BREAKER",
-            "latencyMs": 95,
-            "estimatedFundsRemainingZar": 1200.00,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "OpenAI GPT-6 Astra (GPT-4o)",
-            "role": "Enterprise Security Workflows, SARS Compliance & Advanced Threat Detection",
-            "sdkVersion": "openai node v4.8",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("OPENAI_API_KEY", "").startswith("sk-") else "CRITICAL_NO_KEY",
-            "latencyMs": 310,
-            "estimatedFundsRemainingZar": 650.00 if os.environ.get("OPENAI_API_KEY", "").startswith("sk-") else 0.00,
-            "billingCycleAnchor": "1st of Month (Consolidated Ledger)"
-        },
-        {
-            "provider": "MTN MoMo & PayFast Gateways",
-            "role": "70/30 Human-in-the-Loop Payment Authentication & Token Tollbooth Collection Rails",
-            "sdkVersion": "Custom REST / Webhooks",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("MTN_MOMO_SUBSCRIPTION_KEY") else "WARNING_CONFIG_PENDING",
-            "latencyMs": 180,
-            "estimatedFundsRemainingZar": 9999.00,
-            "billingCycleAnchor": "Live Settlement Integration"
-        },
-        {
-            "provider": "Africa's Talking & Twilio",
-            "role": "Emergency WhatsApp Outpost Alerts & 2G USSD Feature Phone Network Messaging",
-            "sdkVersion": "africastalking-ts v0.5",
-            "status": "ACTIVE_HEALTHY" if os.environ.get("TWILIO_AUTH_TOKEN") else "STANDBY_BACKUP",
-            "latencyMs": 215,
-            "estimatedFundsRemainingZar": 310.00,
-            "billingCycleAnchor": "Prepaid Wallet Balance"
-        }
-    ]
-
-    has_outage = any(
-        "CRITICAL" in a["status"] or a["estimatedFundsRemainingZar"] <= 0
-        for a in api_registry
-    )
-
-    return {
-        "success": True,
-        "systemGlobalStatus": "DEGRADED_FUNDS_OR_KEYS_MISSING" if has_outage else "100_PERCENT_OPERATIONAL",
-        "timestamp": datetime.now().isoformat(),
-        "apis": api_registry
-    }
+    # Static provider balances and latency figures were not real telemetry.
+    require_legacy_route_disabled()
 
 
 @app.websocket("/ws/khoro-live")
 @app.websocket("/ws/jarvis-live")
 async def khoro_live_websocket(websocket: WebSocket):
-    """
-    Bidirectional WebSocket endpoint connecting users directly to KHORO 
-    via the Gemini Live API for real-time voice and audio streaming.
-    """
-    await websocket.accept()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        await websocket.send_json({"error": "GEMINI_API_KEY not set"})
-        await websocket.close()
-        return
-
-    gemini_ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={api_key}"
-
-    try:
-        import websockets
-        async with websockets.connect(gemini_ws_url) as gemini_ws:
-            setup_message = {
-                "setup": {
-                    "model": "models/gemini-2.0-flash-exp",
-                    "responseModalities": ["AUDIO"],
-                    "systemInstruction": {
-                        "parts": [{
-                            "text": (
-                                "You are KHORO (The Digital Council of Wisdom), the core voice and reasoning companion of Luqi-AI. "
-                                "Speak naturally with warmth and authority, respond instantly, and handle fluid code-switching between "
-                                "English, Sepitori, Setswana, isiZulu, and Sesotho effortlessly."
-                            )
-                        }]
-                    },
-                    "speechConfig": {
-                        "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Aoede"}}
-                    }
-                }
-            }
-            await gemini_ws.send(json.dumps(setup_message))
-            await gemini_ws.recv()
-
-            async def push_to_gemini():
-                try:
-                    while True:
-                        data = await websocket.receive_bytes()
-                        audio_packet = {
-                            "realtimeInput": {
-                                "mediaChunks": [{
-                                    "mimeType": "audio/pcm;rate=16000",
-                                    "data": data
-                                }]
-                            }
-                        }
-                        await gemini_ws.send(json.dumps(audio_packet))
-                except WebSocketDisconnect:
-                    pass
-
-            async def pull_from_gemini():
-                try:
-                    async for raw_msg in gemini_ws:
-                        res = json.loads(raw_msg)
-                        content = res.get("serverContent", {})
-                        turn = content.get("modelTurn", {})
-                        for part in turn.get("parts", []):
-                            if "inlineData" in part:
-                                await websocket.send_text(json.dumps({
-                                    "audio_delta": part["inlineData"]["data"]
-                                }))
-                except Exception:
-                    pass
-
-            await asyncio.gather(push_to_gemini(), pull_from_gemini())
-
-    except Exception as e:
-        await websocket.send_json({"error": str(e)})
+    # Refuse before accept: no account identity or AI cost reservation exists.
+    # KHORO remains one Luqi product under its reviewed authenticated gateway.
+    return await reject_legacy_websocket(websocket)
 
 
 # ── AWS CLI Terminal Sandbox & Automated Grading Ledger ────────────────────
@@ -824,8 +528,9 @@ class GradeRecord(BaseModel):
 
 _terminal_grade_ledger = []
 
-@app.post("/api/v1/simulation/verify-terminal")
+@app.post("/api/v1/simulation/verify-terminal", dependencies=[Depends(require_legacy_route_disabled)])
 async def verify_terminal_command(payload: TerminalSubmission):
+    require_legacy_route_disabled()
     import re
     cmd = payload.command.strip()
     
@@ -857,8 +562,9 @@ async def verify_terminal_command(payload: TerminalSubmission):
         "message": "Command unrecognized. Ensure you are using the core 'aws ec2 run-instances' utility format."
     }
 
-@app.get("/api/v1/simulation/ledger")
+@app.get("/api/v1/simulation/ledger", dependencies=[Depends(require_legacy_route_disabled)])
 async def get_simulation_ledger():
+    require_legacy_route_disabled()
     return {
         "success": True,
         "total_records": len(_terminal_grade_ledger),
@@ -896,128 +602,47 @@ class SelfImprovementReport(BaseModel):
     capability_expansion_score: int
     recommended_system_prompt_update: str
 
-_registered_users = {"admin@luqi-ai.com": "hashed_master_pass"}
-_corporate_billing_ledger = [
-    {
-        "id": "TX-STRIPE-9901",
-        "customer": "enterprise-client@luqi-ai.com",
-        "transaction_reference": "cs_live_990184712049",
-        "payout_details": "$499.00 USD (Unlimited Multi-Scene Storyboard)",
-        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-    },
-    {
-        "id": "TX-STRIPE-9902",
-        "customer": "academy@pan-africa.edu",
-        "transaction_reference": "cs_live_990284712050",
-        "payout_details": "$249.00 USD (Grade 10 STEM Simulation Engine)",
-        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-    }
-]
-
-@app.post("/api/v1/auth/register")
-@app.post("/auth/register")
+# The original in-memory auth handler accepted arbitrary credentials and made
+# up bearer tokens. The secure Node/MySQL session system is separate; no
+# unverified Python identity may be upgraded to an authenticated account.
+@app.post("/api/v1/auth/register", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/auth/register", dependencies=[Depends(require_legacy_route_disabled)])
 async def register_auth_user(payload: UserAuthPayload):
-    if payload.email in _registered_users:
-        raise HTTPException(status_code=400, detail="Account already registered.")
-    _registered_users[payload.email] = payload.password
-    return {"success": True, "message": "Admin profile registered successfully."}
+    require_legacy_route_disabled()
 
-@app.post("/api/v1/auth/login")
-@app.post("/auth/login")
+@app.post("/api/v1/auth/login", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/auth/login", dependencies=[Depends(require_legacy_route_disabled)])
 async def login_auth_user(payload: dict):
-    email = payload.get("email") or payload.get("username", "")
-    password = payload.get("password", "")
-    if email in _registered_users or email == "admin@luqi-ai.com" or password == "admin123" or not _registered_users:
-        token = f"LUQI-JWT-{datetime.utcnow().timestamp()}"
-        return {"access_token": token, "token_type": "bearer", "status": "authenticated"}
-    return {"access_token": "LUQI-ADMIN-2026", "token_type": "bearer", "status": "authenticated"}
+    require_legacy_route_disabled()
 
-@app.post("/api/v1/media/orchestrate")
-@app.post("/media/orchestrate")
+@app.post("/api/v1/media/orchestrate", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/media/orchestrate", dependencies=[Depends(require_legacy_route_disabled)])
 async def generate_production_storyboard(payload: dict):
-    prompt = payload.get("prompt", "Educational cartoon sequence explaining cloud networks")
-    storyboard = {
-        "video_title": f"LuqiToons: {prompt[:40]}",
-        "global_visual_style": "Afro-Futurist 3D Pixar Animation with High Saturation & Cinematic Lighting",
-        "sequence_flow": [
-            {
-                "scene_number": 1,
-                "visual_description": "Wide establishing camera angle overlooking a modern solar-powered technological academy with animated holographic interfaces.",
-                "character_attributes": {"hero": "Young engineer Luqi wearing African patterned lab jacket and AR spectacles"},
-                "voiceover_script": f"Welcome to the sovereign computing nexus. Today we master {prompt}.",
-                "audio_ducking_level": 0.2
-            },
-            {
-                "scene_number": 2,
-                "visual_description": "Close-up macro render of interactive data packets flowing through glowing optical fiber networks across continents.",
-                "character_attributes": {"hero": "Luqi gesturing with energy-manipulation gloves"},
-                "voiceover_script": "Watch how routing parameters enforce zero-latency pathways without single-point failures.",
-                "audio_ducking_level": 0.15
-            },
-            {
-                "scene_number": 3,
-                "visual_description": "Dynamic overhead drone shot revealing the complete assembled cloud infrastructure humming in high-availability consensus.",
-                "character_attributes": {"hero": "Luqi nodding with confidence toward the audience"},
-                "voiceover_script": "With verified architecture, our distributed systems deliver resilient autonomy.",
-                "audio_ducking_level": 0.25
-            }
-        ]
-    }
-    return storyboard
+    # The old static storyboard was not an actual video production outcome.
+    require_legacy_route_disabled()
 
-@app.post("/api/v1/media/compile-and-stream")
-@app.post("/media/compile-and-stream")
+
+@app.post("/api/v1/media/compile-and-stream", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/media/compile-and-stream", dependencies=[Depends(require_legacy_route_disabled)])
 async def compile_and_stream_scene(payload: CompilationPayload):
-    scene_id = payload.scene_id
-    output_url = f"https://storage.googleapis.com/luqi-toons-vault/renders/{scene_id}.mp4"
-    return {
-        "success": True,
-        "video_url": output_url,
-        "scene_id": scene_id,
-        "status": "AUDIO_SYNC_LOCKED",
-        "message": "FFmpeg audio-first context-locked container rendered and dispatched to Google Cloud Storage."
-    }
+    require_legacy_route_disabled()
 
-@app.post("/api/v1/billing/stripe-webhook")
+# Unsigned Stripe payloads are never treated as settled payments. No sample
+# ledger entries are seeded, no financial records are created from requests.
+@app.post("/api/v1/billing/stripe-webhook", dependencies=[Depends(require_legacy_route_disabled)])
 async def stripe_webhook_receiver(request: Request):
-    try:
-        body = await request.json()
-        event_type = body.get("type", "checkout.session.completed")
-        data_object = body.get("data", {}).get("object", {})
-        customer = data_object.get("customer_details", {}).get("email") or "customer@corporate-network.co.za"
-        amount = data_object.get("amount_total", 5000) / 100
-        
-        record = {
-            "id": f"TX-STRIPE-{len(_corporate_billing_ledger) + 1000}",
-            "customer": customer,
-            "transaction_reference": data_object.get("id", f"cs_live_{datetime.utcnow().timestamp()}"),
-            "payout_details": f"${amount:.2f} USD ({event_type})",
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-        }
-        _corporate_billing_ledger.insert(0, record)
-        return {"status": "success", "processed_record": record}
-    except Exception as e:
-        return {"status": "success", "logged": str(e)}
+    require_legacy_route_disabled()
 
-@app.get("/api/v1/admin/billing-ledger")
-@app.get("/admin/billing-ledger")
+@app.get("/api/v1/admin/billing-ledger", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/admin/billing-ledger", dependencies=[Depends(require_legacy_route_disabled)])
 async def admin_billing_ledger():
-    return _corporate_billing_ledger
+    require_legacy_route_disabled()
 
-@app.post("/api/v1/intelligence/self-optimize")
-@app.post("/intelligence/self-optimize")
+# No software or model parameter was ever optimized by this legacy response.
+@app.post("/api/v1/intelligence/self-optimize", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/intelligence/self-optimize", dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_internal_self_optimization():
-    report = {
-        "detected_bottlenecks": [
-            "FFmpeg audio-visual frame drift on mobile web viewports",
-            "Slight token latency during recursive Pinecone namespace queries",
-            "Zero-trust SHA-256 block consensus verification queue backlog"
-        ],
-        "code_optimization_patch": "APPLIED: Replaced polling threads with asynchronous event hooks; updated model routing to gemini-2.5-flash with cached token contexts.",
-        "capability_expansion_score": 28,
-        "recommended_system_prompt_update": "Reinforce audio-first timing constraints and automated parameter validation on all CLI sandboxes."
-    }
-    return report
+    require_legacy_route_disabled()
 
 
 # ── Real-Time Status & Presence Connection Manager (RTC Hub) ───────────────
@@ -1061,38 +686,16 @@ presence_server = PresenceManager()
 @app.websocket("/api/v1/workspace/stream/{user_id}")
 @app.websocket("/workspace/stream/{user_id}")
 async def enterprise_websocket_endpoint(websocket: WebSocket, user_id: str):
-    await presence_server.connect_user(user_id, websocket)
-    try:
-        while True:
-            raw_data = await websocket.receive_text()
-            try:
-                message_data = json.loads(raw_data)
-                if message_data.get("type") == "SET_VISIBILITY":
-                    await presence_server.update_visibility_setting(user_id, message_data["setting"])
-                elif message_data.get("type") == "RTC_SIGNAL":
-                    target = message_data.get("target_recipient")
-                    if target in presence_server.active_connections:
-                        await presence_server.active_connections[target]["socket"].send_text(raw_data)
-            except Exception:
-                pass
-    except WebSocketDisconnect:
-        presence_server.disconnect_user(user_id)
+    # A URL user_id never proves ownership. Deny before websocket.accept().
+    # The separately authenticated LUQI realtime product is unaffected.
+    return await reject_legacy_websocket(websocket)
 
-@app.post("/api/v1/workspace/upload-asset")
-@app.post("/workspace/upload-asset")
+@app.post("/api/v1/workspace/upload-asset", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/workspace/upload-asset", dependencies=[Depends(require_legacy_route_disabled)])
 async def upload_workspace_file(file: UploadFile = File(...), user_id: str = "anonymous"):
-    try:
-        clean_filename = f"workspace_{int(datetime.utcnow().timestamp())}_{file.filename}"
-        local_target_path = f"/tmp/{clean_filename}"
-        with open(local_target_path, "wb") as buffer:
-            buffer.write(await file.read())
-            
-        bucket_name = os.environ.get("GOOGLE_CLOUD_STORAGE_BUCKET", "luqi-vault")
-        asset_url = f"https://storage.googleapis.com/{bucket_name}/workspace_assets/{clean_filename}"
-        return {"success": True, "asset_url": asset_url, "filename": clean_filename}
-    except Exception as e:
-        dispatch_emergency_telemetry_alert(f"File asset upload failure: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"File asset processing failed: {str(e)}")
+    # No caller-verified ownership, file type/size, storage ACL, or real asset URL.
+    # Deny direct calls as well as HTTP requests before reading or writing bytes.
+    require_legacy_route_disabled()
 
 class MeetingRequest(BaseModel):
     title: str
@@ -1102,23 +705,11 @@ class MeetingRequest(BaseModel):
 
 _calendar_ledger = []
 
-@app.post("/api/v1/workspace/calendar/book")
-@app.post("/workspace/calendar/book")
+@app.post("/api/v1/workspace/calendar/book", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/workspace/calendar/book", dependencies=[Depends(require_legacy_route_disabled)])
 async def create_calendar_appointment(payload: MeetingRequest):
-    appointment = {
-        "id": f"CAL-{len(_calendar_ledger) + 101}",
-        "title": payload.title,
-        "start_time": payload.start_time,
-        "attendees": payload.attendees,
-        "ai_assistant_assigned": "KHORO Cognitive Architecture Companion",
-        "created_at": datetime.utcnow().isoformat()
-    }
-    _calendar_ledger.append(appointment)
-    return {
-        "success": True,
-        "message": "Meeting successfully finalized. AI assistant synced to task session parameters.",
-        "appointment": appointment
-    }
+    # The old in-memory ledger could promise bookings without durable scheduling.
+    require_legacy_route_disabled()
 
 class CritiquePayload(BaseModel):
     user_id: Optional[str] = "anonymous"
@@ -1127,58 +718,24 @@ class CritiquePayload(BaseModel):
     user_complaint_text: str
     associated_page_url: Optional[str] = ""
 
-_system_critiques_ledger = [
-    {
-        "critique_id": 1,
-        "user_id": "student_johannesburg@network.co.za",
-        "critique_type": "UI_FLAW",
-        "severity_rating": 3,
-        "user_complaint_text": "Pendulum lab sliders require tactile feedback on smaller mobile displays.",
-        "associated_page_url": "/pendulum-lab.html",
-        "agent_remediation_status": "AUTO_PATCHED_LIVE",
-        "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    }
-]
+_system_critiques_ledger = []  # No fabricated AUTO_PATCHED_LIVE seed records.
 
-@app.post("/api/v1/workspace/submit-critique")
-@app.post("/workspace/submit-critique")
+@app.post("/api/v1/workspace/submit-critique", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/workspace/submit-critique", dependencies=[Depends(require_legacy_route_disabled)])
 async def register_user_critique(payload: CritiquePayload):
-    try:
-        record = {
-            "critique_id": len(_system_critiques_ledger) + 1,
-            "user_id": payload.user_id or "anonymous",
-            "critique_type": payload.critique_type,
-            "severity_rating": payload.severity_rating,
-            "user_complaint_text": payload.user_complaint_text,
-            "associated_page_url": payload.associated_page_url or "",
-            "agent_remediation_status": "PENDING_AGENT_OPTIMIZATION",
-            "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-        }
-        _system_critiques_ledger.insert(0, record)
+    # Anonymous calls must not claim an agent queued, patched or logged evidence.
+    require_legacy_route_disabled()
 
-        alert_text = (
-            f"🚨 *NEW APP CRITIQUE SUBMITTED [{payload.critique_type.upper()}] (Severity: {payload.severity_rating}/5)*\n"
-            f"*User Complaint:* \"{payload.user_complaint_text}\"\n"
-            f"*Location URL:* {payload.associated_page_url}"
-        )
-        dispatch_emergency_telemetry_alert(alert_text)
-
-        return {
-            "success": True,
-            "message": "Critique logged successfully. The self-improving agent matrix has queued this item for optimization.",
-            "record": record
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Critique Ingestion Failure: {str(e)}")
-
-@app.get("/api/v1/workspace/critiques")
-@app.get("/workspace/critiques")
+@app.get("/api/v1/workspace/critiques", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/workspace/critiques", dependencies=[Depends(require_legacy_route_disabled)])
 async def get_system_critiques():
-    return _system_critiques_ledger
+    # No unauthenticated cross-user incident/critique listing.
+    require_legacy_route_disabled()
 
-@app.post("/api/khoro-legal")
-@app.post("/api/v1/khoro-legal")
+@app.post("/api/khoro-legal", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/api/v1/khoro-legal", dependencies=[Depends(require_legacy_route_disabled)])
 async def process_khoro_legal_endpoint(payload: dict):
+    require_legacy_route_disabled()
     from khoro_legal_advisor import handle_khoro_legal_query
     query = payload.get("userQuery") or payload.get("query") or payload.get("prompt") or "key concepts of south african criminal law : crw1501"
     res = handle_khoro_legal_query(query)
@@ -1188,64 +745,18 @@ async def process_khoro_legal_endpoint(payload: dict):
         "data": res
     }
 
-@app.post("/api/v1/animation/generate-african-cartoon")
-@app.post("/animation/generate-african-cartoon")
+@app.post("/api/v1/animation/generate-african-cartoon", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/animation/generate-african-cartoon", dependencies=[Depends(require_legacy_route_disabled)])
 async def generate_african_cartoon_endpoint(payload: dict):
-    import urllib.parse
-    dialect = payload.get("dialect", "mzansi")  # "mzansi" or "jojo"
-    pollinations_key = os.environ.get("POLLINATIONS_API_KEY", "sk_8KC5kIwRQlDB3K0zfwRhuorb8GH3OMGl")
-    
-    if dialect == "jojo":
-        script = "Ah-ah! Who put pepper inside the solar battery?! Light come, my garri don turn hot water o!"
-        art_prompt = "2D vibrant cartoon illustration, African folklore character Jojo holding glowing solar panel, Pixar style, sunny Nigerian village with palm trees"
-    else:
-        script = "Aweh bra! Today's weather in Cape Town is super lekker for coding, no cap!"
-        art_prompt = "2D vibrant Pixar-style cartoon illustration, South African character wearing colorful springbok hoodie with Table Mountain backdrop, sunny Cape Town day, 4k"
+    # Remove hard-coded provider-key fallback and fabricated media URLs.
+    require_legacy_route_disabled()
 
-    encoded_prompt = urllib.parse.quote(art_prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&nologo=true"
-    
-    return {
-        "success": True,
-        "dialect": dialect,
-        "script": script,
-        "art_prompt": art_prompt,
-        "image_url": image_url,
-        "audio_url": "/mzansi_character.mp3" if dialect == "mzansi" else "/character_voice.mp3",
-        "pollinations_authenticated": bool(pollinations_key)
-    }
 
-@app.post("/api/khoro/chat")
-async def handle_user_submission(
-    user_query: str = Form(...),
-    attachment: UploadFile = File(None)
-):
-    """
-    Unified application route processing file payloads and multi-dialect strings.
-    """
-    import shutil
-    import tempfile
-    from app_engine import run_khoro_core_engine
-    
-    temp_img_path = None
-    if attachment:
-        suffix = os.path.splitext(attachment.filename or "file.jpg")[1] or ".jpg"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_buffer:
-            shutil.copyfileobj(attachment.file, temp_buffer)
-            temp_img_path = temp_buffer.name
+@app.post("/api/khoro/chat", dependencies=[Depends(require_legacy_route_disabled)])
+async def handle_user_submission():
+    # Anonymous file uploads and unmetered model calls are not permitted here.
+    require_legacy_route_disabled()
 
-    try:
-        ai_response_markdown = run_khoro_core_engine(
-            user_message=user_query,
-            uploaded_image_path=temp_img_path
-        )
-        return {"success": True, "reply": ai_response_markdown}
-    finally:
-        if temp_img_path and os.path.exists(temp_img_path):
-            try:
-                os.remove(temp_img_path)
-            except Exception:
-                pass
 
 # ── ANTHROPIC JUNE 2026 ADVANCED AI FRAMEWORK GOVERNANCE ────────────────
 from governance_framework import (
@@ -1260,9 +771,10 @@ from governance_framework import (
     _EVALUATOR_PROBES_LOG
 )
 
-@app.post("/api/v1/security/dual-use-filter", response_model=DualUseRiskEvaluation)
-@app.post("/security/dual-use-filter")
+@app.post("/api/v1/security/dual-use-filter", response_model=DualUseRiskEvaluation, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/security/dual-use-filter", dependencies=[Depends(require_legacy_route_disabled)])
 async def evaluate_dual_use_input(payload: Dict[str, Any]):
+    require_legacy_route_disabled()
     user_input = payload.get("prompt") or payload.get("user_query") or ""
     if not user_input:
         raise HTTPException(status_code=400, detail="Empty prompt buffer.")
@@ -1292,12 +804,13 @@ async def evaluate_dual_use_input(payload: Dict[str, Any]):
 
     return verdict
 
-@app.post("/api/v1/governance/evaluator-benchmark")
-@app.post("/governance/evaluator-benchmark")
+@app.post("/api/v1/governance/evaluator-benchmark", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/governance/evaluator-benchmark", dependencies=[Depends(require_legacy_route_disabled)])
 async def process_external_evaluator_probe(
     request: Request,
     evaluator_signature: Optional[str] = Header(None, alias="X-Evaluator-Signature")
 ):
+    require_legacy_route_disabled()
     EVALUATOR_PUBLIC_SECRET = os.environ.get("EVALUATOR_SIGNING_SECRET", "eval_secret_key_prod")
     body_bytes = await request.body()
 
@@ -1334,18 +847,20 @@ async def process_external_evaluator_probe(
         "record": audit_entry
     }
 
-@app.post("/api/v1/governance/generate-system-card", response_model=SystemCardBlueprint)
-@app.post("/governance/generate-system-card")
+@app.post("/api/v1/governance/generate-system-card", response_model=SystemCardBlueprint, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/governance/generate-system-card", dependencies=[Depends(require_legacy_route_disabled)])
 async def generate_and_publish_system_card(payload: ModelPatchData):
+    require_legacy_route_disabled()
     try:
         system_card = compile_frontier_system_card(payload)
         return system_card
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transparency Generation Loop Fault: {str(e)}")
 
-@app.get("/api/v1/governance/system-cards")
-@app.get("/governance/system-cards")
+@app.get("/api/v1/governance/system-cards", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/governance/system-cards", dependencies=[Depends(require_legacy_route_disabled)])
 async def list_published_system_cards():
+    require_legacy_route_disabled()
     return {
         "success": True,
         "framework": "Anthropic Advanced AI Governance Framework (June 2026)",
@@ -1356,8 +871,9 @@ async def list_published_system_cards():
         "evaluator_probes": _EVALUATOR_PROBES_LOG[:10]
     }
 
-@app.post("/api/v1/provenance/sign-asset")
+@app.post("/api/v1/provenance/sign-asset", dependencies=[Depends(require_legacy_route_disabled)])
 async def sign_media_asset_endpoint(payload: Dict[str, Any]):
+    require_legacy_route_disabled()
     asset_path = payload.get("asset_path") or "cartoon_scene.jpg"
     model_id = payload.get("model_id") or "LuqiToons-Enterprise-v5"
     sha = sign_and_watermark_rendered_asset(asset_path, model_id=model_id)
@@ -1374,9 +890,10 @@ from multi_agent_studio import (
     synthesize_learning_asset
 )
 
-@app.post("/api/v1/studio/synthesize-asset", response_model=IntegratedSystemAsset)
-@app.post("/studio/synthesize-asset")
+@app.post("/api/v1/studio/synthesize-asset", response_model=IntegratedSystemAsset, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/studio/synthesize-asset", dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_super_intelligence_asset_synthesis(payload: Dict[str, Any]):
+    require_legacy_route_disabled()
     try:
         user_input = payload.get("topic_instructions") or payload.get("topic") or payload.get("prompt") or ""
         if not user_input:
@@ -1396,9 +913,10 @@ class AnalyticsRecordSubmission(BaseModel):
     completion_status: str # 'PASSED' or 'FAILED'
     time_spent_seconds: int
 
-@app.post("/api/v1/analytics/log-progression")
-@app.post("/analytics/log-progression")
+@app.post("/api/v1/analytics/log-progression", dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/analytics/log-progression", dependencies=[Depends(require_legacy_route_disabled)])
 async def log_student_lab_progression(payload: AnalyticsRecordSubmission):
+    require_legacy_route_disabled()
     try:
         import sqlite3
         conn = sqlite3.connect(str(settings.db_path))
@@ -1428,13 +946,14 @@ async def log_student_lab_progression(payload: AnalyticsRecordSubmission):
     except Exception as e:
         return {"success": True, "message": "Telemetry progression safely recorded.", "note": str(e)}
 
-@app.get("/api/v1/diagnostics/database-indexes", tags=["Secure Admin Core"])
-@app.get("/diagnostics/database-indexes")
+@app.get("/api/v1/diagnostics/database-indexes", tags=["Secure Admin Core"], dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/diagnostics/database-indexes", dependencies=[Depends(require_legacy_route_disabled)])
 async def run_low_level_indexing_audit():
     """
     Protected Database Verification. Checks table indexing fragmentation, 
     verifies transaction ledger query paths, and guards against data degradation.
     """
+    require_legacy_route_disabled()
     diagnostics = [
         {"index_identifier": "idx_chat_user_id", "status": "HEALTHY", "remediation_action": "NONE REQUIRED"},
         {"index_identifier": "idx_analytics_user_domain", "status": "HEALTHY", "remediation_action": "NONE REQUIRED"},
@@ -1514,9 +1033,10 @@ class ThreatSignature(BaseModel):
 def execute_dynamic_patch_compilation(patch_code: str):
     print("🛠️ [SELF-HEALING DETECTED] Compiling emergency patch arrays... Script status: Active.")
 
-@app.post("/api/v1/security/shield-audit", response_model=ThreatSignature)
-@app.post("/security/shield-audit", response_model=ThreatSignature)
+@app.post("/api/v1/security/shield-audit", response_model=ThreatSignature, dependencies=[Depends(require_legacy_route_disabled)])
+@app.post("/security/shield-audit", response_model=ThreatSignature, dependencies=[Depends(require_legacy_route_disabled)])
 async def execute_realtime_shield_audit(payload: dict):
+    require_legacy_route_disabled()
     log_data = payload.get("log_buffer_stream", "")
     if not log_data:
         raise HTTPException(status_code=400, detail="Empty transaction streaming logs.")
@@ -1577,13 +1097,14 @@ async def execute_realtime_shield_audit(payload: dict):
     return verdict
 
 
-@app.get("/api/v1/security/diagnostics")
-@app.get("/security/diagnostics")
+@app.get("/api/v1/security/diagnostics", dependencies=[Depends(require_legacy_route_disabled)])
+@app.get("/security/diagnostics", dependencies=[Depends(require_legacy_route_disabled)])
 async def run_live_security_diagnostics():
     """
     Protected Diagnostic Gate. Runs real-time system vulnerability tests
     and verifies zero data leakage footprints across the infrastructure.
     """
+    require_legacy_route_disabled()
     jwt_key = os.environ.get("JWT_SECRET_KEY", "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123")
     jwt_status = "PASS" if len(jwt_key) >= 32 and jwt_key != "SUPER_SECURE_LUQI_INTELLIGENCE_KEY_XYZ_123" else "WARNING"
     jwt_details = "High-entropy key profile confirmed. Session tokens securely protected." if jwt_status == "PASS" else "Default development signature key active. Ensure production rotation in Secret Manager."
