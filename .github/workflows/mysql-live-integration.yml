@@ -177,13 +177,13 @@ jobs:
           fi
       - name: Verify first-user browser flow against real restricted MySQL
         run: npx playwright test --config playwright.mysql.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: password-settings-layouts
           path: test-results/**/password-settings.png
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: mysql-browser-failure-evidence
