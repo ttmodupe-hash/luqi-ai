@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional, Tuple
 MAX_REPORT_LENGTH = 4000
 MAX_JOBS_IN_MEMORY = 100
 _SAFE_PATH = re.compile(r"^[a-zA-Z0-9_./-]{1,180}$")
+_PROPOSAL_ID = re.compile(r"sh_[a-f0-9]{16}\Z")
 _REPORT_WITHHELD = "[REPORT_WITHHELD]"
 _TARGET_WITHHELD = "[TARGET_WITHHELD]"
 # Shared refusal string; never delegate the manager boundary to an injectable tool.
@@ -36,6 +37,11 @@ _SANDBOX_BLOCKED = (
 )
 # In-memory-only keyed fingerprint; never treat as durable incident evidence.
 _FINGERPRINT_KEY = secrets.token_bytes(32)
+
+
+def _valid_proposal_id(value: Any) -> bool:
+    """Reject malformed or oversized caller IDs before touching the job register."""
+    return type(value) is str and len(value) == 19 and _PROPOSAL_ID.fullmatch(value) is not None
 
 
 def _utc_now() -> str:
@@ -241,7 +247,7 @@ class SelfHealingPipelineManager:
         # In-process approval cannot merge/deploy or change the job to deployed.
         # JSON callers may supply arrays/objects. Never let an unhashable
         # identifier raise TypeError before the fail-closed refusal.
-        if type(job_id) is not str or job_id not in self._jobs:
+        if not _valid_proposal_id(job_id) or job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,
@@ -256,7 +262,7 @@ class SelfHealingPipelineManager:
     ) -> Tuple[bool, str]:
         # JSON callers may supply arrays/objects. Never let an unhashable
         # identifier raise TypeError before the fail-closed refusal.
-        if type(job_id) is not str or job_id not in self._jobs:
+        if not _valid_proposal_id(job_id) or job_id not in self._jobs:
             return False, "Proposal not found."
         return (
             False,

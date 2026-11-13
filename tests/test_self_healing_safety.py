@@ -340,5 +340,39 @@ class FailClosedHealingTests(unittest.TestCase):
             self.assertEqual(self.manager.list_jobs(), prior)
 
 
+    def test_review_identifiers_rejected_before_registry_lookup(self):
+        # A giant or malformed JSON ID must not even reach the keyed register.
+        # The old implementation performed a hash-table lookup on arbitrary
+        # strings (including huge input) before refusing them.
+        existing = self.manager.trigger_self_healing("Synthetic security report")
+        original = self.manager.list_jobs()
+
+        class LookupGuard(dict):
+            def __contains__(self, key):
+                if (type(key) is not str or len(key) != 19 or
+                        not key.startswith("sh_") or
+                        any(char not in "0123456789abcdef" for char in key[3:])):
+                    raise AssertionError("Malformed ID reached the job register")
+                return super().__contains__(key)
+
+        self.manager._jobs = LookupGuard(self.manager._jobs)
+        invalid = (
+            "x" * 300_000, "sh_" + "f" * 17, "sh_" + "g" * 16,
+            "Sh_" + "a" * 16, "sh_" + "a" * 15,
+            "sh_" + "a" * 16 + "\n", "", None, [], {},
+        )
+        for operation in (self.manager.authorize_deployment,
+                          self.manager.reject_deployment):
+            for candidate in invalid:
+                with self.subTest(operation=operation.__name__,
+                                  input_type=type(candidate).__name__):
+                    permitted, message = operation(candidate, reviewer="fake-admin")
+                    self.assertFalse(permitted)
+                    self.assertEqual(message, "Proposal not found.")
+            permitted, message = operation(existing.job_id, reviewer="fake-admin")
+            self.assertFalse(permitted)
+        self.assertEqual(self.manager.list_jobs(), original)
+
+
 if __name__ == "__main__":
     unittest.main()
