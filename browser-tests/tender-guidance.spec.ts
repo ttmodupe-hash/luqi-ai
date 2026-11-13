@@ -30,3 +30,28 @@ test('guided original-form fields keep answers and route corrections at 320px',a
  await expect(panel.getByRole('button',{name:'Guide me step by step'})).toHaveCount(0);
  expect(writes).toEqual([]);
 });
+
+test('optional SBD 1 blanks can be reviewed by keyboard at 320px without guessing or sending answers',async({page})=>{
+ await page.setViewportSize({width:320,height:840});
+ const writes:string[]=[];page.on('request',request=>{if(request.method()!=='GET')writes.push(request.method()+' '+request.url());});
+ await page.goto('/#/tenders');
+ await page.getByRole('button',{name:'Prepare a response',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Original government form assistance'});
+ await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
+ await panel.getByLabel('Import original tender document').setInputFiles(fixture);
+ await expect(panel.getByLabel('SBD 1 Name of bidder')).toBeVisible();
+ await panel.getByLabel('SBD 1 Name of bidder').fill('Synthetic mobile bidder');
+ const review=panel.getByText('Review 6 blank optional contact fields');
+ await expect(review).toBeVisible();
+ await review.focus();await page.keyboard.press('Enter');
+ const jump=panel.getByRole('button',{name:'Go to Email address'});
+ await expect(jump).toBeVisible();
+ await expect(panel.getByText(/optional for Luqi's partial export only/)).toBeVisible();
+ await panel.getByRole('button',{name:'Guide me step by step'}).click();
+ await jump.focus();await page.keyboard.press('Enter');
+ await expect(panel.getByLabel('SBD 1 Email address')).toBeFocused();
+ await expect(panel.getByLabel('SBD 1 Email address')).toHaveValue('');
+ await expect(panel.getByText('1 of 7 supported contact fields have valid-format entries.')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(writes).toEqual([]);
+});
