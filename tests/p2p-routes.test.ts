@@ -46,3 +46,24 @@ it('authenticates presence updates and cannot set another account online',async(
  expect((await post('/presence',input)).status).toBe(401);
  expect(spy).toHaveBeenCalledOnce();
 });
+
+it('validates Away as an explicit authenticated choice and rejects hidden or forged statuses',async()=>{
+ vi.stubEnv('LUQI_P2P_ENABLED','true');
+ const spy=vi.spyOn(SovereignP2PEngine,'sharePresence').mockResolvedValue({accepted:true,ttlSeconds:75});
+ const away={leaseId:crypto.randomUUID(),sequence:1,active:true,away:true};
+ const response=await post('/presence',away);
+ expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toBe('no-store');
+ expect(spy).toHaveBeenCalledExactlyOnceWith(7,away);
+ // An unknown status must not fall back to Online or publish a guessed Away.
+ for(const value of ['offline','hidden','busy','true',null,7,{}]){
+  expect((await post('/presence',{...away,away:value})).status).toBe(400);
+ }
+ // No caller-supplied identity, hidden+Away signal, or unrecognised mode field.
+ for(const input of [
+  {...away,active:false},{...away,userId:8},{...away,actorId:8},
+  {...away,sequence:0},{...away,availability:'away'},
+ ]){
+  expect((await post('/presence',input)).status).toBe(400);
+ }
+ expect(spy).toHaveBeenCalledOnce();
+});
