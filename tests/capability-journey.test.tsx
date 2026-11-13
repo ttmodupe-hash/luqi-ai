@@ -92,10 +92,50 @@ describe('LUQI Capability Journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build my LUQI path' }));
     expect(screen.queryByRole('status')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Save as my journey/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+    expect(readCapabilityJourney()?.completed).toEqual([0]);
+    expect(screen.getByRole('status').textContent).toMatch(/A different journey is already saved/i);
+    fireEvent.click(screen.getByRole('button', { name: /Replace saved journey on this device/i }));
     expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
     expect(readCapabilityJourney()?.completed).toEqual([]);
   });
 
+
+  it('requires renewed replacement consent when another tab advances the old goal', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    setCapabilityJourneyStep(0, true);
+    render(<MemoryRouter><PossibilityEnginePage /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'I want to start a township business' }));
+    fireEvent.click(screen.getByRole('button', { name: /Save as my journey/i }));
+    expect(readCapabilityJourney()?.completed).toEqual([0]);
+
+    setCapabilityJourneyStep(1, true);
+    fireEvent.click(screen.getByRole('button', { name: /Replace saved journey on this device/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+    expect(readCapabilityJourney()?.completed).toEqual([0, 1]);
+    expect(screen.getByRole('status').textContent).toMatch(/A different journey is already saved/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /Replace saved journey on this device/i }));
+    expect(readCapabilityJourney()?.goal).toBe('I want to start a township business');
+    expect(readCapabilityJourney()?.completed).toEqual([]);
+  });
+
+  it('refuses to overwrite unseen progress when storage reads are denied but writes could succeed', () => {
+    saveCapabilityJourney('I want to become a network engineer');
+    setCapabilityJourneyStep(2, true);
+    const write = vi.spyOn(Storage.prototype, 'setItem');
+    const denied = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Synthetic read denied', 'SecurityError');
+    });
+    render(<MemoryRouter><PossibilityEnginePage /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'I want to start a township business' }));
+    fireEvent.click(screen.getByRole('button', { name: /Save as my journey/i }));
+    expect(screen.getByRole('status').textContent).toMatch(/did not allow LUQI to save/i);
+    expect(write).not.toHaveBeenCalled();
+    denied.mockRestore();
+    expect(readCapabilityJourney()?.goal).toBe('I want to become a network engineer');
+    expect(readCapabilityJourney()?.completed).toEqual([2]);
+  });
 
   it('does not continue to Ask Luqi with an outdated preview after editing a goal', () => {
     function CapturedAskGoal() {

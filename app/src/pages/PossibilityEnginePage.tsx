@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, CheckCircle2, Compass, Rocket, ShieldCheck, Sparkles, Target } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
-import { saveCapabilityJourney } from '../lib/capability-journey';
+import { readCapabilityJourney, saveCapabilityJourney } from '../lib/capability-journey';
 import '../possibility-engine.css';
 
 const examples = [
@@ -25,6 +25,7 @@ export default function PossibilityEnginePage() {
   const [goal, setGoal] = useState(seeded);
   const [submitted, setSubmitted] = useState(seeded);
   const [saveNotice, setSaveNotice] = useState('');
+  const [replacementApproval, setReplacementApproval] = useState<string | null>(null);
   // A new explicit goal can arrive while React Router keeps this page mounted.
   // Rebuild its local preview, but preserve drafts for unrelated or invalid state.
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function PossibilityEnginePage() {
     setGoal(seeded);
     setSubmitted(seeded);
     setSaveNotice('');
+    setReplacementApproval(null);
   }, [location.key, seeded]);
   const plan = getPossibilityPlan(submitted);
   const previewIsStale = Boolean(plan && goal.trim() !== submitted);
@@ -42,12 +44,14 @@ export default function PossibilityEnginePage() {
     if (!value || value.length > 500) return;
     setSubmitted(value);
     setSaveNotice('');
+    setReplacementApproval(null);
   }
 
   function useExample(value: string) {
     setGoal(value);
     setSubmitted(value);
     setSaveNotice('');
+    setReplacementApproval(null);
   }
 
   function saveJourney() {
@@ -58,11 +62,21 @@ export default function PossibilityEnginePage() {
       setSaveNotice('Your goal has changed. Build the updated path before saving it on this device.');
       return;
     }
+    // Another tab may have saved progress while this local preview was open.
+    // Require an explicit second action before replacing a different journey.
+    const current = readCapabilityJourney();
+    const snapshot = current ? JSON.stringify(current) : null;
+    if (current && current.goal !== submitted && replacementApproval !== snapshot) {
+      setReplacementApproval(snapshot);
+      setSaveNotice('A different journey is already saved on this device. Replacing it will discard that goal and its completed stages. Choose Replace saved journey on this device to confirm.');
+      return;
+    }
     const saved = saveCapabilityJourney(submitted);
     if (!saved) {
       setSaveNotice('This browser did not allow LUQI to save the journey on this device. The path still works without saving.');
       return;
     }
+    setReplacementApproval(null);
     navigate('/journey');
   }
 
@@ -77,7 +91,7 @@ export default function PossibilityEnginePage() {
           <div className="luqi-possibility-input">
             <Target size={20} aria-hidden="true" />
             <input id="luqi-possibility-goal" value={goal} maxLength={500}
-              onChange={event => setGoal(event.target.value)}
+              onChange={event => { setGoal(event.target.value); setReplacementApproval(null); }}
               placeholder="I want to become a network engineer…" autoComplete="off" />
             <button type="submit" disabled={!goal.trim()} aria-label="Build my LUQI path"><ArrowRight size={20} /></button>
           </div>
@@ -129,7 +143,7 @@ export default function PossibilityEnginePage() {
         </div>
         <div className="luqi-possibility-next-actions">
           <button type="button" className="luqi-possibility-primary" onClick={saveJourney}>
-            Save as my journey <Target size={18} />
+            {replacementApproval ? 'Replace saved journey on this device' : 'Save as my journey'} <Target size={18} />
           </button>
           <Link className="luqi-possibility-secondary-action" to="/ask" state={{ luqiHomeNeed: submitted }}
             onClick={event => {

@@ -66,6 +66,9 @@ export function saveCapabilityJourney(goalInput: string): CapabilityJourney | nu
   const plan = getPossibilityPlan(goal);
   const storage = safeStorage();
   if (!plan || !storage || goal.length > MAX_JOURNEY_GOAL_CHARS) return null;
+  // Denied reads are not proof of an empty device store. A write could
+  // succeed while its readback fails, silently replacing unseen progress.
+  try { storage.getItem(CAPABILITY_JOURNEY_KEY); } catch { return null; }
   const now = Date.now();
   const previous = readCapabilityJourney();
   const journey: CapabilityJourney = {

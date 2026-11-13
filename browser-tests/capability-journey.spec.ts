@@ -15,6 +15,28 @@ test.beforeEach(async ({ page, baseURL }) => {
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
 });
 
+test('320px different-goal replacement requires two deliberate actions and preserves old progress until consent', async ({ page }) => {
+  const posts: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST') posts.push(request.url());
+  });
+  await page.getByRole('button', { name: /Mark complete:/i }).first().click();
+  await expect(page.getByText('25%', { exact: true })).toBeVisible();
+  await page.goto('/#/possibility');
+  await page.getByRole('button', { name: 'I want to start a township business' }).click();
+  await page.getByRole('button', { name: /Save as my journey/i }).click();
+  await expect(page.getByRole('status')).toContainText('A different journey is already saved');
+  const prior = await page.evaluate(() => JSON.parse(localStorage.getItem('luqi:capability-journey:v1')!) as { goal: string, completed: number[] });
+  expect(prior.goal).toBe('I want to become a network engineer');
+  expect(prior.completed).toEqual([0]);
+  await page.getByRole('button', { name: /Replace saved journey on this device/i }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'I want to start a township business' })).toBeVisible();
+  await expect(page.getByText('0%', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  expect(posts).toEqual([]);
+});
+
 test('320px keyboard stage completion persists without provider requests', async ({ page }) => {
   const posts: string[] = [];
   page.on('request', request => {
