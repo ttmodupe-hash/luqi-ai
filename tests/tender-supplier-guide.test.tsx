@@ -42,7 +42,8 @@ it('blank optional fields do not block navigation and final review returns to al
  for(let i=0;i<6;i++)fireEvent.click(screen.getByRole('button',{name:'Next contact field'}));
  expect(screen.getByText('Contact field 7 of 7')).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:'Review all contact fields'}));expect(screen.getAllByRole('textbox')).toHaveLength(7);
- expect(screen.getAllByRole('button',{name:/Go to /})).toHaveLength(1);
+ expect(screen.getByRole('button',{name:'Go to Name of bidder'})).toBeTruthy();
+ expect(screen.getAllByRole('button',{name:/Go to /})).toHaveLength(7); // 1 required attention + 6 optional blanks
 });
 it('view-only changes never invoke the answer callback',()=>{
  const edit=vi.fn();render(<TenderSupplierGuide values={{...EMPTY_SUPPLIER_VALUES}} onChange={edit}/>);
