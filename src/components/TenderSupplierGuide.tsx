@@ -55,7 +55,7 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
           <label htmlFor={inputId} className="block text-sm font-semibold">{field.label}{field.required?' (required for this export)':''}</label>
           <p className="text-sm">{help.question}</p>
           <input ref={node=>{if(node)inputs.current[field.id]=node;else delete inputs.current[field.id];}}
-            id={inputId} aria-label={'SBD 1 '+field.label} maxLength={field.max}
+            id={inputId} aria-label={'SBD 1 '+field.label} maxLength={field.max+1}
             type={field.id==='email'?'email':'text'} autoComplete="off" value={values[field.id]}
             aria-invalid={Boolean(issue)} aria-required={field.required}
             aria-describedby={inputId+'-help'+(issue?' '+inputId+'-issue':'')} className={inputStyle}
