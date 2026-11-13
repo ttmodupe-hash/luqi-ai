@@ -153,3 +153,28 @@ it('clears earlier applicant data when the pinned Treasury replacement cannot be
  expect(screen.queryByText(/Local approval and amendment history/)).toBeNull();
  expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
 });
+it('hides previous applicant details during the account-change render, before passive cleanup',async()=>{
+ let exposedAtLayout=false;
+ function Switch(){const customer=useCustomerSession();return <button onClick={()=>customer.acceptSession({
+   token:'synthetic',user:{email:'other@example.test',name:'Other'}
+ } as never)}>Change account for prepaint test</button>}
+ function LayoutProbe(){
+   const customer=useCustomerSession();
+   const email=customer.session?.user.email??null;
+   React.useLayoutEffect(()=>{
+     if(email==='other@example.test'){
+       const oldInput=document.querySelector('input[aria-label="SBD 1 Name of bidder"]') as HTMLInputElement|null;
+       exposedAtLayout=oldInput?.value==='Synthetic previous applicant';
+     }
+   },[email]);
+   return null;
+ }
+ render(<CustomerSessionProvider><Switch/><TenderOriginalForms/><LayoutProbe/></CustomerSessionProvider>);
+ await importOriginal();
+ fireEvent.change(screen.getByLabelText('SBD 1 Name of bidder'),{target:{value:'Synthetic previous applicant'}});
+ fireEvent.click(screen.getByRole('button',{name:'Change account for prepaint test'}));
+ expect(exposedAtLayout).toBe(false);
+ await waitFor(()=>expect(screen.queryByDisplayValue('Synthetic previous applicant')).toBeNull());
+ expect(screen.queryByRole('region',{name:'Original form applicant review'})).toBeNull();
+ expect(network).not.toHaveBeenCalled();
+});
