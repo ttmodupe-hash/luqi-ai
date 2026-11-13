@@ -115,3 +115,20 @@ it('reviews optional blank contacts by opening the selected field without invent
  expect(screen.getByRole('status').textContent).toContain('1 of 7 supported contact fields');
  expect(edits).not.toHaveBeenCalled();expect(network).not.toHaveBeenCalled();
 });
+
+
+it('a blank optional jump focuses the matching visible field in complete-form mode without entering data',async()=>{
+ const writes=vi.fn(),edits=vi.fn();vi.stubGlobal('fetch',writes);
+ render(<TenderSupplierGuide values={{...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'}} onChange={edits}/>);
+ const review=screen.getByText('Review 6 blank optional contact fields');
+ fireEvent.click(review);
+ const disclosure=review.closest('details')!;
+ const jump=within(disclosure).getByRole('button',{name:'Go to Cellphone number'});
+ jump.focus();fireEvent.click(jump);
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByLabelText('SBD 1 Cellphone number')));
+ expect(screen.getAllByRole('textbox')).toHaveLength(7);
+ expect((screen.getByLabelText('SBD 1 Cellphone number') as HTMLInputElement).value).toBe('');
+ expect(screen.getByRole('status').textContent).toContain('1 of 7 supported contact fields');
+ expect(edits).not.toHaveBeenCalled();
+ expect(writes).not.toHaveBeenCalled();
+});
