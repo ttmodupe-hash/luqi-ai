@@ -1,5 +1,14 @@
 export const workspaceTools = [
   {
+    id: "capability-journey", title: "My capability journey", category: "Ask & Learn",
+    description: "Follow four user-confirmed stages on this device. Saving is optional and explicit; no account, paid AI or automatic upload. Start a new path at /possibility without saving.",
+    status: "Code-tested local journey · production unverified", ready: true, path: "/journey", icon: "academy",
+    owner: "Capability & Learning Engineer (#479)", signIn: "Not required",
+    consent: "Explicit device-local browser save", aiCost: "No paid inference",
+    implementationStatus: "Implemented in source", productionStatus: "Not independently verified in production",
+    evidenceDate: "2026-11-11", fallback: "Build a path at /possibility without saving",
+  },
+  {
     id: "launch-control", title: "Launch Control", category: "Tool 024: evidence and release operations",
     description: "Run current Luqi release and health checks, review dependency workflows, restore portable checkpoints and prepare SPF, DKIM and DMARC records locally. External DNS, deployments and payment integrations require separate connections.",
     status: "Working local workflows and live read-only checks", ready: true, path: "/launch-control", icon: "status",

@@ -34,6 +34,12 @@ jobs:
         run: node --test tests/release-control-posture.test.mjs tests/p0-operator-handoff.test.mjs
       - name: Install exactly as Railway web image
         run: npm ci --legacy-peer-deps --include=dev
+      - name: Verify device-local Capability Journey persistence and source parity
+        run: |
+          npx --no-install vitest run tests/capability-journey.test.tsx
+          cmp -s src/pages/CapabilityJourneyPage.tsx app/src/pages/CapabilityJourneyPage.tsx
+          cmp -s src/lib/capability-journey.ts app/src/lib/capability-journey.ts
+          cmp -s src/components/workspace-catalog.ts app/src/components/workspace-catalog.ts || { echo 'Workspace catalog frontend mirrors differ'; exit 1; }
       - name: Verify local Tool 022 planning, review and account boundaries
         run: |
           npx --no-install vitest run tests/devsecnet-engine.test.ts tests/devsecnet-page.test.tsx tests/executable-draft.test.ts tests/executable-draft-page.test.tsx

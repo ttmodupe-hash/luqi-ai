@@ -1,8 +1,8 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, CheckCircle2, Compass, Rocket, ShieldCheck, Sparkles, Target } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
-import { saveCapabilityJourney } from '../lib/capability-journey';
+import { readCapabilityJourney, saveCapabilityJourney } from '../lib/capability-journey';
 import '../possibility-engine.css';
 
 const examples = [
@@ -25,28 +25,58 @@ export default function PossibilityEnginePage() {
   const [goal, setGoal] = useState(seeded);
   const [submitted, setSubmitted] = useState(seeded);
   const [saveNotice, setSaveNotice] = useState('');
+  const [replacementApproval, setReplacementApproval] = useState<string | null>(null);
+  // A new explicit goal can arrive while React Router keeps this page mounted.
+  // Rebuild its local preview, but preserve drafts for unrelated or invalid state.
+  useEffect(() => {
+    if (!seeded) return;
+    setGoal(seeded);
+    setSubmitted(seeded);
+    setSaveNotice('');
+    setReplacementApproval(null);
+  }, [location.key, seeded]);
   const plan = getPossibilityPlan(submitted);
+  const previewIsStale = Boolean(plan && goal.trim() !== submitted);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = goal.trim();
     if (!value || value.length > 500) return;
     setSubmitted(value);
+    setSaveNotice('');
+    setReplacementApproval(null);
   }
 
   function useExample(value: string) {
     setGoal(value);
     setSubmitted(value);
     setSaveNotice('');
+    setReplacementApproval(null);
   }
 
   function saveJourney() {
     if (!submitted) return;
+    // Do not silently save an older preview after the user edits the goal.
+    // The person must review the newly built path before opting into storage.
+    if (goal.trim() !== submitted) {
+      setSaveNotice('Your goal has changed. Build the updated path before saving it on this device.');
+      return;
+    }
+    // Another tab may have saved progress while this local preview was open.
+    // Require an explicit second action before replacing a different journey.
+    const current = readCapabilityJourney();
+    const snapshot = current ? JSON.stringify(current) : null;
+    if (current && current.goal !== submitted && replacementApproval !== snapshot) {
+      setReplacementApproval(snapshot);
+      setSaveNotice('A different journey is already saved on this device. Replacing it will discard that goal and its completed stages. Choose Replace saved journey on this device to confirm.');
+      return;
+    }
     const saved = saveCapabilityJourney(submitted);
     if (!saved) {
       setSaveNotice('This browser did not allow LUQI to save the journey on this device. The path still works without saving.');
       return;
     }
+    setReplacementApproval(null);
     navigate('/journey');
   }
 
@@ -61,7 +91,7 @@ export default function PossibilityEnginePage() {
           <div className="luqi-possibility-input">
             <Target size={20} aria-hidden="true" />
             <input id="luqi-possibility-goal" value={goal} maxLength={500}
-              onChange={event => setGoal(event.target.value)}
+              onChange={event => { setGoal(event.target.value); setReplacementApproval(null); }}
               placeholder="I want to become a network engineer…" autoComplete="off" />
             <button type="submit" disabled={!goal.trim()} aria-label="Build my LUQI path"><ArrowRight size={20} /></button>
           </div>
@@ -89,10 +119,11 @@ export default function PossibilityEnginePage() {
           <h2>{plan.affirmation}</h2>
           <p>{plan.outcome}</p>
         </div>
-        <div className="luqi-possibility-badge"><CheckCircle2 size={20} /><span>Path ready</span></div>
+        <div className="luqi-possibility-badge"><CheckCircle2 size={20} /><span>{previewIsStale ? "Preview needs update" : "Path ready"}</span></div>
       </div>
 
       <div className="luqi-possibility-goal"><span>Your goal</span><strong>{submitted}</strong></div>
+      {previewIsStale && <p className="luqi-possibility-save-notice">This path is for your previous goal. Build the updated path before opening a capability.</p>}
 
       <div className="luqi-possibility-steps">
         {plan.steps.map((step, index) => <article key={step.stage}>
@@ -100,7 +131,7 @@ export default function PossibilityEnginePage() {
           <p>{step.stage}</p>
           <h3>{step.title}</h3>
           <span>{step.detail}</span>
-          <Link to={step.path}>Open this capability <ArrowRight size={16} /></Link>
+          {previewIsStale ? <span>Build the updated path to open this capability.</span> : <Link to={step.path}>Open this capability <ArrowRight size={16} /></Link>}
         </article>)}
       </div>
 
@@ -112,10 +143,16 @@ export default function PossibilityEnginePage() {
         </div>
         <div className="luqi-possibility-next-actions">
           <button type="button" className="luqi-possibility-primary" onClick={saveJourney}>
-            Save as my journey <Target size={18} />
+            {replacementApproval ? 'Replace saved journey on this device' : 'Save as my journey'} <Target size={18} />
           </button>
-          <Link className="luqi-possibility-secondary-action" to="/ask" state={{ luqiHomeNeed: submitted }}>
-            Continue without saving <ArrowRight size={18} />
+          <Link className="luqi-possibility-secondary-action" to="/ask" state={{ luqiHomeNeed: submitted }}
+            onClick={event => {
+              // The optional continuation must never forward an outdated goal either.
+              if (goal.trim() === submitted) return;
+              event.preventDefault();
+              setSaveNotice('Your goal has changed. Build the updated path before continuing.');
+            }}>
+            Free local guide · no journey save or AI request <ArrowRight size={18} />
           </Link>
         </div>
       </div>

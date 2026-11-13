@@ -1,54 +1,249 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Check, Circle, Flag, RotateCcw, ShieldCheck, Target, Trophy } from 'lucide-react';
 import { getPossibilityPlan } from '../lib/possibility-engine';
 import {
   capabilityJourneyProgress,
   clearCapabilityJourney,
+  CAPABILITY_JOURNEY_KEY,
   readCapabilityJourney,
   setCapabilityJourneyStep,
   type CapabilityJourney,
 } from '../lib/capability-journey';
 import '../capability-journey.css';
+import { useOptionalCustomerSession } from '../providers/customer-session';
+import { customerSessionBoundary } from '../lib/customer-session-boundary';
+
+const STALE_JOURNEY_NOTICE = 'This journey changed in another tab or was cleared. Load the latest saved journey before editing so you do not change a different goal.';
+const NEW_JOURNEY_NOTICE = 'A journey was saved in another tab. Load the latest saved journey to continue on this device.';
+const UNREADABLE_STORAGE_NOTICE = 'Browser storage is unavailable. This view has not been replaced. Allow browser storage and try again.';
+const INITIAL_UNREADABLE_STORAGE_NOTICE = 'Browser storage is unavailable. A previously saved journey may still exist on this device. Allow browser storage and load the latest journey before saving a new goal.';
+
+function savedJourneyMatches(first: CapabilityJourney | null, second: CapabilityJourney | null): boolean {
+  return Boolean(first && second &&
+    first.goal === second.goal &&
+    first.startedAt === second.startedAt &&
+    first.updatedAt === second.updatedAt &&
+    first.completed.join(',') === second.completed.join(','));
+}
+
+function canReadJourneyStorage(): boolean {
+  try {
+    window.localStorage.getItem(CAPABILITY_JOURNEY_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default function CapabilityJourneyPage() {
   const [journey, setJourney] = useState<CapabilityJourney | null>(() => readCapabilityJourney());
-  const [notice, setNotice] = useState('');
+  const [initialStorageUnavailable] = useState(() => !canReadJourneyStorage());
+  const [notice, setNotice] = useState(initialStorageUnavailable ? INITIAL_UNREADABLE_STORAGE_NOTICE : '');
+  const [needsReload, setNeedsReload] = useState(initialStorageUnavailable);
+  // Device-local storage is not account-scoped. Require deliberate disclosure.
+  const identity = customerSessionBoundary(useOptionalCustomerSession()?.session ?? null);
+  const [revealed, setRevealed] = useState(false);
+  const [revealOwner, setRevealOwner] = useState<string | null>(null);
+  const privateViewVisible = revealed && revealOwner === identity;
+  const focusAfterRecovery = useRef(false);
+  // Recovery or clearing removes the keyboard-activated button. Keep the user's place.
+  useLayoutEffect(() => {
+    if (!focusAfterRecovery.current) return;
+    focusAfterRecovery.current = false;
+    document.getElementById(journey ? (privateViewVisible ? 'journey-title' : 'journey-privacy-title') : 'journey-empty-title')?.focus();
+  }, [journey, needsReload, privateViewVisible]);
   const plan = useMemo(() => journey ? getPossibilityPlan(journey.goal) : null, [journey]);
   const progress = capabilityJourneyProgress(journey);
   const nextIndex = plan && journey ? plan.steps.findIndex((_, index) => !journey.completed.includes(index)) : -1;
   const nextStep = plan && nextIndex >= 0 ? plan.steps[nextIndex] : null;
 
+  // Account changes hide the previous identity before paint; losing focus
+  // also hides the device-shared journey without deleting its local record.
+  useLayoutEffect(() => { setRevealed(false); }, [identity]);
+  useEffect(() => {
+    const hide = () => setRevealed(false);
+    const onVisibility = () => { if (document.visibilityState === 'hidden') hide(); };
+    window.addEventListener('blur', hide);
+    window.addEventListener('pagehide', hide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('blur', hide);
+      window.removeEventListener('pagehide', hide);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
+  // Storage events arrive in OTHER tabs, including when this page has no goal yet.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== CAPABILITY_JOURNEY_KEY) return;
+      // An access denial is not proof that another tab edited or deleted a goal.
+      if (!canReadJourneyStorage()) {
+        setNeedsReload(true);
+        setNotice(UNREADABLE_STORAGE_NOTICE);
+        return;
+      }
+      const saved = readCapabilityJourney();
+      if (journey ? !savedJourneyMatches(journey, saved) : saved !== null) {
+        setNeedsReload(true);
+        setNotice(journey ? STALE_JOURNEY_NOTICE : NEW_JOURNEY_NOTICE);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [journey]);
+
+  // Detect known other-tab changes before mutating this device-local record.
+  // localStorage has no cross-tab transaction guarantee.
+  function journeySnapshotMatchesSaved(): boolean {
+    return savedJourneyMatches(journey, readCapabilityJourney());
+  }
+
+  function warnStaleJourney() {
+    setNeedsReload(true);
+    setNotice(STALE_JOURNEY_NOTICE);
+  }
+
+  // A storage event may be delayed or absent. Check again before following a link.
+  function guardJourneyNavigation(event: MouseEvent<HTMLAnchorElement>) {
+    if (needsReload) {
+      event.preventDefault();
+      return;
+    }
+    if (!canReadJourneyStorage()) {
+      event.preventDefault();
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (!journeySnapshotMatchesSaved()) {
+      event.preventDefault();
+      warnStaleJourney();
+    }
+  }
+
+  // An empty tab can be stale before the browser dispatches its storage event.
+  // Do not navigate away and invite an accidental replacement of a saved goal.
+  function guardNewJourneyNavigation(event: MouseEvent<HTMLAnchorElement>) {
+    if (needsReload) {
+      event.preventDefault();
+      return;
+    }
+    if (!canReadJourneyStorage()) {
+      event.preventDefault();
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (readCapabilityJourney()) {
+      event.preventDefault();
+      setNeedsReload(true);
+      setNotice(NEW_JOURNEY_NOTICE);
+    }
+  }
+
+  function loadLatestSavedJourney() {
+    // A failed storage read must not be mistaken for another tab clearing the goal.
+    // Keep the visible state and recovery action until the device store is readable.
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    const latest = readCapabilityJourney();
+    focusAfterRecovery.current = true;
+    setRevealed(false);
+    setJourney(latest);
+    setNeedsReload(false);
+    setNotice(latest ? 'Loaded the latest saved journey from this browser.' : 'No readable saved journey is available on this device. It may have been cleared or become invalid. You can choose a new goal.');
+  }
+
   function toggle(index: number) {
-    if (!journey) return;
+    // A pending recovery explicitly blocks edits, even after storage access returns.
+    if (!journey || needsReload) return;
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (!journeySnapshotMatchesSaved()) {
+      warnStaleJourney();
+      return;
+    }
     const complete = !journey.completed.includes(index);
     const updated = setCapabilityJourneyStep(index, complete);
+    if (!updated || updated.completed.includes(index) !== complete) {
+      setNotice('Stage change could not be confirmed as saved on this device. Check browser storage before relying on progress.');
+      return;
+    }
     setJourney(updated);
+    setNeedsReload(false);
     setNotice(complete ? 'Stage marked complete on this device.' : 'Stage reopened on this device.');
   }
 
   function clearJourney() {
+    if (needsReload) return;
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (!journeySnapshotMatchesSaved()) {
+      warnStaleJourney();
+      return;
+    }
     if (!clearCapabilityJourney()) {
       setNotice('This browser did not allow the saved journey to be cleared.');
       return;
     }
+    // Clearing unmounts this button; move keyboard focus to the empty-state heading.
+    focusAfterRecovery.current = true;
+    setRevealed(false);
     setJourney(null);
+    setNeedsReload(false);
     setNotice('Saved journey cleared from this device.');
   }
 
+  function showSavedJourney() {
+    if (!journey || needsReload) return;
+    if (!canReadJourneyStorage()) {
+      setNeedsReload(true);
+      setNotice(UNREADABLE_STORAGE_NOTICE);
+      return;
+    }
+    if (!journeySnapshotMatchesSaved()) { warnStaleJourney(); return; }
+    focusAfterRecovery.current = true;
+    setRevealOwner(identity);
+    setRevealed(true);
+  }
+
   return <main className="luqi-journey">
-    {!journey || !plan ? <section className="luqi-journey-empty" aria-labelledby="journey-empty-title">
+    {journey && plan && !privateViewVisible ? <section className="luqi-journey-empty" aria-labelledby="journey-privacy-title">
+      <div className="luqi-journey-empty-icon"><ShieldCheck size={42} aria-hidden="true" /></div>
+      <p className="luqi-journey-kicker">YOUR CAPABILITY JOURNEY</p>
+      <h1 id="journey-privacy-title" tabIndex={-1}>A journey is saved on this browser.</h1>
+      <p>Goals and progress stored on this device are not tied to your Luqi account. On a shared phone or computer they may belong to someone else.</p>
+      {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+      {needsReload
+        ? <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>
+        : <button type="button" className="luqi-journey-primary" onClick={showSavedJourney}>Show saved journey on this device</button>}
+      <p className="luqi-journey-device">Switching away hides the goal again. This reminder is not account-level access protection.</p>
+    </section> : !journey || !plan ? <section className="luqi-journey-empty" aria-labelledby="journey-empty-title">
       <div className="luqi-journey-empty-icon"><Target size={42} aria-hidden="true" /></div>
       <p className="luqi-journey-kicker">YOUR CAPABILITY JOURNEY</p>
-      <h1 id="journey-empty-title">Start with a goal worth working toward.</h1>
+      <h1 id="journey-empty-title" tabIndex={-1}>Start with a goal worth working toward.</h1>
       <p>LUQI will build the path first. You choose whether to save that goal on this device and track progress.</p>
-      <Link className="luqi-journey-primary" to="/possibility">Build my path <ArrowRight size={18} /></Link>
+      {needsReload
+        ? <p className="luqi-journey-device">Load the latest saved journey before choosing a new goal so you do not replace progress saved in another tab.</p>
+        : <Link className="luqi-journey-primary" to="/possibility" onClick={guardNewJourneyNavigation}>Build my path <ArrowRight size={18} /></Link>}
       {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+      {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
     </section> : <>
       <section className="luqi-journey-hero" aria-labelledby="journey-title">
         <div>
           <p className="luqi-journey-kicker"><Flag size={15} aria-hidden="true" /> YOUR CAPABILITY JOURNEY</p>
-          <h1 id="journey-title">{journey.goal}</h1>
+          <h1 id="journey-title" tabIndex={-1}>{journey.goal}</h1>
           <p>{plan.affirmation}</p>
           <p className="luqi-journey-device"><ShieldCheck size={15} aria-hidden="true" /> Saved only in this browser on this device. LUQI has not uploaded this goal or sent it to an AI provider.</p>
         </div>
@@ -58,6 +253,10 @@ export default function CapabilityJourneyPage() {
           </div>
         </div>
       </section>
+      {(notice || needsReload) && <section className="luqi-journey-recovery" aria-label="Journey storage notice">
+        {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
+        {needsReload && <button type="button" className="luqi-journey-primary" onClick={loadLatestSavedJourney}>Load latest saved journey</button>}
+      </section>}
 
       <section className="luqi-journey-mission" aria-labelledby="journey-mission-title">
         <div>
@@ -70,8 +269,10 @@ export default function CapabilityJourneyPage() {
             <p>Completion here means you marked all four LUQI stages complete. It is not a certification, job guarantee or independent assessment.</p>
           </>}
         </div>
-        {nextStep ? <Link className="luqi-journey-primary" to={nextStep.path}>Continue mission <ArrowRight size={18} /></Link>
-          : <Link className="luqi-journey-primary" to="/possibility">Set the next goal <Trophy size={18} /></Link>}
+        {needsReload
+          ? <p className="luqi-journey-device">Load the latest saved journey before continuing this mission.</p>
+          : nextStep ? <Link className="luqi-journey-primary" to={nextStep.path} onClick={guardJourneyNavigation}>Continue mission <ArrowRight size={18} /></Link>
+          : <Link className="luqi-journey-primary" to="/possibility" onClick={guardJourneyNavigation}>Set the next goal <Trophy size={18} /></Link>}
       </section>
 
       <section className="luqi-journey-stages" aria-label="Journey stages">
@@ -79,7 +280,7 @@ export default function CapabilityJourneyPage() {
           const complete = journey.completed.includes(index);
           const current = index === nextIndex;
           return <article key={step.stage} className={complete ? 'complete' : current ? 'current' : ''}>
-            <button type="button" className="luqi-journey-check" onClick={() => toggle(index)}
+            <button type="button" className="luqi-journey-check" disabled={needsReload} onClick={() => toggle(index)}
               aria-pressed={complete} aria-label={(complete ? 'Reopen ' : 'Mark complete: ') + step.title}>
               {complete ? <Check size={19} /> : <Circle size={19} />}
             </button>
@@ -87,7 +288,9 @@ export default function CapabilityJourneyPage() {
               <p>{step.stage}</p>
               <h3>{step.title}</h3>
               <span>{step.detail}</span>
-              <Link to={step.path}>{complete ? 'Review capability' : 'Open capability'} <ArrowRight size={15} /></Link>
+              {needsReload
+                ? <span>Load latest saved journey to open this capability.</span>
+                : <Link to={step.path} onClick={guardJourneyNavigation}>{complete ? 'Review capability' : 'Open capability'} <ArrowRight size={15} /></Link>}
             </div>
           </article>;
         })}
@@ -99,9 +302,8 @@ export default function CapabilityJourneyPage() {
           <h2>LUQI tracks actions you confirm—not imaginary success.</h2>
           <p>Mark a stage complete only when you have actually done the work you intended. Future versions can add evidence, assessments and verified milestones without pretending they already exist.</p>
         </div>
-        <button type="button" onClick={clearJourney}><RotateCcw size={16} /> Clear saved journey</button>
+        <button type="button" onClick={clearJourney} disabled={needsReload}><RotateCcw size={16} /> Clear saved journey</button>
       </section>
-      {notice && <p role="status" className="luqi-journey-notice">{notice}</p>}
     </>}
   </main>;
 }
