@@ -131,7 +131,7 @@ export async function buildTenderOriginalArchive(packet:PreparedTenderPacket,rev
   archive['READ-ME.txt']=strToU8([
     'Luqi partial original form export',
     ...mappedContactChecklist(packet.enteredFieldIds),
-    'Only the listed supplier contact fields were filled on a hash-verified Treasury SBD 1 original.',
+    'Only fields marked [x] are recorded as entered in the supported partial DOCX; [ ] fields remain blank. Inspect the downloaded original to verify actual content.',
     'This is NOT a complete bid, legal signature, final submission authorisation or verified issuer acceptance.',
     'Complete all remaining issuer fields, declarations, pricing schedules, signatures and attachments yourself.',
     'Check the actual issuer originals, addenda, eligibility, deadline and prescribed channel again before submitting.',

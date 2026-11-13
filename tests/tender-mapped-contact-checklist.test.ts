@@ -50,6 +50,8 @@ describe('SBD 1 private partial-export contact checklist',()=>{
     expect(readme).toContain('[x] Name of bidder: entered in the partial original');
     expect(readme).toContain('[ ] Street address: left blank');
     expect(readme).toContain('not the complete official form');
+    expect(readme).toContain('Only fields marked [x] are recorded as entered in the supported partial DOCX; [ ] fields remain blank.');
+    expect(readme).not.toContain('Only the listed supplier contact fields were filled');
     expect(readme).toContain('This checklist cannot establish which fields your particular issuer requires.');
     expect(readme).not.toContain(context.principal);
     expect(readme).not.toContain(context.priceZar);
