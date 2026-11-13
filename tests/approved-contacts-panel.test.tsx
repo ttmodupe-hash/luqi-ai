@@ -62,3 +62,24 @@ it('renders separately verified online, away, offline and hidden contacts',async
  expect(screen.getByText('Status not shared')).toBeTruthy();
  expect(screen.getByText('1 contact online').textContent).toContain('1 contact online');
 });
+
+it('does not carry a private search term into another account or restore it on return', async()=>{
+ const accountA={token:'account-a',user:{email:'a@example.invalid'}};
+ const accountB={token:'account-b',user:{email:'b@example.invalid'}};
+ const contact=(name:string,circleId:string)=>({circleId,userId:8,name,accountActive:true,presence:'not_shared'});
+ mocks.contacts.mockResolvedValueOnce({contacts:[contact('A private contact','circle-a')]})
+   .mockResolvedValueOnce({contacts:[contact('B approved contact','circle-b')]})
+   .mockResolvedValueOnce({contacts:[contact('A private contact','circle-a')]});
+ const view=render(<MemoryRouter><Panel session={accountA}/></MemoryRouter>);
+ await screen.findByRole('link',{name:'A private contact'});
+ fireEvent.change(screen.getByLabelText('Find a contact'),{target:{value:'Secret search from account A'}});
+ expect((screen.getByLabelText('Find a contact') as HTMLInputElement).value).toBe('Secret search from account A');
+ view.rerender(<MemoryRouter><Panel session={accountB}/></MemoryRouter>);
+ await screen.findByRole('link',{name:'B approved contact'});
+ expect((screen.getByLabelText('Find a contact') as HTMLInputElement).value).toBe('');
+ expect(screen.queryByRole('link',{name:'A private contact'})).toBeNull();
+ view.rerender(<MemoryRouter><Panel session={accountA}/></MemoryRouter>);
+ await screen.findByRole('link',{name:'A private contact'});
+ expect((screen.getByLabelText('Find a contact') as HTMLInputElement).value).toBe('');
+ expect(mocks.contacts).toHaveBeenCalledTimes(3);
+});

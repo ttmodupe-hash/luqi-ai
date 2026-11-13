@@ -14,11 +14,13 @@ export default function ApprovedContactsPanel({ session, presence }: {
   const [rosterToken, setRosterToken] = useState<string | null>(null);
   const [state, setState] = useState<'checking' | 'ready' | 'disabled' | 'unavailable'>('checking');
   const [eligible, setEligible] = useState(false);
-  const [query, setQuery] = useState('');
+  // Search terms are private too: never carry account A's lookup into B's roster.
+  const [search, setSearch] = useState<{ token: string; value: string } | null>(null);
   const [checkedAt, setCheckedAt] = useState(0);
   const [now, setNow] = useState(Date.now);
   const [refreshVersion, setRefreshVersion] = useState(0);
   useEffect(() => {
+    setSearch(null);
     if (!session) { setRosterToken(null); return; }
     let current = true, pending = false, verified = false, epoch = 0;
     setContacts([]); setCheckedAt(0); setEligible(false); setState('checking');
@@ -58,6 +60,7 @@ export default function ApprovedContactsPanel({ session, presence }: {
   const activeState = rosterMatchesSession ? state : 'checking';
   const activeContacts = rosterMatchesSession ? contacts : [];
   const activeEligible = rosterMatchesSession && eligible;
+  const query = session && search?.token === session.token ? search.value : '';
   const needle = query.trim().normalize('NFKC').toLocaleLowerCase();
   const fresh = rosterMatchesSession && checkedAt > 0 && now >= checkedAt && now - checkedAt < 40_000;
   const found = activeContacts.filter(person => person.name.normalize('NFKC').toLocaleLowerCase().includes(needle));
@@ -74,7 +77,7 @@ export default function ApprovedContactsPanel({ session, presence }: {
       {activeState === 'unavailable' && <p>Contacts could not be refreshed. No online status has been assumed.</p>}
       {activeState === 'ready' && <>
         <label className="luqi-contact-search">Find a contact<input type="search" value={query} maxLength={120}
-          onChange={event => setQuery(event.target.value)} autoComplete="off" /></label>
+          onChange={event => setSearch({ token: session.token, value: event.target.value })} autoComplete="off" /></label>
         <ul aria-label="Your approved contacts">{found.map(person => {
           const status = fresh ? person.presence : 'unknown';
           const label = status === 'online' ? 'Online' : status === 'away' ? 'Away' : status === 'offline' ? 'Offline' : status === 'not_shared' ? 'Status not shared' : 'Status not confirmed';
