@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 async function revealIfSaved(page: import('@playwright/test').Page) {
+  // Saving navigates asynchronously; count() can return zero in the old route.
+  // A visible, actionable gate is required before checking protected goal text.
   const button = page.getByRole('button', { name: 'Show saved journey on this device' });
-  if (await button.count()) await button.click();
+  await expect(button).toBeVisible();
+  await button.click();
 }
 
 // Only synthetic device-local goals. The network guard prevents paid API calls.
@@ -163,6 +166,7 @@ test('an initially empty tab discovers a goal saved in another tab at 320px', as
   await expect(page.getByRole('link', { name: /Build my path/i })).toHaveCount(0);
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -185,6 +189,7 @@ test('320px empty tab protects a newly saved goal before any storage event', asy
   await expect(page.getByRole('link', { name: /Build my path/i })).toHaveCount(0);
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
@@ -214,6 +219,7 @@ test('320px stale goal does not navigate to the previous mission before keyboard
 
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to start a township business' })).toBeFocused();
   await expect(page.getByRole('link', { name: /Continue mission/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /Open capability|Review capability/i })).toHaveCount(4);
@@ -238,6 +244,7 @@ test('320px keyboard guards mission and stage navigation without a storage event
 
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to start a township business' })).toBeFocused();
 
   await page.evaluate(key => {
@@ -270,6 +277,7 @@ test('320px transient storage denial disables edits until keyboard recovery', as
 
   await page.getByRole('button', { name: 'Load latest saved journey' }).focus();
   await page.keyboard.press('Enter');
+  await revealIfSaved(page);
   await expect(page.getByRole('heading', { name: 'I want to become a network engineer' })).toBeFocused();
   await expect(page.getByRole('button', { name: /Mark complete:/i }).first()).toBeEnabled();
   await page.getByRole('button', { name: /Mark complete:/i }).first().focus();
