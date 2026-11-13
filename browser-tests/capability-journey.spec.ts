@@ -174,6 +174,11 @@ test('320px stale goal does not navigate to the previous mission before keyboard
   await otherTab.getByLabel('What do you want to make possible?').fill('I want to start a township business');
   await otherTab.getByRole('button', { name: 'Build my LUQI path' }).click();
   await otherTab.getByRole('button', { name: /Save as my journey/i }).click();
+  // The first tab already saved a different goal. Saving only opens the
+  // replacement-confirmation step; no cross-tab change exists until consent.
+  await expect(otherTab.getByRole('status')).toContainText('A different journey is already saved');
+  await otherTab.getByRole('button', { name: /Replace saved journey on this device/i }).click();
+  await expect(otherTab.getByRole('heading', { name: 'I want to start a township business' })).toBeVisible();
 
   await expect(page.getByRole('status')).toContainText('changed in another tab');
   await expect(page.getByRole('link', { name: /Continue mission/i })).toHaveCount(0);
