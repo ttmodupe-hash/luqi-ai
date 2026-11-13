@@ -45,7 +45,7 @@ test('pasted overlength bidder name remains invalid instead of silently becoming
  await bidder.fill('X'.repeat(160));
  await expect(bidder).toHaveValue('X'.repeat(71));
  await expect(bidder).toHaveAttribute('aria-invalid','true');
- await expect(panel.getByText('Use no more than 70 characters for this original field.')).toBeVisible();
+ await expect(panel.getByText('Use no more than 70 characters for this original field.').first()).toBeVisible();
  await expect(panel.getByText('0 of 7 supported contact fields contain entries without detected input errors.')).toBeVisible();
  await panel.getByRole('button',{name:'Prepare exact original for review'}).click();
  await expect(panel.getByText(/Check supported SBD 1 contact fields before preparing/)).toBeVisible();
