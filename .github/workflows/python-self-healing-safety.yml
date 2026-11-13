@@ -1,0 +1,41 @@
+name: LUQI Python Agent Safety (offline; no deployment)
+on:
+  pull_request:
+    branches: [main, "fix/**"]
+    paths:
+      - "backend/self_healing_pipeline.py"
+      - "tests/test_self_healing_safety.py"
+      - ".github/workflows/python-self-healing-safety.yml"
+  push:
+    branches: ["security/fail-closed-python-healing-*"]
+permissions:
+  contents: read
+jobs:
+  python-agent-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile fail-closed agent and regression tests
+        run: python -m compileall -q backend/self_healing_pipeline.py tests/test_self_healing_safety.py
+      - name: Run safety tests without Docker, secrets or vendors
+        run: python -m unittest discover -s tests -p test_self_healing_safety.py -v
+      - name: Verify no live code execution or PyGithub calls exist in module
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path("backend/self_healing_pipeline.py").read_text()
+          forbidden = ("import subprocess", "from subprocess", "subprocess.run(",
+                       "exec(", "eval(", "os.system(", "get_repo(", "create_pull(",
+                       "DEPLOYED_TO_PROD", "_seed_demo_jobs")
+          for item in forbidden:
+              assert item not in source, f"Found prohibited agent operation: {item}"
+          print("No local execution, fake deployment, or GitHub write code.")
+          PY
