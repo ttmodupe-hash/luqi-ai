@@ -126,8 +126,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         _health_status["checks"]["disk"] = f"error: {e}"
 
-    _health_status["status"] = "healthy"
-    logger.info("Luqi AI startup complete — ready for requests")
+    # Server startup does not prove that database setup succeeded.
+    _health_status["status"] = (
+        "healthy" if _health_status["checks"].get("database") == "ok" else "degraded"
+    )
+    if _health_status["status"] == "healthy":
+        logger.info("Luqi AI startup complete — legacy Python service ready")
+    else:
+        logger.error("Luqi AI startup incomplete — database check failed")
 
     yield  # Application runs here
 
@@ -423,66 +429,44 @@ async def root():
     }
 
 
+def _legacy_python_ready() -> bool:
+    """Only startup DB state and the service lifecycle determine readiness.
+
+    This cannot attest to KHORO, payments, AI providers or ongoing DB health.
+    """
+    return (
+        _health_status.get("status") == "healthy"
+        and _health_status.get("checks", {}).get("database") == "ok"
+    )
+
+
 @app.get("/v1/health", tags=["health"])
 @app.get("/health", tags=["health"])
 @app.get("/api/health", tags=["health"])
 async def health():
-    return {
-        "status": "healthy",
-        "service": "luqi-ai-engine",
-        "khoro_active": True,
-        "billing_sync_day": "1st of Every Month",
-        "version": settings.version,
-    }
-    """
-    Health check endpoint for load balancers, Docker, and monitoring.
-    Returns 200 if all critical services are healthy, 503 otherwise.
-    Integrates LUQI Sentry diagnostics.
-    """
-    uptime = round(time.time() - _start_time, 1)
-    critical_ok = all(
-        v == "ok" for k, v in _health_status["checks"].items()
-        if k in ("database",)
+    """Truthful legacy Python startup readiness, not a customer-feature check."""
+    ready = _legacy_python_ready()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+        headers={"Cache-Control": "no-store"},
+        content={
+            "status": "healthy" if ready else "degraded",
+            "service": "luqi-ai-engine",
+            "version": settings.version,
+            "check_scope": "startup_database_only",
+        },
     )
-
-    response_body = {
-        "status": "healthy" if critical_ok else "degraded",
-        "version": settings.version,
-        "codename": settings.codename,
-        "environment": settings.environment,
-        "uptime_seconds": uptime,
-        "timestamp": datetime.utcnow().isoformat(),
-        "checks": _health_status["checks"],
-    }
-
-    # Integrate Sentry diagnostics if available
-    try:
-        from backend.error_monitor import LuqiSentry
-        sentry = LuqiSentry()
-        diag = sentry.get_diagnostics()
-        response_body["sentry"] = diag
-    except Exception:
-        pass
-
-    status_code = status.HTTP_200_OK if critical_ok else status.HTTP_503_SERVICE_UNAVAILABLE
-    return JSONResponse(content=response_body, status_code=status_code)
 
 
 @app.get("/ready", tags=["health"])
 async def ready():
-    """Readiness probe — returns 200 when ready to accept traffic."""
-    if _health_status["status"] == "healthy":
-        return {"ready": True}
+    """Never advertise readiness before a verified startup database check."""
+    is_ready = _legacy_python_ready()
     return JSONResponse(
-        content={"ready": False, "status": _health_status["status"]},
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        status_code=status.HTTP_200_OK if is_ready else status.HTTP_503_SERVICE_UNAVAILABLE,
+        headers={"Cache-Control": "no-store"},
+        content={"ready": is_ready, "status": "healthy" if is_ready else "degraded"},
     )
-
-
-@app.get("/config", tags=["system"])
-async def get_config():
-    """Get non-sensitive configuration."""
-    return settings.health_info()
 
 
 # ── WebSocket Endpoint ───────────────────────────────────────────────────

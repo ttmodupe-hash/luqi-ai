@@ -978,6 +978,75 @@ class MountedRetirementPrebodySafety(unittest.TestCase):
         self.assertGreater(spy.reads, 0)
 
 
+
+class LegacyPythonHealthTruthfulnessTests(unittest.TestCase):
+    """Execute extracted health functions only: no startup, network or database."""
+
+    @staticmethod
+    def _isolated_health():
+        from types import SimpleNamespace
+        from fastapi import status as http_status
+        from fastapi.responses import JSONResponse
+
+        tree = ast.parse((ROOT / "main.py").read_text())
+        names = {"_legacy_python_ready", "health", "ready"}
+        selected = []
+        for node in tree.body:
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and node.name in names:
+                node.decorator_list = []
+                selected.append(node)
+        if {node.name for node in selected} != names:
+            raise AssertionError("Expected all three health handlers in main.py")
+        context = {
+            "JSONResponse": JSONResponse, "status": http_status,
+            "settings": SimpleNamespace(version="synthetic-test"),
+        }
+        exec(compile(ast.fix_missing_locations(
+            ast.Module(body=selected, type_ignores=[])
+        ), "<isolated-legacy-health>", "exec"), context)
+        return context
+
+    def test_no_fake_200_before_db_check_or_after_failed_migration(self):
+        import json
+        context = self._isolated_health()
+        scenarios = (
+            ("initializing", {}, False),
+            ("healthy", {}, False),
+            ("healthy", {"database": "error: synthetic-sensitive-database-path"}, False),
+            ("degraded", {"database": "ok"}, False),
+            ("shutting_down", {"database": "ok"}, False),
+            ("healthy", {"database": "ok"}, True),
+        )
+        for lifecycle, checks, expected_ready in scenarios:
+            with self.subTest(lifecycle=lifecycle, checks=checks):
+                context["_health_status"] = {"status": lifecycle, "checks": checks}
+                health_response = asyncio.run(context["health"]())
+                ready_response = asyncio.run(context["ready"]())
+                expected_status = 200 if expected_ready else 503
+                self.assertEqual(health_response.status_code, expected_status)
+                self.assertEqual(ready_response.status_code, expected_status)
+                health_body = json.loads(health_response.body)
+                ready_body = json.loads(ready_response.body)
+                self.assertEqual(health_body["status"], "healthy" if expected_ready else "degraded")
+                self.assertEqual(health_body["check_scope"], "startup_database_only")
+                self.assertEqual(ready_body["ready"], expected_ready)
+                self.assertEqual(ready_body["status"], health_body["status"])
+                self.assertEqual(health_response.headers["cache-control"], "no-store")
+                self.assertEqual(ready_response.headers["cache-control"], "no-store")
+                for forbidden in ("khoro_active", "billing_sync_day", "checks", "environment"):
+                    self.assertNotIn(forbidden, health_body)
+                self.assertNotIn("synthetic-sensitive-database-path", health_response.body.decode())
+                self.assertNotIn("synthetic-sensitive-database-path", ready_response.body.decode())
+
+    def test_startup_does_not_mark_failed_database_migration_healthy(self):
+        source = (ROOT / "main.py").read_text()
+        self.assertIn(
+            '"healthy" if _health_status["checks"].get("database") == "ok" else "degraded"',
+            source,
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
 
