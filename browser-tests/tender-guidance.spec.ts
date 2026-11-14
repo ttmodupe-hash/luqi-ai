@@ -61,6 +61,8 @@ test('optional SBD 1 blanks can be reviewed by keyboard at 320px without guessin
  await jump.focus();await page.keyboard.press('Enter');
  await expect(panel.getByLabel('SBD 1 Email address')).toBeFocused();
  await expect(panel.getByLabel('SBD 1 Email address')).toHaveValue('');
+ await expect(panel.getByText('No answer entered. This contact field stays blank in the partial export; check whether the issuer requires it.')).toBeVisible();
+ await expect(panel.getByLabel('SBD 1 Email address')).toHaveAttribute('aria-describedby',/-blank/);
  await expect(panel.getByText('1 of 7 supported contact fields have valid-format entries.')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  expect(writes).toEqual([]);

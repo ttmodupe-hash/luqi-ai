@@ -59,6 +59,7 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
     <div className={guided?'space-y-3':'grid gap-3 sm:grid-cols-2'}>
       {progress.rows.filter((_,index)=>!guided||index===step).map(({field,issue})=>{
         const help=SBD1_FIELD_GUIDANCE[field.id], inputId=id+'-'+field.id;
+        const unansweredOptional=guided&&!field.required&&!issue&&!values[field.id].trim();
         return <div key={field.id} className="min-w-0 space-y-1 rounded-lg border border-slate-700 p-3">
           <label htmlFor={inputId} className="block text-sm font-semibold">{field.label}{field.required?' (required for this export)':''}</label>
           <p className="text-sm">{help.question}</p>
@@ -66,11 +67,12 @@ export function TenderSupplierGuide({values, onChange, disabled=false}: {
             id={inputId} aria-label={'SBD 1 '+field.label} maxLength={field.max}
             type={field.id==='email'?'email':'text'} autoComplete="off" value={values[field.id]}
             aria-invalid={Boolean(issue)} aria-required={field.required}
-            aria-describedby={inputId+'-help'+(issue?' '+inputId+'-issue':'')} className={inputStyle}
+            aria-describedby={inputId+'-help'+(issue?' '+inputId+'-issue':'')+(unansweredOptional?' '+inputId+'-blank':'')} className={inputStyle}
             onFocus={()=>{if(!guided)setStep(SBD1_FIELDS.findIndex(item=>item.id===field.id));}}
             onChange={event=>{if(!disabled)onChange(field.id,event.target.value);}}/>
           <p id={inputId+'-help'} className="text-xs text-slate-300">{help.explanation} Maximum {field.max} characters.</p>
           {issue && <p id={inputId+'-issue'} className="text-xs text-amber-200">{issue}</p>}
+          {unansweredOptional && <p id={inputId+'-blank'} className="text-xs text-amber-200">No answer entered. This contact field stays blank in the partial export; check whether the issuer requires it.</p>}
         </div>;
       })}
     </div>

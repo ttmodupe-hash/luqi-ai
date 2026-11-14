@@ -173,3 +173,25 @@ it('clearing a previously entered optional contact restores blank-field review w
  expect(edits).toHaveBeenCalledTimes(2);
  expect(network).not.toHaveBeenCalled();
 });
+
+
+it('guided empty optional question gives an accessible blank-field prompt without claiming it is required',async()=>{
+ const network=vi.fn(),edits=vi.fn();vi.stubGlobal('fetch',network);
+ function LiveFixture(){const [values,setValues]=useState({...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'});
+  return <TenderSupplierGuide values={values} onChange={(field,value)=>{edits(field,value);setValues(prev=>({...prev,[field]:value}));}}/>;}
+ render(<LiveFixture/>);
+ fireEvent.click(screen.getByRole('button',{name:'Guide me step by step'}));
+ fireEvent.click(screen.getByRole('button',{name:'Next contact field'}));
+ const input=screen.getByLabelText('SBD 1 Postal address') as HTMLInputElement;
+ await waitFor(()=>expect(document.activeElement).toBe(input));
+ const prompt=screen.getByText('No answer entered. This contact field stays blank in the partial export; check whether the issuer requires it.');
+ expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(prompt.id);
+ expect(input.getAttribute('aria-invalid')).toBe('false');
+ expect(input.value).toBe('');
+ expect(screen.getByRole('status').textContent).toContain('1 of 7 supported contact fields');
+ expect(edits).not.toHaveBeenCalled();
+ fireEvent.change(input,{target:{value:'Synthetic postal address'}});
+ expect(screen.queryByText('No answer entered. This contact field stays blank in the partial export; check whether the issuer requires it.')).toBeNull();
+ expect(screen.getByRole('status').textContent).toContain('2 of 7 supported contact fields');
+ expect(network).not.toHaveBeenCalled();
+});
