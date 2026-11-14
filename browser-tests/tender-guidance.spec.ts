@@ -67,4 +67,17 @@ test('optional SBD 1 blanks can be reviewed by keyboard at 320px without guessin
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  expect(writes).toEqual([]);
  expect(leaks).toEqual([]);
+ // Clear is a privacy boundary: a second applicant must never inherit the prior values.
+ await panel.getByRole('button',{name:'Clear private document work'}).click();
+ await expect(panel.getByLabel('SBD 1 Name of bidder')).toHaveCount(0);
+ await panel.getByRole('checkbox',{name:/I authorise local processing/}).check();
+ await panel.getByLabel('Import original tender document').setInputFiles(fixture);
+ await expect(panel.getByLabel('SBD 1 Name of bidder')).toHaveValue('');
+ await expect(panel.getByText('0 of 7 supported contact fields have valid-format entries.')).toBeVisible();
+ const leakedAfterClear=await page.evaluate(needle=>[localStorage,sessionStorage].some(store=>
+   Array.from({length:store.length},(_,i)=>{const key=store.key(i)??'';return key.includes(needle)||(store.getItem(key)??'').includes(needle);}).some(Boolean)
+ ),synthetic);
+ expect(leakedAfterClear).toBe(false);
+ expect(writes).toEqual([]);
+ expect(leaks).toEqual([]);
 });
