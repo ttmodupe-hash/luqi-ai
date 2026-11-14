@@ -149,3 +149,27 @@ it('reselecting the current supplier entry view keeps keyboard focus and never e
  expect(edits).not.toHaveBeenCalled();
  expect(writes).not.toHaveBeenCalled();
 });
+
+it('clearing a previously entered optional contact restores blank-field review without changing other answers',async()=>{
+ const network=vi.fn(),edits=vi.fn();vi.stubGlobal('fetch',network);
+ function LiveFixture(){
+  const [values,setValues]=useState({...EMPTY_SUPPLIER_VALUES,bidderName:'Synthetic bidder'});
+  return <TenderSupplierGuide values={values} onChange={(field,value)=>{edits(field,value);setValues(previous=>({...previous,[field]:value}));}}/>;
+ }
+ render(<LiveFixture/>);
+ const postal=screen.getByLabelText('SBD 1 Postal address') as HTMLInputElement;
+ fireEvent.change(postal,{target:{value:'Synthetic postbox'}});
+ expect(screen.getByText('Review 5 blank optional contact fields')).toBeTruthy();
+ expect(screen.getByRole('status').textContent).toContain('2 of 7 supported contact fields');
+ fireEvent.change(postal,{target:{value:''}});
+ const review=screen.getByText('Review 6 blank optional contact fields');
+ fireEvent.click(review);
+ const jump=within(review.closest('details')!).getByRole('button',{name:'Go to Postal address'});
+ fireEvent.click(jump);
+ await waitFor(()=>expect(document.activeElement).toBe(postal));
+ expect(postal.value).toBe('');
+ expect((screen.getByLabelText('SBD 1 Name of bidder') as HTMLInputElement).value).toBe('Synthetic bidder');
+ expect(screen.getByRole('status').textContent).toContain('1 of 7 supported contact fields');
+ expect(edits).toHaveBeenCalledTimes(2);
+ expect(network).not.toHaveBeenCalled();
+});
